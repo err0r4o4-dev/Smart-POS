@@ -1,0 +1,98 @@
+openapi: 3.1.0
+info:
+  title: SmartPOS Foundation API
+  version: 0.0.0
+  description: Phase 0 public foundation only. No business CRUD or authentication endpoints.
+servers:
+  - url: /
+paths:
+  /health/live:
+    get:
+      operationId: getLiveness
+      security: []
+      responses:
+        '200':
+          description: Process is alive; independent of database and AI.
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Liveness'
+  /health/ready:
+    get:
+      operationId: getReadiness
+      security: []
+      responses:
+        '200':
+          description: PostgreSQL reachable and migration version 1 clean.
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Readiness'
+        '503':
+          description: Required database or schema unavailable; no internal details disclosed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/system:
+    get:
+      operationId: getSystemFoundation
+      security: []
+      responses:
+        '200':
+          description: Public foundation information, not tenant/user data.
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                additionalProperties: false
+                properties:
+                  data:
+                    type: object
+                    required: [name, phase, authentication]
+                    additionalProperties: false
+                    properties:
+                      name: { type: string, const: SmartPOS }
+                      phase: { type: integer, const: 0 }
+                      authentication: { type: string, const: not_implemented }
+components:
+  headers:
+    RequestID:
+      description: Generated opaque request correlation ID.
+      schema: { type: string, pattern: '^[a-f0-9]{32}$' }
+  schemas:
+    Liveness:
+      type: object
+      required: [status]
+      additionalProperties: false
+      properties:
+        status: { type: string, const: ok }
+    Readiness:
+      type: object
+      required: [status]
+      additionalProperties: false
+      properties:
+        status: { type: string, const: ready }
+    Error:
+      type: object
+      required: [error]
+      additionalProperties: false
+      properties:
+        error:
+          type: object
+          required: [code, message, request_id]
+          additionalProperties: false
+          properties:
+            code: { type: string }
+            message: { type: string }
+            request_id: { type: string, pattern: '^[a-f0-9]{32}$' }

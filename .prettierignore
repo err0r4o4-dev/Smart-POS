@@ -1,0 +1,11 @@
+package-lock.json
+go.sum
+dist
+node_modules
+.local
+.tools
+coverage
+playwright-report
+test-results
+uv.lock
+docs/architecture/routes.md

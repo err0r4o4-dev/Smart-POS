@@ -1,0 +1,115 @@
+name: smartpos
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-smartpos}
+      POSTGRES_USER: ${POSTGRES_USER:-smartpos_dev}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-development-only}
+    ports: ['127.0.0.1:${POSTGRES_PORT:-5432}:5432']
+    volumes: ['postgres-data:/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [data]
+  migrate:
+    image: migrate/migrate:v4.18.3
+    volumes: ['./database/migrations:/migrations:ro']
+    command:
+      [
+        '-path',
+        '/migrations',
+        '-database',
+        'postgres://${POSTGRES_USER:-smartpos_dev}:${POSTGRES_PASSWORD:-local-development-only}@postgres:5432/${POSTGRES_DB:-smartpos}?sslmode=disable',
+        'up',
+      ]
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [data]
+  api:
+    build: { context: ./apps/api, target: runtime }
+    environment:
+      API_ADDR: ':8080'
+      DATABASE_URL: 'postgres://${POSTGRES_USER:-smartpos_dev}:${POSTGRES_PASSWORD:-local-development-only}@postgres:5432/${POSTGRES_DB:-smartpos}?sslmode=disable'
+    ports: ['127.0.0.1:${API_PORT:-8080}:8080']
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    healthcheck:
+      test:
+        ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:8080/health/ready']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    init: true
+    networks: [edge, data, intelligence]
+  ai:
+    build: { context: ./apps/ai, target: runtime }
+    healthcheck:
+      test:
+        [
+          'CMD',
+          '/app/.venv/bin/python',
+          '-c',
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health/ready', timeout=2)",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    init: true
+    networks: [intelligence]
+  web:
+    build: { context: ., dockerfile: apps/web/Dockerfile }
+    ports: ['127.0.0.1:${WEB_PORT:-5173}:5173']
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:5173']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [edge]
+  caddy:
+    image: caddy:2.10-alpine
+    ports: ['127.0.0.1:${GATEWAY_PORT:-8088}:8088']
+    volumes: ['./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro']
+    depends_on:
+      api: { condition: service_healthy }
+      web: { condition: service_healthy }
+    healthcheck:
+      test:
+        ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:8088/health/ready']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [edge]
+  api-check:
+    profiles: [checks]
+    build: { context: ./apps/api, target: check }
+    network_mode: none
+  ai-check:
+    profiles: [checks]
+    build: { context: ./apps/ai, target: check }
+    network_mode: none
+  integration-check:
+    profiles: [checks]
+    image: postgres:17-alpine
+    entrypoint: ['sh', '/checks/smoke.sh']
+    volumes: ['./tests/integration:/checks:ro']
+    environment:
+      PGHOST: postgres
+      PGDATABASE: ${POSTGRES_DB:-smartpos}
+      PGUSER: ${POSTGRES_USER:-smartpos_dev}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-local-development-only}
+    depends_on:
+      api: { condition: service_healthy }
+      ai: { condition: service_healthy }
+      caddy: { condition: service_healthy }
+    networks: [data, edge, intelligence]
+volumes:
+  postgres-data:
+networks:
+  edge:
+  data:
+    internal: true
+  intelligence:
+    internal: true

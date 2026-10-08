@@ -1,0 +1,63 @@
+name: Foundation checks
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '24', cache: npm }
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+  api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          {
+            go-version-file: apps/api/go.mod,
+            cache-dependency-path: apps/api/go.sum,
+          }
+      - working-directory: apps/api
+        run: test -z "$(gofmt -l .)" && go vet ./... && go test -race ./... && go build ./cmd/server
+  ai:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with: { version: '0.10.0', python-version: '3.13' }
+      - working-directory: apps/ai
+        run: uv sync --frozen && uv run ruff check . && uv run ruff format --check . && uv run pytest
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '24', cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: docker compose config --quiet
+      - run: npm run stack:up
+      - run: npm run verify:integration
+      - run: npm run e2e
+      - run: npm run verify:resilience
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          {
+            name: browser-evidence,
+            path: 'test-results/',
+            if-no-files-found: ignore,
+          }
+      - if: always()
+        run: docker compose down

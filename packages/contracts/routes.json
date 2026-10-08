@@ -1,0 +1,210 @@
+[
+  {
+    "module": "auth",
+    "name": "Authentication",
+    "phase": 1,
+    "routes": [
+      "/login",
+      "/register",
+      "/forgot-password",
+      "/reset-password",
+      "/setup",
+      "/account"
+    ]
+  },
+  {
+    "module": "dashboard",
+    "name": "Dashboard",
+    "phase": 3,
+    "routes": ["/dashboard", "/dashboard/branches", "/tasks", "/notifications"]
+  },
+  {
+    "module": "pos",
+    "name": "POS",
+    "phase": 3,
+    "routes": [
+      "/pos",
+      "/pos/held-carts",
+      "/pos/checkout",
+      "/pos/returns",
+      "/pos/exchanges",
+      "/pos/register/open",
+      "/pos/register/close",
+      "/pos/register/history",
+      "/pos/shifts"
+    ]
+  },
+  {
+    "module": "sales",
+    "name": "Sales",
+    "phase": 3,
+    "routes": [
+      "/sales",
+      "/sales/:id",
+      "/sales/refunds",
+      "/sales/voids",
+      "/receipts",
+      "/sales/tax-documents"
+    ]
+  },
+  {
+    "module": "products",
+    "name": "Products",
+    "phase": 1,
+    "routes": [
+      "/products",
+      "/products/new",
+      "/products/:id",
+      "/products/:id/edit",
+      "/products/import",
+      "/products/labels",
+      "/categories",
+      "/brands",
+      "/units"
+    ]
+  },
+  {
+    "module": "inventory",
+    "name": "Inventory",
+    "phase": 2,
+    "routes": [
+      "/inventory",
+      "/inventory/balances",
+      "/inventory/locations",
+      "/inventory/movements",
+      "/inventory/adjustments",
+      "/inventory/counts",
+      "/inventory/counts/:id",
+      "/inventory/transfers",
+      "/inventory/transfers/:id",
+      "/inventory/reorder-points",
+      "/inventory/valuation"
+    ]
+  },
+  {
+    "module": "shelves",
+    "name": "Shelves",
+    "phase": 4,
+    "routes": [
+      "/shelves",
+      "/shelves/new",
+      "/shelves/:id",
+      "/shelves/layout",
+      "/shelves/replenishments",
+      "/shelves/counts",
+      "/shelves/discrepancies"
+    ]
+  },
+  {
+    "module": "purchasing",
+    "name": "Purchasing",
+    "phase": 4,
+    "routes": [
+      "/suppliers",
+      "/suppliers/:id",
+      "/purchasing/orders",
+      "/purchasing/orders/new",
+      "/purchasing/orders/:id",
+      "/purchasing/receipts",
+      "/purchasing/returns",
+      "/purchasing/suggestions"
+    ]
+  },
+  {
+    "module": "pricing",
+    "name": "Pricing & Promotions",
+    "phase": 5,
+    "routes": [
+      "/pricing",
+      "/pricing/lists",
+      "/promotions",
+      "/promotions/:id",
+      "/discount-approvals"
+    ]
+  },
+  {
+    "module": "customers",
+    "name": "Customers",
+    "phase": 5,
+    "routes": [
+      "/customers",
+      "/customers/:id",
+      "/customers/groups",
+      "/loyalty",
+      "/loyalty/history"
+    ]
+  },
+  {
+    "module": "quality",
+    "name": "Quality & Expiry",
+    "phase": 5,
+    "routes": [
+      "/inventory/batches",
+      "/inventory/expiry",
+      "/inventory/write-offs",
+      "/inventory/recalls"
+    ]
+  },
+  {
+    "module": "ai",
+    "name": "AI Intelligence",
+    "phase": 6,
+    "routes": [
+      "/ai/overview",
+      "/ai/forecast",
+      "/ai/reorder",
+      "/ai/shelf",
+      "/ai/anomalies",
+      "/ai/explanations"
+    ]
+  },
+  {
+    "module": "reports",
+    "name": "Reports",
+    "phase": 6,
+    "routes": [
+      "/reports",
+      "/reports/sales",
+      "/reports/profit",
+      "/reports/inventory",
+      "/reports/shelves",
+      "/reports/employees",
+      "/reports/export"
+    ]
+  },
+  {
+    "module": "employees",
+    "name": "Employees & Permissions",
+    "phase": 1,
+    "routes": [
+      "/employees",
+      "/employees/:id",
+      "/roles",
+      "/approvals",
+      "/audit-logs"
+    ]
+  },
+  {
+    "module": "settings",
+    "name": "Settings",
+    "phase": 1,
+    "routes": [
+      "/settings",
+      "/settings/store",
+      "/settings/branches",
+      "/settings/payments",
+      "/settings/tax",
+      "/settings/receipts",
+      "/settings/hardware",
+      "/settings/notifications",
+      "/settings/integrations",
+      "/settings/backup"
+    ]
+  },
+  {
+    "module": "help",
+    "name": "Help & System",
+    "phase": 0,
+    "routes": ["/help", "/support", "/403", "/404"]
+  }
+]

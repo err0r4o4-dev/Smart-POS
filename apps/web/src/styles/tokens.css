@@ -1,0 +1,53 @@
+:root {
+  --primary: #f4c542;
+  --primary-hover: #e9b52a;
+  --primary-active: #d5a01e;
+  --primary-soft: #fff7db;
+  --primary-subtle: #fffbeb;
+  --primary-strong: #854d0e;
+  --primary-border: #eacb6f;
+  --canvas: #f5f5f7;
+  --surface: #ffffff;
+  --secondary: #f3f6fb;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-strong: #526176;
+  --text-tertiary: #94a3b8;
+  --success: #22c55e;
+  --success-strong: #166534;
+  --warning: #f59e0b;
+  --warning-strong: #92400e;
+  --error: #ef4444;
+  --error-strong: #b91c1c;
+  --info: #3b82f6;
+  --info-strong: #1d4ed8;
+  --border: #e5e8ef;
+  --radius-small: 12px;
+  --radius-control: 14px;
+  --radius-card: 20px;
+  --radius-feature: 24px;
+  --radius-overlay: 28px;
+  --radius-pill: 9999px;
+  --shadow-card: 0 4px 18px rgba(15, 23, 42, 0.05);
+  --shadow-floating: 0 10px 35px rgba(15, 23, 42, 0.08);
+  --font-body:
+    'Inter Variable', 'Noto Sans Thai Variable', system-ui, sans-serif;
+  --font-display: 48px;
+  --font-page: 36px;
+  --font-page-mobile: 28px;
+  --font-section: 24px;
+  --font-card: 18px;
+  --font-text: 16px;
+  --font-caption: 14px;
+  --font-label: 12px;
+}
+
+@theme inline {
+  --color-primary: var(--primary);
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-content: var(--text-primary);
+  --color-muted: var(--text-strong);
+  --font-sans: var(--font-body);
+  --radius-panel: var(--radius-card);
+}

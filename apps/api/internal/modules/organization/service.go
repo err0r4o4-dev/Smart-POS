@@ -74,6 +74,14 @@ type Service struct {
 }
 type auditKey struct{}
 
+func (service *Service) Authorized(ctx context.Context, userID, orgID, permission string) (pgx.Tx, Member, error) {
+	return service.authorized(ctx, userID, orgID, permission)
+}
+
+func RecordAudit(ctx context.Context, tx pgx.Tx, orgID, actor, event, object string) error {
+	return audit(ctx, tx, orgID, actor, event, object, nil)
+}
+
 func WithRequestID(ctx context.Context, requestID string) context.Context {
 	return context.WithValue(ctx, auditKey{}, requestID)
 }

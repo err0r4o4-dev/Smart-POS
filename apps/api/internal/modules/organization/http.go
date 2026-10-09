@@ -68,7 +68,7 @@ func bodyEndpoint[Input any, Output any](status int, run func(context.Context, i
 		respond(writer, request, status, result, err)
 	}
 }
-func (handler Handler) Routes(router chi.Router) {
+func (handler Handler) Routes(router chi.Router, tenantExtensions ...func(chi.Router)) {
 	service := handler.Service
 	router.Group(func(private chi.Router) {
 		private.Use(handler.Authentication.RequireAuth, handler.Authentication.RequireWrite)
@@ -89,6 +89,9 @@ func (handler Handler) Routes(router chi.Router) {
 			return service.Accept(ctx, user, input.Token)
 		}))
 		private.Route("/organizations/{id}", func(tenant chi.Router) {
+			for _, register := range tenantExtensions {
+				register(tenant)
+			}
 			current := endpoint(200, func(ctx context.Context, user identity.Profile, org string, request *http.Request) (any, error) {
 				return service.Context(ctx, user.ID, org)
 			})

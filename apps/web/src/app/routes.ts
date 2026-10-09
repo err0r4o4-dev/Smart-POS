@@ -9,6 +9,7 @@ export const paths = {
   forgotPassword: '/forgot-password',
   resetPassword: '/reset-password',
   account: '/account',
+  products: '/products',
   setup: '/setup',
   store: '/settings/store',
   branches: '/settings/branches',
@@ -27,6 +28,12 @@ export interface NavigationItem {
   roles?: Role[];
 }
 export const navigation: NavigationItem[] = [
+  {
+    to: paths.products,
+    label: 'สินค้า / แค็ตตาล็อก',
+    icon: 'dashboard',
+    permission: 'catalog.read',
+  },
   { to: paths.setup, label: 'ตั้งค่าร้าน / เลือกองค์กร', icon: 'auth' },
   {
     to: paths.store,

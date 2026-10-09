@@ -25,31 +25,55 @@ for (const item of modules) {
     assert.ok(routeDocs.includes('`' + route + '`'), `Missing route ${route}`);
 }
 const api = YAML.parse(readFileSync('packages/contracts/openapi.yaml', 'utf8'));
+const catalogPaths = [
+  '/products',
+  '/products/{productId}',
+  '/products/{productId}/variants',
+  '/products/{productId}/variants/{variantId}',
+  '/products/{productId}/variants/{variantId}/barcodes',
+  '/products/{productId}/variants/{variantId}/barcodes/generate',
+  '/products/{productId}/variants/{variantId}/barcodes/{barcodeId}',
+  '/products/{productId}/labels',
+  '/barcodes/lookup',
+  '/products/import/preview',
+  '/products/import/{jobId}/confirm',
+  '/products/import/{jobId}',
+  '/categories',
+  '/categories/{resourceId}',
+  '/brands',
+  '/brands/{resourceId}',
+  '/units',
+  '/units/{resourceId}',
+].map((path) => '/api/v1/organizations/{id}' + path);
 assert.equal(api.openapi, '3.1.0');
-assert.deepEqual(Object.keys(api.paths).sort(), [
-  '/api/v1/auth/forgot-password',
-  '/api/v1/auth/login',
-  '/api/v1/auth/logout',
-  '/api/v1/auth/me',
-  '/api/v1/auth/register',
-  '/api/v1/auth/reset-password',
-  '/api/v1/invitations/accept',
-  '/api/v1/organizations',
-  '/api/v1/organizations/{id}',
-  '/api/v1/organizations/{id}/audit',
-  '/api/v1/organizations/{id}/branches',
-  '/api/v1/organizations/{id}/branches/{branchId}',
-  '/api/v1/organizations/{id}/context',
-  '/api/v1/organizations/{id}/invitations',
-  '/api/v1/organizations/{id}/invitations/{invitationId}',
-  '/api/v1/organizations/{id}/members',
-  '/api/v1/organizations/{id}/members/{memberId}',
-  '/api/v1/organizations/{id}/permissions',
-  '/api/v1/organizations/{id}/roles',
-  '/api/v1/system',
-  '/health/live',
-  '/health/ready',
-]);
+assert.deepEqual(
+  Object.keys(api.paths).sort(),
+  [
+    ...catalogPaths,
+    '/api/v1/auth/forgot-password',
+    '/api/v1/auth/login',
+    '/api/v1/auth/logout',
+    '/api/v1/auth/me',
+    '/api/v1/auth/register',
+    '/api/v1/auth/reset-password',
+    '/api/v1/invitations/accept',
+    '/api/v1/organizations',
+    '/api/v1/organizations/{id}',
+    '/api/v1/organizations/{id}/audit',
+    '/api/v1/organizations/{id}/branches',
+    '/api/v1/organizations/{id}/branches/{branchId}',
+    '/api/v1/organizations/{id}/context',
+    '/api/v1/organizations/{id}/invitations',
+    '/api/v1/organizations/{id}/invitations/{invitationId}',
+    '/api/v1/organizations/{id}/members',
+    '/api/v1/organizations/{id}/members/{memberId}',
+    '/api/v1/organizations/{id}/permissions',
+    '/api/v1/organizations/{id}/roles',
+    '/api/v1/system',
+    '/health/live',
+    '/health/ready',
+  ].sort(),
+);
 assert.equal(api.components.schemas.Readiness.properties.status.const, 'ready');
 assert.equal(api.components.schemas.Liveness.properties.status.const, 'ok');
 assert.ok(api.paths['/health/ready'].get.responses['503']);
@@ -86,6 +110,57 @@ for (const [path, item] of Object.entries(api.paths)) {
   }
 }
 const compose = YAML.parse(readFileSync('docker-compose.yml', 'utf8'));
+const operationIDs = new Set();
+for (const path of catalogPaths) {
+  for (const method of ['get', 'post', 'patch', 'delete']) {
+    const operation = api.paths[path][method];
+    if (!operation) continue;
+    assert.ok(
+      !operationIDs.has(operation.operationId),
+      'Duplicate operationId',
+    );
+    operationIDs.add(operation.operationId);
+    assert.ok(
+      operation.description.includes('catalog.'),
+      'Missing catalog permission',
+    );
+    assert.ok(operation.responses['401']);
+    assert.ok(operation.responses['403']);
+    assert.ok(operation.responses['404']);
+  }
+}
+function checkReferences(value) {
+  if (!value || typeof value !== 'object') return;
+  if (value.$ref) {
+    assert.ok(
+      value.$ref.startsWith('#/'),
+      'Unexpected external contract reference',
+    );
+    const target = value.$ref
+      .slice(2)
+      .split('/')
+      .reduce((current, key) => current?.[key], api);
+    assert.ok(target, 'Missing reference ' + value.$ref);
+  }
+  for (const child of Object.values(value)) checkReferences(child);
+}
+checkReferences(api);
+assert.equal(
+  api.components.schemas.CatalogVariantInput.properties.cost_price.type,
+  'string',
+);
+assert.equal(
+  api.components.schemas.CatalogBarcodeInput.properties.code.type,
+  'string',
+);
+assert.equal(
+  api.components.schemas.CatalogProductPage.properties.page_size.maximum,
+  100,
+);
+assert.equal(
+  api.components.schemas.CatalogProductCreate.properties.variants.minItems,
+  1,
+);
 for (const service of ['web', 'api', 'ai', 'postgres', 'caddy'])
   assert.ok(compose.services[service].healthcheck);
 assert.ok(

@@ -1,6 +1,6 @@
 # Module specifications
 
-Phase 0 implements platform/presentation, Phase 1A implements identity and Phase 1B implements organization, branch and employee membership management with fixed RBAC. Other business functionality remains planned. API groups/events below are proposals unless explicitly marked implemented; the live source is OpenAPI. Page counts remain the canonical 16-module/106-route inventory. Upstream dependencies are constrained by dependencies.md. See [Phase 1B architecture](organization.md).
+Phase 0 implements platform/presentation, Phase 1A implements identity, Phase 1B implements organization/branch/employee membership management with fixed RBAC and Phase 1C implements product catalog. Other business functionality remains planned. API groups/events below are proposals unless explicitly marked implemented; the live source is OpenAPI. Page counts remain the canonical 16-module/106-route inventory. Upstream dependencies are constrained by dependencies.md. See [Phase 1B architecture](organization.md) and [Phase 1C architecture](catalog.md).
 
 Phase numbers identify the primary delivery phase: POS returns/exchanges and sale refunds extend into Phase 5; settings integrations/backup and the support page extend into Phase 7. Dashboard/help have only the explicitly listed Phase 0 presentations.
 
@@ -67,17 +67,17 @@ Phase numbers identify the primary delivery phase: POS returns/exchanges and sal
 ## Products (9 pages)
 
 - Business purpose: Accurate sellable catalog.
-- Responsibilities: Variants, categories, units, barcode resolution, import validation.
+- Responsibilities: Products/variants, categories/brands/units, barcode resolution, labels and atomic import validation/confirmation.
 - Planned pages: `/products`, `/products/new`, `/products/:id`, `/products/:id/edit`, `/products/import`, `/products/labels`, `/categories`, `/brands`, `/units`.
 - Planned API groups: /products, /categories, /brands, /units.
 - Domain entities: products, product_variants, product_barcodes, categories, brands, units.
 - Dependencies: owning domains/upstream capabilities in [dependency matrix](dependencies.md); authorization through identity and organization for all tenant operations.
-- Permissions: catalog.read, catalog.write, catalog.import.
+- Permissions: catalog.read/create/update/archive/import, catalog.barcode.manage, catalog.labels.print and catalog.category/brand/unit.manage; see the exact permission matrix in [catalog design](catalog.md).
 - Business events: ProductCreated, BarcodeAssigned.
 - Error cases: unknown barcode, duplicate code, invalid unit.
-- Tests: barcode uniqueness, CSV validation, scope, unit conversion.
+- Tests: exact prices, SKU/barcode uniqueness/concurrency, CSV/XLSX validation/bulk/atomicity, scope/RLS, unit metadata, print rendering and nine responsive pages.
 - Implementation phase: 1.
-- Current status: documented/planned; no implementation.
+- Current status: Phase 1C.1–1C.4 implemented and locally verified. All nine pages work; image upload/hardware printing and inventory remain explicit boundaries.
 
 ## Inventory (11 pages)
 

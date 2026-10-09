@@ -15,16 +15,19 @@ var ErrConflict = errors.New("operation conflicts with current state")
 var uuidPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 var codePattern = regexp.MustCompile(`^[A-Z0-9][A-Z0-9_-]{0,49}$`)
 var Roles = []string{"OWNER", "MANAGER", "CASHIER", "INVENTORY_STAFF", "PURCHASING_STAFF"}
-var PermissionNames = []string{"organization.read", "organization.update", "branch.read", "branch.create", "branch.update", "branch.deactivate", "employee.read", "employee.invite", "employee.update", "employee.remove", "role.read", "role.assign", "audit.read"}
+var CatalogPermissions = []string{"catalog.read", "catalog.create", "catalog.update", "catalog.archive", "catalog.import", "catalog.barcode.manage", "catalog.labels.print", "catalog.category.manage", "catalog.brand.manage", "catalog.unit.manage"}
+var PermissionNames = append([]string{"organization.read", "organization.update", "branch.read", "branch.create", "branch.update", "branch.deactivate", "employee.read", "employee.invite", "employee.update", "employee.remove", "role.read", "role.assign", "audit.read"}, CatalogPermissions...)
 
 func Permissions(role string) []string {
 	switch role {
 	case "OWNER":
 		return append([]string{}, PermissionNames...)
 	case "MANAGER":
-		return []string{"organization.read", "branch.read", "branch.update", "employee.read", "employee.invite", "employee.update", "employee.remove", "role.read", "role.assign", "audit.read"}
-	case "CASHIER", "INVENTORY_STAFF", "PURCHASING_STAFF":
-		return []string{"organization.read", "branch.read"}
+		return append([]string{"organization.read", "branch.read", "branch.update", "employee.read", "employee.invite", "employee.update", "employee.remove", "role.read", "role.assign", "audit.read"}, CatalogPermissions...)
+	case "INVENTORY_STAFF":
+		return []string{"organization.read", "branch.read", "catalog.read", "catalog.create", "catalog.update", "catalog.import", "catalog.barcode.manage", "catalog.labels.print"}
+	case "CASHIER", "PURCHASING_STAFF":
+		return []string{"organization.read", "branch.read", "catalog.read"}
 	default:
 		return []string{}
 	}

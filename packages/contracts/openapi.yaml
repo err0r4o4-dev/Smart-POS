@@ -1,11 +1,1896 @@
 openapi: 3.1.0
 info:
-  title: SmartPOS Foundation, Identity and Organization API
+  title: SmartPOS Foundation, Identity, Organization and Catalog API
   version: 1.0.0
   description: Phase 0 foundation, Phase 1A sessions and Phase 1B organization/branch/membership authorization. POS and inventory remain unavailable. All tenant writes require allowed Origin and X-CSRF-Token. UUID path IDs are untrusted; inactive/nonmember tenants return 404, insufficient permissions 403, ownership/uniqueness conflicts 409. PATCH accepts complete editable fields rather than a sparse patch.
 servers:
   - url: /
 paths:
+  /api/v1/organizations/{id}/categories:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: listCatalogcategories
+      security:
+        - sessionCookie: []
+      description: Requires catalog.read. Exclude ARCHIVED by default; bounded pagination.
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 200
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - ACTIVE
+              - INACTIVE
+              - ARCHIVED
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100000
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum:
+              - name
+              - -name
+              - updated
+              - -updated
+            default: name
+      responses:
+        '200':
+          description: Catalog result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogCategoryPage'
+        '400':
+          description: Invalid input or upload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, Origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Scoped resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate, reference, stale revision or preview conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      operationId: createCatalogCategory
+      security:
+        - sessionCookie: []
+      description: 'Requires catalog.category.manage. '
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogCategoryInput'
+      responses:
+        '201':
+          description: Catalog result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogCategory'
+        '400':
+          description: Invalid input or upload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, Origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Scoped resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate, reference, stale revision or preview conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          description: JSON required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/categories/{resourceId}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - name: resourceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      operationId: updateCatalogCategory
+      security:
+        - sessionCookie: []
+      description:
+        Requires catalog.category.manage. Complete fields/current revision; referenced taxonomy
+        cannot archive; category cycles rejected; unit structure immutable after use.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogCategoryInput'
+      responses:
+        '200':
+          description: Catalog result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogCategory'
+        '400':
+          description: Invalid input or upload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, Origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Scoped resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate, reference, stale revision or preview conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          description: JSON required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/brands:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: listCatalogbrands
+      security:
+        - sessionCookie: []
+      description: Requires catalog.read. Exclude ARCHIVED by default; bounded pagination.
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 200
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - ACTIVE
+              - INACTIVE
+              - ARCHIVED
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100000
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum:
+              - name
+              - -name
+              - updated
+              - -updated
+            default: name
+      responses:
+        '200':
+          description: Catalog result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogBrandPage'
+        '400':
+          description: Invalid input or upload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, Origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Scoped resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate, reference, stale revision or preview conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      operationId: createCatalogBrand
+      security:
+        - sessionCookie: []
+      description: 'Requires catalog.brand.manage. '
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogBrandInput'
+      responses:
+        '201':
+          description: Catalog result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogBrand'
+        '400':
+          description: Invalid input or upload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, Origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Scoped resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate, reference, stale revision or preview conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          description: JSON required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/brands/{resourceId}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - name: resourceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      operationId: updateCatalogBrand
+      security:
+        - sessionCookie: []
+      description:
+        Requires catalog.brand.manage. Complete fields/current revision; referenced taxonomy
+        cannot archive; category cycles rejected; unit structure immutable after use.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogBrandInput'
+      responses:
+        '200':
+          description: Catalog result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogBrand'
+        '400':
+          description: Invalid input or upload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, Origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Scoped resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate, reference, stale revision or preview conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          description: JSON required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/units:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: listCatalogunits
+      security:
+        - sessionCookie: []
+      description: Requires catalog.read. Exclude ARCHIVED by default; bounded pagination.
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 200
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - ACTIVE
+              - INACTIVE
+              - ARCHIVED
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100000
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum:
+              - name
+              - -name
+              - updated
+              - -updated
+            default: name
+      responses:
+        '200':
+          description: Catalog result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogUnitPage'
+        '400':
+          description: Invalid input or upload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, Origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Scoped resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate, reference, stale revision or preview conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      operationId: createCatalogUnit
+      security:
+        - sessionCookie: []
+      description: 'Requires catalog.unit.manage. '
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogUnitInput'
+      responses:
+        '201':
+          description: Catalog result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogUnit'
+        '400':
+          description: Invalid input or upload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, Origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Scoped resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate, reference, stale revision or preview conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          description: JSON required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/units/{resourceId}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - name: resourceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      operationId: updateCatalogUnit
+      security:
+        - sessionCookie: []
+      description:
+        Requires catalog.unit.manage. Complete fields/current revision; referenced taxonomy
+        cannot archive; category cycles rejected; unit structure immutable after use.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogUnitInput'
+      responses:
+        '200':
+          description: Catalog result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogUnit'
+        '400':
+          description: Invalid input or upload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, Origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Scoped resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate, reference, stale revision or preview conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          description: JSON required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/products:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: listCatalogProducts
+      security:
+        - sessionCookie: []
+      description:
+        Requires catalog.read. Search name/SKU/barcode; ARCHIVED excluded unless requested;
+        stable UUID secondary sort.
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 200
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - ACTIVE
+              - INACTIVE
+              - ARCHIVED
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100000
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum:
+              - name
+              - -name
+              - updated
+              - -updated
+            default: name
+        - name: category_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: brand_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Catalog result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogProductPage'
+        '400':
+          description: Invalid input or upload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, Origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Scoped resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate, reference, stale revision or preview conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      operationId: createCatalogProduct
+      security:
+        - sessionCookie: []
+      description:
+        Requires catalog.create. Atomic product plus 1-100 variants; ACTIVE parent requires
+        active variant; no stock; duplicate names allowed.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogProductCreate'
+      responses:
+        '201':
+          description: Catalog result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogProduct'
+        '400':
+          description: Invalid input or upload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, Origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Scoped resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate, reference, stale revision or preview conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          description: JSON required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/products/{productId}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getCatalogProduct
+      security:
+        - sessionCookie: []
+      description: 'Requires catalog.read. '
+      parameters: []
+      responses:
+        '200':
+          description: Catalog result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogProduct'
+        '400':
+          description: Invalid input or upload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, Origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Scoped resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate, reference, stale revision or preview conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      operationId: updateCatalogProduct
+      security:
+        - sessionCookie: []
+      description:
+        Requires catalog.update. Complete fields/current revision; archive/restore also
+        requires catalog.archive; history retained.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogProductInput'
+      responses:
+        '200':
+          description: Catalog result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogProduct'
+        '400':
+          description: Invalid input or upload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, Origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Scoped resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate, reference, stale revision or preview conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          description: JSON required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/products/{productId}/variants:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: listCatalogVariants
+      security:
+        - sessionCookie: []
+      description: Requires catalog.read. At most 100 variants per product.
+      parameters: []
+      responses:
+        '200':
+          description: Catalog result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CatalogVariant'
+        '400':
+          description: Invalid input or upload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, Origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Scoped resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate, reference, stale revision or preview conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      operationId: createCatalogVariant
+      security:
+        - sessionCookie: []
+      description: 'Requires catalog.create. '
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogVariantInput'
+      responses:
+        '201':
+          description: Catalog result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogVariant'
+        '400':
+          description: Invalid input or upload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, Origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Scoped resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate, reference, stale revision or preview conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          description: JSON required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/products/{productId}/variants/{variantId}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: variantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      operationId: updateCatalogVariant
+      security:
+        - sessionCookie: []
+      description:
+        Requires catalog.update. Current revision/unchanged SKU; SKU forever reserved;
+        archive/restore requires catalog.archive; cannot disable last active variant of active parent.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogVariantInput'
+      responses:
+        '200':
+          description: Catalog result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogVariant'
+        '400':
+          description: Invalid input or upload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, Origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Scoped resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate, reference, stale revision or preview conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          description: JSON required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/products/{productId}/variants/{variantId}/barcodes:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: variantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: registerCatalogBarcode
+      security:
+        - sessionCookie: []
+      description:
+        Requires catalog.barcode.manage. Tenant-unique variant barcode; checksum EAN/UPC or
+        printable ASCII Code128; max 20 aliases; first primary; primary switch atomic.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogBarcodeInput'
+      responses:
+        '201':
+          description: Catalog result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogBarcode'
+        '400':
+          description: Invalid input or upload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, Origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Scoped resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate, reference, stale revision or preview conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          description: JSON required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/products/{productId}/variants/{variantId}/barcodes/generate:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: variantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: generateCatalogBarcode
+      security:
+        - sessionCookie: []
+      description: Requires catalog.barcode.manage. Random 128-bit SP- identifier, Code128; not GS1 GTIN.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - is_primary
+              properties:
+                is_primary:
+                  type: boolean
+      responses:
+        '201':
+          description: Catalog result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogBarcode'
+        '400':
+          description: Invalid input or upload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, Origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Scoped resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate, reference, stale revision or preview conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          description: JSON required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/products/{productId}/variants/{variantId}/barcodes/{barcodeId}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: variantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: barcodeId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      operationId: removeCatalogBarcode
+      security:
+        - sessionCookie: []
+      description: Requires catalog.barcode.manage. Deletes mapping only; promotes remaining alias.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      responses:
+        '200':
+          description: Catalog result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    additionalProperties: false
+                    required:
+                      - removed
+                    properties:
+                      removed:
+                        type: boolean
+        '400':
+          description: Invalid input or upload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, Origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Scoped resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate, reference, stale revision or preview conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          description: JSON required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/barcodes/lookup:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: lookupCatalogBarcode
+      security:
+        - sessionCookie: []
+      description:
+        Requires catalog.read. Trim scanner CR/LF suffix; unknown 404; no fabricated product
+        data; inactive/archived saleable=false, not stock availability.
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 82
+      responses:
+        '200':
+          description: Catalog result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogLookup'
+        '400':
+          description: Invalid input or upload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, Origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Scoped resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate, reference, stale revision or preview conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/products/{productId}/labels:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getCatalogLabels
+      security:
+        - sessionCookie: []
+      description: Requires catalog.labels.print. Browser SVG/print label source; no direct thermal commands.
+      parameters: []
+      responses:
+        '200':
+          description: Catalog result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogProduct'
+        '400':
+          description: Invalid input or upload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, Origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Scoped resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate, reference, stale revision or preview conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/products/import/preview:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    post:
+      operationId: previewCatalogImport
+      security:
+        - sessionCookie: []
+      description:
+        Requires catalog.import. 5 MiB/2000 rows; UTF8 CSV or one-sheet XLSX; ZIP max20 MiB/100
+        entries; no formulas/extraction; ACTIVE taxonomy required; creator-only job; 1-hour expiry;
+        max30 previews/user/tenant/hour.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      responses:
+        '201':
+          description: Catalog result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogImportJob'
+        '400':
+          description: Invalid input or upload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, Origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Scoped resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate, reference, stale revision or preview conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                mapping:
+                  type: string
+                  description: 'JSON object canonical field -> header:
+                    product_name,sku,barcode,symbology,category,brand,unit,cost_price,selling_price.
+                    Default matching headers.'
+  /api/v1/organizations/{id}/products/import/{jobId}/confirm:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - name: jobId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: confirmCatalogImport
+      security:
+        - sessionCookie: []
+      description:
+        Requires catalog.import. Atomic revalidation by tenant SKU; barcode conflict rejects;
+        CREATE refuses existing; SKIP skips existing; UPDATE changes name/unit/prices/nonempty
+        taxonomy, preserves description/status/attributes. Same job/mode retry returns result;
+        different mode/expiry/stale/invalid ->409/no writes.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - mode
+              properties:
+                mode:
+                  type: string
+                  enum:
+                    - CREATE
+                    - SKIP
+                    - UPDATE
+      responses:
+        '200':
+          description: Catalog result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogImportJob'
+        '400':
+          description: Invalid input or upload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, Origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Scoped resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate, reference, stale revision or preview conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          description: JSON required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/products/import/{jobId}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - name: jobId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getCatalogImportJob
+      security:
+        - sessionCookie: []
+      description: Requires catalog.import. Creator-only preview/result.
+      parameters: []
+      responses:
+        '200':
+          description: Catalog result
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogImportJob'
+        '400':
+          description: Invalid input or upload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, Origin or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Scoped resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Duplicate, reference, stale revision or preview conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/organizations/{id}/members:
     parameters: [{ $ref: '#/components/parameters/OrganizationID' }]
     get:
@@ -783,6 +2668,810 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
   schemas:
+    CatalogProductInput:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - description
+        - category_id
+        - brand_id
+        - status
+        - revision
+      properties:
+        name:
+          type: string
+          maxLength: 200
+          minLength: 1
+        description:
+          type: string
+          maxLength: 2000
+        category_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        brand_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+            - ARCHIVED
+        revision:
+          type: integer
+          minimum: 0
+    CatalogProductCreate:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - description
+        - category_id
+        - brand_id
+        - status
+        - revision
+        - variants
+      properties:
+        name:
+          type: string
+          maxLength: 200
+          minLength: 1
+        description:
+          type: string
+          maxLength: 2000
+        category_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        brand_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+            - ARCHIVED
+        revision:
+          type: integer
+          minimum: 0
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogVariantInput'
+          minItems: 1
+          maxItems: 100
+    CatalogVariantInput:
+      type: object
+      additionalProperties: false
+      required:
+        - sku
+        - name
+        - attributes
+        - unit_id
+        - cost_price
+        - selling_price
+        - status
+        - revision
+      properties:
+        sku:
+          type: string
+          maxLength: 80
+          pattern: ^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$
+        name:
+          type: string
+          maxLength: 200
+          minLength: 1
+        attributes:
+          type: object
+          maxProperties: 12
+          propertyNames:
+            type: string
+            minLength: 1
+            maxLength: 40
+          additionalProperties:
+            type: string
+            minLength: 1
+            maxLength: 200
+        unit_id:
+          type: string
+          format: uuid
+        cost_price:
+          type: string
+          pattern: ^(0|[1-9][0-9]{0,15})(\.[0-9]{1,2})?$
+          description: Exact decimal string; cost >= 0, selling > 0.
+        selling_price:
+          type: string
+          pattern: ^(0|[1-9][0-9]{0,15})(\.[0-9]{1,2})?$
+          description: Exact decimal string; cost >= 0, selling > 0.
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+            - ARCHIVED
+        revision:
+          type: integer
+          minimum: 0
+    CatalogCategoryInput:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - description
+        - status
+        - revision
+        - parent_id
+      properties:
+        name:
+          type: string
+          maxLength: 200
+          minLength: 1
+        description:
+          type: string
+          maxLength: 2000
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+            - ARCHIVED
+        revision:
+          type: integer
+          minimum: 0
+        parent_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+    CatalogBrandInput:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - description
+        - status
+        - revision
+      properties:
+        name:
+          type: string
+          maxLength: 200
+          minLength: 1
+        description:
+          type: string
+          maxLength: 2000
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+            - ARCHIVED
+        revision:
+          type: integer
+          minimum: 0
+    CatalogUnitInput:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - description
+        - status
+        - revision
+        - code
+        - unit_type
+        - base_unit_id
+        - conversion_factor
+      properties:
+        name:
+          type: string
+          maxLength: 200
+          minLength: 1
+        description:
+          type: string
+          maxLength: 2000
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+            - ARCHIVED
+        revision:
+          type: integer
+          minimum: 0
+        code:
+          type: string
+          pattern: ^[A-Za-z0-9][A-Za-z0-9_-]{0,49}$
+        unit_type:
+          type: string
+          enum:
+            - COUNT
+            - WEIGHT
+            - VOLUME
+            - PACKAGING
+        base_unit_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        conversion_factor:
+          type: string
+          pattern: ^(0|[1-9][0-9]{0,11})(\.[0-9]{1,6})?$
+    CatalogBarcodeInput:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - symbology
+        - source
+        - is_primary
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 80
+        symbology:
+          type: string
+          enum:
+            - EAN13
+            - EAN8
+            - UPCA
+            - CODE128
+        source:
+          type: string
+          enum:
+            - MANUFACTURER
+            - ALIAS
+        is_primary:
+          type: boolean
+    CatalogBarcode:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - variant_id
+        - code
+        - symbology
+        - source
+        - is_primary
+      properties:
+        id:
+          type: string
+          format: uuid
+        variant_id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          minLength: 1
+          maxLength: 80
+        symbology:
+          type: string
+          enum:
+            - EAN13
+            - EAN8
+            - UPCA
+            - CODE128
+        source:
+          type: string
+          enum:
+            - MANUFACTURER
+            - INTERNAL
+            - ALIAS
+        is_primary:
+          type: boolean
+    CatalogVariant:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - organization_id
+        - product_id
+        - sku
+        - name
+        - attributes
+        - unit_id
+        - cost_price
+        - selling_price
+        - status
+        - revision
+        - currency
+        - barcodes
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+          format: uuid
+        sku:
+          type: string
+          maxLength: 80
+          pattern: ^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$
+        name:
+          type: string
+          maxLength: 200
+          minLength: 1
+        attributes:
+          type: object
+          maxProperties: 12
+          propertyNames:
+            type: string
+            minLength: 1
+            maxLength: 40
+          additionalProperties:
+            type: string
+            minLength: 1
+            maxLength: 200
+        unit_id:
+          type: string
+          format: uuid
+        cost_price:
+          type: string
+          pattern: ^(0|[1-9][0-9]{0,15})(\.[0-9]{1,2})?$
+          description: Exact decimal string; cost >= 0, selling > 0.
+        selling_price:
+          type: string
+          pattern: ^(0|[1-9][0-9]{0,15})(\.[0-9]{1,2})?$
+          description: Exact decimal string; cost >= 0, selling > 0.
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+            - ARCHIVED
+        revision:
+          type: integer
+          minimum: 0
+        currency:
+          type: string
+          pattern: ^[A-Z]{3}$
+        barcodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogBarcode'
+    CatalogProduct:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - organization_id
+        - name
+        - description
+        - category_id
+        - brand_id
+        - status
+        - revision
+        - category_name
+        - brand_name
+        - created_by
+        - updated_by
+        - created_at
+        - updated_at
+        - variants
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 200
+          minLength: 1
+        description:
+          type: string
+          maxLength: 2000
+        category_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        brand_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+            - ARCHIVED
+        revision:
+          type: integer
+          minimum: 0
+        category_name:
+          type: string
+          maxLength: 200
+        brand_name:
+          type: string
+          maxLength: 200
+        created_by:
+          type: string
+          format: uuid
+        updated_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogVariant'
+    CatalogLookup:
+      type: object
+      additionalProperties: false
+      required:
+        - product
+        - variant_id
+        - saleable
+      properties:
+        product:
+          $ref: '#/components/schemas/CatalogProduct'
+        variant_id:
+          type: string
+          format: uuid
+        saleable:
+          type: boolean
+    CatalogImportRow:
+      type: object
+      additionalProperties: false
+      required:
+        - line
+        - product_name
+        - sku
+        - barcode
+        - symbology
+        - category
+        - brand
+        - unit
+        - cost_price
+        - selling_price
+        - errors
+        - existing_id
+        - variant_revision
+        - product_revision
+      properties:
+        line:
+          type: integer
+          minimum: 2
+        product_name:
+          type: string
+          maxLength: 200
+        sku:
+          type: string
+          maxLength: 200
+        barcode:
+          type: string
+          maxLength: 200
+        symbology:
+          type: string
+        category:
+          type: string
+          maxLength: 200
+        brand:
+          type: string
+          maxLength: 200
+        unit:
+          type: string
+          maxLength: 200
+        cost_price:
+          type: string
+        selling_price:
+          type: string
+        errors:
+          type: array
+          items:
+            type: string
+        existing_id:
+          type: string
+        variant_revision:
+          type: integer
+          minimum: 0
+        product_revision:
+          type: integer
+          minimum: 0
+    CatalogImportResult:
+      type: object
+      additionalProperties: false
+      required:
+        - total
+        - imported
+        - updated
+        - skipped
+        - failed
+      properties:
+        total:
+          type: integer
+        imported:
+          type: integer
+        updated:
+          type: integer
+        skipped:
+          type: integer
+        failed:
+          type: integer
+    CatalogCategory:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - organization_id
+        - name
+        - description
+        - status
+        - revision
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 200
+          minLength: 1
+        description:
+          type: string
+          maxLength: 2000
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+            - ARCHIVED
+        revision:
+          type: integer
+          minimum: 0
+        parent_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+    CatalogBrand:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - organization_id
+        - name
+        - description
+        - status
+        - revision
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 200
+          minLength: 1
+        description:
+          type: string
+          maxLength: 2000
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+            - ARCHIVED
+        revision:
+          type: integer
+          minimum: 0
+    CatalogUnit:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - organization_id
+        - name
+        - description
+        - status
+        - revision
+        - code
+        - unit_type
+        - conversion_factor
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 200
+          minLength: 1
+        description:
+          type: string
+          maxLength: 2000
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+            - ARCHIVED
+        revision:
+          type: integer
+          minimum: 0
+        code:
+          type: string
+          pattern: ^[A-Za-z0-9][A-Za-z0-9_-]{0,49}$
+        unit_type:
+          type: string
+          enum:
+            - COUNT
+            - WEIGHT
+            - VOLUME
+            - PACKAGING
+        base_unit_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        conversion_factor:
+          type: string
+          pattern: ^(0|[1-9][0-9]{0,11})(\.[0-9]{1,6})?$
+    CatalogProductPage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - total
+        - page
+        - page_size
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogProduct'
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+    CatalogCategoryPage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - total
+        - page
+        - page_size
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogCategory'
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+    CatalogBrandPage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - total
+        - page
+        - page_size
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogBrand'
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+    CatalogUnitPage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - total
+        - page
+        - page_size
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogUnit'
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+    CatalogImportJob:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - status
+        - headers
+        - rows
+        - total
+        - valid
+        - invalid
+        - duplicates
+        - new_products
+        - existing_products
+        - result
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+            - PREVIEW
+            - COMPLETED
+        headers:
+          type: array
+          items:
+            type: string
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogImportRow'
+        total:
+          type: integer
+        valid:
+          type: integer
+        invalid:
+          type: integer
+        duplicates:
+          type: integer
+        new_products:
+          type: integer
+        existing_products:
+          type: integer
+        result:
+          anyOf:
+            - $ref: '#/components/schemas/CatalogImportResult'
+            - type: 'null'
     Role:
       {
         type: string,

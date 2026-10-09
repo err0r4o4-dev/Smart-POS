@@ -79,6 +79,9 @@ test('no fake authentication or unfinished business pages', async ({
     page.getByRole('button', { name: 'Sign in unavailable' }),
   ).toBeDisabled();
   await page.goto('/products');
+  await expect(page).toHaveURL(/\/login\?returnTo=%2Fproducts/);
+  await expect(page.getByLabel('Email address')).toBeEnabled();
+  await page.goto('/inventory');
   await expect(
     page.getByRole('heading', { name: 'Nothing on this shelf.' }),
   ).toBeVisible();

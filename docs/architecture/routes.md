@@ -4,6 +4,8 @@ Canonical source: packages/contracts/routes.json. Exactly 16 modules and 106 pla
 
 Implemented identity routes are Phase 1A; organization/branch/member routes below are Phase 1B. These statuses supersede older planned labels without adding routes. Tenant routes require an authenticated session, active organization membership and the listed permission; Owner/Manager branch scope is enforced again by the API. `/setup` also supports memory-only email invitation acceptance after sign-in. See [organization architecture](organization.md).
 
+The nine Products routes are implemented Phase 1C. Catalog records are organization-scoped and shared across branches, not branch-owned. The backend rechecks active organization membership and catalog permissions; the existing Manager policy denies catalog access when no assigned active branch remains. Operational staff access follows active organization membership and fixed catalog permissions, not a separate all-role active-branch gate. Mutation-specific permissions are enforced separately from read access. See [catalog architecture](catalog.md).
+
 | Module | Route | Status | Phase | Access target |
 | --- | --- | --- | --- | --- |
 | Authentication | `/login` | Implemented Phase 1A | 1 | public Origin-validated entry |
@@ -31,15 +33,15 @@ Implemented identity routes are Phase 1A; organization/branch/member routes belo
 | Sales | `/sales/voids` | Planned (not registered) | 3 | session + tenant + branch permission |
 | Sales | `/receipts` | Planned (not registered) | 3 | session + tenant + branch permission |
 | Sales | `/sales/tax-documents` | Planned (not registered) | 3 | session + tenant + branch permission |
-| Products | `/products` | Planned (not registered) | 1 | session + tenant + branch permission |
-| Products | `/products/new` | Planned (not registered) | 1 | session + tenant + branch permission |
-| Products | `/products/:id` | Planned (not registered) | 1 | session + tenant + branch permission |
-| Products | `/products/:id/edit` | Planned (not registered) | 1 | session + tenant + branch permission |
-| Products | `/products/import` | Planned (not registered) | 1 | session + tenant + branch permission |
-| Products | `/products/labels` | Planned (not registered) | 1 | session + tenant + branch permission |
-| Products | `/categories` | Planned (not registered) | 1 | session + tenant + branch permission |
-| Products | `/brands` | Planned (not registered) | 1 | session + tenant + branch permission |
-| Products | `/units` | Planned (not registered) | 1 | session + tenant + branch permission |
+| Products | `/products` | Implemented Phase 1C | 1 | session + tenant + catalog.read |
+| Products | `/products/new` | Implemented Phase 1C | 1 | session + tenant + catalog.create |
+| Products | `/products/:id` | Implemented Phase 1C | 1 | session + tenant + catalog.read |
+| Products | `/products/:id/edit` | Implemented Phase 1C | 1 | session + tenant + catalog.update; archive separately gated |
+| Products | `/products/import` | Implemented Phase 1C | 1 | session + tenant + catalog.import |
+| Products | `/products/labels` | Implemented Phase 1C | 1 | session + tenant + catalog.labels.print |
+| Products | `/categories` | Implemented Phase 1C | 1 | catalog.read; changes require catalog.category.manage |
+| Products | `/brands` | Implemented Phase 1C | 1 | catalog.read; changes require catalog.brand.manage |
+| Products | `/units` | Implemented Phase 1C | 1 | catalog.read; changes require catalog.unit.manage |
 | Inventory | `/inventory` | Planned (not registered) | 2 | session + tenant + branch permission |
 | Inventory | `/inventory/balances` | Planned (not registered) | 2 | session + tenant + branch permission |
 | Inventory | `/inventory/locations` | Planned (not registered) | 2 | session + tenant + branch permission |

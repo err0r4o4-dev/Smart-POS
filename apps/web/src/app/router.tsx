@@ -9,6 +9,14 @@ import { paths } from './routes';
 import { RequireSession } from './ProtectedRoute';
 import { OrganizationGate } from '../features/organization/OrganizationGate';
 import {
+  ProductsPage,
+  ProductDetailsPage,
+  ProductEditorPage,
+} from '../features/catalog/ProductPages';
+import { TaxonomyPage } from '../features/catalog/TaxonomyPage';
+import { ImportPage } from '../features/catalog/ImportPage';
+import { LabelsPage } from '../features/catalog/LabelsPage';
+import {
   SetupPage,
   StorePage,
   BranchesPage,
@@ -36,6 +44,48 @@ export const router = createBrowserRouter([
         element: <RequireSession />,
         children: [
           { path: paths.account, element: <AccountPage /> },
+          {
+            element: <OrganizationGate permission="catalog.read" />,
+            children: [
+              { path: '/products', element: <ProductsPage /> },
+              { path: '/products/:id', element: <ProductDetailsPage /> },
+              {
+                path: '/categories',
+                element: <TaxonomyPage key="categories" kind="categories" />,
+              },
+              {
+                path: '/brands',
+                element: <TaxonomyPage key="brands" kind="brands" />,
+              },
+              {
+                path: '/units',
+                element: <TaxonomyPage key="units" kind="units" />,
+              },
+            ],
+          },
+          {
+            element: <OrganizationGate permission="catalog.create" />,
+            children: [
+              { path: '/products/new', element: <ProductEditorPage /> },
+            ],
+          },
+          {
+            element: <OrganizationGate permission="catalog.update" />,
+            children: [
+              {
+                path: '/products/:id/edit',
+                element: <ProductEditorPage edit />,
+              },
+            ],
+          },
+          {
+            element: <OrganizationGate permission="catalog.import" />,
+            children: [{ path: '/products/import', element: <ImportPage /> }],
+          },
+          {
+            element: <OrganizationGate permission="catalog.labels.print" />,
+            children: [{ path: '/products/labels', element: <LabelsPage /> }],
+          },
           {
             element: <OrganizationGate />,
             children: [

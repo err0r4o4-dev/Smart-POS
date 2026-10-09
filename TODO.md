@@ -1,6 +1,19 @@
-# SmartPOS — Phase 1A / Phase 1B checklist
+# SmartPOS — Phase 1A / Phase 1B / Phase 1C checklist
 
-Status: **Phase 1A and Phase 1B COMPLETED for the local acceptance gates** (2026-10-09), not production readiness. Phase 1C has not started. See the dated entries in `docs/development/verification.md` for executed evidence, earlier failures and operational limitations. The Phase 1A checklist below preserves its original 16-unit/13-browser-test historical counts; the current suite has 22 unit tests and 14 browser tests.
+Status: **Phase 1A, Phase 1B and Phase 1C COMPLETED for the local acceptance gates** (2026-10-09), not production readiness. Phase 2 is NOT STARTED. See `docs/development/verification.md` for executed evidence, failures resolved and operational limitations. Earlier Phase 1A/1B checklist statements are historical checkpoints; the current suite has 51 frontend tests and 15 browser tests.
+
+## Phase 1C implementation and acceptance
+
+- [x] Phase 1C.1: organization-scoped products/categories/brands/units, search/filter/sort/pagination, archive/restore, audit and nine real routes.
+- [x] Phase 1C.2: required default or explicit saleable variants, permanent organization-unique normalized SKU, exact NUMERIC prices, validated attributes and packaging metadata.
+- [x] Phase 1C.3: EAN-13/EAN-8/UPC-A/Code 128 validation, leading-zero strings, aliases, primary barcode, collision-safe internal identifiers, scanner lookup and browser-print labels.
+- [x] Phase 1C.4: bounded CSV/XLSX parsing, mapping, row errors, duplicate CREATE/SKIP/UPDATE, creator-private expiring previews, revision revalidation and atomic/idempotent confirmation.
+- [x] Additive migration 4, composite tenant FKs, catalog FORCE RLS and non-owner runtime grants verified in isolated test data; migration up rerun reports no change.
+- [x] Go format/vet/race/build, TypeScript, lint (three existing warnings), 51 frontend tests, contracts and production frontend builds passed.
+- [x] 116 real catalog API assertions include a 100-row bulk import, concurrent barcode/SKU/confirm tests, atomic rollback, RBAC/tenant denial and stale preview rejection.
+- [x] All 15 Playwright tests passed; nine catalog pages at seven widths, loaded mobile/desktop screenshots and print layout inspected. Auth/organization API regression also passed.
+- [x] Documentation updated without deleting earlier verification history; no commit/push/deployment, original-volume migration, destructive data operation or Phase 2 functionality.
+- [ ] Separate production/hardware gates: image storage, real scanner/printer trials, load testing, durable import retention/cleanup, TLS/secrets and least-privilege production LOGIN identity.
 
 ## Phase 1B implementation and acceptance
 

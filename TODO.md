@@ -1,6 +1,19 @@
-# SmartPOS — Phase 1 / Phase 2 checklist
+# SmartPOS — Phase 1 / Phase 2 / Phase 3 checklist
 
-Status: **Phase 0, Phase 1A, Phase 1B, Phase 1C and Phase 2.1–2.6 COMPLETED for the local acceptance gates** (2026-10-09), not production readiness. Phase 3+ is NOT STARTED. See `docs/development/verification.md` for evidence, resolved failures and operational limitations. Earlier checklists are historical checkpoints; the current suite has 58 frontend tests, 135 inventory API assertions and 16 browser tests.
+Status: **Phase 0, Phase 1A, Phase 1B, Phase 1C, Phase 2.1–2.6 and Phase 3.1–3.7 COMPLETED for the local acceptance gates** (2026-10-10), not production readiness. Phase 4+ is NOT STARTED. See `docs/development/phase3-verification.md` and `docs/development/verification.md` for evidence, resolved failures and operational limitations. Earlier checklists below are historical checkpoints; the current suite has 64 frontend tests, 197 POS API assertions and 17 browser tests, with 116 catalog and 135 inventory regression assertions retained.
+
+## Phase 3 implementation and acceptance
+
+- [x] Phase 3.1: real scoped terminal, one explicit stock source, search/category/barcode lookup and cart entry.
+- [x] Phase 3.2: persistent cashier-owned carts, exact quantities, optimistic revisions, hold/resume and current-price acknowledgement; no reservation.
+- [x] Phase 3.3: exact CASH/QR_MANUAL/BANK_TRANSFER_MANUAL quotes and explicit durable funds acknowledgement; no invented gateway confirmation.
+- [x] Phase 3.4: atomic sale/items/payment/receipt/SALE ledger/balance/cash/audit; idempotent retries and durable reconciliation after posting failure.
+- [x] Phase 3.5: immutable sale/receipt snapshots, scoped history/details, 58/80 mm browser printing and safe reprint/failure.
+- [x] Phase 3.6: one open terminal/cashier shift, counted opening/closing cash, net cash reconciliation, pending-payment close gate and history.
+- [x] Phase 3.7: RBAC/tenant/branch/CSRF/RLS/grants/immutability, oversell/transfer/count/shift races, 197 real POS assertions, 64 frontend tests, Go race/vet/build, contracts and 17 browser regressions.
+- [x] Migration 6 and clean readiness verified only in isolated test/scratch databases; historical migrations and original persistent volumes unchanged.
+- [x] Architecture, checkout, database, security and detailed Thai verification documentation updated; no commit/push/deployment or Phase 4 implementation.
+- [ ] Production gates: approved backups/restore/migration, distinct runtime LOGIN, TLS/secrets/SMTP, hardware/load/accessibility trials and data retention.
 
 ## Phase 2 implementation and acceptance
 

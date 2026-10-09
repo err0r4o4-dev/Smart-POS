@@ -1,5 +1,13 @@
 # Verification
 
+## Phase 3 finalization (2026-10-10 Asia/Bangkok)
+
+**Phase 3.1–3.7 and Phase 3 overall: COMPLETED (Local).** Work began with the October 9 execution context and continued past midnight locally. Phase 0/1A/1B/1C/2 remain COMPLETED (Local); Phase 4 is NOT STARTED. This is not production readiness.
+
+The [detailed Thai report](phase3-verification.md) records architecture, changed files, scoped security review, actual commands, resolved failures and limits. Local evidence includes 132 checkout-flow plus 65 safety/concurrency assertions, 64 frontend tests, Go format/vet/race/build, additive contracts, fresh schema-6 migration, 17 real browser regressions, and catalog/inventory/auth/organization regression. All database changes were isolated to smartpos-auth-test and retained scratch databases; no primary-volume migration, commit/push or deployment occurred.
+
+Earlier dated reports below remain historical evidence, including their then-current Phase 3 NOT STARTED statements.
+
 ## Phase 2 finalization (2026-10-09, continued from local chat history)
 
 **Phase 2.1–2.6 and Phase 2 overall: COMPLETED for local acceptance gates.** Phase 0/1A/1B/1C remain COMPLETED (Local); Phase 3+ is NOT STARTED. This entry supersedes earlier Phase 2-not-started statements without deleting history. No commit, push, deployment, production operation, original-volume migration, history rewrite or volume deletion was performed.

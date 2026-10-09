@@ -17,6 +17,14 @@ import { TaxonomyPage } from '../features/catalog/TaxonomyPage';
 import { ImportPage } from '../features/catalog/ImportPage';
 import { LabelsPage } from '../features/catalog/LabelsPage';
 import { InventoryPage } from '../features/inventory/InventoryPage';
+import { POSWorkspace } from '../features/pos/POSWorkspace';
+import {
+  POSTerminalPage,
+  HeldCartsPage,
+  CheckoutPage,
+  RegisterPage as POSRegisterPage,
+} from '../features/pos/POSPages';
+import { SalesPage, SaleDetailsPage } from '../features/pos/SalesPages';
 import {
   SetupPage,
   StorePage,
@@ -45,6 +53,17 @@ export const router = createBrowserRouter([
         element: <RequireSession />,
         children: [
           { path: paths.account, element: <AccountPage /> },
+          {
+            element: <OrganizationGate permission="sales.read" />,
+            children: [
+              { path: '/sales', element: <SalesPage /> },
+              { path: '/sales/:id', element: <SaleDetailsPage /> },
+            ],
+          },
+          {
+            element: <OrganizationGate permission="receipts.read" />,
+            children: [{ path: '/receipts', element: <SalesPage receipts /> }],
+          },
           {
             element: <OrganizationGate permission="inventory.read" />,
             children: [
@@ -139,6 +158,40 @@ export const router = createBrowserRouter([
     ],
   },
   { path: paths.posPreview, element: <POSLayout /> },
+  {
+    element: <RequireSession />,
+    children: [
+      {
+        element: <OrganizationGate permission="pos.access" />,
+        children: [
+          {
+            element: <POSWorkspace />,
+            children: [
+              { path: '/pos', element: <POSTerminalPage /> },
+              { path: '/pos/held-carts', element: <HeldCartsPage /> },
+              { path: '/pos/checkout', element: <CheckoutPage /> },
+              {
+                path: '/pos/register/open',
+                element: <POSRegisterPage key="open" section="open" />,
+              },
+              {
+                path: '/pos/register/close',
+                element: <POSRegisterPage key="close" section="close" />,
+              },
+              {
+                path: '/pos/register/history',
+                element: <POSRegisterPage key="history" section="history" />,
+              },
+              {
+                path: '/pos/shifts',
+                element: <POSRegisterPage key="shifts" section="shifts" />,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
   { path: paths.authPreview, element: <AuthLayout /> },
   { path: paths.login, element: <LoginPage /> },
   { path: paths.register, element: <RegisterPage /> },

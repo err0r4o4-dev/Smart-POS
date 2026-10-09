@@ -18,20 +18,20 @@ The nine Products routes are implemented Phase 1C. Catalog records are organizat
 | Dashboard | `/dashboard/branches` | Planned (not registered) | 3 | session + tenant + branch permission |
 | Dashboard | `/tasks` | Planned (not registered) | 3 | session + tenant + branch permission |
 | Dashboard | `/notifications` | Planned (not registered) | 3 | session + tenant + branch permission |
-| POS | `/pos` | Planned (not registered) | 3 | session + tenant + branch permission |
-| POS | `/pos/held-carts` | Planned (not registered) | 3 | session + tenant + branch permission |
-| POS | `/pos/checkout` | Planned (not registered) | 3 | session + tenant + branch permission |
+| POS | `/pos` | Implemented (Phase 3) | 3 | session + tenant + branch permission |
+| POS | `/pos/held-carts` | Implemented (Phase 3) | 3 | session + tenant + branch permission |
+| POS | `/pos/checkout` | Implemented (Phase 3) | 3 | session + tenant + branch permission |
 | POS | `/pos/returns` | Planned (not registered) | 3 | session + tenant + branch permission |
 | POS | `/pos/exchanges` | Planned (not registered) | 3 | session + tenant + branch permission |
-| POS | `/pos/register/open` | Planned (not registered) | 3 | session + tenant + branch permission |
-| POS | `/pos/register/close` | Planned (not registered) | 3 | session + tenant + branch permission |
-| POS | `/pos/register/history` | Planned (not registered) | 3 | session + tenant + branch permission |
-| POS | `/pos/shifts` | Planned (not registered) | 3 | session + tenant + branch permission |
-| Sales | `/sales` | Planned (not registered) | 3 | session + tenant + branch permission |
-| Sales | `/sales/:id` | Planned (not registered) | 3 | session + tenant + branch permission |
+| POS | `/pos/register/open` | Implemented (Phase 3) | 3 | session + tenant + branch permission |
+| POS | `/pos/register/close` | Implemented (Phase 3) | 3 | session + tenant + branch permission |
+| POS | `/pos/register/history` | Implemented (Phase 3) | 3 | session + tenant + branch permission |
+| POS | `/pos/shifts` | Implemented (Phase 3) | 3 | session + tenant + branch permission |
+| Sales | `/sales` | Implemented (Phase 3) | 3 | session + tenant + branch permission |
+| Sales | `/sales/:id` | Implemented (Phase 3) | 3 | session + tenant + branch permission |
 | Sales | `/sales/refunds` | Planned (not registered) | 3 | session + tenant + branch permission |
 | Sales | `/sales/voids` | Planned (not registered) | 3 | session + tenant + branch permission |
-| Sales | `/receipts` | Planned (not registered) | 3 | session + tenant + branch permission |
+| Sales | `/receipts` | Implemented (Phase 3) | 3 | session + tenant + branch permission |
 | Sales | `/sales/tax-documents` | Planned (not registered) | 3 | session + tenant + branch permission |
 | Products | `/products` | Implemented Phase 1C | 1 | session + tenant + catalog.read |
 | Products | `/products/new` | Implemented Phase 1C | 1 | session + tenant + catalog.create |

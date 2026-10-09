@@ -39,30 +39,30 @@ Phase numbers identify the primary delivery phase: POS returns/exchanges and sal
 - Business purpose: Fast accurate checkout and cash control.
 - Responsibilities: Cart, holds, checkout, register shifts; returns/exchanges Phase 5.
 - Planned pages: `/pos`, `/pos/held-carts`, `/pos/checkout`, `/pos/returns`, `/pos/exchanges`, `/pos/register/open`, `/pos/register/close`, `/pos/register/history`, `/pos/shifts`.
-- Planned API groups: /pos, /payments, /registers.
-- Domain entities: sales, sale_items, payments, register_shifts, held_carts.
+- Implemented API group: organization-scoped /pos (terminals, carts, checkouts, payment confirmation and shifts); sales/receipts share the POS application module.
+- Domain entities: pos_terminals, register_shifts, pos_carts, pos_cart_items and pos_checkouts; sale snapshots are listed below.
 - Dependencies: owning domains/upstream capabilities in [dependency matrix](dependencies.md); authorization through identity and organization for all tenant operations.
-- Permissions: pos.checkout, register.manage; approval for override.
-- Business events: SaleCompleted, RegisterClosed.
+- Permissions: pos.access/cart.manage/checkout/payment.cash/payment.manual_confirm, pos.terminal.manage and pos.register.open/close/history.read; no price override permission is enabled.
+- Audit: transactional terminal/cart/payment/checkout/shift lifecycle records; no event bus is claimed.
 - Error cases: insufficient stock, payment mismatch, duplicate request.
 - Tests: concurrent checkout, idempotency, exact totals, failed payment.
 - Implementation phase: 3.
-- Current status: layout preview only, no checkout.
+- Current status: Phase 3.1–3.7 implemented and locally verified on seven operational POS routes. /preview/pos remains a non-functional preview. Returns/exchanges are deferred; manual acknowledgement is not bank/gateway settlement proof. See [POS architecture](pos.md).
 
 ## Sales (6 pages)
 
 - Business purpose: Traceable sale and receipt history.
-- Responsibilities: Immutable sale snapshots, void/refund authorization, receipts.
+- Responsibilities: Immutable completed sale snapshots, scoped history/details and receipts. Void/refund workflows remain deferred.
 - Planned pages: `/sales`, `/sales/:id`, `/sales/refunds`, `/sales/voids`, `/receipts`, `/sales/tax-documents`.
 - Planned API groups: /sales, /receipts.
-- Domain entities: sales, sale_items, refunds, returns, receipts.
+- Implemented entities: sales, sale_items, sale_payments and receipts. Refunds/returns remain proposed.
 - Dependencies: owning domains/upstream capabilities in [dependency matrix](dependencies.md); authorization through identity and organization for all tenant operations.
-- Permissions: sales.read, sales.void, refund.approve.
-- Business events: SaleVoided, RefundApproved.
+- Implemented permissions: sales.read, receipts.read/print and pos.payment.reconcile (Owner/Manager). sales.void/refund.approve are not enabled.
+- Audit: completed sales and explicit external funds-resolution notes; no automatic refund or event bus.
 - Error cases: invalid state, duplicate refund, absent receipt.
 - Tests: tenant/branch denial, refund limits, snapshots.
 - Implementation phase: 3.
-- Current status: documented/planned; no implementation.
+- Current status: /sales, /sales/:id and /receipts implemented and locally verified. 58/80 mm browser printing uses immutable snapshots; physical printers, refunds, voids and tax documents are not implemented.
 
 ## Products (9 pages)
 
@@ -92,7 +92,7 @@ Phase numbers identify the primary delivery phase: POS returns/exchanges and sal
 - Error cases: oversell, invalid location, conflicting count.
 - Tests: transfer conservation, concurrency, rollback, no cross-tenant references.
 - Implementation phase: 2.
-- Current status: Phase 2.1–2.6 implemented and locally verified on ten routes. /inventory/valuation stays Planned; no costing, checkout, purchasing, reservations or advanced shelf workflows.
+- Current status: Phase 2.1–2.6 implemented and locally verified on ten routes. /inventory/valuation stays Planned; no costing, purchasing, reservations or advanced shelf workflows.
 
 ## Shelves (7 pages)
 

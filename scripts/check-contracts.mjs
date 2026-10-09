@@ -68,9 +68,37 @@ const inventoryPaths = [
     ).map((action) => '/' + resource + '/{resourceId}/' + action),
   ]),
 ].map((path) => '/api/v1/organizations/{id}/inventory' + path);
+const posPaths = [
+  '/pos/terminals',
+  '/pos/terminals/{resourceId}',
+  '/pos/products',
+  '/pos/barcodes/{code}',
+  '/pos/payment-methods',
+  '/pos/shifts',
+  '/pos/shifts/open',
+  '/pos/shifts/{resourceId}',
+  '/pos/shifts/{resourceId}/close',
+  '/pos/carts',
+  '/pos/carts/{resourceId}',
+  ...['hold', 'resume', 'cancel'].map(
+    (action) => '/pos/carts/{resourceId}/' + action,
+  ),
+  '/pos/checkout',
+  '/pos/checkouts',
+  '/pos/checkouts/{resourceId}',
+  ...['complete', 'cancel', 'resolve'].map(
+    (action) => '/pos/checkouts/{resourceId}/' + action,
+  ),
+  '/pos/payments/{resourceId}/confirm',
+  '/sales',
+  '/sales/{resourceId}',
+  '/receipts',
+  '/receipts/{resourceId}',
+].map((path) => '/api/v1/organizations/{id}' + path);
 assert.deepEqual(
   Object.keys(api.paths).sort(),
   [
+    ...posPaths,
     ...catalogPaths,
     ...inventoryPaths,
     '/api/v1/auth/forgot-password',
@@ -208,6 +236,39 @@ function checkReferences(value) {
   }
   for (const child of Object.values(value)) checkReferences(child);
 }
+for (const path of posPaths) {
+  for (const method of ['get', 'post', 'patch']) {
+    const operation = api.paths[path][method];
+    if (!operation) continue;
+    assert.ok(
+      !operationIDs.has(operation.operationId),
+      'Duplicate POS operation',
+    );
+    operationIDs.add(operation.operationId);
+    assert.ok(/pos\.|sales\.|receipts\./.test(operation.description));
+    for (const status of ['400', '401', '403', '404', '409', '503'])
+      assert.ok(operation.responses[status]);
+  }
+}
+assert.equal(api.components.schemas.POSMoney.type, 'string');
+assert.ok(new RegExp(api.components.schemas.POSMoney.pattern).test('2.25'));
+assert.ok(!new RegExp(api.components.schemas.POSMoney.pattern).test('2.251'));
+assert.equal(
+  api.components.schemas.POSProductPage.properties.page_size.maximum,
+  100,
+);
+assert.equal(
+  api.components.schemas.POSCartInput.properties.items.maxItems,
+  100,
+);
+assert.equal(
+  api.components.schemas.POSSaleItem.properties.quantity.$ref,
+  '#/components/schemas/InventoryQuantity',
+);
+assert.equal(
+  api.components.schemas.POSSale.properties.grand_total.$ref,
+  '#/components/schemas/POSMoney',
+);
 checkReferences(api);
 assert.equal(
   api.components.schemas.CatalogVariantInput.properties.cost_price.type,

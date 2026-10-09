@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
-  title: SmartPOS Foundation, Identity, Organization, Catalog and Inventory API
+  title: SmartPOS Foundation, Identity, Organization, Catalog, Inventory and POS API
   version: 1.0.0
-  description: Phase 0-2 local implementation. Inventory uses exact decimal-string quantities, immutable ledger and atomic balances with branch-scoped authorization. POS, purchasing, valuation, reservations and AI remain deferred. Tenant writes require allowed Origin and X-CSRF-Token; inventory stock/document/reorder commands also require Idempotency-Key. PATCH locations accepts complete fields and current revision. Counts and corrections reject stale stock snapshots.
+  description: Phase 0-3 local implementation. Inventory and POS use exact decimal strings, immutable ledger and atomic balances with tenant/branch authorization. POS persists payment confirmation separately before atomic sale settlement; failures retain reconciliation evidence. Purchasing, valuation, reservations, gateway payments and AI remain deferred. Tenant writes require allowed Origin and X-CSRF-Token. Idempotency-Key is required for inventory commands, cart creation, shift open/close, checkout preparation and payment confirmation. Count corrections reject stale stock snapshots.
 servers:
   - url: /
 paths:
@@ -4495,6 +4495,2246 @@ paths:
           $ref: '#/components/responses/InventoryMediaType'
         '503':
           $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/pos/terminals:
+    get:
+      operationId: posOperation1
+      summary: GET /pos/terminals
+      description:
+        'Permission: pos.access. Tenant/branch scope; Cashier reads own
+        records only. Manual payments require acknowledged=true and reference.
+        Completion can return RECONCILIATION_REQUIRED with durable funds evidence
+        and no sale or stock commit. No gateway or automatic refund.'
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - name: branch_id
+          in: query
+          required: false
+          schema: &a1
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - name: status
+          in: query
+          required: false
+          schema: &a2
+            type: string
+        - name: terminal_id
+          in: query
+          required: false
+          schema: *a1
+        - name: search
+          in: query
+          required: false
+          schema: *a2
+      responses:
+        '200':
+          description: Server-authoritative result; exact string amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/POSTerminalPage'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, ownership, CSRF or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource unavailable in tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, stock, price, shift or payment state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      operationId: posOperation8
+      summary: POST /pos/terminals
+      description:
+        'Permission: pos.terminal.manage. Tenant/branch scope; Cashier
+        reads own records only. Manual payments require acknowledged=true and
+        reference. Completion can return RECONCILIATION_REQUIRED with durable
+        funds evidence and no sale or stock commit. No gateway or automatic
+        refund.'
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/POSTerminalInput'
+      responses:
+        '201':
+          description: Server-authoritative result; exact string amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/POSTerminal'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, ownership, CSRF or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource unavailable in tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, stock, price, shift or payment state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/pos/products:
+    get:
+      operationId: posOperation2
+      summary: GET /pos/products
+      description:
+        'Permission: pos.access. Tenant/branch scope; Cashier reads own
+        records only. Manual payments require acknowledged=true and reference.
+        Completion can return RECONCILIATION_REQUIRED with durable funds evidence
+        and no sale or stock commit. No gateway or automatic refund.'
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - name: branch_id
+          in: query
+          required: false
+          schema: &a1
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - name: status
+          in: query
+          required: false
+          schema: &a2
+            type: string
+        - name: terminal_id
+          in: query
+          required: true
+          schema: *a1
+        - name: search
+          in: query
+          required: false
+          schema: *a2
+        - name: category_id
+          in: query
+          required: false
+          schema: *a1
+      responses:
+        '200':
+          description: Server-authoritative result; exact string amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/POSProductPage'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, ownership, CSRF or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource unavailable in tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, stock, price, shift or payment state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/pos/shifts:
+    get:
+      operationId: posOperation3
+      summary: GET /pos/shifts
+      description: 'Permission: pos.register.history.read. Tenant/branch scope;
+        Cashier reads own records only. Manual payments require acknowledged=true
+        and reference. Completion can return RECONCILIATION_REQUIRED with durable
+        funds evidence and no sale or stock commit. No gateway or automatic
+        refund.'
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - name: branch_id
+          in: query
+          required: false
+          schema: &a1
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - name: status
+          in: query
+          required: false
+          schema: &a2
+            type: string
+        - name: terminal_id
+          in: query
+          required: false
+          schema: *a1
+        - name: search
+          in: query
+          required: false
+          schema: *a2
+      responses:
+        '200':
+          description: Server-authoritative result; exact string amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/POSShiftPage'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, ownership, CSRF or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource unavailable in tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, stock, price, shift or payment state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/pos/carts:
+    get:
+      operationId: posOperation4
+      summary: GET /pos/carts
+      description:
+        'Permission: pos.cart.manage. Tenant/branch scope; Cashier reads
+        own records only. Manual payments require acknowledged=true and reference.
+        Completion can return RECONCILIATION_REQUIRED with durable funds evidence
+        and no sale or stock commit. No gateway or automatic refund.'
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - name: branch_id
+          in: query
+          required: false
+          schema: &a1
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - name: status
+          in: query
+          required: false
+          schema: &a2
+            type: string
+        - name: terminal_id
+          in: query
+          required: false
+          schema: *a1
+        - name: search
+          in: query
+          required: false
+          schema: *a2
+      responses:
+        '200':
+          description: Server-authoritative result; exact string amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/POSCartPage'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, ownership, CSRF or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource unavailable in tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, stock, price, shift or payment state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      operationId: posOperation13
+      summary: POST /pos/carts
+      description:
+        'Permission: pos.cart.manage. Tenant/branch scope; Cashier reads
+        own records only. Manual payments require acknowledged=true and reference.
+        Completion can return RECONCILIATION_REQUIRED with durable funds evidence
+        and no sale or stock commit. No gateway or automatic refund.'
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - $ref: '#/components/parameters/CSRF'
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: *a1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/POSCartInput'
+      responses:
+        '201':
+          description: Server-authoritative result; exact string amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/POSCart'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, ownership, CSRF or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource unavailable in tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, stock, price, shift or payment state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/pos/checkouts:
+    get:
+      operationId: posOperation5
+      summary: GET /pos/checkouts
+      description:
+        'Permission: pos.checkout. Tenant/branch scope; Cashier reads own
+        records only. Manual payments require acknowledged=true and reference.
+        Completion can return RECONCILIATION_REQUIRED with durable funds evidence
+        and no sale or stock commit. No gateway or automatic refund.'
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - name: branch_id
+          in: query
+          required: false
+          schema: &a1
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - name: status
+          in: query
+          required: false
+          schema: &a2
+            type: string
+        - name: terminal_id
+          in: query
+          required: false
+          schema: *a1
+        - name: search
+          in: query
+          required: false
+          schema: *a2
+      responses:
+        '200':
+          description: Server-authoritative result; exact string amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/POSCheckoutPage'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, ownership, CSRF or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource unavailable in tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, stock, price, shift or payment state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/pos/barcodes/{code}:
+    get:
+      operationId: posOperation6
+      summary: GET /pos/barcodes/{code}
+      description:
+        'Permission: pos.access. Tenant/branch scope; Cashier reads own
+        records only. Manual payments require acknowledged=true and reference.
+        Completion can return RECONCILIATION_REQUIRED with durable funds evidence
+        and no sale or stock commit. No gateway or automatic refund.'
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - name: code
+          in: path
+          required: true
+          schema: &a1
+            type: string
+        - name: branch_id
+          in: query
+          required: false
+          schema: &a2
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - name: status
+          in: query
+          required: false
+          schema: *a1
+        - name: terminal_id
+          in: query
+          required: true
+          schema: *a2
+        - name: search
+          in: query
+          required: false
+          schema: *a1
+      responses:
+        '200':
+          description: Server-authoritative result; exact string amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/POSProductPage'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, ownership, CSRF or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource unavailable in tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, stock, price, shift or payment state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/pos/payment-methods:
+    get:
+      operationId: posOperation7
+      summary: GET /pos/payment-methods
+      description:
+        'Permission: pos.access. Tenant/branch scope; Cashier reads own
+        records only. Manual payments require acknowledged=true and reference.
+        Completion can return RECONCILIATION_REQUIRED with durable funds evidence
+        and no sale or stock commit. No gateway or automatic refund.'
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+      responses:
+        '200':
+          description: Server-authoritative result; exact string amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: string
+                      enum:
+                        - CASH
+                        - QR_MANUAL
+                        - BANK_TRANSFER_MANUAL
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, ownership, CSRF or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource unavailable in tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, stock, price, shift or payment state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/pos/terminals/{resourceId}:
+    patch:
+      operationId: posOperation9
+      summary: PATCH /pos/terminals/{resourceId}
+      description:
+        'Permission: pos.terminal.manage. Tenant/branch scope; Cashier
+        reads own records only. Manual payments require acknowledged=true and
+        reference. Completion can return RECONCILIATION_REQUIRED with durable
+        funds evidence and no sale or stock commit. No gateway or automatic
+        refund.'
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/POSTerminalInput'
+      responses:
+        '200':
+          description: Server-authoritative result; exact string amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/POSTerminal'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, ownership, CSRF or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource unavailable in tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, stock, price, shift or payment state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/pos/shifts/open:
+    post:
+      operationId: posOperation10
+      summary: POST /pos/shifts/open
+      description:
+        'Permission: pos.register.open. Tenant/branch scope; Cashier reads
+        own records only. Manual payments require acknowledged=true and reference.
+        Completion can return RECONCILIATION_REQUIRED with durable funds evidence
+        and no sale or stock commit. No gateway or automatic refund.'
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - $ref: '#/components/parameters/CSRF'
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/POSShiftInput'
+      responses:
+        '201':
+          description: Server-authoritative result; exact string amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/POSShift'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, ownership, CSRF or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource unavailable in tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, stock, price, shift or payment state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/pos/shifts/{resourceId}:
+    get:
+      operationId: posOperation11
+      summary: GET /pos/shifts/{resourceId}
+      description: 'Permission: pos.register.history.read. Tenant/branch scope;
+        Cashier reads own records only. Manual payments require acknowledged=true
+        and reference. Completion can return RECONCILIATION_REQUIRED with durable
+        funds evidence and no sale or stock commit. No gateway or automatic
+        refund.'
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Server-authoritative result; exact string amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/POSShift'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, ownership, CSRF or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource unavailable in tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, stock, price, shift or payment state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/pos/shifts/{resourceId}/close:
+    post:
+      operationId: posOperation12
+      summary: POST /pos/shifts/{resourceId}/close
+      description: 'Permission: pos.register.close (pos.register.close.other for
+        another cashier). Tenant/branch scope; Cashier reads own records only.
+        Manual payments require acknowledged=true and reference. Completion can
+        return RECONCILIATION_REQUIRED with durable funds evidence and no sale or
+        stock commit. No gateway or automatic refund.'
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - name: resourceId
+          in: path
+          required: true
+          schema: &a1
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/CSRF'
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: *a1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/POSShiftInput'
+      responses:
+        '200':
+          description: Server-authoritative result; exact string amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/POSShift'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, ownership, CSRF or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource unavailable in tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, stock, price, shift or payment state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/pos/carts/{resourceId}:
+    get:
+      operationId: posOperation14
+      summary: GET /pos/carts/{resourceId}
+      description:
+        'Permission: pos.cart.manage. Tenant/branch scope; Cashier reads
+        own records only. Manual payments require acknowledged=true and reference.
+        Completion can return RECONCILIATION_REQUIRED with durable funds evidence
+        and no sale or stock commit. No gateway or automatic refund.'
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - name: resourceId
+          in: path
+          required: true
+          schema: &a1
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Server-authoritative result; exact string amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/POSCart'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, ownership, CSRF or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource unavailable in tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, stock, price, shift or payment state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      operationId: posOperation15
+      summary: PATCH /pos/carts/{resourceId}
+      description:
+        'Permission: pos.cart.manage. Tenant/branch scope; Cashier reads
+        own records only. Manual payments require acknowledged=true and reference.
+        Completion can return RECONCILIATION_REQUIRED with durable funds evidence
+        and no sale or stock commit. No gateway or automatic refund.'
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - name: resourceId
+          in: path
+          required: true
+          schema: *a1
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/POSCartInput'
+      responses:
+        '200':
+          description: Server-authoritative result; exact string amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/POSCart'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, ownership, CSRF or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource unavailable in tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, stock, price, shift or payment state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/pos/carts/{resourceId}/hold:
+    post:
+      operationId: posOperation16
+      summary: POST /pos/carts/{resourceId}/hold
+      description:
+        'Permission: pos.cart.manage. Tenant/branch scope; Cashier reads
+        own records only. Manual payments require acknowledged=true and reference.
+        Completion can return RECONCILIATION_REQUIRED with durable funds evidence
+        and no sale or stock commit. No gateway or automatic refund.'
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/POSCartInput'
+      responses:
+        '200':
+          description: Server-authoritative result; exact string amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/POSCart'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, ownership, CSRF or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource unavailable in tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, stock, price, shift or payment state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/pos/carts/{resourceId}/resume:
+    post:
+      operationId: posOperation17
+      summary: POST /pos/carts/{resourceId}/resume
+      description:
+        'Permission: pos.cart.manage. Tenant/branch scope; Cashier reads
+        own records only. Manual payments require acknowledged=true and reference.
+        Completion can return RECONCILIATION_REQUIRED with durable funds evidence
+        and no sale or stock commit. No gateway or automatic refund.'
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/POSCartInput'
+      responses:
+        '200':
+          description: Server-authoritative result; exact string amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/POSCart'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, ownership, CSRF or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource unavailable in tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, stock, price, shift or payment state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/pos/carts/{resourceId}/cancel:
+    post:
+      operationId: posOperation18
+      summary: POST /pos/carts/{resourceId}/cancel
+      description:
+        'Permission: pos.cart.manage. Tenant/branch scope; Cashier reads
+        own records only. Manual payments require acknowledged=true and reference.
+        Completion can return RECONCILIATION_REQUIRED with durable funds evidence
+        and no sale or stock commit. No gateway or automatic refund.'
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/POSCartInput'
+      responses:
+        '200':
+          description: Server-authoritative result; exact string amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/POSCart'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, ownership, CSRF or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource unavailable in tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, stock, price, shift or payment state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/pos/checkout:
+    post:
+      operationId: posOperation19
+      summary: POST /pos/checkout
+      description: 'Permission: pos.checkout + pos.payment.cash/manual_confirm.
+        Tenant/branch scope; Cashier reads own records only. Manual payments
+        require acknowledged=true and reference. Completion can return
+        RECONCILIATION_REQUIRED with durable funds evidence and no sale or stock
+        commit. No gateway or automatic refund.'
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - $ref: '#/components/parameters/CSRF'
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/POSCheckoutInput'
+      responses:
+        '201':
+          description: Server-authoritative result; exact string amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/POSCheckout'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, ownership, CSRF or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource unavailable in tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, stock, price, shift or payment state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/pos/checkouts/{resourceId}:
+    get:
+      operationId: posOperation20
+      summary: GET /pos/checkouts/{resourceId}
+      description:
+        'Permission: pos.checkout. Tenant/branch scope; Cashier reads own
+        records only. Manual payments require acknowledged=true and reference.
+        Completion can return RECONCILIATION_REQUIRED with durable funds evidence
+        and no sale or stock commit. No gateway or automatic refund.'
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Server-authoritative result; exact string amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/POSCheckout'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, ownership, CSRF or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource unavailable in tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, stock, price, shift or payment state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/pos/checkouts/{resourceId}/complete:
+    post:
+      operationId: posOperation21
+      summary: POST /pos/checkouts/{resourceId}/complete
+      description:
+        'Permission: pos.checkout. Tenant/branch scope; Cashier reads own
+        records only. Manual payments require acknowledged=true and reference.
+        Completion can return RECONCILIATION_REQUIRED with durable funds evidence
+        and no sale or stock commit. No gateway or automatic refund.'
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+      responses:
+        '200':
+          description: Server-authoritative result; exact string amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/POSCheckout'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, ownership, CSRF or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource unavailable in tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, stock, price, shift or payment state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/pos/checkouts/{resourceId}/cancel:
+    post:
+      operationId: posOperation22
+      summary: POST /pos/checkouts/{resourceId}/cancel
+      description:
+        'Permission: pos.checkout. Tenant/branch scope; Cashier reads own
+        records only. Manual payments require acknowledged=true and reference.
+        Completion can return RECONCILIATION_REQUIRED with durable funds evidence
+        and no sale or stock commit. No gateway or automatic refund.'
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/POSConfirmationInput'
+      responses:
+        '200':
+          description: Server-authoritative result; exact string amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/POSCheckout'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, ownership, CSRF or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource unavailable in tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, stock, price, shift or payment state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/pos/checkouts/{resourceId}/resolve:
+    post:
+      operationId: posOperation23
+      summary: POST /pos/checkouts/{resourceId}/resolve
+      description:
+        'Permission: pos.payment.reconcile. Tenant/branch scope; Cashier
+        reads own records only. Manual payments require acknowledged=true and
+        reference. Completion can return RECONCILIATION_REQUIRED with durable
+        funds evidence and no sale or stock commit. No gateway or automatic
+        refund.'
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/POSConfirmationInput'
+      responses:
+        '200':
+          description: Server-authoritative result; exact string amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/POSCheckout'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, ownership, CSRF or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource unavailable in tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, stock, price, shift or payment state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/pos/payments/{resourceId}/confirm:
+    post:
+      operationId: posOperation24
+      summary: POST /pos/payments/{resourceId}/confirm
+      description:
+        'Permission: pos.payment.cash/manual_confirm. Tenant/branch scope;
+        Cashier reads own records only. Manual payments require acknowledged=true
+        and reference. Completion can return RECONCILIATION_REQUIRED with durable
+        funds evidence and no sale or stock commit. No gateway or automatic
+        refund.'
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - name: resourceId
+          in: path
+          required: true
+          schema: &a1
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/CSRF'
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: *a1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/POSConfirmationInput'
+      responses:
+        '200':
+          description: Server-authoritative result; exact string amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/POSCheckout'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, ownership, CSRF or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource unavailable in tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, stock, price, shift or payment state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/sales:
+    get:
+      operationId: posOperation25
+      summary: GET /sales
+      description:
+        'Permission: sales.read. Tenant/branch scope; Cashier reads own
+        records only. Manual payments require acknowledged=true and reference.
+        Completion can return RECONCILIATION_REQUIRED with durable funds evidence
+        and no sale or stock commit. No gateway or automatic refund.'
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - name: branch_id
+          in: query
+          required: false
+          schema: &a1
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - name: status
+          in: query
+          required: false
+          schema: &a2
+            type: string
+        - name: terminal_id
+          in: query
+          required: false
+          schema: *a1
+        - name: search
+          in: query
+          required: false
+          schema: *a2
+        - name: cashier_id
+          in: query
+          required: false
+          schema: *a1
+        - name: method
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - CASH
+              - QR_MANUAL
+              - BANK_TRANSFER_MANUAL
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Server-authoritative result; exact string amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/POSSalePage'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, ownership, CSRF or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource unavailable in tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, stock, price, shift or payment state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/sales/{resourceId}:
+    get:
+      operationId: posOperation26
+      summary: GET /sales/{resourceId}
+      description:
+        'Permission: sales.read. Tenant/branch scope; Cashier reads own
+        records only. Manual payments require acknowledged=true and reference.
+        Completion can return RECONCILIATION_REQUIRED with durable funds evidence
+        and no sale or stock commit. No gateway or automatic refund.'
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Server-authoritative result; exact string amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/POSSale'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, ownership, CSRF or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource unavailable in tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, stock, price, shift or payment state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/receipts:
+    get:
+      operationId: posOperation27
+      summary: GET /receipts
+      description:
+        'Permission: receipts.read. Tenant/branch scope; Cashier reads own
+        records only. Manual payments require acknowledged=true and reference.
+        Completion can return RECONCILIATION_REQUIRED with durable funds evidence
+        and no sale or stock commit. No gateway or automatic refund.'
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - name: branch_id
+          in: query
+          required: false
+          schema: &a1
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - name: status
+          in: query
+          required: false
+          schema: &a2
+            type: string
+        - name: terminal_id
+          in: query
+          required: false
+          schema: *a1
+        - name: search
+          in: query
+          required: false
+          schema: *a2
+        - name: cashier_id
+          in: query
+          required: false
+          schema: *a1
+        - name: method
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - CASH
+              - QR_MANUAL
+              - BANK_TRANSFER_MANUAL
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Server-authoritative result; exact string amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/POSSalePage'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, ownership, CSRF or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource unavailable in tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, stock, price, shift or payment state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{id}/receipts/{resourceId}:
+    get:
+      operationId: posOperation28
+      summary: GET /receipts/{resourceId}
+      description:
+        'Permission: receipts.read. Tenant/branch scope; Cashier reads own
+        records only. Manual payments require acknowledged=true and reference.
+        Completion can return RECONCILIATION_REQUIRED with durable funds evidence
+        and no sale or stock commit. No gateway or automatic refund.'
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/OrganizationID'
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Server-authoritative result; exact string amounts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/POSSale'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permission, ownership, CSRF or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Resource unavailable in tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Revision, stock, price, shift or payment state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 components:
   parameters:
     OrganizationID:
@@ -6334,6 +8574,7 @@ components:
             - TRANSFER_IN
             - TRANSFER_DISPATCH
             - TRANSFER_RECEIVE
+            - SALE
         quantity_delta:
           $ref: '#/components/schemas/InventoryQuantity'
         quantity_before:
@@ -6518,6 +8759,774 @@ components:
         revision:
           type: integer
           minimum: 1
+    POSMoney:
+      type: string
+      pattern: ^[0-9]{1,16}(\.[0-9]{1,2})?$
+      description: THB exact decimal; never JSON floating point. HALF_UP per line.
+    POSPaymentMethod:
+      type: string
+      enum:
+        - CASH
+        - QR_MANUAL
+        - BANK_TRANSFER_MANUAL
+    POSTerminal:
+      type: object
+      required:
+        - id
+        - branch_id
+        - code
+        - name
+        - stock_location_id
+        - status
+        - revision
+      properties:
+        id: &a1
+          type: string
+          format: uuid
+        branch_id: *a1
+        code: &a2
+          type: string
+        name: *a2
+        stock_location_id: *a1
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+        revision:
+          type: integer
+          minimum: 1
+    POSTerminalInput:
+      type: object
+      additionalProperties: false
+      required:
+        - branch_id
+        - code
+        - name
+        - stock_location_id
+      properties:
+        branch_id: &a1
+          type: string
+          format: uuid
+        code:
+          type: string
+          pattern: ^[A-Z0-9][A-Z0-9_-]{0,49}$
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        stock_location_id: *a1
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+        revision:
+          type: integer
+          minimum: 0
+    POSItem:
+      type: object
+      required:
+        - variant_id
+        - product_name
+        - variant_name
+        - sku
+        - barcode
+        - unit
+        - unit_type
+        - unit_price
+        - currency
+        - product_status
+        - variant_status
+        - unit_status
+        - quantity
+        - available
+        - line_total
+        - previous_price
+        - price_changed
+        - saleable
+      properties:
+        variant_id:
+          type: string
+          format: uuid
+        product_name: &a1
+          type: string
+        variant_name: *a1
+        sku: *a1
+        barcode: *a1
+        unit: *a1
+        unit_type: *a1
+        unit_price: &a3
+          $ref: '#/components/schemas/POSMoney'
+        currency:
+          type: string
+          const: THB
+        product_status: *a1
+        variant_status: *a1
+        unit_status: *a1
+        quantity: &a2
+          $ref: '#/components/schemas/InventoryQuantity'
+        available: *a2
+        line_total: *a3
+        previous_price: *a1
+        price_changed:
+          type: boolean
+        saleable:
+          type: boolean
+    POSCart:
+      type: object
+      required:
+        - id
+        - branch_id
+        - terminal_id
+        - cashier_id
+        - status
+        - revision
+        - items
+        - total
+        - review_required
+      properties:
+        id: &a1
+          type: string
+          format: uuid
+        branch_id: *a1
+        terminal_id: *a1
+        cashier_id: *a1
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - HELD
+            - COMPLETED
+            - CANCELLED
+        revision:
+          type: integer
+          minimum: 1
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/POSItem'
+        total:
+          $ref: '#/components/schemas/POSMoney'
+        review_required:
+          type: boolean
+    POSCartInput:
+      type: object
+      additionalProperties: false
+      required: []
+      properties:
+        terminal_id: &a1
+          type: string
+          format: uuid
+        revision:
+          type: integer
+          minimum: 1
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - variant_id
+              - quantity
+            properties:
+              variant_id: *a1
+              quantity:
+                $ref: '#/components/schemas/InventoryQuantity'
+          maxItems: 100
+    POSCheckoutInput:
+      type: object
+      additionalProperties: false
+      required:
+        - cart_id
+        - revision
+        - method
+        - expected_total
+        - received
+      properties:
+        cart_id:
+          type: string
+          format: uuid
+        revision:
+          type: integer
+          minimum: 1
+        method:
+          type: string
+          enum:
+            - CASH
+            - QR_MANUAL
+            - BANK_TRANSFER_MANUAL
+        expected_total: &a1
+          $ref: '#/components/schemas/POSMoney'
+        received: *a1
+    POSConfirmationInput:
+      type: object
+      additionalProperties: false
+      required: []
+      properties:
+        acknowledged:
+          type: boolean
+        reference:
+          type: string
+          maxLength: 200
+        note:
+          type: string
+          maxLength: 2000
+    POSCheckout:
+      type: object
+      required:
+        - id
+        - branch_id
+        - terminal_id
+        - shift_id
+        - cart_id
+        - cashier_id
+        - status
+        - method
+        - total
+        - received
+        - change
+        - reference
+        - failure_code
+        - sale_id
+        - items
+      properties:
+        id: &a1
+          type: string
+          format: uuid
+        branch_id: *a1
+        terminal_id: *a1
+        shift_id: *a1
+        cart_id: *a1
+        cashier_id: *a1
+        status:
+          type: string
+          enum:
+            - AWAITING_PAYMENT
+            - CONFIRMED
+            - COMPLETED
+            - RECONCILIATION_REQUIRED
+            - CANCELLED
+            - RESOLVED
+        method:
+          type: string
+          enum:
+            - CASH
+            - QR_MANUAL
+            - BANK_TRANSFER_MANUAL
+        total: &a2
+          $ref: '#/components/schemas/POSMoney'
+        received: *a2
+        change: *a2
+        reference: &a3
+          type: string
+        failure_code: *a3
+        sale_id:
+          type: string
+          description: Empty until completed
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/POSItem'
+    POSShiftInput:
+      type: object
+      additionalProperties: false
+      required: []
+      properties:
+        terminal_id:
+          type: string
+          format: uuid
+        opening_cash: &a1
+          $ref: '#/components/schemas/POSMoney'
+        counted_cash: *a1
+    POSShift:
+      type: object
+      required:
+        - id
+        - organization_id
+        - branch_id
+        - terminal_id
+        - cashier_id
+        - terminal_name
+        - cashier_name
+        - status
+        - opening_cash
+        - cash_sales
+        - expected_cash
+        - counted_cash
+        - difference
+        - opened_at
+        - closed_at
+      properties:
+        id: &a1
+          type: string
+          format: uuid
+        organization_id: *a1
+        branch_id: *a1
+        terminal_id: *a1
+        cashier_id: *a1
+        terminal_name: &a2
+          type: string
+        cashier_name: *a2
+        status:
+          type: string
+          enum:
+            - OPEN
+            - CLOSED
+        opening_cash: &a3
+          $ref: '#/components/schemas/POSMoney'
+        cash_sales: *a3
+        expected_cash: *a3
+        counted_cash:
+          type:
+            - string
+            - 'null'
+        difference:
+          type:
+            - string
+            - 'null'
+          description: 'Signed exact decimal: counted minus expected'
+        opened_at:
+          type: string
+          format: date-time
+        closed_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+    POSSaleItem:
+      type: object
+      required:
+        - id
+        - organization_id
+        - sale_id
+        - variant_id
+        - stock_location_id
+        - branch_id
+        - product_name
+        - variant_name
+        - sku
+        - barcode
+        - unit
+        - quantity
+        - unit_price
+        - line_total
+      properties:
+        id: &a1
+          type: string
+          format: uuid
+        organization_id: *a1
+        sale_id: *a1
+        variant_id: *a1
+        stock_location_id: *a1
+        branch_id: *a1
+        product_name: &a2
+          type: string
+        variant_name: *a2
+        sku: *a2
+        barcode: *a2
+        unit: *a2
+        quantity:
+          $ref: '#/components/schemas/InventoryQuantity'
+        unit_price: &a3
+          $ref: '#/components/schemas/POSMoney'
+        line_total: *a3
+    POSSalePayment:
+      type: object
+      required:
+        - id
+        - sale_id
+        - checkout_id
+        - method
+        - status
+        - amount
+        - received
+        - change
+        - reference
+        - confirmed_by
+        - confirmed_at
+      properties:
+        id: &a1
+          type: string
+          format: uuid
+        sale_id: *a1
+        checkout_id: *a1
+        method:
+          type: string
+          enum:
+            - CASH
+            - QR_MANUAL
+            - BANK_TRANSFER_MANUAL
+        status:
+          type: string
+          const: CONFIRMED
+        amount: &a2
+          $ref: '#/components/schemas/POSMoney'
+        received: *a2
+        change: *a2
+        reference:
+          type: string
+        confirmed_by: *a1
+        confirmed_at:
+          type: string
+          format: date-time
+    POSReceipt:
+      type: object
+      required:
+        - id
+        - sale_id
+        - receipt_number
+      properties:
+        id: &a1
+          type: string
+          format: uuid
+        sale_id: *a1
+        receipt_number:
+          type: string
+    POSSale:
+      type: object
+      required:
+        - id
+        - organization_id
+        - branch_id
+        - terminal_id
+        - shift_id
+        - cart_id
+        - checkout_id
+        - cashier_id
+        - sale_number
+        - status
+        - currency
+        - subtotal
+        - discount_total
+        - tax_total
+        - grand_total
+        - payment_status
+        - inventory_operation_id
+        - store_name
+        - branch_name
+        - store_address
+        - terminal_name
+        - cashier_name
+        - completed_at
+        - items
+        - payment
+        - receipt
+        - movements
+        - audit
+      properties:
+        id: &a1
+          type: string
+          format: uuid
+        organization_id: *a1
+        branch_id: *a1
+        terminal_id: *a1
+        shift_id: *a1
+        cart_id: *a1
+        checkout_id: *a1
+        cashier_id: *a1
+        sale_number: &a3
+          type: string
+        status:
+          type: string
+          const: COMPLETED
+        currency:
+          type: string
+          const: THB
+        subtotal: &a2
+          $ref: '#/components/schemas/POSMoney'
+        discount_total: *a2
+        tax_total: *a2
+        grand_total: *a2
+        payment_status:
+          type: string
+          const: CONFIRMED
+        inventory_operation_id: *a1
+        store_name: *a3
+        branch_name: *a3
+        store_address: *a3
+        terminal_name: *a3
+        cashier_name: *a3
+        completed_at:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/POSSaleItem'
+        payment:
+          $ref: '#/components/schemas/POSSalePayment'
+        receipt:
+          $ref: '#/components/schemas/POSReceipt'
+        movements:
+          type: array
+          items:
+            $ref: '#/components/schemas/InventoryMovement'
+        audit:
+          type: array
+          items:
+            type: object
+    POSSaleSummary:
+      type: object
+      required:
+        - id
+        - sale_number
+        - branch_id
+        - terminal_id
+        - branch_name
+        - terminal_name
+        - cashier_name
+        - grand_total
+        - subtotal
+        - discount_total
+        - tax_total
+        - method
+        - payment_status
+        - status
+        - completed_at
+        - receipt_id
+        - receipt_number
+      properties:
+        id: &a1
+          type: string
+          format: uuid
+        sale_number: &a2
+          type: string
+        branch_id: *a1
+        terminal_id: *a1
+        branch_name: *a2
+        terminal_name: *a2
+        cashier_name: *a2
+        grand_total: &a3
+          $ref: '#/components/schemas/POSMoney'
+        subtotal: *a3
+        discount_total: *a3
+        tax_total: *a3
+        method:
+          type: string
+          enum:
+            - CASH
+            - QR_MANUAL
+            - BANK_TRANSFER_MANUAL
+        payment_status: *a2
+        status: *a2
+        completed_at:
+          type: string
+          format: date-time
+        receipt_id: *a1
+        receipt_number: *a2
+    POSCartSummary:
+      type: object
+      required:
+        - id
+        - branch_id
+        - terminal_id
+        - cashier_id
+        - status
+        - revision
+        - created_at
+        - updated_at
+      properties:
+        id: &a1
+          type: string
+          format: uuid
+        branch_id: *a1
+        terminal_id: *a1
+        cashier_id: *a1
+        status:
+          type: string
+        revision:
+          type: integer
+          minimum: 1
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    POSCheckoutSummary:
+      type: object
+      required:
+        - id
+        - branch_id
+        - terminal_id
+        - shift_id
+        - cart_id
+        - cashier_id
+        - status
+        - method
+        - total
+        - received
+        - change
+        - reference
+        - failure_code
+        - created_at
+      properties:
+        id: &a1
+          type: string
+          format: uuid
+        branch_id: *a1
+        terminal_id: *a1
+        shift_id: *a1
+        cart_id: *a1
+        cashier_id: *a1
+        status:
+          type: string
+          enum:
+            - AWAITING_PAYMENT
+            - CONFIRMED
+            - COMPLETED
+            - RECONCILIATION_REQUIRED
+            - CANCELLED
+            - RESOLVED
+        method:
+          type: string
+          enum:
+            - CASH
+            - QR_MANUAL
+            - BANK_TRANSFER_MANUAL
+        total: &a2
+          $ref: '#/components/schemas/POSMoney'
+        received: *a2
+        change: *a2
+        reference: &a3
+          type: string
+        failure_code: *a3
+        created_at:
+          type: string
+          format: date-time
+    POSTerminalPage:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - page_size
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/POSTerminal'
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+    POSProductPage:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - page_size
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/POSItem'
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+    POSCartPage:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - page_size
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/POSCartSummary'
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+    POSCheckoutPage:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - page_size
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/POSCheckoutSummary'
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+    POSShiftPage:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - page_size
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/POSShift'
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+    POSSalePage:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - page_size
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/POSSaleSummary'
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
     InventoryLocation:
       type: object
       required:

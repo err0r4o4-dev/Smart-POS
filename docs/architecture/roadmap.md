@@ -1,6 +1,6 @@
 # Incremental delivery roadmap
 
-Business phases beyond Phase 2 inventory remain planned. Phase 1A, Phase 1B, Phase 1C and Phase 2 passed their local acceptance gates on 2026-10-09. Phase exits depend on actual verification evidence, not file existence or production-readiness assumptions. Phase 2.1–2.6 inventory is COMPLETED (Local); Phase 3+ is NOT STARTED and needs separate authorization.
+Business phases beyond Phase 3 POS/sales remain planned. Phase 1A, Phase 1B, Phase 1C and Phase 2 passed their local acceptance gates on 2026-10-09; Phase 3 verification finished on 2026-10-10 after work began on October 9. Phase exits depend on actual verification evidence, not file existence or production-readiness assumptions. Phase 3.1–3.7 is COMPLETED (Local); Phase 4+ is NOT STARTED and needs separate authorization.
 
 | Phase                  | Goals and deliverables                                                                                                                                 | Dependencies                                      | Acceptance/tests/exit gate                                                                                                                                                                                                                                                | Risks                                                                     |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
@@ -15,7 +15,14 @@ Business phases beyond Phase 2 inventory remain planned. Phase 1A, Phase 1B, Pha
 
 Each phase needs contract/migration review, focused tests, wider regression checks, documented ownership and explicit exit evidence. Do not automatically start Phase 1 after foundation delivery.
 
-## Current subphase gates (2026-10-09)
+## Phase 3 gates (2026-10-10)
+
+- Phase 3.1 Terminal, 3.2 Carts/Holds, 3.3 Payments, 3.4 Sales/Inventory, 3.5 Receipts/History, 3.6 Registers/Shifts and 3.7 Integration/Security/QA: **COMPLETED (Local)**. 197 real POS API assertions, Go vet/race/build, 64 frontend tests, additive contracts, fresh migration validation and 17 browser regressions passed. Ten operational routes preserve the 16-module/106-route inventory.
+- Cash and explicit manual QR/transfer acknowledgement are supported; payment gateways, split payments, discounts/separate tax, refunds/voids, sales dashboard and hardware/load validation are not claimed.
+- Phase 3 overall: **COMPLETED (Local)**, not production readiness. See [Thai verification report](../development/phase3-verification.md).
+- Phase 4: **NOT STARTED**. No supplier, purchase order, goods receiving or automatic replenishment implementation is added.
+
+## Earlier subphase gates (2026-10-09)
 
 - Phase 0: **COMPLETED**, previously reported; foundation browser regression rerun with Phase 1A.
 - Phase 1A Authentication & Security: **COMPLETED for the local acceptance gate**. Go, database, real Caddy/Mailpit auth flows, SMTP failure handling and browser tests passed; see the dated verification entry. This is not production readiness or completion of all Phase 1 deliverables.

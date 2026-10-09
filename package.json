@@ -27,6 +27,7 @@
     "verify:organization": "node tests/integration/organization-flow.mjs",
     "verify:catalog": "node tests/integration/catalog-flow.mjs",
     "verify:inventory": "node tests/integration/inventory-flow.mjs",
+    "verify:pos": "node tests/integration/pos-flow.mjs && node tests/integration/pos-safety.mjs",
     "verify:ai": "docker compose --profile checks run --build --rm ai-check",
     "verify:integration": "docker compose --profile checks run --rm integration-check",
     "verify:resilience": "node scripts/check-resilience.mjs"

@@ -4,23 +4,23 @@ Migration 000001 creates organizations/branches: UUID keys supplied by app, time
 
 The organization/branch Phase 1C catalog and Phase 2 inventory tables ENABLE and FORCE RLS. Transaction-local `app.organization_id` derives from authorized membership. Missing context yields no catalog rows. Superusers bypass RLS: Compose bootstrap user is local-only. Migration 000003 created the non-owner runtime role `smartpos_runtime`; API connections SET ROLE to it. Scoped queries remain mandatory. Membership/invitation tables remain application-scoped, not blanket database RLS.
 
-| Domain         | Implemented/proposed tables                                                                                                                     |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Identity       | users, sessions, roles, permissions, organization_members                                                                                       |
-| Catalog        | products, product_variants, product_barcodes, categories, brands, units                                                                         |
-| Inventory      | stock_locations, stock_balances, stock_movements, inventory_operations, inventory_documents, inventory_document_items, inventory_reorder_points |
-| Shelves        | shelves, shelf_slots, replenishment_tasks                                                                                                       |
-| Purchasing     | suppliers, purchase_orders, purchase_order_items, goods_receipts, goods_receipt_items                                                           |
-| Sales/payments | sales, sale_items, payments, refunds, returns, receipts, register_shifts                                                                        |
-| Customers      | customers, loyalty_accounts, loyalty_transactions                                                                                               |
-| Promotions     | promotions, promotion_rules                                                                                                                     |
-| Quality        | product_batches, write_offs                                                                                                                     |
-| Intelligence   | forecast_runs, demand_forecasts, ai_recommendations, anomaly_alerts                                                                             |
-| System         | notifications, approval_requests, audit_logs, idempotency_keys, outbox_events                                                                   |
+| Domain         | Implemented/proposed tables                                                                                                                                   |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Identity       | users, sessions, roles, permissions, organization_members                                                                                                     |
+| Catalog        | products, product_variants, product_barcodes, categories, brands, units                                                                                       |
+| Inventory      | stock_locations, stock_balances, stock_movements, inventory_operations, inventory_documents, inventory_document_items, inventory_reorder_points               |
+| Shelves        | shelves, shelf_slots, replenishment_tasks                                                                                                                     |
+| Purchasing     | suppliers, purchase_orders, purchase_order_items, goods_receipts, goods_receipt_items                                                                         |
+| Sales/payments | Implemented: pos_terminals, register_shifts, pos_carts, pos_cart_items, pos_checkouts, sales, sale_items, sale_payments, receipts. Deferred: refunds, returns |
+| Customers      | customers, loyalty_accounts, loyalty_transactions                                                                                                             |
+| Promotions     | promotions, promotion_rules                                                                                                                                   |
+| Quality        | product_batches, write_offs                                                                                                                                   |
+| Intelligence   | forecast_runs, demand_forecasts, ai_recommendations, anomaly_alerts                                                                                           |
+| System         | notifications, approval_requests, audit_logs, idempotency_keys, outbox_events                                                                                 |
 
-Tenant tables carry organization_id; branch tables also branch_id. Composite FKs prevent cross-tenant references. Unique/index keys include tenant and derive from queries. Catalog money is implemented as NUMERIC(18,2) + organization currency and exact decimal strings in Go/JSON/TypeScript; future transactional totals may use minor units with an explicit conversion policy. Phase 2 implements NUMERIC(18,3) quantities, an append-only ledger and transactional balance projections; see inventory-ledger.md.
+Tenant tables carry organization_id; branch tables also branch_id. Composite FKs prevent cross-tenant references. Unique/index keys include tenant and derive from queries. Catalog money uses NUMERIC(18,2), organization currency and exact decimal strings. Phase 3 calculates THB using integer cents and big-integer multiplication with HALF_UP rounding per line; stored amounts and API strings remain exact. Phase 2 supplies NUMERIC(18,3) quantities, an append-only ledger and transactional balance projections; see inventory-ledger.md.
 
-`npm run migrate` runs pinned golang-migrate up locally, also automatic before API starts. Migrations are forward-only; do not run down/drop automatically. Add sequential migrations; never edit deployed migrations. Non-disposable changes require backup/rollback approval. Readiness rejects missing/dirty/outdated schema (required version 5).
+`npm run migrate` runs pinned golang-migrate up locally, also automatic before API starts. Migrations are forward-only; do not run down/drop automatically. Add sequential migrations; never edit deployed migrations. Non-disposable changes require backup/rollback approval. Readiness rejects missing/dirty/outdated schema (required version 6). Do not run the default stack/migrate command against a persistent primary volume as part of verification without approval.
 
 ## Phase 1C catalog migration
 
@@ -34,4 +34,10 @@ All seven tables FORCE RLS using transaction-local organization context. Runtime
 
 Runtime is SELECT-only on stock_balances and SELECT/INSERT-only on stock_movements. Append-only triggers also reject ledger UPDATE/DELETE; the SECURITY DEFINER posting trigger has fixed search_path, revoked PUBLIC execution, explicit tenant/user/unfinished-operation validation and locked quantity/version updates. A Variant unit cannot change after stock history. Opening is positive, once per identity and before any ledger history. No existing migration 1–4 was edited, no down migration or original-volume change was performed.
 
-Migration up and repeated no-change were verified only in smartpos-auth-test, together with rollback-only constraints, RLS, precision, grants and reconciliation assertions. Readiness now requires clean schema 5. Production needs distinct least-privileged runtime LOGIN and migration credentials plus backup/recovery planning; see [ledger design](inventory-ledger.md).
+Migration up and repeated no-change were verified only in smartpos-auth-test, together with rollback-only constraints, RLS, precision, grants and reconciliation assertions. Inventory originally required clean schema 5; current POS readiness requires 6. Production needs distinct least-privileged runtime LOGIN and migration credentials plus backup/recovery planning; see [ledger design](inventory-ledger.md).
+
+## Phase 3 POS and sales migration
+
+`000006_pos_sales.up.sql` adds nine tables, tenant/branch composite references, organization FORCE RLS, bounded-history indexes and scoped idempotency/one-open-shift/one-sale uniqueness. Runtime operational grants are restricted; completed sales/items/payments/receipts are SELECT/INSERT only. History and INSERT guards prevent mutation or append-after-completion. Deferred sale consistency checks payment evidence, item totals, cart/shift identity, receipt and matched Inventory ledger.
+
+SALE extends the existing stock movement constraint and carries sale_id; POS invokes the original ledger posting path, never direct balance writes. Funds acknowledgement survives settlement rollback as RECONCILIATION_REQUIRED. Migration and constraints were verified only in isolated test/scratch databases; migrations 1–5 and primary volumes are untouched. See [sales transactions](sales-transactions.md) and [Phase 3 evidence](../development/phase3-verification.md).

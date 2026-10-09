@@ -30,6 +30,24 @@ export interface NavigationItem {
 }
 export const navigation: NavigationItem[] = [
   {
+    to: '/pos',
+    label: 'ขายสินค้า / POS',
+    icon: 'pos',
+    permission: 'pos.access',
+  },
+  {
+    to: '/sales',
+    label: 'ประวัติขาย',
+    icon: 'dashboard',
+    permission: 'sales.read',
+  },
+  {
+    to: '/receipts',
+    label: 'ใบเสร็จ',
+    icon: 'dashboard',
+    permission: 'receipts.read',
+  },
+  {
     to: paths.inventory,
     label: 'คลังสินค้า / สต็อก',
     icon: 'dashboard',

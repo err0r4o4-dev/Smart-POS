@@ -7,6 +7,15 @@ import { HelpPage } from '../features/help/HelpPage';
 import { SystemPage } from '../features/system/SystemPage';
 import { paths } from './routes';
 import { RequireSession } from './ProtectedRoute';
+import { OrganizationGate } from '../features/organization/OrganizationGate';
+import {
+  SetupPage,
+  StorePage,
+  BranchesPage,
+  EmployeesPage,
+  EmployeePage,
+  RolesPage,
+} from '../features/organization/OrganizationPages';
 import {
   AccountPage,
   ForgotPasswordPage,
@@ -22,9 +31,30 @@ export const router = createBrowserRouter([
       { path: '/', element: <Navigate to={paths.dashboard} replace /> },
       { path: paths.dashboard, element: <DashboardPage /> },
       { path: paths.help, element: <HelpPage /> },
+      { path: paths.setup, element: <SetupPage /> },
       {
         element: <RequireSession />,
-        children: [{ path: paths.account, element: <AccountPage /> }],
+        children: [
+          { path: paths.account, element: <AccountPage /> },
+          {
+            element: <OrganizationGate />,
+            children: [
+              { path: paths.store, element: <StorePage /> },
+              { path: paths.branches, element: <BranchesPage /> },
+            ],
+          },
+          {
+            element: <OrganizationGate permission="employee.read" />,
+            children: [
+              { path: paths.employees, element: <EmployeesPage /> },
+              { path: '/employees/:id', element: <EmployeePage /> },
+            ],
+          },
+          {
+            element: <OrganizationGate permission="role.read" />,
+            children: [{ path: paths.roles, element: <RolesPage /> }],
+          },
+        ],
       },
     ],
   },

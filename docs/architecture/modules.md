@@ -1,6 +1,6 @@
 # Module specifications
 
-All business functionality is planned. Phase 0 implements platform and presentation only. API groups and events below are proposed contracts, not live endpoints. Page counts come from the canonical route inventory. Upstream dependencies are constrained by dependencies.md.
+Phase 0 implements platform/presentation, Phase 1A implements identity and Phase 1B implements organization, branch and employee membership management with fixed RBAC. Other business functionality remains planned. API groups/events below are proposals unless explicitly marked implemented; the live source is OpenAPI. Page counts remain the canonical 16-module/106-route inventory. Upstream dependencies are constrained by dependencies.md. See [Phase 1B architecture](organization.md).
 
 Phase numbers identify the primary delivery phase: POS returns/exchanges and sale refunds extend into Phase 5; settings integrations/backup and the support page extend into Phase 7. Dashboard/help have only the explicitly listed Phase 0 presentations.
 
@@ -17,7 +17,7 @@ Phase numbers identify the primary delivery phase: POS returns/exchanges and sal
 - Error cases: invalid credentials, expired recovery, forbidden tenant.
 - Tests: session expiry, CSRF, enumeration, tenant denial.
 - Implementation phase: 1.
-- Current status: Phase 1A registration, login/logout, recovery, session persistence and account page are implemented; organization setup, memberships and permissions remain Phase 1B. The Phase 1A stack is not yet fully reverified.
+- Current status: Phase 1A registration, login/logout, recovery, session persistence/account and Phase 1B `/setup` organization onboarding/selection/invitation acceptance are implemented and locally verified. Organization membership is distinct from global identity.
 
 ## Dashboard (4 pages)
 
@@ -212,7 +212,7 @@ Phase numbers identify the primary delivery phase: POS returns/exchanges and sal
 - Error cases: self-escalation, last owner removal, expired approval.
 - Tests: role/branch matrix, escalation denial, immutable audit.
 - Implementation phase: 1.
-- Current status: documented/planned; no implementation.
+- Current status: Phase 1B `/employees`, `/employees/:id`, `/roles` implement invitations, scoped employee read/update/removal, fixed-role matrix and member change history. Live API is `/organizations/{id}/members`, `/invitations`, `/roles`, `/permissions`, `/audit`, plus `/invitations/accept`, not the proposed generic groups above. `/approvals` and `/audit-logs` remain planned. Operational sales/inventory/purchasing permissions are deferred.
 
 ## Settings (10 pages)
 
@@ -227,7 +227,7 @@ Phase numbers identify the primary delivery phase: POS returns/exchanges and sal
 - Error cases: invalid tax, unsupported hardware, secret exposure.
 - Tests: config validation, secret redaction, branch isolation.
 - Implementation phase: 1.
-- Current status: documented/planned; no implementation.
+- Current status: Phase 1B `/settings/store` and `/settings/branches` implement organization settings and branch create/edit/deactivation with permission checks. Other settings pages remain planned; there is no production integrations/backup/tax/payment functionality.
 
 ## Help & System (4 pages)
 

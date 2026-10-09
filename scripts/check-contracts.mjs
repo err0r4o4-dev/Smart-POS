@@ -33,6 +33,19 @@ assert.deepEqual(Object.keys(api.paths).sort(), [
   '/api/v1/auth/me',
   '/api/v1/auth/register',
   '/api/v1/auth/reset-password',
+  '/api/v1/invitations/accept',
+  '/api/v1/organizations',
+  '/api/v1/organizations/{id}',
+  '/api/v1/organizations/{id}/audit',
+  '/api/v1/organizations/{id}/branches',
+  '/api/v1/organizations/{id}/branches/{branchId}',
+  '/api/v1/organizations/{id}/context',
+  '/api/v1/organizations/{id}/invitations',
+  '/api/v1/organizations/{id}/invitations/{invitationId}',
+  '/api/v1/organizations/{id}/members',
+  '/api/v1/organizations/{id}/members/{memberId}',
+  '/api/v1/organizations/{id}/permissions',
+  '/api/v1/organizations/{id}/roles',
   '/api/v1/system',
   '/health/live',
   '/health/ready',
@@ -40,6 +53,38 @@ assert.deepEqual(Object.keys(api.paths).sort(), [
 assert.equal(api.components.schemas.Readiness.properties.status.const, 'ready');
 assert.equal(api.components.schemas.Liveness.properties.status.const, 'ok');
 assert.ok(api.paths['/health/ready'].get.responses['503']);
+const memberSchema = api.components.schemas.Member;
+assert.equal(memberSchema.type, 'object');
+assert.equal(memberSchema.additionalProperties, false);
+assert.equal(memberSchema.allOf, undefined);
+assert.deepEqual(Object.keys(memberSchema.properties).sort(), [
+  'branch_ids',
+  'display_name',
+  'email',
+  'id',
+  'permissions',
+  'role',
+  'status',
+  'user_id',
+]);
+assert.deepEqual(
+  [...memberSchema.required].sort(),
+  Object.keys(memberSchema.properties).sort(),
+);
+for (const [path, item] of Object.entries(api.paths)) {
+  if (!path.includes('/organizations') && path !== '/api/v1/invitations/accept')
+    continue;
+  for (const method of ['get', 'post', 'patch', 'delete']) {
+    if (!item[method]) continue;
+    assert.deepEqual(item[method].security, [{ sessionCookie: [] }]);
+    if (method !== 'get')
+      assert.ok(
+        item[method].parameters.some(
+          (parameter) => parameter.$ref === '#/components/parameters/CSRF',
+        ),
+      );
+  }
+}
 const compose = YAML.parse(readFileSync('docker-compose.yml', 'utf8'));
 for (const service of ['web', 'api', 'ai', 'postgres', 'caddy'])
   assert.ok(compose.services[service].healthcheck);

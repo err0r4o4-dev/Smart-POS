@@ -42,6 +42,7 @@ docker pull node:24-alpine
 docker compose -p smartpos-auth-test --profile checks run --build --no-deps --rm api-check
 docker compose -p smartpos-auth-test --profile checks run --no-deps --rm auth-integration-check
 npm run verify:auth
+npm run verify:organization
 ```
 
 If another project already uses the proxy subnet, choose an unused `PROXY_SUBNET` and matching fixed Caddy/API addresses before starting this isolated project. Existing volumes are preserved and migration up is rerunnable; no down/drop or counter reset is part of verification. `docker pull` supplies the same Node family already used by the web build; BuildKit's base-image cache alone may not provide its `docker run` tag.
@@ -51,3 +52,11 @@ If another project already uses the proxy subnet, choose an unused `PROXY_SUBNET
 The API flow deliberately stops **only the isolated Mailpit** to check SMTP failure responses and sanitized application logs, then restores it in `finally`. Do not run overlapping auth suites against the same project during this outage test. Mailbox access uses the API container's internal Mailpit interface; no public mailbox binding is required. Reset tests poll for a newly delivered message rather than assuming synchronous SMTP, and expiry fixtures preserve the database's `expires_at > created_at` constraint.
 
 Screenshots/Playwright reports live under ignored `test-results`/`playwright-report`. Traces can contain synthetic test session/reset material; do not publish them as production-safe logs. Mailpit host UI binding, production TLS/SMTP and production hardening are separate verification gates.
+
+## Phase 1B local verification and recovery
+
+The same isolated `smartpos-auth-test` project now requires clean schema version 3. `auth-integration-check` runs rollback-only identity and organization SQL checks; `integration-check` retains foundation RLS/constraint/gateway coverage. `verify:organization` exercises real onboarding, branch/member authorization, invitations, owner concurrency, request protections and an isolated Mailpit outage with restoration. Run auth and organization suites sequentially, never overlapping their SMTP outage scenarios. `verify:auth` runs all 14 browser tests with real auth enabled; a plain `npm run e2e` without `AUTH_E2E=1` does not prove the integrated auth/organization scenarios.
+
+Migration 3 is additive and forward-only. Current verification applied it only to the isolated test volume, not an original development or production database. Never delete a volume or run down migrations to repair a failure. Back up and review existing legacy organization ownership separately before an approved real-environment upgrade; migration does not invent memberships. Keep Caddy/API fixed addresses within the chosen subnet; the tested defaults are `172.30.42.2`/`.3` inside `172.30.42.0/28`.
+
+If a build/check fails, retain the original volume and working-tree changes, diagnose the reported failure, then rebuild the affected local service and rerun the focused gate. A delivery failure creates no persisted pending invitation; retry from the UI after restoring SMTP. If mail was accepted but DB commit failed, the emailed link cannot be used; issue a fresh invitation. Refresh context after role/status changes; do not trust stored selection IDs as authorization. See [verification](verification.md) for exact executed checks and limitations.

@@ -27,6 +27,20 @@ type Handler struct {
 
 type sessionKey struct{}
 
+func SessionFromContext(ctx context.Context) Session {
+	session, _ := ctx.Value(sessionKey{}).(Session)
+	return session
+}
+
+func (handler Handler) RequireWrite(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.Method != http.MethodGet && request.Method != http.MethodHead && !handler.requireCSRF(writer, request) {
+			return
+		}
+		next.ServeHTTP(writer, request)
+	})
+}
+
 func withSession(ctx context.Context, session Session) context.Context {
 	return context.WithValue(ctx, sessionKey{}, session)
 }

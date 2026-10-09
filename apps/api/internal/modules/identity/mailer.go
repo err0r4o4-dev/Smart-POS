@@ -22,13 +22,22 @@ type SMTPMailer struct {
 }
 
 func (mailer SMTPMailer) SendReset(ctx context.Context, to, token string) error {
+	link := mailer.Origin + "/reset-password?token=" + url.QueryEscape(token)
+	body := "A password reset was requested for your SmartPOS account. This link expires in 15 minutes.\r\n\r\n" + link + "\r\n\r\nIf you did not request this, you can ignore this email.\r\n"
+	return mailer.send(ctx, to, "Reset your SmartPOS password", body)
+}
+
+func (mailer SMTPMailer) SendInvitation(ctx context.Context, to, token string) error {
+	link := mailer.Origin + "/setup#invitation=" + url.QueryEscape(token)
+	return mailer.send(ctx, to, "SmartPOS organization invitation", "Sign in with this email to accept your invitation within 48 hours.\r\n\r\n"+link+"\r\n")
+}
+
+func (mailer SMTPMailer) send(ctx context.Context, to, subject, body string) error {
 	host, _, err := net.SplitHostPort(mailer.Address)
 	if err != nil {
 		return errors.New("invalid SMTP address")
 	}
-	link := mailer.Origin + "/reset-password?token=" + url.QueryEscape(token)
-	body := "A password reset was requested for your SmartPOS account. This link expires in 15 minutes.\r\n\r\n" + link + "\r\n\r\nIf you did not request this, you can ignore this email.\r\n"
-	message := []byte(fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: Reset your SmartPOS password\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n%s", mailer.From, to, body))
+	message := []byte(fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n%s", mailer.From, to, subject, body))
 	dialer := net.Dialer{Timeout: 3 * time.Second}
 	connection, err := dialer.DialContext(ctx, "tcp", mailer.Address)
 	if err != nil {

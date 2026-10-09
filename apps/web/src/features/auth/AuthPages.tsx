@@ -361,8 +361,8 @@ export function AccountPage() {
           <dd>{state.session.user.status}</dd>
         </dl>
         <p>
-          Organization setup is pending. Store and branch access are not yet
-          available in Phase 1A.
+          <Link to="/setup">ตั้งค่าร้านหรือเลือกองค์กร</Link> ·{' '}
+          <Link to="/settings/store">จัดการองค์กรและสาขา</Link>
         </p>
         <ErrorMessage message={error} />
         <Button onClick={() => void logout()} disabled={pending}>

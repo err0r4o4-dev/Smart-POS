@@ -14,6 +14,8 @@ import { anonymousSession, canAccess } from '../app/access';
 import { navigation } from '../app/routes';
 import { Brand, Tag } from '../components/ui/primitives';
 import { useAuth } from '../app/AuthProvider';
+import { useOrganization } from '../app/OrganizationProvider';
+import { ContextSwitchers } from '../features/organization/OrganizationGate';
 
 const icons = {
   dashboard: LayoutDashboard,
@@ -23,6 +25,14 @@ const icons = {
 };
 export function ManagementLayout() {
   const { state } = useAuth();
+  const tenant = useOrganization();
+  const access = tenant.context
+    ? {
+        authenticated: true as const,
+        role: tenant.context.membership.role,
+        permissions: tenant.context.permissions,
+      }
+    : anonymousSession;
   const [open, setOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -49,16 +59,20 @@ export function ManagementLayout() {
             <Store size={19} aria-hidden="true" />
           </span>
           <div>
-            <strong>Development workspace</strong>
-            <small>No branch configured</small>
+            <strong>
+              {tenant.context?.organization.name ?? 'Development workspace'}
+            </strong>
+            <small>
+              {tenant.context?.branches.find(
+                (item) => item.id === tenant.branchID,
+              )?.name ?? 'No branch configured'}
+            </small>
           </div>
         </div>
         <p className="nav-label">WORKSPACE</p>
         <nav aria-label="Main navigation">
           {navigation
-            .filter((item) =>
-              canAccess(anonymousSession, item.permission, item.roles),
-            )
+            .filter((item) => canAccess(access, item.permission, item.roles))
             .map((item) => {
               const Icon = icons[item.icon];
               return (
@@ -117,6 +131,7 @@ export function ManagementLayout() {
           </button>
         </header>
         <main id="main-content" className="content">
+          <ContextSwitchers />
           <Outlet />
         </main>
         <footer className="footer">
@@ -170,9 +185,7 @@ export function ManagementLayout() {
           </div>
           <nav id="mobile-navigation" aria-label="Mobile navigation">
             {navigation
-              .filter((item) =>
-                canAccess(anonymousSession, item.permission, item.roles),
-              )
+              .filter((item) => canAccess(access, item.permission, item.roles))
               .map((item) => (
                 <NavLink
                   className="nav-item"

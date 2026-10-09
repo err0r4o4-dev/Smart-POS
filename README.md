@@ -1,6 +1,6 @@
 # SmartPOS
 
-Intelligent Retail Management System - Phase 0 foundation and Phase 1A authentication locally verified. Modular Go monolith, React/TypeScript, independent internal FastAPI, PostgreSQL and Caddy in one monorepo.
+Intelligent Retail Management System - Phase 0 foundation, Phase 1A authentication and Phase 1B organization/branch/employee authorization locally verified. Modular Go monolith, React/TypeScript, independent internal FastAPI, PostgreSQL and Caddy in one monorepo. Phase 1C is not started; this is not a production release.
 
 ## Quick start
 
@@ -16,6 +16,8 @@ Open http://localhost:8088. Compose runs **up migrations only** before API readi
 
 Register at `/register`, sign in at `/login`, and view the protected `/account` page. Password reset emails go to local Mailpit; this is not a production delivery provider. Set `PUBLIC_ORIGIN` to the browser-facing gateway origin and configure SMTP before exposing the application. Phase 1A passed the local authentication gate on 2026-10-09; this does not authorize a production release. See the verification report for the isolated test setup, Mailpit access and remaining operational limits.
 
+Continue at `/setup` to create an organization, its Owner membership and main branch atomically, or select an existing organization. Manage organization details at `/settings/store`, branches at `/settings/branches`, staff/invitations at `/employees`, membership details at `/employees/:id`, and the fixed role matrix at `/roles`. Invitations go to Mailpit and require the invited email's authenticated account. Organization/branch selections are preferences only; every API operation rechecks membership and permissions. See [Phase 1B architecture and limitations](docs/architecture/organization.md).
+
 ```powershell
 npm run dev
 npm run lint
@@ -25,6 +27,7 @@ npm run build
 npm run e2e
 npm run verify:api
 npm run verify:auth
+npm run verify:organization
 npm run verify:ai
 npm run verify:integration
 npm run verify:resilience
@@ -36,8 +39,9 @@ Host Vite at http://localhost:5173 proxies `/api` and `/health` to Go at port 80
 ## Scope
 
 - **Phase 1A implemented and locally verified:** database-backed registration, Argon2id passwords, server-managed sessions, login/logout, asynchronous account recovery, authentication UI, protected account route, trusted Caddy client identities and spoofing-resistant rate limits.
+- **Phase 1B implemented and locally verified:** organization onboarding/switching/settings, branch management, employee membership/invitations, fixed-role RBAC, branch/tenant denial, last-owner protection and successful-change audit. Schema version 3; runtime connections use `smartpos_runtime`. Membership/invitation isolation is application-enforced, not blanket database RLS.
 - **Foundation:** dashboard, responsive navigation, POS/auth previews, help/error pages, real API status, Go health/readiness, typed FastAPI health, organization/branch migration, local infrastructure and tests.
-- **Documented/planned:** 16 modules and 106 routes. No business CRUD, checkout, payment or forecasting. `/dashboard` is not a sales dashboard; tenant membership and RBAC remain Phase 1B.
+- **Documented/planned:** 16 modules and 106 routes. Organization/branch/member operations work; catalog, checkout, payment, inventory and forecasting remain planned. `/dashboard` is not a sales dashboard.
 - **Deferred:** Redis, MinIO, workers, ML, sqlc and business module packages until working use cases need them.
 - Evidence and blockers: [verification](docs/development/verification.md). Configured CI is not evidence of a successful CI run.
 
@@ -48,7 +52,7 @@ apps/web/               React, layouts, tokens, tests
 apps/api/               Go bootstrap, transport, platform
 apps/ai/                FastAPI and typed health checks
 packages/contracts/    OpenAPI and planned route inventory
-database/migrations/   Paired foundational migrations
+database/migrations/   Foundation plus forward-only identity/organization migrations
 infra/caddy/           Same-origin gateway
 tests/                 Browser and container integration checks
 scripts/               Contract/documentation consistency checks

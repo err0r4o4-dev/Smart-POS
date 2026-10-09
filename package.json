@@ -24,6 +24,7 @@
     "migrate": "docker compose run --rm migrate",
     "verify:api": "docker compose --profile checks run --build --rm api-check",
     "verify:auth": "node tests/integration/auth-flow.mjs && node scripts/check-auth.mjs",
+    "verify:organization": "node tests/integration/organization-flow.mjs",
     "verify:ai": "docker compose --profile checks run --build --rm ai-check",
     "verify:integration": "docker compose --profile checks run --rm integration-check",
     "verify:resilience": "node scripts/check-resilience.mjs"

@@ -2,7 +2,7 @@ BEGIN;
 
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM schema_migrations WHERE version=2 AND NOT dirty) THEN
+  IF NOT EXISTS (SELECT 1 FROM schema_migrations WHERE version=3 AND NOT dirty) THEN
     RAISE EXCEPTION 'identity migration not ready';
   END IF;
 END $$;

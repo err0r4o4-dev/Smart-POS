@@ -2,14 +2,16 @@
 
 Canonical source: packages/contracts/routes.json. Exactly 16 modules and 106 planned page routes. Static routes are ranked before dynamic routes by React Router. Only ready pages are registered. A shell is not a completed business feature.
 
+Implemented identity routes are Phase 1A; organization/branch/member routes below are Phase 1B. These statuses supersede older planned labels without adding routes. Tenant routes require an authenticated session, active organization membership and the listed permission; Owner/Manager branch scope is enforced again by the API. `/setup` also supports memory-only email invitation acceptance after sign-in. See [organization architecture](organization.md).
+
 | Module | Route | Status | Phase | Access target |
 | --- | --- | --- | --- | --- |
-| Authentication | `/login` | Planned (not registered) | 1 | public entry / session for account |
-| Authentication | `/register` | Planned (not registered) | 1 | public entry / session for account |
-| Authentication | `/forgot-password` | Planned (not registered) | 1 | public entry / session for account |
-| Authentication | `/reset-password` | Planned (not registered) | 1 | public entry / session for account |
-| Authentication | `/setup` | Planned (not registered) | 1 | public entry / session for account |
-| Authentication | `/account` | Planned (not registered) | 1 | public entry / session for account |
+| Authentication | `/login` | Implemented Phase 1A | 1 | public Origin-validated entry |
+| Authentication | `/register` | Implemented Phase 1A | 1 | public Origin-validated entry |
+| Authentication | `/forgot-password` | Implemented Phase 1A | 1 | public Origin-validated entry |
+| Authentication | `/reset-password` | Implemented Phase 1A | 1 | public token + Origin-validated entry |
+| Authentication | `/setup` | Implemented Phase 1B | 1 | session; no existing tenant required for creation |
+| Authentication | `/account` | Implemented Phase 1A | 1 | session |
 | Dashboard | `/dashboard` | Foundation shell (business dashboard planned) | 3 | session + tenant + branch permission |
 | Dashboard | `/dashboard/branches` | Planned (not registered) | 3 | session + tenant + branch permission |
 | Dashboard | `/tasks` | Planned (not registered) | 3 | session + tenant + branch permission |
@@ -91,14 +93,14 @@ Canonical source: packages/contracts/routes.json. Exactly 16 modules and 106 pla
 | Reports | `/reports/shelves` | Planned (not registered) | 6 | session + tenant + branch permission |
 | Reports | `/reports/employees` | Planned (not registered) | 6 | session + tenant + branch permission |
 | Reports | `/reports/export` | Planned (not registered) | 6 | session + tenant + branch permission |
-| Employees & Permissions | `/employees` | Planned (not registered) | 1 | session + tenant + branch permission |
-| Employees & Permissions | `/employees/:id` | Planned (not registered) | 1 | session + tenant + branch permission |
-| Employees & Permissions | `/roles` | Planned (not registered) | 1 | session + tenant + branch permission |
+| Employees & Permissions | `/employees` | Implemented Phase 1B | 1 | session + tenant + employee.read; scoped write permissions |
+| Employees & Permissions | `/employees/:id` | Implemented Phase 1B | 1 | session + tenant + employee.read; scoped update/remove/audit |
+| Employees & Permissions | `/roles` | Implemented Phase 1B | 1 | session + tenant + role.read |
 | Employees & Permissions | `/approvals` | Planned (not registered) | 1 | session + tenant + branch permission |
 | Employees & Permissions | `/audit-logs` | Planned (not registered) | 1 | session + tenant + branch permission |
 | Settings | `/settings` | Planned (not registered) | 1 | session + tenant + branch permission |
-| Settings | `/settings/store` | Planned (not registered) | 1 | session + tenant + branch permission |
-| Settings | `/settings/branches` | Planned (not registered) | 1 | session + tenant + branch permission |
+| Settings | `/settings/store` | Implemented Phase 1B | 1 | session + tenant + organization.read; Owner writes |
+| Settings | `/settings/branches` | Implemented Phase 1B | 1 | session + tenant + branch.read; scoped branch writes |
 | Settings | `/settings/payments` | Planned (not registered) | 1 | session + tenant + branch permission |
 | Settings | `/settings/tax` | Planned (not registered) | 1 | session + tenant + branch permission |
 | Settings | `/settings/receipts` | Planned (not registered) | 1 | session + tenant + branch permission |

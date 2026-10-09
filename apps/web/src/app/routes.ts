@@ -9,6 +9,11 @@ export const paths = {
   forgotPassword: '/forgot-password',
   resetPassword: '/reset-password',
   account: '/account',
+  setup: '/setup',
+  store: '/settings/store',
+  branches: '/settings/branches',
+  employees: '/employees',
+  roles: '/roles',
   help: '/help',
   forbidden: '/403',
   notFound: '/404',
@@ -22,6 +27,31 @@ export interface NavigationItem {
   roles?: Role[];
 }
 export const navigation: NavigationItem[] = [
+  { to: paths.setup, label: 'ตั้งค่าร้าน / เลือกองค์กร', icon: 'auth' },
+  {
+    to: paths.store,
+    label: 'ข้อมูลองค์กร',
+    icon: 'dashboard',
+    permission: 'organization.read',
+  },
+  {
+    to: paths.branches,
+    label: 'สาขา',
+    icon: 'dashboard',
+    permission: 'branch.read',
+  },
+  {
+    to: paths.employees,
+    label: 'พนักงาน',
+    icon: 'auth',
+    permission: 'employee.read',
+  },
+  {
+    to: paths.roles,
+    label: 'บทบาทและสิทธิ์',
+    icon: 'auth',
+    permission: 'role.read',
+  },
   { to: paths.dashboard, label: 'Overview', icon: 'dashboard' },
   { to: paths.posPreview, label: 'POS layout', icon: 'pos' },
   { to: paths.authPreview, label: 'Authentication layout', icon: 'auth' },

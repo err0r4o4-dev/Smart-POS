@@ -1,6 +1,18 @@
-# SmartPOS — Phase 1A checklist
+# SmartPOS — Phase 1A / Phase 1B checklist
 
-Status: **COMPLETED for the local acceptance gate** (2026-10-09). This tracks Authentication & Security only, not production readiness. Phase 1B (organization, branch management and RBAC) and Phase 1C have not started. See the dated finalization entry in `docs/development/verification.md` for executed evidence, earlier failures and operational limitations.
+Status: **Phase 1A and Phase 1B COMPLETED for the local acceptance gates** (2026-10-09), not production readiness. Phase 1C has not started. See the dated entries in `docs/development/verification.md` for executed evidence, earlier failures and operational limitations. The Phase 1A checklist below preserves its original 16-unit/13-browser-test historical counts; the current suite has 22 unit tests and 14 browser tests.
+
+## Phase 1B implementation and acceptance
+
+- [x] Phase 1B.1: atomic organization/Owner/main branch/defaults/audit creation, idempotent retries, onboarding, organization selection/switching/settings.
+- [x] Phase 1B.2: branch create/edit/status, branch switching, employee membership detail/role/status/assignment, removal, email invitations and acceptance/revocation.
+- [x] Phase 1B.3: fixed roles, API permission checks, all-assigned-branch Manager scope, cross-tenant/branch denial, immediate API revocation and concurrent last-owner protection.
+- [x] Additive migration 3 applied only to isolated `smartpos-auth-test`; runtime `SET ROLE`, composite tenant FKs, successful-change audit and rollback-only SQL checks.
+- [x] Go format/vet/race/build, TypeScript, ESLint, 22 frontend unit tests, contracts, web build and real gateway integration passed locally.
+- [x] All 14 Playwright tests passed, including one integrated Phase 1B scenario with 15 labeled E2E cases; six Phase 1B pages checked at seven widths. Loaded mobile branches and desktop roles screenshots inspected.
+- [x] Auth regression, spoofing/rate limits, SMTP outage rollback, hashed email-bound invitations, expiry/replay/concurrency and log sanitation verified without relaxing security thresholds.
+- [x] Architecture/routes/OpenAPI/security/verification documentation updated; no Phase 1C code, commit, push or deployment.
+- [ ] Production gate remains separate: actual least-privilege LOGIN credentials, TLS/SMTP, deployed IPv6, durable delivery, retention and operational hardening.
 
 ## Implemented; retain and reverify
 
@@ -26,6 +38,6 @@ Status: **COMPLETED for the local acceptance gate** (2026-10-09). This tracks Au
 
 - [x] Phase 1A marked **COMPLETED for the local acceptance gate** after current security/functional checks passed.
 - [x] API, architecture, security, local operation and verification docs updated; no production TLS/SMTP claim.
-- [x] Phase 1B prerequisites recorded separately: non-owner runtime role, authoritative organization/branch membership, tenant context and RBAC. Phase 1B/1C remain **NOT STARTED**.
+- [x] Phase 1A handoff prerequisites were recorded separately and are now implemented in Phase 1B: non-owner runtime role, authoritative organization/branch membership, tenant context and RBAC. Phase 1C remains **NOT STARTED**.
 
 No commit, push, deployment, destructive database operation or security-limit relaxation is implied by this file.

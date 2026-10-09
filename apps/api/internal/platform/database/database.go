@@ -5,10 +5,11 @@ import (
 	"errors"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-const RequiredVersion = 2
+const RequiredVersion = 3
 
 func Open(ctx context.Context, url string) (*pgxpool.Pool, error) {
 	config, err := pgxpool.ParseConfig(url)
@@ -19,6 +20,10 @@ func Open(ctx context.Context, url string) (*pgxpool.Pool, error) {
 	config.MinConns = 0
 	config.MaxConnLifetime = 30 * time.Minute
 	config.ConnConfig.ConnectTimeout = 3 * time.Second
+	config.AfterConnect = func(ctx context.Context, connection *pgx.Conn) error {
+		_, err := connection.Exec(ctx, "SET ROLE smartpos_runtime")
+		return err
+	}
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return nil, errors.New("database pool unavailable")

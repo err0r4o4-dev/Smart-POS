@@ -1,6 +1,6 @@
 # Incremental delivery roadmap
 
-Business phases below remain planned beyond Phase 1A identity. Phase 1A passed its local runtime acceptance gate on 2026-10-09; Phase 1B organization/branch membership and RBAC have not started. Phase exits depend on actual verification evidence, not file existence or production-readiness assumptions.
+Business phases beyond organization/branch/employee management remain planned. Phase 1A and Phase 1B passed their local acceptance gates on 2026-10-09. Phase exits depend on actual verification evidence, not file existence or production-readiness assumptions; Phase 1 as a whole still needs the Phase 1C catalog gate.
 
 | Phase                  | Goals and deliverables                                                                                                                                 | Dependencies                                      | Acceptance/tests/exit gate                                                                                                                                                                                                                                                | Risks                                                                     |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
@@ -19,5 +19,8 @@ Each phase needs contract/migration review, focused tests, wider regression chec
 
 - Phase 0: **COMPLETED**, previously reported; foundation browser regression rerun with Phase 1A.
 - Phase 1A Authentication & Security: **COMPLETED for the local acceptance gate**. Go, database, real Caddy/Mailpit auth flows, SMTP failure handling and browser tests passed; see the dated verification entry. This is not production readiness or completion of all Phase 1 deliverables.
-- Phase 1B organization/branch membership and RBAC: **NOT STARTED**. Requires a non-owner database runtime role and server-authoritative tenant/branch grants. No tenant permission is inferred from an authenticated global identity.
-- Phase 1C: **NOT STARTED**. No catalog/business implementation is included in the authentication finalization.
+- Phase 1B.1 Organization & Store Onboarding: **COMPLETED (Local)**. Atomic Owner/main branch/defaults/audit creation, idempotency, selection/switching and settings verified.
+- Phase 1B.2 Branch & Employee Management: **COMPLETED (Local)**. Branch CRUD without hard deletion, branch grants/switching, memberships and secure invitations verified.
+- Phase 1B.3 RBAC & Tenant Isolation: **COMPLETED (Local)**. Fixed roles, authoritative active membership/branch checks, scoped Manager policy, last-owner serialization, cache isolation, Origin/CSRF and regression checks verified. This is scoped local evidence, not full database RLS or production certification.
+- Phase 1B overall: **COMPLETED (Local)**; see [design and limitations](organization.md) and the dated verification entry. No tenant permission is inferred solely from global authentication.
+- Phase 1C Product Catalog, Categories, Brands, Units, Product Variants & Barcode Management: **NOT STARTED**. It may reuse verified membership/permission boundaries, but needs its own contracts, tenant queries, migrations and tests; do not start automatically.

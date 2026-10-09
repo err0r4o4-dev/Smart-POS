@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"smartpos/api/internal/modules/identity"
+	"smartpos/api/internal/modules/organization"
 	"smartpos/api/internal/platform/httpx"
 )
 
@@ -31,6 +32,8 @@ func Router(checker Readiness, logger *slog.Logger, authentication ...identity.H
 	router.Route("/api/v1", func(version chi.Router) {
 		if len(authentication) > 0 {
 			authentication[0].Routes(version)
+			mailer, _ := authentication[0].Service.Mailer.(organization.InvitationMailer)
+			organization.Handler{Service: &organization.Service{Pool: authentication[0].Service.Pool, Mailer: mailer}, Authentication: authentication[0]}.Routes(version)
 		}
 		version.Get("/system", func(writer http.ResponseWriter, request *http.Request) {
 			httpx.JSON(writer, 200, map[string]any{"data": map[string]any{"name": "SmartPOS", "phase": 0, "authentication": "server_sessions"}})

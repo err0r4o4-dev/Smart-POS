@@ -1,6 +1,6 @@
 # Incremental delivery roadmap
 
-Business phases below remain planned beyond Phase 1A identity. Phase 1A implementation is present but full runtime verification is pending; Phase 1B organization/branch membership and RBAC have not started. Phase 0 exit depends on actual verification evidence, not file existence.
+Business phases below remain planned beyond Phase 1A identity. Phase 1A passed its local runtime acceptance gate on 2026-10-09; Phase 1B organization/branch membership and RBAC have not started. Phase exits depend on actual verification evidence, not file existence or production-readiness assumptions.
 
 | Phase                  | Goals and deliverables                                                                                                                                 | Dependencies                                      | Acceptance/tests/exit gate                                                                                                                                                                                                                                                | Risks                                                                     |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
@@ -14,3 +14,10 @@ Business phases below remain planned beyond Phase 1A identity. Phase 1A implemen
 | 7 Production Readiness | Security/performance review, backup AND restore drills, monitoring, durable jobs/outbox, alerting, accessibility, integrations and deployment/runbooks | All released feature gates                        | Load/concurrency and end-to-end reconciliation; production roles/secrets/TLS/cookies; restore to isolated environment; WCAG/responsive review; observability and rollback drill. Exit: explicit owner-approved release, never automatic from Phase 0.                     | Operational loss, hardening gaps, external payment/hardware failures      |
 
 Each phase needs contract/migration review, focused tests, wider regression checks, documented ownership and explicit exit evidence. Do not automatically start Phase 1 after foundation delivery.
+
+## Current subphase gates (2026-10-09)
+
+- Phase 0: **COMPLETED**, previously reported; foundation browser regression rerun with Phase 1A.
+- Phase 1A Authentication & Security: **COMPLETED for the local acceptance gate**. Go, database, real Caddy/Mailpit auth flows, SMTP failure handling and browser tests passed; see the dated verification entry. This is not production readiness or completion of all Phase 1 deliverables.
+- Phase 1B organization/branch membership and RBAC: **NOT STARTED**. Requires a non-owner database runtime role and server-authoritative tenant/branch grants. No tenant permission is inferred from an authenticated global identity.
+- Phase 1C: **NOT STARTED**. No catalog/business implementation is included in the authentication finalization.

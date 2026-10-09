@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/netip"
 	"strconv"
 	"strings"
 	"time"
@@ -18,9 +19,10 @@ import (
 )
 
 type Handler struct {
-	Service    *Service
-	Origins    []string
-	Production bool
+	Service        *Service
+	Origins        []string
+	Production     bool
+	TrustedProxyIP netip.Addr
 }
 
 type sessionKey struct{}
@@ -67,10 +69,7 @@ func decode(writer http.ResponseWriter, request *http.Request, value any) bool {
 }
 
 func (handler Handler) throttle(writer http.ResponseWriter, request *http.Request, scope, email string, limit int, window time.Duration) bool {
-	ip, _, err := net.SplitHostPort(request.RemoteAddr)
-	if err != nil {
-		ip = request.RemoteAddr
-	}
+	ip := handler.clientIP(request)
 	for _, key := range []string{"ip:" + ip, "account:" + strings.ToLower(strings.TrimSpace(email))} {
 		allowed, err := handler.Service.Allow(request.Context(), scope, key, limit, window)
 		if err != nil {
@@ -84,6 +83,28 @@ func (handler Handler) throttle(writer http.ResponseWriter, request *http.Reques
 		}
 	}
 	return true
+}
+
+func (handler Handler) clientIP(request *http.Request) string {
+	host, _, err := net.SplitHostPort(request.RemoteAddr)
+	if err != nil {
+		return request.RemoteAddr
+	}
+	peer, err := netip.ParseAddr(host)
+	if err != nil {
+		return host
+	}
+	peer = peer.Unmap()
+	if handler.TrustedProxyIP.IsValid() && peer == handler.TrustedProxyIP {
+		forwarded := request.Header.Values("X-Forwarded-For")
+		if len(forwarded) == 1 {
+			client, parseErr := netip.ParseAddr(strings.TrimSpace(forwarded[0]))
+			if parseErr == nil && client.IsValid() && !client.IsUnspecified() && !client.IsMulticast() && client.Zone() == "" {
+				return client.Unmap().String()
+			}
+		}
+	}
+	return peer.String()
 }
 
 func (handler Handler) Routes(router chi.Router) {

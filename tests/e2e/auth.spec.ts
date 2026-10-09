@@ -1,52 +1,22 @@
 import { expect, test } from '@playwright/test';
 import { createHash, randomUUID } from 'node:crypto';
-import { execFileSync } from 'node:child_process';
+import {
+  authSQL,
+  latestToken,
+  mailIds,
+  startAuthClient,
+} from '../integration/auth-fixtures.mjs';
 
 test.skip(
   process.env.AUTH_E2E !== '1',
   'Run only against isolated smartpos-auth-test stack',
 );
 
-function mailpit(path: string) {
-  return JSON.parse(
-    execFileSync(
-      'docker',
-      [
-        'compose',
-        '-p',
-        'smartpos-auth-test',
-        'exec',
-        '-T',
-        'api',
-        'wget',
-        '-qO-',
-        `http://mailpit:8025${path}`,
-      ],
-      { encoding: 'utf8' },
-    ),
-  );
-}
-
-function latestToken(email: string) {
-  const messages = mailpit('/api/v1/messages').messages as Array<{
-    ID: string;
-    To: Array<{ Address: string }>;
-  }>;
-  const message = messages.find((item) =>
-    item.To.some((recipient) => recipient.Address === email),
-  );
-  expect(message).toBeTruthy();
-  const text = mailpit(`/api/v1/message/${encodeURIComponent(message!.ID)}`)
-    .Text as string;
-  const token = text.match(/reset-password\?token=([A-Za-z0-9_-]+)/)?.[1];
-  expect(token).toBeTruthy();
-  return token!;
-}
-
 test('real registration, login, persistence, logout, recovery and reset security', async ({
   page,
   request,
 }) => {
+  test.setTimeout(60000);
   const base = process.env.E2E_BASE_URL;
   expect(base).toBe('http://localhost:18088');
   const email = `browser-${randomUUID()}@example.test`;
@@ -95,6 +65,8 @@ test('real registration, login, persistence, logout, recovery and reset security
       (item) => item.name === 'smartpos_session',
     );
     expect(cookie).toBeTruthy();
+    expect(cookie!.httpOnly).toBe(true);
+    expect(cookie!.sameSite).toBe('Lax');
     const denied = await request.post(`${base}/api/v1/auth/logout`, {
       headers: {
         Origin: base!,
@@ -105,7 +77,7 @@ test('real registration, login, persistence, logout, recovery and reset security
     });
     expect(denied.status()).toBe(403);
     await page.getByRole('button', { name: 'Sign out' }).click();
-    await expect(page).toHaveURL(/\/login$/);
+    await expect(page).toHaveURL(/\/login(?:\?returnTo=%2Faccount)?$/);
     const revoked = await request.get(`${base}/api/v1/auth/me`, {
       headers: { Cookie: `${cookie!.name}=${cookie!.value}` },
     });
@@ -123,13 +95,19 @@ test('real registration, login, persistence, logout, recovery and reset security
       (item) => item.name === 'smartpos_session',
     );
     await page.goto('/forgot-password');
+    const previousIDs = mailIds(email);
     await page.getByLabel('Email address').fill(email);
     await page.getByRole('button', { name: 'Request reset link' }).click();
     await expect(page.getByRole('status')).toContainText(
       'If an eligible account exists',
     );
-    const token = latestToken(email);
+    const token = await latestToken(email, previousIDs);
     await page.goto(`/reset-password?token=${encodeURIComponent(token)}`);
+    await expect(page).toHaveURL(/\/reset-password$/);
+    await page.screenshot({
+      path: 'test-results/auth-reset-mobile.png',
+      fullPage: true,
+    });
     await page.getByLabel('Password', { exact: true }).fill(newPassword);
     await page.getByLabel('Confirm password').fill(newPassword);
     await page.getByRole('button', { name: 'Change password' }).click();
@@ -158,34 +136,24 @@ test('real registration, login, persistence, logout, recovery and reset security
     await expect(
       page.getByRole('heading', { name: 'Your account' }),
     ).toBeVisible();
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await expect(page.locator('body')).toHaveJSProperty('scrollWidth', 1440);
+    await page.screenshot({
+      path: 'test-results/auth-account-desktop.png',
+      fullPage: true,
+    });
   });
 
   await test.step('expired reset token is rejected', async () => {
+    const previousIDs = mailIds(email);
     await page.goto('/forgot-password');
     await page.getByLabel('Email address').fill(email);
     await page.getByRole('button', { name: 'Request reset link' }).click();
     await expect(page.getByRole('status')).toBeVisible();
-    const token = latestToken(email);
+    const token = await latestToken(email, previousIDs);
     const hash = createHash('sha256').update(token).digest('hex');
-    execFileSync(
-      'docker',
-      [
-        'compose',
-        '-p',
-        'smartpos-auth-test',
-        'exec',
-        '-T',
-        'postgres',
-        'psql',
-        '-U',
-        'smartpos_dev',
-        '-d',
-        'smartpos',
-        '-q',
-        '-c',
-        `UPDATE password_reset_tokens SET expires_at=now()-interval '1 minute' WHERE token_hash=decode('${hash}','hex')`,
-      ],
-      { stdio: 'ignore' },
+    authSQL(
+      `UPDATE password_reset_tokens SET created_at=now()-interval '16 minutes',expires_at=now()-interval '1 minute' WHERE token_hash=decode('${hash}','hex')`,
     );
     await page.goto(`/reset-password?token=${encodeURIComponent(token)}`);
     await page.getByLabel('Password', { exact: true }).fill(oldPassword);
@@ -193,4 +161,62 @@ test('real registration, login, persistence, logout, recovery and reset security
     await page.getByRole('button', { name: 'Change password' }).click();
     await expect(page.getByRole('alert')).toContainText('invalid or expired');
   });
+});
+
+test('real clients preserve gateway and direct API rate limits despite spoofed headers', async () => {
+  test.setTimeout(60000);
+  const clients: Array<{ proxy: string; close: () => void }> = [];
+  const createClient = async (direct = false) => {
+    const client = await startAuthClient(direct);
+    clients.push(client);
+    return client;
+  };
+  const attempt = async (
+    client: { proxy: string },
+    headers: Record<string, string> = {},
+  ) =>
+    fetch(`${client.proxy}/api/v1/auth/login`, {
+      method: 'POST',
+      headers: {
+        Origin: 'http://localhost:18088',
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      body: JSON.stringify({
+        email: `rate-${randomUUID()}@example.test`,
+        password: 'invalid password',
+      }),
+    });
+  try {
+    const first = await createClient();
+    for (let count = 0; count < 5; count++)
+      expect((await attempt(first)).status).toBe(401);
+    const limited = await attempt(first);
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get('retry-after')).toBe('600');
+    for (const headers of [
+      { 'X-Forwarded-For': '198.51.100.1' },
+      { 'X-Real-IP': '203.0.113.1' },
+      {
+        'X-Forwarded-For': '198.51.100.1, invalid',
+        'X-Real-IP': '203.0.113.2',
+      },
+    ])
+      expect((await attempt(first, headers)).status).toBe(429);
+    const second = await createClient();
+    expect((await attempt(second)).status).toBe(401);
+    const direct = await createClient(true);
+    for (let count = 0; count < 6; count++) {
+      expect(
+        (
+          await attempt(direct, {
+            'X-Forwarded-For': `198.51.100.${count + 1}`,
+            'X-Real-IP': `203.0.113.${count + 1}`,
+          })
+        ).status,
+      ).toBe(count < 5 ? 401 : 429);
+    }
+  } finally {
+    for (const client of clients.reverse()) client.close();
+  }
 });

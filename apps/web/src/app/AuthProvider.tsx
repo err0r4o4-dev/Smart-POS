@@ -65,15 +65,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
   const signIn = async (email: string, password: string) => {
+    const current = ++generation.current;
     const session = await login(email, password);
-    ++generation.current;
-    setState({ status: 'authenticated', session });
+    if (current === generation.current)
+      setState({ status: 'authenticated', session });
   };
   const signOut = async () => {
     if (state.status !== 'authenticated') return;
+    const current = ++generation.current;
     await logout(state.session.csrf_token);
-    ++generation.current;
-    setState({ status: 'anonymous', session: null });
+    if (current === generation.current)
+      setState({ status: 'anonymous', session: null });
   };
   return (
     <AuthContext.Provider

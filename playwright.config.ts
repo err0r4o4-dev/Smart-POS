@@ -9,5 +9,11 @@ export default defineConfig({
   use: {
     baseURL: process.env.E2E_BASE_URL ?? 'http://127.0.0.1:8088',
     trace: 'retain-on-failure',
+    ...(process.env.AUTH_TEST_PROXY
+      ? {
+          proxy: { server: process.env.AUTH_TEST_PROXY },
+          launchOptions: { args: ['--proxy-bypass-list=<-loopback>'] },
+        }
+      : {}),
   },
 });

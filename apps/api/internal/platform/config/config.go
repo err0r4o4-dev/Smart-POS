@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"net"
+	"net/netip"
 	"net/url"
 	"os"
 	"strconv"
@@ -23,6 +24,7 @@ type Config struct {
 	SMTPUser       string
 	SMTPPassword   string
 	MailFrom       string
+	TrustedProxyIP netip.Addr
 }
 
 func Load() (Config, error) { return Parse(os.Getenv) }
@@ -79,6 +81,16 @@ func Parse(getenv func(string) string) (Config, error) {
 	if environment == "production" && (getenv("SMTP_USER") == "" || getenv("SMTP_PASSWORD") == "") {
 		return Config{}, errors.New("production SMTP authentication is required")
 	}
+	var trustedProxyIP netip.Addr
+	if value := getenv("AUTH_TRUSTED_PROXY_IP"); value != "" {
+		trustedProxyIP, err = netip.ParseAddr(value)
+		if err != nil || !trustedProxyIP.IsValid() || trustedProxyIP.IsLoopback() || trustedProxyIP.IsUnspecified() || trustedProxyIP.IsMulticast() || trustedProxyIP.Zone() != "" {
+			return Config{}, errors.New("AUTH_TRUSTED_PROXY_IP must be a single non-loopback IP address")
+		}
+		trustedProxyIP = trustedProxyIP.Unmap()
+	} else if environment == "production" {
+		return Config{}, errors.New("AUTH_TRUSTED_PROXY_IP is required in production")
+	}
 	hours := 24
 	if value := getenv("AUTH_SESSION_HOURS"); value != "" {
 		hours, err = strconv.Atoi(value)
@@ -86,5 +98,5 @@ func Parse(getenv func(string) string) (Config, error) {
 			return Config{}, errors.New("AUTH_SESSION_HOURS must be 1 through 720")
 		}
 	}
-	return Config{Address: address, DatabaseURL: databaseURL, Environment: environment, PublicOrigin: origin, AllowedOrigins: origins, SessionTTL: time.Duration(hours) * time.Hour, SMTPAddr: smtpAddr, SMTPUser: getenv("SMTP_USER"), SMTPPassword: getenv("SMTP_PASSWORD"), MailFrom: mailFrom}, nil
+	return Config{Address: address, DatabaseURL: databaseURL, Environment: environment, PublicOrigin: origin, AllowedOrigins: origins, SessionTTL: time.Duration(hours) * time.Hour, SMTPAddr: smtpAddr, SMTPUser: getenv("SMTP_USER"), SMTPPassword: getenv("SMTP_PASSWORD"), MailFrom: mailFrom, TrustedProxyIP: trustedProxyIP}, nil
 }

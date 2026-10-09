@@ -35,6 +35,15 @@ func (mailer SMTPMailer) SendReset(ctx context.Context, to, token string) error 
 		return errors.New("mail service unavailable")
 	}
 	defer connection.Close()
+	stopCancellation := context.AfterFunc(ctx, func() { connection.Close() })
+	defer stopCancellation()
+	deadline := time.Now().Add(10 * time.Second)
+	if contextDeadline, ok := ctx.Deadline(); ok && contextDeadline.Before(deadline) {
+		deadline = contextDeadline
+	}
+	if err := connection.SetDeadline(deadline); err != nil {
+		return errors.New("mail service unavailable")
+	}
 	client, err := smtp.NewClient(connection, host)
 	if err != nil {
 		return errors.New("mail service unavailable")

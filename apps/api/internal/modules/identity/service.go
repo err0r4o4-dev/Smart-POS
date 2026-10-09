@@ -31,19 +31,22 @@ type Mailer interface {
 }
 
 type Service struct {
-	Pool       *pgxpool.Pool
-	Mailer     Mailer
-	Logger     *slog.Logger
-	SessionTTL time.Duration
-	DummyHash  string
+	Pool          *pgxpool.Pool
+	Mailer        Mailer
+	Logger        *slog.Logger
+	SessionTTL    time.Duration
+	DummyHash     string
+	resetRequests chan string
 }
 
-func NewService(pool *pgxpool.Pool, mailer Mailer, logger *slog.Logger, ttl time.Duration) (*Service, error) {
+func NewService(ctx context.Context, pool *pgxpool.Pool, mailer Mailer, logger *slog.Logger, ttl time.Duration) (*Service, error) {
 	dummy, err := HashPassword("not-a-real-password")
 	if err != nil {
 		return nil, err
 	}
-	return &Service{Pool: pool, Mailer: mailer, Logger: logger, SessionTTL: ttl, DummyHash: dummy}, nil
+	service := &Service{Pool: pool, Mailer: mailer, Logger: logger, SessionTTL: ttl, DummyHash: dummy, resetRequests: make(chan string, 64)}
+	go service.processResetRequests(ctx)
+	return service, nil
 }
 
 func (service *Service) Register(ctx context.Context, email, password, displayName string) (Profile, error) {
@@ -177,8 +180,35 @@ func (service *Service) RequestReset(ctx context.Context, email string) error {
 	if err != nil {
 		return ErrInvalidInput
 	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	select {
+	case service.resetRequests <- normalized:
+	default:
+		service.Logger.Error("password reset delivery queue full")
+	}
+	return nil
+}
+
+func (service *Service) processResetRequests(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case email := <-service.resetRequests:
+			deliveryCtx, cancel := context.WithTimeout(ctx, 12*time.Second)
+			if err := service.issueReset(deliveryCtx, email); err != nil {
+				service.Logger.Error("password reset processing failed")
+			}
+			cancel()
+		}
+	}
+}
+
+func (service *Service) issueReset(ctx context.Context, normalized string) error {
 	var userID string
-	err = service.Pool.QueryRow(ctx, "SELECT id FROM users WHERE email_normalized=$1 AND status='ACTIVE'", normalized).Scan(&userID)
+	err := service.Pool.QueryRow(ctx, "SELECT id FROM users WHERE email_normalized=$1 AND status='ACTIVE'", normalized).Scan(&userID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}
@@ -207,7 +237,7 @@ func (service *Service) RequestReset(ctx context.Context, email string) error {
 		return err
 	}
 	if err := service.Mailer.SendReset(ctx, normalized, token); err != nil {
-		service.Logger.Error("password reset delivery failed")
+		return err
 	}
 	return nil
 }

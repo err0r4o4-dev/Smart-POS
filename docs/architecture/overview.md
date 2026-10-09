@@ -2,6 +2,10 @@
 
 React -> same-origin Caddy -> Go `/api/v1` -> PostgreSQL. Phase 1A adds an identity module for registration, server-managed sessions, account recovery and audit events. Future Go client -> internal FastAPI. AI has no DB credentials or authority to mutate stock/payments. AI outage cannot block checkout. No public AI gateway routes.
 
+Caddy and Go share a dedicated proxy network with separate fixed addresses: Caddy defaults to `172.30.42.2`, Go to `172.30.42.3`. Fixing both prevents Docker allocating Caddy's trusted address to the API during startup. Only these two services join that network. Go trusts a single configured proxy peer, never an entire Docker/private subnet. Other services and test clients are untrusted. Caddy's existing forwarding defaults are retained without additional forwarding-header overrides.
+
+Password-reset HTTP requests validate and enqueue normalized addresses into a bounded, process-local queue before any account lookup or SMTP work. A single worker issues hashed, expiring tokens and sends mail with bounded deadlines. This is best-effort delivery, not a durable queue or distributed worker system.
+
 Future `apps/api/internal/modules/<domain>/{domain,application,infrastructure,transport}` folders appear with real use cases, not empty packages. Domain owns entities/rules/repository interfaces; application owns authorization/transactions; infrastructure implements adapters; transport maps DTOs/errors. Dependencies point inward; no business rules in handlers.
 
 Frontend `features/<module>` owns UI; layouts own shells; components/ui owns primitives; app owns router/providers/config. Planned route inventory is separate from active routes. Presentations use `/preview/*`, not fake working `/pos` or `/login`.

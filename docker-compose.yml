@@ -41,6 +41,7 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       MAIL_FROM: ${MAIL_FROM:-noreply@localhost}
+      AUTH_TRUSTED_PROXY_IP: ${CADDY_PROXY_IP:-172.30.42.2}
     ports: ['127.0.0.1:${API_PORT:-8080}:8080']
     depends_on:
       migrate: { condition: service_completed_successfully }
@@ -51,7 +52,11 @@ services:
       timeout: 3s
       retries: 20
     init: true
-    networks: [edge, data, intelligence]
+    networks:
+      proxy:
+        ipv4_address: ${API_PROXY_IP:-172.30.42.3}
+      data:
+      intelligence:
   mailpit:
     image: axllent/mailpit:v1.31.4
     ports: ['127.0.0.1:${MAILPIT_PORT:-8025}:8025']
@@ -98,7 +103,10 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
-    networks: [edge]
+    networks:
+      edge:
+      proxy:
+        ipv4_address: ${CADDY_PROXY_IP:-172.30.42.2}
   api-check:
     profiles: [checks]
     build: { context: ./apps/api, target: check }
@@ -139,6 +147,10 @@ volumes:
   postgres-data:
 networks:
   edge:
+  proxy:
+    ipam:
+      config:
+        - subnet: ${PROXY_SUBNET:-172.30.42.0/28}
   data:
     internal: true
   intelligence:

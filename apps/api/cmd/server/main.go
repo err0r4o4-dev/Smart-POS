@@ -37,11 +37,11 @@ func run(logger *slog.Logger) error {
 	}
 	defer pool.Close()
 	mailer := identity.SMTPMailer{Address: settings.SMTPAddr, Username: settings.SMTPUser, Password: settings.SMTPPassword, From: settings.MailFrom, Origin: settings.PublicOrigin, Production: settings.Environment == "production"}
-	authentication, err := identity.NewService(pool, mailer, logger, settings.SessionTTL)
+	authentication, err := identity.NewService(ctx, pool, mailer, logger, settings.SessionTTL)
 	if err != nil {
 		return err
 	}
-	server := &http.Server{Addr: settings.Address, Handler: transport.Router(database.Checker{Pool: pool}, logger, identity.Handler{Service: authentication, Origins: settings.AllowedOrigins, Production: settings.Environment == "production"}), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 1 << 20}
+	server := &http.Server{Addr: settings.Address, Handler: transport.Router(database.Checker{Pool: pool}, logger, identity.Handler{Service: authentication, Origins: settings.AllowedOrigins, Production: settings.Environment == "production", TrustedProxyIP: settings.TrustedProxyIP}), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 1 << 20}
 	failures := make(chan error, 1)
 	go func() { failures <- server.ListenAndServe() }()
 	logger.Info("server starting", "address", settings.Address)

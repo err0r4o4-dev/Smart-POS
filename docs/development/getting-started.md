@@ -25,3 +25,29 @@ The per-service `.env.example` files document host environment variables; Go/Fas
 `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`. `npx playwright install chromium` once, then `npm run e2e` against a running gateway. `npm run verify:api` and `npm run verify:ai` automatically build their check images before running. `npm run verify:integration` uses the running local stack. `npm run verify:resilience` temporarily stops AI/PostgreSQL/API to assert real outage and graceful shutdown behavior, restoring services with finally blocks; use only against this disposable local development stack.
 
 `npm run stack:logs` reads logs; do not publish secret-bearing environment output. `npm run stack:down` stops only this Compose project and preserves named data volume. Tests use synthetic rollback-only SQL; no production URL is accepted by integration Compose configuration.
+
+## Isolated Phase 1A authentication verification
+
+Run from the repository root, using Docker Desktop Linux containers and the already installed Playwright Chromium. Do not target a production database or change the rate-limit thresholds.
+
+```powershell
+$env:POSTGRES_PORT='15432'
+$env:API_PORT='18080'
+$env:WEB_PORT='15173'
+$env:GATEWAY_PORT='18088'
+$env:MAILPIT_PORT='18025'
+$env:PUBLIC_ORIGIN='http://localhost:18088'
+docker compose -p smartpos-auth-test up --build -d --wait
+docker pull node:24-alpine
+docker compose -p smartpos-auth-test --profile checks run --build --no-deps --rm api-check
+docker compose -p smartpos-auth-test --profile checks run --no-deps --rm auth-integration-check
+npm run verify:auth
+```
+
+If another project already uses the proxy subnet, choose an unused `PROXY_SUBNET` and matching fixed Caddy/API addresses before starting this isolated project. Existing volumes are preserved and migration up is rerunnable; no down/drop or counter reset is part of verification. `docker pull` supplies the same Node family already used by the web build; BuildKit's base-image cache alone may not provide its `docker run` tag.
+
+`verify:auth` runs the API auth flow, then all Playwright tests with auth enabled. Disposable, non-root, read-only Node clients on the isolated edge network forward to the real Caddy gateway. Each suite/client receives one real IP with no live prior test bucket; that IP is fixed for all attempts, including explicit 429/spoofing checks. Counters and account limits are never cleared. The direct-API fixture additionally joins data, not the trusted proxy network. Only fixture containers are removed in `finally`; synthetic accounts/rate counters and the database volume remain.
+
+The API flow deliberately stops **only the isolated Mailpit** to check SMTP failure responses and sanitized application logs, then restores it in `finally`. Do not run overlapping auth suites against the same project during this outage test. Mailbox access uses the API container's internal Mailpit interface; no public mailbox binding is required. Reset tests poll for a newly delivered message rather than assuming synchronous SMTP, and expiry fixtures preserve the database's `expires_at > created_at` constraint.
+
+Screenshots/Playwright reports live under ignored `test-results`/`playwright-report`. Traces can contain synthetic test session/reset material; do not publish them as production-safe logs. Mailpit host UI binding, production TLS/SMTP and production hardening are separate verification gates.

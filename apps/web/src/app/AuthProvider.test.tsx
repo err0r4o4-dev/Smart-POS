@@ -23,7 +23,7 @@ const session: AuthSession = {
 };
 
 function Probe() {
-  const { state, signIn, signOut, clear } = useAuth();
+  const { state, signIn, signOut, refresh, clear } = useAuth();
   return (
     <div>
       <output>{state.status}</output>
@@ -31,13 +31,14 @@ function Probe() {
         Sign in
       </button>
       <button onClick={() => void signOut()}>Sign out</button>
+      <button onClick={() => void refresh()}>Refresh</button>
       <button onClick={clear}>Clear</button>
     </div>
   );
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
 });
 
 it('restores the persisted session and signs out through the CSRF-protected API', async () => {
@@ -73,4 +74,60 @@ it('does not let a stale session lookup overwrite a new login or password reset'
   expect(screen.getByText('authenticated')).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
   expect(screen.getByText('anonymous')).toBeVisible();
+});
+
+it('ignores a pending login after the session is cleared', async () => {
+  let resolveLogin!: (value: AuthSession) => void;
+  requests.getSession.mockResolvedValue(null);
+  requests.login.mockReturnValue(
+    new Promise<AuthSession>((resolve) => {
+      resolveLogin = resolve;
+    }),
+  );
+  render(
+    <AuthProvider>
+      <Probe />
+    </AuthProvider>,
+  );
+  expect(await screen.findByText('anonymous')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+  await act(async () => resolveLogin(session));
+  expect(screen.getByText('anonymous')).toBeVisible();
+});
+
+it('does not let a pending logout overwrite a newer login', async () => {
+  let resolveLogout!: (value: { revoked: boolean }) => void;
+  requests.getSession.mockResolvedValue(session);
+  requests.login.mockResolvedValue(session);
+  requests.logout.mockReturnValue(
+    new Promise<{ revoked: boolean }>((resolve) => {
+      resolveLogout = resolve;
+    }),
+  );
+  render(
+    <AuthProvider>
+      <Probe />
+    </AuthProvider>,
+  );
+  expect(await screen.findByText('authenticated')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+  await act(async () => {});
+  await act(async () => resolveLogout({ revoked: true }));
+  expect(screen.getByText('authenticated')).toBeVisible();
+});
+
+it('clears an expired session when explicitly refreshed', async () => {
+  requests.getSession
+    .mockResolvedValueOnce(session)
+    .mockResolvedValueOnce(null);
+  render(
+    <AuthProvider>
+      <Probe />
+    </AuthProvider>,
+  );
+  expect(await screen.findByText('authenticated')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+  expect(await screen.findByText('anonymous')).toBeVisible();
 });

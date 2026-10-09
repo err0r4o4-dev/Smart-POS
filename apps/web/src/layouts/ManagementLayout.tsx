@@ -13,6 +13,7 @@ import {
 import { anonymousSession, canAccess } from '../app/access';
 import { navigation } from '../app/routes';
 import { Brand, Tag } from '../components/ui/primitives';
+import { useAuth } from '../app/AuthProvider';
 
 const icons = {
   dashboard: LayoutDashboard,
@@ -21,6 +22,7 @@ const icons = {
   help: BookOpen,
 };
 export function ManagementLayout() {
+  const { state } = useAuth();
   const [open, setOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -90,9 +92,17 @@ export function ManagementLayout() {
           </div>
           <div className="topbar-right">
             <Tag>Development</Tag>
-            <span className="avatar" aria-label="No signed-in user">
-              —
-            </span>
+            <NavLink
+              to={state.status === 'authenticated' ? '/account' : '/login'}
+              className="avatar"
+              aria-label={
+                state.status === 'authenticated' ? 'Your account' : 'Sign in'
+              }
+            >
+              {state.status === 'authenticated'
+                ? state.session.user.display_name.slice(0, 1).toUpperCase()
+                : '—'}
+            </NavLink>
           </div>
           <button
             ref={menuButton}

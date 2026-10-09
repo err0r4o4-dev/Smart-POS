@@ -1,8 +1,8 @@
 # Database foundation
 
-Migration 000001 creates organizations/branches: UUID keys supplied by app, timestamptz, composite tenant references, organization-scoped unique branch code, explicit checks. No seed credentials/users/sales or extensions.
+Migration 000001 creates organizations/branches: UUID keys supplied by app, timestamptz, composite tenant references, organization-scoped unique branch code, explicit checks. Migration 000002 adds global users, hashed auth sessions, hashed reset tokens, auth audit events and hashed rate-limit keys. No seed credentials/users/sales or extensions.
 
-Both tables ENABLE and FORCE RLS. Transaction-local `app.organization_id` derives from authorized membership. Missing context yields no rows. Superusers bypass RLS: Compose bootstrap user is local-only. Phase 1 must create non-owner runtime role, deny DDL and test tenant/branch paths. Scoped queries remain mandatory.
+The organization/branch tables ENABLE and FORCE RLS. Transaction-local `app.organization_id` will derive from authorized membership. Missing context yields no rows. Superusers bypass RLS: Compose bootstrap user is local-only. Phase 1B must create a non-owner runtime role, deny DDL and test tenant/branch paths. Scoped queries remain mandatory.
 
 | Domain         | Planned tables                                                                                     |
 | -------------- | -------------------------------------------------------------------------------------------------- |
@@ -20,4 +20,4 @@ Both tables ENABLE and FORCE RLS. Transaction-local `app.organization_id` derive
 
 Tenant tables carry organization_id; branch tables also branch_id. Composite FKs prevent cross-tenant references. Unique/index keys include tenant and derive from queries. Money bigint minor units + currency; fractional quantity numeric(18,3) with conversion/rounding rules. Ledger append-only; balances transactional projections.
 
-`npm run migrate` runs pinned golang-migrate up locally, also automatic before API starts. Paired down migration is destructive and never automatic. Add sequential migrations; never edit deployed migrations. Non-disposable changes require backup/rollback approval. Readiness rejects missing/dirty/outdated schema.
+`npm run migrate` runs pinned golang-migrate up locally, also automatic before API starts. The Phase 1A migration is forward-only; do not run down/drop automatically. Add sequential migrations; never edit deployed migrations. Non-disposable changes require backup/rollback approval. Readiness rejects missing/dirty/outdated schema (required version 2).

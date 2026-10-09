@@ -924,6 +924,54 @@ ul {
   color: var(--text-strong);
   font-size: 12px !important;
 }
+.auth-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+}
+.auth-links a {
+  color: var(--primary-strong);
+  font-weight: 650;
+}
+.auth-error {
+  padding: 12px;
+  border: 1px solid #c2410c;
+  border-radius: var(--radius-control);
+  color: #9a3412;
+  background: #fff7ed;
+}
+.password-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.password-control input {
+  padding-right: 70px;
+}
+.password-control button {
+  position: absolute;
+  right: 8px;
+  min-width: 52px;
+  min-height: 40px;
+  border: 0;
+  background: transparent;
+  color: var(--primary-strong);
+}
+.account-card {
+  max-width: 640px;
+  margin: 40px auto;
+}
+.account-card dl {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) 2fr;
+  gap: 12px;
+  overflow-wrap: anywhere;
+}
+.account-card dt {
+  color: var(--text-secondary);
+}
 .help-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

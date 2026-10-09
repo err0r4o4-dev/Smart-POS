@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"smartpos/api/internal/modules/identity"
 	"smartpos/api/internal/platform/config"
 	"smartpos/api/internal/platform/database"
 	"smartpos/api/internal/transport"
@@ -35,7 +36,12 @@ func run(logger *slog.Logger) error {
 		return err
 	}
 	defer pool.Close()
-	server := &http.Server{Addr: settings.Address, Handler: transport.Router(database.Checker{Pool: pool}, logger), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 1 << 20}
+	mailer := identity.SMTPMailer{Address: settings.SMTPAddr, Username: settings.SMTPUser, Password: settings.SMTPPassword, From: settings.MailFrom, Origin: settings.PublicOrigin, Production: settings.Environment == "production"}
+	authentication, err := identity.NewService(pool, mailer, logger, settings.SessionTTL)
+	if err != nil {
+		return err
+	}
+	server := &http.Server{Addr: settings.Address, Handler: transport.Router(database.Checker{Pool: pool}, logger, identity.Handler{Service: authentication, Origins: settings.AllowedOrigins, Production: settings.Environment == "production"}), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 1 << 20}
 	failures := make(chan error, 1)
 	go func() { failures <- server.ListenAndServe() }()
 	logger.Info("server starting", "address", settings.Address)

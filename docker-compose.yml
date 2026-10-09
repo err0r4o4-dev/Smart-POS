@@ -33,6 +33,14 @@ services:
     environment:
       API_ADDR: ':8080'
       DATABASE_URL: 'postgres://${POSTGRES_USER:-smartpos_dev}:${POSTGRES_PASSWORD:-local-development-only}@postgres:5432/${POSTGRES_DB:-smartpos}?sslmode=disable'
+      APP_ENV: ${APP_ENV:-development}
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:8088}
+      DEV_ORIGINS: ${DEV_ORIGINS:-http://localhost:5173}
+      AUTH_SESSION_HOURS: ${AUTH_SESSION_HOURS:-24}
+      SMTP_ADDR: ${SMTP_ADDR:-mailpit:1025}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-noreply@localhost}
     ports: ['127.0.0.1:${API_PORT:-8080}:8080']
     depends_on:
       migrate: { condition: service_completed_successfully }
@@ -44,6 +52,15 @@ services:
       retries: 20
     init: true
     networks: [edge, data, intelligence]
+  mailpit:
+    image: axllent/mailpit:v1.31.4
+    ports: ['127.0.0.1:${MAILPIT_PORT:-8025}:8025']
+    healthcheck:
+      test: ['CMD', '/mailpit', 'readyz']
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks: [intelligence]
   ai:
     build: { context: ./apps/ai, target: runtime }
     healthcheck:
@@ -105,6 +122,19 @@ services:
       ai: { condition: service_healthy }
       caddy: { condition: service_healthy }
     networks: [data, edge, intelligence]
+  auth-integration-check:
+    profiles: [checks]
+    image: postgres:17-alpine
+    entrypoint: ['sh', '/checks/auth-check.sh']
+    volumes: ['./tests/integration:/checks:ro']
+    environment:
+      PGHOST: postgres
+      PGDATABASE: ${POSTGRES_DB:-smartpos}
+      PGUSER: ${POSTGRES_USER:-smartpos_dev}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-local-development-only}
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    networks: [data]
 volumes:
   postgres-data:
 networks:

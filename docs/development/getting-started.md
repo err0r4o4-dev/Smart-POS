@@ -10,7 +10,7 @@ Copy `.env.example` to `.env` if you want custom ports. Defaults run locally wit
 
 ## Frontend development
 
-Stop the container web service or choose a different WEB_PORT before `npm run dev` (Vite 5173). Vite proxies /api and /health to 127.0.0.1:8080. If API_PORT changes, update the local Vite proxy target. Browser uses same-origin relative paths, never internal container hostnames. No auth setup is required because only public foundation presentations exist.
+Stop the container web service or choose a different WEB_PORT before `npm run dev` (Vite 5173). Vite proxies /api and /health to 127.0.0.1:8080. If API_PORT changes, update the local Vite proxy target. Browser uses same-origin relative paths, never internal container hostnames. `DEV_ORIGINS` must include the Vite origin for auth writes. Local password reset messages appear in Mailpit on the loopback `MAILPIT_PORT` (default 8025); never use Mailpit as production delivery.
 
 ## Individual services
 

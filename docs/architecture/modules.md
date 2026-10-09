@@ -17,7 +17,7 @@ Phase numbers identify the primary delivery phase: POS returns/exchanges and sal
 - Error cases: invalid credentials, expired recovery, forbidden tenant.
 - Tests: session expiry, CSRF, enumeration, tenant denial.
 - Implementation phase: 1.
-- Current status: layout preview only, no authentication.
+- Current status: Phase 1A registration, login/logout, recovery, session persistence and account page are implemented; organization setup, memberships and permissions remain Phase 1B. The Phase 1A stack is not yet fully reverified.
 
 ## Dashboard (4 pages)
 

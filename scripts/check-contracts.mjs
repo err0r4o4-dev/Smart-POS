@@ -27,6 +27,12 @@ for (const item of modules) {
 const api = YAML.parse(readFileSync('packages/contracts/openapi.yaml', 'utf8'));
 assert.equal(api.openapi, '3.1.0');
 assert.deepEqual(Object.keys(api.paths).sort(), [
+  '/api/v1/auth/forgot-password',
+  '/api/v1/auth/login',
+  '/api/v1/auth/logout',
+  '/api/v1/auth/me',
+  '/api/v1/auth/register',
+  '/api/v1/auth/reset-password',
   '/api/v1/system',
   '/health/live',
   '/health/ready',

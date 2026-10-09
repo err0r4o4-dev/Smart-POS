@@ -7,12 +7,13 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"smartpos/api/internal/modules/identity"
 	"smartpos/api/internal/platform/httpx"
 )
 
 type Readiness interface{ Ready(context.Context) error }
 
-func Router(checker Readiness, logger *slog.Logger) http.Handler {
+func Router(checker Readiness, logger *slog.Logger, authentication ...identity.Handler) http.Handler {
 	router := chi.NewRouter()
 	router.Use(httpx.RequestIDs, httpx.Security, httpx.Recover(logger), httpx.AccessLog(logger))
 	router.Get("/health/live", func(writer http.ResponseWriter, request *http.Request) {
@@ -28,8 +29,11 @@ func Router(checker Readiness, logger *slog.Logger) http.Handler {
 		httpx.JSON(writer, 200, map[string]string{"status": "ready"})
 	})
 	router.Route("/api/v1", func(version chi.Router) {
+		if len(authentication) > 0 {
+			authentication[0].Routes(version)
+		}
 		version.Get("/system", func(writer http.ResponseWriter, request *http.Request) {
-			httpx.JSON(writer, 200, map[string]any{"data": map[string]any{"name": "SmartPOS", "phase": 0, "authentication": "not_implemented"}})
+			httpx.JSON(writer, 200, map[string]any{"data": map[string]any{"name": "SmartPOS", "phase": 0, "authentication": "server_sessions"}})
 		})
 	})
 	router.NotFound(func(writer http.ResponseWriter, request *http.Request) {

@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { ErrorBoundary } from '../components/feedback/ErrorBoundary';
+import { AuthProvider } from './AuthProvider';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -10,7 +11,9 @@ const queryClient = new QueryClient({
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>{children}</AuthProvider>
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 }

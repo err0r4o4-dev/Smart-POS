@@ -82,6 +82,8 @@ test('no fake authentication or unfinished business pages', async ({
   await expect(page).toHaveURL(/\/login\?returnTo=%2Fproducts/);
   await expect(page.getByLabel('Email address')).toBeEnabled();
   await page.goto('/inventory');
+  await expect(page).toHaveURL(/\/login\?returnTo=%2Finventory/);
+  await page.goto('/inventory/valuation');
   await expect(
     page.getByRole('heading', { name: 'Nothing on this shelf.' }),
   ).toBeVisible();

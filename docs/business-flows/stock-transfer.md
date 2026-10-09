@@ -1,4 +1,6 @@
-# Stock transfer - Phase 2/4 target
+# Stock transfer - historical Phase 2/4 target
+
+Phase 2 is implemented locally. Current behavior is documented in [stock transfers](stock-transfers.md) and [ledger invariants](../database/inventory-ledger.md). The target below predates implementation: batch/outbox integration and Phase 4 receiving are not claimed by Phase 2.
 
 Authorize actor/tenant/branch and both locations. Validate product/unit/batch and positive exact quantity. Claim idempotency key. Lock source/destination balances in stable order. Reject insufficient source or invalid destination.
 

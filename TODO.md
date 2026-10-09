@@ -1,6 +1,20 @@
-# SmartPOS — Phase 1A / Phase 1B / Phase 1C checklist
+# SmartPOS — Phase 1 / Phase 2 checklist
 
-Status: **Phase 1A, Phase 1B and Phase 1C COMPLETED for the local acceptance gates** (2026-10-09), not production readiness. Phase 2 is NOT STARTED. See `docs/development/verification.md` for executed evidence, failures resolved and operational limitations. Earlier Phase 1A/1B checklist statements are historical checkpoints; the current suite has 51 frontend tests and 15 browser tests.
+Status: **Phase 0, Phase 1A, Phase 1B, Phase 1C and Phase 2.1–2.6 COMPLETED for the local acceptance gates** (2026-10-09), not production readiness. Phase 3+ is NOT STARTED. See `docs/development/verification.md` for evidence, resolved failures and operational limitations. Earlier checklists are historical checkpoints; the current suite has 58 frontend tests, 135 inventory API assertions and 16 browser tests.
+
+## Phase 2 implementation and acceptance
+
+- [x] Phase 2.1: branch-local location hierarchy, physical type/status/revision, cycle/cross-tenant denial, protected transit and safe deactivation.
+- [x] Phase 2.2: Variant/location identity, exact quantities, immutable ledger, atomic/versioned balances, one-time opening and reconciliation.
+- [x] Phase 2.3: delta/absolute correction, approval/posting/reject/cancel, explicit self-approval policy, stale correction denial and all-item rollback.
+- [x] Phase 2.4: physical observations, zero-baseline snapshots, exact variance, submission/approval/posting and stale-version recount policy.
+- [x] Phase 2.5: conserved same-branch transfer and inter-branch source/transit/full receipt, branch scope, races and idempotency.
+- [x] Phase 2.6: overview/reorder/availability, ten routes, thirty API path templates, RBAC/CSRF/tenant gates and catalog/navigation integration.
+- [x] Additive migration 5 applied only to smartpos-auth-test, no-change rerun; composite FKs, FORCE RLS and runtime grants verified with rollback-only SQL.
+- [x] Final Go format inspection/vet/race, TypeScript, lint (three existing warnings), 58 unit tests, contracts, frontend build and 135 real inventory API assertions passed.
+- [x] Final browser regression 16/16 passed, including 21 labeled inventory cases and ten routes at seven widths; selected mobile/desktop screenshots inspected.
+- [x] Preserve historical records; no commit/push/deployment, original-volume migration, destructive data operation or Phase 3+ implementation.
+- [ ] Production gates: least-privilege LOGIN/TLS/secrets, backup/recovery, hardware/load trials and retention/cleanup. No valuation, reservations, partial receipt or post-dispatch cancellation claimed.
 
 ## Phase 1C implementation and acceptance
 

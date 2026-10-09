@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
-  title: SmartPOS Foundation, Identity, Organization and Catalog API
+  title: SmartPOS Foundation, Identity, Organization, Catalog and Inventory API
   version: 1.0.0
-  description: Phase 0 foundation, Phase 1A sessions and Phase 1B organization/branch/membership authorization. POS and inventory remain unavailable. All tenant writes require allowed Origin and X-CSRF-Token. UUID path IDs are untrusted; inactive/nonmember tenants return 404, insufficient permissions 403, ownership/uniqueness conflicts 409. PATCH accepts complete editable fields rather than a sparse patch.
+  description: Phase 0-2 local implementation. Inventory uses exact decimal-string quantities, immutable ledger and atomic balances with branch-scoped authorization. POS, purchasing, valuation, reservations and AI remain deferred. Tenant writes require allowed Origin and X-CSRF-Token; inventory stock/document/reorder commands also require Idempotency-Key. PATCH locations accepts complete fields and current revision. Counts and corrections reject stale stock snapshots.
 servers:
   - url: /
 paths:
@@ -2591,6 +2591,1910 @@ paths:
                       name: { type: string, const: SmartPOS }
                       phase: { type: integer, const: 0 }
                       authentication: { type: string, const: server_sessions }
+  /api/v1/organizations/{id}/inventory/counts/{resourceId}/items:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      operationId: saveInventoryPhysicalCount
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.count.update. Tenant/active-branch authorization is enforced in the transaction. Idempotency scoped by organization, actor, operation/path and UUID key; successful exact retry returns saved result after current authorization. Changed payload returns 409. '
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryCountSaveInput'
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryDocument'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/transfers/{resourceId}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: cancelInventorytransfers
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.transfer.create. Tenant/active-branch authorization is enforced in the transaction. Idempotency scoped by organization, actor, operation/path and UUID key; successful exact retry returns saved result after current authorization. Changed payload returns 409. '
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryActionInput'
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryDocument'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/transfers/{resourceId}/receive:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: receiveInventorytransfers
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.transfer.receive. Tenant/active-branch authorization is enforced in the transaction. Idempotency scoped by organization, actor, operation/path and UUID key; successful exact retry returns saved result after current authorization. Changed payload returns 409. '
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryActionInput'
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryDocument'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/transfers/{resourceId}/dispatch:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: dispatchInventorytransfers
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.transfer.dispatch. Tenant/active-branch authorization is enforced in the transaction. Idempotency scoped by organization, actor, operation/path and UUID key; successful exact retry returns saved result after current authorization. Changed payload returns 409. '
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryActionInput'
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryDocument'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/transfers/{resourceId}/approve:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: approveInventorytransfers
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.transfer.approve. Tenant/active-branch authorization is enforced in the transaction. Idempotency scoped by organization, actor, operation/path and UUID key; successful exact retry returns saved result after current authorization. Changed payload returns 409. '
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryActionInput'
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryDocument'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/transfers/{resourceId}/submit:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: submitInventorytransfers
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.transfer.create. Tenant/active-branch authorization is enforced in the transaction. Idempotency scoped by organization, actor, operation/path and UUID key; successful exact retry returns saved result after current authorization. Changed payload returns 409. '
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryActionInput'
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryDocument'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/counts/{resourceId}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: cancelInventorycounts
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.count.create. Tenant/active-branch authorization is enforced in the transaction. Idempotency scoped by organization, actor, operation/path and UUID key; successful exact retry returns saved result after current authorization. Changed payload returns 409. '
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryActionInput'
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryDocument'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/counts/{resourceId}/post:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: postInventorycounts
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.count.post. Tenant/active-branch authorization is enforced in the transaction. Idempotency scoped by organization, actor, operation/path and UUID key; successful exact retry returns saved result after current authorization. Changed payload returns 409. '
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryActionInput'
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryDocument'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/counts/{resourceId}/approve:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: approveInventorycounts
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.count.approve. Tenant/active-branch authorization is enforced in the transaction. Idempotency scoped by organization, actor, operation/path and UUID key; successful exact retry returns saved result after current authorization. Changed payload returns 409. '
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryActionInput'
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryDocument'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/counts/{resourceId}/submit:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: submitInventorycounts
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.count.update. Tenant/active-branch authorization is enforced in the transaction. Idempotency scoped by organization, actor, operation/path and UUID key; successful exact retry returns saved result after current authorization. Changed payload returns 409. '
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryActionInput'
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryDocument'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/adjustments/{resourceId}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: cancelInventoryadjustments
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.adjustment.create. Tenant/active-branch authorization is enforced in the transaction. Idempotency scoped by organization, actor, operation/path and UUID key; successful exact retry returns saved result after current authorization. Changed payload returns 409. '
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryActionInput'
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryDocument'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/adjustments/{resourceId}/reject:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: rejectInventoryadjustments
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.adjustment.approve. Tenant/active-branch authorization is enforced in the transaction. Idempotency scoped by organization, actor, operation/path and UUID key; successful exact retry returns saved result after current authorization. Changed payload returns 409. '
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryActionInput'
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryDocument'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/adjustments/{resourceId}/post:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: postInventoryadjustments
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.adjustment.post. Tenant/active-branch authorization is enforced in the transaction. Idempotency scoped by organization, actor, operation/path and UUID key; successful exact retry returns saved result after current authorization. Changed payload returns 409. '
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryActionInput'
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryDocument'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/adjustments/{resourceId}/approve:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: approveInventoryadjustments
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.adjustment.approve. Tenant/active-branch authorization is enforced in the transaction. Idempotency scoped by organization, actor, operation/path and UUID key; successful exact retry returns saved result after current authorization. Changed payload returns 409. '
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryActionInput'
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryDocument'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/adjustments/{resourceId}/submit:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: submitInventoryadjustments
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.adjustment.create. Tenant/active-branch authorization is enforced in the transaction. Idempotency scoped by organization, actor, operation/path and UUID key; successful exact retry returns saved result after current authorization. Changed payload returns 409. '
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryActionInput'
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryDocument'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/opening-balances:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    post:
+      operationId: postInventoryOpening
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.opening_balance.create. Tenant/active-branch authorization is enforced in the transaction. Idempotency scoped by organization, actor, operation/path and UUID key; successful exact retry returns saved result after current authorization. Changed payload returns 409. '
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryOpeningInput'
+      responses:
+        '201':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryPosted'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/overview:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: listInventoryoverview
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.read. Tenant/active-branch authorization is enforced in the transaction. '
+      parameters:
+        - in: query
+          name: branch_id
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryOverview'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/reorder-points:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: listInventoryreorderpoints
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.read. Tenant/active-branch authorization is enforced in the transaction. '
+      parameters:
+        - in: query
+          name: branch_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100000
+            default: 1
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - in: query
+          name: search
+          schema:
+            type: string
+            maxLength: 200
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: variant_id
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryReorderPointPage'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+    put:
+      operationId: saveInventoryReorder
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.reorder_point.manage. Tenant/active-branch authorization is enforced in the transaction. Idempotency scoped by organization, actor, operation/path and UUID key; successful exact retry returns saved result after current authorization. Changed payload returns 409. '
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryReorderInput'
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryReorderPoint'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/transfers/{resourceId}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getInventorytransfers
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.read. Tenant/active-branch authorization is enforced in the transaction. '
+      parameters: []
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryDocument'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/transfers:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: listInventorytransfers
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.read. Tenant/active-branch authorization is enforced in the transaction. '
+      parameters:
+        - in: query
+          name: branch_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100000
+            default: 1
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - in: query
+          name: search
+          schema:
+            type: string
+            maxLength: 200
+        - in: query
+          name: status
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryDocumentPage'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+    post:
+      operationId: createInventorytransfers
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.transfer.create. Tenant/active-branch authorization is enforced in the transaction. Idempotency scoped by organization, actor, operation/path and UUID key; successful exact retry returns saved result after current authorization. Changed payload returns 409. '
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryTransferInput'
+      responses:
+        '201':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryDocument'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/counts/{resourceId}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getInventorycounts
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.read. Tenant/active-branch authorization is enforced in the transaction. '
+      parameters: []
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryDocument'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/counts:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: listInventorycounts
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.read. Tenant/active-branch authorization is enforced in the transaction. '
+      parameters:
+        - in: query
+          name: branch_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100000
+            default: 1
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - in: query
+          name: search
+          schema:
+            type: string
+            maxLength: 200
+        - in: query
+          name: status
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryDocumentPage'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+    post:
+      operationId: createInventorycounts
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.count.create. Tenant/active-branch authorization is enforced in the transaction. Idempotency scoped by organization, actor, operation/path and UUID key; successful exact retry returns saved result after current authorization. Changed payload returns 409. '
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryCountInput'
+      responses:
+        '201':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryDocument'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/adjustments/{resourceId}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getInventoryadjustments
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.read. Tenant/active-branch authorization is enforced in the transaction. '
+      parameters: []
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryDocument'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/adjustments:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: listInventoryadjustments
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.read. Tenant/active-branch authorization is enforced in the transaction. '
+      parameters:
+        - in: query
+          name: branch_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100000
+            default: 1
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - in: query
+          name: search
+          schema:
+            type: string
+            maxLength: 200
+        - in: query
+          name: status
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryDocumentPage'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+    post:
+      operationId: createInventoryadjustments
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.adjustment.create. Tenant/active-branch authorization is enforced in the transaction. Idempotency scoped by organization, actor, operation/path and UUID key; successful exact retry returns saved result after current authorization. Changed payload returns 409. '
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryAdjustmentInput'
+      responses:
+        '201':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryDocument'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/movements/{resourceId}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getInventorymovements
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.audit.read. Tenant/active-branch authorization is enforced in the transaction. '
+      parameters: []
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryMovement'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/movements:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: listInventorymovements
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.audit.read. Tenant/active-branch authorization is enforced in the transaction. '
+      parameters:
+        - in: query
+          name: branch_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100000
+            default: 1
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - in: query
+          name: search
+          schema:
+            type: string
+            maxLength: 200
+        - in: query
+          name: location_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: variant_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: type
+          schema:
+            type: string
+        - in: query
+          name: actor_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryMovementPage'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/balances/{resourceId}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getInventorybalances
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.read. Tenant/active-branch authorization is enforced in the transaction. '
+      parameters: []
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryBalance'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/balances:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: listInventorybalances
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.read. Tenant/active-branch authorization is enforced in the transaction. '
+      parameters:
+        - in: query
+          name: branch_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100000
+            default: 1
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - in: query
+          name: search
+          schema:
+            type: string
+            maxLength: 200
+        - in: query
+          name: location_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: variant_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: type
+          schema:
+            type: string
+        - in: query
+          name: category_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: product_status
+          schema:
+            type: string
+        - in: query
+          name: stock_status
+          schema:
+            type: string
+            enum:
+              - ZERO
+              - POSITIVE
+              - LOW
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryBalancePage'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/locations/{resourceId}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getInventorylocations
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.read. Tenant/active-branch authorization is enforced in the transaction. '
+      parameters: []
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryLocation'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+    patch:
+      operationId: updateInventoryLocation
+      security:
+        - sessionCookie: []
+      description: Requires inventory.location.manage. Tenant/active-branch authorization is enforced in the transaction. Complete editable fields and current revision required. Location branch is immutable; type becomes immutable after stock history. Deactivation requires zero stock, no active child and no open documents. Parent is navigation only; cycles forbidden.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryLocationUpdateInput'
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryLocation'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/inventory/locations:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: listInventorylocations
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.read. Tenant/active-branch authorization is enforced in the transaction. '
+      parameters:
+        - in: query
+          name: branch_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100000
+            default: 1
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - in: query
+          name: search
+          schema:
+            type: string
+            maxLength: 200
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: type
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryLocationPage'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+    post:
+      operationId: createInventoryLocation
+      security:
+        - sessionCookie: []
+      description: 'Requires inventory.location.manage. Tenant/active-branch authorization is enforced in the transaction. '
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryLocationInput'
+      responses:
+        '201':
+          description: Inventory result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InventoryLocation'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
 components:
   parameters:
     OrganizationID:
@@ -2667,6 +4571,48 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
+    InventoryInvalid:
+      description: 'INVALID_INPUT: references, units, quantity or reason'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InventoryUnauthenticated:
+      description: Session required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InventoryForbidden:
+      description: Role, branch, Origin or CSRF denied
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InventoryNotFound:
+      description: Scoped resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InventoryConflict:
+      description: Stock insufficient, stale version/revision, duplicate fingerprint or transition conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InventoryMediaType:
+      description: JSON required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InventoryUnavailable:
+      description: Dependency unavailable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
   schemas:
     CatalogProductInput:
       type: object
@@ -3689,6 +5635,963 @@ components:
             code: { type: string }
             message: { type: string }
             request_id: { type: string, pattern: '^[a-f0-9]{32}$' }
+    InventoryReorderPointPage:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - page_size
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/InventoryReorderPoint'
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+    InventoryDocumentPage:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - page_size
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/InventoryDocument'
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+    InventoryMovementPage:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - page_size
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/InventoryMovement'
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+    InventoryBalancePage:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - page_size
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/InventoryBalance'
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+    InventoryLocationPage:
+      type: object
+      required:
+        - items
+        - total
+        - page
+        - page_size
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/InventoryLocation'
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+    InventoryPosted:
+      type: object
+      required:
+        - id
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          const: POSTED
+    InventoryOverview:
+      type: object
+      required:
+        - stock
+        - alerts
+        - operations
+        - recent_movements
+        - reservation_policy
+        - quantity_policy
+      properties:
+        stock:
+          type: object
+          required:
+            - recorded_variants
+            - by_unit
+          properties:
+            recorded_variants:
+              type: integer
+            by_unit:
+              type: array
+              items:
+                type: object
+                required:
+                  - unit
+                  - type
+                  - quantity
+                properties:
+                  unit:
+                    type: string
+                  type:
+                    type: string
+                  quantity:
+                    $ref: '#/components/schemas/InventoryQuantity'
+        alerts:
+          type: object
+          required:
+            - active_variants
+            - low_stock_variants
+          properties:
+            active_variants:
+              type: integer
+            low_stock_variants:
+              type: integer
+        operations:
+          type: object
+          required:
+            - pending_adjustments
+            - open_counts
+            - pending_transfers
+          properties:
+            pending_adjustments:
+              type: integer
+            open_counts:
+              type: integer
+            pending_transfers:
+              type: integer
+        recent_movements:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - sku
+              - location_id
+              - variant_id
+              - movement_type
+              - quantity_delta
+              - quantity_before
+              - quantity_after
+              - created_at
+            properties:
+              id:
+                type: string
+                format: uuid
+              sku:
+                type: string
+              location_id:
+                type: string
+                format: uuid
+              variant_id:
+                type: string
+                format: uuid
+              movement_type:
+                type: string
+              quantity_delta:
+                $ref: '#/components/schemas/InventoryQuantity'
+              quantity_before:
+                $ref: '#/components/schemas/InventoryQuantity'
+              quantity_after:
+                $ref: '#/components/schemas/InventoryQuantity'
+              created_at:
+                type: string
+                format: date-time
+        reservation_policy:
+          type: string
+          const: NOT_IMPLEMENTED_ZERO
+        quantity_policy:
+          type: string
+          const: PER_VARIANT_UNIT
+    InventoryReorderInput:
+      type: object
+      additionalProperties: false
+      required:
+        - branch_id
+        - variant_id
+        - minimum_quantity
+        - target_quantity
+      properties:
+        branch_id:
+          type: string
+          format: uuid
+        variant_id:
+          type: string
+          format: uuid
+        minimum_quantity:
+          $ref: '#/components/schemas/InventoryQuantity'
+        target_quantity:
+          $ref: '#/components/schemas/InventoryQuantity'
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+          default: ACTIVE
+      description: Unique branch/Variant; target >= minimum. Deactivate via INACTIVE. Evaluation totals active WAREHOUSE/SALES_FLOOR/SHELF only.
+    InventoryReorderPoint:
+      type: object
+      required:
+        - id
+        - branch_id
+        - variant_id
+        - minimum_quantity
+        - target_quantity
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        branch_id:
+          type: string
+          format: uuid
+        variant_id:
+          type: string
+          format: uuid
+        minimum_quantity:
+          $ref: '#/components/schemas/InventoryQuantity'
+        target_quantity:
+          $ref: '#/components/schemas/InventoryQuantity'
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+        sku:
+          type: string
+        current_quantity:
+          $ref: '#/components/schemas/InventoryQuantity'
+        below_minimum:
+          type: boolean
+    InventoryCountSaveInput:
+      type: object
+      additionalProperties: false
+      required:
+        - revision
+        - items
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+        items:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - variant_id
+              - counted_quantity
+            properties:
+              variant_id:
+                type: string
+                format: uuid
+              counted_quantity:
+                $ref: '#/components/schemas/InventoryQuantity'
+    InventoryActionInput:
+      type: object
+      additionalProperties: false
+      required:
+        - revision
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+    InventoryCountInput:
+      type: object
+      additionalProperties: false
+      required:
+        - location_id
+        - reason_code
+        - items
+      properties:
+        branch_id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        reason_code:
+          type: string
+          minLength: 1
+          maxLength: 100
+        notes:
+          type: string
+          maxLength: 2000
+        items:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - variant_id
+            properties:
+              variant_id:
+                type: string
+                format: uuid
+              quantity:
+                type: string
+        assigned_to:
+          type:
+            - string
+            - 'null'
+          format: uuid
+      description: Snapshot every selected Variant, including zero-stock identities. Physical observations never change stock until post.
+    InventoryTransferInput:
+      type: object
+      additionalProperties: false
+      required:
+        - location_id
+        - destination_location_id
+        - reason_code
+        - items
+      properties:
+        branch_id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        reason_code:
+          type: string
+          minLength: 1
+          maxLength: 100
+        notes:
+          type: string
+          maxLength: 2000
+        items:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - variant_id
+              - quantity
+            properties:
+              variant_id:
+                type: string
+                format: uuid
+              quantity:
+                $ref: '#/components/schemas/InventoryQuantity'
+        destination_location_id:
+          type: string
+          format: uuid
+    InventoryAdjustmentInput:
+      type: object
+      additionalProperties: false
+      required:
+        - location_id
+        - reason_code
+        - items
+        - adjustment_type
+      properties:
+        branch_id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        reason_code:
+          type: string
+          minLength: 1
+          maxLength: 100
+        notes:
+          type: string
+          maxLength: 2000
+        items:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - variant_id
+              - quantity
+            properties:
+              variant_id:
+                type: string
+                format: uuid
+              quantity:
+                $ref: '#/components/schemas/InventoryQuantity'
+        adjustment_type:
+          type: string
+          enum:
+            - INCREASE
+            - DECREASE
+            - CORRECTION
+      description: INCREASE/DECREASE positive delta magnitudes. CORRECTION absolute nonnegative target, captures stock version and rejects stale posting.
+    InventoryOpeningInput:
+      type: object
+      additionalProperties: false
+      required:
+        - location_id
+        - reason_code
+        - items
+      properties:
+        branch_id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        reason_code:
+          type: string
+          minLength: 1
+          maxLength: 100
+        notes:
+          type: string
+          maxLength: 2000
+        items:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - variant_id
+              - quantity
+            properties:
+              variant_id:
+                type: string
+                format: uuid
+              quantity:
+                $ref: '#/components/schemas/InventoryQuantity'
+    InventoryDocument:
+      type: object
+      required:
+        - id
+        - kind
+        - branch_id
+        - location_id
+        - status
+        - revision
+        - items
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum:
+            - ADJUSTMENT
+            - COUNT
+            - TRANSFER
+        branch_id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        destination_branch_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        destination_location_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        transit_location_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        status:
+          type: string
+          enum:
+            - DRAFT
+            - PENDING_APPROVAL
+            - APPROVED
+            - POSTED
+            - REJECTED
+            - CANCELLED
+            - IN_PROGRESS
+            - SUBMITTED
+            - DISPATCHED
+            - RECEIVED
+        revision:
+          type: integer
+          minimum: 1
+        adjustment_type:
+          type:
+            - string
+            - 'null'
+          enum:
+            - INCREASE
+            - DECREASE
+            - CORRECTION
+            - null
+        reason_code:
+          type: string
+        notes:
+          type: string
+        assigned_to:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        created_by:
+          type: string
+          format: uuid
+        approved_by:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        posted_by:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        dispatched_by:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        received_by:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/InventoryItem'
+        history:
+          type: array
+          items:
+            type: object
+            required:
+              - event_type
+              - actor_id
+              - created_at
+              - request_id
+            properties:
+              event_type:
+                type: string
+              actor_id:
+                type: string
+                format: uuid
+              created_at:
+                type: string
+                format: date-time
+              request_id:
+                type: string
+    InventoryItem:
+      type: object
+      required:
+        - variant_id
+        - quantity
+        - expected_quantity
+        - counted_quantity
+      properties:
+        variant_id:
+          type: string
+          format: uuid
+        quantity:
+          $ref: '#/components/schemas/InventoryQuantity'
+        expected_quantity:
+          anyOf:
+            - $ref: '#/components/schemas/InventoryQuantity'
+            - type: 'null'
+        counted_quantity:
+          anyOf:
+            - $ref: '#/components/schemas/InventoryQuantity'
+            - type: 'null'
+        variance:
+          anyOf:
+            - $ref: '#/components/schemas/InventoryQuantity'
+            - type: 'null'
+        sku:
+          type: string
+        unit:
+          type: string
+        product_name:
+          type: string
+        counted_by:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        counted_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        balance_version:
+          type:
+            - integer
+            - 'null'
+    InventoryMovement:
+      type: object
+      required:
+        - id
+        - organization_id
+        - branch_id
+        - location_id
+        - variant_id
+        - movement_type
+        - quantity_delta
+        - quantity_before
+        - quantity_after
+        - operation_id
+        - document_id
+        - reason_code
+        - performed_by
+        - sku
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+          format: uuid
+        branch_id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        variant_id:
+          type: string
+          format: uuid
+        movement_type:
+          type: string
+          enum:
+            - OPENING_BALANCE
+            - ADJUSTMENT_IN
+            - ADJUSTMENT_OUT
+            - COUNT_CORRECTION
+            - TRANSFER_OUT
+            - TRANSFER_IN
+            - TRANSFER_DISPATCH
+            - TRANSFER_RECEIVE
+        quantity_delta:
+          $ref: '#/components/schemas/InventoryQuantity'
+        quantity_before:
+          $ref: '#/components/schemas/InventoryQuantity'
+        quantity_after:
+          $ref: '#/components/schemas/InventoryQuantity'
+        operation_id:
+          type: string
+          format: uuid
+        document_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        reason_code:
+          type: string
+        performed_by:
+          type: string
+          format: uuid
+        sku:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    InventoryBalance:
+      type: object
+      required:
+        - id
+        - organization_id
+        - branch_id
+        - location_id
+        - variant_id
+        - quantity
+        - reserved
+        - available
+        - version
+        - sku
+        - product_name
+        - variant_name
+        - barcode
+        - unit
+        - location_name
+        - location_type
+        - availability_status
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+          format: uuid
+        branch_id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        variant_id:
+          type: string
+          format: uuid
+        quantity:
+          $ref: '#/components/schemas/InventoryQuantity'
+        reserved:
+          $ref: '#/components/schemas/InventoryQuantity'
+        available:
+          $ref: '#/components/schemas/InventoryQuantity'
+        version:
+          type: integer
+        sku:
+          type: string
+        product_name:
+          type: string
+        variant_name:
+          type: string
+        barcode:
+          type:
+            - string
+            - 'null'
+        unit:
+          type: string
+        location_name:
+          type: string
+        location_type:
+          type: string
+        availability_status:
+          type: string
+          enum:
+            - POS_ELIGIBLE
+            - WAREHOUSE
+            - IN_TRANSIT
+            - RESTRICTED
+        updated_at:
+          type: string
+          format: date-time
+    InventoryLocationInput:
+      type: object
+      additionalProperties: false
+      required:
+        - branch_id
+        - code
+        - name
+        - type
+        - status
+      properties:
+        branch_id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          pattern: ^[A-Z0-9][A-Z0-9_-]{0,79}$
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        type:
+          type: string
+          enum:
+            - WAREHOUSE
+            - SALES_FLOOR
+            - SHELF
+            - QUARANTINE
+            - DAMAGED
+        parent_location_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+        description:
+          type: string
+          maxLength: 2000
+        revision:
+          type: integer
+          minimum: 0
+    InventoryLocationUpdateInput:
+      type: object
+      additionalProperties: false
+      required:
+        - branch_id
+        - code
+        - name
+        - type
+        - status
+        - revision
+      properties:
+        branch_id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          pattern: ^[A-Z0-9][A-Z0-9_-]{0,79}$
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        type:
+          type: string
+          enum:
+            - WAREHOUSE
+            - SALES_FLOOR
+            - SHELF
+            - QUARANTINE
+            - DAMAGED
+        parent_location_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+        description:
+          type: string
+          maxLength: 2000
+        revision:
+          type: integer
+          minimum: 1
+    InventoryLocation:
+      type: object
+      required:
+        - id
+        - organization_id
+        - branch_id
+        - code
+        - name
+        - type
+        - parent_location_id
+        - status
+        - description
+        - is_system
+        - revision
+        - created_by
+        - updated_by
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+          format: uuid
+        branch_id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+            - WAREHOUSE
+            - SALES_FLOOR
+            - SHELF
+            - QUARANTINE
+            - DAMAGED
+            - IN_TRANSIT
+        parent_location_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+        description:
+          type: string
+        is_system:
+          type: boolean
+        revision:
+          type: integer
+          minimum: 1
+        created_by:
+          type: string
+          format: uuid
+        updated_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    InventoryQuantity:
+      type: string
+      pattern: ^-?[0-9]{1,15}(\.[0-9]{1,3})?$
+      description: Exact NUMERIC(18,3), decimal string, never binary floating point. Commands require nonnegative magnitudes; COUNT/PACKAGING whole units only.
   headers:
     RequestID:
       description: Generated opaque request correlation ID.

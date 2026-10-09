@@ -16,6 +16,7 @@ import {
 import { TaxonomyPage } from '../features/catalog/TaxonomyPage';
 import { ImportPage } from '../features/catalog/ImportPage';
 import { LabelsPage } from '../features/catalog/LabelsPage';
+import { InventoryPage } from '../features/inventory/InventoryPage';
 import {
   SetupPage,
   StorePage,
@@ -44,6 +45,35 @@ export const router = createBrowserRouter([
         element: <RequireSession />,
         children: [
           { path: paths.account, element: <AccountPage /> },
+          {
+            element: <OrganizationGate permission="inventory.read" />,
+            children: [
+              {
+                path: '/inventory',
+                element: <InventoryPage section="overview" />,
+              },
+              ...[
+                'balances',
+                'locations',
+                'movements',
+                'adjustments',
+                'counts',
+                'transfers',
+                'reorder-points',
+              ].map((section) => ({
+                path: '/inventory/' + section,
+                element: <InventoryPage section={section} />,
+              })),
+              {
+                path: '/inventory/counts/:id',
+                element: <InventoryPage section="counts" />,
+              },
+              {
+                path: '/inventory/transfers/:id',
+                element: <InventoryPage section="transfers" />,
+              },
+            ],
+          },
           {
             element: <OrganizationGate permission="catalog.read" />,
             children: [

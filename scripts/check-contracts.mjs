@@ -46,10 +46,33 @@ const catalogPaths = [
   '/units/{resourceId}',
 ].map((path) => '/api/v1/organizations/{id}' + path);
 assert.equal(api.openapi, '3.1.0');
+const inventoryPaths = [
+  '/overview',
+  '/locations',
+  '/locations/{resourceId}',
+  '/balances',
+  '/balances/{resourceId}',
+  '/movements',
+  '/movements/{resourceId}',
+  '/opening-balances',
+  '/reorder-points',
+  '/counts/{resourceId}/items',
+  ...['adjustments', 'counts', 'transfers'].flatMap((resource) => [
+    '/' + resource,
+    '/' + resource + '/{resourceId}',
+    ...(resource === 'adjustments'
+      ? ['submit', 'approve', 'post', 'reject', 'cancel']
+      : resource === 'counts'
+        ? ['submit', 'approve', 'post', 'cancel']
+        : ['submit', 'approve', 'dispatch', 'receive', 'cancel']
+    ).map((action) => '/' + resource + '/{resourceId}/' + action),
+  ]),
+].map((path) => '/api/v1/organizations/{id}/inventory' + path);
 assert.deepEqual(
   Object.keys(api.paths).sort(),
   [
     ...catalogPaths,
+    ...inventoryPaths,
     '/api/v1/auth/forgot-password',
     '/api/v1/auth/login',
     '/api/v1/auth/logout',
@@ -98,7 +121,7 @@ assert.deepEqual(
 for (const [path, item] of Object.entries(api.paths)) {
   if (!path.includes('/organizations') && path !== '/api/v1/invitations/accept')
     continue;
-  for (const method of ['get', 'post', 'patch', 'delete']) {
+  for (const method of ['get', 'post', 'put', 'patch', 'delete']) {
     if (!item[method]) continue;
     assert.deepEqual(item[method].security, [{ sessionCookie: [] }]);
     if (method !== 'get')
@@ -111,6 +134,47 @@ for (const [path, item] of Object.entries(api.paths)) {
 }
 const compose = YAML.parse(readFileSync('docker-compose.yml', 'utf8'));
 const operationIDs = new Set();
+for (const path of inventoryPaths) {
+  for (const method of ['get', 'post', 'put', 'patch']) {
+    const operation = api.paths[path][method];
+    if (!operation) continue;
+    assert.ok(!operationIDs.has(operation.operationId));
+    operationIDs.add(operation.operationId);
+    assert.ok(operation.description.includes('inventory.'));
+    for (const status of ['400', '401', '403', '404', '409', '503'])
+      assert.ok(operation.responses[status]);
+    if (method !== 'get' && !path.includes('/locations')) {
+      assert.ok(
+        operation.parameters.some(
+          (parameter) =>
+            parameter.name === 'Idempotency-Key' && parameter.required,
+        ),
+      );
+    }
+  }
+}
+const inventoryQuantity = new RegExp(
+  api.components.schemas.InventoryQuantity.pattern,
+);
+assert.ok(inventoryQuantity.test('999999999999999.999'));
+assert.ok(!inventoryQuantity.test('1.0001'));
+assert.ok(
+  api.components.schemas.InventoryMovement.properties.movement_type.enum.includes(
+    'COUNT_CORRECTION',
+  ),
+);
+assert.equal(
+  api.components.schemas.InventoryBalance.properties.quantity.$ref,
+  '#/components/schemas/InventoryQuantity',
+);
+assert.equal(
+  api.components.schemas.InventoryLocationPage.properties.page_size.maximum,
+  100,
+);
+assert.equal(
+  api.components.schemas.InventoryOpeningInput.properties.items.maxItems,
+  100,
+);
 for (const path of catalogPaths) {
   for (const method of ['get', 'post', 'patch', 'delete']) {
     const operation = api.paths[path][method];

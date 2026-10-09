@@ -265,8 +265,9 @@ export function ProductDetailsPage() {
               </div>
             </div>
             <p className="notice">
-              รูปสินค้า: storage ยังไม่ถูกตั้งค่า • สต็อก / สาขา / POS อยู่ใน
-              Phase ถัดไป ไม่ใช่ยอดคงเหลือ 0
+              รูปสินค้า: storage ยังไม่ถูกตั้งค่า • ดูยอดสต็อกจริงตามสาขาได้ที่{' '}
+              <Link to="/inventory/balances">Inventory balances</Link> • POS
+              ยังไม่เริ่ม
             </p>
           </Card>
           {query.data.variants.map((variant) => (

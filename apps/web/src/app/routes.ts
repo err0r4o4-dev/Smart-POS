@@ -10,6 +10,7 @@ export const paths = {
   resetPassword: '/reset-password',
   account: '/account',
   products: '/products',
+  inventory: '/inventory',
   setup: '/setup',
   store: '/settings/store',
   branches: '/settings/branches',
@@ -28,6 +29,12 @@ export interface NavigationItem {
   roles?: Role[];
 }
 export const navigation: NavigationItem[] = [
+  {
+    to: paths.inventory,
+    label: 'คลังสินค้า / สต็อก',
+    icon: 'dashboard',
+    permission: 'inventory.read',
+  },
   {
     to: paths.products,
     label: 'สินค้า / แค็ตตาล็อก',

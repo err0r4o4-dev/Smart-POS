@@ -1,5 +1,123 @@
 # Verification
 
+## Phase 2 finalization (2026-10-09, continued from local chat history)
+
+**Phase 2.1–2.6 and Phase 2 overall: COMPLETED for local acceptance gates.** Phase 0/1A/1B/1C remain COMPLETED (Local); Phase 3+ is NOT STARTED. This entry supersedes earlier Phase 2-not-started statements without deleting history. No commit, push, deployment, production operation, original-volume migration, history rewrite or volume deletion was performed.
+
+### Starting repository and implemented scope
+
+- The original Phase 2 start was clean on develop with Phase 1C already committed. Continuation preserved the unfinished Phase 2 diff. Reused Go/chi/pgx, React/Vite/TanStack Query, Golden Amber primitives, PostgreSQL, Caddy, sessions/CSRF/RBAC, audit and existing test frameworks. No dependency/lockfile changes or parallel agents.
+- Phase 2.1: branch-local location hierarchy, type/status/revision, cycle and cross-tenant/branch protection, safe deactivation and system-managed transit.
+- Phase 2.2: organization/location/Variant identity, immutable signed ledger, locked materialized balance/version, exact NUMERIC(18,3)/decimal-string quantities and positive one-time opening before history.
+- Phase 2.3: request/submit/approve/post/reject/cancel, positive delta or absolute correction target, stale correction rejection and atomic all-item rollback. Owner/Manager self-approval is explicitly allowed and audited.
+- Phase 2.4: selected-Variant quantity/version snapshots including zero identities, assigned physical entry, exact variance, approval/posting and stale snapshot rejection. Recount uses cancellation/new snapshot, not blind refresh.
+- Phase 2.5: conserved same-branch pairs and inter-branch dispatch into transfer-specific transit, full explicit receipt and source/destination permission boundaries. Existing transit can be settled after source branch deactivation without permitting unrelated inactive-source mutations.
+- Phase 2.6: real overview, reorder points, POS eligibility, ten routes, thirty inventory API path templates, filters/pagination, permission-aware actions, cancellation/scope-safe query keys, idempotent retries and catalog/navigation links. Inactive-branch quantities are visible only within allowed historical scope and have zero POS availability.
+- Additive migration 5 creates seven FORCE-RLS tables with composite tenant/branch/location/Variant/document FKs. Runtime cannot directly write balances or rewrite/delete ledger. Definer posting checks tenant/user/owned pending operation with fixed search_path and revoked PUBLIC execution. Readiness requires clean schema 5. Applied migrations 1–5 were not subsequently rewritten.
+
+Architecture, ledger invariants and state machines: [inventory](../architecture/inventory.md), [ledger](../database/inventory-ledger.md), [adjustments](../business-flows/inventory-adjustments.md), [counts](../business-flows/stock-counts.md), [transfers](../business-flows/stock-transfers.md).
+
+### Environment and executed evidence
+
+Windows/Node 24; existing isolated Compose project smartpos-auth-test, gateway localhost:18088, API loopback:18080, web loopback:15173 and internal PostgreSQL/Mailpit/AI. SQL acceptance fixtures roll back; HTTP/E2E fixtures create unique local accounts/organizations and persist only in that test stack. Default/original data/volumes were not migrated or reset. Final checks use the latest inactive-branch and form-style fixes, not earlier Docker images.
+
+| Command / observation                                     | Result                                    | Scope / limitation                                                                                                                         |
+| --------------------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Container gofmt -l on affected Go files                   | PASSED, no filenames                      | Final read-only format inspection                                                                                                          |
+| Container go vet ./... and go test -race ./...            | PASSED all Go modules                     | Final source after availability fix; not production load testing                                                                           |
+| npm run typecheck                                         | PASSED                                    | Current frontend source                                                                                                                    |
+| npm run lint                                              | PASSED, 0 errors / 3 existing warnings    | Existing Fast Refresh warnings in AuthProvider, OrganizationProvider and AuthPages                                                         |
+| npm test                                                  | PASSED, 58 tests / 11 files and contracts | Exact quantity/variance/client coverage plus prior modules                                                                                 |
+| npm run contracts:check                                   | PASSED                                    | Inventory paths/permissions/idempotency/errors/precision, 16 modules / 106 target routes                                                   |
+| npm run build                                             | PASSED                                    | Host production frontend bundle                                                                                                            |
+| docker compose -p smartpos-auth-test build api web        | PASSED                                    | Final production images; Go build cached from identical source, web build executed                                                         |
+| npm run verify:inventory                                  | PASSED, 135 assertions                    | Real Caddy/PostgreSQL, races, atomicity, idempotency, RBAC/branches/tenant, reconciliation and inactive-branch availability                |
+| npm run verify:catalog                                    | PASSED, 116 assertions                    | Earlier Phase 2 regression pass; catalog behavior not changed afterward                                                                    |
+| npm run verify:organization                               | PASSED                                    | Earlier Phase 2 API regression pass                                                                                                        |
+| Auth API flow, spoofing/rate limits and SMTP outage tests | PASSED                                    | Earlier Phase 2 API regression; Mailpit restored afterward                                                                                 |
+| node scripts/check-auth.mjs                               | PASSED, 16/16 browser tests               | Final auth/organization/catalog/inventory/foundation suite                                                                                 |
+| Inventory E2E labeled steps                               | PASSED, 21 acceptance cases               | Real forms/actions, stale/negative errors, retry replay, Cashier/branch/stranger denial and organization switching                         |
+| Inventory responsive assertions                           | PASSED, ten routes × seven widths         | 320/375/640/768/1024/1440/1920; no horizontal page overflow and keyboard checks                                                            |
+| auth-integration-check                                    | PASSED                                    | Final rollback-only identity/organization/catalog/inventory SQL: schema5, RLS/FKs/runtime grants/precision/immutable ledger/atomic balance |
+| integration-check                                         | PASSED                                    | Final foundation SQL, gateway routing, API/AI communication; expected public AI 404 prints wget warning                                    |
+| migrate up; repeat up in isolated project                 | PASSED / no change                        | Migration5 applied earlier only to test stack; final rerun also no change                                                                  |
+| docker compose -p smartpos-auth-test config --quiet       | PASSED                                    | No rendered secret-bearing config logged                                                                                                   |
+| Caddy validate --config /etc/caddy/Caddyfile              | PASSED, Valid configuration               | Local HTTP only; production TLS not certified                                                                                              |
+| Isolated Docker ps                                        | PASSED, six services healthy              | Original/default stack untouched                                                                                                           |
+
+### Visual evidence and resolved failures
+
+Final housekeeping PASSED: `npm run format:check` across the repository, `git diff --check`, and deep comparison preserving all 40 existing API paths and 38 existing schemas plus every prior component. All 782 local OpenAPI references and 64 links in changed Markdown resolve. The contract-only presentation cleanup restores original path/component formatting/order while retaining identical parsed Phase 2 content. The 49-file manifest below contains 21 created and 28 modified files; migrations 1–4, package-lock, environment/secrets and repository rules are untouched. No tests were removed, skipped or weakened.
+
+Inventory E2E generates twenty loaded-page PNGs at 375/1440 under ignored test-results. Selected actual inspections include inventory-overview-1440.png, inventory-balances-375.png, inventory-counts-detail-375.png and inventory-transfers-detail-375.png; not all twenty are claimed manually inspected. Final overview and mobile balances were inspected again after the complete browser rerun.
+
+Resolved without weakening tests/security: unsupported Button variant and union/type errors; fixture ambiguous SQL id; temporary YAML indentation error; stale Docker opening-branch validation; selectors corrected to actual accessible roles/names; tenant initialization no longer resets selection every navigation; disabled branch placeholder excluded from selectable-option count. Visual inspection found borderless fields, fixed by applying existing catalog-page styles. Inactive-branch availability was corrected and covered by four real API regression assertions. Final SQL/API/browser results passed.
+
+During finalization, sandbox child-process/Docker access prevented initial checks/patching; approved escalated commands succeeded. One Go check shell failed on PowerShell quoting before executing tests, then corrected read-only format/vet/race check passed. These tooling failures are not represented as application passes.
+
+### Scoped security review and limitations
+
+SQL/API/browser evidence covers cross-tenant references, unauthorized branches, fixed role permissions, suspended/revoked memberships, CSRF/unknown JSON/body limits, immutable ledger/runtime grants, negative stock, duplicate requests/receipts, stale count/correction and all-item rollback. Organization lock plus balance locks prioritizes correctness; not an external penetration test, compliance assessment or high-throughput/deadlock/load certification.
+
+Not run / not implemented: production deployment/migration, production LOGIN/TLS/secrets/backup-recovery certification, physical scanner/printer or multi-device hardware trials, sustained load testing, retention/cleanup jobs, reservations, valuation/costing, partial receipt, cancellation after dispatch, batch/expiry/returns or distributed counts. Owner/Manager self-approval is an explicit policy; denied-request auditing is not exhaustive. Category/actor filters use UUID fields. Phase 3 POS/payment and Phase 4 purchasing/shelf integrations remain unstarted and must not write balances directly.
+
+### Changed-file manifest
+
+Created:
+
+- `apps/api/internal/modules/inventory/domain.go`
+- `apps/api/internal/modules/inventory/domain_test.go`
+- `apps/api/internal/modules/inventory/service.go`
+- `apps/api/internal/modules/inventory/documents.go`
+- `apps/api/internal/modules/inventory/transfers.go`
+- `apps/api/internal/modules/inventory/queries.go`
+- `apps/api/internal/modules/inventory/http.go`
+- `apps/web/src/features/inventory/InventoryPage.tsx`
+- `apps/web/src/lib/inventory-api.ts`
+- `apps/web/src/lib/inventory-api.test.ts`
+- `apps/web/src/styles/inventory.css`
+- `database/migrations/000005_inventory.up.sql`
+- `docs/architecture/inventory.md`
+- `docs/database/inventory-ledger.md`
+- `docs/business-flows/inventory-adjustments.md`
+- `docs/business-flows/stock-counts.md`
+- `docs/business-flows/stock-transfers.md`
+- `tests/integration/inventory.sql`
+- `tests/integration/inventory-fixtures.mjs`
+- `tests/integration/inventory-flow.mjs`
+- `tests/e2e/inventory.spec.ts`
+
+Modified:
+
+- `apps/api/internal/modules/organization/policy.go`
+- `apps/api/internal/modules/organization/policy_test.go`
+- `apps/api/internal/platform/database/database.go`
+- `apps/api/internal/transport/router.go`
+- `apps/web/src/app/router.tsx`
+- `apps/web/src/app/routes.ts`
+- `apps/web/src/features/catalog/CatalogUI.tsx`
+- `apps/web/src/features/catalog/ProductPages.tsx`
+- `apps/web/src/main.tsx`
+- `packages/contracts/openapi.yaml`
+- `scripts/check-contracts.mjs`
+- `package.json`
+- `tests/e2e/foundation.spec.ts`
+- `tests/integration/auth-check.sh`
+- `tests/integration/foundation.sql`
+- `tests/integration/identity.sql`
+- `tests/integration/organization.sql`
+- `tests/integration/catalog.sql`
+- `README.md`
+- `TODO.md`
+- `docs/architecture/overview.md`
+- `docs/architecture/modules.md`
+- `docs/architecture/routes.md`
+- `docs/architecture/roadmap.md`
+- `docs/database/overview.md`
+- `docs/business-flows/stock-transfer.md` (historical target annotated)
+- `docs/security/security-model.md`
+- `docs/development/verification.md` (this entry; earlier history preserved)
+
 ## Phase 1C finalization (2026-10-09, continued from local chat history)
 
 **Phase 1C.1 / 1C.2 / 1C.3 / 1C.4 and Phase 1C overall: COMPLETED for local acceptance gates.** Phase 0, 1A and 1B remain COMPLETED (Local); Phase 2 is NOT STARTED. This entry supersedes older catalog-not-started statements while retaining all historical results below. No commit, push, deployment, production operation, destructive migration or PostgreSQL volume deletion was performed.

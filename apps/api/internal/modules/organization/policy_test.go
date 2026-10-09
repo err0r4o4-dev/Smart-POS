@@ -2,6 +2,28 @@ package organization
 
 import "testing"
 
+func TestInventoryPolicy(t *testing.T) {
+	for _, role := range []string{"OWNER", "MANAGER"} {
+		for _, permission := range InventoryPermissions {
+			if !hasPermission(role, permission) {
+				t.Fatalf("missing %s permission for %s", permission, role)
+			}
+		}
+	}
+	for _, role := range []string{"CASHIER", "INVENTORY_STAFF", "PURCHASING_STAFF"} {
+		for _, permission := range []string{"inventory.opening_balance.create", "inventory.adjustment.approve", "inventory.adjustment.post", "inventory.count.post", "inventory.transfer.approve"} {
+			if hasPermission(role, permission) {
+				t.Fatalf("unexpected %s permission for %s", permission, role)
+			}
+		}
+	}
+	for _, permission := range InventoryPermissions {
+		if permission != "inventory.read" && hasPermission("CASHIER", permission) {
+			t.Fatalf("cashier mutation/audit escalation: %s", permission)
+		}
+	}
+}
+
 func TestRolePolicy(t *testing.T) {
 	for _, role := range Roles {
 		if !hasPermission(role, "organization.read") {

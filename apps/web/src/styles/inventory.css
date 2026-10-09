@@ -1,0 +1,54 @@
+.inventory-page {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+.inventory-page .catalog-nav {
+  margin: 0;
+}
+.inventory-page .inventory-metrics h2 {
+  font-size: 1rem;
+  color: var(--text-secondary);
+}
+.inventory-metrics strong {
+  font-size: 2rem;
+}
+.inventory-form {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  padding: 1rem;
+}
+.inventory-form fieldset {
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 1rem;
+  padding: 1rem;
+  min-width: 0;
+}
+.inventory-picker,
+.inventory-filters {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+.inventory-metrics {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+}
+.inventory-form textarea,
+.inventory-form input,
+.inventory-form select,
+.inventory-filters input,
+.inventory-filters select {
+  width: 100%;
+  min-width: 0;
+}
+.inventory-form textarea {
+  min-height: 5rem;
+}
+@media (min-width: 768px) {
+  .inventory-filters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

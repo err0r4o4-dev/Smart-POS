@@ -14,7 +14,10 @@ export function CatalogHeader({
       <div>
         <p className="eyebrow">PRODUCT CATALOG · PHASE 1C</p>
         <h1>{title}</h1>
-        <p>แค็ตตาล็อกร่วมขององค์กร • ยังไม่มีข้อมูลสต็อก</p>
+        <p>
+          แค็ตตาล็อกร่วมขององค์กร •{' '}
+          <Link to="/inventory/balances">ดูสต็อกตามสาขา</Link>
+        </p>
       </div>
       <div className="catalog-actions">{children}</div>
     </div>

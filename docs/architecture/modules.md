@@ -1,6 +1,6 @@
 # Module specifications
 
-Phase 0 implements platform/presentation, Phase 1A implements identity, Phase 1B implements organization/branch/employee membership management with fixed RBAC and Phase 1C implements product catalog. Other business functionality remains planned. API groups/events below are proposals unless explicitly marked implemented; the live source is OpenAPI. Page counts remain the canonical 16-module/106-route inventory. Upstream dependencies are constrained by dependencies.md. See [Phase 1B architecture](organization.md) and [Phase 1C architecture](catalog.md).
+Phase 0 implements platform/presentation, Phase 1A implements identity, Phase 1B implements organization/branch/employee membership management with fixed RBAC Phase 1C implements product catalog and Phase 2 implements inventory core. Other business functionality remains planned. API groups/events below are proposals unless explicitly marked implemented; the live source is OpenAPI. Page counts remain the canonical 16-module/106-route inventory. Upstream dependencies are constrained by dependencies.md. See [Phase 1B architecture](organization.md) and [Phase 1C architecture](catalog.md).
 
 Phase numbers identify the primary delivery phase: POS returns/exchanges and sale refunds extend into Phase 5; settings integrations/backup and the support page extend into Phase 7. Dashboard/help have only the explicitly listed Phase 0 presentations.
 
@@ -84,15 +84,15 @@ Phase numbers identify the primary delivery phase: POS returns/exchanges and sal
 - Business purpose: Auditable branch stock truth.
 - Responsibilities: Locations, ledger, balances, counts, adjustments, atomic transfers.
 - Planned pages: `/inventory`, `/inventory/balances`, `/inventory/locations`, `/inventory/movements`, `/inventory/adjustments`, `/inventory/counts`, `/inventory/counts/:id`, `/inventory/transfers`, `/inventory/transfers/:id`, `/inventory/reorder-points`, `/inventory/valuation`.
-- Planned API groups: /inventory.
-- Domain entities: stock_locations, stock_balances, stock_movements, stock_transfers, stock_counts.
+- Implemented API group: /api/v1/organizations/{id}/inventory; 30 path templates with scoped queries, location CRUD, opening, document actions, physical observations and reorder upsert.
+- Domain entities: stock_locations, stock_balances, stock_movements, inventory_operations, inventory_documents, inventory_document_items and inventory_reorder_points. ADJUSTMENT/COUNT/TRANSFER share discriminated documents.
 - Dependencies: owning domains/upstream capabilities in [dependency matrix](dependencies.md); authorization through identity and organization for all tenant operations.
-- Permissions: inventory.read, inventory.adjust, inventory.transfer, inventory.count.
-- Business events: StockMoved, StockCountFinalized.
+- Permissions: 16 explicit inventory grants; see inventory.md and the existing fixed role engine. Owner organization-wide; Manager assigned-active-branch scope; operational roles never approve/post without grants.
+- Audit events: transactional inventory.location.saved, opening.posted, document.created and approved/posted/dispatched/received/count.saved events; no external event bus is claimed.
 - Error cases: oversell, invalid location, conflicting count.
 - Tests: transfer conservation, concurrency, rollback, no cross-tenant references.
 - Implementation phase: 2.
-- Current status: documented/planned; no implementation.
+- Current status: Phase 2.1–2.6 implemented and locally verified on ten routes. /inventory/valuation stays Planned; no costing, checkout, purchasing, reservations or advanced shelf workflows.
 
 ## Shelves (7 pages)
 

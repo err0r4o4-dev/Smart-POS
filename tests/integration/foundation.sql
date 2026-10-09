@@ -2,7 +2,7 @@ BEGIN;
 
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM schema_migrations WHERE version = 4 AND NOT dirty) THEN
+  IF NOT EXISTS (SELECT 1 FROM schema_migrations WHERE version = 5 AND NOT dirty) THEN
     RAISE EXCEPTION 'migration not ready';
   END IF;
 END $$;

@@ -42,16 +42,16 @@ The nine Products routes are implemented Phase 1C. Catalog records are organizat
 | Products | `/categories` | Implemented Phase 1C | 1 | catalog.read; changes require catalog.category.manage |
 | Products | `/brands` | Implemented Phase 1C | 1 | catalog.read; changes require catalog.brand.manage |
 | Products | `/units` | Implemented Phase 1C | 1 | catalog.read; changes require catalog.unit.manage |
-| Inventory | `/inventory` | Planned (not registered) | 2 | session + tenant + branch permission |
-| Inventory | `/inventory/balances` | Planned (not registered) | 2 | session + tenant + branch permission |
-| Inventory | `/inventory/locations` | Planned (not registered) | 2 | session + tenant + branch permission |
-| Inventory | `/inventory/movements` | Planned (not registered) | 2 | session + tenant + branch permission |
-| Inventory | `/inventory/adjustments` | Planned (not registered) | 2 | session + tenant + branch permission |
-| Inventory | `/inventory/counts` | Planned (not registered) | 2 | session + tenant + branch permission |
-| Inventory | `/inventory/counts/:id` | Planned (not registered) | 2 | session + tenant + branch permission |
-| Inventory | `/inventory/transfers` | Planned (not registered) | 2 | session + tenant + branch permission |
-| Inventory | `/inventory/transfers/:id` | Planned (not registered) | 2 | session + tenant + branch permission |
-| Inventory | `/inventory/reorder-points` | Planned (not registered) | 2 | session + tenant + branch permission |
+| Inventory | `/inventory` | Implemented Phase 2 | 2 | session + tenant + branch permission |
+| Inventory | `/inventory/balances` | Implemented Phase 2 | 2 | session + tenant + branch permission |
+| Inventory | `/inventory/locations` | Implemented Phase 2 | 2 | session + tenant + branch permission |
+| Inventory | `/inventory/movements` | Implemented Phase 2 | 2 | session + tenant + branch permission |
+| Inventory | `/inventory/adjustments` | Implemented Phase 2 | 2 | session + tenant + branch permission |
+| Inventory | `/inventory/counts` | Implemented Phase 2 | 2 | session + tenant + branch permission |
+| Inventory | `/inventory/counts/:id` | Implemented Phase 2 | 2 | session + tenant + branch permission |
+| Inventory | `/inventory/transfers` | Implemented Phase 2 | 2 | session + tenant + branch permission |
+| Inventory | `/inventory/transfers/:id` | Implemented Phase 2 | 2 | session + tenant + branch permission |
+| Inventory | `/inventory/reorder-points` | Implemented Phase 2 | 2 | session + tenant + branch permission |
 | Inventory | `/inventory/valuation` | Planned (not registered) | 2 | session + tenant + branch permission |
 | Shelves | `/shelves` | Planned (not registered) | 4 | session + tenant + branch permission |
 | Shelves | `/shelves/new` | Planned (not registered) | 4 | session + tenant + branch permission |
@@ -115,4 +115,8 @@ The nine Products routes are implemented Phase 1C. Catalog records are organizat
 | Help & System | `/403` | Implemented presentation | 0 | public system |
 | Help & System | `/404` | Implemented presentation | 0 | public system |
 
-Additional Phase 0 routes outside the 106 business inventory: / redirects to /dashboard; /preview/pos and /preview/auth are explicitly non-functional presentations. Unmatched paths render 404. Navigation includes ready presentations only. Role-aware navigation and default-deny route guard are foundations, not authentication.
+Additional Phase 0 routes outside the 106 business inventory: / redirects to /dashboard; /preview/pos and /preview/auth are explicitly non-functional presentations. Unmatched paths render 404. Navigation includes implemented tenant modules and ready presentations only. Tenant business routes additionally require real sessions and backend membership/branch authorization.
+
+## Inventory access and deferred valuation
+
+Ten Phase 2 Inventory routes above are implemented; /inventory/valuation stays Planned because no accounting costing method exists. Read pages require inventory.read, movement history additionally requires inventory.audit.read at the API, and each mutation checks its own inventory permission. Lists/details/actions are branch-scoped; destination transfer participants can inspect that transfer without reading arbitrary source balances. Owner has organization-wide scope; Manager remains assigned-active-branch scoped. There is no fake inventory data or business dashboard/checkout implementation.

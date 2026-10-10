@@ -35,6 +35,8 @@ export interface StockBalance {
   updated_at: string;
 }
 export interface StockMovement {
+  batch_id?: string | null;
+  quality_write_off_id?: string | null;
   id: string;
   sku: string;
   variant_id: string;
@@ -50,6 +52,7 @@ export interface StockMovement {
   created_at: string;
 }
 export interface InventoryItem {
+  batch_id?: string | null;
   variant_id: string;
   quantity: string;
   expected_quantity: string | null;

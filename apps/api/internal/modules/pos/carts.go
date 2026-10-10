@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/jackc/pgx/v5"
 	"smartpos/api/internal/modules/customers"
+	"smartpos/api/internal/modules/inventory"
 	"smartpos/api/internal/modules/organization"
 )
 
@@ -40,15 +41,18 @@ func readCart(ctx context.Context, tx pgx.Tx, actor organization.Member, user, o
 	if err != nil {
 		return item, err
 	}
-	rows, err := tx.Query(ctx, "SELECT variant_id::text,quantity::text,unit_price::text FROM pos_cart_items WHERE organization_id=$1 AND cart_id=$2 ORDER BY variant_id", org, id)
+	rows, err := tx.Query(ctx, "SELECT variant_id::text,quantity::text,unit_price::text,batch_id::text FROM pos_cart_items WHERE organization_id=$1 AND cart_id=$2 ORDER BY variant_id", org, id)
 	if err != nil {
 		return item, err
 	}
-	type stored struct{ id, quantity, price string }
+	type stored struct {
+		id, quantity, price string
+		batch               *string
+	}
 	inputs := []stored{}
 	for rows.Next() {
 		var input stored
-		if err = rows.Scan(&input.id, &input.quantity, &input.price); err != nil {
+		if err = rows.Scan(&input.id, &input.quantity, &input.price, &input.batch); err != nil {
 			rows.Close()
 			return item, err
 		}
@@ -59,11 +63,17 @@ func readCart(ctx context.Context, tx pgx.Tx, actor organization.Member, user, o
 	if err != nil {
 		return item, err
 	}
+	stockLocation := value.StockLocationID
 	total := int64(0)
 	for _, input := range inputs {
 		value, err := variant(ctx, tx, org, value.StockLocationID, input.id, input.quantity, input.price)
 		if err != nil {
 			return item, err
+		}
+		value.BatchID = input.batch
+		value.BatchVerified = input.batch != nil
+		if err = inventory.QualityAvailability(ctx, tx, org, stockLocation, value.VariantID, input.batch, &value.Available, &value.Saleable); err != nil {
+			return item, dbError(err)
 		}
 		amount, _ := scaled(value.LineTotal, 2)
 		if total > maxDecimal-amount {
@@ -176,6 +186,9 @@ func (service *Service) UpdateCart(ctx context.Context, user, org, id, action st
 			return current, err
 		}
 		for _, inputItem := range input.Items {
+			if inputItem.BatchID != nil && (!uuidPattern.MatchString(*inputItem.BatchID) || !inputItem.BatchVerified) {
+				return current, ErrInput
+			}
 			value, err := variant(ctx, tx, org, value.StockLocationID, inputItem.VariantID, inputItem.Quantity, "")
 			if err != nil {
 				return current, err
@@ -183,7 +196,7 @@ func (service *Service) UpdateCart(ctx context.Context, user, org, id, action st
 			if !value.Saleable {
 				return current, ErrConflict
 			}
-			_, err = tx.Exec(ctx, "INSERT INTO pos_cart_items(organization_id,cart_id,variant_id,quantity,unit_price) VALUES($1,$2,$3,$4,$5)", org, id, inputItem.VariantID, inputItem.Quantity, value.UnitPrice)
+			_, err = tx.Exec(ctx, "INSERT INTO pos_cart_items(organization_id,cart_id,variant_id,quantity,unit_price,batch_id) VALUES($1,$2,$3,$4,$5,$6)", org, id, inputItem.VariantID, inputItem.Quantity, value.UnitPrice, inputItem.BatchID)
 			if err != nil {
 				return current, dbError(err)
 			}

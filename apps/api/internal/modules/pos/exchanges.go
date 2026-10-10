@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/jackc/pgx/v5"
+	"smartpos/api/internal/modules/inventory"
 	"smartpos/api/internal/modules/organization"
 	"smartpos/api/internal/modules/pricing"
 )
@@ -32,9 +33,17 @@ func QuoteExchange(ctx context.Context, tx pgx.Tx, actor organization.Member, us
 	}
 	total := int64(0)
 	for _, input := range items {
+		if input.BatchID != nil && (!uuidPattern.MatchString(*input.BatchID) || !input.BatchVerified) {
+			return quote, ErrInput
+		}
 		item, err := variant(ctx, tx, org, value.StockLocationID, input.VariantID, input.Quantity, "")
 		if err != nil {
 			return quote, err
+		}
+		item.BatchID = input.BatchID
+		item.BatchVerified = input.BatchVerified
+		if err = inventory.QualityAvailability(ctx, tx, org, value.StockLocationID, input.VariantID, input.BatchID, &item.Available, &item.Saleable); err != nil {
+			return quote, dbError(err)
 		}
 		requested, _ := scaled(item.Quantity, 3)
 		available, _ := scaled(item.Available, 3)
@@ -65,7 +74,7 @@ func QuoteExchange(ctx context.Context, tx pgx.Tx, actor organization.Member, us
 func PostExchange(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org, id, terminalID, credit, method, reference string, snapshots []CartItem) (string, error) {
 	inputs := []ItemInput{}
 	for _, item := range snapshots {
-		inputs = append(inputs, ItemInput{VariantID: item.VariantID, Quantity: item.Quantity})
+		inputs = append(inputs, ItemInput{VariantID: item.VariantID, Quantity: item.Quantity, BatchID: item.BatchID, BatchVerified: item.BatchVerified})
 	}
 	quote, err := QuoteExchange(ctx, tx, actor, user, org, terminalID, inputs)
 	if err != nil {
@@ -102,7 +111,7 @@ func PostExchange(ctx context.Context, tx pgx.Tx, actor organization.Member, use
 		return "", dbError(err)
 	}
 	for _, item := range quote.Items {
-		if _, err = tx.Exec(ctx, "INSERT INTO pos_cart_items(organization_id,cart_id,variant_id,quantity,unit_price) VALUES($1,$2,$3,$4,$5)", org, cart, item.VariantID, item.Quantity, item.UnitPrice); err != nil {
+		if _, err = tx.Exec(ctx, "INSERT INTO pos_cart_items(organization_id,cart_id,variant_id,quantity,unit_price,batch_id) VALUES($1,$2,$3,$4,$5,$6)", org, cart, item.VariantID, item.Quantity, item.UnitPrice, item.BatchID); err != nil {
 			return "", dbError(err)
 		}
 	}

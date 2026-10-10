@@ -224,6 +224,9 @@ func taskJSON(ctx context.Context, tx pgx.Tx, org, id string) (json.RawMessage, 
 	return raw(ctx, tx, `SELECT to_jsonb(task)||jsonb_build_object('quantity',quantity::text) FROM replenishment_tasks task WHERE organization_id=$1 AND id=$2`, org, id)
 }
 func (service *Service) CreateTask(ctx context.Context, user, org, key string, input TaskInput) (json.RawMessage, error) {
+	if input.BatchID != nil && (!uuidPattern.MatchString(*input.BatchID) || !input.BatchVerified) {
+		return nil, ErrInput
+	}
 	tx, actor, err := service.Organization.Authorized(ctx, user, org, "shelf.replenishment.create")
 	if err != nil {
 		return nil, err
@@ -257,7 +260,15 @@ func (service *Service) CreateTask(ctx context.Context, user, org, key string, i
 	if err != nil {
 		return nil, err
 	}
-	available, err := balance(ctx, tx, org, input.SourceID, item.Variant)
+	var availableText string
+	sellable := true
+	if err = inventory.QualityAvailability(ctx, tx, org, input.SourceID, item.Variant, input.BatchID, &availableText, &sellable); err != nil {
+		return nil, err
+	}
+	if !sellable {
+		return nil, ErrConflict
+	}
+	available, err := decimal(availableText, 3)
 	if err != nil {
 		return nil, err
 	}
@@ -270,7 +281,7 @@ func (service *Service) CreateTask(ctx context.Context, user, org, key string, i
 		return nil, ErrConflict
 	}
 	var id string
-	err = tx.QueryRow(ctx, `INSERT INTO replenishment_tasks(organization_id,branch_id,shelf_id,assignment_id,source_location_id,quantity,created_by) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id::text`, org, item.Branch, item.Shelf, item.ID, input.SourceID, input.Quantity, user).Scan(&id)
+	err = tx.QueryRow(ctx, `INSERT INTO replenishment_tasks(organization_id,branch_id,shelf_id,assignment_id,source_location_id,quantity,created_by,batch_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id::text`, org, item.Branch, item.Shelf, item.ID, input.SourceID, input.Quantity, user, input.BatchID).Scan(&id)
 	if err != nil {
 		return nil, dbError(err)
 	}
@@ -298,8 +309,9 @@ func (service *Service) ActTask(ctx context.Context, user, org, id, action, key 
 	}
 	var assignmentID, source, status, quantity string
 	var assigned *string
+	var batch *string
 	var revision int64
-	err = tx.QueryRow(ctx, `SELECT assignment_id::text,source_location_id::text,status,quantity::text,assigned_to::text,revision FROM replenishment_tasks WHERE organization_id=$1 AND id=$2 FOR UPDATE`, org, id).Scan(&assignmentID, &source, &status, &quantity, &assigned, &revision)
+	err = tx.QueryRow(ctx, `SELECT assignment_id::text,source_location_id::text,status,quantity::text,assigned_to::text,revision,batch_id::text FROM replenishment_tasks WHERE organization_id=$1 AND id=$2 FOR UPDATE`, org, id).Scan(&assignmentID, &source, &status, &quantity, &assigned, &revision, &batch)
 	if err != nil {
 		return nil, dbError(err)
 	}
@@ -363,7 +375,7 @@ func (service *Service) ActTask(ctx context.Context, user, org, id, action, key 
 			return nil, ErrStock
 		}
 		adapter := inventory.Service{Organization: service.Organization}
-		transfer, err = adapter.Replenish(ctx, tx, actor, user, org, op, item.Branch, source, item.Location, item.Variant, quantity)
+		transfer, err = adapter.Replenish(ctx, tx, actor, user, org, op, item.Branch, source, item.Location, item.Variant, quantity, batch)
 		if err != nil {
 			return nil, err
 		}

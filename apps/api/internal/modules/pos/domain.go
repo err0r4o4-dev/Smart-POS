@@ -71,8 +71,10 @@ func allowed(values []string, value string) bool {
 }
 
 type ItemInput struct {
-	VariantID string `json:"variant_id"`
-	Quantity  string `json:"quantity"`
+	BatchID       *string `json:"batch_id,omitempty"`
+	BatchVerified bool    `json:"batch_verified,omitempty"`
+	VariantID     string  `json:"variant_id"`
+	Quantity      string  `json:"quantity"`
 }
 type CartInput struct {
 	TerminalID string      `json:"terminal_id"`
@@ -80,6 +82,8 @@ type CartInput struct {
 	Items      []ItemInput `json:"items"`
 }
 type CartItem struct {
+	BatchID       *string `json:"batch_id,omitempty"`
+	BatchVerified bool    `json:"batch_verified,omitempty"`
 	catalog.SaleVariant
 	Quantity        string `json:"quantity"`
 	LineTotal       string `json:"line_total"`

@@ -211,8 +211,12 @@ func validVariant(ctx context.Context, tx pgx.Tx, org, id, value string, active 
 	}
 	return nil
 }
-func postMovement(ctx context.Context, tx pgx.Tx, user, org, op, doc, loc, variant, kind, delta, reason string) error {
-	result, err := tx.Exec(ctx, `INSERT INTO stock_movements(organization_id,branch_id,location_id,variant_id,movement_type,quantity_delta,operation_id,document_id,reason_code,performed_by) SELECT $1,branch_id,id,$3,$4,$5,$6,nullif($7,'')::uuid,$8,$9 FROM stock_locations WHERE organization_id=$1 AND id=$2`, org, loc, variant, kind, delta, op, doc, reason, user)
+func postMovement(ctx context.Context, tx pgx.Tx, user, org, op, doc, loc, variant, kind, delta, reason string, batch ...*string) error {
+	var selected *string
+	if len(batch) > 0 {
+		selected = batch[0]
+	}
+	result, err := tx.Exec(ctx, `INSERT INTO stock_movements(organization_id,branch_id,location_id,variant_id,movement_type,quantity_delta,operation_id,document_id,reason_code,performed_by,batch_id) SELECT $1,branch_id,id,$3,$4,$5,$6,nullif($7,'')::uuid,$8,$9,$10 FROM stock_locations WHERE organization_id=$1 AND id=$2`, org, loc, variant, kind, delta, op, doc, reason, user, selected)
 	if err != nil {
 		return databaseError(err)
 	}
@@ -245,7 +249,7 @@ func (service *Service) Opening(ctx context.Context, user, org, key string, inpu
 		if err = validVariant(ctx, tx, org, item.VariantID, item.Quantity, true); err != nil {
 			return nil, err
 		}
-		if err = postMovement(ctx, tx, user, org, op, "", input.LocationID, item.VariantID, "OPENING_BALANCE", item.Quantity, input.ReasonCode); err != nil {
+		if err = postMovement(ctx, tx, user, org, op, "", input.LocationID, item.VariantID, "OPENING_BALANCE", item.Quantity, input.ReasonCode, item.BatchID); err != nil {
 			return nil, err
 		}
 	}

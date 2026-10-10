@@ -1,10 +1,10 @@
 # Customer Management — Phase 5.4
 
-Customer records are organization-owned business data, not authentication users. Authorized branches share the same records. The Customers module remains one of the canonical 16 modules / 106 planned routes; only `/customers`, `/customers/:id` and `/customers/groups` are implemented here. Loyalty, points and customer promotions remain Phase 5.5, NOT STARTED.
+Customer records are organization-owned business data, not authentication users. Authorized branches share records. Customers remains one of the canonical16 modules/106 planned routes. Phase5.4 implements three Customer routes; Phase5.5 adds real `/loyalty` and `/loyalty/history` with programs/accounts, immutable points and existing POS/Returns/Exchanges integration. See [Loyalty architecture](loyalty.md).
 
 ## Domain and persistence
 
-- Forward-only migration `000011_customers.up.sql` creates `customers`, `customer_groups` and `customer_group_memberships`. Runtime readiness requires exact clean schema 11; migrations 1–10 are not rewritten.
+- Forward-only migration `000011_customers.up.sql` creates `customers`, `customer_groups` and `customer_group_memberships`. Current runtime readiness requires exact clean schema12 after additive Loyalty migration12; migrations1–11 are not rewritten.
 - Organization-scoped codes normalize trim/uppercase. Optional names/contact/notes never require an account. Email is trimmed/lowercase; phone removes formatting separators, keeps optional `+`, and does not infer country codes. Nonempty normalized phone/email remain unique across active and archived records. Duplicate identifiers produce a generic conflict; there is no automatic merge.
 - Customer and group updates/archive require current revisions. Create identity is scoped by organization, actor and Idempotency-Key with a normalized fingerprint. Current authorization precedes replay; replay reads the current resource rather than retaining a sensitive response cache. Default GENERAL/MEMBER/VIP groups are seeded for real organizations with a creator.
 - Memberships use organization-safe composite references and customer/group revisions. Archived groups/customers cannot acquire new membership. Counts describe retained memberships, including historical archived customers; archival does not delete membership or transactions. UI/API provide bounded pagination and literal prefix search.

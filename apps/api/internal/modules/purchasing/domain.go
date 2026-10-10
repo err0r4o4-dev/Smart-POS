@@ -117,15 +117,17 @@ type ProductInput struct {
 	Revision       int64  `json:"revision"`
 }
 type ItemInput struct {
-	VariantID      string `json:"variant_id"`
-	ParentItemID   string `json:"parent_item_id"`
-	PurchaseUnitID string `json:"purchase_unit_id"`
-	Quantity       string `json:"quantity"`
-	UnitCost       string `json:"unit_cost"`
-	Delivered      string `json:"delivered_quantity"`
-	Rejected       string `json:"rejected_quantity"`
-	Damaged        string `json:"damaged_quantity"`
-	Reason         string `json:"reason"`
+	BatchID        *string `json:"batch_id,omitempty"`
+	BatchVerified  bool    `json:"batch_verified,omitempty"`
+	VariantID      string  `json:"variant_id"`
+	ParentItemID   string  `json:"parent_item_id"`
+	PurchaseUnitID string  `json:"purchase_unit_id"`
+	Quantity       string  `json:"quantity"`
+	UnitCost       string  `json:"unit_cost"`
+	Delivered      string  `json:"delivered_quantity"`
+	Rejected       string  `json:"rejected_quantity"`
+	Damaged        string  `json:"damaged_quantity"`
+	Reason         string  `json:"reason"`
 }
 type DocumentInput struct {
 	BranchID     string      `json:"branch_id"`
@@ -166,7 +168,9 @@ type AssignmentInput struct {
 	Revision  int64  `json:"revision"`
 }
 type TaskInput struct {
-	AssignmentID string `json:"assignment_id"`
-	SourceID     string `json:"source_location_id"`
-	Quantity     string `json:"quantity"`
+	BatchID       *string `json:"batch_id,omitempty"`
+	BatchVerified bool    `json:"batch_verified,omitempty"`
+	AssignmentID  string  `json:"assignment_id"`
+	SourceID      string  `json:"source_location_id"`
+	Quantity      string  `json:"quantity"`
 }

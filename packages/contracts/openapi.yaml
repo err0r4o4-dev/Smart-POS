@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: SmartPOS Foundation through Business Operations API
   version: 1.0.0
-  description: Phase 0-4 local implementation and Phase 5.1 customer returns/refunds. Inventory, purchasing, shelves and POS use exact decimal strings, immutable ledger and atomic balances with tenant/branch authorization. Returns preserve original sales and allocate historical paid amounts; physical return posting creates pending refunds, not evidence of payment. Manual refund reporting and confirmation preserve reconciliation evidence; cash disbursements update only an authorized open shift. Tenant writes require allowed Origin and X-CSRF-Token. Idempotency-Key is required for transactional commands. Later Phase 5 capabilities, valuation, reservations, gateway payments and AI remain deferred.
+  description: Phase 0-4 and Phase 5.1-5.6 local implementation includes returns/refunds, exchanges/voids, pricing/promotions, customers, loyalty and batch/expiry/quality. Existing POS and Inventory retain exact decimal money/quantity, integer points, immutable ledgers and atomic tenant/branch-authorized posting. Loyalty rewards are discounts, never fake payments. Batch picking is explicit; FEFO recommends, never physically attests. Legacy stock is untracked without invented provenance. Manual refund reporting/confirmation is reconciliation evidence, not payment-provider verification. Tenant writes require allowed Origin and X-CSRF-Token; transactional commands require Idempotency-Key. Valuation, split-lot allocation, gateway payments and AI remain deferred; production readiness is not claimed.
 servers:
   - url: /
 paths:
@@ -15929,6 +15929,699 @@ paths:
           schema:
             type: string
             format: uuid
+  /api/v1/organizations/{id}/quality/lots:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: listQualitylots
+      security:
+        - sessionCookie: []
+      description:
+        Requires current quality.read before cached replay. Tenant/branch
+        scoped. Aggregate ledger remains authoritative; tracked plus explicit
+        untracked quantities conserve. Dates and lot identity are immutable.
+        Expiry on or before Bangkok today, quarantine and recalls prohibit sale.
+        One verified lot per variant/line; FEFO is suggestion-only. Recalls are
+        irreversible activation records; no release workflow.
+      parameters:
+        - in: query
+          name: branch_id
+          required: true
+          schema: &a1
+            type: string
+            format: uuid
+        - in: query
+          name: variant_id
+          schema: *a1
+        - in: query
+          name: location_id
+          schema: *a1
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+            default: 1
+      responses:
+        '200':
+          description:
+            Authoritative data envelope. Reads return up to 100 entries;
+            increment page for more.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/QualityBatch'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/quality/batches:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: listQualitybatches
+      security:
+        - sessionCookie: []
+      description:
+        Requires current quality.read before cached replay. Tenant/branch
+        scoped. Aggregate ledger remains authoritative; tracked plus explicit
+        untracked quantities conserve. Dates and lot identity are immutable.
+        Expiry on or before Bangkok today, quarantine and recalls prohibit sale.
+        One verified lot per variant/line; FEFO is suggestion-only. Recalls are
+        irreversible activation records; no release workflow.
+      parameters:
+        - in: query
+          name: branch_id
+          required: true
+          schema: *a1
+        - in: query
+          name: variant_id
+          schema: *a1
+        - in: query
+          name: location_id
+          schema: *a1
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+            default: 1
+      responses:
+        '200':
+          description:
+            Authoritative data envelope. Reads return up to 100 entries;
+            increment page for more.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/QualityBalance'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+    post:
+      operationId: createQualityBatch
+      security:
+        - sessionCookie: []
+      description: Requires current quality.batch.create before cached replay.
+        Tenant/branch scoped. Aggregate ledger remains authoritative; tracked plus
+        explicit untracked quantities conserve. Dates and lot identity are
+        immutable. Expiry on or before Bangkok today, quarantine and recalls
+        prohibit sale. One verified lot per variant/line; FEFO is suggestion-only.
+        Recalls are irreversible activation records; no release workflow.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: *a1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QualityBatchInput'
+      responses:
+        '201':
+          description:
+            Authoritative data envelope. Reads return up to 100 entries;
+            increment page for more.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/QualityBatch'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/quality/expiry:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: listQualityexpiry
+      security:
+        - sessionCookie: []
+      description:
+        Requires current quality.read before cached replay. Tenant/branch
+        scoped. Aggregate ledger remains authoritative; tracked plus explicit
+        untracked quantities conserve. Dates and lot identity are immutable.
+        Expiry on or before Bangkok today, quarantine and recalls prohibit sale.
+        One verified lot per variant/line; FEFO is suggestion-only. Recalls are
+        irreversible activation records; no release workflow.
+      parameters:
+        - in: query
+          name: branch_id
+          required: true
+          schema: *a1
+        - in: query
+          name: variant_id
+          schema: *a1
+        - in: query
+          name: location_id
+          schema: *a1
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+            default: 1
+      responses:
+        '200':
+          description:
+            Authoritative data envelope. Reads return up to 100 entries;
+            increment page for more.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/QualityBalance'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/quality/write-offs:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: listQualitywriteoffs
+      security:
+        - sessionCookie: []
+      description:
+        Requires current quality.read before cached replay. Tenant/branch
+        scoped. Aggregate ledger remains authoritative; tracked plus explicit
+        untracked quantities conserve. Dates and lot identity are immutable.
+        Expiry on or before Bangkok today, quarantine and recalls prohibit sale.
+        One verified lot per variant/line; FEFO is suggestion-only. Recalls are
+        irreversible activation records; no release workflow.
+      parameters:
+        - in: query
+          name: branch_id
+          required: true
+          schema: *a1
+        - in: query
+          name: variant_id
+          schema: *a1
+        - in: query
+          name: location_id
+          schema: *a1
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+            default: 1
+      responses:
+        '200':
+          description:
+            Authoritative data envelope. Reads return up to 100 entries;
+            increment page for more.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/QualityWriteOff'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+    post:
+      operationId: requestQualityWriteOff
+      security:
+        - sessionCookie: []
+      description:
+        Requires current quality.write_off.create before cached replay.
+        Tenant/branch scoped. Aggregate ledger remains authoritative; tracked plus
+        explicit untracked quantities conserve. Dates and lot identity are
+        immutable. Expiry on or before Bangkok today, quarantine and recalls
+        prohibit sale. One verified lot per variant/line; FEFO is suggestion-only.
+        Recalls are irreversible activation records; no release workflow.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: *a1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QualityWriteOffInput'
+      responses:
+        '201':
+          description:
+            Authoritative data envelope. Reads return up to 100 entries;
+            increment page for more.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/QualityWriteOff'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/quality/recalls:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: listQualityrecalls
+      security:
+        - sessionCookie: []
+      description:
+        Requires current quality.read before cached replay. Tenant/branch
+        scoped. Aggregate ledger remains authoritative; tracked plus explicit
+        untracked quantities conserve. Dates and lot identity are immutable.
+        Expiry on or before Bangkok today, quarantine and recalls prohibit sale.
+        One verified lot per variant/line; FEFO is suggestion-only. Recalls are
+        irreversible activation records; no release workflow.
+      parameters:
+        - in: query
+          name: branch_id
+          required: true
+          schema: *a1
+        - in: query
+          name: variant_id
+          schema: *a1
+        - in: query
+          name: location_id
+          schema: *a1
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+            default: 1
+      responses:
+        '200':
+          description:
+            Authoritative data envelope. Reads return up to 100 entries;
+            increment page for more.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/QualityRecall'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+    post:
+      operationId: activateQualityRecall
+      security:
+        - sessionCookie: []
+      description: Requires current quality.recall.manage before cached replay.
+        Tenant/branch scoped. Aggregate ledger remains authoritative; tracked plus
+        explicit untracked quantities conserve. Dates and lot identity are
+        immutable. Expiry on or before Bangkok today, quarantine and recalls
+        prohibit sale. One verified lot per variant/line; FEFO is suggestion-only.
+        Recalls are irreversible activation records; no release workflow.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: *a1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QualityRecallInput'
+      responses:
+        '201':
+          description:
+            Authoritative data envelope. Reads return up to 100 entries;
+            increment page for more.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/QualityRecall'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/quality/batches/{resourceId}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema: *a1
+    put:
+      operationId: updateQualityBatch
+      security:
+        - sessionCookie: []
+      description: Requires current quality.batch.manage before cached replay.
+        Tenant/branch scoped. Aggregate ledger remains authoritative; tracked plus
+        explicit untracked quantities conserve. Dates and lot identity are
+        immutable. Expiry on or before Bangkok today, quarantine and recalls
+        prohibit sale. One verified lot per variant/line; FEFO is suggestion-only.
+        Recalls are irreversible activation records; no release workflow.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: *a1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QualityBatchInput'
+      responses:
+        '200':
+          description:
+            Authoritative data envelope. Reads return up to 100 entries;
+            increment page for more.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/QualityBatch'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/quality/write-offs/{resourceId}/approve:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema: *a1
+    post:
+      operationId: approveQualityWriteOff
+      security:
+        - sessionCookie: []
+      description:
+        Requires current quality.write_off.approve before cached replay.
+        Tenant/branch scoped. Aggregate ledger remains authoritative; tracked plus
+        explicit untracked quantities conserve. Dates and lot identity are
+        immutable. Expiry on or before Bangkok today, quarantine and recalls
+        prohibit sale. One verified lot per variant/line; FEFO is suggestion-only.
+        Recalls are irreversible activation records; no release workflow.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: *a1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QualityAction'
+      responses:
+        '200':
+          description:
+            Authoritative data envelope. Reads return up to 100 entries;
+            increment page for more.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/QualityWriteOff'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/quality/write-offs/{resourceId}/reject:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema: *a1
+    post:
+      operationId: rejectQualityWriteOff
+      security:
+        - sessionCookie: []
+      description:
+        Requires current quality.write_off.approve before cached replay.
+        Tenant/branch scoped. Aggregate ledger remains authoritative; tracked plus
+        explicit untracked quantities conserve. Dates and lot identity are
+        immutable. Expiry on or before Bangkok today, quarantine and recalls
+        prohibit sale. One verified lot per variant/line; FEFO is suggestion-only.
+        Recalls are irreversible activation records; no release workflow.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: *a1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QualityAction'
+      responses:
+        '200':
+          description:
+            Authoritative data envelope. Reads return up to 100 entries;
+            increment page for more.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/QualityWriteOff'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/quality/write-offs/{resourceId}/post:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema: *a1
+    post:
+      operationId: postQualityWriteOff
+      security:
+        - sessionCookie: []
+      description: Requires current quality.write_off.post before cached replay.
+        Tenant/branch scoped. Aggregate ledger remains authoritative; tracked plus
+        explicit untracked quantities conserve. Dates and lot identity are
+        immutable. Expiry on or before Bangkok today, quarantine and recalls
+        prohibit sale. One verified lot per variant/line; FEFO is suggestion-only.
+        Recalls are irreversible activation records; no release workflow.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: *a1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QualityAction'
+      responses:
+        '200':
+          description:
+            Authoritative data envelope. Reads return up to 100 entries;
+            increment page for more.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/QualityWriteOff'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '415':
+          $ref: '#/components/responses/InventoryMediaType'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
 components:
   parameters:
     OrganizationID:
@@ -16330,7 +17023,21 @@ components:
               - variant_id
               - quantity
             properties:
-              variant_id: &a1
+              batch_id:
+                type:
+                  - string
+                  - 'null'
+                format: uuid
+                description:
+                  Explicit observed lot only; null means untracked. Never auto-infer
+                  physical provenance.
+              batch_verified:
+                type: boolean
+                default: false
+                description:
+                  Must be true for a non-null batch_id. Physical operator
+                  attestation, never automatic FEFO selection.
+              variant_id:
                 type: string
                 format: uuid
               quantity:
@@ -17085,6 +17792,19 @@ components:
     CustomerReturnItem:
       type: object
       properties:
+        batch_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description:
+            Explicit observed lot only; null means untracked. Never auto-infer
+            physical provenance.
+        batch_verified:
+          type: boolean
+          default: false
+          description: Must be true for a non-null batch_id. Physical operator
+            attestation, never automatic FEFO selection.
         id: &a1
           type: string
           format: uuid
@@ -17208,6 +17928,19 @@ components:
     CustomerReturnLineInput:
       type: object
       properties:
+        batch_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description:
+            Explicit observed lot only; null means untracked. Never auto-infer
+            physical provenance.
+        batch_verified:
+          type: boolean
+          default: false
+          description: Must be true for a non-null batch_id. Physical operator
+            attestation, never automatic FEFO selection.
         original_sale_item_id:
           type: string
           format: uuid
@@ -17515,6 +18248,19 @@ components:
       type: object
       additionalProperties: true
       properties:
+        batch_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description:
+            Explicit observed lot only; null means untracked. Never auto-infer
+            physical provenance.
+        batch_verified:
+          type: boolean
+          default: false
+          description: Must be true for a non-null batch_id. Physical operator
+            attestation, never automatic FEFO selection.
         assignment_id:
           type: string
           format: uuid
@@ -17884,6 +18630,19 @@ components:
       type: object
       additionalProperties: true
       properties:
+        batch_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description:
+            Explicit observed lot only; null means untracked. Never auto-infer
+            physical provenance.
+        batch_verified:
+          type: boolean
+          default: false
+          description: Must be true for a non-null batch_id. Physical operator
+            attestation, never automatic FEFO selection.
         id:
           type: string
           format: uuid
@@ -18048,6 +18807,19 @@ components:
       type: object
       additionalProperties: false
       properties:
+        batch_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description:
+            Explicit observed lot only; null means untracked. Never auto-infer
+            physical provenance.
+        batch_verified:
+          type: boolean
+          default: false
+          description: Must be true for a non-null batch_id. Physical operator
+            attestation, never automatic FEFO selection.
         assignment_id:
           type: string
           format: uuid
@@ -18197,6 +18969,19 @@ components:
       type: object
       additionalProperties: false
       properties:
+        batch_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description:
+            Explicit observed lot only; null means untracked. Never auto-infer
+            physical provenance.
+        batch_verified:
+          type: boolean
+          default: false
+          description: Must be true for a non-null batch_id. Physical operator
+            attestation, never automatic FEFO selection.
         variant_id:
           type: string
           format: uuid
@@ -19730,6 +20515,20 @@ components:
               - variant_id
               - quantity
             properties:
+              batch_id:
+                type:
+                  - string
+                  - 'null'
+                format: uuid
+                description:
+                  Explicit observed lot only; null means untracked. Never auto-infer
+                  physical provenance.
+              batch_verified:
+                type: boolean
+                default: false
+                description:
+                  Must be true for a non-null batch_id. Physical operator
+                  attestation, never automatic FEFO selection.
               variant_id:
                 type: string
                 format: uuid
@@ -19771,6 +20570,20 @@ components:
               - variant_id
               - quantity
             properties:
+              batch_id:
+                type:
+                  - string
+                  - 'null'
+                format: uuid
+                description:
+                  Explicit observed lot only; null means untracked. Never auto-infer
+                  physical provenance.
+              batch_verified:
+                type: boolean
+                default: false
+                description:
+                  Must be true for a non-null batch_id. Physical operator
+                  attestation, never automatic FEFO selection.
               variant_id:
                 type: string
                 format: uuid
@@ -19782,7 +20595,9 @@ components:
             - INCREASE
             - DECREASE
             - CORRECTION
-      description: INCREASE/DECREASE positive delta magnitudes. CORRECTION absolute nonnegative target, captures stock version and rejects stale posting.
+      description:
+        INCREASE/DECREASE positive delta magnitudes. CORRECTION absolute
+        nonnegative target, captures stock version and rejects stale posting.
     InventoryOpeningInput:
       type: object
       additionalProperties: false
@@ -19815,6 +20630,20 @@ components:
               - variant_id
               - quantity
             properties:
+              batch_id:
+                type:
+                  - string
+                  - 'null'
+                format: uuid
+                description:
+                  Explicit observed lot only; null means untracked. Never auto-infer
+                  physical provenance.
+              batch_verified:
+                type: boolean
+                default: false
+                description:
+                  Must be true for a non-null batch_id. Physical operator
+                  attestation, never automatic FEFO selection.
               variant_id:
                 type: string
                 format: uuid
@@ -19956,6 +20785,19 @@ components:
         - expected_quantity
         - counted_quantity
       properties:
+        batch_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description:
+            Explicit observed lot only; null means untracked. Never auto-infer
+            physical provenance.
+        batch_verified:
+          type: boolean
+          default: false
+          description: Must be true for a non-null batch_id. Physical operator
+            attestation, never automatic FEFO selection.
         variant_id:
           type: string
           format: uuid
@@ -20012,6 +20854,19 @@ components:
         - sku
         - created_at
       properties:
+        batch_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description:
+            Explicit observed lot only; null means untracked. Never auto-infer
+            physical provenance.
+        batch_verified:
+          type: boolean
+          default: false
+          description: Must be true for a non-null batch_id. Physical operator
+            attestation, never automatic FEFO selection.
         id:
           type: string
           format: uuid
@@ -20312,6 +21167,19 @@ components:
         - price_changed
         - saleable
       properties:
+        batch_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description:
+            Explicit observed lot only; null means untracked. Never auto-infer
+            physical provenance.
+        batch_verified:
+          type: boolean
+          default: false
+          description: Must be true for a non-null batch_id. Physical operator
+            attestation, never automatic FEFO selection.
         variant_id:
           type: string
           format: uuid
@@ -20417,6 +21285,20 @@ components:
               - variant_id
               - quantity
             properties:
+              batch_id:
+                type:
+                  - string
+                  - 'null'
+                format: uuid
+                description:
+                  Explicit observed lot only; null means untracked. Never auto-infer
+                  physical provenance.
+              batch_verified:
+                type: boolean
+                default: false
+                description:
+                  Must be true for a non-null batch_id. Physical operator
+                  attestation, never automatic FEFO selection.
               variant_id: *a1
               quantity:
                 $ref: '#/components/schemas/InventoryQuantity'
@@ -20654,6 +21536,19 @@ components:
         - unit_price
         - line_total
       properties:
+        batch_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description:
+            Explicit observed lot only; null means untracked. Never auto-infer
+            physical provenance.
+        batch_verified:
+          type: boolean
+          default: false
+          description: Must be true for a non-null batch_id. Physical operator
+            attestation, never automatic FEFO selection.
         id: &a1
           type: string
           format: uuid
@@ -22029,6 +22924,257 @@ components:
           format: uuid
         branch_id:
           type: string
+          format: uuid
+    QualityBatchInput:
+      type: object
+      additionalProperties: false
+      required:
+        - variant_id
+        - lot_number
+        - reason
+      properties:
+        variant_id: &a1
+          type: string
+          format: uuid
+        lot_number: &a5
+          type: string
+          minLength: 1
+          maxLength: 100
+        manufactured_on: &a6
+          type:
+            - string
+            - 'null'
+          format: date
+        expires_on: &a7
+          type:
+            - string
+            - 'null'
+          format: date
+        status: &a8
+          type: string
+          enum:
+            - ACTIVE
+            - QUARANTINED
+          default: ACTIVE
+        reason: &a2
+          type: string
+          minLength: 1
+          maxLength: 1000
+        revision: &a4
+          type: integer
+          minimum: 1
+    QualityRecallInput:
+      type: object
+      additionalProperties: false
+      required:
+        - variant_id
+        - reason
+      properties:
+        variant_id: *a1
+        batch_id: &a3
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description:
+            Explicit observed lot only; null means untracked. Never auto-infer
+            physical provenance.
+        reason: *a2
+    QualityWriteOffInput:
+      type: object
+      additionalProperties: false
+      required:
+        - location_id
+        - variant_id
+        - quantity
+        - reason
+      properties:
+        location_id: *a1
+        variant_id: *a1
+        batch_id: *a3
+        quantity:
+          $ref: '#/components/schemas/InventoryQuantity'
+        reason: *a2
+        revision: *a4
+    QualityAction:
+      type: object
+      additionalProperties: false
+      required:
+        - revision
+      properties:
+        revision: *a4
+    QualityBatch:
+      type: object
+      required:
+        - id
+        - variant_id
+        - lot_number
+        - manufactured_on
+        - expires_on
+        - status
+        - reason
+        - revision
+      properties:
+        id: &a1
+          type: string
+          format: uuid
+        variant_id: *a1
+        lot_number:
+          type: string
+          minLength: 1
+          maxLength: 100
+        manufactured_on:
+          type:
+            - string
+            - 'null'
+          format: date
+        expires_on:
+          type:
+            - string
+            - 'null'
+          format: date
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - QUARANTINED
+          default: ACTIVE
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        revision:
+          type: integer
+          minimum: 1
+        history:
+          type: array
+          description:
+            Read-only quality status history derived from immutable inventory
+            operation result snapshots.
+          items:
+            type: object
+            properties:
+              revision:
+                type: integer
+              status:
+                type: string
+              reason:
+                type: string
+              actor_id:
+                type: string
+                format: uuid
+              recorded_at:
+                type: string
+                format: date-time
+    QualityBalance:
+      type: object
+      required:
+        - id
+        - branch_id
+        - location_id
+        - variant_id
+        - batch_id
+        - quantity
+        - sellable
+        - provenance
+      properties:
+        id: *a1
+        branch_id: *a1
+        location_id: *a1
+        variant_id: *a1
+        batch_id: *a3
+        quantity:
+          $ref: '#/components/schemas/InventoryQuantity'
+        lot_number:
+          type:
+            - string
+            - 'null'
+        expires_on:
+          type:
+            - string
+            - 'null'
+          format: date
+        batch_status:
+          type:
+            - string
+            - 'null'
+          enum:
+            - ACTIVE
+            - QUARANTINED
+            - null
+        provenance:
+          type: string
+          enum:
+            - UNTRACKED
+            - RECORDED_LOT
+        sellable:
+          type: boolean
+    QualityRecall:
+      type: object
+      required:
+        - id
+        - variant_id
+        - batch_id
+        - reason
+      properties:
+        id: &a1
+          type: string
+          format: uuid
+        variant_id: *a1
+        batch_id: &a2
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description:
+            Explicit observed lot only; null means untracked. Never auto-infer
+            physical provenance.
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        created_at:
+          type: string
+          format: date-time
+        affected_locations:
+          type: array
+          items:
+            type: object
+            properties:
+              location_id: *a1
+              batch_id: *a2
+              quantity:
+                $ref: '#/components/schemas/InventoryQuantity'
+    QualityWriteOff:
+      type: object
+      required:
+        - id
+        - location_id
+        - variant_id
+        - batch_id
+        - quantity
+        - status
+        - revision
+      properties:
+        id: *a1
+        location_id: *a1
+        variant_id: *a1
+        batch_id: *a3
+        quantity:
+          $ref: '#/components/schemas/InventoryQuantity'
+        reason: *a2
+        status:
+          type: string
+          enum:
+            - PENDING_APPROVAL
+            - APPROVED
+            - POSTED
+            - REJECTED
+        revision: *a4
+        operation_id:
+          type:
+            - string
+            - 'null'
           format: uuid
   headers:
     RequestID:

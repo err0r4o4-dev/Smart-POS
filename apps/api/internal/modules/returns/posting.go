@@ -69,18 +69,19 @@ func (service *Service) Transition(ctx context.Context, user, org, id, action, k
 	return finish(ctx, tx, user, org, op, "returns."+action, id, value)
 }
 func post(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org, op string, doc document, refundAmount *string) error {
-	rows, err := tx.Query(ctx, `SELECT item.id::text,item.original_sale_item_id::text,item.variant_id::text,item.quantity::text,item.refund_amount::text,item.disposition,item.destination_location_id::text,sale.quantity::text,sale.line_total::text FROM customer_return_items item JOIN sale_items sale ON sale.organization_id=item.organization_id AND sale.id=item.original_sale_item_id WHERE item.organization_id=$1 AND item.return_id=$2 ORDER BY item.variant_id,item.id`, org, doc.ID)
+	rows, err := tx.Query(ctx, `SELECT item.id::text,item.original_sale_item_id::text,item.variant_id::text,item.quantity::text,item.refund_amount::text,item.disposition,item.destination_location_id::text,sale.quantity::text,sale.line_total::text,item.batch_id::text FROM customer_return_items item JOIN sale_items sale ON sale.organization_id=item.organization_id AND sale.id=item.original_sale_item_id WHERE item.organization_id=$1 AND item.return_id=$2 ORDER BY item.variant_id,item.id`, org, doc.ID)
 	if err != nil {
 		return err
 	}
 	type posting struct {
 		ID, SaleItem, Variant, Quantity, Amount, Disposition, Sold, Paid string
 		Destination                                                      *string
+		BatchID                                                          *string
 	}
 	items := []posting{}
 	for rows.Next() {
 		var line posting
-		if err = rows.Scan(&line.ID, &line.SaleItem, &line.Variant, &line.Quantity, &line.Amount, &line.Disposition, &line.Destination, &line.Sold, &line.Paid); err != nil {
+		if err = rows.Scan(&line.ID, &line.SaleItem, &line.Variant, &line.Quantity, &line.Amount, &line.Disposition, &line.Destination, &line.Sold, &line.Paid, &line.BatchID); err != nil {
 			rows.Close()
 			return err
 		}
@@ -106,7 +107,7 @@ func post(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org, 
 		if amount != line.Amount {
 			return ErrConflict
 		}
-		if err = inventory.PostCustomerReturn(ctx, tx, actor, user, org, op, doc.Branch, line.ID, line.Variant, line.Quantity, line.Destination, line.Disposition); err != nil {
+		if err = inventory.PostCustomerReturn(ctx, tx, actor, user, org, op, doc.Branch, line.ID, line.Variant, line.Quantity, line.Destination, line.Disposition, line.BatchID); err != nil {
 			return dbError(err)
 		}
 	}

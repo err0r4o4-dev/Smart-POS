@@ -1,6 +1,6 @@
 # SmartPOS — Phase 1 / Phase 2 / Phase 3 / Phase 4 / Phase 5 checklist
 
-Status: **Phase 0–4 and Phase 5.1–5.4 COMPLETED (Local); Phase 5 overall PARTIAL** (2026-10-10), not production readiness. **Phase 5.4 COMPLETED (Local); 5.5–5.6 NOT STARTED; 5.7 PARTIAL. Phase 6–7 NOT STARTED; Phase 6 NOT READY.** Latest evidence: `docs/development/phase54-verification.md`. Earlier counts/checklists remain historical evidence, not current run totals.
+Status: **Phase 0–4 and Phase 5.1–5.5 COMPLETED (Local); Phase 5 overall PARTIAL** (2026-10-11), not production readiness. **5.6 NOT STARTED; 5.7 PARTIAL pending final QA after Batch/Quality. Phase 6–7 NOT STARTED; Phase 6 NOT READY; Production Ready NO.** Latest evidence: `docs/development/phase55-verification.md`. Earlier counts/checklists remain historical evidence, not current run totals.
 
 ## Phase 5 implementation in progress (2026-10-10)
 
@@ -25,7 +25,8 @@ Status: **Phase 0–4 and Phase 5.1–5.4 COMPLETED (Local); Phase 5 overall PAR
 - [x] Finish Phase5.3 local acceptance:319 new/1699 total numbered API assertions,96 frontend tests,23 browser tests, schema10/seven SQL suites, Go race and8 reconciliation checks; record actual failures/limits.
 - [x] Implement Phase 5.4 Customer CRUD/archive, groups, POS selection and authoritative history with privacy/RBAC/RLS.
 - [x] Finish Phase5.4 local acceptance:253 Customer/1952 total numbered API assertions across18 suites,103 frontend tests,25 full browser tests plus final focused2/2, schema11/eight SQL suites, Go race and11 reconciliation checks; record failures/limits.
-- [ ] Implement Phase 5.5 Loyalty using the accepted Customer extension points; no points or redemption logic exists yet.
+- [x] Implement Phase 5.5 Loyalty programs/accounts/immutable ledger, exact reward discounts, reservations and historical Returns/Exchanges/Voids compensation through existing engines.
+- [x] Finish Phase5.5 local acceptance:249 Loyalty assertions,18 old API suites,144 frontend tests,37 gateway browser tests, fresh schema12/nine SQL suites, Go race and17 reconciliation checks; preserve failed attempts and production limits.
 - [ ] Implement Phase 5.6 Batch/Expiry/Write-offs/Recalls across every Inventory path.
 - [ ] Complete Phase 5.7 integration/security/QA; do not mark Phase 5 complete prematurely.
 

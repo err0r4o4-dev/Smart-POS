@@ -53,7 +53,7 @@ func PostSupply(ctx context.Context, tx pgx.Tx, actor organization.Member, user,
 			movement = "SUPPLIER_RETURN"
 			amount = -amount
 		}
-		_, err = tx.Exec(ctx, `INSERT INTO stock_movements(organization_id,branch_id,location_id,variant_id,movement_type,quantity_delta,operation_id,reason_code,performed_by,purchasing_document_id) VALUES($1,$2,$3,$4,$5,$6,$7,$5,$8,$9)`, org, branch, locationID, item.VariantID, movement, decimal(amount), op, user, document)
+		_, err = tx.Exec(ctx, `INSERT INTO stock_movements(organization_id,branch_id,location_id,variant_id,movement_type,quantity_delta,operation_id,reason_code,performed_by,purchasing_document_id,batch_id) VALUES($1,$2,$3,$4,$5,$6,$7,$5,$8,$9,$10)`, org, branch, locationID, item.VariantID, movement, decimal(amount), op, user, document, item.BatchID)
 		if err != nil {
 			return databaseError(err)
 		}
@@ -61,7 +61,15 @@ func PostSupply(ctx context.Context, tx pgx.Tx, actor organization.Member, user,
 	return nil
 }
 
-func (service *Service) Replenish(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org, op, branch, source, destination, variant, amount string) (string, error) {
+func (service *Service) Replenish(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org, op, branch, source, destination, variant, amount string, batch *string) (string, error) {
+	var available string
+	sellable := true
+	if err := QualityAvailability(ctx, tx, org, source, variant, batch, &available, &sellable); err != nil {
+		return "", err
+	}
+	if !sellable {
+		return "", ErrConflict
+	}
 	if err := SupplyLocation(ctx, tx, actor, org, branch, source, "RECEIPT"); err != nil {
 		return "", err
 	}
@@ -79,11 +87,11 @@ func (service *Service) Replenish(ctx context.Context, tx pgx.Tx, actor organiza
 	if err != nil {
 		return "", databaseError(err)
 	}
-	if _, err = tx.Exec(ctx, `INSERT INTO inventory_document_items(organization_id,document_id,variant_id,quantity) VALUES($1,$2,$3,$4)`, org, id, variant, amount); err != nil {
+	if _, err = tx.Exec(ctx, `INSERT INTO inventory_document_items(organization_id,document_id,variant_id,quantity,batch_id) VALUES($1,$2,$3,$4,$5)`, org, id, variant, amount, batch); err != nil {
 		return "", databaseError(err)
 	}
 	doc := Document{ID: id, Kind: "TRANSFER", Status: "APPROVED", BranchID: branch, LocationID: source, DestinationBranchID: &branch, DestinationLocationID: &destination, Reason: "SHELF_REPLENISHMENT", CreatedBy: user}
-	next, err := service.moveTransfer(ctx, tx, actor, user, org, op, doc, []storedItem{{VariantID: variant, Quantity: amount}}, "dispatch")
+	next, err := service.moveTransfer(ctx, tx, actor, user, org, op, doc, []storedItem{{VariantID: variant, Quantity: amount, BatchID: batch}}, "dispatch")
 	if err != nil {
 		return "", err
 	}

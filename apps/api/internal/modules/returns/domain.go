@@ -15,10 +15,12 @@ var uuidPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]
 var decimalPattern = regexp.MustCompile(`^(0|[1-9][0-9]{0,15})(\.[0-9]{1,3})?$`)
 
 type LineInput struct {
-	SaleItemID  string  `json:"original_sale_item_id"`
-	Quantity    string  `json:"quantity"`
-	Disposition string  `json:"disposition"`
-	Destination *string `json:"destination_location_id"`
+	BatchID       *string `json:"batch_id,omitempty"`
+	BatchVerified bool    `json:"batch_verified,omitempty"`
+	SaleItemID    string  `json:"original_sale_item_id"`
+	Quantity      string  `json:"quantity"`
+	Disposition   string  `json:"disposition"`
+	Destination   *string `json:"destination_location_id"`
 }
 type CreateInput struct {
 	SaleID string      `json:"original_sale_id"`

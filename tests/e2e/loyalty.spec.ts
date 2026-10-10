@@ -105,6 +105,7 @@ test('Loyalty real program/enrollment/adjustment, POS redemption, history and re
     await expect(account).toContainText('Ledger balance: 20');
     for (const width of [320, 375, 768, 1280, 1920]) {
       await page.setViewportSize({ width, height: 1000 });
+      await page.evaluate(() => window.scrollTo(0, 0));
       await expect
         .poll(() =>
           page.evaluate(

@@ -57,6 +57,8 @@ func contains(values []string, value string) bool {
 }
 
 type Item struct {
+	BatchID         *string `json:"batch_id,omitempty"`
+	BatchVerified   bool    `json:"batch_verified,omitempty"`
 	VariantID       string  `json:"variant_id"`
 	Quantity        string  `json:"quantity"`
 	CountedQuantity *string `json:"counted_quantity,omitempty"`
@@ -85,7 +87,7 @@ func (input Command) validate(kind string) error {
 	}
 	seen := map[string]bool{}
 	for _, item := range input.Items {
-		if !uuidPattern.MatchString(item.VariantID) || seen[item.VariantID] {
+		if !uuidPattern.MatchString(item.VariantID) || seen[item.VariantID] || item.BatchID != nil && (!uuidPattern.MatchString(*item.BatchID) || !item.BatchVerified || kind == "COUNT" || input.AdjustmentType == "CORRECTION") {
 			return ErrInput
 		}
 		seen[item.VariantID] = true

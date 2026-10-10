@@ -56,7 +56,7 @@ for (const width of [1024, 1440]) {
           await button.click();
         }
         await expect(menu.getByRole('link')).toHaveCount(navigation.length);
-        await expect(menu.locator('a[href^="/preview/"]')).toHaveCount(0);
+        await expect(menu.locator('a[href^="/preview/"]')).toHaveCount(2);
         await expect(menu.locator('a[href="/dashboard"]')).toHaveAttribute(
           'aria-current',
           'page',
@@ -106,9 +106,14 @@ for (const width of [1024, 1440]) {
   }
 }
 
-test('preview navigation excludes operational modules', async ({ page }) => {
+test('anonymous foundation navigation excludes tenant modules', async ({
+  page,
+}) => {
+  await page.route('**/api/v1/auth/me', (route) =>
+    route.fulfill({ status: 401, json: { error: { code: 'UNAUTHORIZED' } } }),
+  );
   await page.setViewportSize({ width: 1440, height: 720 });
-  await page.goto('/preview/foundation');
+  await page.goto('/dashboard');
   const menu = page.getByRole('navigation', {
     name: 'Main navigation',
     exact: true,
@@ -121,7 +126,7 @@ test('preview navigation excludes operational modules', async ({ page }) => {
   ).toBeVisible();
   await expect(menu.locator('a[href="/customers"]')).toHaveCount(0);
   await expect(page.locator('.sidebar-note')).toContainText(
-    'Development previews',
+    'Built for what’s next',
   );
 });
 
@@ -141,7 +146,7 @@ test('mobile navigation still opens, navigates and dismisses', async ({
     name: 'Mobile navigation',
     exact: true,
   });
-  await expect(menu.locator('a[href^="/preview/"]')).toHaveCount(0);
+  await expect(menu.locator('a[href^="/preview/"]')).toHaveCount(2);
   await expect(menu.getByRole('button')).toHaveCount(7);
   await page.keyboard.press('Shift+Tab');
   await expect(

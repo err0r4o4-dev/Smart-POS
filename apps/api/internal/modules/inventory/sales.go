@@ -41,7 +41,7 @@ func PostSale(ctx context.Context, tx pgx.Tx, actor organization.Member, user, o
 		if err = validVariant(ctx, tx, org, item.VariantID, item.Quantity, true); err != nil {
 			return err
 		}
-		_, err = tx.Exec(ctx, `INSERT INTO stock_movements(organization_id,branch_id,location_id,variant_id,movement_type,quantity_delta,operation_id,reason_code,performed_by,sale_id) VALUES($1,$2,$3,$4,'SALE',$5,$6,'POS_SALE',$7,$8)`, org, branch, location, item.VariantID, decimal(-amount), op, user, sale)
+		_, err = tx.Exec(ctx, `INSERT INTO stock_movements(organization_id,branch_id,location_id,variant_id,movement_type,quantity_delta,operation_id,reason_code,performed_by,sale_id,batch_id) VALUES($1,$2,$3,$4,'SALE',$5,$6,'POS_SALE',$7,$8,$9)`, org, branch, location, item.VariantID, decimal(-amount), op, user, sale, item.BatchID)
 		if err != nil {
 			return databaseError(err)
 		}

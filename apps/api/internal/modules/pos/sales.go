@@ -49,6 +49,9 @@ func settle(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org
 		if err != nil {
 			return "", err
 		}
+		if err = inventory.QualityAvailability(ctx, tx, org, value.StockLocationID, snapshot.VariantID, snapshot.BatchID, &current.Available, &current.Saleable); err != nil {
+			return "", dbError(err)
+		}
 		if !current.Saleable {
 			return "", ErrConflict
 		}
@@ -60,7 +63,7 @@ func settle(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org
 		if stock < quantity {
 			return "", ErrStock
 		}
-		movements = append(movements, inventory.Item{VariantID: snapshot.VariantID, Quantity: snapshot.Quantity})
+		movements = append(movements, inventory.Item{VariantID: snapshot.VariantID, Quantity: snapshot.Quantity, BatchID: snapshot.BatchID})
 	}
 	op, err := inventory.BeginSale(ctx, tx, user, org, item.ID, item.Items)
 	if err != nil {
@@ -74,7 +77,7 @@ func settle(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org
 		return "", dbError(err)
 	}
 	for _, snapshot := range item.Items {
-		_, err = tx.Exec(ctx, `INSERT INTO sale_items(organization_id,sale_id,variant_id,stock_location_id,branch_id,product_name,variant_name,sku,barcode,unit,quantity,unit_price,line_total,discount_total) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`, org, sale, snapshot.VariantID, value.StockLocationID, item.BranchID, snapshot.ProductName, snapshot.VariantName, snapshot.SKU, snapshot.Barcode, snapshot.Unit, snapshot.Quantity, snapshot.UnitPrice, snapshot.LineTotal, snapshot.DiscountTotal)
+		_, err = tx.Exec(ctx, `INSERT INTO sale_items(organization_id,sale_id,variant_id,stock_location_id,branch_id,product_name,variant_name,sku,barcode,unit,quantity,unit_price,line_total,discount_total,batch_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`, org, sale, snapshot.VariantID, value.StockLocationID, item.BranchID, snapshot.ProductName, snapshot.VariantName, snapshot.SKU, snapshot.Barcode, snapshot.Unit, snapshot.Quantity, snapshot.UnitPrice, snapshot.LineTotal, snapshot.DiscountTotal, snapshot.BatchID)
 		if err != nil {
 			return "", dbError(err)
 		}

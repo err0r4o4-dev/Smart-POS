@@ -34,6 +34,8 @@
     "verify:pricing": "node tests/integration/pricing-flow.mjs && node tests/integration/pricing-safety.mjs",
     "verify:phase53": "node scripts/check-phase53.mjs",
     "verify:customers": "node tests/integration/customers-flow.mjs && node tests/integration/customers-safety.mjs",
+    "verify:loyalty": "node tests/integration/loyalty-flow.mjs && node tests/integration/loyalty-safety.mjs",
+    "verify:quality": "node tests/integration/quality-flow.mjs && node tests/integration/quality-safety.mjs",
     "verify:phase54": "node scripts/check-phase54.mjs",
     "verify:purchasing": "node tests/integration/purchasing-flow.mjs && node tests/integration/purchasing-safety.mjs",
     "verify:shelves": "node tests/integration/purchasing-flow.mjs && node tests/integration/purchasing-safety.mjs",

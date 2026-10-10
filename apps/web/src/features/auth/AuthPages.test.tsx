@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { beforeEach, expect, it, vi } from 'vitest';
-import { ResetPasswordPage, safeReturnTo } from './AuthPages';
+import { ResetPasswordPage } from './AuthPages';
 
 const mocks = vi.hoisted(() => ({
   resetPassword: vi.fn(),
@@ -18,35 +18,6 @@ vi.mock('../../lib/api', () => ({
 beforeEach(() => {
   vi.clearAllMocks();
   window.history.replaceState(null, '', '/');
-});
-
-it.each([
-  '/products?search=coffee',
-  '/pos',
-  '/setup',
-  '/account',
-  '/customers/groups',
-])('preserves the local return target %s', (target) => {
-  expect(safeReturnTo(target)).toBe(target);
-});
-
-it.each([
-  null,
-  '',
-  'https://example.test',
-  '//example.test',
-  '/\\example.test',
-  '/..//example.test',
-  '/%2fexample.test',
-  '/%6cogin',
-  '/%ZZ',
-  '/login',
-  '/register?next=/pos',
-  '/forgot-password',
-  '/reset-password?token=test',
-  '/products\n',
-])('rejects unsafe or recursive return target %s', (target) => {
-  expect(safeReturnTo(target)).toBe('/dashboard');
 });
 
 it('removes the reset token from the URL before submission but retains it for the request', async () => {

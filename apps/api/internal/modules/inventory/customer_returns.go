@@ -35,7 +35,7 @@ func ReturnLocation(ctx context.Context, tx pgx.Tx, actor organization.Member, o
 	}
 	return nil
 }
-func PostCustomerReturn(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org, op, branch, item, variant, amount string, destination *string, disposition string) error {
+func PostCustomerReturn(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org, op, branch, item, variant, amount string, destination *string, disposition string, batch *string) error {
 	if err := ReturnLocation(ctx, tx, actor, org, branch, destination, disposition); err != nil {
 		return err
 	}
@@ -60,6 +60,6 @@ func PostCustomerReturn(ctx context.Context, tx pgx.Tx, actor organization.Membe
 			return ErrConflict
 		}
 	}
-	_, err := tx.Exec(ctx, `INSERT INTO stock_movements(organization_id,branch_id,location_id,variant_id,movement_type,quantity_delta,operation_id,reason_code,performed_by,customer_return_item_id) VALUES($1,$2,$3,$4,'SALE_RETURN',$5,$6,$7,$8,$9)`, org, branch, *destination, variant, amount, op, disposition, user, item)
+	_, err := tx.Exec(ctx, `INSERT INTO stock_movements(organization_id,branch_id,location_id,variant_id,movement_type,quantity_delta,operation_id,reason_code,performed_by,customer_return_item_id,batch_id) VALUES($1,$2,$3,$4,'SALE_RETURN',$5,$6,$7,$8,$9,$10)`, org, branch, *destination, variant, amount, op, disposition, user, item, batch)
 	return databaseError(err)
 }

@@ -7,6 +7,8 @@ export interface ReturnableSale {
   grand_total: string;
   items: {
     id: string;
+    variant_id: string;
+    batch_id?: string | null;
     product_name: string;
     sku: string;
     quantity: string;
@@ -36,6 +38,7 @@ export interface CustomerReturn {
   completed_at: string | null;
   items: {
     id: string;
+    batch_id?: string | null;
     product_name: string;
     sku: string;
     quantity: string;

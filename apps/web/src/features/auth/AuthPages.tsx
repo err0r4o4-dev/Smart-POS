@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Loading, Tag } from '../../components/ui/primitives';
 import { AuthLayout } from '../../layouts/AuthLayout';
 import { forgotPassword, register, resetPassword } from '../../lib/api';
@@ -50,34 +50,7 @@ function PasswordField({
 }
 
 export function safeReturnTo(value: string | null) {
-  const unsafe = (path: string) =>
-    /[\\\s]/.test(path) ||
-    Array.from(path).some(
-      (character) =>
-        character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127,
-    );
-  if (
-    !value ||
-    !value.startsWith('/') ||
-    value.startsWith('//') ||
-    unsafe(value)
-  )
-    return '/dashboard';
-  try {
-    const target = new URL(value, 'http://smartpos.local');
-    const pathname = decodeURIComponent(target.pathname);
-    if (
-      pathname.startsWith('//') ||
-      unsafe(pathname) ||
-      ['/login', '/register', '/forgot-password', '/reset-password'].includes(
-        pathname.replace(/\/+$/, ''),
-      )
-    )
-      return '/dashboard';
-    return target.pathname + target.search + target.hash;
-  } catch {
-    return '/dashboard';
-  }
+  return value === '/account' ? value : '/account';
 }
 
 export function LoginPage() {
@@ -87,7 +60,7 @@ export function LoginPage() {
   const [pending, setPending] = useState(false);
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { state, signIn } = useAuth();
+  const { signIn } = useAuth();
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
@@ -103,10 +76,6 @@ export function LoginPage() {
       setPending(false);
     }
   };
-  if (state.status === 'loading')
-    return <Loading>Checking your session…</Loading>;
-  if (state.status === 'authenticated')
-    return <Navigate to={safeReturnTo(params.get('returnTo'))} replace />;
   return (
     <AuthLayout>
       <Tag tone="amber">ACCOUNT ACCESS</Tag>

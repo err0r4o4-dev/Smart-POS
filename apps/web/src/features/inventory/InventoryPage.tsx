@@ -24,6 +24,8 @@ import type {
 import { quantityVariance, variancePercent } from '../../lib/inventory-api';
 import { Button, Card } from '../../components/ui/primitives';
 import { CatalogError, CatalogLoading } from '../catalog/CatalogUI';
+import { BatchPicker, type BatchSelection } from '../quality/BatchPicker';
+import { untrackedBatch } from '../../lib/quality-api';
 
 const sections = [
   ['overview', 'ภาพรวม'],
@@ -760,6 +762,8 @@ function InventoryScreen({
                     {row.document_id ?? row.operation_id}
                     <br />
                     {row.reason_code}
+                    <br />
+                    Lot: {row.batch_id ?? 'UNTRACKED'}
                   </td>
                   <td>
                     {row.performed_by}
@@ -1067,7 +1071,9 @@ function CommandEditor({
   const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');
   const [assigned, setAssigned] = useState('');
-  const [items, setItems] = useState([{ variant_id: '', quantity: '' }]);
+  const [items, setItems] = useState<
+    ({ variant_id: string; quantity: string } & BatchSelection)[]
+  >([{ variant_id: '', quantity: '', ...untrackedBatch }]);
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (
@@ -1092,7 +1098,7 @@ function CommandEditor({
       });
       if (created) created(doc);
       setReason('');
-      setItems([{ variant_id: '', quantity: '' }]);
+      setItems([{ variant_id: '', quantity: '', ...untrackedBatch }]);
     } catch {
       return;
     }
@@ -1200,11 +1206,36 @@ function CommandEditor({
               change={(value) =>
                 setItems(
                   items.map((row, position) =>
-                    position === index ? { ...row, variant_id: value } : row,
+                    position === index
+                      ? { ...row, variant_id: value, ...untrackedBatch }
+                      : row,
                   ),
                 )
               }
             />
+            {resource !== 'counts' && (
+              <BatchPicker
+                key={`${item.variant_id}:${location}`}
+                variant={item.variant_id}
+                branch={
+                  locations.find((value) => value.id === location)?.branch_id
+                }
+                location={
+                  resource === 'transfers' || type === 'DECREASE'
+                    ? location
+                    : undefined
+                }
+                value={item}
+                label={`Batch/Lot ${index + 1}`}
+                change={(selection) =>
+                  setItems(
+                    items.map((value, position) =>
+                      position === index ? { ...value, ...selection } : value,
+                    ),
+                  )
+                }
+              />
+            )}
             {resource !== 'counts' && (
               <Field label={`Quantity ${index + 1}`}>
                 <input
@@ -1241,7 +1272,12 @@ function CommandEditor({
           type="button"
           className="button-secondary"
           disabled={items.length >= 100}
-          onClick={() => setItems([...items, { variant_id: '', quantity: '' }])}
+          onClick={() =>
+            setItems([
+              ...items,
+              { variant_id: '', quantity: '', ...untrackedBatch },
+            ])
+          }
         >
           เพิ่ม Item
         </Button>

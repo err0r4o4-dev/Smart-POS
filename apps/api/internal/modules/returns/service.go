@@ -131,14 +131,21 @@ func createDocument(ctx context.Context, tx pgx.Tx, actor organization.Member, u
 	seen := map[string]bool{}
 	total := new(big.Int)
 	for _, line := range input.Items {
+		if line.BatchID != nil && (!uuidPattern.MatchString(*line.BatchID) || !line.BatchVerified || line.Disposition == "NO_STOCK_RETURN") {
+			return "", ErrInput
+		}
 		if !uuidPattern.MatchString(line.SaleItemID) || seen[line.SaleItemID] {
 			return "", ErrInput
 		}
 		seen[line.SaleItemID] = true
 		var variant, sold, paid, price string
-		err = tx.QueryRow(ctx, "SELECT variant_id::text,quantity::text,line_total::text,unit_price::text FROM sale_items WHERE organization_id=$1 AND sale_id=$2 AND id=$3", org, input.SaleID, line.SaleItemID).Scan(&variant, &sold, &paid, &price)
+		var originalBatch *string
+		err = tx.QueryRow(ctx, "SELECT variant_id::text,quantity::text,line_total::text,unit_price::text,batch_id::text FROM sale_items WHERE organization_id=$1 AND sale_id=$2 AND id=$3", org, input.SaleID, line.SaleItemID).Scan(&variant, &sold, &paid, &price, &originalBatch)
 		if err != nil {
 			return "", dbError(err)
+		}
+		if line.BatchID != nil && (originalBatch == nil || *originalBatch != *line.BatchID) {
+			return "", ErrInput
 		}
 		if err = inventory.ValidateQuantity(ctx, tx, org, variant, line.Quantity, true); err != nil {
 			return "", dbError(err)
@@ -156,7 +163,7 @@ func createDocument(ctx context.Context, tx pgx.Tx, actor organization.Member, u
 		}
 		minor, _ := units(amount, 2)
 		total.Add(total, minor)
-		_, err = tx.Exec(ctx, `INSERT INTO customer_return_items(organization_id,return_id,original_sale_id,original_sale_item_id,variant_id,branch_id,quantity,original_unit_price,original_paid_amount,refund_amount,disposition,destination_location_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, org, id, input.SaleID, line.SaleItemID, variant, branch, line.Quantity, price, paid, amount, line.Disposition, line.Destination)
+		_, err = tx.Exec(ctx, `INSERT INTO customer_return_items(organization_id,return_id,original_sale_id,original_sale_item_id,variant_id,branch_id,quantity,original_unit_price,original_paid_amount,refund_amount,disposition,destination_location_id,batch_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`, org, id, input.SaleID, line.SaleItemID, variant, branch, line.Quantity, price, paid, amount, line.Disposition, line.Destination, line.BatchID)
 		if err != nil {
 			return "", dbError(err)
 		}

@@ -116,7 +116,13 @@ function GroupedMenu({
           </div>
         );
       })}
-      {visibleItems.filter((item) => item.to === paths.help).map(renderLink)}
+      {visibleItems
+        .filter(
+          (item) =>
+            item.to !== paths.dashboard &&
+            !navigationGroups.some((group) => group.paths.includes(item.to)),
+        )
+        .map(renderLink)}
     </>
   );
 }

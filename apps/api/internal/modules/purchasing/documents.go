@@ -146,6 +146,9 @@ func (service *Service) SaveDocument(ctx context.Context, user, org, kind, id, k
 	total := int64(0)
 	seen := map[string]bool{}
 	for _, line := range input.Items {
+		if line.BatchID != nil && (!uuidPattern.MatchString(*line.BatchID) || !line.BatchVerified || kind == "ORDER") {
+			return nil, ErrInput
+		}
 		if !uuidPattern.MatchString(line.VariantID) || seen[line.VariantID] || !text(line.Reason, 2000, false) {
 			return nil, ErrInput
 		}
@@ -182,7 +185,8 @@ func (service *Service) SaveDocument(ctx context.Context, user, org, kind, id, k
 				return nil, ErrInput
 			}
 			var parentAmount, parentAccepted string
-			err = tx.QueryRow(ctx, `SELECT name_snapshot,sku_snapshot,purchase_unit_id::text,inventory_unit_id::text,unit_snapshot,conversion_factor::text,unit_cost::text,quantity::text,accepted_quantity::text FROM purchasing_items WHERE organization_id=$1 AND document_id=$2 AND id=$3 AND variant_id=$4`, org, input.ParentID, line.ParentItemID, line.VariantID).Scan(&info.Name, &info.SKU, &unit, &info.UnitID, &info.UnitName, &info.Factor, &cost, &parentAmount, &parentAccepted)
+			var parentBatch *string
+			err = tx.QueryRow(ctx, `SELECT name_snapshot,sku_snapshot,purchase_unit_id::text,inventory_unit_id::text,unit_snapshot,conversion_factor::text,unit_cost::text,quantity::text,accepted_quantity::text,batch_id::text FROM purchasing_items WHERE organization_id=$1 AND document_id=$2 AND id=$3 AND variant_id=$4`, org, input.ParentID, line.ParentItemID, line.VariantID).Scan(&info.Name, &info.SKU, &unit, &info.UnitID, &info.UnitName, &info.Factor, &cost, &parentAmount, &parentAccepted, &parentBatch)
 			if err != nil {
 				return nil, dbError(err)
 			}
@@ -216,6 +220,9 @@ func (service *Service) SaveDocument(ctx context.Context, user, org, kind, id, k
 					return nil, ErrInput
 				}
 			} else {
+				if (parentBatch == nil) != (line.BatchID == nil) || parentBatch != nil && *parentBatch != *line.BatchID {
+					return nil, ErrInput
+				}
 				if !text(line.Reason, 2000, true) {
 					return nil, ErrInput
 				}
@@ -257,7 +264,7 @@ func (service *Service) SaveDocument(ctx context.Context, user, org, kind, id, k
 			return nil, ErrInput
 		}
 		total += lineTotal
-		_, err = tx.Exec(ctx, `INSERT INTO purchasing_items(organization_id,document_id,variant_id,parent_item_id,name_snapshot,sku_snapshot,purchase_unit_id,inventory_unit_id,unit_snapshot,conversion_factor,quantity,base_quantity,unit_cost,line_total,accepted_quantity,delivered_quantity,rejected_quantity,damaged_quantity,reason) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`, org, id, line.VariantID, nullable(line.ParentItemID), info.Name, info.SKU, unit, info.UnitID, info.UnitName, info.Factor, fixed(amount, 3), fixed(base, 3), fixed(cents, 2), fixed(lineTotal, 2), fixed(accepted, 3), fixed(delivered, 3), fixed(rejected, 3), fixed(damaged, 3), line.Reason)
+		_, err = tx.Exec(ctx, `INSERT INTO purchasing_items(organization_id,document_id,variant_id,parent_item_id,name_snapshot,sku_snapshot,purchase_unit_id,inventory_unit_id,unit_snapshot,conversion_factor,quantity,base_quantity,unit_cost,line_total,accepted_quantity,delivered_quantity,rejected_quantity,damaged_quantity,reason,batch_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`, org, id, line.VariantID, nullable(line.ParentItemID), info.Name, info.SKU, unit, info.UnitID, info.UnitName, info.Factor, fixed(amount, 3), fixed(base, 3), fixed(cents, 2), fixed(lineTotal, 2), fixed(accepted, 3), fixed(delivered, 3), fixed(rejected, 3), fixed(damaged, 3), line.Reason, line.BatchID)
 		if err != nil {
 			return nil, dbError(err)
 		}
@@ -358,15 +365,18 @@ func (service *Service) postDocument(ctx context.Context, tx pgx.Tx, actor organ
 	if (doc.Kind == "RECEIPT" && !contains([]string{"ORDERED", "PARTIALLY_RECEIVED"}, parent.Status)) || (doc.Kind == "RETURN" && parent.Status != "POSTED") {
 		return ErrConflict
 	}
-	rows, err := tx.Query(ctx, `SELECT variant_id::text,parent_item_id::text,quantity::text,base_quantity::text,inventory_unit_id::text FROM purchasing_items WHERE organization_id=$1 AND document_id=$2 ORDER BY variant_id`, org, doc.ID)
+	rows, err := tx.Query(ctx, `SELECT variant_id::text,parent_item_id::text,quantity::text,base_quantity::text,inventory_unit_id::text,batch_id::text FROM purchasing_items WHERE organization_id=$1 AND document_id=$2 ORDER BY variant_id`, org, doc.ID)
 	if err != nil {
 		return err
 	}
-	type posting struct{ Variant, Parent, Quantity, Base, Unit string }
+	type posting struct {
+		Variant, Parent, Quantity, Base, Unit string
+		BatchID                               *string
+	}
 	lines := []posting{}
 	for rows.Next() {
 		var line posting
-		if err = rows.Scan(&line.Variant, &line.Parent, &line.Quantity, &line.Base, &line.Unit); err != nil {
+		if err = rows.Scan(&line.Variant, &line.Parent, &line.Quantity, &line.Base, &line.Unit, &line.BatchID); err != nil {
 			rows.Close()
 			return err
 		}
@@ -407,7 +417,7 @@ func (service *Service) postDocument(ctx context.Context, tx pgx.Tx, actor organ
 				return ErrConflict
 			}
 		}
-		items = append(items, inventory.Item{VariantID: line.Variant, Quantity: line.Base})
+		items = append(items, inventory.Item{VariantID: line.Variant, Quantity: line.Base, BatchID: line.BatchID})
 	}
 	if err = inventory.PostSupply(ctx, tx, actor, user, org, op, doc.ID, doc.Branch, *doc.Location, doc.Kind, items); err != nil {
 		return err

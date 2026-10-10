@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { expect, it } from 'vitest';
-import { navigation, navigationGroups, previewNavigation } from '../app/routes';
+import { navigation, navigationGroups } from '../app/routes';
 import type { Session } from '../app/access';
 import { NavigationMenu } from './NavigationMenu';
 
@@ -17,7 +17,11 @@ function renderMenu(path: string, access: Session = owner, preview = false) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <NavigationMenu
-        items={preview ? previewNavigation : navigation}
+        items={
+          preview
+            ? navigation.filter((item) => item.to.startsWith('/preview/'))
+            : navigation
+        }
         access={access}
         preview={preview}
       />
@@ -28,20 +32,29 @@ function renderMenu(path: string, access: Session = owner, preview = false) {
 it('assigns every operational module to exactly one group', () => {
   const groupedPaths = navigationGroups.flatMap((group) => group.paths);
   expect(new Set(groupedPaths).size).toBe(groupedPaths.length);
-  expect([...groupedPaths, '/dashboard', '/help'].sort()).toEqual(
-    navigation.map((item) => item.to).sort(),
-  );
+  expect(
+    [
+      ...groupedPaths.filter((path) =>
+        navigation.some((item) => item.to === path),
+      ),
+      '/dashboard',
+      '/preview/pos',
+      '/preview/auth',
+      '/help',
+    ].sort(),
+  ).toEqual(navigation.map((item) => item.to).sort());
 });
 
-it('keeps dashboard and help outside seven initially collapsed groups', () => {
+it('keeps foundation and preview links outside seven initially collapsed groups', () => {
   renderMenu('/dashboard');
   expect(screen.getAllByRole('button')).toHaveLength(7);
   for (const button of screen.getAllByRole('button'))
     expect(button).toHaveAttribute('aria-expanded', 'false');
-  expect(screen.getAllByRole('link')).toHaveLength(2);
-  expect(
-    screen.getByRole('link', { name: 'พื้นที่ปฏิบัติงาน' }),
-  ).toHaveAttribute('aria-current', 'page');
+  expect(screen.getAllByRole('link')).toHaveLength(4);
+  expect(screen.getByRole('link', { name: 'Overview' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
 });
 
 it('expands multiple groups independently and hides collapsed links', () => {
@@ -109,7 +122,7 @@ it('filters permissions before showing groups', () => {
 });
 
 it('keeps preview links separate and ungrouped', () => {
-  renderMenu('/preview/foundation', owner, true);
+  renderMenu('/preview/pos', owner, true);
   expect(screen.queryByRole('button')).not.toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'POS layout' })).toBeVisible();
   expect(

@@ -18,6 +18,8 @@ export interface POSTerminal {
   revision: number;
 }
 export interface POSItem {
+  batch_id?: string | null;
+  batch_verified?: boolean;
   variant_id: string;
   product_name: string;
   variant_name: string;
@@ -123,6 +125,7 @@ export interface POSSale extends SaleSummary {
   items: (Pick<
     POSItem,
     | 'variant_id'
+    | 'batch_id'
     | 'product_name'
     | 'variant_name'
     | 'sku'

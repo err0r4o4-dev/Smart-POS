@@ -12,6 +12,7 @@ import { exactOrderTotal } from '../../lib/purchasing-api';
 import { exactDecimal } from '../../lib/pos-api';
 import { useSupplyQuery, type SupplyScope } from './purchasing-hooks';
 import { Field, TextField, RemoteSelect, QueryFeedback } from './SupplyUI';
+import { BatchPicker } from '../quality/BatchPicker';
 
 export function OrderForm({
   state,
@@ -303,6 +304,11 @@ function InspectionForm({
       return {
         variant_id: item.variant_id,
         parent_item_id: item.id,
+        batch_id:
+          saved?.batch_id ??
+          (resource === 'returns' ? item.batch_id : null) ??
+          null,
+        batch_verified: false,
         quantity,
         delivered_quantity: saved?.delivered_quantity ?? quantity,
         rejected_quantity: saved?.rejected_quantity ?? '0',
@@ -328,6 +334,8 @@ function InspectionForm({
                 parent_item_id: line.parent_item_id,
                 quantity: line.quantity,
                 reason: line.reason,
+                batch_id: line.batch_id,
+                batch_verified: line.batch_verified,
               },
         );
       const document = await state.run<PurchaseDocument>(
@@ -380,6 +388,26 @@ function InspectionForm({
             {parent.items[index].outstanding_quantity} · conversion snapshot:{' '}
             {parent.items[index].conversion_factor}
           </p>
+          <BatchPicker
+            key={`${line.variant_id}:${location}`}
+            variant={line.variant_id}
+            location={resource === 'returns' ? location : undefined}
+            value={line}
+            label={`Batch/Lot ${index + 1}`}
+            change={(selection) =>
+              setLines(
+                lines.map((value, position) =>
+                  position === index ? { ...value, ...selection } : value,
+                ),
+              )
+            }
+          />
+          {resource === 'returns' && (
+            <p>
+              ต้องตรง lot ของ receipt ต้นทาง / Must match original receipt lot:{' '}
+              {parent.items[index].batch_id ?? 'UNTRACKED'}
+            </p>
+          )}
           <div className="inventory-form">
             <TextField
               label={

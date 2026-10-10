@@ -1,6 +1,6 @@
 BEGIN;
 DO $$ DECLARE table_name text; BEGIN
- IF NOT EXISTS(SELECT 1 FROM schema_migrations WHERE version=12 AND NOT dirty) THEN RAISE EXCEPTION 'schema 12 required'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM schema_migrations WHERE version=13 AND NOT dirty) THEN RAISE EXCEPTION 'schema 13 required'; END IF;
  FOREACH table_name IN ARRAY ARRAY['loyalty_programs','loyalty_accounts','loyalty_ledger'] LOOP
   IF NOT (SELECT relrowsecurity AND relforcerowsecurity FROM pg_class WHERE oid=table_name::regclass) THEN RAISE EXCEPTION 'loyalty RLS missing'; END IF;
   IF has_table_privilege('smartpos_runtime',table_name,'DELETE') THEN RAISE EXCEPTION 'excess loyalty grant'; END IF;

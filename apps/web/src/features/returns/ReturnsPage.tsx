@@ -15,6 +15,8 @@ import {
 } from '../../lib/returns-api';
 import { useReturnsCommand, useReturnsQuery } from './returns-hooks';
 import { copy, type ReturnsCopy } from './copy';
+import { BatchPicker, type BatchSelection } from '../quality/BatchPicker';
+import { untrackedBatch } from '../../lib/quality-api';
 
 type Command = ReturnType<typeof useReturnsCommand>;
 type Location = { id: string; name: string; type: string; status: string };
@@ -215,6 +217,7 @@ function ReturnLines({
   created: (id: string) => void;
 }) {
   const [reason, setReason] = useState(''),
+    [batches, setBatches] = useState<Record<string, BatchSelection>>({}),
     [quantities, setQuantities] = useState<Record<string, string>>({}),
     [dispositions, setDispositions] = useState<
       Record<string, StockDisposition>
@@ -242,6 +245,9 @@ function ReturnLines({
       const disposition = dispositions[item.id] ?? 'RESTOCK_SELLABLE';
       return {
         original_sale_item_id: item.id,
+        ...(disposition === 'NO_STOCK_RETURN'
+          ? untrackedBatch
+          : (batches[item.id] ?? untrackedBatch)),
         quantity: quantities[item.id],
         disposition,
         destination_location_id:
@@ -277,6 +283,24 @@ function ReturnLines({
               {item.returnable_quantity} · {text.historical}: {item.line_total}{' '}
               THB
             </p>
+            {disposition !== 'NO_STOCK_RETURN' && (
+              <>
+                <p>
+                  Original lot: {item.batch_id ?? 'UNTRACKED'} · lot
+                  ต้องตรงต้นทาง; ไม่ทราบให้เข้ากักกัน / Unknown returns must be
+                  quarantined.
+                </p>
+                <BatchPicker
+                  variant={item.variant_id}
+                  branch={sale.branch_id}
+                  value={batches[item.id] ?? untrackedBatch}
+                  label={`Return Batch/Lot ${item.sku}`}
+                  change={(selection) =>
+                    setBatches({ ...batches, [item.id]: selection })
+                  }
+                />
+              </>
+            )}
             <div className="tenant-form-grid">
               <Field label={`${text.quantity} ${item.sku}`}>
                 <input

@@ -31,6 +31,7 @@ BEGIN
    SELECT 'discount redemption and approval allocation',count(*) FROM sales sale
    WHERE sale.discount_total<>COALESCE((SELECT sum(discount) FROM promotion_redemptions WHERE organization_id=sale.organization_id AND sale_id=sale.id),0)
     +COALESCE((SELECT amount FROM discount_approvals WHERE organization_id=sale.organization_id AND id::text=sale.pricing_snapshot->>'approval_id' AND status='CONSUMED'),0)
+    +COALESCE((sale.pricing_snapshot->'loyalty'->>'amount')::numeric,0)
    UNION ALL
    SELECT 'zero payable NONE no financial money',count(*) FROM sales sale
    JOIN sale_payments payment ON payment.organization_id=sale.organization_id AND payment.sale_id=sale.id

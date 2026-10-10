@@ -36,6 +36,7 @@ export interface SupplierProduct {
   revision: number;
 }
 export interface PurchaseLine {
+  batch_id?: string | null;
   id: string;
   variant_id: string;
   parent_item_id: string | null;
@@ -154,6 +155,7 @@ export interface Shelf {
   assignments: ShelfAssignment[];
 }
 export interface ReplenishmentTask {
+  batch_id?: string | null;
   id: string;
   shelf_id: string;
   shelf_name: string;
@@ -169,6 +171,7 @@ export interface ReplenishmentTask {
   transfer_id: string | null;
 }
 export interface ReplenishmentSuggestion {
+  variant_id: string;
   id: string;
   assignment_id: string;
   shelf_id: string;

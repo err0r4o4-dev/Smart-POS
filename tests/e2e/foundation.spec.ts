@@ -6,7 +6,7 @@ for (const width of [320, 375, 640, 768, 1024, 1440, 1920]) {
   }) => {
     await page.setViewportSize({ width, height: 1000 });
     for (const route of [
-      '/preview/foundation',
+      '/dashboard',
       '/help',
       '/preview/pos',
       '/preview/auth',
@@ -20,7 +20,7 @@ for (const width of [320, 375, 640, 768, 1024, 1440, 1920]) {
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       await expect(page.locator('body')).toHaveJSProperty('scrollWidth', width);
       expect(errors).toEqual([]);
-      if (route === '/preview/foundation') {
+      if (route === '/dashboard') {
         await expect(page.getByText('API & database ready')).toBeVisible();
         await page.screenshot({
           path: `test-results/dashboard-${width}.png`,
@@ -45,7 +45,7 @@ test('mobile navigation supports keyboard, dismissal and real routes', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto('/preview/foundation');
+  await page.goto('/dashboard');
   await page.getByRole('button', { name: 'Open navigation' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await page.keyboard.press('Shift+Tab');
@@ -100,7 +100,7 @@ test('loading remains explicit until the real readiness response arrives', async
     await responseGate;
     await route.continue();
   });
-  await page.goto('/preview/foundation');
+  await page.goto('/dashboard');
   await expect(page.getByRole('status')).toHaveText(
     'Checking service readiness\u2026',
   );
@@ -118,7 +118,7 @@ test('readiness failure stays honest and refresh recovers', async ({
       body: '{"error":{"code":"DEPENDENCY_UNAVAILABLE"}}',
     }),
   );
-  await page.goto('/preview/foundation');
+  await page.goto('/dashboard');
   await expect(page.getByRole('alert')).toContainText('Service not ready');
   await expect(page.getByText('API & database ready')).toHaveCount(0);
   await page.unroute('**/health/ready');

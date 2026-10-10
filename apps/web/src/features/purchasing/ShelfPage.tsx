@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
 import { Button, Card, Tag } from '../../components/ui/primitives';
+import { CartBatchPicker } from '../quality/BatchPicker';
+import { untrackedBatch } from '../../lib/quality-api';
 import type { StockLocation } from '../../lib/inventory-api';
 import type { Member } from '../../lib/organization-api';
 import type {
@@ -655,21 +657,26 @@ function Replenishments({ state }: { state: SupplyScope }) {
               </td>
               <td>
                 {state.tenant.can('shelf.replenishment.create') && (
-                  <Button
-                    disabled={state.busy}
-                    onClick={() => {
-                      void state
+                  <CartBatchPicker
+                    actionLabel="สร้าง Task"
+                    variant={item.variant_id}
+                    location={item.source_location_id}
+                    label={`Batch/Lot ${item.sku}`}
+                    initial={untrackedBatch}
+                    busy={state.busy}
+                    sellableOnly
+                    save={(selection) =>
+                      state
                         .run<ReplenishmentTask>('/shelves/replenishments', {
                           assignment_id: item.assignment_id,
                           source_location_id: item.source_location_id,
                           quantity: item.suggested_quantity,
+                          ...selection,
                         })
                         .then((task) => setSelected(task.id))
-                        .catch(() => {});
-                    }}
-                  >
-                    สร้าง Task
-                  </Button>
+                        .catch(() => {})
+                    }
+                  />
                 )}
               </td>
             </tr>

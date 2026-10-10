@@ -14,6 +14,8 @@ import type {
 } from '../../lib/adjustments-api';
 import { useReturnsCommand, useReturnsQuery } from './returns-hooks';
 import type { AdjustmentsCopy } from './adjustments-copy';
+import { BatchPicker, type BatchSelection } from '../quality/BatchPicker';
+import { untrackedBatch } from '../../lib/quality-api';
 
 export function AdjustmentBuilder({
   sale,
@@ -44,6 +46,8 @@ export function AdjustmentBuilder({
       );
       return {
         original_sale_item_id: item.id,
+        batch_id: prior?.batch_id ?? null,
+        batch_verified: false,
         quantity: prior?.quantity ?? (reversal ? item.returnable_quantity : ''),
         disposition: (prior?.disposition ??
           'RESTOCK_SELLABLE') as StockDisposition,
@@ -53,7 +57,7 @@ export function AdjustmentBuilder({
     }),
   );
   const [replacements, setReplacements] = useState<
-    { item: POSItem; quantity: string }[]
+    { item: POSItem; quantity: string; batch?: BatchSelection }[]
   >(
     () =>
       editing?.replacement_items.map((item) => ({
@@ -84,6 +88,7 @@ export function AdjustmentBuilder({
       )
       .map((line) => ({
         ...line,
+        ...(line.disposition === 'NO_STOCK_RETURN' ? untrackedBatch : {}),
         destination_location_id:
           line.disposition === 'NO_STOCK_RETURN'
             ? null
@@ -92,6 +97,10 @@ export function AdjustmentBuilder({
     replacements: replacements.map((line) => ({
       variant_id: line.item.variant_id,
       quantity: line.quantity,
+      ...(line.batch ?? {
+        batch_id: line.item.batch_id ?? null,
+        batch_verified: false,
+      }),
     })),
   };
   const valid =
@@ -183,6 +192,22 @@ export function AdjustmentBuilder({
               ))}
             </select>
           </Field>
+          {lines[index].disposition !== 'NO_STOCK_RETURN' && (
+            <BatchPicker
+              variant={item.variant_id}
+              branch={sale.branch_id}
+              label={`Return Batch/Lot ${item.sku}`}
+              value={lines[index]}
+              change={(selection) => {
+                setLines(
+                  lines.map((line, position) =>
+                    position === index ? { ...line, ...selection } : line,
+                  ),
+                );
+                setQuote(null);
+              }}
+            />
+          )}
           {lines[index].disposition !== 'NO_STOCK_RETURN' && (
             <Field label={`${text.destination} ${item.sku}`}>
               <select
@@ -291,6 +316,27 @@ export function AdjustmentBuilder({
                   }}
                 />
               </Field>
+              <BatchPicker
+                variant={line.item.variant_id}
+                branch={sale.branch_id}
+                location={
+                  terminals.data?.items.find((item) => item.id === terminal)
+                    ?.stock_location_id
+                }
+                sellableOnly
+                label={`Replacement Batch/Lot ${line.item.sku}`}
+                value={line.batch ?? untrackedBatch}
+                change={(selection) => {
+                  setReplacements(
+                    replacements.map((value, position) =>
+                      position === index
+                        ? { ...value, batch: selection }
+                        : value,
+                    ),
+                  );
+                  setQuote(null);
+                }}
+              />
               <Button
                 type="button"
                 onClick={() => {

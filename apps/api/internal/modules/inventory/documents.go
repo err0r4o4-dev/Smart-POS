@@ -125,7 +125,7 @@ func (service *Service) CreateDocument(ctx context.Context, user, org, kind, key
 		if kind == "COUNT" {
 			_, err = tx.Exec(ctx, `INSERT INTO inventory_document_items(organization_id,document_id,variant_id,quantity,expected_quantity,balance_version) SELECT $1,$2,$3,0,COALESCE((SELECT quantity FROM stock_balances WHERE organization_id=$1 AND location_id=$4 AND variant_id=$3),0),COALESCE((SELECT version FROM stock_balances WHERE organization_id=$1 AND location_id=$4 AND variant_id=$3),0)`, org, id, item.VariantID, input.LocationID)
 		} else {
-			_, err = tx.Exec(ctx, `INSERT INTO inventory_document_items(organization_id,document_id,variant_id,quantity) VALUES($1,$2,$3,abs($4::numeric))`, org, id, item.VariantID, item.Quantity)
+			_, err = tx.Exec(ctx, `INSERT INTO inventory_document_items(organization_id,document_id,variant_id,quantity,batch_id) VALUES($1,$2,$3,abs($4::numeric),$5)`, org, id, item.VariantID, item.Quantity, item.BatchID)
 			if kind == "ADJUSTMENT" && input.AdjustmentType == "CORRECTION" {
 				_, err = tx.Exec(ctx, `UPDATE inventory_document_items SET expected_quantity=COALESCE((SELECT quantity FROM stock_balances WHERE organization_id=$1 AND location_id=$4 AND variant_id=$3),0),balance_version=COALESCE((SELECT version FROM stock_balances WHERE organization_id=$1 AND location_id=$4 AND variant_id=$3),0) WHERE organization_id=$1 AND document_id=$2 AND variant_id=$3`, org, id, item.VariantID, input.LocationID)
 			}
@@ -195,6 +195,7 @@ func (service *Service) SaveCount(ctx context.Context, user, org, id, key string
 }
 
 type storedItem struct {
+	BatchID   *string
 	VariantID string
 	Quantity  string
 	Expected  *string
@@ -203,7 +204,7 @@ type storedItem struct {
 }
 
 func documentItems(ctx context.Context, tx pgx.Tx, org, id string) ([]storedItem, error) {
-	rows, err := tx.Query(ctx, "SELECT variant_id::text,quantity::text,expected_quantity::text,counted_quantity::text,balance_version FROM inventory_document_items WHERE organization_id=$1 AND document_id=$2 ORDER BY variant_id", org, id)
+	rows, err := tx.Query(ctx, "SELECT variant_id::text,quantity::text,expected_quantity::text,counted_quantity::text,balance_version,batch_id::text FROM inventory_document_items WHERE organization_id=$1 AND document_id=$2 ORDER BY variant_id", org, id)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +212,7 @@ func documentItems(ctx context.Context, tx pgx.Tx, org, id string) ([]storedItem
 	items := []storedItem{}
 	for rows.Next() {
 		var item storedItem
-		if err = rows.Scan(&item.VariantID, &item.Quantity, &item.Expected, &item.Counted, &item.Version); err != nil {
+		if err = rows.Scan(&item.VariantID, &item.Quantity, &item.Expected, &item.Counted, &item.Version, &item.BatchID); err != nil {
 			return nil, err
 		}
 		items = append(items, item)
@@ -309,7 +310,7 @@ func (service *Service) Act(ctx context.Context, user, org, kind, id, action, ke
 				movement = "ADJUSTMENT_OUT"
 			}
 			if delta != 0 {
-				if err = postMovement(ctx, tx, user, org, op, id, doc.LocationID, item.VariantID, movement, decimal(delta), doc.Reason); err != nil {
+				if err = postMovement(ctx, tx, user, org, op, id, doc.LocationID, item.VariantID, movement, decimal(delta), doc.Reason, item.BatchID); err != nil {
 					return nil, err
 				}
 			}

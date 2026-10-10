@@ -52,10 +52,10 @@ func (service *Service) moveTransfer(ctx context.Context, tx pgx.Tx, actor organ
 		}
 		for _, item := range items {
 			amount, _ := quantity(item.Quantity)
-			if err = postMovement(ctx, tx, user, org, op, doc.ID, source.ID, item.VariantID, outKind, decimal(-amount), doc.Reason); err != nil {
+			if err = postMovement(ctx, tx, user, org, op, doc.ID, source.ID, item.VariantID, outKind, decimal(-amount), doc.Reason, item.BatchID); err != nil {
 				return "", err
 			}
-			if err = postMovement(ctx, tx, user, org, op, doc.ID, target, item.VariantID, inKind, item.Quantity, doc.Reason); err != nil {
+			if err = postMovement(ctx, tx, user, org, op, doc.ID, target, item.VariantID, inKind, item.Quantity, doc.Reason, item.BatchID); err != nil {
 				return "", err
 			}
 		}
@@ -69,10 +69,10 @@ func (service *Service) moveTransfer(ctx context.Context, tx pgx.Tx, actor organ
 	}
 	for _, item := range items {
 		amount, _ := quantity(item.Quantity)
-		if err = postMovement(ctx, tx, user, org, op, doc.ID, *doc.TransitLocationID, item.VariantID, "TRANSFER_RECEIVE", decimal(-amount), doc.Reason); err != nil {
+		if err = postMovement(ctx, tx, user, org, op, doc.ID, *doc.TransitLocationID, item.VariantID, "TRANSFER_RECEIVE", decimal(-amount), doc.Reason, item.BatchID); err != nil {
 			return "", err
 		}
-		if err = postMovement(ctx, tx, user, org, op, doc.ID, destination.ID, item.VariantID, "TRANSFER_RECEIVE", item.Quantity, doc.Reason); err != nil {
+		if err = postMovement(ctx, tx, user, org, op, doc.ID, destination.ID, item.VariantID, "TRANSFER_RECEIVE", item.Quantity, doc.Reason, item.BatchID); err != nil {
 			return "", err
 		}
 	}

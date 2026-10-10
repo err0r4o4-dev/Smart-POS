@@ -15,7 +15,7 @@ export function SystemPage({ forbidden = false }: { forbidden?: boolean }) {
       </h1>
       <p>
         {forbidden
-          ? 'Your current organization role does not permit access to this page. Select an authorized organization or contact its administrator.'
+          ? 'You do not have permission to view this page. Authentication is not available in Phase 0.'
           : 'This page does not exist or is a planned feature that is not yet available.'}
       </p>
       <Link to="/dashboard" className="button">

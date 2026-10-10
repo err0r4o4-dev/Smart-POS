@@ -6,7 +6,7 @@ Implemented identity routes are Phase 1A; organization/branch/member routes belo
 
 The nine Products routes are implemented Phase 1C. Catalog records are organization-scoped and shared across branches, not branch-owned. The backend rechecks active organization membership and catalog permissions; the existing Manager policy denies catalog access when no assigned active branch remains. Operational staff access follows active organization membership and fixed catalog permissions, not a separate all-role active-branch gate. Mutation-specific permissions are enforced separately from read access. See [catalog architecture](catalog.md).
 
-Phase5.1 registers `/pos/returns` and `/sales/refunds`; Phase5.2 registers `/pos/exchanges` and `/sales/voids`; Phase5.3 registers all five Pricing & Promotions routes below. Phase5.4 registers three Customer routes; loyalty and expiry/quality remain unregistered. Phase5 overall is PARTIAL; canonical16 modules/106 routes does not mean106 implemented pages. See [actual scope](business-operations.md) and [Customers](customers.md).
+Phase5.1 registers two Returns routes; Phase5.2 registers two Exchange/Void routes; Phase5.3 registers five Pricing routes; Phase5.4 registers three Customer routes; Phase5.5 registers `/loyalty` and `/loyalty/history`. Expiry/quality remains unregistered. Phase5 overall is PARTIAL; canonical16 modules/106 routes does not mean106 implemented pages. See [Loyalty](loyalty.md) and [current acceptance](../development/phase55-verification.md).
 
 | Module | Route | Status | Phase | Access target |
 | --- | --- | --- | --- | --- |
@@ -16,7 +16,7 @@ Phase5.1 registers `/pos/returns` and `/sales/refunds`; Phase5.2 registers `/pos
 | Authentication | `/reset-password` | Implemented Phase 1A | 1 | public token + Origin-validated entry |
 | Authentication | `/setup` | Implemented Phase 1B | 1 | session; no existing tenant required for creation |
 | Authentication | `/account` | Implemented Phase 1A | 1 | session |
-| Dashboard | `/dashboard` | Operational module launcher (business analytics dashboard planned) | 3 | session + tenant; module links follow backend permissions |
+| Dashboard | `/dashboard` | Foundation shell (business dashboard planned) | 3 | session + tenant + branch permission |
 | Dashboard | `/dashboard/branches` | Planned (not registered) | 3 | session + tenant + branch permission |
 | Dashboard | `/tasks` | Planned (not registered) | 3 | session + tenant + branch permission |
 | Dashboard | `/notifications` | Planned (not registered) | 3 | session + tenant + branch permission |
@@ -78,8 +78,8 @@ Phase5.1 registers `/pos/returns` and `/sales/refunds`; Phase5.2 registers `/pos
 | Customers | `/customers` | Implemented Phase 5.4 | 5 | session + tenant + customers.read; active branch authorization; mutations reauthorize |
 | Customers | `/customers/:id` | Implemented Phase 5.4 | 5 | session + tenant + customers.read; history additionally requires customers.history.read |
 | Customers | `/customers/groups` | Implemented Phase 5.4 | 5 | session + tenant + customers.groups.read; mutations require customers.groups.manage |
-| Customers | `/loyalty` | Planned (not registered) | 5 | session + tenant + branch permission |
-| Customers | `/loyalty/history` | Planned (not registered) | 5 | session + tenant + branch permission |
+| Customers | `/loyalty` | Implemented Phase 5.5 (Local) | 5 | session + tenant + loyalty.read; mutations reauthorize |
+| Customers | `/loyalty/history` | Implemented Phase 5.5 (Local) | 5 | session + tenant + branch + loyalty.history |
 | Quality & Expiry | `/inventory/batches` | Planned (not registered) | 5 | session + tenant + branch permission |
 | Quality & Expiry | `/inventory/expiry` | Planned (not registered) | 5 | session + tenant + branch permission |
 | Quality & Expiry | `/inventory/write-offs` | Planned (not registered) | 5 | session + tenant + branch permission |
@@ -117,7 +117,7 @@ Phase5.1 registers `/pos/returns` and `/sales/refunds`; Phase5.2 registers `/pos
 | Help & System | `/403` | Implemented presentation | 0 | public system |
 | Help & System | `/404` | Implemented presentation | 0 | public system |
 
-Additional development routes outside the unchanged 106 business inventory: / redirects to the protected /dashboard workspace; /preview/foundation preserves the historical landing page, while /preview/pos and /preview/auth are explicitly non-functional presentations. Operational navigation contains implemented modules only; preview links live in developer help/preview navigation. Anonymous requests to /dashboard or /setup go to /login with a safe local returnTo. Authenticated users without an organization go to /setup; tenant errors remain explicit and do not silently become an empty workspace. Tenant business routes retain real sessions and backend membership/branch authorization. /dashboard is a permission-filtered module launcher, not a fabricated sales/analytics dashboard.
+Additional Phase 0 routes outside the 106 business inventory: / redirects to /dashboard; /preview/pos and /preview/auth are explicitly non-functional presentations. Unmatched paths render 404. Navigation includes implemented tenant modules and ready presentations only. Tenant business routes additionally require real sessions and backend membership/branch authorization.
 
 ## Inventory access and deferred valuation
 

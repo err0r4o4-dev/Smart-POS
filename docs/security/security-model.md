@@ -112,6 +112,16 @@ Phase 0: loopback ports, internal AI without DB credentials, bounded timeouts, g
 
 Local bootstrap DB user is privileged and not production-safe. No compliance/hardening claim. Production needs secret management, least privilege, TLS/cookies, threat review, scanning, abuse controls, retention and verified backups. Never expose local Compose publicly.
 
+## Phase 5.5 scoped Loyalty acceptance (2026-10-11)
+
+See [Phase5.5 verification](../development/phase55-verification.md). This implementation-scoped local review does not replace the pending Phase5.7 full security review, penetration testing or production certification.
+
+- Current tenant/branch permissions are checked before sensitive idempotent replay. Real tests deny adjustment replay after demotion and checkout replay after POS permission revocation. Customer contact PII is not copied to points history or audit payloads.
+- Programs/accounts/ledger use tenant-safe references, FORCE RLS and scoped runtime grants. Actual tests deny cross-tenant reads/FKs and ledger UPDATE/DELETE/TRUNCATE. The privileged local bootstrap identity is not a production runtime LOGIN.
+- Exact ledger points, durable checkout reservations, organization serialization and atomic Sale/points posting prevent double redemption and failed-checkout earning/consumption. Reward remains a discount, not a synthetic payment; no unintended promotion/manual-discount stacking is allowed.
+- Frozen historical rules and cumulative compensating postings cover partial/full Returns, Exchanges and Voids. Spent earned points may create signed ledger debt; available points remain nonnegative and future earning offsets debt. The immutable Sale is not rewritten.
+- Remaining gates: Batch/Expiry/Recall sellability and concurrency are NOT IMPLEMENTED/NOT RUN; full Phase5.7 security/lifecycle QA, physical lot verification, production TLS/secrets, dedicated least-privilege LOGIN, retention, backups and production load remain outstanding. No production-readiness claim.
+
 ## Phase 2 inventory acceptance review
 
 - Reuses existing sessions, Origin/CSRF, active memberships and fixed-role grants. Every write rechecks tenant, permission and appropriate active branch before changing stock or returning a cached idempotent result. Cashier is read-only and cannot query audit movements; inventory staff request/count/move only within explicit assigned branches, never approve/post/opening. Manager cannot widen branch assignments for stock authority.

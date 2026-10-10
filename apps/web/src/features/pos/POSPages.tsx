@@ -23,6 +23,7 @@ import {
 import { usePOS } from './POSContext';
 import { CustomerPicker } from '../customers/CustomerPicker';
 import { LoyaltyCheckoutControls } from '../loyalty/LoyaltyCheckoutControls';
+import { CartBatchPicker, type BatchSelection } from '../quality/BatchPicker';
 
 export function POSTerminalPage() {
   const pos = usePOS();
@@ -74,10 +75,18 @@ export function POSTerminalPage() {
     const items = cart.items.map((value) => ({
       variant_id: value.variant_id,
       quantity: value.quantity,
+      batch_id: value.batch_id,
+      batch_verified: value.batch_verified,
     }));
     const current = items.find((value) => value.variant_id === item.variant_id);
     if (current) current.quantity = adjustQuantity(current.quantity, 1000n);
-    else items.push({ variant_id: item.variant_id, quantity: '1' });
+    else
+      items.push({
+        variant_id: item.variant_id,
+        quantity: '1',
+        batch_id: null,
+        batch_verified: false,
+      });
     await pos.mutate(
       `/pos/carts/${cart.id}`,
       { revision: cart.revision, items },
@@ -227,7 +236,11 @@ export function POSTerminalPage() {
 function CartPanel() {
   const pos = usePOS();
   const cart = pos.cart;
-  const update = async (variantID: string, quantity: string) => {
+  const update = async (
+    variantID: string,
+    quantity: string,
+    batch?: BatchSelection,
+  ) => {
     if (!cart) return;
     const amount = exactDecimal(quantity, 3);
     if (amount === null || amount <= 0n) {
@@ -241,6 +254,14 @@ function CartPanel() {
         items: cart.items.map((item) => ({
           variant_id: item.variant_id,
           quantity: item.variant_id === variantID ? quantity : item.quantity,
+          batch_id:
+            item.variant_id === variantID && batch
+              ? batch.batch_id
+              : item.batch_id,
+          batch_verified:
+            item.variant_id === variantID && batch
+              ? batch.batch_verified
+              : item.batch_verified,
         })),
       },
       'PATCH',
@@ -257,6 +278,8 @@ function CartPanel() {
             .map((item) => ({
               variant_id: item.variant_id,
               quantity: item.quantity,
+              batch_id: item.batch_id,
+              batch_verified: item.batch_verified,
             })),
         },
         'PATCH',
@@ -270,6 +293,19 @@ function CartPanel() {
       {cart?.items.map((item) => (
         <div className="pos-cart-item" key={item.variant_id}>
           <h3>{item.product_name}</h3>
+          <CartBatchPicker
+            key={`${item.variant_id}:${cart.revision}`}
+            variant={item.variant_id}
+            location={pos.terminal?.stock_location_id}
+            label={`Batch/Lot ${item.sku}`}
+            sellableOnly
+            initial={{
+              batch_id: item.batch_id ?? null,
+              batch_verified: item.batch_verified ?? false,
+            }}
+            busy={pos.busy}
+            save={(batch) => update(item.variant_id, item.quantity, batch)}
+          />
           <small>
             {item.sku} · {item.unit} · {moneyText(item.unit_price)} บาท
           </small>
@@ -370,6 +406,8 @@ function CartPanel() {
                   items: cart.items.map((item) => ({
                     variant_id: item.variant_id,
                     quantity: item.quantity,
+                    batch_id: item.batch_id,
+                    batch_verified: item.batch_verified,
                   })),
                 },
                 'PATCH',

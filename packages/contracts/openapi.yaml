@@ -14708,6 +14708,14 @@ paths:
           $ref: '#/components/responses/InventoryUnavailable'
       parameters:
         - in: query
+          name: loyalty_points
+          description: Integer points redeemed as a server-priced discount; cannot stack with promotions or manual discounts.
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 1000000000000
+            default: 0
+        - in: query
           name: approval_id
           schema:
             type: string
@@ -16145,7 +16153,19 @@ components:
     LoyaltyProgram:
       type: object
       additionalProperties: false
-      required: [id, organization_id, name, spend, earn_points, point_value, status, revision, created_at, created_by]
+      required:
+        [
+          id,
+          organization_id,
+          name,
+          spend,
+          earn_points,
+          point_value,
+          status,
+          revision,
+          created_at,
+          created_by,
+        ]
       properties:
         id:
           type: string

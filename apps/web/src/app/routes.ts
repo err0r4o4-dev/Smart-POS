@@ -33,6 +33,12 @@ export interface NavigationItem {
 }
 export const navigation: NavigationItem[] = [
   {
+    to: '/customers',
+    label: 'ลูกค้า / Customers',
+    icon: 'dashboard',
+    permission: 'customers.read',
+  },
+  {
     to: '/pricing',
     label: 'ราคา / Pricing',
     icon: 'dashboard',

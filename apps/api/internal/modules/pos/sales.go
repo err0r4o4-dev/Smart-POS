@@ -64,8 +64,8 @@ func settle(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org
 	}
 	var sale string
 	quoteData, _ := json.Marshal(item.Pricing)
-	err = tx.QueryRow(ctx, `INSERT INTO sales(organization_id,branch_id,terminal_id,shift_id,cart_id,checkout_id,cashier_id,currency,subtotal,grand_total,inventory_operation_id,store_name,branch_name,store_address,terminal_name,cashier_name,discount_total,pricing_snapshot)
- SELECT $1,$2,$3,$4,$5,$6,$7,'THB',$12,$8,$9,organization.name,branch.name,CASE WHEN branch.address<>'' THEN branch.address ELSE organization.address END,$10,$11,$13,$14 FROM organizations organization JOIN branches branch ON branch.organization_id=organization.id AND branch.id=$2 WHERE organization.id=$1 RETURNING id::text`, org, item.BranchID, item.TerminalID, item.ShiftID, item.CartID, item.ID, user, item.Total, op, value.Name, actor.DisplayName, item.Pricing.Subtotal, item.Pricing.Discount, quoteData).Scan(&sale)
+	err = tx.QueryRow(ctx, `INSERT INTO sales(organization_id,branch_id,terminal_id,shift_id,cart_id,checkout_id,cashier_id,currency,subtotal,grand_total,inventory_operation_id,store_name,branch_name,store_address,terminal_name,cashier_name,discount_total,pricing_snapshot,customer_id,customer_code_snapshot)
+ SELECT $1,$2,$3,$4,$5,$6,$7,'THB',$12,$8,$9,organization.name,branch.name,CASE WHEN branch.address<>'' THEN branch.address ELSE organization.address END,$10,$11,$13,$14,$15,$16 FROM organizations organization JOIN branches branch ON branch.organization_id=organization.id AND branch.id=$2 WHERE organization.id=$1 RETURNING id::text`, org, item.BranchID, item.TerminalID, item.ShiftID, item.CartID, item.ID, user, item.Total, op, value.Name, actor.DisplayName, item.Pricing.Subtotal, item.Pricing.Discount, quoteData, item.CustomerID, item.CustomerCode).Scan(&sale)
 	if err != nil {
 		return "", dbError(err)
 	}
@@ -149,6 +149,9 @@ func (service *Service) CompleteCheckout(ctx context.Context, user, org, id stri
 		}
 		if errors.Is(problem, ErrPrice) {
 			code = "PRICE_CHANGED"
+		}
+		if errors.Is(problem, ErrCustomer) {
+			code = "CUSTOMER_UNAVAILABLE"
 		}
 		_, err = tx.Exec(ctx, "UPDATE pos_checkouts SET status='RECONCILIATION_REQUIRED',failure_code=$3 WHERE organization_id=$1 AND id=$2", org, id, code)
 		if err != nil {

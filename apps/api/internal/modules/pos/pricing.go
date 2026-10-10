@@ -50,6 +50,9 @@ func (service *Service) Quote(ctx context.Context, user, org, id, approval strin
 	return cart.Pricing, nil
 }
 func revalidate(ctx context.Context, tx pgx.Tx, org string, item Checkout) error {
+	if err := validateCheckoutCustomer(ctx, tx, org, item); err != nil {
+		return err
+	}
 	if item.Pricing.Revision == "" {
 		return ErrPrice
 	}

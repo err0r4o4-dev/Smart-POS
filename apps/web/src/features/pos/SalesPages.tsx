@@ -392,6 +392,7 @@ export function Receipt({
       <p>ขาย: {sale.sale_number}</p>
       <p>{new Date(sale.completed_at).toLocaleString('th-TH')}</p>
       <p>แคชเชียร์: {sale.cashier_name}</p>
+      <p>ลูกค้า / Customer: {sale.customer_code_snapshot || 'Walk-in'}</p>
       <hr />
       {sale.items.map((item) => (
         <div className="receipt-item" key={item.variant_id}>

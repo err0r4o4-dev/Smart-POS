@@ -92,7 +92,12 @@ func PostExchange(ctx context.Context, tx pgx.Tx, actor organization.Member, use
 		method = "NONE"
 	}
 	var cart, checkoutID string
-	err = tx.QueryRow(ctx, "INSERT INTO pos_carts(organization_id,branch_id,terminal_id,cashier_id,create_key) VALUES($1,$2,$3,$4,$5) RETURNING id::text", org, quote.Terminal.BranchID, terminalID, user, id).Scan(&cart)
+	var customerID *string
+	var customerCode string
+	if err = tx.QueryRow(ctx, "SELECT sale.customer_id::text,sale.customer_code_snapshot FROM sale_adjustments adjustment JOIN sales sale ON sale.organization_id=adjustment.organization_id AND sale.id=adjustment.original_sale_id WHERE adjustment.organization_id=$1 AND adjustment.id=$2", org, id).Scan(&customerID, &customerCode); err != nil {
+		return "", dbError(err)
+	}
+	err = tx.QueryRow(ctx, "INSERT INTO pos_carts(organization_id,branch_id,terminal_id,cashier_id,create_key,customer_id) VALUES($1,$2,$3,$4,$5,$6) RETURNING id::text", org, quote.Terminal.BranchID, terminalID, user, id, customerID).Scan(&cart)
 	if err != nil {
 		return "", dbError(err)
 	}
@@ -103,9 +108,9 @@ func PostExchange(ctx context.Context, tx pgx.Tx, actor organization.Member, use
 	}
 	data, _ := json.Marshal(quote.Items)
 	quoteData, _ := json.Marshal(quote.Pricing)
-	err = tx.QueryRow(ctx, "INSERT INTO pos_checkouts(organization_id,branch_id,terminal_id,shift_id,cart_id,cashier_id,cart_revision,idempotency_key,fingerprint,status,method,currency,total,received,change,items,confirmation_key,confirmed_by,confirmed_at,reference,adjustment_id,credit_amount,pricing_snapshot) VALUES($1,$2,$3,$4,$5,$6,1,$7,$8,'CONFIRMED',$9,'THB',$10,$11,0,$12,$7,$6,now(),$13,$7,$14,$15) RETURNING id::text", org, quote.Terminal.BranchID, terminalID, quote.Shift, cart, user, id, fingerprint(id), method, quote.Total, external, data, reference, money(applied), quoteData).Scan(&checkoutID)
+	err = tx.QueryRow(ctx, "INSERT INTO pos_checkouts(organization_id,branch_id,terminal_id,shift_id,cart_id,cashier_id,cart_revision,idempotency_key,fingerprint,status,method,currency,total,received,change,items,confirmation_key,confirmed_by,confirmed_at,reference,adjustment_id,credit_amount,pricing_snapshot,customer_id,customer_code_snapshot) VALUES($1,$2,$3,$4,$5,$6,1,$7,$8,'CONFIRMED',$9,'THB',$10,$11,0,$12,$7,$6,now(),$13,$7,$14,$15,$16,$17) RETURNING id::text", org, quote.Terminal.BranchID, terminalID, quote.Shift, cart, user, id, fingerprint(id), method, quote.Total, external, data, reference, money(applied), quoteData, customerID, customerCode).Scan(&checkoutID)
 	if err != nil {
 		return "", dbError(err)
 	}
-	return settle(ctx, tx, actor, user, org, Checkout{ID: checkoutID, BranchID: quote.Terminal.BranchID, TerminalID: terminalID, ShiftID: quote.Shift, CartID: cart, CashierID: user, Method: method, Total: quote.Total, Items: quote.Items, Pricing: quote.Pricing})
+	return settle(ctx, tx, actor, user, org, Checkout{ID: checkoutID, BranchID: quote.Terminal.BranchID, TerminalID: terminalID, ShiftID: quote.Shift, CartID: cart, CashierID: user, Method: method, Total: quote.Total, Items: quote.Items, Pricing: quote.Pricing, CustomerID: customerID, CustomerCode: customerCode})
 }

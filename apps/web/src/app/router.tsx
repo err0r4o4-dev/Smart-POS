@@ -23,6 +23,7 @@ import { ReturnsPage } from '../features/returns/ReturnsPage';
 import { AdjustmentsPage } from '../features/returns/AdjustmentsPage';
 import { POSWorkspace } from '../features/pos/POSWorkspace';
 import { PricingPage } from '../features/pricing/PricingPage';
+import { CustomersPage } from '../features/customers/CustomerPages';
 import {
   POSTerminalPage,
   HeldCartsPage,
@@ -57,6 +58,25 @@ export const router = createBrowserRouter([
       {
         element: <RequireSession />,
         children: [
+          {
+            element: <OrganizationGate permission="customers.read" />,
+            children: [
+              { path: '/customers', element: <CustomersPage /> },
+              {
+                path: '/customers/:id',
+                element: <CustomersPage view="detail" />,
+              },
+            ],
+          },
+          {
+            element: <OrganizationGate permission="customers.groups.read" />,
+            children: [
+              {
+                path: '/customers/groups',
+                element: <CustomersPage view="groups" />,
+              },
+            ],
+          },
           { path: paths.account, element: <AccountPage /> },
           {
             element: <OrganizationGate permission="pricing.read" />,

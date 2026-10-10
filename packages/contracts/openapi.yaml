@@ -14712,6 +14712,728 @@ paths:
           schema:
             type: string
             format: uuid
+  /api/v1/organizations/{id}/customers:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationID"
+    get:
+      operationId: listCustomers
+      security:
+        - sessionCookie: []
+      description: "Requires customers.read; active organization membership and branch authorization are checked
+        before any idempotent replay. Customer data is organization-wide, not a user account. Cashier reads have
+        masked phone/email and omit note/consent values. Cache-Control: no-store. Archival preserves immutable
+        transaction references."
+      responses:
+        "200":
+          description: Authoritative result in data envelope
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/CustomerPage"
+        "400":
+          $ref: "#/components/responses/InventoryInvalid"
+        "401":
+          $ref: "#/components/responses/InventoryUnauthenticated"
+        "403":
+          $ref: "#/components/responses/InventoryForbidden"
+        "404":
+          $ref: "#/components/responses/InventoryNotFound"
+        "409":
+          $ref: "#/components/responses/InventoryConflict"
+        "503":
+          $ref: "#/components/responses/InventoryUnavailable"
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - ""
+              - ACTIVE
+              - ARCHIVED
+        - name: group_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+    post:
+      operationId: createCustomer
+      security:
+        - sessionCookie: []
+      description: "Requires customers.manage; active organization membership and branch authorization are checked
+        before any idempotent replay. Customer data is organization-wide, not a user account. Cashier reads have
+        masked phone/email and omit note/consent values. Cache-Control: no-store. Archival preserves immutable
+        transaction references."
+      responses:
+        "200":
+          description: Authoritative result in data envelope
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Customer"
+        "400":
+          $ref: "#/components/responses/InventoryInvalid"
+        "401":
+          $ref: "#/components/responses/InventoryUnauthenticated"
+        "403":
+          $ref: "#/components/responses/InventoryForbidden"
+        "404":
+          $ref: "#/components/responses/InventoryNotFound"
+        "409":
+          $ref: "#/components/responses/InventoryConflict"
+        "503":
+          $ref: "#/components/responses/InventoryUnavailable"
+      parameters:
+        - $ref: "#/components/parameters/CSRF"
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Operation identity; same normalized payload replays current resource after current authorization.
+            A different payload conflicts.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerInput"
+  /api/v1/organizations/{id}/customers/search:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationID"
+    post:
+      operationId: searchCustomers
+      security:
+        - sessionCookie: []
+      description: "Requires customers.read; active organization membership and branch authorization are checked
+        before any idempotent replay. Customer data is organization-wide, not a user account. Cashier reads have
+        masked phone/email and omit note/consent values. Cache-Control: no-store. Archival preserves immutable
+        transaction references."
+      responses:
+        "200":
+          description: Authoritative result in data envelope
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/CustomerPage"
+        "400":
+          $ref: "#/components/responses/InventoryInvalid"
+        "401":
+          $ref: "#/components/responses/InventoryUnauthenticated"
+        "403":
+          $ref: "#/components/responses/InventoryForbidden"
+        "404":
+          $ref: "#/components/responses/InventoryNotFound"
+        "409":
+          $ref: "#/components/responses/InventoryConflict"
+        "503":
+          $ref: "#/components/responses/InventoryUnavailable"
+      parameters:
+        - $ref: "#/components/parameters/CSRF"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerSearch"
+  /api/v1/organizations/{id}/customers/{customerId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationID"
+      - name: customerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getCustomer
+      security:
+        - sessionCookie: []
+      description: "Requires customers.read; active organization membership and branch authorization are checked
+        before any idempotent replay. Customer data is organization-wide, not a user account. Cashier reads have
+        masked phone/email and omit note/consent values. Cache-Control: no-store. Archival preserves immutable
+        transaction references."
+      responses:
+        "200":
+          description: Authoritative result in data envelope
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Customer"
+        "400":
+          $ref: "#/components/responses/InventoryInvalid"
+        "401":
+          $ref: "#/components/responses/InventoryUnauthenticated"
+        "403":
+          $ref: "#/components/responses/InventoryForbidden"
+        "404":
+          $ref: "#/components/responses/InventoryNotFound"
+        "409":
+          $ref: "#/components/responses/InventoryConflict"
+        "503":
+          $ref: "#/components/responses/InventoryUnavailable"
+      parameters: []
+    put:
+      operationId: updateCustomer
+      security:
+        - sessionCookie: []
+      description: "Requires customers.manage; active organization membership and branch authorization are checked
+        before any idempotent replay. Customer data is organization-wide, not a user account. Cashier reads have
+        masked phone/email and omit note/consent values. Cache-Control: no-store. Archival preserves immutable
+        transaction references."
+      responses:
+        "200":
+          description: Authoritative result in data envelope
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Customer"
+        "400":
+          $ref: "#/components/responses/InventoryInvalid"
+        "401":
+          $ref: "#/components/responses/InventoryUnauthenticated"
+        "403":
+          $ref: "#/components/responses/InventoryForbidden"
+        "404":
+          $ref: "#/components/responses/InventoryNotFound"
+        "409":
+          $ref: "#/components/responses/InventoryConflict"
+        "503":
+          $ref: "#/components/responses/InventoryUnavailable"
+      parameters:
+        - $ref: "#/components/parameters/CSRF"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerUpdate"
+  /api/v1/organizations/{id}/customers/{customerId}/archive:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationID"
+      - name: customerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: archiveCustomer
+      security:
+        - sessionCookie: []
+      description: "Requires customers.manage; active organization membership and branch authorization are checked
+        before any idempotent replay. Customer data is organization-wide, not a user account. Cashier reads have
+        masked phone/email and omit note/consent values. Cache-Control: no-store. Archival preserves immutable
+        transaction references."
+      responses:
+        "200":
+          description: Authoritative result in data envelope
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Customer"
+        "400":
+          $ref: "#/components/responses/InventoryInvalid"
+        "401":
+          $ref: "#/components/responses/InventoryUnauthenticated"
+        "403":
+          $ref: "#/components/responses/InventoryForbidden"
+        "404":
+          $ref: "#/components/responses/InventoryNotFound"
+        "409":
+          $ref: "#/components/responses/InventoryConflict"
+        "503":
+          $ref: "#/components/responses/InventoryUnavailable"
+      parameters:
+        - $ref: "#/components/parameters/CSRF"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerRevision"
+  /api/v1/organizations/{id}/customers/{customerId}/history:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationID"
+      - name: customerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: customerHistory
+      security:
+        - sessionCookie: []
+      description: "Requires customers.history.read; active organization membership and branch authorization are
+        checked before any idempotent replay. Customer data is organization-wide, not a user account. Cashier
+        reads have masked phone/email and omit note/consent values. Cache-Control: no-store. Archival preserves
+        immutable transaction references."
+      responses:
+        "200":
+          description: Authoritative result in data envelope
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/CustomerHistory"
+        "400":
+          $ref: "#/components/responses/InventoryInvalid"
+        "401":
+          $ref: "#/components/responses/InventoryUnauthenticated"
+        "403":
+          $ref: "#/components/responses/InventoryForbidden"
+        "404":
+          $ref: "#/components/responses/InventoryNotFound"
+        "409":
+          $ref: "#/components/responses/InventoryConflict"
+        "503":
+          $ref: "#/components/responses/InventoryUnavailable"
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: branch_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: RFC3339 inclusive boundary; when both boundaries provided maximum span 366 days.
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: RFC3339 inclusive boundary; when both boundaries provided maximum span 366 days.
+  /api/v1/organizations/{id}/customers/{customerId}/audit:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationID"
+      - name: customerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: customerAudit
+      security:
+        - sessionCookie: []
+      description: "Requires customers.history.read; active organization membership and branch authorization are
+        checked before any idempotent replay. Customer data is organization-wide, not a user account. Cashier
+        reads have masked phone/email and omit note/consent values. Cache-Control: no-store. Archival preserves
+        immutable transaction references."
+      responses:
+        "200":
+          description: Authoritative result in data envelope
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/CustomerAuditPage"
+        "400":
+          $ref: "#/components/responses/InventoryInvalid"
+        "401":
+          $ref: "#/components/responses/InventoryUnauthenticated"
+        "403":
+          $ref: "#/components/responses/InventoryForbidden"
+        "404":
+          $ref: "#/components/responses/InventoryNotFound"
+        "409":
+          $ref: "#/components/responses/InventoryConflict"
+        "503":
+          $ref: "#/components/responses/InventoryUnavailable"
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+  /api/v1/organizations/{id}/customers/groups:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationID"
+    get:
+      operationId: listCustomerGroups
+      security:
+        - sessionCookie: []
+      description: "Requires customers.groups.read; active organization membership and branch authorization are
+        checked before any idempotent replay. Customer data is organization-wide, not a user account. Cashier
+        reads have masked phone/email and omit note/consent values. Cache-Control: no-store. Archival preserves
+        immutable transaction references."
+      responses:
+        "200":
+          description: Authoritative result in data envelope
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/CustomerGroupPage"
+        "400":
+          $ref: "#/components/responses/InventoryInvalid"
+        "401":
+          $ref: "#/components/responses/InventoryUnauthenticated"
+        "403":
+          $ref: "#/components/responses/InventoryForbidden"
+        "404":
+          $ref: "#/components/responses/InventoryNotFound"
+        "409":
+          $ref: "#/components/responses/InventoryConflict"
+        "503":
+          $ref: "#/components/responses/InventoryUnavailable"
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - ""
+              - ACTIVE
+              - ARCHIVED
+    post:
+      operationId: createCustomerGroup
+      security:
+        - sessionCookie: []
+      description: "Requires customers.groups.manage; active organization membership and branch authorization are
+        checked before any idempotent replay. Customer data is organization-wide, not a user account. Cashier
+        reads have masked phone/email and omit note/consent values. Cache-Control: no-store. Archival preserves
+        immutable transaction references."
+      responses:
+        "200":
+          description: Authoritative result in data envelope
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/CustomerGroup"
+        "400":
+          $ref: "#/components/responses/InventoryInvalid"
+        "401":
+          $ref: "#/components/responses/InventoryUnauthenticated"
+        "403":
+          $ref: "#/components/responses/InventoryForbidden"
+        "404":
+          $ref: "#/components/responses/InventoryNotFound"
+        "409":
+          $ref: "#/components/responses/InventoryConflict"
+        "503":
+          $ref: "#/components/responses/InventoryUnavailable"
+      parameters:
+        - $ref: "#/components/parameters/CSRF"
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Operation identity; same normalized payload replays current resource after current authorization.
+            A different payload conflicts.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerGroupInput"
+  /api/v1/organizations/{id}/customers/groups/{groupId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationID"
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      operationId: updateCustomerGroup
+      security:
+        - sessionCookie: []
+      description: "Requires customers.groups.manage; active organization membership and branch authorization are
+        checked before any idempotent replay. Customer data is organization-wide, not a user account. Cashier
+        reads have masked phone/email and omit note/consent values. Cache-Control: no-store. Archival preserves
+        immutable transaction references."
+      responses:
+        "200":
+          description: Authoritative result in data envelope
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/CustomerGroup"
+        "400":
+          $ref: "#/components/responses/InventoryInvalid"
+        "401":
+          $ref: "#/components/responses/InventoryUnauthenticated"
+        "403":
+          $ref: "#/components/responses/InventoryForbidden"
+        "404":
+          $ref: "#/components/responses/InventoryNotFound"
+        "409":
+          $ref: "#/components/responses/InventoryConflict"
+        "503":
+          $ref: "#/components/responses/InventoryUnavailable"
+      parameters:
+        - $ref: "#/components/parameters/CSRF"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerGroupUpdate"
+  /api/v1/organizations/{id}/customers/groups/{groupId}/archive:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationID"
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: archiveCustomerGroup
+      security:
+        - sessionCookie: []
+      description: "Requires customers.groups.manage; active organization membership and branch authorization are
+        checked before any idempotent replay. Customer data is organization-wide, not a user account. Cashier
+        reads have masked phone/email and omit note/consent values. Cache-Control: no-store. Archival preserves
+        immutable transaction references."
+      responses:
+        "200":
+          description: Authoritative result in data envelope
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/CustomerGroup"
+        "400":
+          $ref: "#/components/responses/InventoryInvalid"
+        "401":
+          $ref: "#/components/responses/InventoryUnauthenticated"
+        "403":
+          $ref: "#/components/responses/InventoryForbidden"
+        "404":
+          $ref: "#/components/responses/InventoryNotFound"
+        "409":
+          $ref: "#/components/responses/InventoryConflict"
+        "503":
+          $ref: "#/components/responses/InventoryUnavailable"
+      parameters:
+        - $ref: "#/components/parameters/CSRF"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerRevision"
+  /api/v1/organizations/{id}/customers/{customerId}/groups/{groupId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationID"
+      - name: customerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      operationId: setCustomerMembership
+      security:
+        - sessionCookie: []
+      description: "Requires customers.manage and customers.groups.manage; active organization membership and branch
+        authorization are checked before any idempotent replay. Customer data is organization-wide, not a user
+        account. Cashier reads have masked phone/email and omit note/consent values. Cache-Control: no-store.
+        Archival preserves immutable transaction references."
+      responses:
+        "200":
+          description: Authoritative result in data envelope
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Customer"
+        "400":
+          $ref: "#/components/responses/InventoryInvalid"
+        "401":
+          $ref: "#/components/responses/InventoryUnauthenticated"
+        "403":
+          $ref: "#/components/responses/InventoryForbidden"
+        "404":
+          $ref: "#/components/responses/InventoryNotFound"
+        "409":
+          $ref: "#/components/responses/InventoryConflict"
+        "503":
+          $ref: "#/components/responses/InventoryUnavailable"
+      parameters:
+        - $ref: "#/components/parameters/CSRF"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerMembershipInput"
+  /api/v1/organizations/{id}/pos/carts/{resourceId}/customer:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationID"
+      - name: resourceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      operationId: selectPOSCustomer
+      security:
+        - sessionCookie: []
+      description: "Requires pos.cart.manage and customers.select; active organization membership and branch
+        authorization are checked before any idempotent replay. Customer data is organization-wide, not a user
+        account. Cashier reads have masked phone/email and omit note/consent values. Cache-Control: no-store.
+        Archival preserves immutable transaction references."
+      responses:
+        "200":
+          description: Authoritative result in data envelope
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/POSCart"
+        "400":
+          $ref: "#/components/responses/InventoryInvalid"
+        "401":
+          $ref: "#/components/responses/InventoryUnauthenticated"
+        "403":
+          $ref: "#/components/responses/InventoryForbidden"
+        "404":
+          $ref: "#/components/responses/InventoryNotFound"
+        "409":
+          $ref: "#/components/responses/InventoryConflict"
+        "503":
+          $ref: "#/components/responses/InventoryUnavailable"
+      parameters:
+        - $ref: "#/components/parameters/CSRF"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/POSCustomerInput"
 components:
   parameters:
     OrganizationID:
@@ -18896,6 +19618,17 @@ components:
         - total
         - review_required
       properties:
+        customer_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        customer:
+          anyOf:
+            - $ref: "#/components/schemas/CustomerSelection"
+            - type: "null"
+        customer_cleared:
+          type: boolean
         id: &a1
           type: string
           format: uuid
@@ -19015,6 +19748,15 @@ components:
         - items
         - credit_amount
       properties:
+        customer_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        customer_code_snapshot:
+          type: string
+          description: Immutable customer code only; no contact details or notes copied
+            into receipts.
         id:
           type: string
           format: uuid
@@ -19283,6 +20025,15 @@ components:
         - movements
         - audit
       properties:
+        customer_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        customer_code_snapshot:
+          type: string
+          description: Immutable customer code only; no contact details or notes copied
+            into receipts.
         id:
           type: string
           format: uuid
@@ -19759,6 +20510,487 @@ components:
       type: string
       pattern: ^-?[0-9]{1,15}(\.[0-9]{1,3})?$
       description: Exact NUMERIC(18,3), decimal string, never binary floating point. Commands require nonnegative magnitudes; COUNT/PACKAGING whole units only.
+    CustomerInput:
+      type: object
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          pattern: ^[A-Z0-9][A-Z0-9_-]{0,39}$
+          description: Trimmed and uppercased, unique within organization, including archived records.
+        name:
+          type: string
+          maxLength: 200
+          default: ""
+        phone:
+          type: string
+          maxLength: 40
+          default: ""
+          description: Optional; normalized separators removed, optional leading + and 6–20 digits. Nonempty normalized
+            phone is unique per organization including archived records. No implicit country conversion.
+        email:
+          type: string
+          maxLength: 254
+          default: ""
+          description: Optional plain address; trimmed lowercase, unique nonempty within organization including archived
+            records.
+        notes:
+          type: string
+          maxLength: 2000
+          default: ""
+          description: Optional single-line text. Do not collect sensitive identity documents.
+        marketing_consent:
+          type: boolean
+          default: false
+          description: Explicit opt-in only; creation never implies consent.
+        status:
+          type: string
+          enum:
+            - ACTIVE
+          default: ACTIVE
+        revision:
+          type: integer
+          minimum: 0
+      required:
+        - code
+    CustomerUpdate:
+      allOf:
+        - $ref: "#/components/schemas/CustomerInput"
+        - type: object
+          required:
+            - revision
+          properties:
+            revision:
+              type: integer
+              minimum: 1
+    Customer:
+      type: object
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          pattern: ^[A-Z0-9][A-Z0-9_-]{0,39}$
+          description: Trimmed and uppercased, unique within organization, including archived records.
+        name:
+          type: string
+          maxLength: 200
+          default: ""
+        phone:
+          type: string
+          maxLength: 40
+          default: ""
+          description: Optional; normalized separators removed, optional leading + and 6–20 digits. Nonempty normalized
+            phone is unique per organization including archived records. No implicit country conversion.
+        email:
+          type: string
+          maxLength: 254
+          default: ""
+          description: Optional plain address; trimmed lowercase, unique nonempty within organization including archived
+            records.
+        notes:
+          type: string
+          maxLength: 2000
+          default: ""
+          description: Optional single-line text. Do not collect sensitive identity documents.
+        marketing_consent:
+          type: boolean
+          default: false
+          description: Explicit opt-in only; creation never implies consent.
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - ARCHIVED
+        revision:
+          type: integer
+          minimum: 1
+        id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        groups:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomerGroup"
+      required:
+        - id
+        - code
+        - name
+        - phone
+        - email
+        - notes
+        - marketing_consent
+        - status
+        - revision
+        - created_at
+        - updated_at
+        - groups
+    CustomerGroupInput:
+      type: object
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          pattern: ^[A-Z0-9][A-Z0-9_-]{0,39}$
+          description: Trimmed and uppercased, unique within organization, including archived records.
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        revision:
+          type: integer
+          minimum: 0
+      required:
+        - code
+        - name
+    CustomerGroupUpdate:
+      allOf:
+        - $ref: "#/components/schemas/CustomerGroupInput"
+        - type: object
+          required:
+            - revision
+          properties:
+            revision:
+              type: integer
+              minimum: 1
+    CustomerGroup:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          pattern: ^[A-Z0-9][A-Z0-9_-]{0,39}$
+          description: Trimmed and uppercased, unique within organization, including archived records.
+        name:
+          type: string
+        revision:
+          type: integer
+          minimum: 1
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - ARCHIVED
+        member_count:
+          type: integer
+          minimum: 0
+      required:
+        - id
+        - code
+        - name
+        - revision
+        - status
+        - member_count
+    CustomerSelection:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - ARCHIVED
+      required:
+        - id
+        - code
+        - name
+        - status
+    CustomerPage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Customer"
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+      required:
+        - items
+        - total
+        - page
+        - page_size
+    CustomerGroupPage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomerGroup"
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+      required:
+        - items
+        - total
+        - page
+        - page_size
+    CustomerSearch:
+      type: object
+      additionalProperties: false
+      properties:
+        search:
+          type: string
+          maxLength: 200
+          description: Case-insensitive literal prefix of code/name/normalized phone/email. Use POST so PII is not
+            written into URLs.
+        status:
+          type: string
+          enum:
+            - ""
+            - ACTIVE
+            - ARCHIVED
+        group_id:
+          type: string
+          format: uuid
+        branch_id:
+          type: string
+          format: uuid
+        page:
+          type: integer
+          minimum: 1
+          maximum: 10000
+          default: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+      required: []
+    CustomerRevision:
+      type: object
+      additionalProperties: false
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+      required:
+        - revision
+    CustomerMembershipInput:
+      type: object
+      additionalProperties: false
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+        group_revision:
+          type: integer
+          minimum: 1
+        present:
+          type: boolean
+      required:
+        - revision
+        - group_revision
+        - present
+    POSCustomerInput:
+      type: object
+      additionalProperties: false
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+        customer_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+      required:
+        - revision
+        - customer_id
+    CustomerSignedMoney:
+      type: string
+      pattern: ^-?[0-9]+\.[0-9]{2}$
+    CustomerActivity:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum:
+            - SALE
+            - REPLACEMENT
+            - RETURN
+            - REFUND
+            - EXCHANGE
+            - REVERSAL
+        number:
+          type: string
+        status:
+          type: string
+        occurred_at:
+          type: string
+          format: date-time
+        branch_id:
+          type: string
+          format: uuid
+        branch_name:
+          type: string
+        sale_id:
+          type: string
+          format: uuid
+        return_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        adjustment_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        amount:
+          $ref: "#/components/schemas/CustomerSignedMoney"
+        paid:
+          $ref: "#/components/schemas/POSMoney"
+        refunded:
+          $ref: "#/components/schemas/POSMoney"
+        pending_refund:
+          $ref: "#/components/schemas/POSMoney"
+        return_credit:
+          $ref: "#/components/schemas/POSMoney"
+      required:
+        - id
+        - kind
+        - number
+        - status
+        - occurred_at
+        - branch_id
+        - branch_name
+        - sale_id
+        - return_id
+        - adjustment_id
+        - amount
+        - paid
+        - refunded
+        - pending_refund
+        - return_credit
+    CustomerHistory:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomerActivity"
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        summary:
+          type: object
+          additionalProperties: false
+          properties:
+            purchases:
+              type: integer
+            replacements:
+              type: integer
+            paid:
+              $ref: "#/components/schemas/POSMoney"
+            refunded:
+              $ref: "#/components/schemas/POSMoney"
+            pending_refund:
+              $ref: "#/components/schemas/POSMoney"
+            net_collected:
+              $ref: "#/components/schemas/CustomerSignedMoney"
+          required:
+            - purchases
+            - replacements
+            - paid
+            - refunded
+            - pending_refund
+            - net_collected
+      required:
+        - items
+        - total
+        - page
+        - page_size
+      description: Read-only committed sales, persisted return/refund/adjustment documents and their settled/pending
+        status. Only sale_payments.amount contributes paid, including external replacement top-ups exactly once.
+        Only CONFIRMED customer_refunds contribute refunded. Return credits and adjustment document values never
+        count as new funds. Net collected is paid minus confirmed refunds for the filtered timestamps/authorized
+        branches.
+    CustomerAuditEvent:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: integer
+        actor_id:
+          type: string
+          format: uuid
+        event_type:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - actor_id
+        - event_type
+        - created_at
+    CustomerAuditPage:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomerAuditEvent"
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+      required:
+        - items
+        - total
+        - page
+        - page_size
     PricingRule:
       type: object
       additionalProperties: false

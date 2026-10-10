@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"smartpos/api/internal/modules/catalog"
+	"smartpos/api/internal/modules/customers"
 	"smartpos/api/internal/modules/identity"
 	"smartpos/api/internal/modules/inventory"
 	"smartpos/api/internal/modules/organization"
@@ -46,7 +47,8 @@ func Router(checker Readiness, logger *slog.Logger, authentication ...identity.H
 			purchasingHandler := purchasing.Handler{Service: &purchasing.Service{Organization: organizations}}
 			returnsHandler := returns.Handler{Service: &returns.Service{Organization: organizations}}
 			pricingHandler := pricing.Handler{Service: &pricing.Service{Organization: organizations}}
-			organization.Handler{Service: organizations, Authentication: authentication[0]}.Routes(version, catalogHandler.TenantRoutes, inventoryHandler.TenantRoutes, posHandler.TenantRoutes, purchasingHandler.TenantRoutes, returnsHandler.TenantRoutes, pricingHandler.TenantRoutes)
+			customerHandler := customers.Handler{Service: &customers.Service{Organization: organizations}}
+			organization.Handler{Service: organizations, Authentication: authentication[0]}.Routes(version, catalogHandler.TenantRoutes, inventoryHandler.TenantRoutes, posHandler.TenantRoutes, purchasingHandler.TenantRoutes, returnsHandler.TenantRoutes, pricingHandler.TenantRoutes, customerHandler.TenantRoutes)
 		}
 		version.Get("/system", func(writer http.ResponseWriter, request *http.Request) {
 			httpx.JSON(writer, 200, map[string]any{"data": map[string]any{"name": "SmartPOS", "phase": 0, "authentication": "server_sessions"}})

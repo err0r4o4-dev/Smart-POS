@@ -21,6 +21,7 @@ import {
   type POSShift,
 } from '../../lib/pos-api';
 import { usePOS } from './POSContext';
+import { CustomerPicker } from '../customers/CustomerPicker';
 
 export function POSTerminalPage() {
   const pos = usePOS();
@@ -263,6 +264,7 @@ function CartPanel() {
   return (
     <>
       <h2>ตะกร้าสินค้า</h2>
+      <CustomerPicker />
       {!cart?.items.length && <p>ยังไม่มีสินค้าในตะกร้า</p>}
       {cart?.items.map((item) => (
         <div className="pos-cart-item" key={item.variant_id}>
@@ -455,6 +457,10 @@ export function HeldCartsPage() {
                 );
                 if (result) {
                   pos.setCart(result.id);
+                  if (result.customer_cleared)
+                    pos.setMessage(
+                      'ลูกค้าที่ถูกเก็บถาวรถูกนำออกแล้ว — Walk-in กรุณาตรวจสอบก่อนชำระเงิน',
+                    );
                   if (result.review_required)
                     pos.setMessage('ราคา / สถานะ / สต็อกเปลี่ยน กรุณาตรวจสอบ');
                   navigate('/pos');
@@ -590,6 +596,7 @@ export function CheckoutPage() {
     <>
       <h1>ชำระเงิน</h1>
       <Card className="pos-checkout">
+        <p>ลูกค้า / Customer: {checkout?.customer_code_snapshot || pos.cart?.customer?.code || 'Walk-in'}</p>
         <p>
           ราคาสุดท้ายคำนวณจาก Pricing quote บนเซิร์ฟเวอร์ การเลือก QR /
           โอนยังไม่ใช่การรับเงิน

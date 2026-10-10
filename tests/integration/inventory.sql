@@ -1,6 +1,6 @@
 BEGIN;
 DO $$ BEGIN
- IF NOT EXISTS(SELECT 1 FROM schema_migrations WHERE version=10 AND NOT dirty) THEN RAISE EXCEPTION 'inventory schema missing'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM schema_migrations WHERE version=11 AND NOT dirty) THEN RAISE EXCEPTION 'inventory schema missing'; END IF;
  IF has_table_privilege('smartpos_runtime','stock_balances','UPDATE') OR has_table_privilege('smartpos_runtime','stock_movements','UPDATE') OR has_table_privilege('smartpos_runtime','stock_movements','DELETE') THEN RAISE EXCEPTION 'unsafe inventory runtime grants'; END IF;
 END $$;
 INSERT INTO users(id,email,email_normalized,password_hash,display_name) VALUES('30000000-0000-4000-8000-000000000001','inventory-sql@example.test','inventory-sql@example.test','$argon2id$fixture','Inventory SQL');

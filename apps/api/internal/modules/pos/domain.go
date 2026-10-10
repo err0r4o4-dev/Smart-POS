@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"regexp"
 	"smartpos/api/internal/modules/catalog"
+	"smartpos/api/internal/modules/customers"
 	"smartpos/api/internal/modules/pricing"
 	"strconv"
 	"strings"
@@ -91,17 +92,20 @@ type CartItem struct {
 	PricingRevision string `json:"pricing_revision"`
 }
 type Cart struct {
-	ID                    string        `json:"id"`
-	BranchID              string        `json:"branch_id"`
-	TerminalID            string        `json:"terminal_id"`
-	CashierID             string        `json:"cashier_id"`
-	Status                string        `json:"status"`
-	Revision              int64         `json:"revision"`
-	Items                 []CartItem    `json:"items"`
-	Total                 string        `json:"total"`
-	ReviewRequired        bool          `json:"review_required"`
-	Pricing               pricing.Quote `json:"pricing"`
-	StoredPricingRevision string        `json:"-"`
+	CustomerID            *string              `json:"customer_id"`
+	Customer              *customers.Selection `json:"customer"`
+	CustomerCleared       bool                 `json:"customer_cleared"`
+	ID                    string               `json:"id"`
+	BranchID              string               `json:"branch_id"`
+	TerminalID            string               `json:"terminal_id"`
+	CashierID             string               `json:"cashier_id"`
+	Status                string               `json:"status"`
+	Revision              int64                `json:"revision"`
+	Items                 []CartItem           `json:"items"`
+	Total                 string               `json:"total"`
+	ReviewRequired        bool                 `json:"review_required"`
+	Pricing               pricing.Quote        `json:"pricing"`
+	StoredPricingRevision string               `json:"-"`
 }
 type TerminalInput struct {
 	BranchID        string `json:"branch_id"`
@@ -135,22 +139,24 @@ type ConfirmationInput struct {
 	Acknowledged bool   `json:"acknowledged"`
 }
 type Checkout struct {
-	ID          string        `json:"id"`
-	BranchID    string        `json:"branch_id"`
-	TerminalID  string        `json:"terminal_id"`
-	ShiftID     string        `json:"shift_id"`
-	CartID      string        `json:"cart_id"`
-	CashierID   string        `json:"cashier_id"`
-	Status      string        `json:"status"`
-	Method      string        `json:"method"`
-	Total       string        `json:"total"`
-	Received    string        `json:"received"`
-	Change      string        `json:"change"`
-	Reference   string        `json:"reference"`
-	FailureCode string        `json:"failure_code"`
-	SaleID      string        `json:"sale_id"`
-	Items       []CartItem    `json:"items"`
-	Pricing     pricing.Quote `json:"pricing"`
+	CustomerID   *string       `json:"customer_id"`
+	CustomerCode string        `json:"customer_code_snapshot"`
+	ID           string        `json:"id"`
+	BranchID     string        `json:"branch_id"`
+	TerminalID   string        `json:"terminal_id"`
+	ShiftID      string        `json:"shift_id"`
+	CartID       string        `json:"cart_id"`
+	CashierID    string        `json:"cashier_id"`
+	Status       string        `json:"status"`
+	Method       string        `json:"method"`
+	Total        string        `json:"total"`
+	Received     string        `json:"received"`
+	Change       string        `json:"change"`
+	Reference    string        `json:"reference"`
+	FailureCode  string        `json:"failure_code"`
+	SaleID       string        `json:"sale_id"`
+	Items        []CartItem    `json:"items"`
+	Pricing      pricing.Quote `json:"pricing"`
 }
 
 func validateItems(items []ItemInput) error {

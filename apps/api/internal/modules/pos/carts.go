@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/jackc/pgx/v5"
+	"smartpos/api/internal/modules/customers"
 	"smartpos/api/internal/modules/organization"
 )
 
@@ -12,7 +13,7 @@ func cartHeader(ctx context.Context, tx pgx.Tx, actor organization.Member, user,
 	if !uuidPattern.MatchString(id) {
 		return item, ErrInput
 	}
-	err := tx.QueryRow(ctx, "SELECT id::text,branch_id::text,terminal_id::text,cashier_id::text,status,revision,pricing_revision FROM pos_carts WHERE organization_id=$1 AND id=$2 FOR UPDATE", org, id).Scan(&item.ID, &item.BranchID, &item.TerminalID, &item.CashierID, &item.Status, &item.Revision, &item.StoredPricingRevision)
+	err := tx.QueryRow(ctx, "SELECT id::text,branch_id::text,terminal_id::text,cashier_id::text,status,revision,pricing_revision,customer_id::text FROM pos_carts WHERE organization_id=$1 AND id=$2 FOR UPDATE", org, id).Scan(&item.ID, &item.BranchID, &item.TerminalID, &item.CashierID, &item.Status, &item.Revision, &item.StoredPricingRevision, &item.CustomerID)
 	if err != nil {
 		return item, dbError(err)
 	}
@@ -25,6 +26,15 @@ func readCart(ctx context.Context, tx pgx.Tx, actor organization.Member, user, o
 	item, err := cartHeader(ctx, tx, actor, user, org, id)
 	if err != nil {
 		return item, err
+	}
+	if item.CustomerID != nil {
+		if !allowed(actor.Permissions, "customers.select") {
+			return item, organization.ErrDenied
+		}
+		item.Customer, err = customers.ReadSelection(ctx, tx, org, *item.CustomerID)
+		if err != nil {
+			return item, dbError(err)
+		}
 	}
 	value, err := terminal(ctx, tx, actor, org, item.TerminalID, false)
 	if err != nil {
@@ -149,6 +159,7 @@ func (service *Service) UpdateCart(ctx context.Context, user, org, id, action st
 		return current, err
 	}
 	next := current.Status
+	cleared := false
 	switch action {
 	case "update":
 		if current.Status != "ACTIVE" || validateItems(input.Items) != nil {
@@ -196,12 +207,22 @@ func (service *Service) UpdateCart(ctx context.Context, user, org, id, action st
 			return current, err
 		}
 		next = "ACTIVE"
+		if current.CustomerID != nil {
+			selected, problem := customers.ReadSelection(ctx, tx, org, *current.CustomerID)
+			if problem != nil {
+				return current, dbError(problem)
+			}
+			if selected.Status != "ACTIVE" {
+				current.CustomerID = nil
+				cleared = true
+			}
+		}
 	case "cancel":
 		next = "CANCELLED"
 	default:
 		return current, ErrInput
 	}
-	_, err = tx.Exec(ctx, "UPDATE pos_carts SET status=$3,revision=revision+1,updated_at=now() WHERE organization_id=$1 AND id=$2", org, id, next)
+	_, err = tx.Exec(ctx, "UPDATE pos_carts SET status=$3,revision=revision+1,updated_at=now(),customer_id=$4 WHERE organization_id=$1 AND id=$2", org, id, next, current.CustomerID)
 	if err != nil {
 		return current, dbError(err)
 	}
@@ -219,6 +240,12 @@ func (service *Service) UpdateCart(ctx context.Context, user, org, id, action st
 			if item.PriceChanged || !item.Saleable {
 				result.ReviewRequired = true
 			}
+		}
+	}
+	result.CustomerCleared = cleared
+	if cleared {
+		if err = organization.RecordAudit(ctx, tx, org, user, "pos.cart.customer_cleared", id); err != nil {
+			return result, err
 		}
 	}
 	return result, finish(ctx, tx, org, user, "pos.cart."+action, id)

@@ -1,0 +1,137 @@
+.customer-page {
+  min-width: 0;
+}
+.customer-filters,
+.customer-pagination,
+.customer-membership {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.customer-filters .tenant-field {
+  flex: 1 1 180px;
+}
+.customer-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 14px;
+  margin: 18px 0;
+}
+.customer-record {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.55);
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.customer-record p {
+  margin: 0;
+}
+.customer-form {
+  display: grid;
+  gap: 14px;
+  max-width: 760px;
+}
+.customer-form .tenant-field,
+.customer-picker label {
+  display: grid;
+  gap: 6px;
+}
+.customer-consent {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.customer-consent input {
+  width: auto;
+}
+.customer-pagination {
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18px;
+}
+.customer-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  gap: 14px;
+}
+.customer-summary p {
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(255, 195, 82, 0.13);
+}
+.customer-summary strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 1.25rem;
+  overflow-wrap: anywhere;
+}
+.customer-picker {
+  padding: 16px;
+  margin: 12px 0 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255, 195, 82, 0.09);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.customer-picker form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px;
+}
+.customer-picker label {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+.customer-picker input,
+.customer-page input,
+.customer-page select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+.customer-page .customer-consent input {
+  width: auto;
+}
+.customer-pick-result {
+  display: block;
+  margin-top: 8px;
+  width: 100%;
+  white-space: normal;
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+.customer-membership {
+  justify-content: space-between;
+  align-items: center;
+  margin: 12px 0;
+}
+.customer-archive {
+  margin-top: 16px;
+}
+@media (max-width: 480px) {
+  .customer-page .card {
+    padding: 16px;
+  }
+  .customer-pagination {
+    align-items: stretch;
+  }
+  .customer-pagination span {
+    flex-basis: 100%;
+    order: -1;
+  }
+  .customer-page .page-heading {
+    align-items: stretch;
+  }
+  .customer-picker {
+    padding: 12px;
+  }
+}

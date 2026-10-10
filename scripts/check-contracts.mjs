@@ -153,6 +153,13 @@ const pricingPaths = [
   '/discount-approvals/{resourceId}/reject',
   '/pos/carts/{resourceId}/quote',
 ].map((path) => '/api/v1/organizations/{id}' + path);
+const expectedCustomerPaths = [
+  '/customers', '/customers/search', '/customers/{customerId}',
+  '/customers/{customerId}/archive', '/customers/{customerId}/history',
+  '/customers/{customerId}/audit', '/customers/groups',
+  '/customers/groups/{groupId}', '/customers/groups/{groupId}/archive',
+  '/customers/{customerId}/groups/{groupId}', '/pos/carts/{resourceId}/customer',
+].map((path) => '/api/v1/organizations/{id}' + path);
 assert.deepEqual(
   Object.keys(api.paths).sort(),
   [
@@ -177,6 +184,7 @@ assert.deepEqual(
     ...supplyPaths,
     ...returnPaths,
     ...pricingPaths,
+    ...expectedCustomerPaths,
     '/api/v1/auth/forgot-password',
     '/api/v1/auth/login',
     '/api/v1/auth/logout',
@@ -452,6 +460,25 @@ assert.equal(
   '#/components/schemas/POSMoney',
 );
 checkReferences(api);
+const customerPaths=Object.keys(api.paths).filter(path=>path.includes('/customers')||path.endsWith('/customer'));
+assert.equal(customerPaths.length,11);
+const customerOperations=[];
+for(const path of customerPaths){
+  for(const method of ['get','post','put','patch']){
+    const operation=api.paths[path][method];if(!operation)continue;
+    customerOperations.push(operation.operationId);
+    assert.deepEqual(operation.security,[{sessionCookie:[]}]);
+    for(const status of ['200','400','401','403','404','409','503'])assert.ok(operation.responses[status]);
+    if(method!=='get')assert.ok(operation.parameters.some(parameter=>parameter.$ref==='#/components/parameters/CSRF'));
+  }
+}
+assert.equal(customerOperations.length,14);
+assert.equal(new Set(customerOperations).size,14);
+assert.equal(api.components.schemas.CustomerPage.properties.page_size.maximum,100);
+assert.equal(api.components.schemas.CustomerInput.properties.marketing_consent.default,false);
+assert.deepEqual(api.components.schemas.POSCustomerInput.properties.customer_id.type,['string','null']);
+assert.ok(!api.components.schemas.POSCheckoutInput.properties.customer_id,'customer references are selected on carts, never trusted on checkout');
+for(const name of ['POSCart','POSCheckout','POSSale'])assert.deepEqual(api.components.schemas[name].properties.customer_id.type,['string','null']);
 for (const path of returnPaths) {
   for (const method of ['get', 'post']) {
     const operation = api.paths[path][method];

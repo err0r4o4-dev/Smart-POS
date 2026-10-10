@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/jackc/pgx/v5"
+	"smartpos/api/internal/modules/customers"
 	"smartpos/api/internal/modules/organization"
 	"smartpos/api/internal/modules/pricing"
 )
@@ -18,6 +19,12 @@ func checkout(ctx context.Context, tx pgx.Tx, actor organization.Member, user, o
 	err := tx.QueryRow(ctx, `SELECT id::text,branch_id::text,terminal_id::text,shift_id::text,cart_id::text,cashier_id::text,status,method,total::text,received::text,change::text,reference,failure_code,COALESCE((SELECT id::text FROM sales WHERE organization_id=checkout.organization_id AND checkout_id=checkout.id),''),items FROM pos_checkouts checkout WHERE organization_id=$1 AND id=$2 FOR UPDATE`, org, id).Scan(&item.ID, &item.BranchID, &item.TerminalID, &item.ShiftID, &item.CartID, &item.CashierID, &item.Status, &item.Method, &item.Total, &item.Received, &item.Change, &item.Reference, &item.FailureCode, &item.SaleID, &items)
 	if err != nil {
 		return item, dbError(err)
+	}
+	if err = tx.QueryRow(ctx, "SELECT customer_id::text,customer_code_snapshot FROM pos_checkouts WHERE organization_id=$1 AND id=$2", org, id).Scan(&item.CustomerID, &item.CustomerCode); err != nil {
+		return item, err
+	}
+	if item.CustomerID != nil && !allowed(actor.Permissions, "customers.select") {
+		return item, organization.ErrDenied
 	}
 	if actor.Role == "CASHIER" && item.CashierID != user {
 		return item, organization.ErrDenied
@@ -91,6 +98,17 @@ func (service *Service) PrepareCheckout(ctx context.Context, user, org, key stri
 	if cart.Status != "ACTIVE" || cart.Revision != input.Revision || len(cart.Items) == 0 {
 		return Checkout{}, ErrConflict
 	}
+	customerCode := ""
+	if cart.CustomerID != nil {
+		selected, problem := customers.ValidateSelection(ctx, tx, actor, org, *cart.CustomerID)
+		if problem != nil {
+			if problem == customers.ErrConflict {
+				return Checkout{}, ErrCustomer
+			}
+			return Checkout{}, dbError(problem)
+		}
+		customerCode = selected.Code
+	}
 	value, err := terminal(ctx, tx, actor, org, cart.TerminalID, true)
 	if err != nil {
 		return Checkout{}, err
@@ -136,7 +154,7 @@ func (service *Service) PrepareCheckout(ctx context.Context, user, org, key stri
 		return Checkout{}, err
 	}
 	quoteData, _ := json.Marshal(cart.Pricing)
-	err = tx.QueryRow(ctx, `INSERT INTO pos_checkouts(organization_id,branch_id,terminal_id,shift_id,cart_id,cashier_id,cart_revision,idempotency_key,fingerprint,status,method,currency,total,received,change,items,pricing_snapshot) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'AWAITING_PAYMENT',$10,'THB',$11,$12,$13,$14,$15) RETURNING id::text`, org, cart.BranchID, cart.TerminalID, shift, cart.ID, user, cart.Revision, key, hash, input.Method, cart.Total, input.Received, change, items, quoteData).Scan(&id)
+	err = tx.QueryRow(ctx, `INSERT INTO pos_checkouts(organization_id,branch_id,terminal_id,shift_id,cart_id,cashier_id,cart_revision,idempotency_key,fingerprint,status,method,currency,total,received,change,items,pricing_snapshot,customer_id,customer_code_snapshot) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'AWAITING_PAYMENT',$10,'THB',$11,$12,$13,$14,$15,$16,$17) RETURNING id::text`, org, cart.BranchID, cart.TerminalID, shift, cart.ID, user, cart.Revision, key, hash, input.Method, cart.Total, input.Received, change, items, quoteData, cart.CustomerID, customerCode).Scan(&id)
 	if err != nil {
 		return Checkout{}, dbError(err)
 	}
@@ -197,7 +215,11 @@ func (service *Service) ConfirmPayment(ctx context.Context, user, org, id, key s
 		return item, dbError(err)
 	}
 	if problem := revalidate(ctx, tx, org, item); problem != nil {
-		if _, err = tx.Exec(ctx, "UPDATE pos_checkouts SET status='RECONCILIATION_REQUIRED',failure_code='PRICING_CHANGED' WHERE organization_id=$1 AND id=$2", org, id); err != nil {
+		code := "PRICING_CHANGED"
+		if errors.Is(problem, ErrCustomer) {
+			code = "CUSTOMER_UNAVAILABLE"
+		}
+		if _, err = tx.Exec(ctx, "UPDATE pos_checkouts SET status='RECONCILIATION_REQUIRED',failure_code=$3 WHERE organization_id=$1 AND id=$2", org, id, code); err != nil {
 			return item, dbError(err)
 		}
 	}

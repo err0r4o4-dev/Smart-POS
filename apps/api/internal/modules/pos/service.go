@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"log/slog"
 	"smartpos/api/internal/modules/catalog"
+	"smartpos/api/internal/modules/customers"
 	"smartpos/api/internal/modules/inventory"
 	"smartpos/api/internal/modules/organization"
 	"smartpos/api/internal/modules/pricing"
@@ -17,14 +18,16 @@ import (
 
 type Service struct{ Organization *organization.Service }
 
+var ErrCustomer = errors.New("customer unavailable for checkout")
+
 func dbError(err error) error {
-	if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, catalog.ErrNotFound) || errors.Is(err, inventory.ErrNotFound) || errors.Is(err, organization.ErrNotFound) {
+	if errors.Is(err, customers.ErrNotFound) || errors.Is(err, pgx.ErrNoRows) || errors.Is(err, catalog.ErrNotFound) || errors.Is(err, inventory.ErrNotFound) || errors.Is(err, organization.ErrNotFound) {
 		return ErrNotFound
 	}
-	if errors.Is(err, pricing.ErrInput) || errors.Is(err, catalog.ErrInput) || errors.Is(err, inventory.ErrInput) || errors.Is(err, organization.ErrInput) {
+	if errors.Is(err, customers.ErrInput) || errors.Is(err, pricing.ErrInput) || errors.Is(err, catalog.ErrInput) || errors.Is(err, inventory.ErrInput) || errors.Is(err, organization.ErrInput) {
 		return ErrInput
 	}
-	if errors.Is(err, pricing.ErrConflict) || errors.Is(err, catalog.ErrConflict) || errors.Is(err, inventory.ErrConflict) || errors.Is(err, organization.ErrConflict) {
+	if errors.Is(err, customers.ErrConflict) || errors.Is(err, pricing.ErrConflict) || errors.Is(err, catalog.ErrConflict) || errors.Is(err, inventory.ErrConflict) || errors.Is(err, organization.ErrConflict) {
 		return ErrConflict
 	}
 	var problem *pgconn.PgError

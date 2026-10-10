@@ -26,16 +26,22 @@ func Permissions(role string) []string {
 	case "OWNER":
 		return append([]string{}, PermissionNames...)
 	case "MANAGER":
-		return append(append(append(append(append(append(append([]string{"organization.read", "branch.read", "branch.update", "employee.read", "employee.invite", "employee.update", "employee.remove", "role.read", "role.assign", "audit.read"}, CatalogPermissions...), InventoryPermissions...), POSPermissions...), PurchasingPermissions...), ReturnsPermissions...), AdjustmentPermissions...), PricingPermissions...)
+		return append(managerPermissions(), CustomerPermissions...)
 	case "INVENTORY_STAFF":
 		return append([]string{"organization.read", "branch.read", "catalog.read", "catalog.create", "catalog.update", "catalog.import", "catalog.barcode.manage", "catalog.labels.print", "inventory.read", "inventory.audit.read", "inventory.location.manage", "inventory.adjustment.create", "inventory.count.create", "inventory.count.update", "inventory.transfer.create", "inventory.transfer.dispatch", "inventory.transfer.receive", "inventory.reorder_point.manage"}, WarehousePurchasingPermissions...)
 	case "PURCHASING_STAFF":
 		return append([]string{"organization.read", "branch.read", "catalog.read", "inventory.read", "inventory.transfer.create", "inventory.transfer.receive", "inventory.reorder_point.manage"}, BuyerPermissions...)
 	case "CASHIER":
-		return append(append(append([]string{"organization.read", "branch.read", "catalog.read", "inventory.read", "pricing.read", "promotions.read", "discount.read", "discount.request"}, CashierPOSPermissions...), CashierReturnsPermissions...), CashierAdjustmentPermissions...)
+		return append(cashierPermissions(), "customers.read", "customers.select", "customers.groups.read")
 	default:
 		return []string{}
 	}
+}
+func managerPermissions() []string {
+	return append(append(append(append(append(append(append([]string{"organization.read", "branch.read", "branch.update", "employee.read", "employee.invite", "employee.update", "employee.remove", "role.read", "role.assign", "audit.read"}, CatalogPermissions...), InventoryPermissions...), POSPermissions...), PurchasingPermissions...), ReturnsPermissions...), AdjustmentPermissions...), PricingPermissions...)
+}
+func cashierPermissions() []string {
+	return append(append(append([]string{"organization.read", "branch.read", "catalog.read", "inventory.read", "pricing.read", "promotions.read", "discount.read", "discount.request"}, CashierPOSPermissions...), CashierReturnsPermissions...), CashierAdjustmentPermissions...)
 }
 func hasPermission(role, permission string) bool {
 	for _, allowed := range Permissions(role) {

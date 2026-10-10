@@ -33,6 +33,8 @@ func respond(writer http.ResponseWriter, request *http.Request, result any, err 
 		code, message, status = "INSUFFICIENT_STOCK", "Configured sale location has insufficient recorded stock", 409
 	case errors.Is(err, ErrPrice):
 		code, message, status = "PRICE_CHANGED", "Prices changed; review and refresh the cart before payment", 409
+	case errors.Is(err, ErrCustomer):
+		code, message, status = "CUSTOMER_UNAVAILABLE", "Customer is no longer available; review customer selection", 409
 	case errors.Is(err, ErrPending):
 		code, message, status = "PAYMENT_PENDING", "Pending or confirmed payment must be reconciled before proceeding", 409
 	case errors.Is(err, ErrConflict):
@@ -70,6 +72,9 @@ func writeEndpoint[Input any](status int, run func(context.Context, string, stri
 func resourceID(request *http.Request) string { return chi.URLParam(request, "resourceId") }
 func (handler Handler) TenantRoutes(router chi.Router) {
 	service := handler.Service
+	router.Patch("/pos/carts/{resourceId}/customer", writeEndpoint(200, func(ctx context.Context, user, org string, request *http.Request, input CustomerInput) (any, error) {
+		return service.SelectCustomer(ctx, user, org, resourceID(request), input)
+	}))
 	router.Get("/pos/carts/{resourceId}/quote", endpoint(200, func(ctx context.Context, user, org string, request *http.Request) (any, error) {
 		return service.Quote(ctx, user, org, resourceID(request), request.URL.Query().Get("approval_id"))
 	}))

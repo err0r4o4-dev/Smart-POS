@@ -1,5 +1,6 @@
 import { organizationRequest } from './organization-api';
 import type { PricingQuote } from './pricing-api';
+import type { CustomerSelection } from './customers-api';
 
 export interface POSPage<Item> {
   items: Item[];
@@ -36,6 +37,9 @@ export interface POSItem {
   previous_price: string;
 }
 export interface POSCart {
+  customer_id?: string | null;
+  customer?: CustomerSelection | null;
+  customer_cleared?: boolean;
   id: string;
   branch_id: string;
   terminal_id: string;
@@ -73,6 +77,8 @@ export interface POSShift {
 export type PaymentMethod = 'CASH' | 'QR_MANUAL' | 'BANK_TRANSFER_MANUAL';
 export type RecordedPaymentMethod = PaymentMethod | 'EXCHANGE_CREDIT' | 'NONE';
 export interface POSCheckout {
+  customer_id?: string|null;
+  customer_code_snapshot?: string;
   id: string;
   cart_id: string;
   terminal_id: string;
@@ -105,6 +111,8 @@ export interface SaleSummary {
   receipt_number: string;
 }
 export interface POSSale extends SaleSummary {
+  customer_id?: string | null;
+  customer_code_snapshot?: string;
   store_name: string;
   store_address: string;
   currency: string;

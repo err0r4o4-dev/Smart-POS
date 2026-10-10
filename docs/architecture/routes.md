@@ -6,6 +6,8 @@ Implemented identity routes are Phase 1A; organization/branch/member routes belo
 
 The nine Products routes are implemented Phase 1C. Catalog records are organization-scoped and shared across branches, not branch-owned. The backend rechecks active organization membership and catalog permissions; the existing Manager policy denies catalog access when no assigned active branch remains. Operational staff access follows active organization membership and fixed catalog permissions, not a separate all-role active-branch gate. Mutation-specific permissions are enforced separately from read access. See [catalog architecture](catalog.md).
 
+Phase 5.1 newly registers only `/pos/returns` and `/sales/refunds`; exchanges/voids, pricing/promotions, customers/loyalty and expiry/quality remain unregistered. Phase 5 overall is PARTIAL, not 106 implemented pages. See [actual scope](business-operations.md).
+
 | Module | Route | Status | Phase | Access target |
 | --- | --- | --- | --- | --- |
 | Authentication | `/login` | Implemented Phase 1A | 1 | public Origin-validated entry |
@@ -21,7 +23,7 @@ The nine Products routes are implemented Phase 1C. Catalog records are organizat
 | POS | `/pos` | Implemented (Phase 3) | 3 | session + tenant + branch permission |
 | POS | `/pos/held-carts` | Implemented (Phase 3) | 3 | session + tenant + branch permission |
 | POS | `/pos/checkout` | Implemented (Phase 3) | 3 | session + tenant + branch permission |
-| POS | `/pos/returns` | Planned (not registered) | 3 | session + tenant + branch permission |
+| POS | `/pos/returns` | Implemented Phase 5.1 (Local) | 5 | session + tenant + branch + returns.read; actions reauthorize |
 | POS | `/pos/exchanges` | Planned (not registered) | 3 | session + tenant + branch permission |
 | POS | `/pos/register/open` | Implemented (Phase 3) | 3 | session + tenant + branch permission |
 | POS | `/pos/register/close` | Implemented (Phase 3) | 3 | session + tenant + branch permission |
@@ -29,7 +31,7 @@ The nine Products routes are implemented Phase 1C. Catalog records are organizat
 | POS | `/pos/shifts` | Implemented (Phase 3) | 3 | session + tenant + branch permission |
 | Sales | `/sales` | Implemented (Phase 3) | 3 | session + tenant + branch permission |
 | Sales | `/sales/:id` | Implemented (Phase 3) | 3 | session + tenant + branch permission |
-| Sales | `/sales/refunds` | Planned (not registered) | 3 | session + tenant + branch permission |
+| Sales | `/sales/refunds` | Implemented Phase 5.1 (Local) | 5 | session + tenant + branch + refunds.read; settlement restricted |
 | Sales | `/sales/voids` | Planned (not registered) | 3 | session + tenant + branch permission |
 | Sales | `/receipts` | Implemented (Phase 3) | 3 | session + tenant + branch permission |
 | Sales | `/sales/tax-documents` | Planned (not registered) | 3 | session + tenant + branch permission |

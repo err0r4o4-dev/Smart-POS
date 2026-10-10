@@ -1,5 +1,15 @@
 # Verification
 
+## Current Phase 5 local slice (2026-10-10 Asia/Bangkok)
+
+**Phase 0–4 COMPLETED (Local); Phase 5 PARTIAL. Phase 5.1 Returns/Refunds COMPLETED (Local), scoped; 5.2–5.6 not implemented; 5.7 PARTIAL; Phase 6 NOT STARTED / NOT READY.** This current section supersedes historical NOT STARTED labels below without replacing earlier evidence. See [detailed Thai report](phase5-verification.md), [architecture/limits](../architecture/business-operations.md) and [schema](../database/business-operations.md).
+
+Latest real runs: Returns **111+94+42=247 assertions**, catalog116/inventory135/POS132+64/purchasing175+125, auth/organization regressions; **91 frontend tests**, contracts/typecheck/lint (0 errors/3 existing warnings)/build; Go format/vet/race/build in CGO-enabled image; **19/19 real-enabled Playwright tests**; foundation/gateway smoke and7 AI health tests. Print/responsive Returns screenshots inspected. A chained regression timeout was not counted as pass; all suites then reran separately and passed.
+
+Fresh retained scratch `smartpos_phase5_acceptance_20261010_c40fedb1` started with no public tables, applied official migrations1–8 individually with clean trackers and no-change rerun; six rollback-only SQL suites passed. Existing isolated smartpos counts/tracker unchanged during scratch verification; final global ledger/balance mismatches=0. Both primary/test volumes preserved; no primary migration/reset/commit/push/deploy. Readiness exact clean8; migration8 contains Returns/Refunds only.
+
+Fixed real managed-shelf over-capacity return regression (two concurrent successes instead of one); active shelf/assignment/capacity and rollback/recovery verified in42 assertions. Shift list serializes cash_refunds as exact money string. Manual refund confirmation is operator evidence, not bank verification; no auto payout. Future exchange/pricing/loyalty/batch gates cannot be claimed passed from this slice.
+
 ## Phase 4 final local acceptance (2026-10-10 Asia/Bangkok)
 
 **Phase 0–4: COMPLETED (Local); Phase 5: NOT STARTED.** Mandatory Phase 4 gates passed on the isolated `smartpos-auth-test` stack. Docker Engine 29.8.2 / Compose v5.5.1, PostgreSQL 17.11 and Caddy v2.10.2 were confirmed running; host CGO=0 was not changed because Go race checks passed in the existing CGO-enabled api-check image (Go 1.26.9 / GCC 15.2.0).

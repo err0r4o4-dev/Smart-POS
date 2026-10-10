@@ -1,6 +1,21 @@
-# SmartPOS — Phase 1 / Phase 2 / Phase 3 / Phase 4 checklist
+# SmartPOS — Phase 1 / Phase 2 / Phase 3 / Phase 4 / Phase 5 checklist
 
-Status: **Phase 0–4 COMPLETED for the local acceptance gates** (2026-10-10), not production readiness. **Phase 5+ is NOT STARTED.** Current evidence: `docs/development/phase4-verification.md` and `docs/development/verification.md`. This finalization passes 75 frontend tests, 300 purchasing/shelf assertions, 18 browser tests, Go race checks and actual Phase 0–3 regressions. Earlier counts/checklists remain historical evidence, not current run totals.
+Status: **Phase 0–4 COMPLETED (Local); Phase 5 PARTIAL** (2026-10-10), not production readiness. **Phase 5.1 COMPLETED (Local); 5.2–5.6 not implemented; 5.7 PARTIAL. Phase 6–7 NOT STARTED.** Current evidence: `docs/development/phase5-verification.md` and `docs/development/verification.md`: 247 Returns assertions, 91 frontend tests, 19 browser tests, fresh migration chain 1–8, Go race and Phase 0–4 regressions. Earlier counts/checklists remain historical evidence, not current run totals.
+
+## Phase 5 implementation in progress (2026-10-10)
+
+- [x] Inspect the existing transaction boundaries and preserve Phase 0–4 evidence.
+- [x] Implement Phase 5.1 historical returns, Inventory posting and explicit refund settlement.
+- [x] Add typed contracts, tenant-scoped Returns UI and a real gateway browser workflow.
+- [x] Finish scoped Phase 5.1 acceptance: historical rounding, concurrent over-return, all-item rollback, late-shift cash, reconciliation, runtime RLS and same-key recovery.
+- [x] Reproduce and fix managed-shelf over-capacity returns; 42 real assertions cover concurrent posting, inactive/unassigned shelves and recovery.
+- [x] Rebuild isolated web/api; verify final print CSS, seven responsive widths and 19/19 real-enabled browser tests.
+- [x] Fresh migrate 1–8/rerun and six rollback-only SQL suites; preserve primary volume, test data and retained scratch databases.
+- [x] Record actual commands, failed attempts, limitations and remaining implementation work without replacing Phase 0–4 evidence.
+- [ ] Implement Phase 5.2 Exchanges/Voids without a second checkout engine.
+- [ ] Implement Phase 5.3 Pricing/Promotions, Phase 5.4 Customers and Phase 5.5 Loyalty.
+- [ ] Implement Phase 5.6 Batch/Expiry/Write-offs/Recalls across every Inventory path.
+- [ ] Complete Phase 5.7 integration/security/QA; do not mark Phase 5 complete prematurely.
 
 ## Phase 4 continuation and final acceptance
 

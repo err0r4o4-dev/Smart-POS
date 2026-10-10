@@ -1,6 +1,6 @@
 # POS database invariants
 
-Forward migration `000006_pos_sales.up.sql` is required; readiness now expects clean version 6. Migrations 000001-000005 are unchanged. Apply through the repository's up-only migration workflow after an approved backup/restore plan, not by modifying applied historical migrations.
+Forward migration `000006_pos_sales.up.sql` introduced POS/sales; current readiness requires clean version8 with Phase5.1 Returns/Refunds. Migrations000001–000007 remain unchanged. See [business operations additions](business-operations.md) for SALE_RETURN and current-shift cash refunds. Apply only through an approved up-only migration/backup/restore workflow; never modify applied historical migrations or use the primary database as verification scratch.
 
 | Table           | Purpose                                                                                 |
 | --------------- | --------------------------------------------------------------------------------------- |

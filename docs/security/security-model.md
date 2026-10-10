@@ -1,5 +1,17 @@
 # Security model
 
+## Phase 5.1 scoped Returns/Refunds review (2026-10-10)
+
+Evidence: [Phase 5 report](../development/phase5-verification.md); overall Phase5 remains PARTIAL. Implementation-scoped local review, not a penetration test or production certification.
+
+- Every command/read/replay rechecks session, active membership, permission and branch/document access before cached results. Cashier own-document visibility; Owner/Manager scoped approval/settlement. Demotion before approval replay denies403; suspension denies404 under existing concealment policy.
+- Five new FORCE RLS tables and tenant-composite references; runtime non-superuser/non-BYPASSRLS. Missing/mismatched context yields0. Completed history/events/disbursements cannot be rewritten/deleted through runtime; no direct balance-write grant.
+- Strict JSON, bounded payload/pagination/timeouts and existing CSRF/Origin checks. Tests cover missing CSRF/foreign Origin/cross-tenant/branch/changed-payload/stale-revision and immutable source sales.
+- Exact historical allocation, organization locking, unique movement/refund/disbursement identities and deferred checks prevent duplicate effects. All-item failed posting rolls back stock/version/refund/key; same-key recovery tested. Managed shelf status/assignment/capacity revalidated before posting.
+- No automatic external payment. Manual confirmation is reviewed evidence, not bank settlement verification. Uncertain payout retains reconciliation notes; no second-transfer retry instruction. Cash uses current actor-owned open shift, unresolved close gate and immutable old shifts.
+- UI cache/workspace keys scope tenant/user/branch/resource; context changes abort stale mutations; ambiguous retries preserve operation identity. Print is not legal/bank certification. Raw traces may contain sessions and remain uncommitted.
+- Limits: unavailable shift-owner reassignment absent; no draft reservation; no batch expiry/recall guard. Customer privacy/loyalty double-spend/recall races are not implemented/tested. Dedicated runtimeLOGIN/TLS/retention/load operations remain production gates.
+
 ## Phase 3 scoped POS review (2026-10-10)
 
 This is an implementation-scoped local review, not a penetration test or production certification. Evidence: [Phase 3 report](../development/phase3-verification.md), real API/SQL suites and browser regression.

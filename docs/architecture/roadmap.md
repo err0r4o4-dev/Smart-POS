@@ -1,6 +1,6 @@
 # Incremental delivery roadmap
 
-Phase 0–4 are COMPLETED (Local); Phase 5+ remains planned and NOT STARTED. Phase 1A, Phase 1B, Phase 1C and Phase 2 passed their local acceptance gates on 2026-10-09; Phase 3 and Phase 4 final verification finished on 2026-10-10. Phase exits depend on actual verification evidence, not file existence or production-readiness assumptions. See [Phase 4 final acceptance](../development/phase4-verification.md) for current commands, results and production limitations. No Phase 5 implementation or production release is authorized by local acceptance.
+Phase 0–4 are COMPLETED (Local). Phase 5 is PARTIAL: 5.1 Returns/Refunds passed scoped local acceptance on 2026-10-10; 5.2–5.6 are not implemented and 5.7 remains partial. Phase 6–7 are NOT STARTED; Phase 6 is NOT READY. Phase exits depend on actual evidence, not file existence or production-readiness assumptions. See [current Phase 5 evidence](../development/phase5-verification.md) and [preserved Phase 4 acceptance](../development/phase4-verification.md). This implementation does not authorize production release.
 
 | Phase                  | Goals and deliverables                                                                                                                                 | Dependencies                                      | Acceptance/tests/exit gate                                                                                                                                                                                                                                                | Risks                                                                     |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
@@ -15,7 +15,14 @@ Phase 0–4 are COMPLETED (Local); Phase 5+ remains planned and NOT STARTED. Pha
 
 Each phase needs contract/migration review, focused tests, wider regression checks, documented ownership and explicit exit evidence. Do not automatically start Phase 1 after foundation delivery.
 
-## Phase 3 gates (2026-10-10)
+## Phase 5 delivery gates (2026-10-10)
+
+- **5.1 COMPLETED (Local):** historical full/partial returns, exact cumulative allocation, approval/disposition, atomic Inventory/pending-refund/audit, explicit manual settlement/reconciliation and current-shift cash accounting. Latest 247 API assertions, 91 frontend tests, contracts/typecheck/lint/build, Go race and 19 browser regressions passed. Two routes added to implementation status, none to the canonical 106-route inventory.
+- **5.2–5.6 PARTIAL / not implemented:** exchange difference tender and durable document linkage; auditable completed-sale reversal; price lists/promotions; customers/privacy; loyalty ledger/reversal; tracked/untracked batches, expiry/recall and write-offs still required. Do not substitute unrelated checkout/return operations or shell pages for these gates.
+- **5.7 PARTIAL:** Phase 0–4 and Returns regression passed, but concurrency/E2E/security gates for the missing subphases have not run. Phase 5 overall cannot close.
+- Migration 8 contains Returns/Refunds only and has already been applied in isolated databases. Future schema additions need forward-only migrations and renewed readiness/chain verification, never edits to applied migrations or primary test migration.
+
+## Historical Phase 3 gates (2026-10-10)
 
 - Phase 3.1 Terminal, 3.2 Carts/Holds, 3.3 Payments, 3.4 Sales/Inventory, 3.5 Receipts/History, 3.6 Registers/Shifts and 3.7 Integration/Security/QA: **COMPLETED (Local)**. 197 real POS API assertions, Go vet/race/build, 64 frontend tests, additive contracts, fresh migration validation and 17 browser regressions passed. Ten operational routes preserve the 16-module/106-route inventory.
 - Cash and explicit manual QR/transfer acknowledgement are supported; payment gateways, split payments, discounts/separate tax, refunds/voids, sales dashboard and hardware/load validation are not claimed.

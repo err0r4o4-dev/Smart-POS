@@ -8,7 +8,7 @@ import (
 	"smartpos/api/internal/modules/organization"
 )
 
-const shiftJSON = `to_jsonb(shift)-ARRAY['open_key','close_key'] || jsonb_build_object('opening_cash',shift.opening_cash::text,'cash_sales',shift.cash_sales::text,'expected_cash',shift.expected_cash::text,'counted_cash',shift.counted_cash::text,'difference',shift.difference::text,'terminal_name',terminal.name,'cashier_name',cashier.display_name)`
+const shiftJSON = `to_jsonb(shift)-ARRAY['open_key','close_key'] || jsonb_build_object('opening_cash',shift.opening_cash::text,'cash_sales',shift.cash_sales::text,'cash_refunds',shift.cash_refunds::text,'expected_cash',shift.expected_cash::text,'counted_cash',shift.counted_cash::text,'difference',shift.difference::text,'terminal_name',terminal.name,'cashier_name',cashier.display_name)`
 const shiftFrom = ` FROM register_shifts shift JOIN pos_terminals terminal ON terminal.organization_id=shift.organization_id AND terminal.id=shift.terminal_id JOIN users cashier ON cashier.id=shift.cashier_id`
 
 func shiftResult(ctx context.Context, tx pgx.Tx, org, id string) (json.RawMessage, error) {
@@ -85,7 +85,7 @@ func (service *Service) CloseShift(ctx context.Context, user, org, id, key strin
 		return shiftResult(ctx, tx, org, id)
 	}
 	var pending bool
-	err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM pos_checkouts WHERE organization_id=$1 AND shift_id=$2 AND status IN ('AWAITING_PAYMENT','CONFIRMED','RECONCILIATION_REQUIRED'))", org, id).Scan(&pending)
+	err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM pos_checkouts WHERE organization_id=$1 AND shift_id=$2 AND status IN ('AWAITING_PAYMENT','CONFIRMED','RECONCILIATION_REQUIRED')) OR EXISTS(SELECT 1 FROM customer_refunds WHERE organization_id=$1 AND shift_id=$2 AND status IN ('SETTLEMENT_REPORTED','RECONCILIATION_REQUIRED'))", org, id).Scan(&pending)
 	if err != nil {
 		return nil, err
 	}

@@ -1,10 +1,10 @@
 # SmartPOS
 
-Intelligent Retail Management System - Phase 0 foundation, Phase 1A authentication, Phase 1B organization/branch/employee authorization, Phase 1C product catalog, Phase 2 inventory and Phase 3 POS/sales locally verified. Modular Go monolith, React/TypeScript, independent internal FastAPI, PostgreSQL and Caddy in one monorepo. Phase 0–4 are complete for local acceptance, including purchasing/shelves. This is not a production release.
+Intelligent Retail Management System - Modular Go monolith, React/TypeScript, independent internal FastAPI, PostgreSQL and Caddy in one monorepo. Phase 0–4 are complete for local acceptance, including purchasing/shelves. Phase 5 is PARTIAL: Phase 5.1 Returns/Refunds passed scoped local acceptance; 5.2–5.6 are not implemented. This is not a production release. See [current Phase 5 evidence](docs/development/phase5-verification.md).
 
 ## Quick start
 
-Prerequisites: Docker Desktop Linux containers with Compose v2; Node.js 24 for host frontend. Go/Python run through Docker.
+Prerequisites: Docker Desktop Linux containers with Docker Compose; Node.js 24 for host frontend. Go/Python run through Docker. The following startup automatically applies migrations through version 8: use it only for an approved new/local database. Do not use the persistent primary volume as a verification target; Phase 5 acceptance uses the isolated `smartpos-auth-test` project.
 
 ```powershell
 Copy-Item .env.example .env
@@ -33,6 +33,7 @@ npm run verify:organization
 npm run verify:catalog
 npm run verify:inventory
 npm run verify:pos
+npm run verify:returns
 npm run verify:purchasing
 npm run verify:ai
 npm run verify:integration
@@ -46,11 +47,12 @@ Host Vite at http://localhost:5173 proxies `/api` and `/health` to Go at port 80
 
 - **Phase 1A implemented and locally verified:** database-backed registration, Argon2id passwords, server-managed sessions, login/logout, asynchronous account recovery, authentication UI, protected account route, trusted Caddy client identities and spoofing-resistant rate limits.
 - **Phase 1B implemented and locally verified:** organization onboarding/switching/settings, branch management, employee membership/invitations, fixed-role RBAC, branch/tenant denial, last-owner protection and successful-change audit. Runtime connections use `smartpos_runtime`. Membership/invitation isolation is application-enforced, not blanket database RLS.
-- **Phase 1C implemented and locally verified:** products/categories/brands/units, stable SKU variants and exact prices, manufacturer/alias/internal barcodes, keyboard lookup, browser-print labels, atomic CSV/XLSX preview/confirm, permission checks and catalog RLS. Catalog introduced schema version 4; current readiness requires version 7; nine catalog routes. Catalog regression retains 116 API assertions; historical Phase 3 evidence is linked below.
+- **Phase 1C implemented and locally verified:** products/categories/brands/units, stable SKU variants and exact prices, manufacturer/alias/internal barcodes, keyboard lookup, browser-print labels, atomic CSV/XLSX preview/confirm, permission checks and catalog RLS. Catalog introduced schema version 4; current readiness requires clean version 8; nine catalog routes. Catalog regression retains 116 API assertions; historical Phase 3 evidence is linked below.
 - **Phase 3 implemented and locally verified:** stock-source-bound terminals, persisted revisioned carts/holds, exact cash/manual QR/manual transfer confirmation, atomic sales/Inventory posting, durable funds reconciliation, immutable receipts/history and register shifts. Ten browser routes, 197 POS integration assertions, 64 frontend tests and 17 browser tests passed locally. See [Phase 3 report](docs/development/phase3-verification.md).
 - **Foundation:** dashboard, responsive navigation, POS/auth previews, help/error pages, real API status, Go health/readiness, typed FastAPI health, organization/branch migration, local infrastructure and tests.
 - **Phase 4 completed (Local):** suppliers, purchase orders, receiving/returns, shelves/slots/assignments, replenishment tasks and deterministic suggestions. Fresh migrations 1–7/reruns, rollback-only SQL/RLS/grants, 300 purchasing/shelf assertions, 75 frontend tests, Go race/vet/build and 18 browser tests passed with Phase 0–3 regressions retained. See [Phase 4 final acceptance](docs/development/phase4-verification.md).
-- **Documented/planned:** 16 modules and 106 routes remain the canonical inventory. Organization/branch/member/catalog/inventory/POS/sales operations work; purchasing/shelves has passed local acceptance. Customer returns/refunds, valuation and forecasting remain planned. `/dashboard` is not a sales dashboard.
+- **Phase 5.1 completed (Local):** historical full/partial returns, approvals, inspected Inventory disposition, explicit manual refund evidence/reconciliation, current-shift cash accounting and two real routes. Latest acceptance: 247 Returns API assertions, 91 frontend tests, 19 browser tests, Go race/vet/build and fresh migrations 1–8. See [business operations boundaries](docs/architecture/business-operations.md).
+- **Documented/planned:** 16 modules and 106 routes remain the canonical inventory. Phase 5 overall is PARTIAL: exchanges/voids, pricing/promotions, customers/loyalty and batch/expiry/quality are not implemented. Valuation and forecasting remain planned. `/dashboard` is not a sales dashboard; Phase 6 is NOT STARTED / NOT READY.
 - **Deferred:** Redis, MinIO, workers, ML, sqlc and business module packages until working use cases need them.
 - Evidence and blockers: [verification](docs/development/verification.md). Configured CI is not evidence of a successful CI run.
 
@@ -61,7 +63,7 @@ apps/web/               React, layouts, tokens, tests
 apps/api/               Go bootstrap, transport, platform
 apps/ai/                FastAPI and typed health checks
 packages/contracts/    OpenAPI and planned route inventory
-database/migrations/   Forward-only foundation, identity, organization, catalog, inventory, POS and purchasing/shelves migrations
+database/migrations/   Forward-only migrations 1–8; latest adds customer returns/refunds only
 infra/caddy/           Same-origin gateway
 tests/                 Browser and container integration checks
 scripts/               Contract/documentation consistency checks
@@ -85,6 +87,6 @@ Create an active branch-local WAREHOUSE, SALES_FLOOR or SHELF and stock its vari
 
 At `/pos/checkout`, prepare a frozen quote, explicitly acknowledge real received funds, then complete the sale. CASH supports received/change; QR_MANUAL and BANK_TRANSFER_MANUAL require an operator-entered reference and exact amount. They do not contact a bank or prove settlement. If posting fails after funds confirmation, the saved checkout remains RECONCILIATION_REQUIRED; retry completion or have an Owner/Manager document external funds resolution at `/pos/shifts`. Do not collect payment again merely because a response was lost.
 
-Browse `/sales`, `/sales/:id` and `/receipts`; receipts use committed snapshots and browser print at 58/80 mm. Print failure never reverses or reposts a sale. `/pos/register/close` reconciles counted cash against opening cash plus net CASH sales; manual methods are excluded. `/pos/register/history` and `/pos/shifts` retain branch/cashier-scoped history.
+Browse `/sales`, `/sales/:id` and `/receipts`; receipts use committed snapshots and browser print at 58/80 mm. Print failure never reverses or reposts a sale. `/pos/register/close` reconciles counted cash against opening cash plus net CASH sales minus confirmed cash refunds; manual methods are excluded. Reported/unreconciled cash refunds block closure. `/pos/register/history` and `/pos/shifts` retain branch/cashier-scoped history.
 
-Read [POS architecture](docs/architecture/pos.md), [checkout workflow](docs/business-flows/pos-checkout.md), [database invariants](docs/database/sales-transactions.md) and the [historical Phase 3 verification report](docs/development/phase3-verification.md). Phase 4 has since passed [local acceptance](docs/development/phase4-verification.md); Phase 5 is NOT STARTED. Physical scanner/printer, production TLS/secrets, least-privilege login, backup/restore, retention and load gates are not verified.
+Read [POS architecture](docs/architecture/pos.md), [checkout workflow](docs/business-flows/pos-checkout.md), [database invariants](docs/database/sales-transactions.md) and the [historical Phase 3 verification report](docs/development/phase3-verification.md). Phase 4 has since passed [local acceptance](docs/development/phase4-verification.md); current Phase 5.1 and remaining gaps are recorded in the [Phase 5 report](docs/development/phase5-verification.md). Physical scanner/printer, production TLS/secrets, least-privilege login, backup/restore, retention and load gates are not verified.

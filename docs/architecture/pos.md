@@ -1,5 +1,7 @@
 # POS and sales - Phase 3
 
+Current Phase 5.1 extension: separate customer returns/refunds reuse this POS history and current-shift accounting; original sales and closed shifts remain immutable. Readiness is clean schema8; exchanges/voids/discounts remain unimplemented. See [business operations](business-operations.md) and [latest acceptance](../development/phase5-verification.md). The Phase3 delivery statements below remain historical except the updated current register formula.
+
 Local implementation, verified on 2026-10-10; not a production release. The work started with the 2026-10-09 execution context. Go remains a modular monolith with Chi/pgx, PostgreSQL remains the only transactional database, and React/TanStack Query remains the frontend. No gateway, microservice, AI or Phase 4 functionality is added.
 
 ## Terminal and stock-source policy
@@ -36,7 +38,7 @@ Database uniqueness covers one open shift per terminal/cashier, request keys, on
 
 ## Register accounting
 
-`OPEN -> CLOSED`, with explicit opening cash and counted cash. `cash_sales` sums completed CASH totals (tender minus change), not QR/transfer amounts. `expected_cash = opening_cash + cash_sales`; signed `difference = counted_cash - expected_cash`. Pending/confirmed/reconciliation-required attempts block closure. A close/settlement race either rejects the premature close or closes after the committed sale is included. No cash-in/out or shared-cashier shift model is implemented.
+`OPEN -> CLOSED`, with explicit opening cash and counted cash. `cash_sales` sums completed CASH totals (tender minus change), not QR/transfer amounts. Phase5.1 adds confirmed `cash_refunds`: `expected_cash = opening_cash + cash_sales - cash_refunds`; signed `difference = counted_cash - expected_cash`. Pending/confirmed/reconciliation-required checkout attempts and reported/unreconciled cash refunds block closure. A close/settlement race rejects premature close or includes the committed accounting. Refunds use a current actor-owned open shift, never reopen/rewrite the original closed shift. General cash-in/out and shared-cashier shifts remain unimplemented.
 
 ## UI and history
 

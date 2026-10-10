@@ -19,6 +19,7 @@ import { LabelsPage } from '../features/catalog/LabelsPage';
 import { InventoryPage } from '../features/inventory/InventoryPage';
 import { PurchasingPage } from '../features/purchasing/PurchasingPage';
 import { ShelfPage } from '../features/purchasing/ShelfPage';
+import { ReturnsPage } from '../features/returns/ReturnsPage';
 import { POSWorkspace } from '../features/pos/POSWorkspace';
 import {
   POSTerminalPage,
@@ -55,6 +56,14 @@ export const router = createBrowserRouter([
         element: <RequireSession />,
         children: [
           { path: paths.account, element: <AccountPage /> },
+          {
+            element: <OrganizationGate permission="returns.read" />,
+            children: [{ path: '/pos/returns', element: <ReturnsPage /> }],
+          },
+          {
+            element: <OrganizationGate permission="refunds.read" />,
+            children: [{ path: '/sales/refunds', element: <ReturnsPage refunds /> }],
+          },
           {
             element: <OrganizationGate permission="supplier.read" />,
             children: [

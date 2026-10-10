@@ -127,6 +127,19 @@ const posPaths = [
   '/receipts',
   '/receipts/{resourceId}',
 ].map((path) => '/api/v1/organizations/{id}' + path);
+const returnPaths = [
+  '/returns',
+  '/returns/{resourceId}',
+  '/returns/sales/{saleId}',
+  ...['submit', 'approve', 'reject', 'cancel', 'complete'].map(
+    (action) => '/returns/{resourceId}/' + action,
+  ),
+  '/refunds',
+  '/refunds/{resourceId}',
+  ...['report-settlement', 'confirm-settlement', 'reconcile'].map(
+    (action) => '/refunds/{resourceId}/' + action,
+  ),
+].map((path) => '/api/v1/organizations/{id}' + path);
 assert.deepEqual(
   Object.keys(api.paths).sort(),
   [
@@ -134,6 +147,7 @@ assert.deepEqual(
     ...catalogPaths,
     ...inventoryPaths,
     ...supplyPaths,
+    ...returnPaths,
     '/api/v1/auth/forgot-password',
     '/api/v1/auth/login',
     '/api/v1/auth/logout',
@@ -368,6 +382,30 @@ assert.equal(
   '#/components/schemas/POSMoney',
 );
 checkReferences(api);
+for (const path of returnPaths) {
+  for (const method of ['get', 'post']) {
+    const operation = api.paths[path][method];
+    if (!operation) continue;
+    assert.ok(
+      !operationIDs.has(operation.operationId),
+      'Duplicate return operation',
+    );
+    operationIDs.add(operation.operationId);
+    for (const status of ['400', '401', '403', '404', '409', '503'])
+      assert.ok(operation.responses[status]);
+    if (method === 'post')
+      assert.ok(
+        operation.parameters.some(
+          (parameter) =>
+            parameter.name === 'Idempotency-Key' && parameter.required === true,
+        ),
+      );
+  }
+}
+assert.equal(
+  api.components.schemas.POSShift.properties.cash_refunds.$ref,
+  '#/components/schemas/POSMoney',
+);
 assert.equal(
   api.components.schemas.CatalogVariantInput.properties.cost_price.type,
   'string',

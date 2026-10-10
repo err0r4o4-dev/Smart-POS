@@ -1,5 +1,7 @@
 # Database foundation
 
+Current schema/readiness is exact clean version **8**. Migration 8 implements customer Returns/Refunds only, not all Phase 5 domains. See [business operations schema](business-operations.md) and [fresh-chain evidence](../development/phase5-verification.md). Persistent primary volumes were not migrated for verification.
+
 Migration 000001 creates organizations/branches: UUID keys supplied by app, timestamptz, composite tenant references, organization-scoped unique branch code, explicit checks. Migration 000002 adds global users, hashed auth sessions, hashed reset tokens, auth audit events and hashed rate-limit keys. No seed credentials/users/sales or extensions.
 
 The organization/branch Phase 1C catalog and Phase 2 inventory tables ENABLE and FORCE RLS. Transaction-local `app.organization_id` derives from authorized membership. Missing context yields no catalog rows. Superusers bypass RLS: Compose bootstrap user is local-only. Migration 000003 created the non-owner runtime role `smartpos_runtime`; API connections SET ROLE to it. Scoped queries remain mandatory. Membership/invitation tables remain application-scoped, not blanket database RLS.
@@ -11,7 +13,7 @@ The organization/branch Phase 1C catalog and Phase 2 inventory tables ENABLE and
 | Inventory      | stock_locations, stock_balances, stock_movements, inventory_operations, inventory_documents, inventory_document_items, inventory_reorder_points               |
 | Shelves        | shelves, shelf_slots, replenishment_tasks                                                                                                                     |
 | Purchasing     | suppliers, purchase_orders, purchase_order_items, goods_receipts, goods_receipt_items                                                                         |
-| Sales/payments | Implemented: pos_terminals, register_shifts, pos_carts, pos_cart_items, pos_checkouts, sales, sale_items, sale_payments, receipts. Deferred: refunds, returns |
+| Sales/payments | Implemented: pos_terminals, register_shifts, pos_carts, pos_cart_items, pos_checkouts, sales, sale_items, sale_payments, receipts; Phase 5.1 customer_returns/items/refunds, refund_settlement_events, register_cash_disbursements. Deferred: exchanges/voids |
 | Customers      | customers, loyalty_accounts, loyalty_transactions                                                                                                             |
 | Promotions     | promotions, promotion_rules                                                                                                                                   |
 | Quality        | product_batches, write_offs                                                                                                                                   |
@@ -20,7 +22,7 @@ The organization/branch Phase 1C catalog and Phase 2 inventory tables ENABLE and
 
 Tenant tables carry organization_id; branch tables also branch_id. Composite FKs prevent cross-tenant references. Unique/index keys include tenant and derive from queries. Catalog money uses NUMERIC(18,2), organization currency and exact decimal strings. Phase 3 calculates THB using integer cents and big-integer multiplication with HALF_UP rounding per line; stored amounts and API strings remain exact. Phase 2 supplies NUMERIC(18,3) quantities, an append-only ledger and transactional balance projections; see inventory-ledger.md.
 
-`npm run migrate` runs pinned golang-migrate up locally, also automatic before API starts. Migrations are forward-only; do not run down/drop automatically. Add sequential migrations; never edit deployed migrations. Non-disposable changes require backup/rollback approval. Readiness rejects missing/dirty/outdated schema (required version 6). Do not run the default stack/migrate command against a persistent primary volume as part of verification without approval.
+`npm run migrate` runs pinned golang-migrate up locally, also automatic before API starts. Migrations are forward-only; do not run down/drop automatically. Add sequential migrations; never edit deployed migrations. Non-disposable changes require backup/rollback approval. Readiness rejects missing/dirty/other schema versions (required version 8). Do not run the default stack/migrate command against a persistent primary volume as part of verification without approval.
 
 ## Phase 1C catalog migration
 
@@ -34,7 +36,7 @@ All seven tables FORCE RLS using transaction-local organization context. Runtime
 
 Runtime is SELECT-only on stock_balances and SELECT/INSERT-only on stock_movements. Append-only triggers also reject ledger UPDATE/DELETE; the SECURITY DEFINER posting trigger has fixed search_path, revoked PUBLIC execution, explicit tenant/user/unfinished-operation validation and locked quantity/version updates. A Variant unit cannot change after stock history. Opening is positive, once per identity and before any ledger history. No existing migration 1–4 was edited, no down migration or original-volume change was performed.
 
-Migration up and repeated no-change were verified only in smartpos-auth-test, together with rollback-only constraints, RLS, precision, grants and reconciliation assertions. Inventory originally required clean schema 5; current POS readiness requires 6. Production needs distinct least-privileged runtime LOGIN and migration credentials plus backup/recovery planning; see [ledger design](inventory-ledger.md).
+Migration up and repeated no-change were verified only in smartpos-auth-test, together with rollback-only constraints, RLS, precision, grants and reconciliation assertions. Inventory originally required clean schema5, POS introduced6; current readiness is clean8. Production needs distinct least-privileged runtime LOGIN and migration credentials plus backup/recovery planning; see [ledger design](inventory-ledger.md).
 
 ## Phase 3 POS and sales migration
 

@@ -13,6 +13,7 @@ import (
 	"smartpos/api/internal/modules/organization"
 	"smartpos/api/internal/modules/pos"
 	"smartpos/api/internal/modules/purchasing"
+	"smartpos/api/internal/modules/returns"
 	"smartpos/api/internal/platform/httpx"
 )
 
@@ -42,7 +43,8 @@ func Router(checker Readiness, logger *slog.Logger, authentication ...identity.H
 			inventoryHandler := inventory.Handler{Service: &inventory.Service{Organization: organizations}}
 			posHandler := pos.Handler{Service: &pos.Service{Organization: organizations}}
 			purchasingHandler := purchasing.Handler{Service: &purchasing.Service{Organization: organizations}}
-			organization.Handler{Service: organizations, Authentication: authentication[0]}.Routes(version, catalogHandler.TenantRoutes, inventoryHandler.TenantRoutes, posHandler.TenantRoutes, purchasingHandler.TenantRoutes)
+			returnsHandler := returns.Handler{Service: &returns.Service{Organization: organizations}}
+			organization.Handler{Service: organizations, Authentication: authentication[0]}.Routes(version, catalogHandler.TenantRoutes, inventoryHandler.TenantRoutes, posHandler.TenantRoutes, purchasingHandler.TenantRoutes, returnsHandler.TenantRoutes)
 		}
 		version.Get("/system", func(writer http.ResponseWriter, request *http.Request) {
 			httpx.JSON(writer, 200, map[string]any{"data": map[string]any{"name": "SmartPOS", "phase": 0, "authentication": "server_sessions"}})

@@ -903,6 +903,7 @@ export function RegisterPage({
             <>
               <p>เงินเปิดกะ {moneyText(pos.shift.opening_cash)}</p>
               <p>ยอดขายเงินสดสุทธิ {moneyText(pos.shift.cash_sales)}</p>
+              <p>คืนเงินสด {moneyText(pos.shift.cash_refunds ?? '0.00')}</p>
               <strong>
                 เงินควรมี {moneyText(pos.shift.expected_cash)} บาท
               </strong>
@@ -950,6 +951,7 @@ export function RegisterPage({
                 <th>เวลา</th>
                 <th>เปิดกะ</th>
                 <th>ขายเงินสด</th>
+                <th>คืนเงินสด</th>
                 <th>ควรมี</th>
                 <th>นับจริง / ส่วนต่าง</th>
                 <th>สถานะ</th>
@@ -971,6 +973,7 @@ export function RegisterPage({
                   </td>
                   <td>{item.opening_cash}</td>
                   <td>{item.cash_sales}</td>
+                  <td>{item.cash_refunds ?? '0.00'}</td>
                   <td>{item.expected_cash}</td>
                   <td>
                     {item.counted_cash ?? '?'} / {item.difference ?? '?'}

@@ -61,6 +61,7 @@ export interface POSShift {
   status: string;
   opening_cash: string;
   cash_sales: string;
+  cash_refunds?: string;
   expected_cash: string;
   counted_cash: string | null;
   difference: string | null;

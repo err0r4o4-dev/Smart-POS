@@ -32,6 +32,8 @@ export interface NavigationItem {
   roles?: Role[];
 }
 export const navigation: NavigationItem[] = [
+  { to: '/pos/returns', label: 'คืนสินค้าลูกค้า', icon: 'pos', permission: 'returns.read' },
+  { to: '/sales/refunds', label: 'ติดตามการคืนเงิน', icon: 'dashboard', permission: 'refunds.read' },
   {
     to: '/pos',
     label: 'ขายสินค้า / POS',

@@ -2,7 +2,7 @@
 
 Phase 0 implements platform/presentation, Phase 1A implements identity, Phase 1B implements organization/branch/employee membership management with fixed RBAC Phase 1C implements product catalog and Phase 2 implements inventory core. Other business functionality remains planned. API groups/events below are proposals unless explicitly marked implemented; the live source is OpenAPI. Page counts remain the canonical 16-module/106-route inventory. Upstream dependencies are constrained by dependencies.md. See [Phase 1B architecture](organization.md) and [Phase 1C architecture](catalog.md).
 
-Phase numbers identify the primary delivery phase: POS returns/exchanges and sale refunds extend into Phase 5; settings integrations/backup and the support page extend into Phase 7. Dashboard/help have only the explicitly listed Phase 0 presentations.
+Current status supersedes the older introductory scope: Phase 0–4 are locally accepted and Phase 5.1 Returns/Refunds is locally accepted; Phase 5 overall is PARTIAL. Phase numbers identify primary delivery: returns/refunds extend into 5.1; exchanges/voids and remaining business operations are still pending. Settings integrations/backup and support extend into Phase 7. Dashboard/help retain only listed presentations. See [business operations](business-operations.md).
 
 ## Authentication (6 pages)
 
@@ -47,22 +47,22 @@ Phase numbers identify the primary delivery phase: POS returns/exchanges and sal
 - Error cases: insufficient stock, payment mismatch, duplicate request.
 - Tests: concurrent checkout, idempotency, exact totals, failed payment.
 - Implementation phase: 3.
-- Current status: Phase 3.1–3.7 implemented and locally verified on seven operational POS routes. /preview/pos remains a non-functional preview. Returns/exchanges are deferred; manual acknowledgement is not bank/gateway settlement proof. See [POS architecture](pos.md).
+- Current status: Phase 3.1–3.7 implemented and locally verified on seven operational POS routes; Phase 5.1 adds `/pos/returns` with original-sale validation, approval and inspected Inventory posting. /preview/pos remains a non-functional preview. Exchanges remain deferred; manual acknowledgement is not bank/gateway settlement proof. See [POS architecture](pos.md) and [Returns boundary](business-operations.md).
 
 ## Sales (6 pages)
 
 - Business purpose: Traceable sale and receipt history.
-- Responsibilities: Immutable completed sale snapshots, scoped history/details and receipts. Void/refund workflows remain deferred.
+- Responsibilities: Immutable completed sale snapshots, scoped history/details and receipts; explicit Phase 5.1 refund evidence/reconciliation. Completed-sale voids remain deferred.
 - Planned pages: `/sales`, `/sales/:id`, `/sales/refunds`, `/sales/voids`, `/receipts`, `/sales/tax-documents`.
 - Planned API groups: /sales, /receipts.
-- Implemented entities: sales, sale_items, sale_payments and receipts. Refunds/returns remain proposed.
+- Implemented entities: sales, sale_items, sale_payments, receipts and Phase 5.1 customer_returns/items/refunds, refund_settlement_events and register_cash_disbursements.
 - Dependencies: owning domains/upstream capabilities in [dependency matrix](dependencies.md); authorization through identity and organization for all tenant operations.
 - Implemented permissions: sales.read, receipts.read/print and pos.payment.reconcile (Owner/Manager). sales.void/refund.approve are not enabled.
 - Audit: completed sales and explicit external funds-resolution notes; no automatic refund or event bus.
 - Error cases: invalid state, duplicate refund, absent receipt.
 - Tests: tenant/branch denial, refund limits, snapshots.
 - Implementation phase: 3.
-- Current status: /sales, /sales/:id and /receipts implemented and locally verified. 58/80 mm browser printing uses immutable snapshots; physical printers, refunds, voids and tax documents are not implemented.
+- Current status: /sales, /sales/:id and /receipts implemented and locally verified; `/sales/refunds` now implements separate manual settlement/reconciliation and current-shift cash accounting. 58/80 mm sales printing uses immutable snapshots; refund acknowledgement printing is not a tax receipt. Physical printers, completed-sale voids and tax documents remain unimplemented.
 
 ## Products (9 pages)
 

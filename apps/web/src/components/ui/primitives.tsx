@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react';
-import { AlertCircle, LoaderCircle, ShoppingBag } from 'lucide-react';
+import { AlertCircle, LoaderCircle } from 'lucide-react';
+import logoMark from '../../assets/logo-mark.png';
 
 export function Button({
   className = '',
@@ -22,16 +23,22 @@ export function Tag({
 }) {
   return <span className={`tag tag-${tone}`}>{children}</span>;
 }
-export function Brand({ compact = false }: { compact?: boolean }) {
+export function Brand({
+  compact = false,
+  className = '',
+}: {
+  compact?: boolean;
+  className?: string;
+}) {
   return (
-    <span className="brand">
+    <span className={`brand ${compact ? 'brand-compact' : ''} ${className}`.trim()}>
       <span className="brand-mark">
-        <ShoppingBag size={23} aria-hidden="true" />
+        <img src={logoMark} alt="VELO Icon" className="brand-mark-img" />
       </span>
       {!compact && (
         <span>
-          Smart<span className="brand-light">POS</span>
-          <small>INTELLIGENT RETAIL</small>
+          VELO<span className="brand-light">POS</span>
+          <small>SMART POS PLATFORM</small>
         </span>
       )}
     </span>

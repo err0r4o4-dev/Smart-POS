@@ -46,7 +46,7 @@ export function ManagementLayout() {
         Skip to content
       </a>
       <aside className="sidebar">
-        <NavLink to="/dashboard" aria-label="SmartPOS overview">
+        <NavLink to="/dashboard" aria-label="VELO SmartPOS overview">
           <Brand />
         </NavLink>
         <div className="workspace-context">
@@ -120,7 +120,7 @@ export function ManagementLayout() {
         </main>
         <footer className="footer">
           SmartPOS · Intelligent Retail Management
-          <span>Local environment · not production</span>
+          <span>Foundation, not production</span>
         </footer>
       </div>
       {

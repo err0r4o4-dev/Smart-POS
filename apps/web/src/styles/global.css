@@ -336,14 +336,27 @@ ul {
   grid-template-columns: 256px minmax(0, 1fr);
 }
 .sidebar {
+  overflow: hidden;
   background: var(--surface);
   border-right: 1px solid var(--border);
   position: sticky;
   top: 0;
   height: 100vh;
+  height: 100dvh;
   padding: 30px 20px 22px;
   display: flex;
   flex-direction: column;
+}
+.sidebar > a,
+.sidebar > .workspace-context,
+.sidebar > .nav-label {
+  flex-shrink: 0;
+}
+.sidebar-navigation {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
 }
 .sidebar > a {
   padding-left: 9px;
@@ -399,21 +412,66 @@ ul {
   color: var(--primary-strong);
   font-weight: 650;
 }
-.sidebar-note {
-  margin-top: auto;
+.nav-group {
+  margin: 6px 0;
+}
+.nav-group-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: var(--radius-small);
+  background: transparent;
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  text-align: start;
+  cursor: pointer;
+}
+.nav-group-toggle:hover {
   background: var(--canvas);
-  padding: 20px 15px;
+}
+.nav-group-toggle.active {
+  color: var(--primary-strong);
+}
+.nav-group-toggle svg {
+  flex-shrink: 0;
+}
+.nav-group-toggle[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+.nav-group-items {
+  margin: 4px 0 8px 10px;
+  padding-left: 6px;
+  border-left: 1px solid var(--border);
+}
+.nav-item > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.nav-item > svg {
+  flex-shrink: 0;
+}
+.sidebar-note {
+  flex-shrink: 0;
+  margin-top: 12px;
+  background: var(--canvas);
+  padding: 12px;
   border-radius: var(--radius-card);
   font-size: 12px;
 }
 .sidebar-note strong {
   display: block;
-  margin-top: 10px;
   font-size: 13px;
 }
 .sidebar-note p {
   font-size: 12px;
-  margin: 8px 0 16px;
+  margin: 4px 0 8px;
 }
 .tiny-dot {
   width: 8px;
@@ -749,6 +807,27 @@ ul {
 }
 .module-section .section-heading {
   margin-bottom: 20px;
+}
+.workspace-modules {
+  margin: 24px 0;
+}
+.workspace-module-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 16px;
+}
+.workspace-module-link h2 {
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+.workspace-module-link span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+.workspace-module-link:hover {
+  border-color: var(--primary-strong);
 }
 .module-grid {
   display: grid;

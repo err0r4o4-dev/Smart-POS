@@ -1,0 +1,161 @@
+import { fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter, useNavigate } from 'react-router-dom';
+import { expect, it } from 'vitest';
+import { navigation, navigationGroups, previewNavigation } from '../app/routes';
+import type { Session } from '../app/access';
+import { NavigationMenu } from './NavigationMenu';
+
+const owner: Session = {
+  authenticated: true,
+  role: 'OWNER',
+  permissions: navigation.flatMap((item) =>
+    item.permission ? [item.permission] : [],
+  ),
+};
+
+function renderMenu(path: string, access: Session = owner, preview = false) {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <NavigationMenu
+        items={preview ? previewNavigation : navigation}
+        access={access}
+        preview={preview}
+      />
+    </MemoryRouter>,
+  );
+}
+
+it('assigns every operational module to exactly one group', () => {
+  const groupedPaths = navigationGroups.flatMap((group) => group.paths);
+  expect(new Set(groupedPaths).size).toBe(groupedPaths.length);
+  expect([...groupedPaths, '/dashboard', '/help'].sort()).toEqual(
+    navigation.map((item) => item.to).sort(),
+  );
+});
+
+it('keeps dashboard and help outside seven initially collapsed groups', () => {
+  renderMenu('/dashboard');
+  expect(screen.getAllByRole('button')).toHaveLength(7);
+  for (const button of screen.getAllByRole('button'))
+    expect(button).toHaveAttribute('aria-expanded', 'false');
+  expect(screen.getAllByRole('link')).toHaveLength(2);
+  expect(
+    screen.getByRole('link', { name: 'พื้นที่ปฏิบัติงาน' }),
+  ).toHaveAttribute('aria-current', 'page');
+});
+
+it('expands multiple groups independently and hides collapsed links', () => {
+  renderMenu('/dashboard');
+  const sales = screen.getByRole('button', { name: 'การขาย' });
+  const customers = screen.getByRole('button', { name: 'ลูกค้าและสมาชิก' });
+  fireEvent.click(sales);
+  fireEvent.click(customers);
+  expect(screen.getByRole('link', { name: 'ขายสินค้า / POS' })).toBeVisible();
+  expect(
+    screen.getByRole('link', { name: 'ลูกค้า / Customers' }),
+  ).toBeVisible();
+  fireEvent.click(sales);
+  expect(
+    screen.queryByRole('link', { name: 'ขายสินค้า / POS' }),
+  ).not.toBeInTheDocument();
+  expect(customers).toHaveAttribute('aria-expanded', 'true');
+});
+
+it.each(['/pos/returns', '/sales/voids', '/sales/refunds'])(
+  'opens only the correct group for %s',
+  (path) => {
+    renderMenu(path);
+    expect(
+      screen.getByRole('button', { name: 'คืนสินค้าและคืนเงิน' }),
+    ).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: 'การขาย' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+    expect(document.querySelectorAll('a[aria-current="page"]')).toHaveLength(1);
+    expect(document.querySelector('a[aria-current="page"]')).toHaveAttribute(
+      'href',
+      path,
+    );
+  },
+);
+
+it('opens the correct group for a nested route', () => {
+  renderMenu('/products/item-1');
+  expect(
+    screen.getByRole('button', { name: 'สินค้าและสต็อก' }),
+  ).toHaveAttribute('aria-expanded', 'true');
+  expect(
+    screen.getByRole('link', { name: 'สินค้า / แค็ตตาล็อก' }),
+  ).toHaveAttribute('aria-current', 'page');
+});
+
+it('filters permissions before showing groups', () => {
+  renderMenu('/products', {
+    authenticated: true,
+    role: 'INVENTORY_STAFF',
+    permissions: ['catalog.read'],
+  });
+  expect(
+    screen.queryByRole('button', { name: 'การขาย' }),
+  ).not.toBeInTheDocument();
+  expect(screen.getAllByRole('button')).toHaveLength(2);
+  expect(
+    screen.getByRole('link', { name: 'สินค้า / แค็ตตาล็อก' }),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole('link', { name: 'คลังสินค้า / สต็อก', hidden: true }),
+  ).not.toBeInTheDocument();
+});
+
+it('keeps preview links separate and ungrouped', () => {
+  renderMenu('/preview/foundation', owner, true);
+  expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'POS layout' })).toBeVisible();
+  expect(
+    screen.queryByRole('link', { name: 'ลูกค้า / Customers', hidden: true }),
+  ).not.toBeInTheDocument();
+});
+
+it('opens the destination group on navigation', () => {
+  function Harness() {
+    const navigate = useNavigate();
+    return (
+      <>
+        <button onClick={() => navigate('/products/item-1')}>
+          Visit product
+        </button>
+        <NavigationMenu items={navigation} access={owner} preview={false} />
+      </>
+    );
+  }
+  render(
+    <MemoryRouter initialEntries={['/dashboard']}>
+      <Harness />
+    </MemoryRouter>,
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Visit product' }));
+  expect(
+    screen.getByRole('button', { name: 'สินค้าและสต็อก' }),
+  ).toHaveAttribute('aria-expanded', 'true');
+});
+
+it('opens the current group when permissions finish loading', () => {
+  const view = render(
+    <MemoryRouter initialEntries={['/products']}>
+      <NavigationMenu
+        items={navigation}
+        access={{ authenticated: false }}
+        preview={false}
+      />
+    </MemoryRouter>,
+  );
+  view.rerender(
+    <MemoryRouter initialEntries={['/products']}>
+      <NavigationMenu items={navigation} access={owner} preview={false} />
+    </MemoryRouter>,
+  );
+  expect(
+    screen.getByRole('button', { name: 'สินค้าและสต็อก' }),
+  ).toHaveAttribute('aria-expanded', 'true');
+});

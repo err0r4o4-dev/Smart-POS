@@ -43,6 +43,7 @@ test('real registration, login, persistence, logout, recovery and reset security
   });
 
   await test.step('invalid login, valid login, refresh and CSRF', async () => {
+    await page.goto('/login?returnTo=%2Faccount');
     await page.getByLabel('Email address').fill(email);
     await page
       .getByLabel('Password', { exact: true })
@@ -85,6 +86,7 @@ test('real registration, login, persistence, logout, recovery and reset security
   });
 
   await test.step('single-use reset revokes active sessions and rejects old password', async () => {
+    await page.goto('/login?returnTo=%2Faccount');
     await page.getByLabel('Email address').fill(email);
     await page.getByLabel('Password', { exact: true }).fill(oldPassword);
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
@@ -124,7 +126,7 @@ test('real registration, login, persistence, logout, recovery and reset security
     await page.getByLabel('Confirm password').fill(newPassword);
     await page.getByRole('button', { name: 'Change password' }).click();
     await expect(page.getByRole('alert')).toContainText('invalid or expired');
-    await page.goto('/login');
+    await page.goto('/login?returnTo=%2Faccount');
     await page.getByLabel('Email address').fill(email);
     await page.getByLabel('Password', { exact: true }).fill(oldPassword);
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();

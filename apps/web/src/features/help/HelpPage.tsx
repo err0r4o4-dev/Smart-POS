@@ -30,13 +30,14 @@ export function HelpPage() {
           <ShieldCheck className="help-icon" />
           <h2>Know the boundary</h2>
           <p>
-            Authentication, product management, checkout, payments and
-            forecasting are not implemented. No transaction or credential
-            submission is available.
+            Sign in to use the implemented catalog, inventory, POS, sales,
+            purchasing, shelves, returns, pricing and customer modules. Access
+            follows your organization, branch and role permissions.
           </p>
           <p>
-            Health status is real. Module/page counts describe the architecture,
-            not sales activity.
+            Forecasting, loyalty and the business analytics dashboard remain
+            planned. The 106-route inventory is a roadmap, not 106 finished
+            pages.
           </p>
         </Card>
         <Card>
@@ -54,6 +55,10 @@ export function HelpPage() {
       </div>
       <section className="preview-links">
         <h2>Explore the layout foundations</h2>
+        <Link to="/preview/foundation" className="button button-secondary">
+          Foundation preview
+          <ArrowRight size={17} />
+        </Link>
         <Link to="/preview/pos" className="button button-secondary">
           POS preview
           <ArrowRight size={17} />

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/jackc/pgx/v5"
 	"smartpos/api/internal/modules/customers"
+	"smartpos/api/internal/modules/loyalty"
 	"smartpos/api/internal/modules/organization"
 	"smartpos/api/internal/modules/pricing"
 )
@@ -38,6 +39,9 @@ func checkout(ctx context.Context, tx pgx.Tx, actor organization.Member, user, o
 		err = tx.QueryRow(ctx, "SELECT pricing_snapshot FROM pos_checkouts WHERE organization_id=$1 AND id=$2", org, id).Scan(&data)
 		if err == nil {
 			err = json.Unmarshal(data, &item.Pricing)
+			if err == nil && item.Pricing.Loyalty != nil && !allowed(actor.Permissions, "loyalty.redeem") {
+				return item, organization.ErrDenied
+			}
 		}
 	}
 	return item, err
@@ -85,6 +89,9 @@ func (service *Service) PrepareCheckout(ctx context.Context, user, org, key stri
 		}
 		if result.Status == "AWAITING_PAYMENT" {
 			problem = revalidate(ctx, tx, org, result)
+			if problem == nil {
+				problem = validateReward(ctx, tx, actor, org, result)
+			}
 		}
 		return result, problem
 	}
@@ -125,6 +132,19 @@ func (service *Service) PrepareCheckout(ctx context.Context, user, org, key stri
 	}
 	if err = priceCart(ctx, tx, org, &cart, input.ApprovalID); err != nil {
 		return Checkout{}, err
+	}
+	quote, problem := loyalty.Quote(ctx, tx, actor, org, cart.CustomerID, cart.Pricing, input.LoyaltyPoints)
+	if problem != nil {
+		return Checkout{}, dbError(problem)
+	}
+	cart.Pricing = quote
+	cart.Total = quote.Total
+	for index := range cart.Items {
+		for _, line := range quote.Lines {
+			if cart.Items[index].VariantID == line.VariantID {
+				cart.Items[index].LineTotal, cart.Items[index].DiscountTotal = line.Net, line.Discount
+			}
+		}
 	}
 	if input.PricingRevision != "" && input.PricingRevision != cart.Pricing.Revision {
 		return Checkout{}, ErrPrice
@@ -188,6 +208,11 @@ func (service *Service) ConfirmPayment(ctx context.Context, user, org, id, key s
 	}
 	if item.Method != "CASH" && item.Method != "NONE" && !text(input.Reference, 200, true) {
 		return item, ErrInput
+	}
+	if item.Status == "AWAITING_PAYMENT" {
+		if err = validateReward(ctx, tx, actor, org, item); err != nil {
+			return item, err
+		}
 	}
 	if item.Status != "AWAITING_PAYMENT" {
 		if err = pricing.CurrentApprover(ctx, tx, org, item.Pricing.ApprovalID); err != nil {

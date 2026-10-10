@@ -2,7 +2,7 @@ BEGIN;
 DO $verify$
 DECLARE table_name text;
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM schema_migrations WHERE version=11 AND NOT dirty) THEN RAISE EXCEPTION 'business schema not ready'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM schema_migrations WHERE version=12 AND NOT dirty) THEN RAISE EXCEPTION 'business schema not ready'; END IF;
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='smartpos_runtime' AND (rolsuper OR rolbypassrls)) THEN RAISE EXCEPTION 'runtime bypasses RLS'; END IF;
   FOREACH table_name IN ARRAY ARRAY['customer_returns','customer_return_items','customer_refunds','refund_settlement_events','register_cash_disbursements'] LOOP
     IF NOT EXISTS (SELECT 1 FROM pg_class WHERE oid=table_name::regclass AND relrowsecurity AND relforcerowsecurity) THEN RAISE EXCEPTION 'missing FORCE RLS on %',table_name; END IF;

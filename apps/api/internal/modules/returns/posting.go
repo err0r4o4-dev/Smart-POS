@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/jackc/pgx/v5"
 	"smartpos/api/internal/modules/inventory"
+	"smartpos/api/internal/modules/loyalty"
 	"smartpos/api/internal/modules/organization"
 )
 
@@ -108,6 +109,9 @@ func post(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org, 
 		if err = inventory.PostCustomerReturn(ctx, tx, actor, user, org, op, doc.Branch, line.ID, line.Variant, line.Quantity, line.Destination, line.Disposition); err != nil {
 			return dbError(err)
 		}
+	}
+	if err = loyalty.ReverseReturn(ctx, tx, user, org, doc.ID); err != nil {
+		return dbError(err)
 	}
 	if refundAmount != nil {
 		if *refundAmount == "" {

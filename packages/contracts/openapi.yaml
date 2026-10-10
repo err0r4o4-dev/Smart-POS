@@ -15450,6 +15450,477 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/POSCustomerInput'
+  /api/v1/organizations/{id}/loyalty/programs:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: listLoyaltyprograms
+      security:
+        - sessionCookie: []
+      description:
+        Requires current loyalty permissions and active tenant membership
+        before replay. History restricts branch-scoped actors to assigned
+        branches; account balances are organization-wide. Points are exact
+        integers. Redemption is a discount, never a payment, and cannot stack with
+        promotions or manual discounts.
+      responses:
+        '200':
+          description: Authoritative data envelope
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/LoyaltyProgram'
+                      page:
+                        type: integer
+                      page_size:
+                        type: integer
+                      total:
+                        type: integer
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+            default: 1
+        - name: customer_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: branch_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+    post:
+      operationId: createLoyaltyprograms
+      security:
+        - sessionCookie: []
+      description:
+        Requires current loyalty permissions and active tenant membership
+        before replay. History restricts branch-scoped actors to assigned
+        branches; account balances are organization-wide. Points are exact
+        integers. Redemption is a discount, never a payment, and cannot stack with
+        promotions or manual discounts.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoyaltyProgramInput'
+      responses:
+        '200':
+          description: Authoritative data envelope
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/LoyaltyProgram'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/loyalty/programs/{loyaltyId}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - name: loyaltyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      operationId: updateLoyaltyprograms
+      security:
+        - sessionCookie: []
+      description:
+        Requires current loyalty permissions and active tenant membership
+        before replay. History restricts branch-scoped actors to assigned
+        branches; account balances are organization-wide. Points are exact
+        integers. Redemption is a discount, never a payment, and cannot stack with
+        promotions or manual discounts.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoyaltyProgramInput'
+      responses:
+        '200':
+          description: Authoritative data envelope
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/LoyaltyProgram'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/loyalty/accounts:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: listLoyaltyaccounts
+      security:
+        - sessionCookie: []
+      description:
+        Requires current loyalty permissions and active tenant membership
+        before replay. History restricts branch-scoped actors to assigned
+        branches; account balances are organization-wide. Points are exact
+        integers. Redemption is a discount, never a payment, and cannot stack with
+        promotions or manual discounts.
+      responses:
+        '200':
+          description: Authoritative data envelope
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/LoyaltyAccount'
+                      page:
+                        type: integer
+                      page_size:
+                        type: integer
+                      total:
+                        type: integer
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+            default: 1
+        - name: customer_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: branch_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+    post:
+      operationId: createLoyaltyaccounts
+      security:
+        - sessionCookie: []
+      description:
+        Requires current loyalty permissions and active tenant membership
+        before replay. History restricts branch-scoped actors to assigned
+        branches; account balances are organization-wide. Points are exact
+        integers. Redemption is a discount, never a payment, and cannot stack with
+        promotions or manual discounts.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoyaltyAccountInput'
+      responses:
+        '200':
+          description: Authoritative data envelope
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/LoyaltyAccount'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/loyalty/accounts/{loyaltyId}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - name: loyaltyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      operationId: updateLoyaltyaccounts
+      security:
+        - sessionCookie: []
+      description:
+        Requires current loyalty permissions and active tenant membership
+        before replay. History restricts branch-scoped actors to assigned
+        branches; account balances are organization-wide. Points are exact
+        integers. Redemption is a discount, never a payment, and cannot stack with
+        promotions or manual discounts.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoyaltyAccountInput'
+      responses:
+        '200':
+          description: Authoritative data envelope
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/LoyaltyAccount'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/loyalty/accounts/{loyaltyId}/adjust:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - name: loyaltyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: adjustLoyaltyPoints
+      security:
+        - sessionCookie: []
+      description:
+        Requires current loyalty permissions and active tenant membership
+        before replay. History restricts branch-scoped actors to assigned
+        branches; account balances are organization-wide. Points are exact
+        integers. Redemption is a discount, never a payment, and cannot stack with
+        promotions or manual discounts.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoyaltyAdjustmentInput'
+      responses:
+        '200':
+          description: Authoritative data envelope
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/LoyaltyAccount'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/loyalty/history:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: listLoyaltyhistory
+      security:
+        - sessionCookie: []
+      description:
+        Requires current loyalty permissions and active tenant membership
+        before replay. History restricts branch-scoped actors to assigned
+        branches; account balances are organization-wide. Points are exact
+        integers. Redemption is a discount, never a payment, and cannot stack with
+        promotions or manual discounts.
+      responses:
+        '200':
+          description: Authoritative data envelope
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/LoyaltyEntry'
+                      page:
+                        type: integer
+                      page_size:
+                        type: integer
+                      total:
+                        type: integer
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+            default: 1
+        - name: customer_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: branch_id
+          in: query
+          schema:
+            type: string
+            format: uuid
 components:
   parameters:
     OrganizationID:
@@ -15569,6 +16040,241 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
   schemas:
+    LoyaltyProgramInput:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - spend
+        - earn_points
+        - point_value
+        - status
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        spend:
+          $ref: '#/components/schemas/POSMoney'
+        earn_points:
+          type: integer
+          minimum: 0
+          maximum: 1000000
+        point_value:
+          $ref: '#/components/schemas/POSMoney'
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - SUSPENDED
+        revision:
+          type: integer
+          minimum: 0
+          description: 0 or omitted on create; current revision required on update
+    LoyaltyAccountInput:
+      type: object
+      additionalProperties: false
+      required:
+        - customer_id
+        - program_id
+        - status
+      properties:
+        customer_id:
+          type: string
+          format: uuid
+        program_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - SUSPENDED
+        revision:
+          type: integer
+          minimum: 0
+    LoyaltyAdjustmentInput:
+      type: object
+      additionalProperties: false
+      required:
+        - points
+        - reason
+        - branch_id
+      properties:
+        points:
+          type: integer
+          minimum: -1000000000000
+          maximum: 1000000000000
+          not:
+            const: 0
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        branch_id:
+          type: string
+          format: uuid
+    LoyaltyReward:
+      type: object
+      additionalProperties: false
+      required:
+        - account_id
+        - program_id
+        - program_revision
+        - point_value
+        - points
+        - amount
+      properties:
+        account_id:
+          type: string
+          format: uuid
+        program_id:
+          type: string
+          format: uuid
+        program_revision:
+          type: integer
+          minimum: 1
+        point_value:
+          $ref: '#/components/schemas/POSMoney'
+        points:
+          type: integer
+          minimum: 1
+          maximum: 1000000000000
+        amount:
+          $ref: '#/components/schemas/POSMoney'
+    LoyaltyProgram:
+      type: object
+      additionalProperties: false
+      required: [id, organization_id, name, spend, earn_points, point_value, status, revision, created_at, created_by]
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        spend:
+          $ref: '#/components/schemas/POSMoney'
+        earn_points:
+          type: integer
+          minimum: 0
+          maximum: 1000000
+        point_value:
+          $ref: '#/components/schemas/POSMoney'
+        status:
+          type: string
+          enum: [ACTIVE, SUSPENDED]
+        revision:
+          type: integer
+          minimum: 1
+        created_at:
+          type: string
+          format: date-time
+        created_by:
+          type: string
+          format: uuid
+    LoyaltyAccount:
+      type: object
+      required:
+        - id
+        - customer_id
+        - program_id
+        - status
+        - revision
+        - balance
+        - available
+      properties:
+        id:
+          type: string
+          format: uuid
+        customer_id:
+          type: string
+          format: uuid
+        program_id:
+          type: string
+          format: uuid
+        customer_code:
+          type: string
+        customer_name:
+          type: string
+        program_name:
+          type: string
+        program_status:
+          type: string
+          enum:
+            - ACTIVE
+            - SUSPENDED
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - SUSPENDED
+        revision:
+          type: integer
+          minimum: 1
+        balance:
+          type: string
+          pattern: ^-?[0-9]+$
+          description:
+            Signed immutable-ledger sum; negative reversal debt is allowed but
+            not redeemable
+        available:
+          type: string
+          pattern: ^[0-9]+$
+          description: max(0, balance - pending checkout reservations)
+    LoyaltyEntry:
+      type: object
+      required:
+        - id
+        - account_id
+        - kind
+        - points
+        - reason
+        - snapshot
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        account_id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum:
+            - EARN
+            - REDEEM
+            - EARN_REVERSAL
+            - REDEEM_REVERSAL
+            - ADJUST
+        points:
+          type: string
+          pattern: ^-?[0-9]+$
+        sale_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        return_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        branch_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        reason:
+          type: string
+        snapshot:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
     AdjustmentInput:
       type: object
       additionalProperties: false
@@ -19705,6 +20411,12 @@ components:
         - expected_total
         - received
       properties:
+        loyalty_points:
+          type: integer
+          minimum: 0
+          maximum: 1000000000000
+          default: 0
+          description: Optional exact points from the selected customer account; server calculates reward discount.
         cart_id:
           type: string
           format: uuid
@@ -21139,6 +21851,8 @@ components:
         - total
         - revision
       properties:
+        loyalty:
+          $ref: '#/components/schemas/LoyaltyReward'
         subtotal:
           $ref: '#/components/schemas/POSMoney'
         discount:

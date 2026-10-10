@@ -1,6 +1,6 @@
 BEGIN;
 DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM schema_migrations WHERE version=11 AND NOT dirty) THEN RAISE EXCEPTION 'schema not ready'; END IF;
+    IF NOT EXISTS (SELECT 1 FROM schema_migrations WHERE version=12 AND NOT dirty) THEN RAISE EXCEPTION 'schema not ready'; END IF;
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='smartpos_runtime' AND (rolsuper OR rolbypassrls)) THEN RAISE EXCEPTION 'runtime bypasses RLS'; END IF;
 END $$;
 INSERT INTO users(id,email,email_normalized,password_hash,display_name) VALUES

@@ -11,6 +11,7 @@ import (
 	"smartpos/api/internal/modules/customers"
 	"smartpos/api/internal/modules/identity"
 	"smartpos/api/internal/modules/inventory"
+	"smartpos/api/internal/modules/loyalty"
 	"smartpos/api/internal/modules/organization"
 	"smartpos/api/internal/modules/pos"
 	"smartpos/api/internal/modules/pricing"
@@ -48,7 +49,8 @@ func Router(checker Readiness, logger *slog.Logger, authentication ...identity.H
 			returnsHandler := returns.Handler{Service: &returns.Service{Organization: organizations}}
 			pricingHandler := pricing.Handler{Service: &pricing.Service{Organization: organizations}}
 			customerHandler := customers.Handler{Service: &customers.Service{Organization: organizations}}
-			organization.Handler{Service: organizations, Authentication: authentication[0]}.Routes(version, catalogHandler.TenantRoutes, inventoryHandler.TenantRoutes, posHandler.TenantRoutes, purchasingHandler.TenantRoutes, returnsHandler.TenantRoutes, pricingHandler.TenantRoutes, customerHandler.TenantRoutes)
+			loyaltyHandler := loyalty.Handler{Service: &loyalty.Service{Organization: organizations}}
+			organization.Handler{Service: organizations, Authentication: authentication[0]}.Routes(version, catalogHandler.TenantRoutes, inventoryHandler.TenantRoutes, posHandler.TenantRoutes, purchasingHandler.TenantRoutes, returnsHandler.TenantRoutes, pricingHandler.TenantRoutes, customerHandler.TenantRoutes, loyaltyHandler.TenantRoutes)
 		}
 		version.Get("/system", func(writer http.ResponseWriter, request *http.Request) {
 			httpx.JSON(writer, 200, map[string]any{"data": map[string]any{"name": "SmartPOS", "phase": 0, "authentication": "server_sessions"}})

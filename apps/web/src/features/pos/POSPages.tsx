@@ -22,6 +22,7 @@ import {
 } from '../../lib/pos-api';
 import { usePOS } from './POSContext';
 import { CustomerPicker } from '../customers/CustomerPicker';
+import { LoyaltyCheckoutControls } from '../loyalty/LoyaltyCheckoutControls';
 
 export function POSTerminalPage() {
   const pos = usePOS();
@@ -558,6 +559,7 @@ export function CheckoutPage() {
           pricing_revision:
             currentSelection?.quote.revision ?? pos.cart.pricing?.revision,
           approval_id: currentSelection?.approvalID ?? '',
+          loyalty_points: currentSelection?.quote.loyalty?.points ?? 0,
         },
       };
     const result = await pos.mutate<POSCheckout>(
@@ -611,6 +613,10 @@ export function CheckoutPage() {
             <strong className="pos-total">
               ยอดรวม {moneyText(payable)} บาท
             </strong>
+            <LoyaltyCheckoutControls
+              locked={requestLocked || !!checkout}
+              onSelection={setPricingSelection}
+            />
             <PricingCheckoutControls
               key={[
                 pos.cart?.id,

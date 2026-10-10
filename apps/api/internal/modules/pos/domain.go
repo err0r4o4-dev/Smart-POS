@@ -125,6 +125,7 @@ type ShiftInput struct {
 	CountedCash string `json:"counted_cash"`
 }
 type CheckoutInput struct {
+	LoyaltyPoints   int64  `json:"loyalty_points"`
 	CartID          string `json:"cart_id"`
 	Revision        int64  `json:"revision"`
 	Method          string `json:"method"`

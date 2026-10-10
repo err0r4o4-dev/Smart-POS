@@ -35,7 +35,7 @@ export function RequireSession() {
   if (state.status === 'anonymous')
     return (
       <Navigate
-        to={`/login?returnTo=${encodeURIComponent(location.pathname)}`}
+        to={`/login?returnTo=${encodeURIComponent(location.pathname + location.search + location.hash)}`}
         replace
       />
     );

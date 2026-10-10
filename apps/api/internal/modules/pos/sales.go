@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"log/slog"
 	"smartpos/api/internal/modules/inventory"
+	"smartpos/api/internal/modules/loyalty"
 	"smartpos/api/internal/modules/organization"
 	"smartpos/api/internal/modules/pricing"
 )
@@ -37,6 +38,9 @@ func settle(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org
 		return "", ErrConflict
 	}
 	if err = revalidate(ctx, tx, org, item); err != nil {
+		return "", err
+	}
+	if err = validateReward(ctx, tx, actor, org, item); err != nil {
 		return "", err
 	}
 	movements := []inventory.Item{}
@@ -79,6 +83,9 @@ func settle(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org
 		return "", dbError(err)
 	}
 	if err = pricing.Redeem(ctx, tx, org, sale, item.Pricing); err != nil {
+		return "", dbError(err)
+	}
+	if err = loyalty.PostSale(ctx, tx, user, org, sale); err != nil {
 		return "", dbError(err)
 	}
 	_, err = tx.Exec(ctx, `INSERT INTO sale_payments(organization_id,sale_id,checkout_id,method,status,amount,credit_amount,received,change,reference,confirmed_by,confirmed_at) SELECT organization_id,$3,id,method,'CONFIRMED',total-credit_amount,credit_amount,received,change,reference,confirmed_by,confirmed_at FROM pos_checkouts WHERE organization_id=$1 AND id=$2`, org, item.ID, sale)

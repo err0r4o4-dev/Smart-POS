@@ -11,6 +11,7 @@ import (
 	"smartpos/api/internal/modules/identity"
 	"smartpos/api/internal/modules/organization"
 	"smartpos/api/internal/platform/httpx"
+	"strconv"
 	"time"
 )
 
@@ -76,7 +77,15 @@ func (handler Handler) TenantRoutes(router chi.Router) {
 		return service.SelectCustomer(ctx, user, org, resourceID(request), input)
 	}))
 	router.Get("/pos/carts/{resourceId}/quote", endpoint(200, func(ctx context.Context, user, org string, request *http.Request) (any, error) {
-		return service.Quote(ctx, user, org, resourceID(request), request.URL.Query().Get("approval_id"))
+		points := int64(0)
+		if value := request.URL.Query().Get("loyalty_points"); value != "" {
+			var err error
+			points, err = strconv.ParseInt(value, 10, 64)
+			if err != nil {
+				return nil, ErrInput
+			}
+		}
+		return service.Quote(ctx, user, org, resourceID(request), request.URL.Query().Get("approval_id"), points)
 	}))
 	router.Route("/pos", func(tenant chi.Router) {
 		for _, resource := range []string{"terminals", "shifts", "carts", "products", "checkouts"} {

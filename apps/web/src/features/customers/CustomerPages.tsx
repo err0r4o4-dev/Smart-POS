@@ -519,6 +519,16 @@ function CustomerDetail({ text }: { text: Text }) {
   const value = query.data;
   return (
     <>
+      {scope.tenant.can('loyalty.read') && (
+        <nav className="catalog-nav">
+          <Link to={`/loyalty?customer_id=${value.id}`}>
+            สมาชิกและแต้ม / Loyalty
+          </Link>
+          <Link to={`/loyalty/history?customer_id=${value.id}`}>
+            ประวัติแต้ม / Points history
+          </Link>
+        </nav>
+      )}
       <Card>
         <h2>
           {value.code} · {value.name || text('ไม่ระบุชื่อ', 'Unnamed')}

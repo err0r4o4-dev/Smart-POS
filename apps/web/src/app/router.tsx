@@ -3,6 +3,7 @@ import { ManagementLayout } from '../layouts/ManagementLayout';
 import { POSLayout } from '../layouts/POSLayout';
 import { AuthLayout } from '../layouts/AuthLayout';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
+import { FoundationPage } from '../features/dashboard/FoundationPage';
 import { HelpPage } from '../features/help/HelpPage';
 import { SystemPage } from '../features/system/SystemPage';
 import { paths } from './routes';
@@ -24,6 +25,7 @@ import { AdjustmentsPage } from '../features/returns/AdjustmentsPage';
 import { POSWorkspace } from '../features/pos/POSWorkspace';
 import { PricingPage } from '../features/pricing/PricingPage';
 import { CustomersPage } from '../features/customers/CustomerPages';
+import { LoyaltyPage } from '../features/loyalty/LoyaltyPage';
 import {
   POSTerminalPage,
   HeldCartsPage,
@@ -52,12 +54,23 @@ export const router = createBrowserRouter([
     element: <ManagementLayout />,
     children: [
       { path: '/', element: <Navigate to={paths.dashboard} replace /> },
-      { path: paths.dashboard, element: <DashboardPage /> },
+      { path: paths.foundationPreview, element: <FoundationPage /> },
       { path: paths.help, element: <HelpPage /> },
-      { path: paths.setup, element: <SetupPage /> },
       {
         element: <RequireSession />,
         children: [
+          { path: paths.setup, element: <SetupPage /> },
+          {
+            element: <OrganizationGate />,
+            children: [{ path: paths.dashboard, element: <DashboardPage /> }],
+          },
+          {
+            element: <OrganizationGate permission="loyalty.read" />,
+            children: [
+              { path: '/loyalty', element: <LoyaltyPage /> },
+              { path: '/loyalty/history', element: <LoyaltyPage history /> },
+            ],
+          },
           {
             element: <OrganizationGate permission="customers.read" />,
             children: [

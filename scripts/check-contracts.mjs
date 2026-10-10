@@ -166,6 +166,11 @@ const expectedCustomerPaths = [
   '/customers/{customerId}/groups/{groupId}',
   '/pos/carts/{resourceId}/customer',
 ].map((path) => '/api/v1/organizations/{id}' + path);
+const loyaltyPaths = [
+  '/loyalty/programs', '/loyalty/programs/{loyaltyId}',
+  '/loyalty/accounts', '/loyalty/accounts/{loyaltyId}',
+  '/loyalty/accounts/{loyaltyId}/adjust', '/loyalty/history',
+].map((path) => '/api/v1/organizations/{id}' + path);
 assert.deepEqual(
   Object.keys(api.paths).sort(),
   [
@@ -191,6 +196,7 @@ assert.deepEqual(
     ...returnPaths,
     ...pricingPaths,
     ...expectedCustomerPaths,
+    ...loyaltyPaths,
     '/api/v1/auth/forgot-password',
     '/api/v1/auth/login',
     '/api/v1/auth/logout',
@@ -510,6 +516,24 @@ for (const name of ['POSCart', 'POSCheckout', 'POSSale'])
     'string',
     'null',
   ]);
+const loyaltyOperations = [];
+for (const path of loyaltyPaths) {
+ for (const method of ['get', 'post', 'put']) {
+  const operation = api.paths[path][method];
+  if (!operation) continue;
+  loyaltyOperations.push(operation.operationId);
+  assert.deepEqual(operation.security, [{sessionCookie:[]}]);
+  for (const status of ['200','400','401','403','404','409','503']) assert.ok(operation.responses[status]);
+  if (method !== 'get') {
+   assert.ok(operation.parameters.some(parameter => parameter.$ref === '#/components/parameters/CSRF'));
+   assert.ok(operation.parameters.some(parameter => parameter.name === 'Idempotency-Key' && parameter.required));
+  }
+ }
+}
+assert.equal(loyaltyOperations.length,8);
+assert.equal(new Set(loyaltyOperations).size,8);
+assert.equal(api.components.schemas.POSCheckoutInput.properties.loyalty_points.maximum,1000000000000);
+assert.equal(api.components.schemas.LoyaltyAdjustmentInput.additionalProperties,false);
 for (const path of returnPaths) {
   for (const method of ['get', 'post']) {
     const operation = api.paths[path][method];

@@ -24,6 +24,14 @@ export interface PriceDefinition {
   rule?: PricingRule;
 }
 export interface PricingQuote {
+  loyalty?: {
+    account_id: string;
+    program_id: string;
+    program_revision: number;
+    points: number;
+    amount: string;
+    point_value: string;
+  };
   subtotal: string;
   discount: string;
   total: string;

@@ -1,0 +1,22 @@
+.loyalty-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: 1rem;
+  align-items: end;
+  margin-block: 1rem;
+}
+.loyalty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-block: 0.75rem;
+}
+.loyalty-snapshot {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+.loyalty-page .card {
+  min-width: 0;
+}

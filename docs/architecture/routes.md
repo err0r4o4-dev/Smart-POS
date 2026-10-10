@@ -16,7 +16,7 @@ Phase5.1 registers `/pos/returns` and `/sales/refunds`; Phase5.2 registers `/pos
 | Authentication | `/reset-password` | Implemented Phase 1A | 1 | public token + Origin-validated entry |
 | Authentication | `/setup` | Implemented Phase 1B | 1 | session; no existing tenant required for creation |
 | Authentication | `/account` | Implemented Phase 1A | 1 | session |
-| Dashboard | `/dashboard` | Foundation shell (business dashboard planned) | 3 | session + tenant + branch permission |
+| Dashboard | `/dashboard` | Operational module launcher (business analytics dashboard planned) | 3 | session + tenant; module links follow backend permissions |
 | Dashboard | `/dashboard/branches` | Planned (not registered) | 3 | session + tenant + branch permission |
 | Dashboard | `/tasks` | Planned (not registered) | 3 | session + tenant + branch permission |
 | Dashboard | `/notifications` | Planned (not registered) | 3 | session + tenant + branch permission |
@@ -117,7 +117,7 @@ Phase5.1 registers `/pos/returns` and `/sales/refunds`; Phase5.2 registers `/pos
 | Help & System | `/403` | Implemented presentation | 0 | public system |
 | Help & System | `/404` | Implemented presentation | 0 | public system |
 
-Additional Phase 0 routes outside the 106 business inventory: / redirects to /dashboard; /preview/pos and /preview/auth are explicitly non-functional presentations. Unmatched paths render 404. Navigation includes implemented tenant modules and ready presentations only. Tenant business routes additionally require real sessions and backend membership/branch authorization.
+Additional development routes outside the unchanged 106 business inventory: / redirects to the protected /dashboard workspace; /preview/foundation preserves the historical landing page, while /preview/pos and /preview/auth are explicitly non-functional presentations. Operational navigation contains implemented modules only; preview links live in developer help/preview navigation. Anonymous requests to /dashboard or /setup go to /login with a safe local returnTo. Authenticated users without an organization go to /setup; tenant errors remain explicit and do not silently become an empty workspace. Tenant business routes retain real sessions and backend membership/branch authorization. /dashboard is a permission-filtered module launcher, not a fabricated sales/analytics dashboard.
 
 ## Inventory access and deferred valuation
 

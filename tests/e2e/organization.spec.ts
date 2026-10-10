@@ -43,6 +43,7 @@ test('Phase 1B: real onboarding, invitation, branch/RBAC isolation, switching an
       .getByRole('button', { name: 'Create account', exact: true })
       .click();
     await expect(page).toHaveURL(/\/login/);
+    await page.goto('/login?returnTo=%2Faccount');
     await page.getByLabel('Email address').fill(email);
     await page.getByLabel('Password', { exact: true }).fill(password);
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
@@ -329,6 +330,7 @@ test('Phase 1B: real onboarding, invitation, branch/RBAC isolation, switching an
         .getByRole('button', { name: 'Sign out', exact: true })
         .click();
       await expect(owner).toHaveURL(/\/login/);
+      await owner.goto('/login?returnTo=%2Faccount');
       expect(
         await owner.evaluate(() =>
           Object.keys(sessionStorage).filter((key) =>

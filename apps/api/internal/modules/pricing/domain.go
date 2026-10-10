@@ -109,6 +109,7 @@ type Applied struct {
 	Discount string `json:"discount"`
 }
 type Quote struct {
+	Loyalty    *Reward   `json:"loyalty,omitempty"`
 	Lines      []Line    `json:"lines"`
 	Promotions []Applied `json:"promotions"`
 	Subtotal   string    `json:"subtotal"`
@@ -116,6 +117,15 @@ type Quote struct {
 	Total      string    `json:"total"`
 	Revision   string    `json:"revision"`
 	ApprovalID string    `json:"approval_id,omitempty"`
+}
+
+type Reward struct {
+	AccountID       string `json:"account_id"`
+	ProgramID       string `json:"program_id"`
+	ProgramRevision int64  `json:"program_revision"`
+	PointValue      string `json:"point_value"`
+	Points          int64  `json:"points"`
+	Amount          string `json:"amount"`
 }
 
 func (input *Definition) Validate(promotion bool) error {

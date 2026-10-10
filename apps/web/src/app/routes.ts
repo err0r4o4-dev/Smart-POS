@@ -2,6 +2,7 @@ import type { Role } from './access';
 
 export const paths = {
   dashboard: '/dashboard',
+  foundationPreview: '/preview/foundation',
   posPreview: '/preview/pos',
   authPreview: '/preview/auth',
   login: '/login',
@@ -32,6 +33,13 @@ export interface NavigationItem {
   roles?: Role[];
 }
 export const navigation: NavigationItem[] = [
+  {
+    to: '/loyalty',
+    label: 'สมาชิกและรางวัล / Loyalty',
+    icon: 'dashboard',
+    permission: 'loyalty.read',
+  },
+  { to: paths.dashboard, label: 'พื้นที่ปฏิบัติงาน', icon: 'dashboard' },
   {
     to: '/customers',
     label: 'ลูกค้า / Customers',
@@ -153,7 +161,58 @@ export const navigation: NavigationItem[] = [
     icon: 'auth',
     permission: 'role.read',
   },
-  { to: paths.dashboard, label: 'Overview', icon: 'dashboard' },
+  { to: paths.account, label: 'บัญชีผู้ใช้', icon: 'auth' },
+  { to: paths.help, label: 'Getting started', icon: 'help' },
+];
+
+export const navigationGroups = [
+  { id: 'sales', label: 'การขาย', paths: ['/pos', '/sales', '/receipts'] },
+  {
+    id: 'returns',
+    label: 'คืนสินค้าและคืนเงิน',
+    paths: ['/pos/returns', '/pos/exchanges', '/sales/voids', '/sales/refunds'],
+  },
+  {
+    id: 'customers',
+    label: 'ลูกค้าและสมาชิก',
+    paths: ['/customers', '/loyalty'],
+  },
+  {
+    id: 'pricing',
+    label: 'ราคาและโปรโมชัน',
+    paths: ['/pricing', '/promotions', '/discount-approvals'],
+  },
+  {
+    id: 'inventory',
+    label: 'สินค้าและสต็อก',
+    paths: [paths.products, paths.inventory, paths.shelves],
+  },
+  {
+    id: 'purchasing',
+    label: 'จัดซื้อและซัพพลายเออร์',
+    paths: [paths.suppliers, paths.purchasing],
+  },
+  {
+    id: 'settings',
+    label: 'ตั้งค่าและผู้ใช้งาน',
+    paths: [
+      paths.setup,
+      paths.store,
+      paths.branches,
+      paths.employees,
+      paths.roles,
+      paths.account,
+    ],
+  },
+];
+
+export const previewNavigation: NavigationItem[] = [
+  { to: paths.dashboard, label: 'พื้นที่ปฏิบัติงาน', icon: 'dashboard' },
+  {
+    to: paths.foundationPreview,
+    label: 'Foundation preview',
+    icon: 'dashboard',
+  },
   { to: paths.posPreview, label: 'POS layout', icon: 'pos' },
   { to: paths.authPreview, label: 'Authentication layout', icon: 'auth' },
   { to: paths.help, label: 'Getting started', icon: 'help' },

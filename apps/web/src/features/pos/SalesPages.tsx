@@ -271,6 +271,11 @@ export function SaleDetailsPage() {
       <div className="pos-sale-detail">
         <Card className="no-print">
           <h2>{sale.sale_number}</h2>
+          {sale.customer_id && tenant.can('loyalty.read') && (
+            <Link to={`/loyalty/history?customer_id=${sale.customer_id}`}>
+              ประวัติแต้มลูกค้า / Customer points history
+            </Link>
+          )}
           <p>
             {sale.status} · {sale.payment_status}
           </p>

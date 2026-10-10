@@ -23,7 +23,7 @@ export function AuthLayout({ children }: { children?: ReactNode } = {}) {
             <ArrowUpRight size={88} />
           </div>
         </div>
-        <small>SmartPOS · Golden Amber Glass</small>
+        <small>VELO · Smart POS Platform</small>
       </section>
       <section className="auth-form-section">
         <Link to="/dashboard" className="back-link">

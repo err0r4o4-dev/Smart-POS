@@ -17,6 +17,8 @@ import { TaxonomyPage } from '../features/catalog/TaxonomyPage';
 import { ImportPage } from '../features/catalog/ImportPage';
 import { LabelsPage } from '../features/catalog/LabelsPage';
 import { InventoryPage } from '../features/inventory/InventoryPage';
+import { PurchasingPage } from '../features/purchasing/PurchasingPage';
+import { ShelfPage } from '../features/purchasing/ShelfPage';
 import { POSWorkspace } from '../features/pos/POSWorkspace';
 import {
   POSTerminalPage,
@@ -53,6 +55,86 @@ export const router = createBrowserRouter([
         element: <RequireSession />,
         children: [
           { path: paths.account, element: <AccountPage /> },
+          {
+            element: <OrganizationGate permission="supplier.read" />,
+            children: [
+              {
+                path: '/suppliers',
+                element: <PurchasingPage view="suppliers" />,
+              },
+              {
+                path: '/suppliers/:id',
+                element: <PurchasingPage view="supplier" />,
+              },
+            ],
+          },
+          {
+            element: <OrganizationGate permission="purchasing.read" />,
+            children: [
+              {
+                path: '/purchasing/orders',
+                element: <PurchasingPage view="orders" />,
+              },
+              {
+                path: '/purchasing/orders/:id',
+                element: <PurchasingPage view="order" />,
+              },
+              {
+                path: '/purchasing/receipts',
+                element: <PurchasingPage view="receipts" />,
+              },
+              {
+                path: '/purchasing/returns',
+                element: <PurchasingPage view="returns" />,
+              },
+            ],
+          },
+          {
+            element: <OrganizationGate permission="purchasing.order.create" />,
+            children: [
+              {
+                path: '/purchasing/orders/new',
+                element: <PurchasingPage view="new" />,
+              },
+            ],
+          },
+          {
+            element: (
+              <OrganizationGate permission="purchasing.suggestion.read" />
+            ),
+            children: [
+              {
+                path: '/purchasing/suggestions',
+                element: <PurchasingPage view="suggestions" />,
+              },
+            ],
+          },
+          {
+            element: <OrganizationGate permission="shelf.read" />,
+            children: [
+              { path: '/shelves', element: <ShelfPage view="overview" /> },
+              { path: '/shelves/:id', element: <ShelfPage view="detail" /> },
+              ...['layout', 'replenishments', 'discrepancies'].map((view) => ({
+                path: '/shelves/' + view,
+                element: <ShelfPage view={view} />,
+              })),
+            ],
+          },
+          {
+            element: <OrganizationGate permission="shelf.manage" />,
+            children: [
+              { path: '/shelves/new', element: <ShelfPage view="new" /> },
+            ],
+          },
+          {
+            element: <OrganizationGate permission="inventory.read" />,
+            children: [
+              {
+                path: '/shelves/counts',
+                element: <InventoryPage section="counts" shelfOnly />,
+              },
+            ],
+          },
           {
             element: <OrganizationGate permission="sales.read" />,
             children: [

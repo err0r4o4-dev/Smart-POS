@@ -11,6 +11,7 @@ import (
 )
 
 type Filter struct {
+	ShelfOnly                                                                                                        bool
 	BranchID, Search, LocationID, VariantID, Status, Type, CategoryID, ProductStatus, Start, End, Actor, StockStatus string
 	Page, PageSize                                                                                                   int
 }
@@ -18,6 +19,12 @@ type Filter struct {
 func filter(values url.Values) (Filter, error) {
 	result := Filter{BranchID: values.Get("branch_id"), Search: values.Get("search"), LocationID: values.Get("location_id"), VariantID: values.Get("variant_id"), Status: values.Get("status"), Type: values.Get("type"), CategoryID: values.Get("category_id"), ProductStatus: values.Get("product_status"), Start: values.Get("from"), End: values.Get("to"), Actor: values.Get("actor_id"), StockStatus: values.Get("stock_status"), Page: 1, PageSize: 20}
 	var err error
+	if value := values.Get("shelf_only"); value != "" {
+		result.ShelfOnly, err = strconv.ParseBool(value)
+		if err != nil {
+			return result, ErrInput
+		}
+	}
 	if values.Get("page") != "" {
 		result.Page, err = strconv.Atoi(values.Get("page"))
 		if err != nil {
@@ -145,12 +152,22 @@ func (service *Service) List(ctx context.Context, user, org, resource string, fi
 	switch resource {
 	case "locations":
 		from = ` FROM stock_locations item `
+		if filter.ShelfOnly {
+			where += ` AND EXISTS(SELECT 1 FROM shelves shelf WHERE shelf.organization_id=item.organization_id AND shelf.stock_location_id=item.id) `
+		}
 		where += ` AND (item.name ILIKE $5 OR item.code ILIKE $5) AND ($6='' OR item.status=$6) AND ($7='' OR item.type=$7)`
 	case "adjustments", "counts", "transfers":
 		kind := map[string]string{"adjustments": "ADJUSTMENT", "counts": "COUNT", "transfers": "TRANSFER"}[resource]
 		args[6] = kind
 		from = ` FROM inventory_documents item `
 		where = ` WHERE item.organization_id=$1 AND ($2 OR item.branch_id=ANY($3::uuid[]) OR item.destination_branch_id=ANY($3::uuid[])) AND ($4='' OR item.branch_id=nullif($4,'')::uuid OR item.destination_branch_id=nullif($4,'')::uuid) AND item.kind=$7 AND ($6='' OR item.status=$6) AND (item.reason_code ILIKE $5 OR item.id::text ILIKE $5) `
+		if filter.ShelfOnly {
+			where += ` AND EXISTS(SELECT 1 FROM shelves shelf WHERE shelf.organization_id=item.organization_id AND shelf.stock_location_id=item.location_id) `
+		}
+		if filter.LocationID != "" {
+			args = append(args, filter.LocationID)
+			where += ` AND item.location_id=$8::uuid `
+		}
 		selection += `||jsonb_build_object('items',COALESCE((SELECT jsonb_agg(jsonb_build_object('variant_id',variant_id,'quantity',quantity::text,'expected_quantity',expected_quantity::text,'counted_quantity',counted_quantity::text)) FROM inventory_document_items WHERE organization_id=item.organization_id AND document_id=item.id),'[]'::jsonb))`
 	case "movements":
 		args = []any{org, owner, branches, filter.BranchID, "%" + filter.Search + "%", filter.LocationID, filter.VariantID, filter.Type, filter.Start, filter.End, filter.Actor}

@@ -170,7 +170,13 @@ function VariantPicker({
     </div>
   );
 }
-export function InventoryPage({ section }: { section: string }) {
+export function InventoryPage({
+  section,
+  shelfOnly = false,
+}: {
+  section: string;
+  shelfOnly?: boolean;
+}) {
   const tenant = useOrganization();
   const { id } = useParams();
   return (
@@ -178,10 +184,19 @@ export function InventoryPage({ section }: { section: string }) {
       key={`${tenant.context?.organization.id}:${tenant.branchID}:${section}:${id ?? ''}`}
       section={section}
       id={id}
+      shelfOnly={shelfOnly}
     />
   );
 }
-function InventoryScreen({ section, id }: { section: string; id?: string }) {
+function InventoryScreen({
+  section,
+  id,
+  shelfOnly,
+}: {
+  section: string;
+  id?: string;
+  shelfOnly?: boolean;
+}) {
   const tenant = useOrganization();
   const auth = useAuth();
   const client = useQueryClient();
@@ -218,6 +233,7 @@ function InventoryScreen({ section, id }: { section: string; id?: string }) {
     type,
     page: String(page),
     page_size: '20',
+    ...(shelfOnly ? { shelf_only: 'true' } : {}),
     location_id: locationFilter,
     stock_status: stockStatus,
     category_id: category,
@@ -249,7 +265,7 @@ function InventoryScreen({ section, id }: { section: string; id?: string }) {
     queryKey: [...key, 'locations-for-form', locationPage],
     queryFn: ({ signal }) =>
       organizationRequest<InventoryPageData<StockLocation>>(
-        `${base}/locations?branch_id=${branch}&page_size=100&page=${locationPage}`,
+        `${base}/locations?branch_id=${branch}&page_size=100&page=${locationPage}${shelfOnly ? '&shelf_only=true' : ''}`,
         { signal },
       ),
     enabled: !!org && !!branch,
@@ -321,7 +337,11 @@ function InventoryScreen({ section, id }: { section: string; id?: string }) {
     <section className="catalog-page inventory-page">
       <header className="catalog-header">
         <div>
-          <p className="eyebrow">INVENTORY · PHASE 2</p>
+          <p className="eyebrow">
+            {shelfOnly
+              ? 'SHELF COUNTS · INVENTORY SERVICE'
+              : 'INVENTORY · PHASE 2'}
+          </p>
           <h1>{title(section)}</h1>
           <p>
             Recorded Stock จาก ledger · Counted Stock คือผลตรวจนับ ·
@@ -379,7 +399,7 @@ function InventoryScreen({ section, id }: { section: string; id?: string }) {
                 }}
               />
             </Field>
-            {['balances', 'movements'].includes(section) && (
+            {['balances', 'movements', 'counts'].includes(section) && (
               <Field label="Location filter">
                 <select
                   value={locationFilter}

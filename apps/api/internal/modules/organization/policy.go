@@ -19,18 +19,18 @@ var CatalogPermissions = []string{"catalog.read", "catalog.create", "catalog.upd
 var InventoryPermissions = []string{"inventory.read", "inventory.location.manage", "inventory.opening_balance.create", "inventory.adjustment.create", "inventory.adjustment.approve", "inventory.adjustment.post", "inventory.count.create", "inventory.count.update", "inventory.count.approve", "inventory.count.post", "inventory.transfer.create", "inventory.transfer.approve", "inventory.transfer.dispatch", "inventory.transfer.receive", "inventory.reorder_point.manage", "inventory.audit.read"}
 var POSPermissions = []string{"pos.access", "pos.cart.manage", "pos.checkout", "pos.payment.cash", "pos.payment.manual_confirm", "pos.terminal.manage", "pos.register.open", "pos.register.close", "pos.register.close.other", "pos.register.history.read", "pos.payment.reconcile", "sales.read", "receipts.read", "receipts.print"}
 var CashierPOSPermissions = []string{"pos.access", "pos.cart.manage", "pos.checkout", "pos.payment.cash", "pos.payment.manual_confirm", "pos.register.open", "pos.register.close", "pos.register.history.read", "sales.read", "receipts.read", "receipts.print"}
-var PermissionNames = append(append(append([]string{"organization.read", "organization.update", "branch.read", "branch.create", "branch.update", "branch.deactivate", "employee.read", "employee.invite", "employee.update", "employee.remove", "role.read", "role.assign", "audit.read"}, CatalogPermissions...), InventoryPermissions...), POSPermissions...)
+var PermissionNames = append(append(append(append([]string{"organization.read", "organization.update", "branch.read", "branch.create", "branch.update", "branch.deactivate", "employee.read", "employee.invite", "employee.update", "employee.remove", "role.read", "role.assign", "audit.read"}, CatalogPermissions...), InventoryPermissions...), POSPermissions...), PurchasingPermissions...)
 
 func Permissions(role string) []string {
 	switch role {
 	case "OWNER":
 		return append([]string{}, PermissionNames...)
 	case "MANAGER":
-		return append(append(append([]string{"organization.read", "branch.read", "branch.update", "employee.read", "employee.invite", "employee.update", "employee.remove", "role.read", "role.assign", "audit.read"}, CatalogPermissions...), InventoryPermissions...), POSPermissions...)
+		return append(append(append(append([]string{"organization.read", "branch.read", "branch.update", "employee.read", "employee.invite", "employee.update", "employee.remove", "role.read", "role.assign", "audit.read"}, CatalogPermissions...), InventoryPermissions...), POSPermissions...), PurchasingPermissions...)
 	case "INVENTORY_STAFF":
-		return []string{"organization.read", "branch.read", "catalog.read", "catalog.create", "catalog.update", "catalog.import", "catalog.barcode.manage", "catalog.labels.print", "inventory.read", "inventory.audit.read", "inventory.location.manage", "inventory.adjustment.create", "inventory.count.create", "inventory.count.update", "inventory.transfer.create", "inventory.transfer.dispatch", "inventory.transfer.receive", "inventory.reorder_point.manage"}
+		return append([]string{"organization.read", "branch.read", "catalog.read", "catalog.create", "catalog.update", "catalog.import", "catalog.barcode.manage", "catalog.labels.print", "inventory.read", "inventory.audit.read", "inventory.location.manage", "inventory.adjustment.create", "inventory.count.create", "inventory.count.update", "inventory.transfer.create", "inventory.transfer.dispatch", "inventory.transfer.receive", "inventory.reorder_point.manage"}, WarehousePurchasingPermissions...)
 	case "PURCHASING_STAFF":
-		return []string{"organization.read", "branch.read", "catalog.read", "inventory.read", "inventory.transfer.create", "inventory.transfer.receive", "inventory.reorder_point.manage"}
+		return append([]string{"organization.read", "branch.read", "catalog.read", "inventory.read", "inventory.transfer.create", "inventory.transfer.receive", "inventory.reorder_point.manage"}, BuyerPermissions...)
 	case "CASHIER":
 		return append([]string{"organization.read", "branch.read", "catalog.read", "inventory.read"}, CashierPOSPermissions...)
 	default:

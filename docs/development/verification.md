@@ -1,5 +1,11 @@
 # Verification
 
+## Phase 4 continuation (2026-10-10 Asia/Bangkok)
+
+**Phase 4: IMPLEMENTED; LOCAL ACCEPTANCE PENDING.** The purchasing/shelves changes already present in the working tree were retained. This continuation verifies 75 frontend tests (including 11 focused purchasing tests), contracts, TypeScript, ESLint, frontend production build and Go vet/tests/build. ESLint retains three existing warnings; Vite reports a bundle-size warning.
+
+Current integration/database/browser verification is **BLOCKED**: `docker ps` cannot connect to `dockerDesktopLinuxEngine`, including outside the sandbox. `go test -race ./...` is **BLOCKED** because cgo is disabled. No migration, database test, browser scenario, commit, push or deployment was performed in this continuation. The [Phase 4 progress report](phase4-verification.md) distinguishes actual passes from unverified runtime gates. Earlier Phase 4 NOT STARTED statements below are historical, not current status.
+
 ## Phase 3 finalization (2026-10-10 Asia/Bangkok)
 
 **Phase 3.1–3.7 and Phase 3 overall: COMPLETED (Local).** Work began with the October 9 execution context and continued past midnight locally. Phase 0/1A/1B/1C/2 remain COMPLETED (Local); Phase 4 is NOT STARTED. This is not production readiness.

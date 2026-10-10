@@ -1,0 +1,42 @@
+.supply-page .inventory-form {
+  align-items: start;
+}
+.supply-picker {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.supply-line {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  margin: 12px 0;
+}
+.supply-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 16px;
+}
+.supply-page code {
+  overflow-wrap: anywhere;
+}
+.supply-page .catalog-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.supply-page fieldset {
+  min-width: 0;
+}
+.supply-page legend {
+  overflow-wrap: anywhere;
+}
+.supply-page .button {
+  max-width: 100%;
+  white-space: normal;
+}
+@media (max-width: 640px) {
+  .supply-page .inventory-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

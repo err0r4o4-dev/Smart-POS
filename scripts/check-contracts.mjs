@@ -68,6 +68,38 @@ const inventoryPaths = [
     ).map((action) => '/' + resource + '/{resourceId}/' + action),
   ]),
 ].map((path) => '/api/v1/organizations/{id}/inventory' + path);
+const supplyPaths = [
+  '/suppliers',
+  '/suppliers/{resourceId}',
+  '/suppliers/{resourceId}/products',
+  '/suppliers/{resourceId}/products/{productId}',
+  ...[
+    ['orders', ['submit', 'approve', 'reject', 'issue', 'cancel', 'close']],
+    ['receipts', ['submit', 'approve', 'reject', 'correct', 'cancel', 'post']],
+    ['returns', ['submit', 'approve', 'reject', 'cancel', 'dispatch']],
+  ].flatMap(([resource, actions]) => [
+    '/purchasing/' + resource,
+    '/purchasing/' + resource + '/{resourceId}',
+    ...actions.map(
+      (action) => '/purchasing/' + resource + '/{resourceId}/' + action,
+    ),
+  ]),
+  '/purchasing/discrepancies',
+  '/purchasing/discrepancies/{resourceId}',
+  '/purchasing/suggestions',
+  '/purchasing/suggestions/create-draft',
+  '/shelves',
+  '/shelves/{resourceId}',
+  '/shelves/{resourceId}/slots',
+  '/shelves/{resourceId}/assignments',
+  '/shelves/{resourceId}/assignments/{assignmentId}',
+  '/shelves/replenishments',
+  '/shelves/replenishments/{resourceId}',
+  '/shelves/replenishments/suggestions',
+  ...['assign', 'start', 'complete', 'cancel'].map(
+    (action) => '/shelves/replenishments/{resourceId}/' + action,
+  ),
+].map((path) => '/api/v1/organizations/{id}' + path);
 const posPaths = [
   '/pos/terminals',
   '/pos/terminals/{resourceId}',
@@ -101,6 +133,7 @@ assert.deepEqual(
     ...posPaths,
     ...catalogPaths,
     ...inventoryPaths,
+    ...supplyPaths,
     '/api/v1/auth/forgot-password',
     '/api/v1/auth/login',
     '/api/v1/auth/logout',
@@ -162,6 +195,71 @@ for (const [path, item] of Object.entries(api.paths)) {
 }
 const compose = YAML.parse(readFileSync('docker-compose.yml', 'utf8'));
 const operationIDs = new Set();
+for (const path of supplyPaths) {
+  for (const method of ['get', 'post', 'patch']) {
+    const operation = api.paths[path][method];
+    if (!operation) continue;
+    assert.ok(
+      !operationIDs.has(operation.operationId),
+      'Duplicate Phase 4 operationId',
+    );
+    operationIDs.add(operation.operationId);
+    assert.match(
+      operation.description,
+      /Permission: (supplier|purchasing|shelf)\./,
+    );
+    for (const status of ['400', '401', '403', '404', '409', '503'])
+      assert.ok(operation.responses[status]);
+    if (
+      method !== 'get' &&
+      (path.includes('/purchasing/') || path.includes('/replenishments'))
+    )
+      assert.ok(
+        operation.parameters.some(
+          (parameter) =>
+            parameter.name === 'Idempotency-Key' &&
+            parameter.required &&
+            parameter.schema.format === 'uuid',
+        ),
+      );
+    if (
+      method === 'get' &&
+      !path.includes('{resourceId}') &&
+      !path.endsWith('/products')
+    )
+      assert.ok(
+        operation.parameters.some(
+          (parameter) =>
+            parameter.name === 'page_size' && parameter.schema.maximum === 100,
+        ),
+      );
+  }
+}
+for (const [schema, valid, invalid] of [
+  ['SupplyMoney', '9999999999999999.99', '1.001'],
+  ['SupplyQuantity', '999999999999999.999', '1e3'],
+  ['SupplyFactor', '24.000000', '0.0000001'],
+]) {
+  const pattern = new RegExp(api.components.schemas[schema].pattern);
+  assert.ok(pattern.test(valid));
+  assert.ok(!pattern.test(invalid));
+  assert.equal(api.components.schemas[schema].type, 'string');
+}
+assert.equal(
+  api.components.schemas.PurchaseDocumentInput.properties.items.maxItems,
+  100,
+);
+assert.equal(api.components.schemas.Shelf.properties.assignments.maxItems, 100);
+assert.equal(
+  api.components.schemas.PurchaseLine.properties.conversion_factor.$ref,
+  '#/components/schemas/SupplyFactor',
+);
+for (const movement of ['PURCHASE_RECEIVE', 'SUPPLIER_RETURN'])
+  assert.ok(
+    api.components.schemas.InventoryMovement.properties.movement_type.enum.includes(
+      movement,
+    ),
+  );
 for (const path of inventoryPaths) {
   for (const method of ['get', 'post', 'put', 'patch']) {
     const operation = api.paths[path][method];

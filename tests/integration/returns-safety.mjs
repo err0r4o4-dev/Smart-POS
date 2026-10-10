@@ -86,12 +86,19 @@ try {
     [variant, '1'],
     [variant2, '1'],
   ]);
-  const historicalSale = JSON.stringify(await ok(`/sales/${original.id}`));
+  const immutableSale = ({ returns, adjustments, ...snapshot }) =>
+    JSON.stringify(snapshot);
+  const historicalSale = immutableSale(await ok(`/sales/${original.id}`));
   const full = await action(await approve(await create(original)), 'complete');
   equal(
-    JSON.stringify(await ok(`/sales/${original.id}`)),
+    immutableSale(await ok(`/sales/${original.id}`)),
     historicalSale,
     'sale, payment, receipt and original movements stay immutable',
+  );
+  equal(
+    (await ok(`/sales/${original.id}`)).returns[0].id,
+    full.id,
+    'new navigation projection links the compensating return',
   );
   equal(
     full.amount,

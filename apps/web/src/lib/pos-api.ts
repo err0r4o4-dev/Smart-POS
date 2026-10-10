@@ -69,6 +69,7 @@ export interface POSShift {
   closed_at: string | null;
 }
 export type PaymentMethod = 'CASH' | 'QR_MANUAL' | 'BANK_TRANSFER_MANUAL';
+export type RecordedPaymentMethod = PaymentMethod | 'EXCHANGE_CREDIT';
 export interface POSCheckout {
   id: string;
   cart_id: string;
@@ -94,7 +95,7 @@ export interface SaleSummary {
   terminal_name: string;
   cashier_name: string;
   grand_total: string;
-  method: PaymentMethod;
+  method: RecordedPaymentMethod;
   payment_status: string;
   status: string;
   completed_at: string;
@@ -122,8 +123,9 @@ export interface POSSale extends SaleSummary {
     | 'line_total'
   > & { stock_location_id: string })[];
   payment: {
-    method: PaymentMethod;
+    method: RecordedPaymentMethod;
     amount: string;
+    credit_amount?: string;
     received: string;
     change: string;
     status: string;
@@ -141,6 +143,14 @@ export interface POSSale extends SaleSummary {
     variant_id: string;
   }[];
   audit: { event_type: string; created_at: string; actor_id: string }[];
+  adjustments?: {
+    id: string;
+    kind: string;
+    number: string;
+    status: string;
+    net_difference: string;
+  }[];
+  returns?: { id: string; number: string; status: string }[];
 }
 
 export function posRequest<Result>(
@@ -170,8 +180,9 @@ export function adjustQuantity(value: string, step: bigint) {
   const next = amount + step;
   return `${next / 1000n}.${(next % 1000n).toString().padStart(3, '0')}`;
 }
-export const paymentLabels: Record<PaymentMethod, string> = {
+export const paymentLabels: Record<RecordedPaymentMethod, string> = {
   CASH: 'เงินสด',
   QR_MANUAL: 'QR — ยืนยันด้วยตนเอง',
   BANK_TRANSFER_MANUAL: 'โอนธนาคาร — ยืนยันด้วยตนเอง',
+  EXCHANGE_CREDIT: 'เครดิตเปลี่ยนสินค้า — ไม่ใช่เงินรับใหม่',
 };

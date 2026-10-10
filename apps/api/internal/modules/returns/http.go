@@ -61,6 +61,7 @@ func writeEndpoint[Input any](status int, run func(context.Context, string, stri
 	})
 }
 func (handler Handler) TenantRoutes(router chi.Router) {
+	handler.adjustmentRoutes(router)
 	service := handler.Service
 	for _, kind := range []string{"returns", "refunds"} {
 		router.Get("/"+kind, endpoint(200, func(ctx context.Context, user, org string, request *http.Request) (any, error) {

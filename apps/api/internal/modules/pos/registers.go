@@ -85,7 +85,7 @@ func (service *Service) CloseShift(ctx context.Context, user, org, id, key strin
 		return shiftResult(ctx, tx, org, id)
 	}
 	var pending bool
-	err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM pos_checkouts WHERE organization_id=$1 AND shift_id=$2 AND status IN ('AWAITING_PAYMENT','CONFIRMED','RECONCILIATION_REQUIRED')) OR EXISTS(SELECT 1 FROM customer_refunds WHERE organization_id=$1 AND shift_id=$2 AND status IN ('SETTLEMENT_REPORTED','RECONCILIATION_REQUIRED'))", org, id).Scan(&pending)
+	err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM pos_checkouts WHERE organization_id=$1 AND shift_id=$2 AND status IN ('AWAITING_PAYMENT','CONFIRMED','RECONCILIATION_REQUIRED')) OR EXISTS(SELECT 1 FROM customer_refunds WHERE organization_id=$1 AND shift_id=$2 AND status IN ('SETTLEMENT_REPORTED','RECONCILIATION_REQUIRED')) OR EXISTS(SELECT 1 FROM sale_adjustments WHERE organization_id=$1 AND shift_id=$2 AND reported_at IS NOT NULL AND status IN ('AWAITING_SETTLEMENT','RECONCILIATION_REQUIRED'))", org, id).Scan(&pending)
 	if err != nil {
 		return nil, err
 	}

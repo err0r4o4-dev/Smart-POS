@@ -143,6 +143,21 @@ const returnPaths = [
 assert.deepEqual(
   Object.keys(api.paths).sort(),
   [
+    ...['/exchanges', '/sales/voids']
+      .flatMap((root) => [
+        root,
+        root + '/quote',
+        root + '/{resourceId}',
+        ...[
+          'submit',
+          'approve',
+          'reject',
+          'cancel',
+          'confirm-settlement',
+          'complete',
+        ].map((action) => root + '/{resourceId}/' + action),
+      ])
+      .map((path) => '/api/v1/organizations/{id}' + path),
     ...posPaths,
     ...catalogPaths,
     ...inventoryPaths,
@@ -405,6 +420,57 @@ for (const path of returnPaths) {
 assert.equal(
   api.components.schemas.POSShift.properties.cash_refunds.$ref,
   '#/components/schemas/POSMoney',
+);
+const adjustmentPaths = Object.keys(api.paths).filter((path) =>
+  /\/(exchanges|sales\/voids)(\/|$)/.test(path),
+);
+assert.equal(adjustmentPaths.length, 18);
+for (const path of adjustmentPaths) {
+  for (const method of ['get', 'post', 'patch']) {
+    const operation = api.paths[path][method];
+    if (!operation) continue;
+    assert.ok(
+      !operationIDs.has(operation.operationId),
+      'Duplicate adjustment operation',
+    );
+    operationIDs.add(operation.operationId);
+    assert.deepEqual(operation.security, [{ sessionCookie: [] }]);
+    for (const status of ['400', '401', '403', '404', '409', '503'])
+      assert.ok(operation.responses[status]);
+    if (method !== 'get') {
+      assert.ok(
+        operation.parameters.some(
+          (parameter) => parameter.$ref === '#/components/parameters/CSRF',
+        ),
+      );
+      if (!path.endsWith('/quote'))
+        assert.ok(
+          operation.parameters.some(
+            (parameter) =>
+              parameter.name === 'Idempotency-Key' && parameter.required,
+          ),
+        );
+    }
+  }
+}
+assert.ok(
+  !api.components.schemas.POSCheckoutInput.properties.method.enum.includes(
+    'EXCHANGE_CREDIT',
+  ),
+);
+assert.equal(
+  api.components.schemas.POSSalePayment.properties.credit_amount.$ref,
+  '#/components/schemas/POSMoney',
+);
+assert.ok(
+  api.components.schemas.POSSalePayment.properties.method.enum.includes(
+    'EXCHANGE_CREDIT',
+  ),
+);
+assert.equal(
+  api.components.schemas.SaleAdjustmentPage.properties.items.items.properties
+    .return_credit.$ref,
+  '#/components/schemas/ReturnMoney',
 );
 assert.equal(
   api.components.schemas.CatalogVariantInput.properties.cost_price.type,

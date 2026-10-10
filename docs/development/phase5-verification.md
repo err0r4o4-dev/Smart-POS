@@ -1,5 +1,11 @@
 # Phase 5 — Business Operations: local verification
 
+## Latest Phase5.2 handoff (2026-10-10)
+
+Phase5.2 **COMPLETED (Local)** after mandatory scoped acceptance:384 new API assertions,996 numbered regressions plus auth/organization,94 frontend tests,21 real-gateway browser tests, clean fresh migrations1–9/seven rollback-only SQL suites, CGO Go race/vet/build, Docker/Caddy and reconciled ledger/payment consideration. Detailed architecture, commands, failed-attempt history and limitations: [Phase5.2 Thai report](phase52-verification.md).
+
+Phase5 overall remains **PARTIAL**;5.3–5.6 NOT STARTED,5.7 PARTIAL,Phase6 NOT STARTED / NOT READY. The original Phase5.1 report/table below is preserved as historical evidence; its schema8/counts/deferred5.2 labels describe that earlier run, not the current repository. Canonical16 modules/106 routes unchanged. No commit/push/deploy/primary migration or data deletion.
+
 วันที่ตรวจ: **2026-10-10, Asia/Bangkok** รายงาน working tree ที่ยังไม่ commit ไม่ใช่ production certification
 
 ## 1. สถานะและขอบเขตจริง
@@ -143,7 +149,6 @@ Docs: README/TODO/current verification/roadmap/overview/modules/routes/security/
 ไม่มี reset/stage/commit/branch/push/deploy/Phase6 Stackเดิมและ volumes คงไว้ทำต่อ Test clients ของ suites ปิดใน finally ไม่ลบ container/process เดิมที่ไม่ทราบเจ้าของ
 
 **Final: Phase5 PARTIAL; scoped5.1 COMPLETED (Local); Phase6 NOT READY / NOT STARTED.** ถัดไป5.2 durable Exchanges/Voids ก่อน pricing/customers/loyalty/qualityตามลำดับ ไม่ใช่ AI
-
 
 ## 11. Complete changed-path inventory
 

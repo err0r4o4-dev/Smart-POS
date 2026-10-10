@@ -308,7 +308,36 @@ export function SaleDetailsPage() {
               {item.actor_id}
             </p>
           ))}
-          <p>ไม่มีการแก้ไข / คืนเงิน / void ใน Phase 3</p>
+          <p>
+            ประวัติขายเดิมไม่ถูกแก้ไข
+            การคืน/เปลี่ยน/กลับรายการใช้เอกสารเชื่อมโยง
+          </p>
+          <nav className="catalog-nav">
+            <Link to={`/pos/exchanges?sale_id=${sale.id}`}>
+              เปลี่ยนสินค้า / Exchanges
+            </Link>
+            <Link to={`/sales/voids?sale_id=${sale.id}`}>
+              กลับรายการ / Reversal
+            </Link>
+          </nav>
+          {sale.adjustments?.map((item) => (
+            <p key={item.id}>
+              <Link
+                to={`${item.kind === 'EXCHANGE' ? '/pos/exchanges' : '/sales/voids'}?document_id=${item.id}`}
+              >
+                {item.number}
+              </Link>{' '}
+              · {item.status} · {item.net_difference} THB
+            </p>
+          ))}
+          {sale.returns?.map((item) => (
+            <p key={item.id}>
+              <Link to={`/pos/returns?return_id=${item.id}`}>
+                {item.number}
+              </Link>{' '}
+              · {item.status}
+            </p>
+          ))}
         </Card>
         <Card>
           <div className="no-print">
@@ -392,6 +421,12 @@ export function Receipt({
         เงินรับ {moneyText(sale.payment.received)} · ทอน{' '}
         {moneyText(sale.payment.change)}
       </p>
+      {sale.payment.credit_amount && sale.payment.credit_amount !== '0.00' && (
+        <p>
+          เครดิตเปลี่ยนสินค้า {moneyText(sale.payment.credit_amount)} · เงินใหม่{' '}
+          {moneyText(sale.payment.amount)}
+        </p>
+      )}
       <p>ขอบคุณที่ใช้บริการ</p>
       <small>ใบเสร็จรับเงินทั่วไป ไม่ใช่ใบกำกับภาษี</small>
     </article>

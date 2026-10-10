@@ -588,11 +588,13 @@ export function CheckoutPage() {
                   setMethod(event.target.value as PaymentMethod)
                 }
               >
-                {Object.entries(paymentLabels).map(([value, label]) => (
-                  <option value={value} key={value}>
-                    {label}
-                  </option>
-                ))}
+                {Object.entries(paymentLabels)
+                  .filter(([value]) => value !== 'EXCHANGE_CREDIT')
+                  .map(([value, label]) => (
+                    <option value={value} key={value}>
+                      {label}
+                    </option>
+                  ))}
               </select>
             </label>
             {method === 'CASH' && (

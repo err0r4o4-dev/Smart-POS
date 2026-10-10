@@ -1,6 +1,6 @@
 # SmartPOS — Phase 1 / Phase 2 / Phase 3 / Phase 4 / Phase 5 checklist
 
-Status: **Phase 0–4 COMPLETED (Local); Phase 5 PARTIAL** (2026-10-10), not production readiness. **Phase 5.1 COMPLETED (Local); 5.2–5.6 not implemented; 5.7 PARTIAL. Phase 6–7 NOT STARTED.** Current evidence: `docs/development/phase5-verification.md` and `docs/development/verification.md`: 247 Returns assertions, 91 frontend tests, 19 browser tests, fresh migration chain 1–8, Go race and Phase 0–4 regressions. Earlier counts/checklists remain historical evidence, not current run totals.
+Status: **Phase 0–4, Phase 5.1 and Phase 5.2 COMPLETED (Local); Phase 5 overall PARTIAL** (2026-10-10), not production readiness. **5.3–5.6 NOT STARTED; 5.7 PARTIAL. Phase 6–7 NOT STARTED; Phase 6 NOT READY.** Latest evidence: `docs/development/phase52-verification.md`: 384 Phase5.2 API assertions, 996 numbered regression assertions, 94 frontend tests, 21 browser tests, fresh migration chain1–9, Go race and seven rollback-only SQL suites. Earlier counts/checklists remain historical evidence, not current run totals.
 
 ## Phase 5 implementation in progress (2026-10-10)
 
@@ -12,7 +12,13 @@ Status: **Phase 0–4 COMPLETED (Local); Phase 5 PARTIAL** (2026-10-10), not pro
 - [x] Rebuild isolated web/api; verify final print CSS, seven responsive widths and 19/19 real-enabled browser tests.
 - [x] Fresh migrate 1–8/rerun and six rollback-only SQL suites; preserve primary volume, test data and retained scratch databases.
 - [x] Record actual commands, failed attempts, limitations and remaining implementation work without replacing Phase 0–4 evidence.
-- [ ] Implement Phase 5.2 Exchanges/Voids without a second checkout engine.
+- [x] Implement Phase 5.2 Exchanges/Voids through the existing Returns/POS/Inventory/RBAC engine.
+- [x] Historical credit, equal/positive/negative/multi-item exchanges, approved revisions and immutable document linkage.
+- [x] Explicit manual difference acknowledgement, once-only cash accounting, durable reconciliation/recovery and atomic Inventory posting.
+- [x] Full-sale compensating reversals, prior-return conflict policy and existing uncommitted checkout cancellation.
+- [x] Phase5.2 runtime RLS/RBAC/CSRF, concurrent exchanges/returns/POS/shifts and managed-shelf regression.
+- [x] Fresh schema9/rerun, CGO race, 94 frontend tests and 21 real-gateway browser tests; preserve failed attempt logs and primary data.
+- [x] Update Phase5.2 architecture/schema/security/business flows and evidence-based local acceptance report.
 - [ ] Implement Phase 5.3 Pricing/Promotions, Phase 5.4 Customers and Phase 5.5 Loyalty.
 - [ ] Implement Phase 5.6 Batch/Expiry/Write-offs/Recalls across every Inventory path.
 - [ ] Complete Phase 5.7 integration/security/QA; do not mark Phase 5 complete prematurely.

@@ -1,6 +1,6 @@
 BEGIN;
 DO $$ BEGIN
- IF NOT EXISTS(SELECT 1 FROM schema_migrations WHERE version=8 AND NOT dirty) THEN RAISE EXCEPTION 'catalog schema not ready'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM schema_migrations WHERE version=9 AND NOT dirty) THEN RAISE EXCEPTION 'catalog schema not ready'; END IF;
  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='smartpos_runtime' AND (rolsuper OR rolbypassrls)) THEN RAISE EXCEPTION 'unsafe runtime'; END IF;
 END $$;
 INSERT INTO users(id,email,email_normalized,password_hash,display_name) VALUES('20000000-0000-4000-8000-000000000001','catalog-sql@example.test','catalog-sql@example.test','$argon2id$fixture','Catalog SQL');

@@ -65,6 +65,15 @@ func (service *Service) Settle(ctx context.Context, user, org, id, action, key s
 	if input.Revision != value.Revision {
 		return nil, ErrConflict
 	}
+	saved, err := applyRefundSettlement(ctx, tx, user, org, id, action, input, value)
+	if err != nil {
+		return nil, err
+	}
+	return finish(ctx, tx, user, org, op, "refunds."+action, id, saved)
+}
+
+func applyRefundSettlement(ctx context.Context, tx pgx.Tx, user, org, id, action string, input SettlementInput, value refund) (json.RawMessage, error) {
+	var err error
 	next := ""
 	switch action {
 	case "report":
@@ -79,7 +88,7 @@ func (service *Service) Settle(ctx context.Context, user, org, id, action, key s
 				return nil, ErrInput
 			}
 			var valid bool
-			err = tx.QueryRow(ctx, `SELECT status='OPEN' AND branch_id=$3 AND cashier_id=$4 AND expected_cash-COALESCE((SELECT sum(amount) FROM customer_refunds WHERE organization_id=$1 AND shift_id=$2 AND status IN ('SETTLEMENT_REPORTED','RECONCILIATION_REQUIRED')),0)>=$5::numeric FROM register_shifts WHERE organization_id=$1 AND id=$2 FOR UPDATE`, org, *input.ShiftID, value.Branch, user, value.Amount).Scan(&valid)
+			err = tx.QueryRow(ctx, `SELECT status='OPEN' AND branch_id=$3 AND cashier_id=$4 AND expected_cash-COALESCE((SELECT sum(amount) FROM customer_refunds WHERE organization_id=$1 AND shift_id=$2 AND status IN ('SETTLEMENT_REPORTED','RECONCILIATION_REQUIRED')),0)-COALESCE((SELECT sum(-net_difference) FROM sale_adjustments WHERE organization_id=$1 AND shift_id=$2 AND linked_return_id<>$6 AND net_difference<0 AND reported_at IS NOT NULL AND status IN ('AWAITING_SETTLEMENT','RECONCILIATION_REQUIRED')),0)>=$5::numeric FROM register_shifts WHERE organization_id=$1 AND id=$2 FOR UPDATE`, org, *input.ShiftID, value.Branch, user, value.Amount, value.ReturnID).Scan(&valid)
 			if err != nil {
 				return nil, dbError(err)
 			}
@@ -124,5 +133,5 @@ func (service *Service) Settle(ctx context.Context, user, org, id, action, key s
 	if err != nil {
 		return nil, err
 	}
-	return finish(ctx, tx, user, org, op, "refunds."+action, id, saved)
+	return saved, nil
 }

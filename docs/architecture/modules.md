@@ -2,7 +2,7 @@
 
 Phase 0 implements platform/presentation, Phase 1A implements identity, Phase 1B implements organization/branch/employee membership management with fixed RBAC Phase 1C implements product catalog and Phase 2 implements inventory core. Other business functionality remains planned. API groups/events below are proposals unless explicitly marked implemented; the live source is OpenAPI. Page counts remain the canonical 16-module/106-route inventory. Upstream dependencies are constrained by dependencies.md. See [Phase 1B architecture](organization.md) and [Phase 1C architecture](catalog.md).
 
-Current status supersedes the older introductory scope: Phase 0–4 are locally accepted and Phase 5.1 Returns/Refunds is locally accepted; Phase 5 overall is PARTIAL. Phase numbers identify primary delivery: returns/refunds extend into 5.1; exchanges/voids and remaining business operations are still pending. Settings integrations/backup and support extend into Phase 7. Dashboard/help retain only listed presentations. See [business operations](business-operations.md).
+Current status supersedes the older introductory scope: Phase0–4, Phase5.1 Returns/Refunds and Phase5.2 Exchanges/Voids are locally accepted; Phase5 overall is PARTIAL. The existing `returns` application module also owns `sale_adjustments` and settlement evidence, while POS retains replacement Sales/payment/shift ownership and Inventory retains all stock posting. No extra canonical module is added:16 modules/106 routes. Phase5.3–5.6 are NOT STARTED. Settings integrations/backup and support extend into Phase7. See [business operations](business-operations.md) and [latest acceptance](../development/phase52-verification.md).
 
 ## Authentication (6 pages)
 
@@ -47,22 +47,22 @@ Current status supersedes the older introductory scope: Phase 0–4 are locally 
 - Error cases: insufficient stock, payment mismatch, duplicate request.
 - Tests: concurrent checkout, idempotency, exact totals, failed payment.
 - Implementation phase: 3.
-- Current status: Phase 3.1–3.7 implemented and locally verified on seven operational POS routes; Phase 5.1 adds `/pos/returns` with original-sale validation, approval and inspected Inventory posting. /preview/pos remains a non-functional preview. Exchanges remain deferred; manual acknowledgement is not bank/gateway settlement proof. See [POS architecture](pos.md) and [Returns boundary](business-operations.md).
+- Current status: Phase3.1–3.7 implemented on seven operational POS routes; Phase5.1 adds `/pos/returns`; Phase5.2 adds `/pos/exchanges` with durable historical return credit, approved replacement snapshots, net settlement and atomic existing POS posting. /preview/pos remains non-functional. Manual acknowledgement is not bank/gateway proof. See [POS architecture](pos.md) and [business operations](business-operations.md).
 
 ## Sales (6 pages)
 
 - Business purpose: Traceable sale and receipt history.
-- Responsibilities: Immutable completed sale snapshots, scoped history/details and receipts; explicit Phase 5.1 refund evidence/reconciliation. Completed-sale voids remain deferred.
+- Responsibilities: Immutable completed Sale snapshots/history/receipts, manual refunds, related-document navigation and Phase5.2 compensating full-sale reversals; never deletion of completed Sales.
 - Planned pages: `/sales`, `/sales/:id`, `/sales/refunds`, `/sales/voids`, `/receipts`, `/sales/tax-documents`.
 - Planned API groups: /sales, /receipts.
-- Implemented entities: sales, sale_items, sale_payments, receipts and Phase 5.1 customer_returns/items/refunds, refund_settlement_events and register_cash_disbursements.
+- Implemented entities: sales, sale_items, sale_payments, receipts; Phase5.1 customer_returns/items/refunds, refund_settlement_events, register_cash_disbursements; Phase5.2 sale_adjustments and adjustment_settlement_events. Replacement payments distinguish external amount from credit_amount.
 - Dependencies: owning domains/upstream capabilities in [dependency matrix](dependencies.md); authorization through identity and organization for all tenant operations.
-- Implemented permissions: sales.read, receipts.read/print and pos.payment.reconcile (Owner/Manager). sales.void/refund.approve are not enabled.
+- Implemented permissions: sales.read, receipts.read/print, pos.payment.reconcile; Phase5.1 returns/refunds grants and Phase5.2 exchange.read/create/approve/settlement.confirm/complete, sales.void.read/request/approve/complete. Owner/Manager approve/reverse/settle within branch scope; Cashier own exchange creation/positive acknowledgement/completion requires approval, with negative-refund and reversal completion denied.
 - Audit: completed sales and explicit external funds-resolution notes; no automatic refund or event bus.
 - Error cases: invalid state, duplicate refund, absent receipt.
 - Tests: tenant/branch denial, refund limits, snapshots.
 - Implementation phase: 3.
-- Current status: /sales, /sales/:id and /receipts implemented and locally verified; `/sales/refunds` now implements separate manual settlement/reconciliation and current-shift cash accounting. 58/80 mm sales printing uses immutable snapshots; refund acknowledgement printing is not a tax receipt. Physical printers, completed-sale voids and tax documents remain unimplemented.
+- Current status: /sales, /sales/:id, /receipts, /sales/refunds and /sales/voids operational. Reversals preserve original history and use inspected Return/refund compensation; prior completed returns/adjustments conservatively block full-sale reversal. 58/80 mm sales printing uses immutable snapshots; refund/exchange/reversal acknowledgements are not tax receipts. Physical printers and tax documents remain unverified/unimplemented.
 
 ## Products (9 pages)
 

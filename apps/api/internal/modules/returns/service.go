@@ -110,51 +110,60 @@ func (service *Service) Create(ctx context.Context, user, org, key string, input
 	if err != nil || cached != nil {
 		return cached, dbError(err)
 	}
-	var id string
-	err = tx.QueryRow(ctx, "INSERT INTO customer_returns(organization_id,branch_id,original_sale_id,reason,amount,created_by) VALUES($1,$2,$3,$4,0,$5) RETURNING id::text", org, branch, input.SaleID, input.Reason, user).Scan(&id)
+	id, err := createDocument(ctx, tx, actor, user, org, branch, input)
 	if err != nil {
-		return nil, dbError(err)
-	}
-	seen := map[string]bool{}
-	total := new(big.Int)
-	for _, line := range input.Items {
-		if !uuidPattern.MatchString(line.SaleItemID) || seen[line.SaleItemID] {
-			return nil, ErrInput
-		}
-		seen[line.SaleItemID] = true
-		var variant, sold, paid, price string
-		err = tx.QueryRow(ctx, "SELECT variant_id::text,quantity::text,line_total::text,unit_price::text FROM sale_items WHERE organization_id=$1 AND sale_id=$2 AND id=$3", org, input.SaleID, line.SaleItemID).Scan(&variant, &sold, &paid, &price)
-		if err != nil {
-			return nil, dbError(err)
-		}
-		if err = inventory.ValidateQuantity(ctx, tx, org, variant, line.Quantity, true); err != nil {
-			return nil, dbError(err)
-		}
-		returned, refunded, err := prior(ctx, tx, org, line.SaleItemID)
-		if err != nil {
-			return nil, err
-		}
-		amount, err := allocation(sold, paid, returned, refunded, line.Quantity)
-		if err != nil {
-			return nil, err
-		}
-		if err = inventory.ReturnLocation(ctx, tx, actor, org, branch, line.Destination, line.Disposition); err != nil {
-			return nil, dbError(err)
-		}
-		minor, _ := units(amount, 2)
-		total.Add(total, minor)
-		_, err = tx.Exec(ctx, `INSERT INTO customer_return_items(organization_id,return_id,original_sale_id,original_sale_item_id,variant_id,branch_id,quantity,original_unit_price,original_paid_amount,refund_amount,disposition,destination_location_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, org, id, input.SaleID, line.SaleItemID, variant, branch, line.Quantity, price, paid, amount, line.Disposition, line.Destination)
-		if err != nil {
-			return nil, dbError(err)
-		}
-	}
-	_, err = tx.Exec(ctx, "UPDATE customer_returns SET amount=$3 WHERE organization_id=$1 AND id=$2", org, id, fixed(total, 2))
-	if err != nil {
-		return nil, dbError(err)
+		return nil, err
 	}
 	value, err := result(ctx, tx, org, id)
 	if err != nil {
 		return nil, err
 	}
 	return finish(ctx, tx, user, org, op, "returns.created", id, value)
+}
+
+func createDocument(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org, branch string, input CreateInput) (string, error) {
+	var err error
+	var id string
+	err = tx.QueryRow(ctx, "INSERT INTO customer_returns(organization_id,branch_id,original_sale_id,reason,amount,created_by) VALUES($1,$2,$3,$4,0,$5) RETURNING id::text", org, branch, input.SaleID, input.Reason, user).Scan(&id)
+	if err != nil {
+		return "", dbError(err)
+	}
+	seen := map[string]bool{}
+	total := new(big.Int)
+	for _, line := range input.Items {
+		if !uuidPattern.MatchString(line.SaleItemID) || seen[line.SaleItemID] {
+			return "", ErrInput
+		}
+		seen[line.SaleItemID] = true
+		var variant, sold, paid, price string
+		err = tx.QueryRow(ctx, "SELECT variant_id::text,quantity::text,line_total::text,unit_price::text FROM sale_items WHERE organization_id=$1 AND sale_id=$2 AND id=$3", org, input.SaleID, line.SaleItemID).Scan(&variant, &sold, &paid, &price)
+		if err != nil {
+			return "", dbError(err)
+		}
+		if err = inventory.ValidateQuantity(ctx, tx, org, variant, line.Quantity, true); err != nil {
+			return "", dbError(err)
+		}
+		returned, refunded, err := prior(ctx, tx, org, line.SaleItemID)
+		if err != nil {
+			return "", err
+		}
+		amount, err := allocation(sold, paid, returned, refunded, line.Quantity)
+		if err != nil {
+			return "", err
+		}
+		if err = inventory.ReturnLocation(ctx, tx, actor, org, branch, line.Destination, line.Disposition); err != nil {
+			return "", dbError(err)
+		}
+		minor, _ := units(amount, 2)
+		total.Add(total, minor)
+		_, err = tx.Exec(ctx, `INSERT INTO customer_return_items(organization_id,return_id,original_sale_id,original_sale_item_id,variant_id,branch_id,quantity,original_unit_price,original_paid_amount,refund_amount,disposition,destination_location_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, org, id, input.SaleID, line.SaleItemID, variant, branch, line.Quantity, price, paid, amount, line.Disposition, line.Destination)
+		if err != nil {
+			return "", dbError(err)
+		}
+	}
+	_, err = tx.Exec(ctx, "UPDATE customer_returns SET amount=$3 WHERE organization_id=$1 AND id=$2", org, id, fixed(total, 2))
+	if err != nil {
+		return "", dbError(err)
+	}
+	return id, nil
 }

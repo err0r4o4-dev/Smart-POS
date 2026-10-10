@@ -40,6 +40,7 @@ export interface CustomerReturn {
     sku: string;
     quantity: string;
     refund_amount: string;
+    original_sale_item_id: string;
     disposition: StockDisposition;
     destination_location_id: string | null;
     movement_id: string | null;

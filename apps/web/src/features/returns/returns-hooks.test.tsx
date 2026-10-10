@@ -101,6 +101,21 @@ it('aborts an unmounted tenant command and does not yield stale data', async () 
   resolve({ id: 'old-tenant-data' });
   await expect(pending).resolves.toBeUndefined();
 });
+it('separates adjustment POST and PATCH retry fingerprints', async () => {
+  const { Wrapper } = wrapper(),
+    hook = renderHook(() => useReturnsCommand(), { wrapper: Wrapper });
+  mocks.request.mockResolvedValue({ id: 'adjustment' });
+  await act(async () => {
+    await hook.result.current.run('/exchanges/id', { revision: 1 });
+  });
+  await act(async () => {
+    await hook.result.current.run('/exchanges/id', { revision: 1 }, 'PATCH');
+  });
+  expect(mocks.request.mock.calls[1][1].method).toBe('PATCH');
+  expect(mocks.request.mock.calls[0][1].key).not.toBe(
+    mocks.request.mock.calls[1][1].key,
+  );
+});
 it('isolates queries by user, organization, branch and resource', async () => {
   const { client, Wrapper } = wrapper();
   mocks.request.mockResolvedValue({ items: [] });

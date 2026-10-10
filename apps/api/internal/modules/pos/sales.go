@@ -11,6 +11,11 @@ import (
 )
 
 func settle(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org string, item Checkout) (string, error) {
+	var credit, external string
+	var adjustment *string
+	if err := tx.QueryRow(ctx, "SELECT credit_amount::text,(total-credit_amount)::text,adjustment_id::text FROM pos_checkouts WHERE organization_id=$1 AND id=$2", org, item.ID).Scan(&credit, &external, &adjustment); err != nil {
+		return "", err
+	}
 	value, err := terminal(ctx, tx, actor, org, item.TerminalID, true)
 	if err != nil {
 		return "", err
@@ -68,7 +73,7 @@ func settle(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org
 	if err = inventory.PostSale(ctx, tx, actor, user, org, op, sale, item.BranchID, value.StockLocationID, movements); err != nil {
 		return "", dbError(err)
 	}
-	_, err = tx.Exec(ctx, `INSERT INTO sale_payments(organization_id,sale_id,checkout_id,method,status,amount,received,change,reference,confirmed_by,confirmed_at) SELECT organization_id,$3,id,method,'CONFIRMED',total,received,change,reference,confirmed_by,confirmed_at FROM pos_checkouts WHERE organization_id=$1 AND id=$2`, org, item.ID, sale)
+	_, err = tx.Exec(ctx, `INSERT INTO sale_payments(organization_id,sale_id,checkout_id,method,status,amount,credit_amount,received,change,reference,confirmed_by,confirmed_at) SELECT organization_id,$3,id,method,'CONFIRMED',total-credit_amount,credit_amount,received,change,reference,confirmed_by,confirmed_at FROM pos_checkouts WHERE organization_id=$1 AND id=$2`, org, item.ID, sale)
 	if err != nil {
 		return "", dbError(err)
 	}
@@ -76,7 +81,7 @@ func settle(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org
 		return "", dbError(err)
 	}
 	if item.Method == "CASH" {
-		_, err = tx.Exec(ctx, "UPDATE register_shifts SET cash_sales=cash_sales+$3::numeric,expected_cash=expected_cash+$3::numeric WHERE organization_id=$1 AND id=$2 AND status='OPEN'", org, item.ShiftID, item.Total)
+		_, err = tx.Exec(ctx, "UPDATE register_shifts SET cash_sales=cash_sales+$3::numeric,expected_cash=expected_cash+$3::numeric WHERE organization_id=$1 AND id=$2 AND status='OPEN'", org, item.ShiftID, external)
 		if err != nil {
 			return "", dbError(err)
 		}
@@ -91,8 +96,10 @@ func settle(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org
 	if err = inventory.CompleteSale(ctx, tx, org, op, result); err != nil {
 		return "", err
 	}
-	if _, err = tx.Exec(ctx, "SET CONSTRAINTS sale_consistency IMMEDIATE"); err != nil {
-		return "", dbError(err)
+	if adjustment == nil {
+		if _, err = tx.Exec(ctx, "SET CONSTRAINTS sale_consistency IMMEDIATE"); err != nil {
+			return "", dbError(err)
+		}
 	}
 	return sale, nil
 }
@@ -155,10 +162,10 @@ func (service *Service) CompleteCheckout(ctx context.Context, user, org, id stri
 func saleResult(ctx context.Context, tx pgx.Tx, org, id string) (json.RawMessage, error) {
 	return raw(ctx, tx, `SELECT to_jsonb(sale)||jsonb_build_object('subtotal',sale.subtotal::text,'discount_total',sale.discount_total::text,'tax_total',sale.tax_total::text,'grand_total',sale.grand_total::text,
  'items',COALESCE((SELECT jsonb_agg(to_jsonb(item)||jsonb_build_object('quantity',item.quantity::text,'unit_price',item.unit_price::text,'line_total',item.line_total::text) ORDER BY item.sku) FROM sale_items item WHERE item.organization_id=sale.organization_id AND item.sale_id=sale.id),'[]'::jsonb),
- 'payment',(SELECT to_jsonb(payment)||jsonb_build_object('amount',payment.amount::text,'received',payment.received::text,'change',payment.change::text) FROM sale_payments payment WHERE payment.organization_id=sale.organization_id AND payment.sale_id=sale.id),
+ 'payment',(SELECT to_jsonb(payment)||jsonb_build_object('amount',payment.amount::text,'credit_amount',payment.credit_amount::text,'received',payment.received::text,'change',payment.change::text) FROM sale_payments payment WHERE payment.organization_id=sale.organization_id AND payment.sale_id=sale.id),
  'receipt',(SELECT to_jsonb(receipt) FROM receipts receipt WHERE receipt.organization_id=sale.organization_id AND receipt.sale_id=sale.id),
  'movements',COALESCE((SELECT jsonb_agg(to_jsonb(movement)||jsonb_build_object('quantity_delta',movement.quantity_delta::text,'quantity_before',movement.quantity_before::text,'quantity_after',movement.quantity_after::text)) FROM stock_movements movement WHERE movement.organization_id=sale.organization_id AND movement.sale_id=sale.id),'[]'::jsonb),
- 'audit',COALESCE((SELECT jsonb_agg(to_jsonb(event) ORDER BY created_at) FROM organization_audit_events event WHERE event.organization_id=sale.organization_id AND event.object_id IN (sale.id,sale.checkout_id)),'[]'::jsonb)) FROM sales sale WHERE organization_id=$1 AND id=$2`, org, id)
+ 'adjustments',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',id,'kind',kind,'number',number,'status',status,'net_difference',net_difference::text)) FROM sale_adjustments WHERE organization_id=sale.organization_id AND (original_sale_id=sale.id OR replacement_sale_id=sale.id)),'[]'::jsonb), 'returns',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',id,'number',number,'status',status)) FROM customer_returns WHERE organization_id=sale.organization_id AND original_sale_id=sale.id),'[]'::jsonb), 'audit',COALESCE((SELECT jsonb_agg(to_jsonb(event) ORDER BY created_at) FROM organization_audit_events event WHERE event.organization_id=sale.organization_id AND event.object_id IN (sale.id,sale.checkout_id)),'[]'::jsonb)) FROM sales sale WHERE organization_id=$1 AND id=$2`, org, id)
 }
 func (service *Service) Sale(ctx context.Context, user, org, id string, receipt bool) (json.RawMessage, error) {
 	permission := "sales.read"

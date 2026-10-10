@@ -1,6 +1,14 @@
 .returns-page {
   min-width: 0;
 }
+.adjustment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 1rem;
+}
+.returns-page article p {
+  overflow-wrap: anywhere;
+}
 .returns-page .card,
 .returns-line {
   min-width: 0;

@@ -7,7 +7,7 @@ const client = await startAuthClient();
 try {
   const result = spawnSync(
     process.execPath,
-    [require.resolve('@playwright/test/cli'), 'test'],
+    [require.resolve('@playwright/test/cli'), 'test', ...process.argv.slice(2)],
     {
       stdio: 'inherit',
       env: {

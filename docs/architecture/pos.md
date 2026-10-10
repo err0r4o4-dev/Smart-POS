@@ -1,6 +1,6 @@
 # POS and sales - Phase 3
 
-Current Phase 5.1 extension: separate customer returns/refunds reuse this POS history and current-shift accounting; original sales and closed shifts remain immutable. Readiness is clean schema8; exchanges/voids/discounts remain unimplemented. See [business operations](business-operations.md) and [latest acceptance](../development/phase5-verification.md). The Phase3 delivery statements below remain historical except the updated current register formula.
+Current Phase5.1/5.2 extension: Returns/Refunds and Exchanges/Voids reuse POS history and current-shift accounting; original Sales and closed shifts remain immutable. Readiness is exact clean schema9. Replacement Sales record `credit_amount` separately from external funds; ordinary checkout input/UI cannot choose internal `EXCHANGE_CREDIT`. Discounts remain unimplemented. See [business operations](business-operations.md) and [latest acceptance](../development/phase52-verification.md). Phase3 delivery statements below remain historical except the current register formula.
 
 Local implementation, verified on 2026-10-10; not a production release. The work started with the 2026-10-09 execution context. Go remains a modular monolith with Chi/pgx, PostgreSQL remains the only transactional database, and React/TanStack Query remains the frontend. No gateway, microservice, AI or Phase 4 functionality is added.
 
@@ -42,7 +42,7 @@ Database uniqueness covers one open shift per terminal/cashier, request keys, on
 
 ## UI and history
 
-Operational pages: `/pos`, `/pos/held-carts`, `/pos/checkout`, `/pos/register/open`, `/pos/register/close`, `/pos/register/history`, `/pos/shifts`, `/sales`, `/sales/:id`, `/receipts`. `/preview/pos` remains a presentation preview. Returns/exchanges/refunds/voids/tax documents remain unavailable.
+Operational pages: `/pos`, `/pos/held-carts`, `/pos/checkout`, `/pos/register/open`, `/pos/register/close`, `/pos/register/history`, `/pos/shifts`, `/sales`, `/sales/:id`, `/receipts`; Phase5 adds `/pos/returns`, `/sales/refunds`, `/pos/exchanges`, `/sales/voids`. `/preview/pos` is a presentation preview; tax documents remain unavailable.
 
 POS uses the existing fonts, amber controls, cards and organization switchers. Query keys include user/organization/branch and requests support cancellation; workspace remounts on context changes. Barcode scanning uses keyboard/Enter, unknown codes never create products, and quantity controls support direct entry and touch. Held carts/register/payment/sales history use server pagination. Product browsing and terminal/location selectors are bounded; use product search/category filters for larger catalogs.
 

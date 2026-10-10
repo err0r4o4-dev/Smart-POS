@@ -1,6 +1,20 @@
 # Verification
 
-## Current Phase 5 local slice (2026-10-10 Asia/Bangkok)
+## Current Phase5.2 local acceptance (2026-10-10 Asia/Bangkok)
+
+**Phase0–4, Phase5.1 and Phase5.2 COMPLETED (Local); Phase5 overall PARTIAL. Phase5.3–5.6 NOT STARTED; 5.7 PARTIAL; Phase6 NOT STARTED / NOT READY.** This latest section supersedes earlier status labels without deleting historical evidence. See [detailed Thai report](phase52-verification.md).
+
+- Real isolated PostgreSQL/HTTP:384 Phase5.2 assertions (163 flow+135 safety+86 boundaries) and996 numbered regressions (catalog116, Inventory135, POS132+64, purchasing/shelves175+125, Returns111+96+42); auth/organization suites also pass but have no assertion count. Latest combined numbered total1380, not1380 independent test cases.
+- Frontend94/94, TypeScript, OpenAPI/canonical16 modules106 routes, build pass; ESLint0 errors/3 existing Fast Refresh warnings; existing >500KB bundle warning remains. Go format/vet/race/build pass in CGO1 image; AI7/7 pass with existing Starlette warning.
+- Latest post-security real gateway Chromium21/21 in3.3m; two new grouped exchange/reversal tests plus19 regressions, no mocked adjustment APIs. Seven widths320–1920 pass; completed320/768/1440 and print screenshots inspected before/after the fix. Printing is browser evidence only, not tax/hardware certification. Evidence `.local/phase52-post-security-e2e.stdout.log`.
+- Fresh retained scratch `smartpos_phase52_acceptance_20261010_09667c15`: zero public tables before official1–9 migrations, each clean tracker, final9|f, rerun no change, seven rollback-only SQL suites pass. Existing isolated DB counts/tracker unchanged during scratch verification. Global isolated ledger/balance and payment consideration mismatches both0; primary DB never accessed/migrated and no volume/data deleted.
+- Docker29.8.2/Compose5.5.1/PostgreSQL17.11/Caddy2.10.2 healthy; Compose and Caddy validation/foundation smoke pass. Host CGO0 unchanged; check image Go1.26.9/GCC15.2.0/CGO1 supplies race checks. Local three-sample latency:lookup6.31–7.25ms, quote9.73–10.26ms, completion33.16–34.99ms; not production-load evidence.
+- Earlier sequential-run JSON retains two FAILED entries:Returns safety full JSON comparison included new related-document projections, and Cashier boundary used an incorrect endpoint. Corrected only those test contracts/URLs; final separate reruns pass96/77. Earlier failed browser label-locator runs remain preserved; latest21/21 supersedes them. No tests/security controls deleted/weakened.
+- Isolated schema9 was initially applied before its final guard enhancement; exact acknowledgement constraint/consistency function were transactionally synchronized only in the disposable test DB, then final fresh1–9 acceptance passed. This was not a primary migration and is not silently presented as a migration rerun applying edited SQL.
+
+Final5.2 security follow-up before handoff: reproduced Cashier negative manual-refund complete returning200 instead of403; server now rechecks conditional authority before cached replay and UI hides restricted completion. Boundaries86PASS covers allowed Manager completion and denied demoted-Cashier exact-key replay; flow163/safety135 rerunPASS. The latest Phase5.2 total384 and combined1380 supersede earlier375/1371 counts; earlier failed logs and initial runnerJSON remain intact.
+
+## Historical Phase5.1 local slice (2026-10-10 Asia/Bangkok)
 
 **Phase 0–4 COMPLETED (Local); Phase 5 PARTIAL. Phase 5.1 Returns/Refunds COMPLETED (Local), scoped; 5.2–5.6 not implemented; 5.7 PARTIAL; Phase 6 NOT STARTED / NOT READY.** This current section supersedes historical NOT STARTED labels below without replacing earlier evidence. See [detailed Thai report](phase5-verification.md), [architecture/limits](../architecture/business-operations.md) and [schema](../database/business-operations.md).
 

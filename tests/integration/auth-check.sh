@@ -7,5 +7,7 @@ psql -v ON_ERROR_STOP=1 -f /checks/catalog.sql
 echo 'PASS: catalog composite tenant FKs, exact prices, uniqueness, RLS and runtime grants'
 psql -v ON_ERROR_STOP=1 -f /checks/inventory.sql
 psql -v ON_ERROR_STOP=1 -f /checks/returns.sql
+psql -v ON_ERROR_STOP=1 -f /checks/adjustments.sql
+echo 'PASS: exchange/reversal accounting, tenant RLS and immutable settlement evidence'
 echo 'PASS: business operation FORCE RLS, runtime grants and deferred accounting checks'
 echo 'PASS: inventory tenant FKs, append-only ledger, atomic balances, precision and runtime grants'

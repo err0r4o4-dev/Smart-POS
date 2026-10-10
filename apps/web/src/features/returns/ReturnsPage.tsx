@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
 import { Button, Card, Loading, Tag } from '../../components/ui/primitives';
@@ -34,12 +34,13 @@ export function ReturnsPage({ refunds = false }: { refunds?: boolean }) {
   );
 }
 function ReturnsWorkspace({ refunds }: { refunds: boolean }) {
+  const [params] = useSearchParams();
   const tenant = useOrganization(),
     command = useReturnsCommand();
   const [language, setLanguage] = useState<'th' | 'en'>('th'),
     [search, setSearch] = useState(''),
     [page, setPage] = useState(1),
-    [selected, setSelected] = useState('');
+    [selected, setSelected] = useState(params.get('return_id') ?? '');
   const text = copy[language],
     kind = refunds ? 'refunds' : 'returns';
   const filters = new URLSearchParams({

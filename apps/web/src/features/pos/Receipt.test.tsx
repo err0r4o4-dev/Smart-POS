@@ -40,6 +40,27 @@ const sale = {
 } as POSSale;
 
 describe('committed receipt snapshot', () => {
+  it('distinguishes exchange credit from newly collected money', () => {
+    render(
+      <Receipt
+        sale={{
+          ...sale,
+          payment: {
+            ...sale.payment,
+            method: 'EXCHANGE_CREDIT',
+            credit_amount: '2.25',
+            amount: '0.00',
+            received: '0.00',
+            change: '0.00',
+          },
+        }}
+      />,
+    );
+    expect(screen.getByRole('article')).toHaveTextContent(
+      'เครดิตเปลี่ยนสินค้า 2.25 · เงินใหม่ 0.00',
+    );
+    expect(screen.getByRole('article')).toHaveTextContent('ไม่ใช่เงินรับใหม่');
+  });
   it('renders saved items, exact totals and change without a catalog call', () => {
     render(<Receipt sale={sale} />);
     const receipt = screen.getByRole('article', { name: 'ใบเสร็จขาย' });

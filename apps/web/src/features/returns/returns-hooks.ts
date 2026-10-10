@@ -39,9 +39,10 @@ export function useReturnsCommand() {
   async function run<Result>(
     path: string,
     body: object,
+    method: 'POST' | 'PATCH' = 'POST',
   ): Promise<Result | undefined> {
     const current = controller.current,
-      fingerprint = path + JSON.stringify(body),
+      fingerprint = method + path + JSON.stringify(body),
       key = keys.current.get(fingerprint) ?? crypto.randomUUID();
     keys.current.set(fingerprint, key);
     setBusy(true);
@@ -50,7 +51,7 @@ export function useReturnsCommand() {
       const value = await organizationRequest<Result>(
         `/organizations/${org}${path}`,
         {
-          method: 'POST',
+          method,
           body,
           key,
           csrf: state.session?.csrf_token,

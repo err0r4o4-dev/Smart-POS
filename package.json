@@ -29,6 +29,8 @@
     "verify:inventory": "node tests/integration/inventory-flow.mjs",
     "verify:pos": "node tests/integration/pos-flow.mjs && node tests/integration/pos-safety.mjs",
     "verify:returns": "node tests/integration/returns-flow.mjs && node tests/integration/returns-safety.mjs && node tests/integration/returns-shelves.mjs",
+    "verify:adjustments": "node tests/integration/adjustments-flow.mjs && node tests/integration/adjustments-safety.mjs && node tests/integration/adjustments-boundaries.mjs",
+    "verify:phase52": "node scripts/check-phase52.mjs",
     "verify:purchasing": "node tests/integration/purchasing-flow.mjs && node tests/integration/purchasing-safety.mjs",
     "verify:shelves": "node tests/integration/purchasing-flow.mjs && node tests/integration/purchasing-safety.mjs",
     "verify:ai": "docker compose --profile checks run --build --rm ai-check",

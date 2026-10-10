@@ -20,6 +20,7 @@ import { InventoryPage } from '../features/inventory/InventoryPage';
 import { PurchasingPage } from '../features/purchasing/PurchasingPage';
 import { ShelfPage } from '../features/purchasing/ShelfPage';
 import { ReturnsPage } from '../features/returns/ReturnsPage';
+import { AdjustmentsPage } from '../features/returns/AdjustmentsPage';
 import { POSWorkspace } from '../features/pos/POSWorkspace';
 import {
   POSTerminalPage,
@@ -57,12 +58,26 @@ export const router = createBrowserRouter([
         children: [
           { path: paths.account, element: <AccountPage /> },
           {
+            element: <OrganizationGate permission="exchange.read" />,
+            children: [
+              { path: '/pos/exchanges', element: <AdjustmentsPage /> },
+            ],
+          },
+          {
+            element: <OrganizationGate permission="sales.void.read" />,
+            children: [
+              { path: '/sales/voids', element: <AdjustmentsPage reversal /> },
+            ],
+          },
+          {
             element: <OrganizationGate permission="returns.read" />,
             children: [{ path: '/pos/returns', element: <ReturnsPage /> }],
           },
           {
             element: <OrganizationGate permission="refunds.read" />,
-            children: [{ path: '/sales/refunds', element: <ReturnsPage refunds /> }],
+            children: [
+              { path: '/sales/refunds', element: <ReturnsPage refunds /> },
+            ],
           },
           {
             element: <OrganizationGate permission="supplier.read" />,

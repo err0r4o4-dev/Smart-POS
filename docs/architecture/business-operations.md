@@ -2,9 +2,21 @@
 
 ## Delivery boundary (2026-10-10)
 
-Phase 5 overall is **PARTIAL**. Phase 5.1 Returns/Refunds passed its scoped local acceptance; Phases 5.2–5.6 are not implemented and Phase 5.7 is partial regression/security evidence, not acceptance of those missing features. Phase 6 is NOT STARTED and NOT READY. See [actual verification](../development/phase5-verification.md).
+Phase5 overall is **PARTIAL**. Phase5.1 Returns/Refunds and Phase5.2 Exchanges/Voids passed scoped local acceptance; Phase5.3–5.6 NOT STARTED and Phase5.7 PARTIAL. Phase6 NOT STARTED / NOT READY. See [latest verification](../development/phase52-verification.md) and [preserved Phase5.1 evidence](../development/phase5-verification.md).
 
-The canonical inventory stays at 16 modules / 106 planned routes. Only `/pos/returns` and `/sales/refunds` are newly implemented. No exchange, void, promotion, customer, loyalty or quality page is registered as operational.
+The canonical inventory stays at16 modules/106 planned routes. Operational Phase5 routes: `/pos/returns`, `/sales/refunds`, `/pos/exchanges`, `/sales/voids`. No promotion/customer/loyalty/quality page is operational. Schema9 adds adjustments inside the existing Returns application module.
+
+## Implemented Phase5.2 Exchanges/Voids
+
+- EXCHANGE and REVERSAL share discriminated, revisioned `sale_adjustments`, linked inspected Returns and append-only settlement events. Original Sales/items/payments/receipts and closed shifts remain immutable.
+- Lifecycle: `DRAFT → PENDING_APPROVAL → APPROVED → AWAITING_SETTLEMENT → COMPLETED`; rejection/cancellation only before acknowledged money. Nonzero posting conflict retains evidence as `RECONCILIATION_REQUIRED` without any committed Return/replacement Sale/stock/cash side effect.
+- Credit uses the same cumulative historical allocation as Returns. Replacement price is server-authoritative and checked again at completion. `difference = replacement_total − return_credit`; zero uses NONE, positive explicit CASH/QR_MANUAL/BANK_TRANSFER_MANUAL, negative authorized refund methods. No discount/loyalty/gateway engine is added.
+- Replacement Sale consideration is `payment.amount + payment.credit_amount = grand_total`. Credit applied is min(return credit, replacement gross); only positive net CASH increments cash_sales and only negative CASH_REFUND increments cash_refunds. Never treat exchange credit as new cash/bank revenue. Existing register formula remains `opening_cash + cash_sales − cash_refunds`.
+- Completion reuses historical allocation, `PostCustomerReturn`, existing POS `settle`, existing refund accounting and operation-result/audit persistence in one authorized transaction. Organization serialization, branch access, managed-shelf capacity and no-negative-stock controls remain intact.
+- Full-sale reversal conservatively requires no prior completed return/adjustment and a complete original item allocation. No deletion or residual partial-sale reversal; an uncommitted checkout still uses the existing cancellation policy.
+- Every read/mutation/replay reauthorizes before a cached result. Same-key/same-payload completion replays once; changed payload/revision conflicts. After acknowledged posting failure, the original key replays that failure document; refresh and use a new completion key to retry posting, never re-acknowledge funds.
+
+See [exchange flow](../business-flows/product-exchanges.md), [settlement/recovery](../business-flows/exchange-settlement.md), [reversal policy](../business-flows/sale-reversals.md) and [database guards](../database/exchanges-voids.md).
 
 ## Implemented ownership
 
@@ -55,9 +67,8 @@ Owner/Manager can approve and settle in their branch scope; self-approval is exp
 
 Operation keys bind organization, actor, action, resource, input fingerprint and revision. Authorization and branch checks happen before cached results. Identical successful retries return the committed result; changed payloads conflict. Failed posting rolls back the operation record and every local side effect, permitting the same key to retry after a legitimate capacity correction. Strict JSON/body limits, bounded lists, context deadlines and existing CSRF/Origin middleware remain in force.
 
-## Unimplemented next subphases
+## Remaining next subphases
 
-- **5.2 Exchanges/Voids:** must durably link return and replacement checkout, settle only the authorized difference, prevent orphan documents and preserve closed accounting. Current POS constraints require full-price consideration; two unrelated operations are not an exchange. Uncommitted checkout cancellation already exists, but is not a completed-sale void.
 - **5.3 Pricing/Promotions:** no price lists, scheduling/stacking/usage limits, approvals or checkout discount allocations. Catalog remains the authoritative price source.
 - **5.4 Customers:** no customer CRUD/groups, consent, privacy lifecycle or sale linkage.
 - **5.5 Loyalty:** no points ledger, earning/redemption or refund reversals; no loyalty double-spend assurance is claimed.

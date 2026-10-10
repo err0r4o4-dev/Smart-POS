@@ -1,5 +1,17 @@
 # Security model
 
+## Phase5.2 scoped Exchanges/Voids review (2026-10-10)
+
+Evidence: [local acceptance](../development/phase52-verification.md); implementation-scoped tests, not penetration/load/production certification.
+
+- Session, active membership, permission, own-document visibility and authorized branch are checked on every read/mutation/replay before operation-cache results. Organization serialization remains enabled. Cashier cannot approve, refund a negative difference or complete a reversal; positive own-shift exchange completion still needs approved snapshots.
+- Negative-difference completion additionally requires current Owner/Manager authority **before cached replay**: Cashier cannot finalize a manager-acknowledged manual refund or replay its own completion after demotion. This conditional gap was reproduced and fixed; authorized promotion/completion and denied demotion/replay are retained in86 boundary assertions.
+- Migration9 adds two ENABLE/FORCE RLS tables, composite tenant/branch references, constrained state/evidence pairs, immutable history/events and deferred linked-document/payment/item consistency. Runtime has no delete on adjustments/events and no direct Stock Balance writes. Missing/foreign tenant context yields no rows; bootstrap-superuser success is not RLS evidence.
+- Existing CSRF/Origin, strict JSON/body bounds, UUID Idempotency-Key and revision checks remain enabled. Tests cover tenant404, branch/RBAC403, role revocation before replay, changed payload, stale approval/settlement and unwanted financial fields on non-settlement actions.
+- Acknowledgement is operator evidence, not bank validation. After nonzero local posting failure the savepoint rolls back business effects and keeps RECONCILIATION_REQUIRED evidence; recovery cannot accept or refund money a second time. Unresolved acknowledged CASH/CASH_REFUND blocks shift close. Own-shift checks and reserved outgoing refunds prevent duplicate cash consumption.
+- Completed Sales/items/payments/receipts and closed shifts are not rewritten. Prior returns/reversals block double compensation; exchange-vs-return/POS races retain cumulative quantities and stock conservation. Managed-shelf capacity/assignments and no-negative-stock stay enforced.
+- Frontend query keys include user/org/branch; selected Sale/details are hidden immediately if branch context mismatches. Browser org/branch switching and permission-denied workflows use the actual gateway/backend, not mocked adjustment APIs.
+
 ## Phase 5.1 scoped Returns/Refunds review (2026-10-10)
 
 Evidence: [Phase 5 report](../development/phase5-verification.md); overall Phase5 remains PARTIAL. Implementation-scoped local review, not a penetration test or production certification.

@@ -6,7 +6,7 @@ Implemented identity routes are Phase 1A; organization/branch/member routes belo
 
 The nine Products routes are implemented Phase 1C. Catalog records are organization-scoped and shared across branches, not branch-owned. The backend rechecks active organization membership and catalog permissions; the existing Manager policy denies catalog access when no assigned active branch remains. Operational staff access follows active organization membership and fixed catalog permissions, not a separate all-role active-branch gate. Mutation-specific permissions are enforced separately from read access. See [catalog architecture](catalog.md).
 
-Phase 5.1 newly registers only `/pos/returns` and `/sales/refunds`; exchanges/voids, pricing/promotions, customers/loyalty and expiry/quality remain unregistered. Phase 5 overall is PARTIAL, not 106 implemented pages. See [actual scope](business-operations.md).
+Phase5.1 registers `/pos/returns` and `/sales/refunds`; Phase5.2 registers `/pos/exchanges` and `/sales/voids`. Pricing/promotions, customers/loyalty and expiry/quality remain unregistered. Phase5 overall is PARTIAL; canonical16 modules/106 routes does not mean106 implemented pages. See [actual scope](business-operations.md).
 
 | Module | Route | Status | Phase | Access target |
 | --- | --- | --- | --- | --- |
@@ -24,7 +24,7 @@ Phase 5.1 newly registers only `/pos/returns` and `/sales/refunds`; exchanges/vo
 | POS | `/pos/held-carts` | Implemented (Phase 3) | 3 | session + tenant + branch permission |
 | POS | `/pos/checkout` | Implemented (Phase 3) | 3 | session + tenant + branch permission |
 | POS | `/pos/returns` | Implemented Phase 5.1 (Local) | 5 | session + tenant + branch + returns.read; actions reauthorize |
-| POS | `/pos/exchanges` | Planned (not registered) | 3 | session + tenant + branch permission |
+| POS | `/pos/exchanges` | Implemented Phase 5.2 (Local) | 5 | session + tenant + branch + exchange.read; actions reauthorize |
 | POS | `/pos/register/open` | Implemented (Phase 3) | 3 | session + tenant + branch permission |
 | POS | `/pos/register/close` | Implemented (Phase 3) | 3 | session + tenant + branch permission |
 | POS | `/pos/register/history` | Implemented (Phase 3) | 3 | session + tenant + branch permission |
@@ -32,7 +32,7 @@ Phase 5.1 newly registers only `/pos/returns` and `/sales/refunds`; exchanges/vo
 | Sales | `/sales` | Implemented (Phase 3) | 3 | session + tenant + branch permission |
 | Sales | `/sales/:id` | Implemented (Phase 3) | 3 | session + tenant + branch permission |
 | Sales | `/sales/refunds` | Implemented Phase 5.1 (Local) | 5 | session + tenant + branch + refunds.read; settlement restricted |
-| Sales | `/sales/voids` | Planned (not registered) | 3 | session + tenant + branch permission |
+| Sales | `/sales/voids` | Implemented Phase 5.2 (Local) | 5 | session + tenant + branch + sales.void.read; approval/completion restricted |
 | Sales | `/receipts` | Implemented (Phase 3) | 3 | session + tenant + branch permission |
 | Sales | `/sales/tax-documents` | Planned (not registered) | 3 | session + tenant + branch permission |
 | Products | `/products` | Implemented Phase 1C | 1 | session + tenant + catalog.read |

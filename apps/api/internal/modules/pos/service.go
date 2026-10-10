@@ -12,6 +12,7 @@ import (
 	"smartpos/api/internal/modules/catalog"
 	"smartpos/api/internal/modules/inventory"
 	"smartpos/api/internal/modules/organization"
+	"smartpos/api/internal/modules/pricing"
 )
 
 type Service struct{ Organization *organization.Service }
@@ -20,10 +21,10 @@ func dbError(err error) error {
 	if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, catalog.ErrNotFound) || errors.Is(err, inventory.ErrNotFound) || errors.Is(err, organization.ErrNotFound) {
 		return ErrNotFound
 	}
-	if errors.Is(err, catalog.ErrInput) || errors.Is(err, inventory.ErrInput) || errors.Is(err, organization.ErrInput) {
+	if errors.Is(err, pricing.ErrInput) || errors.Is(err, catalog.ErrInput) || errors.Is(err, inventory.ErrInput) || errors.Is(err, organization.ErrInput) {
 		return ErrInput
 	}
-	if errors.Is(err, catalog.ErrConflict) || errors.Is(err, inventory.ErrConflict) || errors.Is(err, organization.ErrConflict) {
+	if errors.Is(err, pricing.ErrConflict) || errors.Is(err, catalog.ErrConflict) || errors.Is(err, inventory.ErrConflict) || errors.Is(err, organization.ErrConflict) {
 		return ErrConflict
 	}
 	var problem *pgconn.PgError
@@ -113,6 +114,15 @@ func variant(ctx context.Context, tx pgx.Tx, org, location, id, quantity, oldPri
 		return item, dbError(err)
 	}
 	item.SaleVariant = value
+	var branch string
+	if err = tx.QueryRow(ctx, "SELECT branch_id::text FROM stock_locations WHERE organization_id=$1 AND id=$2", org, location).Scan(&branch); err != nil {
+		return item, dbError(err)
+	}
+	value.UnitPrice, _, _, err = pricing.EffectivePrice(ctx, tx, org, branch, id, value.UnitPrice)
+	if err != nil {
+		return item, dbError(err)
+	}
+	item.UnitPrice = value.UnitPrice
 	amount, err := scaled(quantity, 3)
 	if err != nil || amount <= 0 {
 		return item, ErrInput

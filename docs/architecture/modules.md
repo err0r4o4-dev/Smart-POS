@@ -2,7 +2,7 @@
 
 Phase 0 implements platform/presentation, Phase 1A implements identity, Phase 1B implements organization/branch/employee membership management with fixed RBAC Phase 1C implements product catalog and Phase 2 implements inventory core. Other business functionality remains planned. API groups/events below are proposals unless explicitly marked implemented; the live source is OpenAPI. Page counts remain the canonical 16-module/106-route inventory. Upstream dependencies are constrained by dependencies.md. See [Phase 1B architecture](organization.md) and [Phase 1C architecture](catalog.md).
 
-Current status supersedes the older introductory scope: Phase0–4, Phase5.1 Returns/Refunds and Phase5.2 Exchanges/Voids are locally accepted; Phase5 overall is PARTIAL. The existing `returns` application module also owns `sale_adjustments` and settlement evidence, while POS retains replacement Sales/payment/shift ownership and Inventory retains all stock posting. No extra canonical module is added:16 modules/106 routes. Phase5.3–5.6 are NOT STARTED. Settings integrations/backup and support extend into Phase7. See [business operations](business-operations.md) and [latest acceptance](../development/phase52-verification.md).
+Current status supersedes the older introductory scope: Phase0–4 and Phase5.1–5.3 are locally accepted; Phase5 overall is PARTIAL. Returns owns adjustments, POS owns Sales/payment/shifts, Inventory owns stock posting and pricing owns quotes/discount approvals/redemptions in the same authorized transaction. No extra canonical module is added:16 modules/106 routes. Phase5.4–5.6 are NOT STARTED. See [pricing](pricing.md), [business operations](business-operations.md) and [latest acceptance](../development/phase53-verification.md).
 
 ## Authentication (6 pages)
 
@@ -42,7 +42,7 @@ Current status supersedes the older introductory scope: Phase0–4, Phase5.1 Ret
 - Implemented API group: organization-scoped /pos (terminals, carts, checkouts, payment confirmation and shifts); sales/receipts share the POS application module.
 - Domain entities: pos_terminals, register_shifts, pos_carts, pos_cart_items and pos_checkouts; sale snapshots are listed below.
 - Dependencies: owning domains/upstream capabilities in [dependency matrix](dependencies.md); authorization through identity and organization for all tenant operations.
-- Permissions: pos.access/cart.manage/checkout/payment.cash/payment.manual_confirm, pos.terminal.manage and pos.register.open/close/history.read; no price override permission is enabled.
+- Permissions: pos.access/cart.manage/checkout/payment.cash/payment.manual_confirm, pos.terminal.manage and pos.register.open/close/history.read; manual overrides require Phase5.3 discount.request and currently authorized discount.approve.
 - Audit: transactional terminal/cart/payment/checkout/shift lifecycle records; no event bus is claimed.
 - Error cases: insufficient stock, payment mismatch, duplicate request.
 - Tests: concurrent checkout, idempotency, exact totals, failed payment.
@@ -126,18 +126,17 @@ Current status supersedes the older introductory scope: Phase0–4, Phase5.1 Ret
 
 ## Pricing & Promotions (5 pages)
 
-- Business purpose: Consistent prices and approved discounts.
-- Responsibilities: Price lists, promotion eligibility, precedence, approvals.
-- Planned pages: `/pricing`, `/pricing/lists`, `/promotions`, `/promotions/:id`, `/discount-approvals`.
-- Planned API groups: /pricing, /promotions, /approvals.
-- Domain entities: price_lists, promotions, promotion_rules, approval_requests.
-- Dependencies: owning domains/upstream capabilities in [dependency matrix](dependencies.md); authorization through identity and organization for all tenant operations.
-- Permissions: pricing.manage, promotions.manage, discount.approve.
-- Business events: PriceChanged, PromotionActivated.
-- Error cases: overlapping promotion, expired rule, unauthorized override.
-- Tests: exact rounding, stacking precedence, override denial.
-- Implementation phase: 5.
-- Current status: documented/planned; no implementation.
+- Business purpose: Consistent authoritative prices and approved discounts.
+- Responsibilities: Scheduled organization/branch lists, promotion eligibility/precedence, exact allocation, manual approvals and atomic committed usage.
+- Implemented pages: `/pricing`, `/pricing/lists`, `/promotions`, `/promotions/:id`, `/discount-approvals`.
+- Implemented API groups: `/pricing/lists`, `/promotions`, `/discount-approvals` and POS cart quote; see OpenAPI.
+- Domain entities: price_lists, promotions with typed JSON rules, discount_approvals, promotion_redemptions; immutable POS/Sale pricing snapshots.
+- Dependencies: identity/organization authorization, Catalog identities, POS settlement, historical Returns credit and Inventory physical posting.
+- Permissions: pricing.read/manage/approve, promotions.read/manage, discount.request/read/approve. Owner manages organization-wide definitions; Manager writes assigned branches; Cashier requests own-cart discounts only.
+- Audits: definition mutations/transitions, approval requests/decisions and committed checkout; no speculative event bus is added.
+- Error cases: stale revisions/approvals, expired eligibility, exhausted usage, foreign scope, revoked authority and post-acknowledgement pricing changes.
+- Tests: exact rounding/stacking, BOGO physical deduction, final-use concurrency, replay/rollback, historical discounted refunds/exchanges, zero-payable and runtime RLS.
+- Implementation phase: 5.3; [architecture](pricing.md) and [actual verification status](../development/phase53-verification.md).
 
 ## Customers (5 pages)
 

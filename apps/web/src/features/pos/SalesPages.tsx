@@ -409,6 +409,10 @@ export function Receipt({
       ))}
       <hr />
       <div className="receipt-total">
+        <span>
+          ก่อนลด {moneyText(sale.subtotal)} · ส่วนลด{' '}
+          {moneyText(sale.discount_total)}
+        </span>
         <span>รวมสุทธิ</span>
         <strong>
           {moneyText(sale.grand_total)} {sale.currency}

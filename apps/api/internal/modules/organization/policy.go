@@ -26,13 +26,13 @@ func Permissions(role string) []string {
 	case "OWNER":
 		return append([]string{}, PermissionNames...)
 	case "MANAGER":
-		return append(append(append(append(append(append([]string{"organization.read", "branch.read", "branch.update", "employee.read", "employee.invite", "employee.update", "employee.remove", "role.read", "role.assign", "audit.read"}, CatalogPermissions...), InventoryPermissions...), POSPermissions...), PurchasingPermissions...), ReturnsPermissions...), AdjustmentPermissions...)
+		return append(append(append(append(append(append(append([]string{"organization.read", "branch.read", "branch.update", "employee.read", "employee.invite", "employee.update", "employee.remove", "role.read", "role.assign", "audit.read"}, CatalogPermissions...), InventoryPermissions...), POSPermissions...), PurchasingPermissions...), ReturnsPermissions...), AdjustmentPermissions...), PricingPermissions...)
 	case "INVENTORY_STAFF":
 		return append([]string{"organization.read", "branch.read", "catalog.read", "catalog.create", "catalog.update", "catalog.import", "catalog.barcode.manage", "catalog.labels.print", "inventory.read", "inventory.audit.read", "inventory.location.manage", "inventory.adjustment.create", "inventory.count.create", "inventory.count.update", "inventory.transfer.create", "inventory.transfer.dispatch", "inventory.transfer.receive", "inventory.reorder_point.manage"}, WarehousePurchasingPermissions...)
 	case "PURCHASING_STAFF":
 		return append([]string{"organization.read", "branch.read", "catalog.read", "inventory.read", "inventory.transfer.create", "inventory.transfer.receive", "inventory.reorder_point.manage"}, BuyerPermissions...)
 	case "CASHIER":
-		return append(append(append([]string{"organization.read", "branch.read", "catalog.read", "inventory.read"}, CashierPOSPermissions...), CashierReturnsPermissions...), CashierAdjustmentPermissions...)
+		return append(append(append([]string{"organization.read", "branch.read", "catalog.read", "inventory.read", "pricing.read", "promotions.read", "discount.read", "discount.request"}, CashierPOSPermissions...), CashierReturnsPermissions...), CashierAdjustmentPermissions...)
 	default:
 		return []string{}
 	}

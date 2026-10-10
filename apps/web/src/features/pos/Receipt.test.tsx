@@ -10,6 +10,8 @@ const sale = {
   sale_number: 'SAL-SNAPSHOT',
   cashier_name: 'Cashier',
   completed_at: '2026-10-09T12:00:00Z',
+  subtotal: '2.25',
+  discount_total: '0.00',
   grand_total: '2.25',
   currency: 'THB',
   receipt: { id: 'receipt', receipt_number: 'REC-SNAPSHOT' },
@@ -40,6 +42,41 @@ const sale = {
 } as POSSale;
 
 describe('committed receipt snapshot', () => {
+  it('renders historical gross and discount amounts without repricing', () => {
+    render(
+      <Receipt sale={{ ...sale, subtotal: '3.00', discount_total: '0.75' }} />,
+    );
+    expect(screen.getByRole('article')).toHaveTextContent(
+      'ก่อนลด 3.00 · ส่วนลด 0.75',
+    );
+    expect(screen.getByRole('article')).toHaveTextContent(
+      /รวมสุทธิ\s*2\.25 THB/,
+    );
+  });
+  it('distinguishes zero-payable sales from receiving money', () => {
+    render(
+      <Receipt
+        sale={{
+          ...sale,
+          discount_total: '2.25',
+          grand_total: '0.00',
+          payment: {
+            ...sale.payment,
+            method: 'NONE',
+            amount: '0.00',
+            received: '0.00',
+            change: '0.00',
+          },
+        }}
+      />,
+    );
+    expect(screen.getByRole('article')).toHaveTextContent(
+      'ยอดสุทธิศูนย์ — ไม่มีการรับเงิน',
+    );
+    expect(screen.getByRole('article')).toHaveTextContent(
+      /รวมสุทธิ\s*0\.00 THB/,
+    );
+  });
   it('distinguishes exchange credit from newly collected money', () => {
     render(
       <Receipt

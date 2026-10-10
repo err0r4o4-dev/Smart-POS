@@ -1,4 +1,5 @@
 import { organizationRequest } from './organization-api';
+import type { PricingQuote } from './pricing-api';
 
 export interface POSPage<Item> {
   items: Item[];
@@ -44,6 +45,7 @@ export interface POSCart {
   items: POSItem[];
   total: string;
   review_required: boolean;
+  pricing?: PricingQuote;
 }
 export interface CartSummary {
   id: string;
@@ -69,14 +71,14 @@ export interface POSShift {
   closed_at: string | null;
 }
 export type PaymentMethod = 'CASH' | 'QR_MANUAL' | 'BANK_TRANSFER_MANUAL';
-export type RecordedPaymentMethod = PaymentMethod | 'EXCHANGE_CREDIT';
+export type RecordedPaymentMethod = PaymentMethod | 'EXCHANGE_CREDIT' | 'NONE';
 export interface POSCheckout {
   id: string;
   cart_id: string;
   terminal_id: string;
   shift_id: string;
   status: string;
-  method: PaymentMethod;
+  method: RecordedPaymentMethod;
   total: string;
   received: string;
   change: string;
@@ -185,4 +187,5 @@ export const paymentLabels: Record<RecordedPaymentMethod, string> = {
   QR_MANUAL: 'QR — ยืนยันด้วยตนเอง',
   BANK_TRANSFER_MANUAL: 'โอนธนาคาร — ยืนยันด้วยตนเอง',
   EXCHANGE_CREDIT: 'เครดิตเปลี่ยนสินค้า — ไม่ใช่เงินรับใหม่',
+  NONE: 'ยอดสุทธิศูนย์ — ไม่มีการรับเงิน',
 };

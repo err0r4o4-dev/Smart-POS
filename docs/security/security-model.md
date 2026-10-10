@@ -1,5 +1,17 @@
 # Security model
 
+## Phase5.3 implementation-scoped verification (2026-10-10)
+
+Evidence: [local acceptance](../development/phase53-verification.md). These are targeted implementation tests, not a penetration test, independent security audit or production certification.
+
+- Existing sessions, active membership, fixed pricing/promotions/discount permissions, branch scope and own-cart/own-request checks remain authoritative. Owner controls organization-wide definitions; Manager writes only assigned branches; Cashier cannot approve. Current approver authority is checked again when applying a discount and before sensitive checkout/approval replay.
+- Manual approval binds organization, branch, requester, cart revision and pricing revision; expiry is15 minutes. Foreign, forged, stale, expired and permission-revoked approvals are denied. Request keys reject changed payloads; consumed approvals cannot be reused for another Sale.
+- Server validates bounded typed rules and variant/category references; no executable user expressions or trusted client totals. Mutations retain strict JSON/body limits, Origin/CSRF, optimistic revisions and successful-change audit. Definition transitions use revisions rather than replay caches.
+- Migration10 adds four ENABLE/FORCE RLS tables and tenant-safe references. Runtime cannot delete definitions/approvals/redemptions or update redemption history. Tests exercise smartpos_runtime directly without tenant context and with foreign context; bootstrap-superuser results are not claimed as RLS evidence.
+- Exact cents and deterministic remainder allocations prevent over-discounting. Sale pricing snapshots, consumed approvals and redemptions are immutable; deferred guards reconcile Sale discounts and committed usage. Organization serialization/row locks protect final redemption, rollback and duplicate completion.
+- Changed pricing after acknowledgement never changes paid consideration silently: posting rolls back and durable reconciliation evidence remains. Zero-payable uses a zero-valued internal NONE settlement and no financial payment/funds-confirmation event. Every BOGO physical unit remains stock-accounted. Historical refunds/credits use net-paid snapshots, not current prices.
+- Limits: approval queues return at most200 entries; definition lists are unpaginated. Dedicated runtime LOGIN, TLS/secrets, approved backups/restores/primary migration, production concurrency/load and hardware/legal certification are separate gates.
+
 ## Phase5.2 scoped Exchanges/Voids review (2026-10-10)
 
 Evidence: [local acceptance](../development/phase52-verification.md); implementation-scoped tests, not penetration/load/production certification.

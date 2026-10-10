@@ -22,6 +22,7 @@ import { ShelfPage } from '../features/purchasing/ShelfPage';
 import { ReturnsPage } from '../features/returns/ReturnsPage';
 import { AdjustmentsPage } from '../features/returns/AdjustmentsPage';
 import { POSWorkspace } from '../features/pos/POSWorkspace';
+import { PricingPage } from '../features/pricing/PricingPage';
 import {
   POSTerminalPage,
   HeldCartsPage,
@@ -57,6 +58,35 @@ export const router = createBrowserRouter([
         element: <RequireSession />,
         children: [
           { path: paths.account, element: <AccountPage /> },
+          {
+            element: <OrganizationGate permission="pricing.read" />,
+            children: [
+              { path: '/pricing', element: <PricingPage view="overview" /> },
+              { path: '/pricing/lists', element: <PricingPage view="lists" /> },
+            ],
+          },
+          {
+            element: <OrganizationGate permission="promotions.read" />,
+            children: [
+              {
+                path: '/promotions',
+                element: <PricingPage view="promotions" />,
+              },
+              {
+                path: '/promotions/:id',
+                element: <PricingPage view="promotions" />,
+              },
+            ],
+          },
+          {
+            element: <OrganizationGate permission="discount.read" />,
+            children: [
+              {
+                path: '/discount-approvals',
+                element: <PricingPage view="approvals" />,
+              },
+            ],
+          },
           {
             element: <OrganizationGate permission="exchange.read" />,
             children: [

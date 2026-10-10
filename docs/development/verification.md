@@ -1,5 +1,13 @@
 # Verification
 
+## Current Phase5.3 local acceptance (2026-10-10 Asia/Bangkok)
+
+**Phase0–4 and5.1–5.3 COMPLETED (Local); Phase5 overall PARTIAL;5.4–5.6 NOT STARTED;5.7 PARTIAL;Phase6 NOT STARTED / NOT READY.** This section supersedes earlier current-status labels without deleting historical evidence. See [detailed Thai report](phase53-verification.md).
+
+- All16 API suites passed:319 Pricing assertions (280 flow+39 safety) plus1380 earlier numbered regressions =1699 assertions, not independent test cases. Auth/organization also pass without assertion counters. Full real-gateway browser suite23/23 passed.
+- Frontend18 files/96 tests, typecheck/contracts/build pass; ESLint0 errors/3 existing warnings. Go format/vet/race/build and AI7 tests pass.
+- Fresh migrations1–10/rerun, seven rollback-only SQL suites, FORCE RLS/runtime grants, isolated Compose/Caddy/smoke,8 global read-only reconciliation checks and final format/diff checks pass. No primary migration, data/volume deletion, dependency installation, commit/push or deployment.
+
 ## Current Phase5.2 local acceptance (2026-10-10 Asia/Bangkok)
 
 **Phase0–4, Phase5.1 and Phase5.2 COMPLETED (Local); Phase5 overall PARTIAL. Phase5.3–5.6 NOT STARTED; 5.7 PARTIAL; Phase6 NOT STARTED / NOT READY.** This latest section supersedes earlier status labels without deleting historical evidence. See [detailed Thai report](phase52-verification.md).

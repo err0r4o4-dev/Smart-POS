@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/jackc/pgx/v5"
 	"smartpos/api/internal/modules/organization"
+	"smartpos/api/internal/modules/pricing"
 )
 
 func checkout(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org, id string) (Checkout, error) {
@@ -25,6 +26,13 @@ func checkout(ctx context.Context, tx pgx.Tx, actor organization.Member, user, o
 		return item, err
 	}
 	err = json.Unmarshal(items, &item.Items)
+	if err == nil {
+		var data []byte
+		err = tx.QueryRow(ctx, "SELECT pricing_snapshot FROM pos_checkouts WHERE organization_id=$1 AND id=$2", org, id).Scan(&data)
+		if err == nil {
+			err = json.Unmarshal(data, &item.Pricing)
+		}
+	}
 	return item, err
 }
 func (service *Service) Checkout(ctx context.Context, user, org, id string) (Checkout, error) {
@@ -36,6 +44,9 @@ func (service *Service) Checkout(ctx context.Context, user, org, id string) (Che
 	return checkout(ctx, tx, actor, user, org, id)
 }
 func paymentPermission(method string) string {
+	if method == "NONE" {
+		return "pos.checkout"
+	}
 	if method == "CASH" {
 		return "pos.payment.cash"
 	}
@@ -58,7 +69,17 @@ func (service *Service) PrepareCheckout(ctx context.Context, user, org, key stri
 		if hash != previous {
 			return Checkout{}, ErrConflict
 		}
-		return checkout(ctx, tx, actor, user, org, id)
+		result, problem := checkout(ctx, tx, actor, user, org, id)
+		if problem != nil {
+			return result, problem
+		}
+		if problem = pricing.CurrentApprover(ctx, tx, org, result.Pricing.ApprovalID); problem != nil {
+			return result, problem
+		}
+		if result.Status == "AWAITING_PAYMENT" {
+			problem = revalidate(ctx, tx, org, result)
+		}
+		return result, problem
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return Checkout{}, err
@@ -80,6 +101,15 @@ func (service *Service) PrepareCheckout(ctx context.Context, user, org, key stri
 	}
 	if err = cartUnlocked(ctx, tx, org, cart.ID); err != nil {
 		return Checkout{}, err
+	}
+	if cart.ReviewRequired {
+		return Checkout{}, ErrPrice
+	}
+	if err = priceCart(ctx, tx, org, &cart, input.ApprovalID); err != nil {
+		return Checkout{}, err
+	}
+	if input.PricingRevision != "" && input.PricingRevision != cart.Pricing.Revision {
+		return Checkout{}, ErrPrice
 	}
 	if input.ExpectedTotal != cart.Total {
 		return Checkout{}, ErrPrice
@@ -105,9 +135,15 @@ func (service *Service) PrepareCheckout(ctx context.Context, user, org, key stri
 	if err != nil {
 		return Checkout{}, err
 	}
-	err = tx.QueryRow(ctx, `INSERT INTO pos_checkouts(organization_id,branch_id,terminal_id,shift_id,cart_id,cashier_id,cart_revision,idempotency_key,fingerprint,status,method,currency,total,received,change,items) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'AWAITING_PAYMENT',$10,'THB',$11,$12,$13,$14) RETURNING id::text`, org, cart.BranchID, cart.TerminalID, shift, cart.ID, user, cart.Revision, key, hash, input.Method, cart.Total, input.Received, change, items).Scan(&id)
+	quoteData, _ := json.Marshal(cart.Pricing)
+	err = tx.QueryRow(ctx, `INSERT INTO pos_checkouts(organization_id,branch_id,terminal_id,shift_id,cart_id,cashier_id,cart_revision,idempotency_key,fingerprint,status,method,currency,total,received,change,items,pricing_snapshot) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'AWAITING_PAYMENT',$10,'THB',$11,$12,$13,$14,$15) RETURNING id::text`, org, cart.BranchID, cart.TerminalID, shift, cart.ID, user, cart.Revision, key, hash, input.Method, cart.Total, input.Received, change, items, quoteData).Scan(&id)
 	if err != nil {
 		return Checkout{}, dbError(err)
+	}
+	if input.Method == "NONE" {
+		if _, err = tx.Exec(ctx, "UPDATE pos_checkouts SET status='CONFIRMED',confirmation_key=$3,confirmed_by=$4,confirmed_at=now() WHERE organization_id=$1 AND id=$2", org, id, key, user); err != nil {
+			return Checkout{}, dbError(err)
+		}
 	}
 	result, err := checkout(ctx, tx, actor, user, org, id)
 	if err != nil {
@@ -132,10 +168,13 @@ func (service *Service) ConfirmPayment(ctx context.Context, user, org, id, key s
 	if item.CashierID != user || !allowed(actor.Permissions, paymentPermission(item.Method)) {
 		return item, organization.ErrDenied
 	}
-	if item.Method != "CASH" && !text(input.Reference, 200, true) {
+	if item.Method != "CASH" && item.Method != "NONE" && !text(input.Reference, 200, true) {
 		return item, ErrInput
 	}
 	if item.Status != "AWAITING_PAYMENT" {
+		if err = pricing.CurrentApprover(ctx, tx, org, item.Pricing.ApprovalID); err != nil {
+			return item, err
+		}
 		var previous string
 		err = tx.QueryRow(ctx, "SELECT COALESCE(confirmation_key::text,'') FROM pos_checkouts WHERE organization_id=$1 AND id=$2", org, id).Scan(&previous)
 		if err != nil {
@@ -156,6 +195,11 @@ func (service *Service) ConfirmPayment(ctx context.Context, user, org, id, key s
 	_, err = tx.Exec(ctx, "UPDATE pos_checkouts SET status='CONFIRMED',confirmation_key=$3,confirmed_by=$4,confirmed_at=now(),reference=$5 WHERE organization_id=$1 AND id=$2", org, id, key, user, input.Reference)
 	if err != nil {
 		return item, dbError(err)
+	}
+	if problem := revalidate(ctx, tx, org, item); problem != nil {
+		if _, err = tx.Exec(ctx, "UPDATE pos_checkouts SET status='RECONCILIATION_REQUIRED',failure_code='PRICING_CHANGED' WHERE organization_id=$1 AND id=$2", org, id); err != nil {
+			return item, dbError(err)
+		}
 	}
 	result, err := checkout(ctx, tx, actor, user, org, id)
 	if err != nil {

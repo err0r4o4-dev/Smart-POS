@@ -1,6 +1,6 @@
 BEGIN;
 DO $$ DECLARE table_name text; BEGIN
- IF NOT EXISTS(SELECT 1 FROM schema_migrations WHERE version=9 AND NOT dirty) THEN RAISE EXCEPTION 'schema 9 required'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM schema_migrations WHERE version=10 AND NOT dirty) THEN RAISE EXCEPTION 'schema 10 required'; END IF;
  FOREACH table_name IN ARRAY ARRAY['sale_adjustments','adjustment_settlement_events'] LOOP
   IF NOT EXISTS(SELECT 1 FROM pg_class WHERE oid=table_name::regclass AND relrowsecurity AND relforcerowsecurity) THEN RAISE EXCEPTION 'missing FORCE RLS'; END IF;
   IF NOT has_table_privilege('smartpos_runtime',table_name,'INSERT') OR has_table_privilege('smartpos_runtime',table_name,'DELETE') OR has_table_privilege('smartpos_runtime',table_name,'TRUNCATE') THEN RAISE EXCEPTION 'unsafe grants'; END IF;

@@ -2,16 +2,22 @@
 
 ## Delivery boundary (2026-10-10)
 
-Phase5 overall is **PARTIAL**. Phase5.1 Returns/Refunds and Phase5.2 Exchanges/Voids passed scoped local acceptance; Phase5.3–5.6 NOT STARTED and Phase5.7 PARTIAL. Phase6 NOT STARTED / NOT READY. See [latest verification](../development/phase52-verification.md) and [preserved Phase5.1 evidence](../development/phase5-verification.md).
+Phase5 overall is **PARTIAL**. Phase5.1 Returns/Refunds and Phase5.2 Exchanges/Voids passed scoped local acceptance; Phase5.3 Pricing/Promotions passed scoped local acceptance; Phase5.4–5.6 NOT STARTED and Phase5.7 PARTIAL. Phase6 NOT STARTED / NOT READY. See [latest verification](../development/phase53-verification.md) and [preserved Phase5.2 evidence](../development/phase52-verification.md).
 
-The canonical inventory stays at16 modules/106 planned routes. Operational Phase5 routes: `/pos/returns`, `/sales/refunds`, `/pos/exchanges`, `/sales/voids`. No promotion/customer/loyalty/quality page is operational. Schema9 adds adjustments inside the existing Returns application module.
+The canonical inventory stays at16 modules/106 planned routes. Operational Phase5 routes: `/pos/returns`, `/sales/refunds`, `/pos/exchanges`, `/sales/voids`, `/pricing`, `/pricing/lists`, `/promotions`, `/promotions/:id`, `/discount-approvals`. No customer/loyalty/quality page is operational. Schema10 adds pricing definitions, approvals, redemptions and immutable net allocation snapshots; earlier migration files stay unchanged.
+
+## Implemented Phase5.3 Pricing/Promotions
+
+Organization/branch lists override Catalog through deterministic scope/priority/UUID order and effective windows. Typed PERCENTAGE/FIXED/BOGO/MINIMUM_SPEND rules use explicit stack/exclusive/best policies, exact integer-cent allocation and committed usage limits. No client total or executable expression is trusted. Manual approvals bind cart/requester/revisions, expire after15 minutes and recheck current approver authority.
+
+POS prepare/acknowledge/complete revalidates the same quote. A changed acknowledged quote preserves reconciliation evidence, never silently reprices paid consideration. Sale/items, Inventory, approval consumption and redemptions commit atomically. Zero-payable records a zero-valued internal NONE settlement, not fake received money. BOGO still deducts every physical unit. Historical refunds/exchange credits use immutable net-paid lines; replacements use current pricing. Refund/reversal does not replenish promotion usage. See [pricing architecture](pricing.md).
 
 ## Implemented Phase5.2 Exchanges/Voids
 
 - EXCHANGE and REVERSAL share discriminated, revisioned `sale_adjustments`, linked inspected Returns and append-only settlement events. Original Sales/items/payments/receipts and closed shifts remain immutable.
 - Lifecycle: `DRAFT → PENDING_APPROVAL → APPROVED → AWAITING_SETTLEMENT → COMPLETED`; rejection/cancellation only before acknowledged money. Nonzero posting conflict retains evidence as `RECONCILIATION_REQUIRED` without any committed Return/replacement Sale/stock/cash side effect.
-- Credit uses the same cumulative historical allocation as Returns. Replacement price is server-authoritative and checked again at completion. `difference = replacement_total − return_credit`; zero uses NONE, positive explicit CASH/QR_MANUAL/BANK_TRANSFER_MANUAL, negative authorized refund methods. No discount/loyalty/gateway engine is added.
-- Replacement Sale consideration is `payment.amount + payment.credit_amount = grand_total`. Credit applied is min(return credit, replacement gross); only positive net CASH increments cash_sales and only negative CASH_REFUND increments cash_refunds. Never treat exchange credit as new cash/bank revenue. Existing register formula remains `opening_cash + cash_sales − cash_refunds`.
+- Credit uses the same cumulative historical allocation as Returns. Replacement price is server-authoritative and checked again at completion. `difference = replacement_total − return_credit`; zero uses NONE, positive explicit CASH/QR_MANUAL/BANK_TRANSFER_MANUAL, negative authorized refund methods. Phase5.3 adds current replacement discounts through the shared quote service; no loyalty/gateway engine is added.
+- Replacement Sale consideration is `payment.amount + payment.credit_amount = grand_total`. Credit applied is min(return credit, replacement net total); only positive net CASH increments cash_sales and only negative CASH_REFUND increments cash_refunds. Never treat exchange credit as new cash/bank revenue. Existing register formula remains `opening_cash + cash_sales − cash_refunds`.
 - Completion reuses historical allocation, `PostCustomerReturn`, existing POS `settle`, existing refund accounting and operation-result/audit persistence in one authorized transaction. Organization serialization, branch access, managed-shelf capacity and no-negative-stock controls remain intact.
 - Full-sale reversal conservatively requires no prior completed return/adjustment and a complete original item allocation. No deletion or residual partial-sale reversal; an uncommitted checkout still uses the existing cancellation policy.
 - Every read/mutation/replay reauthorizes before a cached result. Same-key/same-payload completion replays once; changed payload/revision conflicts. After acknowledged posting failure, the original key replays that failure document; refresh and use a new completion key to retry posting, never re-acknowledge funds.
@@ -69,7 +75,6 @@ Operation keys bind organization, actor, action, resource, input fingerprint and
 
 ## Remaining next subphases
 
-- **5.3 Pricing/Promotions:** no price lists, scheduling/stacking/usage limits, approvals or checkout discount allocations. Catalog remains the authoritative price source.
 - **5.4 Customers:** no customer CRUD/groups, consent, privacy lifecycle or sale linkage.
 - **5.5 Loyalty:** no points ledger, earning/redemption or refund reversals; no loyalty double-spend assurance is claimed.
 - **5.6 Batch/Quality:** no tracked/untracked allocation, batch balances, FEFO, expiry, recall blocking or write-off posting across all inventory paths.

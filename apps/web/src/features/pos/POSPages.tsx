@@ -3,6 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Button, Card, Loading } from '../../components/ui/primitives';
 import {
+  PricingCheckoutControls,
+  type PricingSelection,
+} from '../pricing/PricingCheckoutControls';
+import {
   posRequest,
   moneyText,
   adjustQuantity,
@@ -485,6 +489,14 @@ export function HeldCartsPage() {
 
 export function CheckoutPage() {
   const pos = usePOS();
+  const [pricingSelection, setPricingSelection] = useState<PricingSelection>();
+  const currentSelection =
+    pricingSelection?.cartID === pos.cart?.id &&
+    pricingSelection?.cartRevision === pos.cart?.revision &&
+    pricingSelection?.baseRevision === pos.cart?.pricing?.revision
+      ? pricingSelection
+      : undefined;
+  const payable = currentSelection?.quote.total ?? pos.cart?.total ?? '0.00';
   const [method, setMethod] = useState<PaymentMethod>('CASH');
   const [received, setReceived] = useState('');
   const [reference, setReference] = useState('');
@@ -529,9 +541,17 @@ export function CheckoutPage() {
         body: {
           cart_id: pos.cart.id,
           revision: pos.cart.revision,
-          method,
-          expected_total: pos.cart.total,
-          received: method === 'CASH' ? received : pos.cart.total,
+          method: payable === '0.00' ? 'NONE' : method,
+          expected_total: payable,
+          received:
+            payable === '0.00'
+              ? '0.00'
+              : method === 'CASH'
+                ? received
+                : payable,
+          pricing_revision:
+            currentSelection?.quote.revision ?? pos.cart.pricing?.revision,
+          approval_id: currentSelection?.approvalID ?? '',
         },
       };
     const result = await pos.mutate<POSCheckout>(
@@ -571,14 +591,23 @@ export function CheckoutPage() {
       <h1>ชำระเงิน</h1>
       <Card className="pos-checkout">
         <p>
-          ราคาสุดท้ายคำนวณจาก Catalog บนเซิร์ฟเวอร์ การเลือก QR /
+          ราคาสุดท้ายคำนวณจาก Pricing quote บนเซิร์ฟเวอร์ การเลือก QR /
           โอนยังไม่ใช่การรับเงิน
         </p>
         {!checkout ? (
           <>
             <strong className="pos-total">
-              ยอดรวม {moneyText(pos.cart?.total ?? '0.00')} บาท
+              ยอดรวม {moneyText(payable)} บาท
             </strong>
+            <PricingCheckoutControls
+              key={[
+                pos.cart?.id,
+                pos.cart?.revision,
+                pos.cart?.pricing?.revision,
+              ].join(':')}
+              locked={requestLocked}
+              onSelection={setPricingSelection}
+            />
             <label>
               วิธีชำระเงิน
               <select
@@ -589,7 +618,10 @@ export function CheckoutPage() {
                 }
               >
                 {Object.entries(paymentLabels)
-                  .filter(([value]) => value !== 'EXCHANGE_CREDIT')
+                  .filter(
+                    ([value]) =>
+                      value !== 'EXCHANGE_CREDIT' && value !== 'NONE',
+                  )
                   .map(([value, label]) => (
                     <option value={value} key={value}>
                       {label}
@@ -703,7 +735,11 @@ export function CheckoutPage() {
               checkout.status,
             ) && (
               <>
-                <p role="status">ยืนยันเงินแล้ว แต่ยังไม่ใช่การขายสำเร็จ</p>
+                <p role="status">
+                  {checkout.method === 'NONE'
+                    ? 'ยอดสุทธิศูนย์ ไม่มีการรับเงิน กรุณาบันทึกขายและตัดสต็อก'
+                    : 'ยืนยันเงินแล้ว แต่ยังไม่ใช่การขายสำเร็จ'}
+                </p>
                 {checkout.failure_code && (
                   <p role="alert">
                     {checkout.failure_code} — หลักฐานเงินยังอยู่ ต้องตรวจสอบ

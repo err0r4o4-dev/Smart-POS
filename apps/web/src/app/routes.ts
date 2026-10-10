@@ -33,6 +33,24 @@ export interface NavigationItem {
 }
 export const navigation: NavigationItem[] = [
   {
+    to: '/pricing',
+    label: 'ราคา / Pricing',
+    icon: 'dashboard',
+    permission: 'pricing.read',
+  },
+  {
+    to: '/promotions',
+    label: 'โปรโมชัน / Promotions',
+    icon: 'dashboard',
+    permission: 'promotions.read',
+  },
+  {
+    to: '/discount-approvals',
+    label: 'อนุมัติส่วนลด / Discount approvals',
+    icon: 'dashboard',
+    permission: 'discount.read',
+  },
+  {
     to: '/pos/returns',
     label: 'คืนสินค้าลูกค้า',
     icon: 'pos',

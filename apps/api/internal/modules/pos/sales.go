@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"smartpos/api/internal/modules/inventory"
 	"smartpos/api/internal/modules/organization"
+	"smartpos/api/internal/modules/pricing"
 )
 
 func settle(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org string, item Checkout) (string, error) {
@@ -35,6 +36,9 @@ func settle(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org
 	if cart.Status != "ACTIVE" || cart.Revision != revision {
 		return "", ErrConflict
 	}
+	if err = revalidate(ctx, tx, org, item); err != nil {
+		return "", err
+	}
 	movements := []inventory.Item{}
 	for _, snapshot := range item.Items {
 		current, err := variant(ctx, tx, org, value.StockLocationID, snapshot.VariantID, snapshot.Quantity, snapshot.UnitPrice)
@@ -59,18 +63,22 @@ func settle(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org
 		return "", dbError(err)
 	}
 	var sale string
-	err = tx.QueryRow(ctx, `INSERT INTO sales(organization_id,branch_id,terminal_id,shift_id,cart_id,checkout_id,cashier_id,currency,subtotal,grand_total,inventory_operation_id,store_name,branch_name,store_address,terminal_name,cashier_name)
- SELECT $1,$2,$3,$4,$5,$6,$7,'THB',$8,$8,$9,organization.name,branch.name,CASE WHEN branch.address<>'' THEN branch.address ELSE organization.address END,$10,$11 FROM organizations organization JOIN branches branch ON branch.organization_id=organization.id AND branch.id=$2 WHERE organization.id=$1 RETURNING id::text`, org, item.BranchID, item.TerminalID, item.ShiftID, item.CartID, item.ID, user, item.Total, op, value.Name, actor.DisplayName).Scan(&sale)
+	quoteData, _ := json.Marshal(item.Pricing)
+	err = tx.QueryRow(ctx, `INSERT INTO sales(organization_id,branch_id,terminal_id,shift_id,cart_id,checkout_id,cashier_id,currency,subtotal,grand_total,inventory_operation_id,store_name,branch_name,store_address,terminal_name,cashier_name,discount_total,pricing_snapshot)
+ SELECT $1,$2,$3,$4,$5,$6,$7,'THB',$12,$8,$9,organization.name,branch.name,CASE WHEN branch.address<>'' THEN branch.address ELSE organization.address END,$10,$11,$13,$14 FROM organizations organization JOIN branches branch ON branch.organization_id=organization.id AND branch.id=$2 WHERE organization.id=$1 RETURNING id::text`, org, item.BranchID, item.TerminalID, item.ShiftID, item.CartID, item.ID, user, item.Total, op, value.Name, actor.DisplayName, item.Pricing.Subtotal, item.Pricing.Discount, quoteData).Scan(&sale)
 	if err != nil {
 		return "", dbError(err)
 	}
 	for _, snapshot := range item.Items {
-		_, err = tx.Exec(ctx, `INSERT INTO sale_items(organization_id,sale_id,variant_id,stock_location_id,branch_id,product_name,variant_name,sku,barcode,unit,quantity,unit_price,line_total) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`, org, sale, snapshot.VariantID, value.StockLocationID, item.BranchID, snapshot.ProductName, snapshot.VariantName, snapshot.SKU, snapshot.Barcode, snapshot.Unit, snapshot.Quantity, snapshot.UnitPrice, snapshot.LineTotal)
+		_, err = tx.Exec(ctx, `INSERT INTO sale_items(organization_id,sale_id,variant_id,stock_location_id,branch_id,product_name,variant_name,sku,barcode,unit,quantity,unit_price,line_total,discount_total) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`, org, sale, snapshot.VariantID, value.StockLocationID, item.BranchID, snapshot.ProductName, snapshot.VariantName, snapshot.SKU, snapshot.Barcode, snapshot.Unit, snapshot.Quantity, snapshot.UnitPrice, snapshot.LineTotal, snapshot.DiscountTotal)
 		if err != nil {
 			return "", dbError(err)
 		}
 	}
 	if err = inventory.PostSale(ctx, tx, actor, user, org, op, sale, item.BranchID, value.StockLocationID, movements); err != nil {
+		return "", dbError(err)
+	}
+	if err = pricing.Redeem(ctx, tx, org, sale, item.Pricing); err != nil {
 		return "", dbError(err)
 	}
 	_, err = tx.Exec(ctx, `INSERT INTO sale_payments(organization_id,sale_id,checkout_id,method,status,amount,credit_amount,received,change,reference,confirmed_by,confirmed_at) SELECT organization_id,$3,id,method,'CONFIRMED',total-credit_amount,credit_amount,received,change,reference,confirmed_by,confirmed_at FROM pos_checkouts WHERE organization_id=$1 AND id=$2`, org, item.ID, sale)
@@ -97,7 +105,7 @@ func settle(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org
 		return "", err
 	}
 	if adjustment == nil {
-		if _, err = tx.Exec(ctx, "SET CONSTRAINTS sale_consistency IMMEDIATE"); err != nil {
+		if _, err = tx.Exec(ctx, "SET CONSTRAINTS sale_consistency,pricing_sale_consistency IMMEDIATE"); err != nil {
 			return "", dbError(err)
 		}
 	}
@@ -118,6 +126,9 @@ func (service *Service) CompleteCheckout(ctx context.Context, user, org, id stri
 		return item, organization.ErrDenied
 	}
 	if item.Status == "COMPLETED" {
+		if err = pricing.CurrentApprover(ctx, tx, org, item.Pricing.ApprovalID); err != nil {
+			return item, err
+		}
 		return item, nil
 	}
 	if !allowed([]string{"CONFIRMED", "RECONCILIATION_REQUIRED"}, item.Status) {

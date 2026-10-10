@@ -6,7 +6,7 @@ Implemented identity routes are Phase 1A; organization/branch/member routes belo
 
 The nine Products routes are implemented Phase 1C. Catalog records are organization-scoped and shared across branches, not branch-owned. The backend rechecks active organization membership and catalog permissions; the existing Manager policy denies catalog access when no assigned active branch remains. Operational staff access follows active organization membership and fixed catalog permissions, not a separate all-role active-branch gate. Mutation-specific permissions are enforced separately from read access. See [catalog architecture](catalog.md).
 
-Phase5.1 registers `/pos/returns` and `/sales/refunds`; Phase5.2 registers `/pos/exchanges` and `/sales/voids`. Pricing/promotions, customers/loyalty and expiry/quality remain unregistered. Phase5 overall is PARTIAL; canonical16 modules/106 routes does not mean106 implemented pages. See [actual scope](business-operations.md).
+Phase5.1 registers `/pos/returns` and `/sales/refunds`; Phase5.2 registers `/pos/exchanges` and `/sales/voids`; Phase5.3 registers all five Pricing & Promotions routes below. Customers/loyalty and expiry/quality remain unregistered. Phase5 overall is PARTIAL; canonical16 modules/106 routes does not mean106 implemented pages. See [actual scope](business-operations.md).
 
 | Module | Route | Status | Phase | Access target |
 | --- | --- | --- | --- | --- |
@@ -70,11 +70,11 @@ Phase5.1 registers `/pos/returns` and `/sales/refunds`; Phase5.2 registers `/pos
 | Purchasing | `/purchasing/receipts` | Implemented Phase 4 (Local) | 4 | session + tenant + branch permission |
 | Purchasing | `/purchasing/returns` | Implemented Phase 4 (Local) | 4 | session + tenant + branch permission |
 | Purchasing | `/purchasing/suggestions` | Implemented Phase 4 (Local) | 4 | session + tenant + branch permission |
-| Pricing & Promotions | `/pricing` | Planned (not registered) | 5 | session + tenant + branch permission |
-| Pricing & Promotions | `/pricing/lists` | Planned (not registered) | 5 | session + tenant + branch permission |
-| Pricing & Promotions | `/promotions` | Planned (not registered) | 5 | session + tenant + branch permission |
-| Pricing & Promotions | `/promotions/:id` | Planned (not registered) | 5 | session + tenant + branch permission |
-| Pricing & Promotions | `/discount-approvals` | Planned (not registered) | 5 | session + tenant + branch permission |
+| Pricing & Promotions | `/pricing` | Implemented Phase 5.3 (Local) | 5 | session + tenant + pricing.read; API branch scope and mutations reauthorize |
+| Pricing & Promotions | `/pricing/lists` | Implemented Phase 5.3 (Local) | 5 | session + tenant + pricing.read; API branch scope and mutations reauthorize |
+| Pricing & Promotions | `/promotions` | Implemented Phase 5.3 (Local) | 5 | session + tenant + promotions.read; API branch scope and mutations reauthorize |
+| Pricing & Promotions | `/promotions/:id` | Implemented Phase 5.3 (Local) | 5 | session + tenant + promotions.read; API branch scope and mutations reauthorize |
+| Pricing & Promotions | `/discount-approvals` | Implemented Phase 5.3 (Local) | 5 | session + tenant + discount.read; API branch scope and mutations reauthorize |
 | Customers | `/customers` | Planned (not registered) | 5 | session + tenant + branch permission |
 | Customers | `/customers/:id` | Planned (not registered) | 5 | session + tenant + branch permission |
 | Customers | `/customers/groups` | Planned (not registered) | 5 | session + tenant + branch permission |

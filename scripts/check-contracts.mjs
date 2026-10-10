@@ -140,6 +140,19 @@ const returnPaths = [
     (action) => '/refunds/{resourceId}/' + action,
   ),
 ].map((path) => '/api/v1/organizations/{id}' + path);
+const pricingPaths = [
+  ...['/pricing/lists', '/promotions'].flatMap((root) => [
+    root,
+    root + '/{resourceId}',
+    ...['submit', 'approve', 'activate', 'pause'].map(
+      (action) => root + '/{resourceId}/' + action,
+    ),
+  ]),
+  '/discount-approvals',
+  '/discount-approvals/{resourceId}/approve',
+  '/discount-approvals/{resourceId}/reject',
+  '/pos/carts/{resourceId}/quote',
+].map((path) => '/api/v1/organizations/{id}' + path);
 assert.deepEqual(
   Object.keys(api.paths).sort(),
   [
@@ -163,6 +176,7 @@ assert.deepEqual(
     ...inventoryPaths,
     ...supplyPaths,
     ...returnPaths,
+    ...pricingPaths,
     '/api/v1/auth/forgot-password',
     '/api/v1/auth/login',
     '/api/v1/auth/logout',
@@ -224,6 +238,47 @@ for (const [path, item] of Object.entries(api.paths)) {
 }
 const compose = YAML.parse(readFileSync('docker-compose.yml', 'utf8'));
 const operationIDs = new Set();
+for (const path of pricingPaths) {
+  for (const method of ['get', 'post', 'put']) {
+    const operation = api.paths[path][method];
+    if (!operation) continue;
+    assert.ok(
+      !operationIDs.has(operation.operationId),
+      'Duplicate pricing operationId',
+    );
+    operationIDs.add(operation.operationId);
+    for (const status of ['400', '401', '403', '404', '409', '503'])
+      assert.ok(operation.responses[status]);
+  }
+}
+assert.equal(pricingPaths.length, 16);
+for (const schema of ['POSCheckoutInput', 'POSCheckout', 'POSSalePayment'])
+  assert.ok(
+    api.components.schemas[schema].properties.method.enum.includes('NONE'),
+  );
+assert.equal(
+  api.components.schemas.POSCheckoutInput.properties.pricing_revision.pattern,
+  '^[a-f0-9]{64}$',
+);
+assert.equal(
+  api.components.schemas.POSCart.properties.pricing.$ref,
+  '#/components/schemas/PricingQuote',
+);
+assert.equal(
+  api.components.schemas.POSSaleItem.properties.discount_total.$ref,
+  '#/components/schemas/POSMoney',
+);
+assert.deepEqual(api.components.schemas.PricingRule.properties.type.enum, [
+  'PERCENTAGE',
+  'FIXED',
+  'BOGO',
+  'MINIMUM_SPEND',
+]);
+assert.deepEqual(api.components.schemas.PricingRule.properties.policy.enum, [
+  'EXCLUSIVE',
+  'STACKABLE',
+  'BEST_DISCOUNT_ONLY',
+]);
 for (const path of supplyPaths) {
   for (const method of ['get', 'post', 'patch']) {
     const operation = api.paths[path][method];

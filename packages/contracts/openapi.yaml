@@ -13786,6 +13786,932 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CustomerReturnActionInput'
+  /api/v1/organizations/{id}/pricing/lists:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: listpriceList
+      security:
+        - sessionCookie: []
+      description:
+        Requires pricing.read. Current tenant/branch authorization precedes
+        replay. Exact integer cents, server rules, optimistic revisions.
+        Organization-wide writes require Owner.
+      responses:
+        '200':
+          description: Authoritative result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PricingDefinition'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+    post:
+      operationId: createpriceList
+      security:
+        - sessionCookie: []
+      description: Requires pricing.manage. Current tenant/branch authorization
+        precedes replay. Exact integer cents, server rules, optimistic revisions.
+        Organization-wide writes require Owner.
+      responses:
+        '200':
+          description: Authoritative result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PricingDefinition'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PricingDefinition'
+  /api/v1/organizations/{id}/pricing/lists/{resourceId}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: readpriceList
+      security:
+        - sessionCookie: []
+      description:
+        Requires pricing.read. Current tenant/branch authorization precedes
+        replay. Exact integer cents, server rules, optimistic revisions.
+        Organization-wide writes require Owner.
+      responses:
+        '200':
+          description: Authoritative result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PricingDefinition'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+    put:
+      operationId: updatepriceList
+      security:
+        - sessionCookie: []
+      description: Requires pricing.manage. Current tenant/branch authorization
+        precedes replay. Exact integer cents, server rules, optimistic revisions.
+        Organization-wide writes require Owner.
+      responses:
+        '200':
+          description: Authoritative result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PricingDefinition'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PricingDefinition'
+  /api/v1/organizations/{id}/pricing/lists/{resourceId}/submit:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: submitpriceList
+      security:
+        - sessionCookie: []
+      description: Requires pricing.manage. Current tenant/branch authorization
+        precedes replay. Exact integer cents, server rules, optimistic revisions.
+        Organization-wide writes require Owner.
+      responses:
+        '200':
+          description: Authoritative result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PricingDefinition'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PricingAction'
+  /api/v1/organizations/{id}/pricing/lists/{resourceId}/approve:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: approvepriceList
+      security:
+        - sessionCookie: []
+      description: Requires pricing.approve. Current tenant/branch authorization
+        precedes replay. Exact integer cents, server rules, optimistic revisions.
+        Organization-wide writes require Owner.
+      responses:
+        '200':
+          description: Authoritative result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PricingDefinition'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PricingAction'
+  /api/v1/organizations/{id}/pricing/lists/{resourceId}/activate:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: activatepriceList
+      security:
+        - sessionCookie: []
+      description: Requires pricing.manage. Current tenant/branch authorization
+        precedes replay. Exact integer cents, server rules, optimistic revisions.
+        Organization-wide writes require Owner.
+      responses:
+        '200':
+          description: Authoritative result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PricingDefinition'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PricingAction'
+  /api/v1/organizations/{id}/pricing/lists/{resourceId}/pause:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: pausepriceList
+      security:
+        - sessionCookie: []
+      description: Requires pricing.manage. Current tenant/branch authorization
+        precedes replay. Exact integer cents, server rules, optimistic revisions.
+        Organization-wide writes require Owner.
+      responses:
+        '200':
+          description: Authoritative result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PricingDefinition'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PricingAction'
+  /api/v1/organizations/{id}/promotions:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: listpromotion
+      security:
+        - sessionCookie: []
+      description: Requires promotions.read. Current tenant/branch authorization
+        precedes replay. Exact integer cents, server rules, optimistic revisions.
+        Organization-wide writes require Owner.
+      responses:
+        '200':
+          description: Authoritative result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PricingDefinition'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+    post:
+      operationId: createpromotion
+      security:
+        - sessionCookie: []
+      description:
+        Requires promotions.manage. Current tenant/branch authorization
+        precedes replay. Exact integer cents, server rules, optimistic revisions.
+        Organization-wide writes require Owner.
+      responses:
+        '200':
+          description: Authoritative result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PricingDefinition'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PricingDefinition'
+  /api/v1/organizations/{id}/promotions/{resourceId}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: readpromotion
+      security:
+        - sessionCookie: []
+      description: Requires promotions.read. Current tenant/branch authorization
+        precedes replay. Exact integer cents, server rules, optimistic revisions.
+        Organization-wide writes require Owner.
+      responses:
+        '200':
+          description: Authoritative result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PricingDefinition'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+    put:
+      operationId: updatepromotion
+      security:
+        - sessionCookie: []
+      description:
+        Requires promotions.manage. Current tenant/branch authorization
+        precedes replay. Exact integer cents, server rules, optimistic revisions.
+        Organization-wide writes require Owner.
+      responses:
+        '200':
+          description: Authoritative result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PricingDefinition'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PricingDefinition'
+  /api/v1/organizations/{id}/promotions/{resourceId}/submit:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: submitpromotion
+      security:
+        - sessionCookie: []
+      description:
+        Requires promotions.manage. Current tenant/branch authorization
+        precedes replay. Exact integer cents, server rules, optimistic revisions.
+        Organization-wide writes require Owner.
+      responses:
+        '200':
+          description: Authoritative result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PricingDefinition'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PricingAction'
+  /api/v1/organizations/{id}/promotions/{resourceId}/approve:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: approvepromotion
+      security:
+        - sessionCookie: []
+      description: Requires pricing.approve. Current tenant/branch authorization
+        precedes replay. Exact integer cents, server rules, optimistic revisions.
+        Organization-wide writes require Owner.
+      responses:
+        '200':
+          description: Authoritative result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PricingDefinition'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PricingAction'
+  /api/v1/organizations/{id}/promotions/{resourceId}/activate:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: activatepromotion
+      security:
+        - sessionCookie: []
+      description:
+        Requires promotions.manage. Current tenant/branch authorization
+        precedes replay. Exact integer cents, server rules, optimistic revisions.
+        Organization-wide writes require Owner.
+      responses:
+        '200':
+          description: Authoritative result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PricingDefinition'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PricingAction'
+  /api/v1/organizations/{id}/promotions/{resourceId}/pause:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: pausepromotion
+      security:
+        - sessionCookie: []
+      description:
+        Requires promotions.manage. Current tenant/branch authorization
+        precedes replay. Exact integer cents, server rules, optimistic revisions.
+        Organization-wide writes require Owner.
+      responses:
+        '200':
+          description: Authoritative result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PricingDefinition'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PricingAction'
+  /api/v1/organizations/{id}/discount-approvals:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: listDiscountApprovals
+      security:
+        - sessionCookie: []
+      description: Requires discount.read. Current tenant/branch authorization
+        precedes replay. Exact integer cents, server rules, optimistic revisions.
+        Organization-wide writes require Owner.
+      responses:
+        '200':
+          description: Authoritative result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DiscountApproval'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+    post:
+      operationId: requestDiscountApproval
+      security:
+        - sessionCookie: []
+      description:
+        Requires discount.request. Current tenant/branch authorization
+        precedes replay. Exact integer cents, server rules, optimistic revisions.
+        Organization-wide writes require Owner.
+      responses:
+        '200':
+          description: Authoritative result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/DiscountApproval'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiscountApprovalInput'
+  /api/v1/organizations/{id}/discount-approvals/{resourceId}/approve:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: approveDiscountApproval
+      security:
+        - sessionCookie: []
+      description:
+        Requires discount.approve. Current tenant/branch authorization
+        precedes replay. Exact integer cents, server rules, optimistic revisions.
+        Organization-wide writes require Owner.
+      responses:
+        '200':
+          description: Authoritative result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/DiscountApproval'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PricingAction'
+  /api/v1/organizations/{id}/discount-approvals/{resourceId}/reject:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: rejectDiscountApproval
+      security:
+        - sessionCookie: []
+      description:
+        Requires discount.approve. Current tenant/branch authorization
+        precedes replay. Exact integer cents, server rules, optimistic revisions.
+        Organization-wide writes require Owner.
+      responses:
+        '200':
+          description: Authoritative result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/DiscountApproval'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PricingAction'
+  /api/v1/organizations/{id}/pos/carts/{resourceId}/quote:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - in: path
+        name: resourceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: quotePOSCart
+      security:
+        - sessionCookie: []
+      description:
+        Requires pos.checkout. Current tenant/branch authorization precedes
+        replay. Exact integer cents, server rules, optimistic revisions.
+        Organization-wide writes require Owner.
+      responses:
+        '200':
+          description: Authoritative result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PricingQuote'
+        '400':
+          $ref: '#/components/responses/InventoryInvalid'
+        '401':
+          $ref: '#/components/responses/InventoryUnauthenticated'
+        '403':
+          $ref: '#/components/responses/InventoryForbidden'
+        '404':
+          $ref: '#/components/responses/InventoryNotFound'
+        '409':
+          $ref: '#/components/responses/InventoryConflict'
+        '503':
+          $ref: '#/components/responses/InventoryUnavailable'
+      parameters:
+        - in: query
+          name: approval_id
+          schema:
+            type: string
+            format: uuid
 components:
   parameters:
     OrganizationID:
@@ -17949,6 +18875,14 @@ components:
           type: boolean
         saleable:
           type: boolean
+        gross_total:
+          type: string
+          description: Gross amount when quoted; empty before cart pricing.
+        discount_total:
+          type: string
+          description: Allocated discount when quoted; empty before cart pricing.
+        pricing_revision:
+          type: string
     POSCart:
       type: object
       required:
@@ -17986,6 +18920,8 @@ components:
           $ref: '#/components/schemas/POSMoney'
         review_required:
           type: boolean
+        pricing:
+          $ref: '#/components/schemas/PricingQuote'
     POSCartInput:
       type: object
       additionalProperties: false
@@ -18032,9 +18968,20 @@ components:
             - CASH
             - QR_MANUAL
             - BANK_TRANSFER_MANUAL
+            - NONE
         expected_total: &a1
           $ref: '#/components/schemas/POSMoney'
         received: *a1
+        pricing_revision:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+          description: Optional for legacy clients; when supplied must match the authoritative quote.
+        approval_id:
+          type: string
+          description: Approved manual discount, or empty string for no approval.
+          anyOf:
+            - format: uuid
+            - const: ''
     POSConfirmationInput:
       type: object
       additionalProperties: false
@@ -18102,6 +19049,7 @@ components:
             - QR_MANUAL
             - BANK_TRANSFER_MANUAL
             - EXCHANGE_CREDIT
+            - NONE
         total:
           $ref: '#/components/schemas/POSMoney'
         received:
@@ -18126,6 +19074,8 @@ components:
             - string
             - 'null'
           format: uuid
+        pricing:
+          $ref: '#/components/schemas/PricingQuote'
     POSShiftInput:
       type: object
       additionalProperties: false
@@ -18232,6 +19182,10 @@ components:
         unit_price: &a3
           $ref: '#/components/schemas/POSMoney'
         line_total: *a3
+        gross_total:
+          $ref: '#/components/schemas/POSMoney'
+        discount_total:
+          $ref: '#/components/schemas/POSMoney'
     POSSalePayment:
       type: object
       required:
@@ -18264,6 +19218,7 @@ components:
             - QR_MANUAL
             - BANK_TRANSFER_MANUAL
             - EXCHANGE_CREDIT
+            - NONE
         status:
           type: string
           const: CONFIRMED
@@ -18447,6 +19402,12 @@ components:
                 type: string
               status:
                 type: string
+        pricing_snapshot:
+          description: Immutable pricing quote; empty for sales committed before schema 10.
+          anyOf:
+            - $ref: '#/components/schemas/PricingQuote'
+            - type: object
+              maxProperties: 0
     POSSaleSummary:
       type: object
       required:
@@ -18798,6 +19759,286 @@ components:
       type: string
       pattern: ^-?[0-9]{1,15}(\.[0-9]{1,3})?$
       description: Exact NUMERIC(18,3), decimal string, never binary floating point. Commands require nonnegative magnitudes; COUNT/PACKAGING whole units only.
+    PricingRule:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - policy
+      properties:
+        type:
+          type: string
+          enum:
+            - PERCENTAGE
+            - FIXED
+            - BOGO
+            - MINIMUM_SPEND
+        policy:
+          type: string
+          enum:
+            - EXCLUSIVE
+            - STACKABLE
+            - BEST_DISCOUNT_ONLY
+        basis_points:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        amount:
+          $ref: '#/components/schemas/POSMoney'
+        minimum_spend:
+          $ref: '#/components/schemas/POSMoney'
+        buy:
+          type: integer
+          minimum: 0
+          maximum: 1000
+        get:
+          type: integer
+          minimum: 0
+          maximum: 1000
+        variant_ids:
+          type: array
+          maxItems: 100
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
+        category_ids:
+          type: array
+          maxItems: 100
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
+        usage_limit:
+          type: integer
+          minimum: 0
+    PricingDefinition:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - priority
+        - branch_id
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        branch_id:
+          type: string
+          description: Empty string means organization-wide; only Owner may manage.
+        revision:
+          type: integer
+          minimum: 0
+        status:
+          type: string
+          enum:
+            - DRAFT
+            - PENDING_APPROVAL
+            - APPROVED
+            - ACTIVE
+            - PAUSED
+        priority:
+          type: integer
+          minimum: -10000
+          maximum: 10000
+        starts_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        ends_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        items:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - variant_id
+              - unit_price
+            properties:
+              variant_id:
+                type: string
+                format: uuid
+              unit_price:
+                $ref: '#/components/schemas/POSMoney'
+        rule:
+          $ref: '#/components/schemas/PricingRule'
+    PricingQuote:
+      type: object
+      required:
+        - lines
+        - promotions
+        - subtotal
+        - discount
+        - total
+        - revision
+      properties:
+        subtotal:
+          $ref: '#/components/schemas/POSMoney'
+        discount:
+          $ref: '#/components/schemas/POSMoney'
+        total:
+          $ref: '#/components/schemas/POSMoney'
+        revision:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        approval_id:
+          type: string
+          format: uuid
+        lines:
+          type: array
+          items:
+            type: object
+            required:
+              - variant_id
+              - quantity
+              - unit_price
+              - gross
+              - discount
+              - net
+            properties:
+              variant_id:
+                type: string
+                format: uuid
+              category_id:
+                type: string
+              quantity:
+                $ref: '#/components/schemas/InventoryQuantity'
+              catalog_price:
+                $ref: '#/components/schemas/POSMoney'
+              unit_price:
+                $ref: '#/components/schemas/POSMoney'
+              price_list_id:
+                type: string
+              price_revision:
+                type: integer
+                minimum: 0
+              gross:
+                $ref: '#/components/schemas/POSMoney'
+              discount:
+                $ref: '#/components/schemas/POSMoney'
+              net:
+                $ref: '#/components/schemas/POSMoney'
+        promotions:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - name
+              - revision
+              - rule
+              - discount
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+              revision:
+                type: integer
+                minimum: 1
+              rule:
+                $ref: '#/components/schemas/PricingRule'
+              discount:
+                $ref: '#/components/schemas/POSMoney'
+    PricingAction:
+      type: object
+      additionalProperties: false
+      required:
+        - revision
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+    DiscountApprovalInput:
+      type: object
+      additionalProperties: false
+      required:
+        - cart_id
+        - revision
+        - pricing_revision
+        - amount
+        - reason
+      properties:
+        cart_id:
+          type: string
+          format: uuid
+        revision:
+          type: integer
+          minimum: 1
+        pricing_revision:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        amount:
+          $ref: '#/components/schemas/POSMoney'
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 2000
+    DiscountApproval:
+      type: object
+      required:
+        - id
+        - cart_id
+        - cart_revision
+        - pricing_revision
+        - amount
+        - reason
+        - status
+        - revision
+        - expires_at
+        - requested_by
+        - branch_id
+      properties:
+        id:
+          type: string
+          format: uuid
+        cart_id:
+          type: string
+          format: uuid
+        cart_revision:
+          type: integer
+          minimum: 1
+        pricing_revision:
+          type: string
+        amount:
+          $ref: '#/components/schemas/POSMoney'
+        reason:
+          type: string
+        status:
+          type: string
+          enum:
+            - PENDING
+            - APPROVED
+            - REJECTED
+            - CONSUMED
+        revision:
+          type: integer
+          minimum: 1
+        expires_at:
+          type: string
+          format: date-time
+        requested_by:
+          type: string
+          format: uuid
+        approved_by:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        branch_id:
+          type: string
+          format: uuid
   headers:
     RequestID:
       description: Generated opaque request correlation ID.

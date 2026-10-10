@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"regexp"
 	"smartpos/api/internal/modules/catalog"
+	"smartpos/api/internal/modules/pricing"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -79,23 +80,28 @@ type CartInput struct {
 }
 type CartItem struct {
 	catalog.SaleVariant
-	Quantity      string `json:"quantity"`
-	LineTotal     string `json:"line_total"`
-	Available     string `json:"available"`
-	PreviousPrice string `json:"previous_price"`
-	PriceChanged  bool   `json:"price_changed"`
-	Saleable      bool   `json:"saleable"`
+	Quantity        string `json:"quantity"`
+	LineTotal       string `json:"line_total"`
+	Available       string `json:"available"`
+	PreviousPrice   string `json:"previous_price"`
+	PriceChanged    bool   `json:"price_changed"`
+	Saleable        bool   `json:"saleable"`
+	GrossTotal      string `json:"gross_total"`
+	DiscountTotal   string `json:"discount_total"`
+	PricingRevision string `json:"pricing_revision"`
 }
 type Cart struct {
-	ID             string     `json:"id"`
-	BranchID       string     `json:"branch_id"`
-	TerminalID     string     `json:"terminal_id"`
-	CashierID      string     `json:"cashier_id"`
-	Status         string     `json:"status"`
-	Revision       int64      `json:"revision"`
-	Items          []CartItem `json:"items"`
-	Total          string     `json:"total"`
-	ReviewRequired bool       `json:"review_required"`
+	ID                    string        `json:"id"`
+	BranchID              string        `json:"branch_id"`
+	TerminalID            string        `json:"terminal_id"`
+	CashierID             string        `json:"cashier_id"`
+	Status                string        `json:"status"`
+	Revision              int64         `json:"revision"`
+	Items                 []CartItem    `json:"items"`
+	Total                 string        `json:"total"`
+	ReviewRequired        bool          `json:"review_required"`
+	Pricing               pricing.Quote `json:"pricing"`
+	StoredPricingRevision string        `json:"-"`
 }
 type TerminalInput struct {
 	BranchID        string `json:"branch_id"`
@@ -115,11 +121,13 @@ type ShiftInput struct {
 	CountedCash string `json:"counted_cash"`
 }
 type CheckoutInput struct {
-	CartID        string `json:"cart_id"`
-	Revision      int64  `json:"revision"`
-	Method        string `json:"method"`
-	ExpectedTotal string `json:"expected_total"`
-	Received      string `json:"received"`
+	CartID          string `json:"cart_id"`
+	Revision        int64  `json:"revision"`
+	Method          string `json:"method"`
+	ExpectedTotal   string `json:"expected_total"`
+	Received        string `json:"received"`
+	PricingRevision string `json:"pricing_revision"`
+	ApprovalID      string `json:"approval_id"`
 }
 type ConfirmationInput struct {
 	Reference    string `json:"reference"`
@@ -127,21 +135,22 @@ type ConfirmationInput struct {
 	Acknowledged bool   `json:"acknowledged"`
 }
 type Checkout struct {
-	ID          string     `json:"id"`
-	BranchID    string     `json:"branch_id"`
-	TerminalID  string     `json:"terminal_id"`
-	ShiftID     string     `json:"shift_id"`
-	CartID      string     `json:"cart_id"`
-	CashierID   string     `json:"cashier_id"`
-	Status      string     `json:"status"`
-	Method      string     `json:"method"`
-	Total       string     `json:"total"`
-	Received    string     `json:"received"`
-	Change      string     `json:"change"`
-	Reference   string     `json:"reference"`
-	FailureCode string     `json:"failure_code"`
-	SaleID      string     `json:"sale_id"`
-	Items       []CartItem `json:"items"`
+	ID          string        `json:"id"`
+	BranchID    string        `json:"branch_id"`
+	TerminalID  string        `json:"terminal_id"`
+	ShiftID     string        `json:"shift_id"`
+	CartID      string        `json:"cart_id"`
+	CashierID   string        `json:"cashier_id"`
+	Status      string        `json:"status"`
+	Method      string        `json:"method"`
+	Total       string        `json:"total"`
+	Received    string        `json:"received"`
+	Change      string        `json:"change"`
+	Reference   string        `json:"reference"`
+	FailureCode string        `json:"failure_code"`
+	SaleID      string        `json:"sale_id"`
+	Items       []CartItem    `json:"items"`
+	Pricing     pricing.Quote `json:"pricing"`
 }
 
 func validateItems(items []ItemInput) error {
@@ -159,6 +168,9 @@ func validateItems(items []ItemInput) error {
 	return nil
 }
 func payment(method, total, received string) (string, error) {
+	if method == "NONE" && total == "0.00" && received == "0.00" {
+		return "0.00", nil
+	}
 	amount, err := scaled(total, 2)
 	if err != nil || amount <= 0 {
 		return "", ErrInput

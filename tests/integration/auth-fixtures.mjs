@@ -176,6 +176,12 @@ export async function latestToken(email, previousIDs) {
 }
 
 export function authSQL(statement) {
+  const database = process.env.AUTH_TEST_DATABASE ?? 'smartpos';
+  if (
+    database !== 'smartpos' &&
+    !/^smartpos_phase53_[a-z0-9_]+$/.test(database)
+  )
+    throw new Error('Unsafe isolated test database');
   return execFileSync(
     'docker',
     [
@@ -189,7 +195,7 @@ export function authSQL(statement) {
       '-U',
       'smartpos_dev',
       '-d',
-      'smartpos',
+      database,
       '-v',
       'ON_ERROR_STOP=1',
       '-At',

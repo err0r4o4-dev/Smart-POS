@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/jackc/pgx/v5"
 	"smartpos/api/internal/modules/organization"
+	"smartpos/api/internal/modules/pricing"
 )
 
 type ExchangePricing struct {
@@ -12,6 +13,7 @@ type ExchangePricing struct {
 	Shift    string
 	Items    []CartItem
 	Total    string
+	Pricing  pricing.Quote
 }
 
 func QuoteExchange(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org, terminalID string, items []ItemInput) (ExchangePricing, error) {
@@ -50,6 +52,13 @@ func QuoteExchange(ctx context.Context, tx pgx.Tx, actor organization.Member, us
 		quote.Items = append(quote.Items, item)
 	}
 	quote.Total = money(total)
+	cart := Cart{BranchID: value.BranchID, Items: quote.Items, CashierID: user}
+	if err = priceCart(ctx, tx, org, &cart, ""); err != nil {
+		return quote, err
+	}
+	quote.Items = cart.Items
+	quote.Total = cart.Total
+	quote.Pricing = cart.Pricing
 	return quote, nil
 }
 
@@ -63,7 +72,7 @@ func PostExchange(ctx context.Context, tx pgx.Tx, actor organization.Member, use
 		return "", err
 	}
 	for index, item := range quote.Items {
-		if item.UnitPrice != snapshots[index].UnitPrice {
+		if item.UnitPrice != snapshots[index].UnitPrice || item.PricingRevision != snapshots[index].PricingRevision {
 			return "", ErrPrice
 		}
 	}
@@ -79,6 +88,9 @@ func PostExchange(ctx context.Context, tx pgx.Tx, actor organization.Member, use
 	if applied == amount {
 		method = "EXCHANGE_CREDIT"
 	}
+	if amount == 0 {
+		method = "NONE"
+	}
 	var cart, checkoutID string
 	err = tx.QueryRow(ctx, "INSERT INTO pos_carts(organization_id,branch_id,terminal_id,cashier_id,create_key) VALUES($1,$2,$3,$4,$5) RETURNING id::text", org, quote.Terminal.BranchID, terminalID, user, id).Scan(&cart)
 	if err != nil {
@@ -90,9 +102,10 @@ func PostExchange(ctx context.Context, tx pgx.Tx, actor organization.Member, use
 		}
 	}
 	data, _ := json.Marshal(quote.Items)
-	err = tx.QueryRow(ctx, "INSERT INTO pos_checkouts(organization_id,branch_id,terminal_id,shift_id,cart_id,cashier_id,cart_revision,idempotency_key,fingerprint,status,method,currency,total,received,change,items,confirmation_key,confirmed_by,confirmed_at,reference,adjustment_id,credit_amount) VALUES($1,$2,$3,$4,$5,$6,1,$7,$8,'CONFIRMED',$9,'THB',$10,$11,0,$12,$7,$6,now(),$13,$7,$14) RETURNING id::text", org, quote.Terminal.BranchID, terminalID, quote.Shift, cart, user, id, fingerprint(id), method, quote.Total, external, data, reference, money(applied)).Scan(&checkoutID)
+	quoteData, _ := json.Marshal(quote.Pricing)
+	err = tx.QueryRow(ctx, "INSERT INTO pos_checkouts(organization_id,branch_id,terminal_id,shift_id,cart_id,cashier_id,cart_revision,idempotency_key,fingerprint,status,method,currency,total,received,change,items,confirmation_key,confirmed_by,confirmed_at,reference,adjustment_id,credit_amount,pricing_snapshot) VALUES($1,$2,$3,$4,$5,$6,1,$7,$8,'CONFIRMED',$9,'THB',$10,$11,0,$12,$7,$6,now(),$13,$7,$14,$15) RETURNING id::text", org, quote.Terminal.BranchID, terminalID, quote.Shift, cart, user, id, fingerprint(id), method, quote.Total, external, data, reference, money(applied), quoteData).Scan(&checkoutID)
 	if err != nil {
 		return "", dbError(err)
 	}
-	return settle(ctx, tx, actor, user, org, Checkout{ID: checkoutID, BranchID: quote.Terminal.BranchID, TerminalID: terminalID, ShiftID: quote.Shift, CartID: cart, CashierID: user, Method: method, Total: quote.Total, Items: quote.Items})
+	return settle(ctx, tx, actor, user, org, Checkout{ID: checkoutID, BranchID: quote.Terminal.BranchID, TerminalID: terminalID, ShiftID: quote.Shift, CartID: cart, CashierID: user, Method: method, Total: quote.Total, Items: quote.Items, Pricing: quote.Pricing})
 }

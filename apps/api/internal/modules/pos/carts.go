@@ -12,7 +12,7 @@ func cartHeader(ctx context.Context, tx pgx.Tx, actor organization.Member, user,
 	if !uuidPattern.MatchString(id) {
 		return item, ErrInput
 	}
-	err := tx.QueryRow(ctx, "SELECT id::text,branch_id::text,terminal_id::text,cashier_id::text,status,revision FROM pos_carts WHERE organization_id=$1 AND id=$2 FOR UPDATE", org, id).Scan(&item.ID, &item.BranchID, &item.TerminalID, &item.CashierID, &item.Status, &item.Revision)
+	err := tx.QueryRow(ctx, "SELECT id::text,branch_id::text,terminal_id::text,cashier_id::text,status,revision,pricing_revision FROM pos_carts WHERE organization_id=$1 AND id=$2 FOR UPDATE", org, id).Scan(&item.ID, &item.BranchID, &item.TerminalID, &item.CashierID, &item.Status, &item.Revision, &item.StoredPricingRevision)
 	if err != nil {
 		return item, dbError(err)
 	}
@@ -68,6 +68,12 @@ func readCart(ctx context.Context, tx pgx.Tx, actor organization.Member, user, o
 		item.Items = append(item.Items, value)
 	}
 	item.Total = money(total)
+	if err = priceCart(ctx, tx, org, &item, ""); err != nil {
+		return item, err
+	}
+	if item.StoredPricingRevision != "" && item.StoredPricingRevision != item.Pricing.Revision {
+		item.ReviewRequired = true
+	}
 	return item, nil
 }
 func cartUnlocked(ctx context.Context, tx pgx.Tx, org, id string) error {
@@ -202,6 +208,18 @@ func (service *Service) UpdateCart(ctx context.Context, user, org, id, action st
 	result, err := readCart(ctx, tx, actor, user, org, id)
 	if err != nil {
 		return result, err
+	}
+	if action == "update" {
+		if _, err = tx.Exec(ctx, "UPDATE pos_carts SET pricing_revision=$3 WHERE organization_id=$1 AND id=$2", org, id, result.Pricing.Revision); err != nil {
+			return result, dbError(err)
+		}
+		result.StoredPricingRevision = result.Pricing.Revision
+		result.ReviewRequired = false
+		for _, item := range result.Items {
+			if item.PriceChanged || !item.Saleable {
+				result.ReviewRequired = true
+			}
+		}
 	}
 	return result, finish(ctx, tx, org, user, "pos.cart."+action, id)
 }

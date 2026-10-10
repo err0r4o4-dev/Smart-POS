@@ -1,6 +1,6 @@
 # SmartPOS — Phase 1 / Phase 2 / Phase 3 / Phase 4 / Phase 5 checklist
 
-Status: **Phase 0–4, Phase 5.1 and Phase 5.2 COMPLETED (Local); Phase 5 overall PARTIAL** (2026-10-10), not production readiness. **5.3–5.6 NOT STARTED; 5.7 PARTIAL. Phase 6–7 NOT STARTED; Phase 6 NOT READY.** Latest evidence: `docs/development/phase52-verification.md`: 384 Phase5.2 API assertions, 996 numbered regression assertions, 94 frontend tests, 21 browser tests, fresh migration chain1–9, Go race and seven rollback-only SQL suites. Earlier counts/checklists remain historical evidence, not current run totals.
+Status: **Phase 0–4 and Phase 5.1–5.3 COMPLETED (Local); Phase 5 overall PARTIAL** (2026-10-10), not production readiness. **Phase 5.3 COMPLETED (Local); 5.4–5.6 NOT STARTED; 5.7 PARTIAL. Phase 6–7 NOT STARTED; Phase 6 NOT READY.** Latest evidence: `docs/development/phase53-verification.md`. Earlier counts/checklists remain historical evidence, not current run totals.
 
 ## Phase 5 implementation in progress (2026-10-10)
 
@@ -19,7 +19,11 @@ Status: **Phase 0–4, Phase 5.1 and Phase 5.2 COMPLETED (Local); Phase 5 overal
 - [x] Phase5.2 runtime RLS/RBAC/CSRF, concurrent exchanges/returns/POS/shifts and managed-shelf regression.
 - [x] Fresh schema9/rerun, CGO race, 94 frontend tests and 21 real-gateway browser tests; preserve failed attempt logs and primary data.
 - [x] Update Phase5.2 architecture/schema/security/business flows and evidence-based local acceptance report.
-- [ ] Implement Phase 5.3 Pricing/Promotions, Phase 5.4 Customers and Phase 5.5 Loyalty.
+- [x] Implement Phase 5.3 price lists, four promotion types/policies, manual approvals and authoritative POS pricing.
+- [x] Add migration10, FORCE RLS/runtime grants, exact immutable allocations, atomic usage and NONE settlement.
+- [x] Implement five real Pricing routes and browser lifecycle/checkout/responsive coverage.
+- [x] Finish Phase5.3 local acceptance:319 new/1699 total numbered API assertions,96 frontend tests,23 browser tests, schema10/seven SQL suites, Go race and8 reconciliation checks; record actual failures/limits.
+- [ ] Implement Phase 5.4 Customers and Phase 5.5 Loyalty.
 - [ ] Implement Phase 5.6 Batch/Expiry/Write-offs/Recalls across every Inventory path.
 - [ ] Complete Phase 5.7 integration/security/QA; do not mark Phase 5 complete prematurely.
 

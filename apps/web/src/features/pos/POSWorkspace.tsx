@@ -40,7 +40,9 @@ export function POSWorkspace() {
         </header>
         <nav className="pos-navigation" aria-label="เมนูขาย">
           <Link to="/pos">ขายสินค้า</Link>
-          <Link to="/pos/held-carts">ตะกร้าพัก</Link>
+          <Link to="/pos/held-carts">
+            ตะกร้าพัก <span className="shortcut-badge">F4</span>
+          </Link>
           <Link to="/pos/checkout">ชำระเงิน</Link>
           <Link to="/pos/register/open">เปิดกะ</Link>
           <Link to="/pos/register/close">ปิดกะ</Link>

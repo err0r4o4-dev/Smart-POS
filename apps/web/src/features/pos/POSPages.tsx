@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Button, Card, Loading } from '../../components/ui/primitives';
@@ -31,6 +31,20 @@ export function POSTerminalPage() {
   const [barcode, setBarcode] = useState('');
   const [category, setCategory] = useState('');
   const scanner = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'F2') {
+        event.preventDefault();
+        scanner.current?.focus();
+        scanner.current?.select();
+      } else if (event.key === 'F4') {
+        event.preventDefault();
+        navigate('/pos/held-carts');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigate]);
   const products = useQuery({
     queryKey: [
       'tenant',
@@ -122,6 +136,9 @@ export function POSTerminalPage() {
           >
             <label>
               สแกนบาร์โค้ด
+              <span className="shortcut-badge" title="กด F2 เพื่อสลับมาช่องนี้">
+                F2
+              </span>
               <input
                 ref={scanner}
                 aria-label="สแกนบาร์โค้ด"
@@ -511,6 +528,43 @@ export function CheckoutPage() {
   const request = useRef<{ key: string; body: object } | null>(null);
   const [requestLocked, setRequestLocked] = useState(false);
   const confirmKey = useRef(crypto.randomUUID());
+  const quickPresets = (() => {
+    const payDec = exactDecimal(payable, 2);
+    if (payDec === null || payDec <= 0n) return [];
+    const list: string[] = [];
+    const denominations = [50n, 100n, 500n, 1000n];
+    for (const denom of denominations) {
+      const val = denom * 100n;
+      if (val > payDec) {
+        list.push(`${denom}.00`);
+      }
+    }
+    if (payDec > 100000n) {
+      const nextThou = ((payDec + 99999n) / 100000n) * 1000n;
+      const nextStr = `${nextThou}.00`;
+      if (!list.includes(nextStr)) {
+        list.push(nextStr);
+      }
+    }
+    return list;
+  })();
+  const changeCalculation = (() => {
+    if (!received.trim()) return null;
+    const payDec = exactDecimal(payable, 2);
+    const recDec = exactDecimal(received.trim(), 2);
+    if (payDec === null || recDec === null) return null;
+    const diff = recDec - payDec;
+    if (diff >= 0n) {
+      const whole = diff / 100n;
+      const frac = (diff % 100n).toString().padStart(2, '0');
+      return { valid: true, amount: `${whole}.${frac}` };
+    } else {
+      const shortage = -diff;
+      const whole = shortage / 100n;
+      const frac = (shortage % 100n).toString().padStart(2, '0');
+      return { valid: false, amount: `${whole}.${frac}` };
+    }
+  })();
   const pending = useQuery({
     queryKey: [
       'tenant',
@@ -637,16 +691,61 @@ export function CheckoutPage() {
               </select>
             </label>
             {method === 'CASH' && (
-              <label>
-                เงินรับ
-                <input
-                  aria-label="เงินรับ"
-                  inputMode="decimal"
-                  value={received}
-                  disabled={pos.busy || requestLocked}
-                  onChange={(event) => setReceived(event.target.value)}
-                />
-              </label>
+              <div className="pos-cash-field">
+                <label>
+                  เงินรับ
+                  <input
+                    aria-label="เงินรับ"
+                    inputMode="decimal"
+                    value={received}
+                    disabled={pos.busy || requestLocked}
+                    onChange={(event) => setReceived(event.target.value)}
+                  />
+                </label>
+                <div
+                  className="quick-cash-buttons"
+                  role="group"
+                  aria-label="ปุ่มเงินสดด่วน"
+                >
+                  <button
+                    type="button"
+                    className="quick-cash-btn"
+                    disabled={pos.busy || requestLocked}
+                    onClick={() => setReceived(payable)}
+                  >
+                    พอดี ({moneyText(payable)})
+                  </button>
+                  {quickPresets.map((amt) => (
+                    <button
+                      key={amt}
+                      type="button"
+                      className="quick-cash-btn"
+                      disabled={pos.busy || requestLocked}
+                      onClick={() => setReceived(amt)}
+                    >
+                      {moneyText(amt)}
+                    </button>
+                  ))}
+                </div>
+                {changeCalculation && (
+                  <div
+                    className={`pos-change-hint ${changeCalculation.valid ? 'change-valid' : 'change-short'}`}
+                    role="status"
+                  >
+                    {changeCalculation.valid ? (
+                      <span>
+                        เงินทอน:{' '}
+                        <strong>{moneyText(changeCalculation.amount)} บาท</strong>
+                      </span>
+                    ) : (
+                      <span>
+                        ยังขาดอีก:{' '}
+                        <strong>{moneyText(changeCalculation.amount)} บาท</strong>
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
             <Button
               disabled={pos.busy || !pos.cart?.items.length || !pos.shift}

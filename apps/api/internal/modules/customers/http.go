@@ -129,11 +129,11 @@ func (handler Handler) TenantRoutes(router chi.Router) {
 			path += "/{groupId}"
 		}
 		router.MethodFunc(method, path, endpoint(func(ctx context.Context, user, org string, request *http.Request) (any, error) {
-			var input Group
+			var input GroupInput
 			if err := decode(request, &input); err != nil {
 				return nil, err
 			}
-			return service.SaveGroup(ctx, user, org, chi.URLParam(request, "groupId"), request.Header.Get("Idempotency-Key"), input)
+			return service.SaveGroup(ctx, user, org, chi.URLParam(request, "groupId"), request.Header.Get("Idempotency-Key"), Group{Code: input.Code, Name: input.Name, Revision: input.Revision})
 		}))
 	}
 	router.Put("/customers/{customerId}/groups/{groupId}", endpoint(func(ctx context.Context, user, org string, request *http.Request) (any, error) {

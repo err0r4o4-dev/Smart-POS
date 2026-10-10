@@ -2,7 +2,7 @@
 
 ## Delivery boundary (2026-10-10)
 
-Phase5 overall is **PARTIAL**. Phase5.1 Returns/Refunds and Phase5.2 Exchanges/Voids passed scoped local acceptance; Phase5.3 Pricing/Promotions passed scoped local acceptance; Phase5.4–5.6 NOT STARTED and Phase5.7 PARTIAL. Phase6 NOT STARTED / NOT READY. See [latest verification](../development/phase53-verification.md) and [preserved Phase5.2 evidence](../development/phase52-verification.md).
+Phase5 overall is **PARTIAL**. Phase5.1–5.4 passed scoped local acceptance, including Customer Management. Phase5.5–5.6 remain NOT STARTED and Phase5.7 PARTIAL. Phase6 NOT STARTED / NOT READY. See [latest verification](../development/phase54-verification.md) and [preserved Phase5.3 evidence](../development/phase53-verification.md).
 
 The canonical inventory stays at16 modules/106 planned routes. Operational Phase5 routes: `/pos/returns`, `/sales/refunds`, `/pos/exchanges`, `/sales/voids`, `/pricing`, `/pricing/lists`, `/promotions`, `/promotions/:id`, `/discount-approvals`. No customer/loyalty/quality page is operational. Schema10 adds pricing definitions, approvals, redemptions and immutable net allocation snapshots; earlier migration files stay unchanged.
 
@@ -75,7 +75,7 @@ Operation keys bind organization, actor, action, resource, input fingerprint and
 
 ## Remaining next subphases
 
-- **5.4 Customers:** no customer CRUD/groups, consent, privacy lifecycle or sale linkage.
+- **5.4 Customers COMPLETED (Local):** revisioned organization-scoped records/groups, optional contact and explicit opt-in, masked Cashier access, backend-validated POS selection, immutable Sale code snapshot and authoritative activity history. See [Customers](customers.md) and the acceptance report. No hard-delete or automatic merge is provided.
 - **5.5 Loyalty:** no points ledger, earning/redemption or refund reversals; no loyalty double-spend assurance is claimed.
 - **5.6 Batch/Quality:** no tracked/untracked allocation, batch balances, FEFO, expiry, recall blocking or write-off posting across all inventory paths.
 

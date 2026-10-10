@@ -38,6 +38,7 @@ function useCustomerQuery<Result>(path: string, enabled = true, body?: object) {
       scope.org,
       scope.branch,
       'customers',
+      scope.tenant.can('customers.manage'),
       path,
       body,
     ],
@@ -126,7 +127,13 @@ export function CustomersPage({
   const scope = useScope();
   return (
     <CustomerWorkspace
-      key={[scope.user, scope.org, scope.branch].join(':')}
+      key={[
+        scope.user,
+        scope.org,
+        scope.branch,
+        scope.tenant.can('customers.manage'),
+        scope.tenant.can('customers.history.read'),
+      ].join(':')}
       view={view}
     />
   );
@@ -201,7 +208,13 @@ function CustomerList({ text }: { text: Text }) {
   const query = useCustomerQuery<CustomerPage<Customer>>(
     '/customers/search',
     true,
-    { search: term, status, ...(group ? { group_id: group } : {}), page, page_size: 25 },
+    {
+      search: term,
+      status,
+      ...(group ? { group_id: group } : {}),
+      page,
+      page_size: 25,
+    },
   );
   const groups = useCustomerQuery<CustomerPage<CustomerGroup>>(
     '/customers/groups?page_size=100',

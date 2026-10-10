@@ -44,6 +44,11 @@ type Group struct {
 	Revision    int64  `json:"revision"`
 	MemberCount int    `json:"member_count"`
 }
+type GroupInput struct {
+	Code     string `json:"code"`
+	Name     string `json:"name"`
+	Revision int64  `json:"revision"`
+}
 type Selection struct {
 	ID     string `json:"id"`
 	Code   string `json:"code"`

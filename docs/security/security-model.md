@@ -1,5 +1,13 @@
 # Security model
 
+## Phase5.4 customer protections (2026-10-10)
+
+- Reuse server sessions/CSRF/Origin and active organization/branch authorization. Customer/group read/manage/select/history permissions are explicit; Cashier receives masked phone/email and cannot read notes/history or mutate records.
+- All three Customer tables FORCE RLS with composite tenant FKs and least-privilege grants. Customer/group hard deletion is denied. Revision/immutable settlement triggers protect customer identity, historical Sales and code snapshots; archived records cannot be newly selected.
+- Authorization is evaluated before create replay. UI search uses POST rather than contact PII in URLs; customer handlers return no-store; audits contain actor/object/events only. Duplicate/validation errors are generic. Marketing is explicit opt-in, not inferred from record creation.
+- User/org/branch/permission cache keys, permission-aware workspace remounts and existing query cancellation/removal prevent old-context draft/PII reuse. Real gateway tests cover branch/org switching, foreign detail lookup, role masking and logout; the same-user manage-permission downgrade has a focused cache regression test.
+- Archival retains transactions, memberships, code snapshots and create fingerprints. It is not legally certified erasure. Retention/deletion policy, production role/TLS/secrets/backup, load/hardware and accessibility remain separate gates. This is implementation-scoped protection verification, not a repository-wide security audit. See [design](../architecture/customers.md) and [executed evidence](../development/phase54-verification.md).
+
 ## Phase5.3 implementation-scoped verification (2026-10-10)
 
 Evidence: [local acceptance](../development/phase53-verification.md). These are targeted implementation tests, not a penetration test, independent security audit or production certification.

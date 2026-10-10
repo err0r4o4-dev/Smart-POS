@@ -77,7 +77,7 @@ export interface POSShift {
 export type PaymentMethod = 'CASH' | 'QR_MANUAL' | 'BANK_TRANSFER_MANUAL';
 export type RecordedPaymentMethod = PaymentMethod | 'EXCHANGE_CREDIT' | 'NONE';
 export interface POSCheckout {
-  customer_id?: string|null;
+  customer_id?: string | null;
   customer_code_snapshot?: string;
   id: string;
   cart_id: string;

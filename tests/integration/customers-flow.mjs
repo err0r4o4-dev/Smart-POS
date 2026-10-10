@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { adjustmentsFixture } from './adjustments-fixtures.mjs';
+import { customersFixture } from './customers-fixtures.mjs';
 import {
   inventoryAccount,
   inventoryMembership,
@@ -14,7 +14,7 @@ if (
   )
 )
   throw new Error('Customer acceptance requires explicit Phase54 scratch DB');
-const fixture = await adjustmentsFixture();
+const fixture = await customersFixture();
 const { owner, org, branch, variant, variant2, terminal, call } = fixture;
 let assertions = 0;
 function editable(value) {

@@ -22,6 +22,7 @@ export function CustomerPicker() {
       pos.branch,
       'customers',
       'picker',
+      pos.can('customers.manage'),
       term,
       page,
     ],

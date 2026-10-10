@@ -596,7 +596,12 @@ export function CheckoutPage() {
     <>
       <h1>ชำระเงิน</h1>
       <Card className="pos-checkout">
-        <p>ลูกค้า / Customer: {checkout?.customer_code_snapshot || pos.cart?.customer?.code || 'Walk-in'}</p>
+        <p>
+          ลูกค้า / Customer:{' '}
+          {checkout?.customer_code_snapshot ||
+            pos.cart?.customer?.code ||
+            'Walk-in'}
+        </p>
         <p>
           ราคาสุดท้ายคำนวณจาก Pricing quote บนเซิร์ฟเวอร์ การเลือก QR /
           โอนยังไม่ใช่การรับเงิน

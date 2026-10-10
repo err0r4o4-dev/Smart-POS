@@ -2,7 +2,7 @@
 
 Phase 0 implements platform/presentation, Phase 1A implements identity, Phase 1B implements organization/branch/employee membership management with fixed RBAC Phase 1C implements product catalog and Phase 2 implements inventory core. Other business functionality remains planned. API groups/events below are proposals unless explicitly marked implemented; the live source is OpenAPI. Page counts remain the canonical 16-module/106-route inventory. Upstream dependencies are constrained by dependencies.md. See [Phase 1B architecture](organization.md) and [Phase 1C architecture](catalog.md).
 
-Current status supersedes the older introductory scope: Phase0–4 and Phase5.1–5.3 are locally accepted; Phase5 overall is PARTIAL. Returns owns adjustments, POS owns Sales/payment/shifts, Inventory owns stock posting and pricing owns quotes/discount approvals/redemptions in the same authorized transaction. No extra canonical module is added:16 modules/106 routes. Phase5.4–5.6 are NOT STARTED. See [pricing](pricing.md), [business operations](business-operations.md) and [latest acceptance](../development/phase53-verification.md).
+Current status supersedes the older introductory scope: Phase0–4 and Phase5.1–5.4 are locally accepted; Phase5 overall is PARTIAL. Returns owns adjustments, POS owns Sales/payment/shifts, Inventory owns stock posting and pricing owns quotes/discount approvals/redemptions in the same authorized transaction. Customers owns organization-shared records/groups/history. No extra canonical module is added:16 modules/106 routes. Phase5.5–5.6 are NOT STARTED. See [Customers](customers.md), [business operations](business-operations.md) and [latest acceptance](../development/phase54-verification.md).
 
 ## Authentication (6 pages)
 
@@ -140,18 +140,18 @@ Current status supersedes the older introductory scope: Phase0–4 and Phase5.1�
 
 ## Customers (5 pages)
 
-- Business purpose: Customer relationships and earned loyalty.
-- Responsibilities: Customer groups, consent, loyalty accrual/redemption/history.
-- Planned pages: `/customers`, `/customers/:id`, `/customers/groups`, `/loyalty`, `/loyalty/history`.
-- Planned API groups: /customers, /loyalty.
-- Domain entities: customers, loyalty_accounts, loyalty_transactions.
-- Dependencies: owning domains/upstream capabilities in [dependency matrix](dependencies.md); authorization through identity and organization for all tenant operations.
-- Permissions: customers.read, customers.write, loyalty.adjust.
-- Business events: CustomerCreated, LoyaltyAccrued.
-- Error cases: insufficient points, duplicate accrual, invalid consent.
-- Tests: PII scope, reversal, duplicate events, redemption concurrency.
-- Implementation phase: 5.
-- Current status: documented/planned; no implementation.
+- Business purpose: Organization-shared customer records, explicit consent and authoritative transaction history.
+- Responsibilities: Revisioned CRUD/archive, customer groups/memberships, masked Cashier lookup and POS selection. Loyalty is not implemented.
+- Implemented pages: `/customers`, `/customers/:id`, `/customers/groups`. Planned: `/loyalty`, `/loyalty/history`.
+- Implemented API groups: `/customers`, `/customers/groups`, activity/audit/membership subresources and POS cart customer selection. `/loyalty` remains planned.
+- Domain entities: customers, customer_groups, customer_group_memberships; nullable immutable Sale/checkout references and code snapshots. Loyalty entities remain proposed.
+- Dependencies: identity/organization authorization, existing POS/Sales/Returns/Exchanges settlement and Inventory invariants.
+- Permissions: customers.read/manage/select, customers.groups.read/manage, customers.history.read; no loyalty permission is added.
+- Audits: customer/group creation, revisioned edit/archive, membership and POS selection; no copied contact PII.
+- Error cases: duplicate normalized identifiers, stale revisions, foreign tenant references, archival during checkout and revoked authorization.
+- Tests: customer privacy/RBAC/RLS, idempotency/concurrency, financial activity reconciliation, immutable historical references and frontend context isolation.
+- Implementation phase: 5.4; Loyalty remains Phase 5.5 NOT STARTED.
+- Current status: Phase5.4 COMPLETED (Local); see [architecture](customers.md) and [verification](../development/phase54-verification.md). Loyalty remains NOT STARTED.
 
 ## Quality & Expiry (4 pages)
 

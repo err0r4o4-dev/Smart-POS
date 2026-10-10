@@ -1,17 +1,20 @@
 # SmartPOS — Phase 1 / Phase 2 / Phase 3 / Phase 4 checklist
 
-Status: **Phase 0, Phase 1A, Phase 1B, Phase 1C, Phase 2.1–2.6 and Phase 3.1–3.7 COMPLETED for the local acceptance gates** (2026-10-10), not production readiness. Phase 4 is **IMPLEMENTED; LOCAL ACCEPTANCE PENDING**; Phase 5+ is NOT STARTED. See `docs/development/phase4-verification.md` and `docs/development/verification.md` for current evidence and blockers. Earlier checklists below are historical checkpoints; the current frontend suite has 75 passing tests. Historical Phase 3 evidence records 197 POS API assertions and 17 browser tests, with 116 catalog and 135 inventory regression assertions; these runtime suites were not rerun during this continuation.
+Status: **Phase 0–4 COMPLETED for the local acceptance gates** (2026-10-10), not production readiness. **Phase 5+ is NOT STARTED.** Current evidence: `docs/development/phase4-verification.md` and `docs/development/verification.md`. This finalization passes 75 frontend tests, 300 purchasing/shelf assertions, 18 browser tests, Go race checks and actual Phase 0–3 regressions. Earlier counts/checklists remain historical evidence, not current run totals.
 
-## Phase 4 continuation and remaining acceptance
+## Phase 4 continuation and final acceptance
 
 - [x] Inspect and retain existing purchasing/shelves implementation, migration 7, API contracts, typed frontend and test changes.
 - [x] Focused purchasing frontend tests: 11 passed; full frontend regression: 75 passed; contracts/typecheck/lint/build and Go vet/tests/build passed on 2026-10-10.
 - [x] Changed Go files pass format inspection; purchasing frontend/contracts/test files pass Prettier checks. No application-code fix was required by these checks.
 - [x] Update current status and verification documentation without replacing earlier evidence or claiming a completed runtime gate.
-- [ ] Go race checks: blocked because cgo is disabled on the current host; rerun with a supported toolchain/check container.
-- [ ] Migration 7/readiness/SQL constraints and purchasing/shelf integration acceptance on the isolated `smartpos-auth-test` stack: blocked because Docker daemon is unavailable. Do not migrate primary volumes.
-- [ ] Current Playwright purchasing/shelf journeys, responsive screenshots and existing runtime regressions: not run because the isolated Docker stack is unavailable. Older artifacts are not current evidence.
-- [ ] Close Phase 4 only after outstanding runtime checks pass; no commit/push/deployment or Phase 5 work is included.
+- [x] Previous CGO blocker resolved for acceptance: Go format/vet/race/build passed in the existing api-check container, without changing host CGO configuration.
+- [x] Previous Docker blocker resolved: isolated stack healthy; fresh migration runner 000001–000007, scratch/test reruns, rollback-only SQL and nine-table RLS/grants passed. Primary volumes untouched.
+- [x] Purchasing/shelf flow 175 and latest safety 125 assertions passed, including added CSRF/Origin and concurrent duplicate receipt coverage; final isolated global ledger/balance mismatches = 0.
+- [x] All 18 real-enabled Playwright tests and Phase 0–3 API regressions passed; Phase 4 covered 15 routes at seven widths and six screenshots were inspected.
+- [x] Resolve obsolete exact schema-5 guards in five SQL test files to exact schema 7; original runner rerun passed without weakening tests or rewriting application code.
+- [x] Close Phase 4 COMPLETED (Local) with actual evidence; no commit/push/deployment or Phase 5 work is included.
+- [ ] Separate production gates: dedicated runtime LOGIN, TLS/secrets/SMTP, backup/restore/rollout, retention, load/hardware/accessibility and operational hardening.
 
 ## Phase 3 implementation and acceptance
 

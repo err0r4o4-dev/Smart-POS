@@ -151,6 +151,28 @@ try {
       },
     ],
   };
+  for (const [path, body] of [
+    ['/purchasing/orders', input],
+    [
+      '/shelves',
+      {
+        branch_id: branch,
+        stock_location_id: shelf.id,
+        code: 'CSRF-DENIED',
+        name: 'Denied request',
+      },
+    ],
+  ]) {
+    for (const headers of [
+      { 'X-CSRF-Token': '' },
+      { Origin: 'http://attacker.invalid' },
+    ])
+      equal(
+        (await call(path, 'POST', body, randomUUID(), owner, headers)).status,
+        403,
+        path + ': CSRF/Origin denial',
+      );
+  }
   const key = randomUUID();
   let order = await ok('/purchasing/orders', 'POST', input, key);
   equal(
@@ -200,7 +222,27 @@ try {
   receipt = await approved('receipts', receipt);
   const postKey = randomUUID(),
     postBody = { revision: receipt.revision };
-  receipt = await action('receipts', receipt, 'post', {}, postKey);
+  const postedReceipts = await Promise.all(
+    [1, 2].map(() =>
+      ok(
+        `/purchasing/receipts/${receipt.id}/post`,
+        'POST',
+        postBody,
+        postKey,
+        owner,
+        200,
+      ),
+    ),
+  );
+  receipt = postedReceipts[0];
+  equal(postedReceipts[1].id, receipt.id, 'concurrent receipt replay');
+  equal(
+    authSQL(
+      `SELECT count(*) FROM stock_movements WHERE organization_id='${org}' AND purchasing_document_id='${receipt.id}'`,
+    ),
+    '1',
+    'concurrent duplicate receipt creates one movement',
+  );
   equal(
     (
       await ok(

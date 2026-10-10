@@ -1,5 +1,15 @@
 # Verification
 
+## Phase 4 final local acceptance (2026-10-10 Asia/Bangkok)
+
+**Phase 0–4: COMPLETED (Local); Phase 5: NOT STARTED.** Mandatory Phase 4 gates passed on the isolated `smartpos-auth-test` stack. Docker Engine 29.8.2 / Compose v5.5.1, PostgreSQL 17.11 and Caddy v2.10.2 were confirmed running; host CGO=0 was not changed because Go race checks passed in the existing CGO-enabled api-check image (Go 1.26.9 / GCC 15.2.0).
+
+Fresh `migrate` runner applied 000001–000007 one step at a time in retained scratch `smartpos_phase4_final_93f36d91`, ending at clean tracker `7|f`. Scratch and test-database reruns reported no change. Foundation/identity/organization/catalog/inventory rollback-only SQL passed on both databases, plus nine-table Phase 4 RLS/policy/grant checks. Final global isolated ledger/balance reconciliation reported zero mismatches.
+
+Current evidence: 175 purchasing/shelf flow + 125 safety assertions; auth/organization regressions; 116 catalog, 135 inventory and 132+64 POS assertions; 75 frontend tests, contracts/typecheck/lint/build; Go format/vet/race/build; AI check with 7 tests; all 18 Playwright tests with real integrated scenarios enabled. Phase 4 covers 15 routes at seven widths; six screenshots at 320/768/1440 were inspected. Existing warnings are documented, not suppressed.
+
+The initial SQL runner failure was an obsolete exact schema-5 guard, corrected to exact schema 7 in five SQL test files without weakening assertions. Added purchasing/shelf CSRF/Origin and concurrent duplicate-receipt test coverage; application code and migrations were not rewritten. Primary database/volumes remained untouched; no commit, push, deployment or Phase 5 work occurred. See the [detailed Thai final report](phase4-verification.md) for commands, environment, security evidence, artifacts and production limitations. The blocked continuation below is preserved historical evidence and superseded by this acceptance.
+
 ## Phase 4 continuation (2026-10-10 Asia/Bangkok)
 
 **Phase 4: IMPLEMENTED; LOCAL ACCEPTANCE PENDING.** The purchasing/shelves changes already present in the working tree were retained. This continuation verifies 75 frontend tests (including 11 focused purchasing tests), contracts, TypeScript, ESLint, frontend production build and Go vet/tests/build. ESLint retains three existing warnings; Vite reports a bundle-size warning.

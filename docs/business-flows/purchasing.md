@@ -1,6 +1,6 @@
-# Purchasing - Phase 4 implementation, acceptance pending
+# Purchasing - Phase 4 completed (Local)
 
-Supplier, purchasing and shelf workflows are implemented in the current working tree. Host-only checks pass; real database/integration/browser verification must still be rerun before closing the local acceptance gate. See [current evidence and blockers](../development/phase4-verification.md). The flow below describes intended behavior, not proof that runtime acceptance has passed.
+Supplier, purchasing and shelf workflows passed the local acceptance gate on 2026-10-10, including real database/integration/browser verification. See [final evidence and production limitations](../development/phase4-verification.md). This is local acceptance, not production readiness or authorization to start Phase 5.
 
 Supplier registration -> draft order -> validated exact line quantities/prices -> approval -> ordered -> partial/full receiving -> atomic inventory receipt ledger -> completion. Receiving locks order/line state, checks remaining quantity, deduplicates receipt request and commits document/ledger/balances together. Supplier returns are separately authorized compensating movements.
 

@@ -53,21 +53,21 @@ The nine Products routes are implemented Phase 1C. Catalog records are organizat
 | Inventory | `/inventory/transfers/:id` | Implemented Phase 2 | 2 | session + tenant + branch permission |
 | Inventory | `/inventory/reorder-points` | Implemented Phase 2 | 2 | session + tenant + branch permission |
 | Inventory | `/inventory/valuation` | Planned (not registered) | 2 | session + tenant + branch permission |
-| Shelves | `/shelves` | Implemented Phase 4; acceptance pending | 4 | session + tenant + branch permission |
-| Shelves | `/shelves/new` | Implemented Phase 4; acceptance pending | 4 | session + tenant + branch permission |
-| Shelves | `/shelves/:id` | Implemented Phase 4; acceptance pending | 4 | session + tenant + branch permission |
-| Shelves | `/shelves/layout` | Implemented Phase 4; acceptance pending | 4 | session + tenant + branch permission |
-| Shelves | `/shelves/replenishments` | Implemented Phase 4; acceptance pending | 4 | session + tenant + branch permission |
-| Shelves | `/shelves/counts` | Implemented Phase 4; acceptance pending | 4 | session + tenant + branch permission |
-| Shelves | `/shelves/discrepancies` | Implemented Phase 4; acceptance pending | 4 | session + tenant + branch permission |
-| Purchasing | `/suppliers` | Implemented Phase 4; acceptance pending | 4 | session + tenant + branch permission |
-| Purchasing | `/suppliers/:id` | Implemented Phase 4; acceptance pending | 4 | session + tenant + branch permission |
-| Purchasing | `/purchasing/orders` | Implemented Phase 4; acceptance pending | 4 | session + tenant + branch permission |
-| Purchasing | `/purchasing/orders/new` | Implemented Phase 4; acceptance pending | 4 | session + tenant + branch permission |
-| Purchasing | `/purchasing/orders/:id` | Implemented Phase 4; acceptance pending | 4 | session + tenant + branch permission |
-| Purchasing | `/purchasing/receipts` | Implemented Phase 4; acceptance pending | 4 | session + tenant + branch permission |
-| Purchasing | `/purchasing/returns` | Implemented Phase 4; acceptance pending | 4 | session + tenant + branch permission |
-| Purchasing | `/purchasing/suggestions` | Implemented Phase 4; acceptance pending | 4 | session + tenant + branch permission |
+| Shelves | `/shelves` | Implemented Phase 4 (Local) | 4 | session + tenant + branch permission |
+| Shelves | `/shelves/new` | Implemented Phase 4 (Local) | 4 | session + tenant + branch permission |
+| Shelves | `/shelves/:id` | Implemented Phase 4 (Local) | 4 | session + tenant + branch permission |
+| Shelves | `/shelves/layout` | Implemented Phase 4 (Local) | 4 | session + tenant + branch permission |
+| Shelves | `/shelves/replenishments` | Implemented Phase 4 (Local) | 4 | session + tenant + branch permission |
+| Shelves | `/shelves/counts` | Implemented Phase 4 (Local) | 4 | session + tenant + branch permission |
+| Shelves | `/shelves/discrepancies` | Implemented Phase 4 (Local) | 4 | session + tenant + branch permission |
+| Purchasing | `/suppliers` | Implemented Phase 4 (Local) | 4 | session + tenant + branch permission |
+| Purchasing | `/suppliers/:id` | Implemented Phase 4 (Local) | 4 | session + tenant + branch permission |
+| Purchasing | `/purchasing/orders` | Implemented Phase 4 (Local) | 4 | session + tenant + branch permission |
+| Purchasing | `/purchasing/orders/new` | Implemented Phase 4 (Local) | 4 | session + tenant + branch permission |
+| Purchasing | `/purchasing/orders/:id` | Implemented Phase 4 (Local) | 4 | session + tenant + branch permission |
+| Purchasing | `/purchasing/receipts` | Implemented Phase 4 (Local) | 4 | session + tenant + branch permission |
+| Purchasing | `/purchasing/returns` | Implemented Phase 4 (Local) | 4 | session + tenant + branch permission |
+| Purchasing | `/purchasing/suggestions` | Implemented Phase 4 (Local) | 4 | session + tenant + branch permission |
 | Pricing & Promotions | `/pricing` | Planned (not registered) | 5 | session + tenant + branch permission |
 | Pricing & Promotions | `/pricing/lists` | Planned (not registered) | 5 | session + tenant + branch permission |
 | Pricing & Promotions | `/promotions` | Planned (not registered) | 5 | session + tenant + branch permission |

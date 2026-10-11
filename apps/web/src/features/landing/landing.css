@@ -8,8 +8,8 @@
   letter-spacing: -0.025em;
 }
 .landing-container {
-  width: min(1200px, calc(100% - 64px));
-  margin-inline: auto;
+  width: 70%;
+  margin-inline: 15%;
 }
 .landing-header {
   position: sticky;
@@ -548,6 +548,7 @@
 @media (max-width: 767px) {
   .landing-container {
     width: calc(100% - 40px);
+    margin-inline: auto;
   }
   .landing-header-inner {
     min-height: 76px;

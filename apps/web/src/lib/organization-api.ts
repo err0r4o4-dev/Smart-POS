@@ -1,5 +1,5 @@
 import type { Role } from '../app/access';
-import { ApiError } from './api';
+import { requestData } from './api';
 export interface OrganizationInput {
   name: string;
   code: string;
@@ -68,7 +68,7 @@ export async function organizationRequest<Result>(
     signal?: AbortSignal;
   } = {},
 ): Promise<Result> {
-  const response = await fetch(`/api/v1${path}`, {
+  return requestData<Result>(`/api/v1${path}`, {
     method: options.method ?? 'GET',
     credentials: 'same-origin',
     signal: options.signal,
@@ -80,14 +80,4 @@ export async function organizationRequest<Result>(
     },
     ...(options.body ? { body: JSON.stringify(options.body) } : {}),
   });
-  const result = (await response.json()) as {
-    data?: Result;
-    error?: { message?: string };
-  };
-  if (!response.ok || result.data === undefined)
-    throw new ApiError(
-      response.status,
-      result.error?.message ?? 'Organization service unavailable',
-    );
-  return result.data;
 }

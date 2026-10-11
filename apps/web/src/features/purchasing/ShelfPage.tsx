@@ -114,7 +114,8 @@ function ShelfScreen({ view, id }: { view: string; id?: string }) {
                 </Field>
               </div>
               <QueryFeedback
-                loading={list.isLoading}
+                retry={() => void list.refetch()}
+                loading={list.isFetching}
                 error={list.error}
                 empty={list.data?.total === 0}
               />
@@ -324,7 +325,11 @@ function ShelfDetail({
   const shelf = query.data;
   return (
     <>
-      <QueryFeedback loading={query.isLoading} error={query.error} />
+      <QueryFeedback
+        retry={() => void query.refetch()}
+        loading={query.isFetching}
+        error={query.error}
+      />
       {shelf && (
         <>
           <Card>
@@ -622,7 +627,8 @@ function Replenishments({ state }: { state: SupplyScope }) {
           ไม่จองสต็อกและตรวจ stock/capacity ใหม่ตอน complete
         </p>
         <QueryFeedback
-          loading={suggestions.isLoading}
+          retry={() => void suggestions.refetch()}
+          loading={suggestions.isFetching}
           error={suggestions.error}
           empty={suggestions.data?.total === 0}
         />
@@ -723,7 +729,8 @@ function Replenishments({ state }: { state: SupplyScope }) {
           </Field>
         </div>
         <QueryFeedback
-          loading={tasks.isLoading}
+          retry={() => void tasks.refetch()}
+          loading={tasks.isFetching}
           error={tasks.error}
           empty={tasks.data?.total === 0}
         />
@@ -793,7 +800,11 @@ function TaskDetail({ state, id }: { state: SupplyScope; id: string }) {
   return (
     <Card>
       <h2>Task Detail</h2>
-      <QueryFeedback loading={query.isLoading} error={query.error} />
+      <QueryFeedback
+        retry={() => void query.refetch()}
+        loading={query.isFetching}
+        error={query.error}
+      />
       {task && (
         <>
           <p>
@@ -810,7 +821,8 @@ function TaskDetail({ state, id }: { state: SupplyScope; id: string }) {
             ['OPEN', 'ASSIGNED'].includes(task.status) && (
               <>
                 <QueryFeedback
-                  loading={members.isLoading}
+                  retry={() => void members.refetch()}
+                  loading={members.isFetching}
                   error={members.error}
                 />
                 <Field label="ผู้รับผิดชอบ Task">

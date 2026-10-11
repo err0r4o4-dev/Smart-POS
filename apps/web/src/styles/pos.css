@@ -122,6 +122,11 @@
   display: grid;
   gap: 18px;
 }
+.pos-checkout > section {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
 .pos-total {
   font-size: clamp(26px, 4vw, 40px);
   color: #854d0e;
@@ -278,7 +283,9 @@
   background: var(--surface, #ffffff);
   border: 1px solid var(--border, #cbd5e1);
   color: var(--text-primary, #0f172a);
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
 }
 .quick-cash-btn:hover:not(:disabled) {
   background: var(--primary-soft, #fff7db);

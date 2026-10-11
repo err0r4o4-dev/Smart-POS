@@ -12,7 +12,7 @@ export function CatalogHeader({
   return (
     <div className="catalog-header">
       <div>
-        <p className="eyebrow">PRODUCT CATALOG · PHASE 1C</p>
+        <p className="eyebrow">จัดการสินค้า</p>
         <h1>{title}</h1>
         <p>
           แค็ตตาล็อกร่วมขององค์กร •{' '}

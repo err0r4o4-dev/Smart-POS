@@ -36,6 +36,24 @@ are repository-root relative. Verification-only work authorizes reporting, not f
 - Capture permitted non-sensitive states only. Do not expose customer/employee
   data, receipts, tokens, or primary records through screenshots.
 
+## Apple-inspired design checks
+
+For affected visual work, read the direction in
+`.agents/skills/smartpos-ui-guidelines/SKILL.md`. Verify the rendered result rather
+than treating the style name or token reuse as proof that the design succeeds.
+
+- Check clear hierarchy, alignment, restrained decoration, and efficient density.
+  Keep POS totals, stock quantities, and primary actions easy to find and read.
+- Check desktop uses available width and keyboard/pointer-friendly controls;
+  mobile/tablet should reflow content into touch-friendly interactions, not merely
+  shrink a desktop layout or introduce another workspace/navigation model.
+- Check existing yellow branding, local Thai/Latin typography, and icon consistency
+  remain intact unless a different direction was explicitly requested.
+- Where glass is used, inspect contrast over varied backgrounds and the solid
+  fallback without blur/transparency. Check critical data stays on reliable surfaces.
+- Where motion is used, check reduced-motion behavior, visible state feedback, and
+  immediate access to actions. Do not require glass or animation for a visual pass.
+
 ## Commands and delivery
 
 `npm run e2e` runs existing Playwright scenarios and may launch configured servers

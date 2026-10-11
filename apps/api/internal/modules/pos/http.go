@@ -73,6 +73,9 @@ func writeEndpoint[Input any](status int, run func(context.Context, string, stri
 func resourceID(request *http.Request) string { return chi.URLParam(request, "resourceId") }
 func (handler Handler) TenantRoutes(router chi.Router) {
 	service := handler.Service
+	router.Post("/online-orders/{orderId}/pos-cart", writeEndpoint(200, func(ctx context.Context, user, org string, request *http.Request, input OnlineOrderInput) (any, error) {
+		return service.ImportOnlineOrder(ctx, user, org, chi.URLParam(request, "orderId"), input)
+	}))
 	router.Patch("/pos/carts/{resourceId}/customer", writeEndpoint(200, func(ctx context.Context, user, org string, request *http.Request, input CustomerInput) (any, error) {
 		return service.SelectCustomer(ctx, user, org, resourceID(request), input)
 	}))

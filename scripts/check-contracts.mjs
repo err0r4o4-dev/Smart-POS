@@ -5,15 +5,15 @@ import YAML from 'yaml';
 const modules = JSON.parse(
   readFileSync('packages/contracts/routes.json', 'utf8'),
 );
-const expected = [6, 4, 9, 6, 9, 11, 7, 8, 5, 5, 4, 6, 7, 5, 10, 4];
-assert.equal(modules.length, 16);
+const expected = [6, 4, 9, 6, 9, 11, 7, 8, 5, 5, 4, 6, 7, 5, 10, 4, 7];
+assert.equal(modules.length, 17);
 assert.deepEqual(
   modules.map((item) => item.routes.length),
   expected,
 );
 const routes = modules.flatMap((item) => item.routes);
-assert.equal(routes.length, 106);
-assert.equal(new Set(routes).size, 106);
+assert.equal(routes.length, 113);
+assert.equal(new Set(routes).size, 113);
 const routeDocs = readFileSync('docs/architecture/routes.md', 'utf8');
 const moduleDocs = readFileSync('docs/architecture/modules.md', 'utf8');
 for (const item of modules) {
@@ -25,6 +25,21 @@ for (const item of modules) {
     assert.ok(routeDocs.includes('`' + route + '`'), `Missing route ${route}`);
 }
 const api = YAML.parse(readFileSync('packages/contracts/openapi.yaml', 'utf8'));
+const storefrontPaths = [
+  '/api/v1/storefronts',
+  ...['', '/products', '/quote', '/orders', '/track'].map(
+    (suffix) => '/api/v1/storefronts/{slug}' + suffix,
+  ),
+  ...[
+    '/storefront',
+    '/storefront/products',
+    '/storefront/products/{variantId}',
+    '/online-orders',
+    '/online-orders/{orderId}',
+    '/online-orders/{orderId}/status',
+    '/online-orders/{orderId}/pos-cart',
+  ].map((suffix) => '/api/v1/organizations/{id}' + suffix),
+];
 const catalogPaths = [
   '/products',
   '/products/{productId}',
@@ -212,6 +227,7 @@ assert.deepEqual(
     ...expectedCustomerPaths,
     ...loyaltyPaths,
     ...qualityPaths,
+    ...storefrontPaths,
     '/api/v1/auth/forgot-password',
     '/api/v1/auth/login',
     '/api/v1/auth/logout',
@@ -272,6 +288,63 @@ for (const [path, item] of Object.entries(api.paths)) {
   }
 }
 const compose = YAML.parse(readFileSync('docker-compose.yml', 'utf8'));
+for (const path of storefrontPaths) {
+  for (const method of ['get', 'post', 'put']) {
+    const operation = api.paths[path][method];
+    if (!operation) continue;
+    if (path.startsWith('/api/v1/storefronts')) {
+      assert.deepEqual(operation.security, []);
+      if (method === 'post') assert.ok(operation.responses['429']);
+    }
+    assert.ok(operation.responses['409']);
+    assert.ok(operation.responses['503']);
+  }
+}
+const guestCreate = api.paths['/api/v1/storefronts/{slug}/orders'].post;
+assert.ok(
+  guestCreate.parameters.some(
+    (parameter) => parameter.name === 'Idempotency-Key' && parameter.required,
+  ),
+);
+assert.equal(
+  api.components.schemas.StorefrontOrderInput.properties.access_token.writeOnly,
+  true,
+);
+assert.equal(
+  api.components.schemas.StorefrontOrderInput.properties.access_token.pattern,
+  '^[a-f0-9]{64}$',
+);
+for (const field of [
+  'customer_name',
+  'contact_phone',
+  'customer_note',
+  'branch_id',
+  'terminal_id',
+  'cart_id',
+  'sale_id',
+  'access_hash',
+])
+  assert.equal(
+    api.components.schemas.PublicOnlineOrder.properties[field],
+    undefined,
+  );
+assert.ok(
+  !api.components.schemas.OnlineOrderTransitionInput.properties.status.enum.includes(
+    'COMPLETED',
+  ),
+);
+assert.equal(
+  api.components.schemas.StorefrontLine.properties.quantity.$ref,
+  '#/components/schemas/InventoryQuantity',
+);
+assert.equal(
+  api.components.schemas.StorefrontLine.properties.unit_price.$ref,
+  '#/components/schemas/POSMoney',
+);
+assert.equal(
+  api.components.schemas.POSCart.properties.online_order.$ref,
+  '#/components/schemas/OnlineOrderLink',
+);
 const operationIDs = new Set();
 for (const path of pricingPaths) {
   for (const method of ['get', 'post', 'put']) {
@@ -671,5 +744,5 @@ assert.ok(
   'Internal AI must not publish a host port',
 );
 console.log(
-  'PASS: 16 modules, 106 unique documented routes, foundation contract and service health wiring',
+  'PASS: 17 modules, 113 unique documented routes, storefront/POS contract and service health wiring',
 );

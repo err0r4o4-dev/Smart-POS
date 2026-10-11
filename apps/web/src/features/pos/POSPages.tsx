@@ -25,6 +25,7 @@ import { usePOS } from './POSContext';
 import { CustomerPicker } from '../customers/CustomerPicker';
 import { LoyaltyCheckoutControls } from '../loyalty/LoyaltyCheckoutControls';
 import { CartBatchPicker, type BatchSelection } from '../quality/BatchPicker';
+import { OnlineOrderPOS } from '../storefront/OnlineOrderPOS';
 
 export function POSTerminalPage() {
   const pos = usePOS();
@@ -78,7 +79,8 @@ export function POSTerminalPage() {
       ),
   });
   const add = async (item: POSItem) => {
-    if (!pos.shift || !pos.terminal || !item.saleable) return;
+    if (!pos.shift || !pos.terminal || !item.saleable || pos.cart?.online_order)
+      return;
     let cart = pos.cart;
     if (!cart) {
       cart = await pos.mutate<POSCart>('/pos/carts', {
@@ -130,6 +132,7 @@ export function POSTerminalPage() {
   return (
     <>
       <h1>ขายสินค้า</h1>
+      <OnlineOrderPOS />
       <p>สต็อกแสดงยอดที่บันทึก ณ ตำแหน่งขาย ไม่ใช่การยืนยันจำนวนจริงบนชั้น</p>
       {!pos.shift && (
         <p className="notice">
@@ -160,7 +163,10 @@ export function POSTerminalPage() {
                 disabled={pos.busy}
               />
             </label>
-            <Button type="submit" disabled={pos.busy || !pos.shift}>
+            <Button
+              type="submit"
+              disabled={pos.busy || !pos.shift || !!pos.cart?.online_order}
+            >
               เพิ่มจากบาร์โค้ด
             </Button>
           </form>
@@ -220,6 +226,7 @@ export function POSTerminalPage() {
                 <Button
                   disabled={
                     pos.busy ||
+                    !!pos.cart?.online_order ||
                     !pos.shift ||
                     !item.saleable ||
                     exactDecimal(item.available, 3) === 0n
@@ -306,6 +313,39 @@ function CartPanel() {
   return (
     <>
       <h2>ตะกร้าสินค้า</h2>
+      {cart?.online_order && (
+        <div className="notice">
+          <strong>ออเดอร์ออนไลน์ {cart.online_order.number}</strong>
+          <p>
+            ยอดตอนสั่ง ฿{moneyText(cart.online_order.estimated_total)} · ยอด POS
+            ปัจจุบัน ฿{moneyText(cart.total)}
+          </p>
+          <p>
+            รายการและจำนวนถูกล็อกตามออเดอร์ เลือก lot และทบทวนราคาได้
+            ยืนยันยอดกับลูกค้าก่อนชำระ
+          </p>
+          <Button
+            className="button-secondary"
+            disabled={pos.busy}
+            onClick={() =>
+              void (async () => {
+                const result = await pos.mutate<POSCart>(
+                  `/pos/carts/${cart.id}/cancel`,
+                  { revision: cart.revision },
+                );
+                if (result) {
+                  pos.setCart('');
+                  pos.setMessage(
+                    'ยกเลิกตะกร้าแล้ว ออเดอร์กลับไปพร้อมรับและยังไม่สร้างยอดขาย',
+                  );
+                }
+              })()
+            }
+          >
+            ยกเลิกตะกร้าและคืนออเดอร์ไปรายการพร้อมรับ
+          </Button>
+        </div>
+      )}
       <CustomerPicker />
       {!cart?.items.length && <p>ยังไม่มีสินค้าในตะกร้า</p>}
       {cart?.items.map((item) => (
@@ -330,7 +370,7 @@ function CartPanel() {
           <div className="pos-quantity">
             <Button
               aria-label={`ลด ${item.sku}`}
-              disabled={pos.busy}
+              disabled={pos.busy || !!cart.online_order}
               onClick={() =>
                 void update(
                   item.variant_id,
@@ -343,12 +383,12 @@ function CartPanel() {
             <QuantityInput
               key={`${item.variant_id}:${cart.revision}`}
               item={item}
-              disabled={pos.busy}
+              disabled={pos.busy || !!cart.online_order}
               update={(quantity) => void update(item.variant_id, quantity)}
             />
             <Button
               aria-label={`เพิ่มจำนวน ${item.sku}`}
-              disabled={pos.busy}
+              disabled={pos.busy || !!cart.online_order}
               onClick={() =>
                 void update(
                   item.variant_id,
@@ -360,7 +400,7 @@ function CartPanel() {
             </Button>
             <Button
               aria-label={`ลบ ${item.sku}`}
-              disabled={pos.busy}
+              disabled={pos.busy || !!cart.online_order}
               onClick={() => void remove(item.variant_id)}
             >
               ลบ

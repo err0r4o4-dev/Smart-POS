@@ -5,6 +5,7 @@ ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy PYTHONUNBUFFERED=1
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev
 COPY app ./app
+COPY logging.json ./logging.json
 
 FROM base AS check
 RUN uv sync --frozen
@@ -15,4 +16,4 @@ FROM base AS runtime
 RUN useradd --create-home --uid 10001 app
 USER app
 EXPOSE 8001
-CMD ["/app/.venv/bin/uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--no-access-log"]
+CMD ["/app/.venv/bin/uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--log-config", "/app/logging.json", "--no-access-log"]

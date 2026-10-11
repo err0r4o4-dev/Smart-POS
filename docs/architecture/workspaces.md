@@ -2,7 +2,7 @@
 
 ## Customer area
 
-`/shop` uses StorefrontLayout, independent of OrganizationProvider and employee navigation. It never loads tenant catalog/customer data through employee endpoints. The page has a visible customer-area label and an explicit not-open-for-orders state. Public product publishing, customer identities, cart/checkout, order tracking, reservations, shipping and online payment settlement remain future work. No fabricated catalog, placeholder checkout success or financial mutations are provided.
+`/shop` uses StorefrontLayout, independent of OrganizationProvider and employee navigation. It never loads tenant catalog/customer data through employee endpoints. It now exposes published stores/products, a store-specific guest cart and private order tracking through the public storefront API. Orders are unpaid pickup requests, not sales or stock reservations. Customer accounts, shipping and online payment remain deferred. No fabricated catalog or placeholder financial completion is provided. See [storefront flow](storefront.md).
 
 ## Team entrances
 
@@ -20,7 +20,7 @@ WorkspaceAreaGate denies non-management members access to `/manage/...`, except 
 
 Legacy `/dashboard` resolves to the role's canonical home; `/staff` resolves to `/work` for every permitted team member. Existing unprefixed module URLs redirect to the role-appropriate namespace, preserving dynamic IDs, query parameters and URL fragments. Legacy administration links always resolve to management and never grant permissions. `/manage` redirects to `/manage/dashboard`. Unknown paths still render the existing not-found page. Browser namespaces do not change `/api/v1/organizations/...` endpoints, payloads or database schemas.
 
-`/manage/customers` and `/work/customers` are customer databases for team use, not online-shopper portals. `/manage/products` is product management and `/work/products` is product information in work navigation. POS has a selling-area label and returns to the active workspace. POS terminals, shifts, settlement, inventory posting and receipt contracts are unchanged.
+`/manage/customers` and `/work/customers` are customer databases for team use, not online-shopper portals. `/manage/products` is product management and `/work/products` is product information in work navigation. POS has a selling-area label and returns to the active workspace. POS terminal, shift, settlement, inventory and receipt engines are retained; storefront adds an optional cart/order link, a staff import command and atomic order completion during existing sale settlement.
 
 ## Diagnostics and verification
 

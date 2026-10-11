@@ -1,6 +1,6 @@
 ---
 name: smartpos-ui-guidelines
-description: Adjust SmartPOS styling, visual hierarchy, and responsive layouts using existing tokens, local fonts, and Lucide. Read the canonical UI skill; do not perform an unsolicited redesign.
+description: Design or adjust SmartPOS Apple-inspired web UI and adaptive Cupertino-style mobile layouts using existing tokens, local fonts, and Lucide. Use for visual changes or Apple-style requests; read the canonical UI skill and do not perform an unsolicited redesign.
 ---
 
 # smartpos-ui-guidelines Claude Adapter

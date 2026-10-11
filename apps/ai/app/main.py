@@ -1,3 +1,5 @@
+import logging
+from time import perf_counter
 from typing import Literal
 from uuid import uuid4
 
@@ -8,6 +10,7 @@ from pydantic import BaseModel, ConfigDict
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import get_settings
+from app.observability import logger
 
 
 class Health(BaseModel):
@@ -35,14 +38,35 @@ app = FastAPI(
 
 @app.middleware("http")
 async def headers(request: Request, call_next):
+    started = perf_counter()
     request.state.request_id = uuid4().hex
     try:
         response = await call_next(request)
     except Exception:
+        logger.error(
+            "request panic",
+            extra={"event": "request_panic", "request_id": request.state.request_id},
+        )
         response = error_response(request, 500, "INTERNAL_ERROR", "An unexpected error occurred")
     response.headers["X-Request-ID"] = request.state.request_id
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Cache-Control"] = "no-store"
+    level = (
+        logging.ERROR
+        if response.status_code >= 500
+        else (logging.WARNING if response.status_code >= 400 else logging.INFO)
+    )
+    logger.log(
+        level,
+        "http_request",
+        extra={
+            "method": request.method,
+            "status": response.status_code,
+            "path": request.url.path,
+            "request_id": request.state.request_id,
+            "latency_ms": int((perf_counter() - started) * 1000),
+        },
+    )
     return response
 
 

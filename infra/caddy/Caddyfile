@@ -1,8 +1,32 @@
 {
 	auto_https off
 	admin off
+	log default {
+		output stdout
+		format filter {
+			wrap json
+			fields {
+				request delete
+				resp_headers delete
+			}
+		}
+	}
 }
 :8088 {
+	log {
+		output stdout
+		format filter {
+			wrap json
+			fields {
+				request delete
+				resp_headers delete
+			}
+		}
+	}
+	log_append method {method}
+	log_append path {orig_path}
+	log_append request_id {http.response.header.X-Request-ID}
+	log_append gateway_request_id {http.request.uuid}
 	header {
 		X-Content-Type-Options nosniff
 		X-Frame-Options DENY

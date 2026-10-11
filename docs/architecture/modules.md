@@ -1,8 +1,18 @@
 # Module specifications
 
-Phase 0 implements platform/presentation, Phase 1A implements identity, Phase 1B implements organization/branch/employee membership management with fixed RBAC Phase 1C implements product catalog and Phase 2 implements inventory core. Other business functionality remains planned. API groups/events below are proposals unless explicitly marked implemented; the live source is OpenAPI. Page counts remain the canonical 16-module/106-route inventory. Upstream dependencies are constrained by dependencies.md. See [Phase 1B architecture](organization.md) and [Phase 1C architecture](catalog.md).
+Phase 0 implements platform/presentation, Phase 1A implements identity, Phase 1B implements organization/branch/employee membership management with fixed RBAC Phase 1C implements product catalog and Phase 2 implements inventory core. Other business functionality remains planned. API groups/events below are proposals unless explicitly marked implemented; the live source is OpenAPI. Page counts now use the canonical 17-module/113-route inventory including Storefront. Upstream dependencies are constrained by dependencies.md. See [Phase 1B architecture](organization.md) and [Phase 1C architecture](catalog.md).
 
-Current status supersedes older introductory scope: Phase0–4 and Phase5.1–5.7 COMPLETED (Local); Phase5 overall COMPLETED (Local); Phase6–7 NOT STARTED; Phase6 NOT READY; Production Ready NO. Existing POS/payment/stock/pricing engines are retained; Quality extends Inventory and Loyalty extends Customers. Canonical16 modules/106 planned routes unchanged. See [Quality](quality.md), [Loyalty](loyalty.md) and [final acceptance](../development/phase57-verification.md).
+Current status supersedes older introductory scope: Phase0–4 and Phase5.1–5.7 COMPLETED (Local); Phase5 overall COMPLETED (Local); Phase6–7 NOT STARTED; Phase6 NOT READY; Production Ready NO. Existing POS/payment/stock/pricing engines are retained; Quality extends Inventory and Loyalty extends Customers. The original Phase5 checkpoint counted16 modules/106 routes; the storefront extension now brings the inventory to17 modules/113 routes. See [Quality](quality.md), [Loyalty](loyalty.md) and [final acceptance](../development/phase57-verification.md).
+
+## Storefront (7 pages)
+
+- Purpose: Published catalog and guest orders for pickup and payment at the store.
+- Pages: `/shop`, `/shop/:slug`, `/shop/:slug/cart`, `/shop/:slug/track/:orderId`, `/settings/storefront`, `/online-orders`, `/online-orders/:orderId`.
+- Owner: public Go storefront module; existing POS owns payment, sales, inventory posting and receipts.
+- Permissions: storefront.manage for Owner/Manager; online_orders.read/manage for Owner/Manager/Cashier with branch scope.
+- Invariants: explicit product publication, immutable estimates and pickup snapshots, hashed tracking access, idempotent creation/import/settlement, no stock reservation, no invented completion.
+- Boundaries: no customer account, shipping, online payment, costing, or new payment engine. See [Storefront](storefront.md).
+- Current canonical inventory: 17 modules / 113 logical routes; dated Phase5 acceptance counts below remain historical evidence, not storefront verification.
 
 ## Authentication (6 pages)
 

@@ -94,6 +94,10 @@ func readCart(ctx context.Context, tx pgx.Tx, actor organization.Member, user, o
 	if item.StoredPricingRevision != "" && item.StoredPricingRevision != item.Pricing.Revision {
 		item.ReviewRequired = true
 	}
+	item.OnlineOrder, err = onlineOrderLink(ctx, tx, org, id)
+	if err != nil {
+		return item, err
+	}
 	return item, nil
 }
 func cartUnlocked(ctx context.Context, tx pgx.Tx, org, id string) error {
@@ -174,6 +178,9 @@ func (service *Service) UpdateCart(ctx context.Context, user, org, id, action st
 	case "update":
 		if current.Status != "ACTIVE" || validateItems(input.Items) != nil {
 			return current, ErrInput
+		}
+		if err = validateOnlineCart(ctx, tx, org, id, input.Items); err != nil {
+			return current, err
 		}
 		value, err := terminal(ctx, tx, actor, org, current.TerminalID, true)
 		if err != nil {
@@ -256,6 +263,11 @@ func (service *Service) UpdateCart(ctx context.Context, user, org, id, action st
 		}
 	}
 	result.CustomerCleared = cleared
+	if action == "cancel" {
+		if err = releaseOnlineCart(ctx, tx, user, org, id); err != nil {
+			return result, err
+		}
+	}
 	if cleared {
 		if err = organization.RecordAudit(ctx, tx, org, user, "pos.cart.customer_cleared", id); err != nil {
 			return result, err

@@ -23,6 +23,12 @@ import {
 
 type Kind = 'categories' | 'brands' | 'units';
 const labels = { categories: 'หมวดหมู่', brands: 'แบรนด์', units: 'หน่วยนับ' };
+
+function statusTone(status: string): 'success' | 'amber' | 'neutral' {
+  if (status === 'ACTIVE') return 'success';
+  if (status === 'INACTIVE') return 'amber';
+  return 'neutral';
+}
 const permissions = {
   categories: 'catalog.category.manage',
   brands: 'catalog.brand.manage',
@@ -178,7 +184,7 @@ export function TaxonomyPage({ kind }: { kind: Kind }) {
                         </>
                       )}
                       <td>
-                        <Tag>{item.status}</Tag>
+                        <Tag tone={statusTone(item.status)}>{item.status}</Tag>
                       </td>
                       {allowed && (
                         <td>

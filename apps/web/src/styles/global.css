@@ -916,15 +916,6 @@ ul {
   font-size: 12px;
   margin: 6px 0 14px;
 }
-.preview-header {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 20px 32px;
-}
 .back-link {
   min-height: 44px;
   display: inline-flex;
@@ -932,11 +923,6 @@ ul {
   gap: 8px;
   font-size: 13px;
   color: var(--text-strong);
-}
-.preview-content {
-  max-width: 1600px;
-  margin: auto;
-  padding: 34px;
 }
 .notice {
   color: var(--primary-strong);
@@ -1191,18 +1177,6 @@ pre {
   margin-top: 20px;
   overflow: auto;
 }
-.preview-links {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 15px;
-  margin-top: 35px;
-}
-.preview-links h2 {
-  width: 100%;
-  font-size: 21px;
-  margin-bottom: 5px;
-}
 .standalone {
   min-height: 100vh;
   padding: 30px 20px;
@@ -1439,30 +1413,6 @@ pre {
     padding: 20px 18px;
     flex-direction: column;
   }
-  .preview-header {
-    padding: 15px 18px;
-    flex-wrap: wrap;
-  }
-  .preview-header .brand {
-    font-size: 19px;
-  }
-  .preview-header .brand small {
-    display: none;
-  }
-  .preview-header .brand-mark {
-    width: 34px;
-    height: 34px;
-  }
-  .preview-header .brand-mark-img {
-    width: 22px;
-    height: 22px;
-  }
-  .preview-header .brand-logo {
-    height: 38px;
-  }
-  .preview-content {
-    padding: 25px 18px;
-  }
   .pos-grid {
     grid-template-columns: 1fr;
   }
@@ -1494,9 +1444,6 @@ pre {
   .auth-form {
     padding: 25px 0;
   }
-  .preview-links .button {
-    width: 100%;
-  }
 }
 @media (max-width: 360px) {
   .topbar-right {
@@ -1522,9 +1469,6 @@ pre {
   }
   .service-ready .tag {
     margin-left: 0;
-  }
-  .preview-header .brand {
-    display: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {

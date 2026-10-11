@@ -57,7 +57,7 @@ export function ManagementLayout() {
         </div>
         <p className="nav-label">WORKSPACE</p>
         <nav className="sidebar-navigation" aria-label="Main navigation">
-          <NavigationMenu items={navigation} access={access} preview={false} />
+          <NavigationMenu items={navigation} access={access} />
         </nav>
         <div className="sidebar-note">
           <strong>Built for what’s next</strong>
@@ -156,11 +156,9 @@ export function ManagementLayout() {
             <NavigationMenu
               items={navigation}
               access={access}
-              preview={false}
               onNavigate={close}
             />
           </nav>
-          <Tag tone="amber">Phase 0 · presentation only</Tag>
         </dialog>
       }
     </div>

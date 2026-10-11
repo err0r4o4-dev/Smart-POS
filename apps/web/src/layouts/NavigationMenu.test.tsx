@@ -13,18 +13,10 @@ const owner: Session = {
   ),
 };
 
-function renderMenu(path: string, access: Session = owner, preview = false) {
+function renderMenu(path: string, access: Session = owner) {
   return render(
     <MemoryRouter initialEntries={[path]}>
-      <NavigationMenu
-        items={
-          preview
-            ? navigation.filter((item) => item.to.startsWith('/preview/'))
-            : navigation
-        }
-        access={access}
-        preview={preview}
-      />
+      <NavigationMenu items={navigation} access={access} />
     </MemoryRouter>,
   );
 }
@@ -38,19 +30,17 @@ it('assigns every operational module to exactly one group', () => {
         navigation.some((item) => item.to === path),
       ),
       '/dashboard',
-      '/preview/pos',
-      '/preview/auth',
       '/help',
     ].sort(),
   ).toEqual(navigation.map((item) => item.to).sort());
 });
 
-it('keeps foundation and preview links outside seven initially collapsed groups', () => {
+it('keeps foundation links outside seven initially collapsed groups', () => {
   renderMenu('/dashboard');
   expect(screen.getAllByRole('button')).toHaveLength(7);
   for (const button of screen.getAllByRole('button'))
     expect(button).toHaveAttribute('aria-expanded', 'false');
-  expect(screen.getAllByRole('link')).toHaveLength(4);
+  expect(screen.getAllByRole('link')).toHaveLength(2);
   expect(screen.getByRole('link', { name: 'Overview' })).toHaveAttribute(
     'aria-current',
     'page',
@@ -121,13 +111,13 @@ it('filters permissions before showing groups', () => {
   ).not.toBeInTheDocument();
 });
 
-it('keeps preview links separate and ungrouped', () => {
-  renderMenu('/preview/pos', owner, true);
-  expect(screen.queryByRole('button')).not.toBeInTheDocument();
-  expect(screen.getByRole('link', { name: 'POS layout' })).toBeVisible();
-  expect(
-    screen.queryByRole('link', { name: 'ลูกค้า / Customers', hidden: true }),
-  ).not.toBeInTheDocument();
+it('removes preview links while retaining the real POS entry', () => {
+  renderMenu('/pos');
+  expect(document.querySelectorAll('a[href^="/preview/"]')).toHaveLength(0);
+  expect(screen.getByRole('link', { name: 'ขายสินค้า / POS' })).toHaveAttribute(
+    'href',
+    '/pos',
+  );
 });
 
 it('opens the destination group on navigation', () => {
@@ -138,7 +128,7 @@ it('opens the destination group on navigation', () => {
         <button onClick={() => navigate('/products/item-1')}>
           Visit product
         </button>
-        <NavigationMenu items={navigation} access={owner} preview={false} />
+        <NavigationMenu items={navigation} access={owner} />
       </>
     );
   }
@@ -156,16 +146,12 @@ it('opens the destination group on navigation', () => {
 it('opens the current group when permissions finish loading', () => {
   const view = render(
     <MemoryRouter initialEntries={['/products']}>
-      <NavigationMenu
-        items={navigation}
-        access={{ authenticated: false }}
-        preview={false}
-      />
+      <NavigationMenu items={navigation} access={{ authenticated: false }} />
     </MemoryRouter>,
   );
   view.rerender(
     <MemoryRouter initialEntries={['/products']}>
-      <NavigationMenu items={navigation} access={owner} preview={false} />
+      <NavigationMenu items={navigation} access={owner} />
     </MemoryRouter>,
   );
   expect(

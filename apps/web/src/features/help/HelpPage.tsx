@@ -1,5 +1,4 @@
-import { Link } from 'react-router-dom';
-import { ArrowRight, BookOpen, Code2, ShieldCheck } from 'lucide-react';
+import { BookOpen, Code2, ShieldCheck } from 'lucide-react';
 import { Card, Tag } from '../../components/ui/primitives';
 
 export function HelpPage() {
@@ -30,9 +29,8 @@ export function HelpPage() {
           <ShieldCheck className="help-icon" />
           <h2>Know the boundary</h2>
           <p>
-            Authentication, product management, checkout, payments and
-            forecasting are not implemented. No transaction or credential
-            submission is available.
+            Sign in and select your organization to use product management and
+            POS. Checkout requires POS access and an open register shift.
           </p>
           <p>
             Health status is real. Module/page counts describe the architecture,
@@ -52,17 +50,6 @@ export function HelpPage() {
           </p>
         </Card>
       </div>
-      <section className="preview-links">
-        <h2>Explore the layout foundations</h2>
-        <Link to="/preview/pos" className="button button-secondary">
-          POS preview
-          <ArrowRight size={17} />
-        </Link>
-        <Link to="/preview/auth" className="button button-secondary">
-          Authentication preview
-          <ArrowRight size={17} />
-        </Link>
-      </section>
     </>
   );
 }

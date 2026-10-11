@@ -152,6 +152,6 @@ networks:
       config:
         - subnet: ${PROXY_SUBNET:-172.30.42.0/28}
   data:
-    internal: true
+    # internal: true
   intelligence:
     internal: true

@@ -1,28 +1,35 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { expect, it } from 'vitest';
-import { POSLayout } from './POSLayout';
+import { HelpPage } from '../features/help/HelpPage';
 import { AuthLayout } from './AuthLayout';
 
-it('never enables a fake login', () => {
+it('renders supplied authentication controls without a preview fallback', () => {
   render(
     <MemoryRouter>
-      <AuthLayout />
+      <AuthLayout>
+        <form aria-label="Sign in">
+          <label htmlFor="email">Email address</label>
+          <input id="email" type="email" />
+          <button type="submit">Sign in</button>
+        </form>
+      </AuthLayout>
     </MemoryRouter>,
   );
-  expect(
-    screen.getByRole('button', { name: 'Sign in unavailable' }),
-  ).toBeDisabled();
-  expect(screen.getByLabelText('Email address')).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Sign in' })).toBeEnabled();
+  expect(screen.getByLabelText('Email address')).toBeEnabled();
+  expect(screen.queryByText(/preview/i)).not.toBeInTheDocument();
 });
-it('never enables a fake checkout', () => {
+it('shows operational help without links to removed previews', () => {
   render(
     <MemoryRouter>
-      <POSLayout />
+      <HelpPage />
     </MemoryRouter>,
   );
   expect(
-    screen.getByRole('button', { name: 'Checkout unavailable' }),
-  ).toBeDisabled();
-  expect(screen.getByRole('status')).toHaveTextContent('presentation only');
+    screen.getByRole('heading', { name: 'Know the boundary' }),
+  ).toBeVisible();
+  expect(screen.getByText(/Checkout requires POS access/)).toBeVisible();
+  expect(document.querySelectorAll('a[href^="/preview/"]')).toHaveLength(0);
+  expect(screen.queryByText(/preview/i)).not.toBeInTheDocument();
 });

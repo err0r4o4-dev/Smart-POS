@@ -2,8 +2,6 @@ import type { Role } from './access';
 
 export const paths = {
   dashboard: '/dashboard',
-  posPreview: '/preview/pos',
-  authPreview: '/preview/auth',
   login: '/login',
   register: '/register',
   forgotPassword: '/forgot-password',
@@ -166,8 +164,6 @@ export const navigation: NavigationItem[] = [
     permission: 'role.read',
   },
   { to: paths.dashboard, label: 'Overview', icon: 'dashboard' },
-  { to: paths.posPreview, label: 'POS layout', icon: 'pos' },
-  { to: paths.authPreview, label: 'Authentication layout', icon: 'auth' },
   { to: paths.help, label: 'Getting started', icon: 'help' },
 ];
 

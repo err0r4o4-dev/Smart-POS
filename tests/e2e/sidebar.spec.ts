@@ -56,7 +56,7 @@ for (const width of [1024, 1440]) {
           await button.click();
         }
         await expect(menu.getByRole('link')).toHaveCount(navigation.length);
-        await expect(menu.locator('a[href^="/preview/"]')).toHaveCount(2);
+        await expect(menu.locator('a[href^="/preview/"]')).toHaveCount(0);
         await expect(menu.locator('a[href="/dashboard"]')).toHaveAttribute(
           'aria-current',
           'page',
@@ -119,11 +119,13 @@ test('anonymous foundation navigation excludes tenant modules', async ({
     exact: true,
   });
   await expect(
-    menu.getByRole('link', { name: 'POS layout', exact: true }),
+    menu.getByRole('link', { name: 'Overview', exact: true }),
   ).toBeVisible();
   await expect(
-    menu.getByRole('link', { name: 'Authentication layout', exact: true }),
+    menu.getByRole('link', { name: 'Getting started', exact: true }),
   ).toBeVisible();
+  await expect(menu.getByRole('link')).toHaveCount(2);
+  await expect(menu.locator('a[href^="/preview/"]')).toHaveCount(0);
   await expect(menu.locator('a[href="/customers"]')).toHaveCount(0);
   await expect(page.locator('.sidebar-note')).toContainText(
     'Built for what’s next',
@@ -146,7 +148,7 @@ test('mobile navigation still opens, navigates and dismisses', async ({
     name: 'Mobile navigation',
     exact: true,
   });
-  await expect(menu.locator('a[href^="/preview/"]')).toHaveCount(2);
+  await expect(menu.locator('a[href^="/preview/"]')).toHaveCount(0);
   await expect(menu.getByRole('button')).toHaveCount(7);
   await page.keyboard.press('Shift+Tab');
   await expect(

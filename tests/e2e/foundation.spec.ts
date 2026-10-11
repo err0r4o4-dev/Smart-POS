@@ -8,8 +8,9 @@ for (const width of [320, 375, 640, 768, 1024, 1440, 1920]) {
     for (const route of [
       '/dashboard',
       '/help',
-      '/preview/pos',
-      '/preview/auth',
+      '/login',
+      '/register',
+      '/forgot-password',
       '/403',
       '/404',
     ]) {
@@ -29,7 +30,7 @@ for (const width of [320, 375, 640, 768, 1024, 1440, 1920]) {
       }
       if (
         [375, 1440].includes(width) &&
-        ['/preview/pos', '/preview/auth'].includes(route)
+        ['/login', '/register'].includes(route)
       ) {
         await page.screenshot({
           path: `test-results/${route.replaceAll('/', '-')}-${width}.png`,
@@ -62,22 +63,43 @@ test('mobile navigation supports keyboard, dismissal and real routes', async ({
   await page.getByRole('button', { name: 'Open navigation' }).click();
   await page
     .getByRole('navigation', { name: 'Mobile navigation' })
-    .getByRole('link', { name: 'POS layout', exact: true })
+    .getByRole('link', { name: 'Getting started', exact: true })
     .click();
-  await expect(page).toHaveURL(/\/preview\/pos$/);
+  await expect(page).toHaveURL(/\/help$/);
   await expect(
-    page.getByRole('button', { name: 'Checkout unavailable' }),
-  ).toBeDisabled();
+    page.getByRole('heading', { name: 'Build on solid ground.' }),
+  ).toBeVisible();
+  await expect(page.locator('a[href^="/preview/"]')).toHaveCount(0);
 });
 
-test('no fake authentication or unfinished business pages', async ({
+for (const route of ['/preview/pos', '/preview/auth']) {
+  test(`removed preview ${route} shows the not-found page`, async ({
+    page,
+  }) => {
+    await page.goto(route);
+    await expect(
+      page.getByRole('heading', { name: 'Nothing on this shelf.' }),
+    ).toBeVisible();
+    await expect(page.getByText('404 · NOT FOUND')).toBeVisible();
+    await expect(page.getByRole('form')).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: 'Checkout unavailable' }),
+    ).toHaveCount(0);
+  });
+}
+
+test('real authentication and protected business pages remain available', async ({
   page,
 }) => {
-  await page.goto('/preview/auth');
-  await expect(page.getByLabel('Email address')).toBeDisabled();
-  await expect(
-    page.getByRole('button', { name: 'Sign in unavailable' }),
-  ).toBeDisabled();
+  await page.goto('/login');
+  await expect(page.getByLabel('Email address')).toBeEnabled();
+  await expect(page.getByLabel('Password', { exact: true })).toBeEnabled();
+  for (const route of ['/pos', '/pos/checkout']) {
+    await page.goto(route);
+    await expect(page).toHaveURL(
+      new RegExp('/login\\?returnTo=' + encodeURIComponent(route) + '$'),
+    );
+  }
   await page.goto('/products');
   await expect(page).toHaveURL(/\/login\?returnTo=%2Fproducts/);
   await expect(page.getByLabel('Email address')).toBeEnabled();

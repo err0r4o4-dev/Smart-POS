@@ -20,7 +20,6 @@ const icons = {
 interface NavigationMenuProps {
   items: NavigationItem[];
   access: Session;
-  preview: boolean;
   onNavigate?: () => void;
 }
 
@@ -41,7 +40,6 @@ export function NavigationMenu(props: NavigationMenuProps) {
 function GroupedMenu({
   items,
   access,
-  preview,
   onNavigate,
   pathname,
 }: NavigationMenuProps & { pathname: string }) {
@@ -77,7 +75,6 @@ function GroupedMenu({
       </NavLink>
     );
   };
-  if (preview) return <>{visibleItems.map(renderLink)}</>;
   return (
     <>
       {visibleItems

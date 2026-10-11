@@ -1,7 +1,5 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { ManagementLayout } from '../layouts/ManagementLayout';
-import { POSLayout } from '../layouts/POSLayout';
-import { AuthLayout } from '../layouts/AuthLayout';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { HelpPage } from '../features/help/HelpPage';
 import { SystemPage } from '../features/system/SystemPage';
@@ -340,7 +338,6 @@ export const router = createBrowserRouter([
       },
     ],
   },
-  { path: paths.posPreview, element: <POSLayout /> },
   {
     element: <RequireSession />,
     children: [
@@ -375,7 +372,6 @@ export const router = createBrowserRouter([
       },
     ],
   },
-  { path: paths.authPreview, element: <AuthLayout /> },
   { path: paths.login, element: <LoginPage /> },
   { path: paths.register, element: <RegisterPage /> },
   { path: paths.forgotPassword, element: <ForgotPasswordPage /> },

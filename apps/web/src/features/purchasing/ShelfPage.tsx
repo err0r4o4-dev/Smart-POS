@@ -344,6 +344,11 @@ function ShelfScreen({ view, id }: { view: string; id?: string }) {
                         </tr>
                       ))}
                     </SupplyTable>
+                    <Pagination
+                      page={page}
+                      total={list.data?.total ?? 0}
+                      change={setPage}
+                    />
                   </Card>
                 </>
               ) : (
@@ -380,13 +385,13 @@ function ShelfScreen({ view, id }: { view: string; id?: string }) {
                       readonly
                     />
                   )}
+                  <Pagination
+                    page={page}
+                    total={list.data?.total ?? 0}
+                    change={setPage}
+                  />
                 </>
               )}
-              <Pagination
-                page={page}
-                total={list.data?.total ?? 0}
-                change={setPage}
-              />
             </>
           )}
           {view === 'replenishments' && <Replenishments state={state} />}

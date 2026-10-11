@@ -7,7 +7,9 @@ export function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <main id="main-content" className="auth-shell">
       <section className="auth-story">
-        <Brand />
+        <Link to="/" aria-label="VELO POS หน้าหลัก">
+          <Brand />
+        </Link>
         <div>
           <Tag tone="amber">INTELLIGENT RETAIL</Tag>
           <h1 tabIndex={-1}>

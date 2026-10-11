@@ -304,6 +304,7 @@ ul {
 }
 .brand {
   display: inline-flex;
+  cursor: pointer;
   align-items: center;
   gap: 11px;
   font-size: 24px;

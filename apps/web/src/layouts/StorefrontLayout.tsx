@@ -10,7 +10,7 @@ export function StorefrontLayout() {
         ข้ามไปเนื้อหา
       </a>
       <header className="storefront-header">
-        <Link to={paths.shop} aria-label="หน้าร้านออนไลน์">
+        <Link to="/" aria-label="VELO POS หน้าหลัก">
           <Brand />
         </Link>
         <Tag tone="amber">

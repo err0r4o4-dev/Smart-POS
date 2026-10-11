@@ -1,5 +1,5 @@
 import { useState, useRef, type ReactNode } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, Link as RouterLink } from 'react-router-dom';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavigate';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -49,7 +49,9 @@ export function POSWorkspace() {
           >
             กลับพื้นที่ทำงาน
           </Link>
-          <Brand />
+          <RouterLink to="/" aria-label="VELO POS หน้าหลัก">
+            <Brand />
+          </RouterLink>
           <span className="tag tag-amber">
             ขายหน้าร้าน · {roleLabels[tenant.context.membership.role]}
           </span>

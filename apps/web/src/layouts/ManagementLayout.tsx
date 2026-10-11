@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { Menu, Store, X } from 'lucide-react';
 import {
   anonymousSession,
@@ -111,9 +111,9 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
         Skip to content
       </a>
       <aside className="sidebar">
-        <NavLink to={homePath} aria-label={`VELO SmartPOS · ${areaTitle}`}>
+        <Link to="/" aria-label="VELO SmartPOS หน้าหลัก">
           <Brand />
-        </NavLink>
+        </Link>
         <div className="workspace-context">
           <span className="context-icon">
             <Store size={19} aria-hidden="true" />
@@ -239,7 +239,9 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
         >
           <div className="mobile-dialog-head">
             <div>
-              <Brand />
+              <Link to="/" aria-label="VELO SmartPOS หน้าหลัก" onClick={close}>
+                <Brand />
+              </Link>
               <p>
                 {areaTitle}
                 {role ? ` · ${roleLabels[role]}` : ''}

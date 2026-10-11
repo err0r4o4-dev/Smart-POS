@@ -1,15 +1,24 @@
 # Complete route inventory
 
-Canonical source: packages/contracts/routes.json. Exactly 16 modules and 106 planned page routes. Static routes are ranked before dynamic routes by React Router. Only ready pages are registered. A shell is not a completed business feature.
+Canonical source: packages/contracts/routes.json. Exactly 17 modules and 113 page routes (implemented and planned). Static routes are ranked before dynamic routes by React Router. Only ready pages are registered. A shell is not a completed business feature.
 
 Implemented identity routes are Phase 1A; organization/branch/member routes below are Phase 1B. These statuses supersede older planned labels without adding routes. Tenant routes require an authenticated session, active organization membership and the listed permission; Owner/Manager branch scope is enforced again by the API. `/setup` also supports memory-only email invitation acceptance after sign-in. See [organization architecture](organization.md).
 
 The nine Products routes are implemented Phase 1C. Catalog records are organization-scoped and shared across branches, not branch-owned. The backend rechecks active organization membership and catalog permissions; the existing Manager policy denies catalog access when no assigned active branch remains. Operational staff access follows active organization membership and fixed catalog permissions, not a separate all-role active-branch gate. Mutation-specific permissions are enforced separately from read access. See [catalog architecture](catalog.md).
 
-Phase5.1 registers two Returns routes;5.2 two Exchange/Void;5.3 five Pricing;5.4 three Customer;5.5 two Loyalty;5.6 four Quality routes. Phase0–4 and Phase5.1–5.7 COMPLETED (Local); Phase5 overall COMPLETED (Local); Phase6–7 NOT STARTED; Phase6 NOT READY; Production Ready NO. Canonical16 modules/106 planned routes do not imply106 implemented pages. See [Quality](quality.md) and [final acceptance](../development/phase57-verification.md).
+Phase5.1 registers two Returns routes;5.2 two Exchange/Void;5.3 five Pricing;5.4 three Customer;5.5 two Loyalty;5.6 four Quality routes. Phase0–4 and Phase5.1–5.7 COMPLETED (Local); Phase5 overall COMPLETED (Local); Phase6–7 NOT STARTED; Phase6 NOT READY; Production Ready NO. The historical Phase5 checkpoint counted16 modules/106 routes; the current storefront extension brings the inventory to17 modules/113 routes and still does not imply all planned pages are implemented. See [Quality](quality.md) and [final acceptance](../development/phase57-verification.md).
+
+Storefront adds seven logical routes; management/work routes below use their existing workspace prefixes. See [storefront flow](storefront.md). This extension does not claim online payment or Phase6 readiness.
 
 | Module | Route | Status | Phase | Access target |
 | --- | --- | --- | --- | --- |
+| Storefront | `/shop` | Implemented; published-store directory | 5 | public |
+| Storefront | `/shop/:slug` | Implemented; selectively published catalog | 5 | public |
+| Storefront | `/shop/:slug/cart` | Implemented; guest pickup order | 5 | public + Origin + rate limit |
+| Storefront | `/shop/:slug/track/:orderId` | Implemented; private tracking fragment | 5 | matching access token |
+| Storefront | `/settings/storefront` | Implemented under `/manage` | 5 | Owner/Manager + storefront.manage |
+| Storefront | `/online-orders` | Implemented under `/manage` and `/work` | 5 | session + tenant + branch + online_orders.read |
+| Storefront | `/online-orders/:orderId` | Implemented; staff workflow / POS entry | 5 | online_orders.read; mutations separately gated |
 | Authentication | `/login` | Implemented Phase 1A | 1 | public Origin-validated entry |
 | Authentication | `/register` | Implemented Phase 1A | 1 | public Origin-validated entry |
 | Authentication | `/forgot-password` | Implemented Phase 1A | 1 | public Origin-validated entry |

@@ -42,6 +42,8 @@ docs. All paths are repository-root relative.
 - Add `smartpos-ui-guidelines` for styling/layout and `smartpos-api-contract` for
   public DTO changes. Do not invent endpoints or alter backend/data behavior as
   frontend convenience. New dependencies require an approved concrete need.
+- Add `smartpos-cross-platform-design` for adaptive layout or browser/device/input
+  compatibility requirements. Keep native/PWA and backend changes separate.
 - Preserve existing copy conventions, Thai text coverage, visible focus, labels,
   and recoverable form input after failures.
 

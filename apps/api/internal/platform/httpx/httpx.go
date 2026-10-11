@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 type contextKey struct{}
@@ -64,7 +66,7 @@ func Recover(logger *slog.Logger) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 			defer func() {
 				if recover() != nil {
-					logger.Error("request panic", "request_id", RequestID(request.Context()))
+					logger.Error("request panic", "event", "request_panic", "request_id", RequestID(request.Context()))
 					Error(writer, request, 500, "INTERNAL_ERROR", "An unexpected error occurred")
 				}
 			}()
@@ -77,8 +79,19 @@ func AccessLog(logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 			started := time.Now()
-			next.ServeHTTP(writer, request)
-			logger.Info("request completed", "request_id", RequestID(request.Context()), "method", request.Method, "duration_ms", time.Since(started).Milliseconds())
+			response := middleware.NewWrapResponseWriter(writer, request.ProtoMajor)
+			next.ServeHTTP(response, request)
+			status := response.Status()
+			if status == 0 {
+				status = http.StatusOK
+			}
+			level := slog.LevelInfo
+			if status >= 500 {
+				level = slog.LevelError
+			} else if status >= 400 {
+				level = slog.LevelWarn
+			}
+			logger.Log(request.Context(), level, "http_request", "method", request.Method, "status", status, "path", request.URL.Path, "request_id", RequestID(request.Context()), "latency_ms", time.Since(started).Milliseconds())
 		})
 	}
 }

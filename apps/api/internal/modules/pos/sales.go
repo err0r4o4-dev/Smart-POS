@@ -111,11 +111,14 @@ func settle(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org
 		return "", err
 	}
 	result, _ := json.Marshal(map[string]string{"sale_id": sale, "checkout_id": item.ID})
+	if err = completeOnlineOrder(ctx, tx, user, org, item.CartID, sale); err != nil {
+		return "", err
+	}
 	if err = inventory.CompleteSale(ctx, tx, org, op, result); err != nil {
 		return "", err
 	}
 	if adjustment == nil {
-		if _, err = tx.Exec(ctx, "SET CONSTRAINTS sale_consistency,pricing_sale_consistency IMMEDIATE"); err != nil {
+		if _, err = tx.Exec(ctx, "SET CONSTRAINTS sale_consistency,pricing_sale_consistency,online_order_consistent IMMEDIATE"); err != nil {
 			return "", dbError(err)
 		}
 	}

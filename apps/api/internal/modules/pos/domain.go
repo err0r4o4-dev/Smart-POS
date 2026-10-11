@@ -96,6 +96,7 @@ type CartItem struct {
 	PricingRevision string `json:"pricing_revision"`
 }
 type Cart struct {
+	OnlineOrder           *OnlineOrderLink     `json:"online_order,omitempty"`
 	CustomerID            *string              `json:"customer_id"`
 	Customer              *customers.Selection `json:"customer"`
 	CustomerCleared       bool                 `json:"customer_cleared"`

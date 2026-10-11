@@ -115,40 +115,6 @@
 .workspace-information-grid h2 {
   margin-bottom: 0;
 }
-.landing-access {
-  padding: 64px 0;
-  background: var(--surface);
-}
-.landing-access-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
-}
-.landing-access-grid article {
-  display: flex;
-  flex-direction: column;
-  align-items: start;
-  gap: 16px;
-  padding: 28px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  min-width: 0;
-}
-.landing-access-grid article > svg {
-  color: var(--primary-strong);
-}
-.landing-access-grid h3 {
-  font-size: 20px;
-}
-.landing-access-grid p {
-  line-height: 1.8;
-  color: var(--text-strong);
-}
-.landing-access-grid .button {
-  margin-top: auto;
-  width: 100%;
-  white-space: normal;
-}
 .landing-shop-link {
   font-size: 13px;
   white-space: nowrap;
@@ -255,12 +221,8 @@
   }
 }
 @media (max-width: 767px) {
-  .landing-access-grid,
   .workspace-information-grid {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .landing-access {
-    padding: 40px 0;
   }
   .storefront-header {
     flex-wrap: wrap;

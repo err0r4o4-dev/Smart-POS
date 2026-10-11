@@ -206,5 +206,19 @@
     "name": "Help & System",
     "phase": 0,
     "routes": ["/help", "/support", "/403", "/404"]
+  },
+  {
+    "module": "storefront",
+    "name": "Storefront",
+    "phase": 5,
+    "routes": [
+      "/shop",
+      "/shop/:slug",
+      "/shop/:slug/cart",
+      "/shop/:slug/track/:orderId",
+      "/settings/storefront",
+      "/online-orders",
+      "/online-orders/:orderId"
+    ]
   }
 ]

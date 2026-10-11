@@ -23,6 +23,19 @@ for (const width of [320, 375, 768, 1024, 1440, 1920]) {
       page.getByRole('navigation', { name: 'Main navigation' }),
     ).toHaveCount(0);
     await expect(page.locator('body')).toHaveJSProperty('scrollWidth', width);
+    await expect(page.locator('.landing-access')).toHaveCount(0);
+    await expect(page.locator('.landing-access-grid')).toHaveCount(0);
+    const containers = await page.locator('.landing-container').all();
+    for (const container of containers) {
+      const bounds = await container.boundingBox();
+      expect(bounds).not.toBeNull();
+      if (!bounds) throw new Error('Landing container has no bounding box');
+      const expectedWidth = width >= 768 ? width * 0.7 : width - 40;
+      const expectedMargin = (width - expectedWidth) / 2;
+      expect(bounds.width).toBeCloseTo(expectedWidth, 0);
+      expect(bounds.x).toBeCloseTo(expectedMargin, 0);
+      expect(width - bounds.x - bounds.width).toBeCloseTo(expectedMargin, 0);
+    }
     await page.screenshot({
       path: `test-results/landing-${width}.png`,
       fullPage: true,

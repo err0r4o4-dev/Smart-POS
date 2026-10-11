@@ -67,7 +67,12 @@ const routes: RouteObject[] = [
   {
     path: paths.shop,
     element: <StorefrontLayout />,
-    children: [{ index: true, element: <StorefrontPage /> }],
+    children: [
+      { index: true, element: <StorefrontPage /> },
+      { path: ':slug', element: <StorefrontPage /> },
+      { path: ':slug/cart', element: <ShopCartPage /> },
+      { path: ':slug/track/:orderId', element: <ShopTrackingPage /> },
+    ],
   },
   {
     element: <OrganizationWorkspaceProvider />,
@@ -108,6 +113,30 @@ const routes: RouteObject[] = [
                   {
                     path: '/loyalty/history',
                     element: <LoyaltyPage history />,
+                  },
+                ],
+              },
+              {
+                element: <OrganizationGate permission="online_orders.read" />,
+                children: [
+                  { path: '/online-orders', element: <OnlineOrdersPage /> },
+                  {
+                    path: '/online-orders/:orderId',
+                    element: <OnlineOrderPage />,
+                  },
+                ],
+              },
+              {
+                element: (
+                  <OrganizationGate
+                    permission="storefront.manage"
+                    roles={managementRoles}
+                  />
+                ),
+                children: [
+                  {
+                    path: '/settings/storefront',
+                    element: <StorefrontSettingsPage />,
                   },
                 ],
               },

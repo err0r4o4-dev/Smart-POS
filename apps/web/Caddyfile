@@ -1,8 +1,32 @@
 {
 	auto_https off
 	admin off
+	log default {
+		output stdout
+		format filter {
+			wrap json
+			fields {
+				request delete
+				resp_headers delete
+			}
+		}
+	}
 }
 :5173 {
+	log {
+		output stdout
+		format filter {
+			wrap json
+			fields {
+				request delete
+				resp_headers delete
+			}
+		}
+	}
+	header X-Request-ID {http.request.uuid}
+	log_append method {method}
+	log_append path {orig_path}
+	log_append request_id {http.request.uuid}
 	root * /srv
 	@assets path /assets/*
 	handle @assets {

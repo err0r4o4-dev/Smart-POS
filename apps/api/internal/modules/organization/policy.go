@@ -26,13 +26,13 @@ func Permissions(role string) []string {
 	case "OWNER":
 		return append([]string{}, PermissionNames...)
 	case "MANAGER":
-		return append(append(append(managerPermissions(), CustomerPermissions...), LoyaltyPermissions...), QualityPermissions...)
+		return append(append(append(append(managerPermissions(), CustomerPermissions...), LoyaltyPermissions...), QualityPermissions...), StorefrontPermissions...)
 	case "INVENTORY_STAFF":
 		return append([]string{"quality.read", "quality.batch.create", "quality.write_off.create", "organization.read", "branch.read", "catalog.read", "catalog.create", "catalog.update", "catalog.import", "catalog.barcode.manage", "catalog.labels.print", "inventory.read", "inventory.audit.read", "inventory.location.manage", "inventory.adjustment.create", "inventory.count.create", "inventory.count.update", "inventory.transfer.create", "inventory.transfer.dispatch", "inventory.transfer.receive", "inventory.reorder_point.manage"}, WarehousePurchasingPermissions...)
 	case "PURCHASING_STAFF":
 		return append([]string{"quality.read", "quality.batch.create", "organization.read", "branch.read", "catalog.read", "inventory.read", "inventory.transfer.create", "inventory.transfer.receive", "inventory.reorder_point.manage"}, BuyerPermissions...)
 	case "CASHIER":
-		return append(cashierPermissions(), "quality.read", "customers.read", "customers.select", "customers.groups.read", "loyalty.read", "loyalty.enroll", "loyalty.redeem")
+		return append(cashierPermissions(), "quality.read", "customers.read", "customers.select", "customers.groups.read", "loyalty.read", "loyalty.enroll", "loyalty.redeem", "online_orders.read", "online_orders.manage")
 	default:
 		return []string{}
 	}

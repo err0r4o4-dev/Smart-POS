@@ -20,7 +20,7 @@ Higher-priority instructions and actual execution permissions always apply.
 
 ## Shared skills and discovery adapters
 
-Canonical workflows are the eight skills in `.agents/skills`. Corresponding
+Canonical workflows live in `.agents/skills`. Corresponding
 `.claude/skills/<name>/SKILL.md` adapters direct Claude to the canonical file. Do
 not duplicate workflow bodies or define independent policy in adapters. Paths in
 canonical skills are repository-root relative unless explicitly stated otherwise.

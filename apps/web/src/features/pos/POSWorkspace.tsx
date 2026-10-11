@@ -67,6 +67,9 @@ export function POSWorkspace() {
           <Link to="/pos/shifts">ตรวจสอบการชำระเงิน</Link>
           <Link to="/sales">ประวัติขาย</Link>
           <Link to="/receipts">ใบเสร็จ</Link>
+          {tenant.can('online_orders.read') && (
+            <Link to="/online-orders">ออเดอร์ออนไลน์</Link>
+          )}
         </nav>
         <main id="main-content">
           <WorkspaceStatus />
@@ -132,6 +135,7 @@ function WorkspaceProvider({
   const tenant = useOrganization();
   const client = useQueryClient();
   const navigate = useNavigate();
+  const location = useLocation();
   const [terminalID, setTerminalID] = useState('');
   const [cartID, setCartID] = useState('');
   const [busy, setBusy] = useState(false);
@@ -248,7 +252,12 @@ function WorkspaceProvider({
           setCartID('');
           setError('');
           setMessage('');
-          navigate('/pos');
+          const entry = new URLSearchParams(location.search).get(
+            'online_order',
+          );
+          navigate(
+            entry ? `/pos?online_order=${encodeURIComponent(entry)}` : '/pos',
+          );
         },
         shifts: shifts.data?.items ?? [],
         shift,

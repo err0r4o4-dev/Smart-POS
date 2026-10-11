@@ -2,7 +2,7 @@
 
 Phase 0 implements platform/presentation, Phase 1A implements identity, Phase 1B implements organization/branch/employee membership management with fixed RBAC Phase 1C implements product catalog and Phase 2 implements inventory core. Other business functionality remains planned. API groups/events below are proposals unless explicitly marked implemented; the live source is OpenAPI. Page counts remain the canonical 16-module/106-route inventory. Upstream dependencies are constrained by dependencies.md. See [Phase 1B architecture](organization.md) and [Phase 1C architecture](catalog.md).
 
-Current status supersedes the older introductory scope: Phase0–4 and5.1–5.5 COMPLETED (Local);Phase5 overall PARTIAL;5.6 NOT STARTED;5.7 PARTIAL;Phase6–7 NOT STARTED;Production Ready NO. Returns owns adjustments, POS owns Sales/payment/shifts, Inventory owns stock posting, Pricing owns prices/promotions and Customers/Loyalty own records/groups/programs/points through existing transactions. Canonical16 modules/106 planned routes are unchanged. See [Loyalty](loyalty.md) and [latest acceptance](../development/phase55-verification.md).
+Current status supersedes older introductory scope: Phase0–4 and Phase5.1–5.7 COMPLETED (Local); Phase5 overall COMPLETED (Local); Phase6–7 NOT STARTED; Phase6 NOT READY; Production Ready NO. Existing POS/payment/stock/pricing engines are retained; Quality extends Inventory and Loyalty extends Customers. Canonical16 modules/106 planned routes unchanged. See [Quality](quality.md), [Loyalty](loyalty.md) and [final acceptance](../development/phase57-verification.md).
 
 ## Authentication (6 pages)
 
@@ -144,7 +144,7 @@ Current status supersedes the older introductory scope: Phase0–4 and5.1–5.5 
 - Responsibilities: Revisioned Customer CRUD/archive, groups/memberships, masked Cashier lookup/POS selection; Loyalty programs/enrollment/status, immutable points, reservations, reward discounts and reversals.
 - Implemented pages: `/customers`, `/customers/:id`, `/customers/groups`, `/loyalty`, `/loyalty/history`.
 - Implemented API groups: `/customers`, groups/activity/audit/membership subresources, `/loyalty` programs/accounts/adjustments/history and existing POS quote/checkout integration.
-- Domain entities: customers, customer_groups, customer_group_memberships; loyalty_programs, loyalty_accounts, loyalty_points_ledger; immutable Sale/checkout customer and reward snapshots.
+- Domain entities: customers, customer_groups, customer_group_memberships; loyalty_programs, loyalty_accounts, loyalty_ledger; immutable Sale/checkout customer and reward snapshots.
 - Dependencies: identity/organization authorization, existing POS/Sales/Returns/Exchanges settlement and Inventory invariants.
 - Permissions: customers.read/manage/select, customers.groups.read/manage, customers.history.read; Loyalty permissions follow the fixed role matrix.
 - Audits: Customer/group edits/archive/membership and POS selection; Loyalty program/account changes, reasoned adjustments and transactional earning/redemption/compensation. No copied contact PII.
@@ -157,16 +157,16 @@ Current status supersedes the older introductory scope: Phase0–4 and5.1–5.5 
 
 - Business purpose: Reduce expiry and unsafe stock risk.
 - Responsibilities: Batches, expiry, quarantine, recalls, approved write-offs.
-- Planned pages: `/inventory/batches`, `/inventory/expiry`, `/inventory/write-offs`, `/inventory/recalls`.
-- Planned API groups: /quality.
-- Domain entities: product_batches, write_offs, recall_cases.
+- Implemented pages: `/inventory/batches`, `/inventory/expiry`, `/inventory/write-offs`, `/inventory/recalls`.
+- Implemented API group: /quality, through existing Inventory posting.
+- Domain entities: product_batches, quality_stock_balances, quality_write_offs, quality_recalls; existing immutable stock_movements.
 - Dependencies: owning domains/upstream capabilities in [dependency matrix](dependencies.md); authorization through identity and organization for all tenant operations.
-- Permissions: quality.read, quality.quarantine, writeoff.approve.
+- Permissions: quality.read, quality.batch.create/manage, quality.recall.manage, quality.write_off.create/approve/post.
 - Business events: BatchQuarantined, StockWrittenOff.
 - Error cases: expired batch, invalid recall scope, denied write-off.
-- Tests: FEFO, quarantine unsellable, write-off ledger consistency.
-- Implementation phase: 5.
-- Current status: documented/planned; no implementation.
+- Tests: FEFO/verified selection, expiry/quarantine/recall denial, tracked/untracked conservation, receiving/shelf/POS/returns, concurrent Sale/WriteOff/Recall, RBAC/RLS and gateway browser.
+- Implementation phase: 5.6; final integration/security5.7.
+- Current status: COMPLETED (Local); see [Quality](quality.md) and [final acceptance](../development/phase57-verification.md). Physical provenance, split-lot picking, tracked counts and recall release remain explicit limitations.
 
 ## AI Intelligence (6 pages)
 

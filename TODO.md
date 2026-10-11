@@ -1,8 +1,8 @@
 # SmartPOS — Phase 1 / Phase 2 / Phase 3 / Phase 4 / Phase 5 checklist
 
-Status: **Phase 0–4 and Phase 5.1–5.5 COMPLETED (Local); Phase 5 overall PARTIAL** (2026-10-11), not production readiness. **5.6 NOT STARTED; 5.7 PARTIAL pending final QA after Batch/Quality. Phase 6–7 NOT STARTED; Phase 6 NOT READY; Production Ready NO.** Latest evidence: `docs/development/phase55-verification.md`. Earlier counts/checklists remain historical evidence, not current run totals.
+Status: **Phase0–4 and Phase5.1–5.7 COMPLETED (Local); Phase5 overall COMPLETED (Local); Phase6–7 NOT STARTED; Phase6 NOT READY; Production Ready NO.** (2026-10-11), local acceptance only. Latest evidence: `docs/development/phase57-verification.md`. Earlier checklists/counts remain historical, not current run totals.
 
-## Phase 5 implementation in progress (2026-10-10)
+## Phase 5 completed locally (2026-10-11)
 
 - [x] Inspect the existing transaction boundaries and preserve Phase 0–4 evidence.
 - [x] Implement Phase 5.1 historical returns, Inventory posting and explicit refund settlement.
@@ -27,8 +27,8 @@ Status: **Phase 0–4 and Phase 5.1–5.5 COMPLETED (Local); Phase 5 overall PAR
 - [x] Finish Phase5.4 local acceptance:253 Customer/1952 total numbered API assertions across18 suites,103 frontend tests,25 full browser tests plus final focused2/2, schema11/eight SQL suites, Go race and11 reconciliation checks; record failures/limits.
 - [x] Implement Phase 5.5 Loyalty programs/accounts/immutable ledger, exact reward discounts, reservations and historical Returns/Exchanges/Voids compensation through existing engines.
 - [x] Finish Phase5.5 local acceptance:249 Loyalty assertions,18 old API suites,144 frontend tests,37 gateway browser tests, fresh schema12/nine SQL suites, Go race and17 reconciliation checks; preserve failed attempts and production limits.
-- [ ] Implement Phase 5.6 Batch/Expiry/Write-offs/Recalls across every Inventory path.
-- [ ] Complete Phase 5.7 integration/security/QA; do not mark Phase 5 complete prematurely.
+- [x] Implement and accept Phase5.6 Batch/Expiry/Write-offs/Recalls across existing Inventory paths:285 Quality assertions, schema13, real browser and24 reconciliation checks.
+- [x] Complete Phase5.7 integration/security/QA:23 API suites/2620 numbered assertions,120 frontend tests,37 browser tests, fresh1–13/10 SQL suites, Go race, resilience and32 zero-mismatch checks. Limits and failed-run evidence retained; Production Ready NO.
 
 ## Phase 4 continuation and final acceptance
 

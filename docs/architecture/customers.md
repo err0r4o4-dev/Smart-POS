@@ -4,7 +4,7 @@ Customer records are organization-owned business data, not authentication users.
 
 ## Domain and persistence
 
-- Forward-only migration `000011_customers.up.sql` creates `customers`, `customer_groups` and `customer_group_memberships`. Current runtime readiness requires exact clean schema12 after additive Loyalty migration12; migrations1–11 are not rewritten.
+- Forward-only migration `000011_customers.up.sql` creates `customers`, `customer_groups`, `customer_group_memberships`. Current readiness exact clean13 after additive Loyalty12 and Quality13; migrations1–11 unchanged.
 - Organization-scoped codes normalize trim/uppercase. Optional names/contact/notes never require an account. Email is trimmed/lowercase; phone removes formatting separators, keeps optional `+`, and does not infer country codes. Nonempty normalized phone/email remain unique across active and archived records. Duplicate identifiers produce a generic conflict; there is no automatic merge.
 - Customer and group updates/archive require current revisions. Create identity is scoped by organization, actor and Idempotency-Key with a normalized fingerprint. Current authorization precedes replay; replay reads the current resource rather than retaining a sensitive response cache. Default GENERAL/MEMBER/VIP groups are seeded for real organizations with a creator.
 - Memberships use organization-safe composite references and customer/group revisions. Archived groups/customers cannot acquire new membership. Counts describe retained memberships, including historical archived customers; archival does not delete membership or transactions. UI/API provide bounded pagination and literal prefix search.

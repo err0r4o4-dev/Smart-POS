@@ -1,5 +1,7 @@
 # Security model
 
+Current Phase5 local acceptance includes Quality tenant-safe references, FORCE RLS/runtime grants, current-RBAC-before-replay, posting-time expiry/recall checks, same-lot return guards and Sale/WriteOff/Recall races. [Final scoped security review and evidence](../development/phase57-verification.md) documents actual findings and production boundaries; no production security certification is claimed.
+
 ## Phase5.4 customer protections (2026-10-10)
 
 - Reuse server sessions/CSRF/Origin and active organization/branch authorization. Customer/group read/manage/select/history permissions are explicit; Cashier receives masked phone/email and cannot read notes/history or mutate records.
@@ -120,7 +122,7 @@ See [Phase5.5 verification](../development/phase55-verification.md). This implem
 - Programs/accounts/ledger use tenant-safe references, FORCE RLS and scoped runtime grants. Actual tests deny cross-tenant reads/FKs and ledger UPDATE/DELETE/TRUNCATE. The privileged local bootstrap identity is not a production runtime LOGIN.
 - Exact ledger points, durable checkout reservations, organization serialization and atomic Sale/points posting prevent double redemption and failed-checkout earning/consumption. Reward remains a discount, not a synthetic payment; no unintended promotion/manual-discount stacking is allowed.
 - Frozen historical rules and cumulative compensating postings cover partial/full Returns, Exchanges and Voids. Spent earned points may create signed ledger debt; available points remain nonnegative and future earning offsets debt. The immutable Sale is not rewritten.
-- Remaining gates: Batch/Expiry/Recall sellability and concurrency are NOT IMPLEMENTED/NOT RUN; full Phase5.7 security/lifecycle QA, physical lot verification, production TLS/secrets, dedicated least-privilege LOGIN, retention, backups and production load remain outstanding. No production-readiness claim.
+- Continuation: Batch/Quality and final Phase5.7 scoped security/lifecycle checks passed; see [final review](../development/phase57-verification.md). Physical lot verification, production TLS/secrets/runtime LOGIN, retention, backups, production load and full penetration/compliance assessment remain separate gates.
 
 ## Phase 2 inventory acceptance review
 

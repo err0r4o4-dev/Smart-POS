@@ -70,3 +70,7 @@ Loyalty checks assert: reward Sale has the exact REDEEM reference/points; EARN m
 2. Pass every Batch/Quality gate, including Sale vs Write-off/Recall races, branch/RLS, FEFO/unknown-stock policies, quantity reconciliation and real backend E2E; create `phase56-verification.md` from actual evidence.
 3. Only then execute Phase5.7 complete Supplier-to-Recall lifecycle and final security/resilience/manual reconciliation review; preserve all old and new regressions and produce `phase57-verification.md`.
 4. Production remains NO: dedicated runtime LOGIN/secrets/TLS, retention/erasure/reward-accounting policy, backups/restoration/rollout, load/concurrency assessment, physical lot selection/scanners/printers, real payment integration and full accessibility review are separate operational gates.
+
+## Continuation after this historical acceptance
+
+2026-10-11:Phase5.6 and5.7 subsequently passed; see [Quality report](phase56-verification.md) and [final report](phase57-verification.md). Schema12/counts above remain historical5.5 evidence, not current readiness. Checkpoint reruns retained in `.local/phase55-loyalty-checkpoint-final.log` (249 assertions) and `.local/phase55-reconciliation-checkpoint-final.log` (17 checks). Current schema13 checker replaces historical schema12 checker for acceptance.

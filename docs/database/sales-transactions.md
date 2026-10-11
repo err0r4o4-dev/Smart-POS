@@ -1,6 +1,6 @@
 # POS database invariants
 
-Forward migration `000006_pos_sales.up.sql` introduced POS/sales; current readiness requires clean version8 with Phase5.1 Returns/Refunds. Migrations000001–000007 remain unchanged. See [business operations additions](business-operations.md) for SALE_RETURN and current-shift cash refunds. Apply only through an approved up-only migration/backup/restore workflow; never modify applied historical migrations or use the primary database as verification scratch.
+Forward migration `000006_pos_sales.up.sql` introduced POS/sales; current readiness requires exact clean version13 after additive Returns/Exchanges/Pricing/Customers/Loyalty/Quality migrations. Migrations000001–000011 remain unchanged; see [final acceptance](../development/phase57-verification.md). See [business operations additions](business-operations.md) for SALE_RETURN and current-shift cash refunds. Apply only through an approved up-only migration/backup/restore workflow; never modify applied historical migrations or use the primary database as verification scratch.
 
 | Table           | Purpose                                                                                 |
 | --------------- | --------------------------------------------------------------------------------------- |

@@ -2,7 +2,7 @@
 
 ## Delivery boundary (2026-10-10)
 
-Phase5 overall is **PARTIAL**. Phase5.1–5.4 passed scoped local acceptance, including Customer Management. Phase5.5–5.6 remain NOT STARTED and Phase5.7 PARTIAL. Phase6 NOT STARTED / NOT READY. See [latest verification](../development/phase54-verification.md) and [preserved Phase5.3 evidence](../development/phase53-verification.md).
+Phase0–4 and Phase5.1–5.7 COMPLETED (Local); Phase5 overall COMPLETED (Local); Phase6–7 NOT STARTED; Phase6 NOT READY; Production Ready NO. Returns/refunds/exchanges remain original-engine operations; Loyalty/Quality extend existing transaction boundaries. See [final acceptance](../development/phase57-verification.md), [Loyalty](loyalty.md) and [Quality](quality.md).
 
 The canonical inventory stays at16 modules/106 planned routes. Operational Phase5 routes: `/pos/returns`, `/sales/refunds`, `/pos/exchanges`, `/sales/voids`, `/pricing`, `/pricing/lists`, `/promotions`, `/promotions/:id`, `/discount-approvals`. No customer/loyalty/quality page is operational. Schema10 adds pricing definitions, approvals, redemptions and immutable net allocation snapshots; earlier migration files stay unchanged.
 
@@ -57,7 +57,7 @@ Quantities use exact thousandths; money uses exact cents and Go big integers. A 
 
 If the destination is registered as a managed shelf, posting requires an ACTIVE shelf, an ACTIVE assignment for that variant and recorded quantity plus return not exceeding configured capacity. The check occurs inside the authorized Inventory transaction, including retries. A full/inactive/unassigned shelf rejects atomically; a new inspected document can use an authorized warehouse instead. This is a return-path guard, not a claim that capacity is a database invariant for every legacy Inventory adjustment.
 
-Disposition is operator inspection, not automated expiry/recall validation. There are no batch identities, FEFO, expiry, recalls or write-offs yet. Never infer verified physical provenance from a sale's aggregate variant/location ledger.
+Disposition remains operator inspection. Phase5.6 now enforces recorded batch identity, Bangkok expiry, quarantine/recall blocking and tracked/untracked conservation at posting. Unknown returns cannot be restored to sellable stock. FEFO recommends, never attests physical selection. See [Quality boundaries](quality.md); aggregate legacy stock is not retroactive provenance.
 
 ## Refund boundary
 
@@ -76,7 +76,7 @@ Operation keys bind organization, actor, action, resource, input fingerprint and
 ## Remaining next subphases
 
 - **5.4 Customers COMPLETED (Local):** revisioned organization-scoped records/groups, optional contact and explicit opt-in, masked Cashier access, backend-validated POS selection, immutable Sale code snapshot and authoritative activity history. See [Customers](customers.md) and the acceptance report. No hard-delete or automatic merge is provided.
-- **5.5 Loyalty:** no points ledger, earning/redemption or refund reversals; no loyalty double-spend assurance is claimed.
-- **5.6 Batch/Quality:** no tracked/untracked allocation, batch balances, FEFO, expiry, recall blocking or write-off posting across all inventory paths.
+- **5.5 Loyalty COMPLETED (Local):** immutable points, committed earning/reward discounts, reservations and historical compensation; see [Loyalty](loyalty.md).
+- **5.6 Batch/Quality COMPLETED (Local):** tracked/untracked posting, FEFO/expiry/quarantine, recalls and approved write-offs; see [Quality](quality.md). Phase5.7 final local acceptance complete with production gates retained.
 
 Migration 8 has already been applied to isolated databases and contains Returns/Refunds only. Do not append future tables to that file and assume an existing database will change. Follow-up schema changes require forward-only migrations, explicit version/readiness updates and renewed fresh-chain testing. Do not migrate the persistent primary database as part of acceptance.

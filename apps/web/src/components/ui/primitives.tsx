@@ -31,7 +31,9 @@ export function Brand({
   className?: string;
 }) {
   return (
-    <span className={`brand ${compact ? 'brand-compact' : ''} ${className}`.trim()}>
+    <span
+      className={`brand ${compact ? 'brand-compact' : ''} ${className}`.trim()}
+    >
       <span className="brand-mark">
         <img src={logoMark} alt="VELO Icon" className="brand-mark-img" />
       </span>

@@ -32,7 +32,12 @@ export interface NavigationItem {
   roles?: Role[];
 }
 export const navigation: NavigationItem[] = [
-  {to:'/inventory/batches',label:'Batch/Expiry/Quality',icon:'dashboard',permission:'quality.read'},
+  {
+    to: '/inventory/batches',
+    label: 'Batch/Expiry/Quality',
+    icon: 'dashboard',
+    permission: 'quality.read',
+  },
   {
     to: '/loyalty',
     label: 'สมาชิกและรางวัล / Loyalty',
@@ -186,7 +191,12 @@ export const navigationGroups = [
   {
     id: 'inventory',
     label: 'สินค้าและสต็อก',
-    paths: [paths.products, paths.inventory, paths.shelves, '/inventory/batches'],
+    paths: [
+      paths.products,
+      paths.inventory,
+      paths.shelves,
+      '/inventory/batches',
+    ],
   },
   {
     id: 'purchasing',

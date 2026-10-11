@@ -6,7 +6,7 @@ Implemented identity routes are Phase 1A; organization/branch/member routes belo
 
 The nine Products routes are implemented Phase 1C. Catalog records are organization-scoped and shared across branches, not branch-owned. The backend rechecks active organization membership and catalog permissions; the existing Manager policy denies catalog access when no assigned active branch remains. Operational staff access follows active organization membership and fixed catalog permissions, not a separate all-role active-branch gate. Mutation-specific permissions are enforced separately from read access. See [catalog architecture](catalog.md).
 
-Phase5.1 registers two Returns routes; Phase5.2 registers two Exchange/Void routes; Phase5.3 registers five Pricing routes; Phase5.4 registers three Customer routes; Phase5.5 registers `/loyalty` and `/loyalty/history`. Expiry/quality remains unregistered. Phase5 overall is PARTIAL; canonical16 modules/106 routes does not mean106 implemented pages. See [Loyalty](loyalty.md) and [current acceptance](../development/phase55-verification.md).
+Phase5.1 registers two Returns routes;5.2 two Exchange/Void;5.3 five Pricing;5.4 three Customer;5.5 two Loyalty;5.6 four Quality routes. Phase0–4 and Phase5.1–5.7 COMPLETED (Local); Phase5 overall COMPLETED (Local); Phase6–7 NOT STARTED; Phase6 NOT READY; Production Ready NO. Canonical16 modules/106 planned routes do not imply106 implemented pages. See [Quality](quality.md) and [final acceptance](../development/phase57-verification.md).
 
 | Module | Route | Status | Phase | Access target |
 | --- | --- | --- | --- | --- |
@@ -79,11 +79,11 @@ Phase5.1 registers two Returns routes; Phase5.2 registers two Exchange/Void rout
 | Customers | `/customers/:id` | Implemented Phase 5.4 | 5 | session + tenant + customers.read; history additionally requires customers.history.read |
 | Customers | `/customers/groups` | Implemented Phase 5.4 | 5 | session + tenant + customers.groups.read; mutations require customers.groups.manage |
 | Customers | `/loyalty` | Implemented Phase 5.5 (Local) | 5 | session + tenant + loyalty.read; mutations reauthorize |
-| Customers | `/loyalty/history` | Implemented Phase 5.5 (Local) | 5 | session + tenant + branch + loyalty.history |
-| Quality & Expiry | `/inventory/batches` | Planned (not registered) | 5 | session + tenant + branch permission |
-| Quality & Expiry | `/inventory/expiry` | Planned (not registered) | 5 | session + tenant + branch permission |
-| Quality & Expiry | `/inventory/write-offs` | Planned (not registered) | 5 | session + tenant + branch permission |
-| Quality & Expiry | `/inventory/recalls` | Planned (not registered) | 5 | session + tenant + branch permission |
+| Customers | `/loyalty/history` | Implemented Phase 5.5 (Local) | 5 | session + tenant + branch + loyalty.read |
+| Quality & Expiry | `/inventory/batches` | Implemented Phase 5.6 (Local) | 5 | session + tenant + branch + quality.read; mutations separately authorized |
+| Quality & Expiry | `/inventory/expiry` | Implemented Phase 5.6 (Local) | 5 | session + tenant + branch + quality.read; mutations separately authorized |
+| Quality & Expiry | `/inventory/write-offs` | Implemented Phase 5.6 (Local) | 5 | session + tenant + branch + quality.read; mutations separately authorized |
+| Quality & Expiry | `/inventory/recalls` | Implemented Phase 5.6 (Local) | 5 | session + tenant + branch + quality.read; mutations separately authorized |
 | AI Intelligence | `/ai/overview` | Planned (not registered) | 6 | session + tenant + branch permission |
 | AI Intelligence | `/ai/forecast` | Planned (not registered) | 6 | session + tenant + branch permission |
 | AI Intelligence | `/ai/reorder` | Planned (not registered) | 6 | session + tenant + branch permission |

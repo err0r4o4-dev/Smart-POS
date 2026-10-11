@@ -91,9 +91,18 @@ export const router = createBrowserRouter([
             element: <OrganizationGate permission="quality.read" />,
             children: [
               { path: '/inventory/batches', element: <QualityPage /> },
-              { path: '/inventory/expiry', element: <QualityPage view="expiry" /> },
-              { path: '/inventory/write-offs', element: <QualityPage view="write-offs" /> },
-              { path: '/inventory/recalls', element: <QualityPage view="recalls" /> },
+              {
+                path: '/inventory/expiry',
+                element: <QualityPage view="expiry" />,
+              },
+              {
+                path: '/inventory/write-offs',
+                element: <QualityPage view="write-offs" />,
+              },
+              {
+                path: '/inventory/recalls',
+                element: <QualityPage view="recalls" />,
+              },
             ],
           },
           {

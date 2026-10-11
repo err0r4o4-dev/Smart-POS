@@ -21,6 +21,12 @@ are repository-root relative. Verification-only work authorizes reporting, not f
 
 ## Focused checklist
 
+For cross-platform/browser compatibility requests, read
+`.agents/skills/smartpos-cross-platform-design/SKILL.md` and select its relevant
+matrix entries. Record browser/version, OS/device, viewport, input mode, and
+emulated versus real execution. Viewport resizing is not real-device evidence;
+report unavailable browser/device combinations as not run or blocked.
+
 - Inspect representative narrow/mobile, tablet, and desktop layouts. Check
   overflow, clipped content, sticky actions, dialogs, navigation, and Thai wrapping.
   Record dimensions and environment actually used.

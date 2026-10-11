@@ -90,6 +90,11 @@ Use `smartpos-frontend` for behavior and `smartpos-ui-verification` for rendered
 checks. Choose representative narrow/mobile, tablet, and desktop sizes based on
 actual layout, not an unrelated imposed breakpoint system.
 
+For cross-platform requirements or adaptive layout changes, use
+`.agents/skills/smartpos-cross-platform-design/SKILL.md` to select browser/device/
+input coverage and check orientation, safe areas, keyboard obstruction, and
+fallbacks. Apple-inspired styling does not itself prove platform compatibility.
+
 Report reuse decisions, affected token/component consumers, responsive behavior,
 material/motion choices, and evidence/limits. Styling scope does not imply a global
 token rewrite, application-wide redesign, or audit.

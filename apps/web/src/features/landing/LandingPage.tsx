@@ -7,10 +7,8 @@ import {
   Layers3,
   ReceiptText,
   ShieldCheck,
-  ShoppingBag,
   Sparkles,
   Store,
-  UsersRound,
 } from 'lucide-react';
 import { useAuth } from '../../app/AuthProvider';
 import { paths } from '../../app/routes';
@@ -153,62 +151,6 @@ export function LandingPage() {
               </ul>
             </div>
             <POSPreview />
-          </div>
-        </section>
-        <section
-          className="landing-access"
-          aria-labelledby="landing-access-title"
-        >
-          <div className="landing-container">
-            <div className="landing-section-heading">
-              <p className="landing-eyebrow">คนละหน้าที่ คนละพื้นที่</p>
-              <h2 id="landing-access-title">เลือกทางเข้าที่ตรงกับคุณ</h2>
-              <p>
-                หน้าร้านสำหรับลูกค้าแยกจากทีมร้าน
-                สิทธิ์ของเจ้าของร้านและพนักงานตรวจสอบจากบัญชีจริง
-              </p>
-            </div>
-            <div className="landing-access-grid">
-              <article>
-                <ShoppingBag size={28} aria-hidden="true" />
-                <h3>ลูกค้า</h3>
-                <p>
-                  หน้าร้านออนไลน์สำหรับเลือกซื้อสินค้า ไม่ต้องเปิดกะหรือใช้
-                  terminal
-                </p>
-                <span className="tag tag-amber">ยังไม่เปิดรับออเดอร์</span>
-                <Link className="button" to={paths.shop}>
-                  ไปหน้าร้านลูกค้า
-                  <ArrowRight size={18} aria-hidden="true" />
-                </Link>
-              </article>
-              <article>
-                <ShieldCheck size={28} aria-hidden="true" />
-                <h3>เจ้าของร้าน / ผู้จัดการ</h3>
-                <p>
-                  จัดการข้อมูลร้าน สินค้า สต็อก และทีมงาน ตามสิทธิ์ที่ได้รับ
-                </p>
-                <Link
-                  className="button button-secondary"
-                  to={authenticated ? paths.workspace : paths.login}
-                >
-                  เข้าสู่การจัดการร้าน
-                  <ArrowRight size={18} aria-hidden="true" />
-                </Link>
-              </article>
-              <article>
-                <UsersRound size={28} aria-hidden="true" />
-                <h3>พนักงาน</h3>
-                <p>เข้าทำงานขาย คลังสินค้า หรือจัดซื้อ เฉพาะหน้าที่ของคุณ</p>
-                <Link
-                  className="button button-secondary"
-                  to={authenticated ? paths.workspace : paths.login}
-                >
-                  เข้าสู่พื้นที่พนักงาน
-                  <ArrowRight size={18} aria-hidden="true" />
-                </Link>
-              </article>
-            </div>
           </div>
         </section>
         <section

@@ -1,6 +1,6 @@
 ---
 name: smartpos-go-backend
-description: Implement or inspect SmartPOS Go handlers, services, domain behavior, validation, authorization, context/timeouts, and logging using the existing chi/net-http modular monolith. Use for apps/api work; add database, contract, or Go-testing guidance only for affected boundaries.
+description: Implement or inspect SmartPOS Go handlers, services, domain behavior, validation, authorization, and internal integration reliability using the existing chi/net-http modular monolith. Use for apps/api work including Go-to-AI deadlines/retries/fallback; add database, contract, AI, or Go-testing guidance only for affected boundaries.
 ---
 
 # SmartPOS Go Backend
@@ -48,7 +48,45 @@ another project's Go version, framework, ORM, or package layout.
 
 ## Verification and output
 
+For requested Go-to-AI/internal service changes, apply the integration checklist
+below and use `smartpos-ai-service` for the Python/internal schema boundary.
+Do not load AI evaluation guidance for unrelated Go or health-only changes.
+
 Start with focused Go/domain/HTTP tests, then appropriate authorized vet/build/race
 or integration checks with actual prerequisites. Report endpoints, boundaries,
 contracts/data impact, actual checks, and limitations. Inspection requests stop
 after explaining the flow without implementation.
+
+## Internal integration reliability
+
+Apply only to the affected integration, not as an automatic hardening/refactor pass.
+Inspect current clients, configuration, tests, and the agreed failure contract.
+
+- Carry the request context and bounded deadline through the HTTP call. Budget
+  connection, response, and any retry within that deadline; stop on cancellation.
+  Reuse established clients/transports, close response bodies, and bound request/
+  response sizes and concurrency. Do not invent timeout values without workload
+  context or hold PostgreSQL business transactions open during AI/network calls.
+- Retry only eligible transient failures for operations with an established safe
+  replay contract. Bound attempts/backoff by the original deadline. Do not retry
+  authorization/validation failures, create a fresh operation identity, or blindly
+  retry settlement/refund/stock writes. Preserve existing idempotency semantics.
+- Preserve service authentication and trusted request correlation. Go authorizes
+  and minimizes each organization/branch snapshot; AI-returned identifiers are
+  not authority to switch tenants or expand access. Validate schema/model version,
+  horizon/unit, provenance, freshness policy, and finite outputs before use.
+- Separate insufficient_data, unavailable, timeout, canceled, and invalid output.
+  Follow agreed public error/status behavior; never replace a failed forecast
+  with a fabricated zero or successful action. Core POS must not depend on optional
+  AI availability. Propose a circuit breaker/queue only for a concrete approved need.
+- Reuse structured logs/request IDs and existing metrics where present. Record
+  status, latency, attempts, and bounded outcome labels without raw snapshots,
+  prompts, secrets, or customer data. Adding telemetry infrastructure or exporting
+  data is separate scope; ordinary logs do not prove end-to-end tracing exists.
+- For changed behavior, add focused deterministic `httptest`/existing-client tests
+  for relevant cancellation/deadline, bounded retries, malformed/oversized output,
+  and degraded-service cases. Do not call live AI/providers to test transport.
+  Add `smartpos-ai-evaluation` only when forecast/model quality is also affected.
+
+This checklist describes required decisions for requested integration work, not
+evidence that a Go-to-AI client, retries, metrics, or fallback already exists.

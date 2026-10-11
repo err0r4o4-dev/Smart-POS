@@ -8,7 +8,7 @@
   letter-spacing: -0.025em;
 }
 .landing-container {
-  width: min(1200px, calc(100% - 64px));
+  width: 70%;
   margin-inline: auto;
 }
 .landing-header {

@@ -85,20 +85,25 @@ Browser / React -> public Go API -> PostgreSQL
 
 Skills live under `.agents/skills/<name>/SKILL.md`:
 
-| Task                                         | Primary skill              | Add when relevant                        |
-| -------------------------------------------- | -------------------------- | ---------------------------------------- |
-| Orientation or unclear ownership             | `smartpos-project-context` | Owning implementation skill              |
-| React UI, navigation, forms, client state    | `smartpos-frontend`        | UI guidelines/verification, API contract |
-| Styling, visual hierarchy, responsive layout | `smartpos-ui-guidelines`   | Frontend, UI verification                |
-| Appearance/browser interaction checks        | `smartpos-ui-verification` | Owning skill for requested fixes         |
-| Go handlers/services/business behavior       | `smartpos-go-backend`      | Database, contract, Go testing           |
-| SQL, pgx, persistence, transactions          | `smartpos-go-database`     | Go backend/testing                       |
-| Public route/request/response changes        | `smartpos-api-contract`    | Affected producer/consumer skills        |
-| Go tests/backend verification                | `smartpos-go-testing`      | Owning skill for requested fixes         |
+| Task                                         | Primary skill                    | Add when relevant                        |
+| -------------------------------------------- | -------------------------------- | ---------------------------------------- |
+| Orientation or unclear ownership             | `smartpos-project-context`       | Owning implementation skill              |
+| React UI, navigation, forms, client state    | `smartpos-frontend`              | UI guidelines/verification, API contract |
+| Styling, visual hierarchy, responsive layout | `smartpos-ui-guidelines`         | Frontend, UI verification                |
+| Adaptive web, browser/device/input coverage  | `smartpos-cross-platform-design` | UI guidelines, frontend, UI verification |
+| Appearance/browser interaction checks        | `smartpos-ui-verification`       | Owning skill for requested fixes         |
+| Go handlers/services/business behavior       | `smartpos-go-backend`            | Database, contract, Go testing           |
+| SQL, pgx, persistence, transactions          | `smartpos-go-database`           | Go backend/testing                       |
+| Public route/request/response changes        | `smartpos-api-contract`          | Affected producer/consumer skills        |
+| Go tests/backend verification                | `smartpos-go-testing`            | Owning skill for requested fixes         |
+| Internal FastAPI AI and Go-to-AI integration | `smartpos-ai-service`            | Go backend, contract, AI evaluation      |
+| Forecast backtesting and quality evaluation  | `smartpos-ai-evaluation`         | AI service for requested code changes    |
 
 Do not load Go skills for visual-only work. Read-only tasks remain read-only even
-when an implementation skill matches. For AI/infrastructure work, inspect the
-actual owning code and available guidance; do not force an unrelated skill.
+when an implementation skill matches. Use AI evaluation only for forecast/model
+quality, not health checks alone. For infrastructure work, inspect the actual
+owning code and available guidance; do not force an unrelated skill. AI skills do
+not authorize training, model/provider changes, production data access, or rollout.
 
 ## Safety and verification
 

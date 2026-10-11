@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
+import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavigate';
 import { useQuery } from '@tanstack/react-query';
 import { Button, Card, Loading } from '../../components/ui/primitives';
 import {
@@ -784,12 +785,16 @@ export function CheckoutPage() {
                     {changeCalculation.valid ? (
                       <span>
                         เงินทอน:{' '}
-                        <strong>{moneyText(changeCalculation.amount)} บาท</strong>
+                        <strong>
+                          {moneyText(changeCalculation.amount)} บาท
+                        </strong>
                       </span>
                     ) : (
                       <span>
                         ยังขาดอีก:{' '}
-                        <strong>{moneyText(changeCalculation.amount)} บาท</strong>
+                        <strong>
+                          {moneyText(changeCalculation.amount)} บาท
+                        </strong>
                       </span>
                     )}
                   </div>

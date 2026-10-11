@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { Button, Card, Tag } from '../../components/ui/primitives';
 import { ApiError } from '../../lib/api';
 import type { BarcodeLookup } from '../../lib/catalog-api';

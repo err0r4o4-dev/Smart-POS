@@ -5,6 +5,24 @@ export type Session =
   | { authenticated: true; role: Role; permissions: string[] };
 export const anonymousSession: Session = { authenticated: false };
 
+export type WorkspaceArea = 'management' | 'staff' | 'account';
+export const managementRoles: Role[] = ['OWNER', 'MANAGER'];
+export const roleLabels: Record<Role, string> = {
+  OWNER: 'เจ้าของร้าน',
+  MANAGER: 'ผู้จัดการ',
+  CASHIER: 'แคชเชียร์',
+  INVENTORY_STAFF: 'พนักงานคลัง',
+  PURCHASING_STAFF: 'พนักงานจัดซื้อ',
+};
+
+export function isManagementRole(role: Role) {
+  return managementRoles.includes(role);
+}
+
+export function workspaceHome(role: Role) {
+  return isManagementRole(role) ? '/manage/dashboard' : '/work';
+}
+
 export function canAccess(
   session: Session,
   permission?: string,

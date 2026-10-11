@@ -1,5 +1,7 @@
 import { useState, useRef, type ReactNode } from 'react';
-import { Link, Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
+import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
+import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavigate';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
@@ -16,9 +18,13 @@ import {
 
 import { WorkspaceContext } from './POSContext';
 import { usePOS } from './POSContext';
+import { roleLabels, workspaceHome } from '../../app/access';
+import { businessArea } from '../../app/workspace-paths';
+import { paths } from '../../app/routes';
 
 export function POSWorkspace() {
   const tenant = useOrganization();
+  const { pathname } = useLocation();
   const { state } = useAuth();
   if (!tenant.context || !state.session) return null;
   return (
@@ -34,8 +40,19 @@ export function POSWorkspace() {
           ข้ามไปเนื้อหา
         </a>
         <header className="pos-header">
-          <Link to="/dashboard">กลับภาพรวม</Link>
+          <Link
+            to={
+              businessArea(pathname) === 'staff'
+                ? paths.staff
+                : workspaceHome(tenant.context.membership.role)
+            }
+          >
+            กลับพื้นที่ทำงาน
+          </Link>
           <Brand />
+          <span className="tag tag-amber">
+            ขายหน้าร้าน · {roleLabels[tenant.context.membership.role]}
+          </span>
           <ContextSwitchers />
         </header>
         <nav className="pos-navigation" aria-label="เมนูขาย">

@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { Button, Loading } from '../../components/ui/primitives';
 import { CatalogError } from '../catalog/CatalogUI';
 import type { Product, Variant } from '../../lib/catalog-api';

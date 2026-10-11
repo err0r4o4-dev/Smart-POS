@@ -1,5 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
+import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavigate';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
@@ -266,7 +268,7 @@ export function SetupPage() {
       tenant.clearInvitation();
       await tenant.refresh();
       tenant.select(result.organization.id);
-      navigate('/settings/store');
+      navigate('/manage/settings/store');
     } catch (failure) {
       setError(
         failure instanceof Error ? failure.message : 'รับคำเชิญไม่สำเร็จ',
@@ -302,7 +304,7 @@ export function SetupPage() {
       );
       await tenant.refresh();
       tenant.select(result.organization.id);
-      navigate('/settings/store');
+      navigate('/manage/settings/store');
     } catch (failure) {
       setError(
         failure instanceof Error ? failure.message : 'สร้างองค์กรไม่สำเร็จ',
@@ -337,7 +339,7 @@ export function SetupPage() {
                 className="button-secondary"
                 onClick={() => {
                   tenant.select(item.id);
-                  navigate('/settings/store');
+                  navigate('/manage/settings/store');
                 }}
               >
                 {item.name}

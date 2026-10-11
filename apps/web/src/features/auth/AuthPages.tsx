@@ -4,6 +4,9 @@ import { Button, Loading, Tag } from '../../components/ui/primitives';
 import { AuthLayout } from '../../layouts/AuthLayout';
 import { forgotPassword, register, resetPassword } from '../../lib/api';
 import { useAuth } from '../../app/AuthProvider';
+import { useOrganization } from '../../app/OrganizationProvider';
+import { isManagementRole } from '../../app/access';
+import { paths } from '../../app/routes';
 
 function ErrorMessage({ message }: { message: string }) {
   return message ? (
@@ -50,7 +53,7 @@ function PasswordField({
 }
 
 export function safeReturnTo(value: string | null) {
-  return value === '/account' ? value : '/account';
+  return value === '/account' ? value : paths.workspace;
 }
 
 export function LoginPage() {
@@ -80,7 +83,10 @@ export function LoginPage() {
     <AuthLayout>
       <Tag tone="amber">ACCOUNT ACCESS</Tag>
       <h2>Welcome back.</h2>
-      <p>Sign in to your SmartPOS account.</p>
+      <p>
+        เข้าสู่ระบบสำหรับเจ้าของร้าน ผู้จัดการ และพนักงาน
+        ไม่ใช่บัญชีผู้ซื้อออนไลน์
+      </p>
       {params.has('registered') && (
         <p role="status">Account created. Sign in to continue.</p>
       )}
@@ -328,6 +334,7 @@ export function ResetPasswordPage() {
 }
 
 export function AccountPage() {
+  const tenant = useOrganization();
   const { state, signOut } = useAuth();
   const [error, setError] = useState('');
   const [pending, setPending] = useState(false);
@@ -348,7 +355,7 @@ export function AccountPage() {
     }
   };
   return (
-    <main id="main-content" className="content">
+    <div>
       <section className="card account-card">
         <Tag tone="amber">ACCOUNT</Tag>
         <h1>Your account</h1>
@@ -361,14 +368,21 @@ export function AccountPage() {
           <dd>{state.session.user.status}</dd>
         </dl>
         <p>
-          <Link to="/setup">ตั้งค่าร้านหรือเลือกองค์กร</Link> ·{' '}
-          <Link to="/settings/store">จัดการองค์กรและสาขา</Link>
+          <Link to={paths.workspace}>เข้าสู่พื้นที่ทำงานตามบทบาท</Link> ·{' '}
+          <Link to="/setup">เลือกองค์กร / ตั้งค่าร้าน / รับคำเชิญ</Link>
+          {tenant.context &&
+            isManagementRole(tenant.context.membership.role) && (
+              <>
+                {' '}
+                · <Link to="/manage/settings/store">จัดการองค์กรและสาขา</Link>
+              </>
+            )}
         </p>
         <ErrorMessage message={error} />
         <Button onClick={() => void logout()} disabled={pending}>
           {pending ? 'Signing out…' : 'Sign out'}
         </Button>
       </section>
-    </main>
+    </div>
   );
 }

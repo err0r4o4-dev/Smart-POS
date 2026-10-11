@@ -2,6 +2,18 @@
 
 Intelligent Retail Management System - Modular Go monolith, React/TypeScript, independent internal FastAPI, PostgreSQL and Caddy. Phase0–4 and Phase5.1–5.7 COMPLETED (Local); Phase5 overall COMPLETED (Local); Phase6–7 NOT STARTED; Phase6 NOT READY; Production Ready NO. Latest local acceptance:2026-10-11. See [final Phase5 evidence](docs/development/phase57-verification.md), [Quality acceptance](docs/development/phase56-verification.md) and preserved [Loyalty acceptance](docs/development/phase55-verification.md).
 
+## Workspaces and entrances
+
+- `/` explains the three entrances; `/shop` is the separate customer-facing area with no employee sidebar or organization context requests.
+- `/login` and `/register` are team-account authentication, not customer-shopping accounts. After sign-in, `/workspace` resolves the current organization membership: Owner/Manager go to `/manage/dashboard`, Cashier/Inventory/Purchasing staff go to `/work`; users without a membership continue at `/account` for onboarding.
+- Business pages use `/manage/...` for management and `/work/...` for daily work. An owner using `/work/products` or `/work/pos` stays in the work area, including internal links and POS return navigation. Administrative pages are available only under `/manage/...` and still require a management role and existing permissions.
+- Legacy `/dashboard`, `/staff` and unprefixed module bookmarks redirect to canonical paths, retaining IDs, query parameters and fragments. HTTP API paths remain unchanged.
+- Management and staff have separate menu sets and visible area/role labels. Shared operational routes keep their existing permission checks. Direct store-settings, employee-management and role-matrix pages also require Owner/Manager. Changing workspace never changes membership or grants permissions.
+- Public development readiness information moves to `/help/system`; it is not the management home or business reporting.
+- **Online sales are not enabled:** `/shop` explicitly states that public catalog, customer checkout, orders, shipping and online settlement are not connected. It displays no mock products and accepts no orders, delivery details or money. POS and its existing transaction flow remain unchanged.
+
+See [workspace boundaries](docs/architecture/workspaces.md). No database/API migration is required for this UI separation.
+
 ## Quick start
 
 Prerequisites: Docker Desktop Linux containers with Docker Compose; Node.js24 for host frontend. Go/Python run through Docker. Startup below automatically migrates through version12: use only for an explicitly approved new/local database. Never use the persistent primary volume as a verification target; acceptance uses isolated `smartpos-auth-test`.

@@ -8,7 +8,12 @@ import {
   Terminal,
 } from 'lucide-react';
 import { canAccess, type Session } from '../app/access';
-import { navigationGroups, paths, type NavigationItem } from '../app/routes';
+import {
+  navigationGroups,
+  paths,
+  type NavigationItem,
+  type NavigationGroup,
+} from '../app/routes';
 
 const icons = {
   dashboard: LayoutDashboard,
@@ -20,6 +25,8 @@ const icons = {
 interface NavigationMenuProps {
   items: NavigationItem[];
   access: Session;
+  groups?: NavigationGroup[];
+  homePath?: string;
   onNavigate?: () => void;
 }
 
@@ -30,7 +37,7 @@ export function NavigationMenu(props: NavigationMenuProps) {
     : 'anonymous';
   return (
     <GroupedMenu
-      key={pathname + ':' + accessKey}
+      key={pathname + ':' + accessKey + ':' + props.homePath}
       {...props}
       pathname={pathname}
     />
@@ -42,6 +49,8 @@ function GroupedMenu({
   access,
   onNavigate,
   pathname,
+  groups = navigationGroups,
+  homePath = paths.dashboard,
 }: NavigationMenuProps & { pathname: string }) {
   const panelPrefix = useId();
   const visibleItems = items.filter((item) =>
@@ -55,7 +64,7 @@ function GroupedMenu({
   const [expanded, setExpanded] = useState(
     () =>
       new Set(
-        navigationGroups
+        groups
           .filter((group) => activeItem && group.paths.includes(activeItem.to))
           .map((group) => group.id),
       ),
@@ -77,10 +86,8 @@ function GroupedMenu({
   };
   return (
     <>
-      {visibleItems
-        .filter((item) => item.to === paths.dashboard)
-        .map(renderLink)}
-      {navigationGroups.map((group) => {
+      {visibleItems.filter((item) => item.to === homePath).map(renderLink)}
+      {groups.map((group) => {
         const groupItems = group.paths.flatMap((path) =>
           visibleItems.filter((item) => item.to === path),
         );
@@ -116,8 +123,8 @@ function GroupedMenu({
       {visibleItems
         .filter(
           (item) =>
-            item.to !== paths.dashboard &&
-            !navigationGroups.some((group) => group.paths.includes(item.to)),
+            item.to !== homePath &&
+            !groups.some((group) => group.paths.includes(item.to)),
         )
         .map(renderLink)}
     </>

@@ -1,7 +1,14 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useOrganization } from '../../app/OrganizationProvider';
 import { ErrorState, Loading } from '../../components/ui/primitives';
-export function OrganizationGate({ permission }: { permission?: string }) {
+import type { Role } from '../../app/access';
+export function OrganizationGate({
+  permission,
+  roles,
+}: {
+  permission?: string;
+  roles?: Role[];
+}) {
   const tenant = useOrganization();
   if (tenant.loading) return <Loading>กำลังตรวจสอบสิทธิ์องค์กร…</Loading>;
   if (tenant.error)
@@ -9,6 +16,8 @@ export function OrganizationGate({ permission }: { permission?: string }) {
       <ErrorState message={tenant.error} retry={() => void tenant.refresh()} />
     );
   if (!tenant.context) return <Navigate to="/setup" replace />;
+  if (roles && !roles.includes(tenant.context.membership.role))
+    return <Navigate to="/403" replace />;
   if (permission && !tenant.can(permission))
     return <Navigate to="/403" replace />;
   return (

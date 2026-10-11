@@ -40,7 +40,7 @@ for (const width of [1024, 1440]) {
       'desktop sidebar contains long menu at ' + width + 'x' + height,
       async ({ page }, testInfo) => {
         await page.setViewportSize({ width, height });
-        await page.goto('/dashboard');
+        await page.goto('/manage/dashboard');
         const sidebar = page.locator('.sidebar');
         const menu = page.getByRole('navigation', {
           name: 'Main navigation',
@@ -57,10 +57,9 @@ for (const width of [1024, 1440]) {
         }
         await expect(menu.getByRole('link')).toHaveCount(navigation.length);
         await expect(menu.locator('a[href^="/preview/"]')).toHaveCount(0);
-        await expect(menu.locator('a[href="/dashboard"]')).toHaveAttribute(
-          'aria-current',
-          'page',
-        );
+        await expect(
+          menu.locator('a[href="/manage/dashboard"]'),
+        ).toHaveAttribute('aria-current', 'page');
         const sidebarBefore = await sidebar.boundingBox();
         const contextBefore = await sidebar
           .locator('.workspace-context')
@@ -113,22 +112,22 @@ test('anonymous foundation navigation excludes tenant modules', async ({
     route.fulfill({ status: 401, json: { error: { code: 'UNAUTHORIZED' } } }),
   );
   await page.setViewportSize({ width: 1440, height: 720 });
-  await page.goto('/dashboard');
+  await page.goto('/help/system');
   const menu = page.getByRole('navigation', {
     name: 'Main navigation',
     exact: true,
   });
   await expect(
-    menu.getByRole('link', { name: 'Overview', exact: true }),
+    menu.getByRole('link', { name: 'สถานะระบบ', exact: true }),
   ).toBeVisible();
   await expect(
-    menu.getByRole('link', { name: 'Getting started', exact: true }),
+    menu.getByRole('link', { name: 'คู่มือการใช้งาน', exact: true }),
   ).toBeVisible();
-  await expect(menu.getByRole('link')).toHaveCount(2);
+  await expect(menu.getByRole('link')).toHaveCount(4);
   await expect(menu.locator('a[href^="/preview/"]')).toHaveCount(0);
-  await expect(menu.locator('a[href="/customers"]')).toHaveCount(0);
+  await expect(menu.locator('a[href="/manage/customers"]')).toHaveCount(0);
   await expect(page.locator('.sidebar-note')).toContainText(
-    'Built for what’s next',
+    'บัญชีและการเข้าใช้งาน',
   );
 });
 
@@ -136,7 +135,7 @@ test('mobile navigation still opens, navigates and dismisses', async ({
   page,
 }, testInfo) => {
   await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto('/dashboard');
+  await page.goto('/manage/dashboard');
   await expect(page.locator('.sidebar-navigation a')).toHaveCount(
     navigation.length,
   );
@@ -152,7 +151,7 @@ test('mobile navigation still opens, navigates and dismisses', async ({
   await expect(menu.getByRole('button')).toHaveCount(7);
   await page.keyboard.press('Shift+Tab');
   await expect(
-    menu.getByRole('link', { name: 'Getting started', exact: true }),
+    menu.getByRole('link', { name: 'คู่มือการใช้งาน', exact: true }),
   ).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(
@@ -162,13 +161,13 @@ test('mobile navigation still opens, navigates and dismisses', async ({
   await firstGroup.focus();
   await page.keyboard.press('Enter');
   await expect(firstGroup).toHaveAttribute('aria-expanded', 'true');
-  await expect(menu.locator('a[href="/pos"]')).toBeVisible();
+  await expect(menu.locator('a[href="/manage/pos"]')).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('mobile-categories.png') });
   await page.keyboard.press('Space');
   await expect(firstGroup).toHaveAttribute('aria-expanded', 'false');
-  await expect(menu.locator('a[href="/pos"]')).toBeHidden();
+  await expect(menu.locator('a[href="/manage/pos"]')).toBeHidden();
   await menu
-    .getByRole('link', { name: 'Getting started', exact: true })
+    .getByRole('link', { name: 'คู่มือการใช้งาน', exact: true })
     .click();
   await expect(page).toHaveURL(/\/help$/);
   await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -183,13 +182,13 @@ test('deep links open the destination group and highlight only its menu', async 
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 720 });
-  for (const path of ['/sales/voids', '/products/item-1']) {
+  for (const path of ['/manage/sales/voids', '/manage/products/item-1']) {
     await page.goto(path);
     const menu = page.getByRole('navigation', {
       name: 'Main navigation',
       exact: true,
     });
-    const group = path.startsWith('/sales/')
+    const group = path.startsWith('/manage/sales/')
       ? 'คืนสินค้าและคืนเงิน'
       : 'สินค้าและสต็อก';
     await expect(
@@ -199,7 +198,9 @@ test('deep links open the destination group and highlight only its menu', async 
     await expect(menu.locator('a[aria-current="page"]')).toBeVisible();
     await expect(menu.locator('a[aria-current="page"]')).toHaveAttribute(
       'href',
-      path.startsWith('/sales/') ? '/sales/voids' : '/products',
+      path.startsWith('/manage/sales/')
+        ? '/manage/sales/voids'
+        : '/manage/products',
     );
     await expect(
       menu.getByRole('button', { name: 'การขาย', exact: true }),

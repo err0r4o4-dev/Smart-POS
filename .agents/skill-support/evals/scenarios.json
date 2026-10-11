@@ -1,0 +1,150 @@
+{
+  "version": 1,
+  "purpose": "Manual forward-evaluation scenarios; candidates are not a mandatory load list.",
+  "status": "not-run",
+  "cases": [
+    {
+      "id": "readonly-flow",
+      "prompt": "อธิบาย flow checkout โดยไม่แก้ไฟล์",
+      "candidatePrimarySkill": "smartpos-project-context",
+      "candidateAdditionalSkills": [],
+      "expectedBehavior": [
+        "No file, TODO or service mutation",
+        "Report implemented versus planned behavior"
+      ],
+      "status": "not-run"
+    },
+    {
+      "id": "mobile-layout",
+      "prompt": "แก้ layout POS บนมือถือ",
+      "candidatePrimarySkill": "smartpos-ui-guidelines",
+      "candidateAdditionalSkills": [
+        "smartpos-cross-platform-design",
+        "smartpos-ui-verification"
+      ],
+      "expectedBehavior": [
+        "Preserve Apple-inspired identity, yellow, tokens, fonts and Lucide",
+        "No Go or AI skill for a visual-only task"
+      ],
+      "status": "not-run"
+    },
+    {
+      "id": "react-stale-data",
+      "prompt": "แก้ข้อมูลสินค้าเก่าหลังเปลี่ยนสาขา",
+      "candidatePrimarySkill": "smartpos-frontend",
+      "candidateAdditionalSkills": ["react-best-practices", "frontend-testing"],
+      "expectedBehavior": [
+        "Inspect scoped query keys and invalidation",
+        "Regression test before behavior fix",
+        "No new state library or Next.js"
+      ],
+      "status": "not-run"
+    },
+    {
+      "id": "go-transaction",
+      "prompt": "แก้ query ตัดสต็อกให้ rollback เมื่อรายการหนึ่งผิด",
+      "candidatePrimarySkill": "golang-database",
+      "candidateAdditionalSkills": ["smartpos-go-database", "golang-testing"],
+      "expectedBehavior": [
+        "Preserve exact quantities, tenant scope, idempotency and audit",
+        "No primary database reset",
+        "Integration target must be confirmed isolated"
+      ],
+      "status": "not-run"
+    },
+    {
+      "id": "api-contract",
+      "prompt": "เพิ่ม field ใน response ของ Go API",
+      "candidatePrimarySkill": "smartpos-api-contract",
+      "candidateAdditionalSkills": ["golang-swagger"],
+      "expectedBehavior": [
+        "Update actual consumers and manual OpenAPI/inventory",
+        "No swag init, annotations or Swagger service"
+      ],
+      "status": "not-run"
+    },
+    {
+      "id": "internal-timeout",
+      "prompt": "แก้ timeout ระหว่าง Go กับ FastAPI",
+      "candidatePrimarySkill": "golang-context",
+      "candidateAdditionalSkills": ["smartpos-ai-service", "python-testing"],
+      "expectedBehavior": [
+        "Preserve request deadline/cancellation and replay safety",
+        "No provider/model switch or detached request context"
+      ],
+      "status": "not-run"
+    },
+    {
+      "id": "ai-health",
+      "prompt": "ตรวจ health endpoint ของ AI แบบอ่านอย่างเดียว",
+      "candidatePrimarySkill": "python-fastapi",
+      "candidateAdditionalSkills": [],
+      "expectedBehavior": [
+        "No forecast evaluation, training, artifacts or production calls",
+        "Distinguish health from model quality"
+      ],
+      "status": "not-run"
+    },
+    {
+      "id": "forecast-backtest",
+      "prompt": "วางแผน backtest forecast จากข้อมูลที่อนุญาต",
+      "candidatePrimarySkill": "ai-evaluation",
+      "candidateAdditionalSkills": [
+        "smartpos-ai-evaluation",
+        "ai-data-preparation"
+      ],
+      "expectedBehavior": [
+        "Temporal split and deterministic baseline",
+        "Plan is not measured accuracy",
+        "No paid inference, training or retail posting"
+      ],
+      "status": "not-run"
+    },
+    {
+      "id": "failed-test",
+      "prompt": "แก้ bug frontend แต่ regression test ยังไม่ผ่าน",
+      "candidatePrimarySkill": "diagnose",
+      "candidateAdditionalSkills": ["frontend-testing"],
+      "expectedBehavior": [
+        "Keep tests and unresolved task checklist",
+        "Report failed check rather than mark complete"
+      ],
+      "status": "not-run"
+    },
+    {
+      "id": "todo-cleanup",
+      "prompt": "ปิดงานที่ผ่าน checks แล้วโดยมี roadmap เดิม",
+      "candidatePrimarySkill": "handoff",
+      "candidateAdditionalSkills": [],
+      "expectedBehavior": [
+        "Remove only the completed task section without unrelated additions",
+        "Retain the tracked roadmap and tests"
+      ],
+      "status": "not-run"
+    },
+    {
+      "id": "global-scope",
+      "prompt": "เพิ่ม skill เฉพาะ SmartPOS",
+      "candidatePrimarySkill": "smartpos-project-context",
+      "candidateAdditionalSkills": [],
+      "expectedBehavior": [
+        "Only repository-local skill/routing files change",
+        "No global skill/config/model/provider changes",
+        "Avoid duplicate global skill identities"
+      ],
+      "status": "not-run"
+    },
+    {
+      "id": "docs-only",
+      "prompt": "แก้คำอธิบายใน README",
+      "candidatePrimarySkill": null,
+      "candidateAdditionalSkills": [],
+      "expectedBehavior": [
+        "Appropriate metadata/reference/format/diff checks",
+        "Do not force app tests, backend or AI skills",
+        "handoff is optional unless status transfer was requested"
+      ],
+      "status": "not-run"
+    }
+  ]
+}

@@ -10,6 +10,31 @@ export const StorefrontPage = lazy(() =>
     default: module.StorefrontPage,
   })),
 );
+export const ShopCartPage = lazy(() =>
+  import('../features/storefront/ShopCartPage').then((module) => ({
+    default: module.ShopCartPage,
+  })),
+);
+export const ShopTrackingPage = lazy(() =>
+  import('../features/storefront/ShopTrackingPage').then((module) => ({
+    default: module.ShopTrackingPage,
+  })),
+);
+export const OnlineOrdersPage = lazy(() =>
+  import('../features/storefront/OnlineOrderPages').then((module) => ({
+    default: module.OnlineOrdersPage,
+  })),
+);
+export const OnlineOrderPage = lazy(() =>
+  import('../features/storefront/OnlineOrderPages').then((module) => ({
+    default: module.OnlineOrderPage,
+  })),
+);
+export const StorefrontSettingsPage = lazy(() =>
+  import('../features/storefront/OnlineOrderPages').then((module) => ({
+    default: module.StorefrontSettingsPage,
+  })),
+);
 export const DashboardPage = lazy(() =>
   import('../features/dashboard/DashboardPage').then((module) => ({
     default: module.DashboardPage,

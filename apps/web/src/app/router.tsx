@@ -2,6 +2,11 @@ import { Suspense } from 'react';
 import {
   LandingPage,
   StorefrontPage,
+  ShopCartPage,
+  ShopTrackingPage,
+  OnlineOrdersPage,
+  OnlineOrderPage,
+  StorefrontSettingsPage,
   DashboardPage,
   HelpPage,
   SystemPage,

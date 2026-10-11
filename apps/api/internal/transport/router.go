@@ -19,11 +19,16 @@ import (
 	"smartpos/api/internal/modules/returns"
 	"smartpos/api/internal/modules/storefront"
 	"smartpos/api/internal/platform/httpx"
+	"smartpos/api/internal/platform/stripe"
 )
 
 type Readiness interface{ Ready(context.Context) error }
 
 func Router(checker Readiness, logger *slog.Logger, authentication ...identity.Handler) http.Handler {
+	return RouterWithSandbox(checker, logger, nil, authentication...)
+}
+
+func RouterWithSandbox(checker Readiness, logger *slog.Logger, sandbox *stripe.Client, authentication ...identity.Handler) http.Handler {
 	router := chi.NewRouter()
 	router.Use(httpx.RequestIDs, httpx.Security, httpx.AccessLog(logger), httpx.Recover(logger))
 	router.Get("/health/live", func(writer http.ResponseWriter, request *http.Request) {
@@ -51,7 +56,7 @@ func Router(checker Readiness, logger *slog.Logger, authentication ...identity.H
 			pricingHandler := pricing.Handler{Service: &pricing.Service{Organization: organizations}}
 			customerHandler := customers.Handler{Service: &customers.Service{Organization: organizations}}
 			loyaltyHandler := loyalty.Handler{Service: &loyalty.Service{Organization: organizations}}
-			storefrontHandler := storefront.Handler{Service: &storefront.Service{Organization: organizations}, Authentication: authentication[0]}
+			storefrontHandler := storefront.Handler{Service: &storefront.Service{Organization: organizations}, Authentication: authentication[0], Sandbox: sandbox}
 			storefrontHandler.PublicRoutes(version)
 			organization.Handler{Service: organizations, Authentication: authentication[0]}.Routes(version, catalogHandler.TenantRoutes, inventoryHandler.TenantRoutes, posHandler.TenantRoutes, purchasingHandler.TenantRoutes, returnsHandler.TenantRoutes, pricingHandler.TenantRoutes, customerHandler.TenantRoutes, loyaltyHandler.TenantRoutes, storefrontHandler.TenantRoutes)
 		}

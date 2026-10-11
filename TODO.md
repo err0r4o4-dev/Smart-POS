@@ -1,5 +1,17 @@
 # SmartPOS — Phase 1 / Phase 2 / Phase 3 / Phase 4 / Phase 5 checklist
 
+## Task — single-store online flow and Stripe sandbox (2026-10-12)
+
+- [x] Inspect storefront/POS boundaries, configuration and test seams; choose Stripe sandbox with user authorization.
+- [x] Test the first slice: management-only sandbox Checkout, authoritative status and test refunds; never mutate orders, sales or stock.
+- [x] Implement adapter, test-only configuration, protected API, management UI and matching contracts.
+- [x] Run focused/regression checks and document actual results and setup without secrets.
+  - Current continuation: focused frontend 20/20, full frontend 217/217, contract inventory, logs 10/10, dev-stack 5/5, Go tests/vet/build/gofmt and fixture-based Chromium 2/2 passed. Screenshots at 390/768/1440 generated and visually inspected.
+  - First scoped Prettier check failed on eight sandbox-related files; corrected through apply_patch and final scoped recheck passed. Post-format frontend gates and Chromium rerun passed; only the task-created Vite process was stopped. Details: `docs/architecture/payment-sandbox.md`. Real Stripe, database integration and CGO race checks have not run.
+- [ ] Complete remaining approved flow: single-store enforcement, front/back stock, atomic reservations, customer checkout, durable webhooks, shipment posting, cancellation/refunds/reports.
+- [ ] Verify complete flow on an explicitly isolated database and Stripe sandbox. Real Stripe checks require a locally configured test key; do not implicitly migrate/rebuild the primary stack.
+- [ ] Remove only this section after all acceptance succeeds; retain it while required work remains.
+
 Status: **Phase0–4 and Phase5.1–5.7 COMPLETED (Local); Phase5 overall COMPLETED (Local); Phase6–7 NOT STARTED; Phase6 NOT READY; Production Ready NO.** (2026-10-11), local acceptance only. Latest evidence: `docs/development/phase57-verification.md`. Earlier checklists/counts remain historical, not current run totals.
 
 ## Phase 5 completed locally (2026-10-11)

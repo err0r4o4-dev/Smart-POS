@@ -1,12 +1,12 @@
 # Complete route inventory
 
-Canonical source: packages/contracts/routes.json. Exactly 17 modules and 113 page routes (implemented and planned). Static routes are ranked before dynamic routes by React Router. Only ready pages are registered. A shell is not a completed business feature.
+Canonical source: packages/contracts/routes.json. Exactly 17 modules and 114 page routes (implemented and planned). Static routes are ranked before dynamic routes by React Router. Only ready pages are registered. A shell is not a completed business feature.
 
 Implemented identity routes are Phase 1A; organization/branch/member routes below are Phase 1B. These statuses supersede older planned labels without adding routes. Tenant routes require an authenticated session, active organization membership and the listed permission; Owner/Manager branch scope is enforced again by the API. `/setup` also supports memory-only email invitation acceptance after sign-in. See [organization architecture](organization.md).
 
 The nine Products routes are implemented Phase 1C. Catalog records are organization-scoped and shared across branches, not branch-owned. The backend rechecks active organization membership and catalog permissions; the existing Manager policy denies catalog access when no assigned active branch remains. Operational staff access follows active organization membership and fixed catalog permissions, not a separate all-role active-branch gate. Mutation-specific permissions are enforced separately from read access. See [catalog architecture](catalog.md).
 
-Phase5.1 registers two Returns routes;5.2 two Exchange/Void;5.3 five Pricing;5.4 three Customer;5.5 two Loyalty;5.6 four Quality routes. Phase0–4 and Phase5.1–5.7 COMPLETED (Local); Phase5 overall COMPLETED (Local); Phase6–7 NOT STARTED; Phase6 NOT READY; Production Ready NO. The historical Phase5 checkpoint counted16 modules/106 routes; the current storefront extension brings the inventory to17 modules/113 routes and still does not imply all planned pages are implemented. See [Quality](quality.md) and [final acceptance](../development/phase57-verification.md).
+Phase5.1 registers two Returns routes;5.2 two Exchange/Void;5.3 five Pricing;5.4 three Customer;5.5 two Loyalty;5.6 four Quality routes. Phase0–4 and Phase5.1–5.7 COMPLETED (Local); Phase5 overall COMPLETED (Local); Phase6–7 NOT STARTED; Phase6 NOT READY; Production Ready NO. The historical Phase5 checkpoint counted16 modules/106 routes; storefront and its management-only Stripe sandbox diagnostic bring the current inventory to17 modules/114 routes. Sandbox diagnostics do not implement customer online payment or fulfillment. See [Quality](quality.md), [sandbox](payment-sandbox.md) and [final acceptance](../development/phase57-verification.md).
 
 Storefront adds seven logical routes; management/work routes below use their existing workspace prefixes. See [storefront flow](storefront.md). This extension does not claim online payment or Phase6 readiness.
 
@@ -115,6 +115,7 @@ Storefront adds seven logical routes; management/work routes below use their exi
 | Settings | `/settings/store` | Implemented Phase 1B | 1 | session + tenant + organization.read; Owner writes |
 | Settings | `/settings/branches` | Implemented Phase 1B | 1 | session + tenant + branch.read; scoped branch writes |
 | Settings | `/settings/payments` | Planned (not registered) | 1 | session + tenant + branch permission |
+| Storefront | `/settings/storefront/payments` | Implemented sandbox diagnostic only | 5 | management + session + tenant + storefront.manage; canonical `/manage/settings/storefront/payments`; no customer payment or stock effects |
 | Settings | `/settings/tax` | Planned (not registered) | 1 | session + tenant + branch permission |
 | Settings | `/settings/receipts` | Planned (not registered) | 1 | session + tenant + branch permission |
 | Settings | `/settings/hardware` | Planned (not registered) | 1 | session + tenant + branch permission |

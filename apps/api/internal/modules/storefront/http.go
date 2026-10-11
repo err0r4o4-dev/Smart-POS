@@ -11,6 +11,7 @@ import (
 	"smartpos/api/internal/modules/identity"
 	"smartpos/api/internal/modules/organization"
 	"smartpos/api/internal/platform/httpx"
+	"smartpos/api/internal/platform/stripe"
 	"strconv"
 	"time"
 )
@@ -18,6 +19,7 @@ import (
 type Handler struct {
 	Service        *Service
 	Authentication identity.Handler
+	Sandbox        *stripe.Client
 }
 type operation func(context.Context, string, string, *http.Request) (any, error)
 
@@ -106,6 +108,7 @@ func (handler Handler) PublicRoutes(router chi.Router) {
 	})
 }
 func (handler Handler) TenantRoutes(router chi.Router) {
+	SandboxHandler{Organization: handler.Service.Organization, Gateway: handler.Sandbox}.Routes(router)
 	service := handler.Service
 	router.Get("/storefront", endpoint(200, func(ctx context.Context, user, org string, _ *http.Request) (any, error) {
 		return service.Settings(ctx, user, org)

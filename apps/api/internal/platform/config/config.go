@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"smartpos/api/internal/platform/stripe"
 )
 
 type Config struct {
@@ -25,6 +26,7 @@ type Config struct {
 	SMTPPassword   string
 	MailFrom       string
 	TrustedProxyIP netip.Addr
+	PaymentSandbox *stripe.Client
 }
 
 func Load() (Config, error) { return Parse(os.Getenv) }
@@ -98,5 +100,12 @@ func Parse(getenv func(string) string) (Config, error) {
 			return Config{}, errors.New("AUTH_SESSION_HOURS must be 1 through 720")
 		}
 	}
-	return Config{Address: address, DatabaseURL: databaseURL, Environment: environment, PublicOrigin: origin, AllowedOrigins: origins, SessionTTL: time.Duration(hours) * time.Hour, SMTPAddr: smtpAddr, SMTPUser: getenv("SMTP_USER"), SMTPPassword: getenv("SMTP_PASSWORD"), MailFrom: mailFrom, TrustedProxyIP: trustedProxyIP}, nil
+	sandbox, err := stripe.NewSandbox(getenv("STRIPE_TEST_SECRET_KEY"), origin)
+	if err != nil {
+		return Config{}, err
+	}
+	if environment != "development" && sandbox.Configured() {
+		return Config{}, errors.New("Stripe sandbox is allowed only in development")
+	}
+	return Config{Address: address, DatabaseURL: databaseURL, Environment: environment, PublicOrigin: origin, AllowedOrigins: origins, SessionTTL: time.Duration(hours) * time.Hour, SMTPAddr: smtpAddr, SMTPUser: getenv("SMTP_USER"), SMTPPassword: getenv("SMTP_PASSWORD"), MailFrom: mailFrom, TrustedProxyIP: trustedProxyIP, PaymentSandbox: sandbox}, nil
 }

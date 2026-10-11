@@ -11,6 +11,7 @@ import { StorefrontLayout } from '../layouts/StorefrontLayout';
 import { StorefrontPage } from '../features/storefront/StorefrontPage';
 import { ShopCartPage } from '../features/storefront/ShopCartPage';
 import { ShopTrackingPage } from '../features/storefront/ShopTrackingPage';
+import { PaymentSandboxPage } from '../features/storefront/PaymentSandboxPage';
 import {
   StorefrontSettingsPage,
   OnlineOrdersPage,
@@ -145,6 +146,10 @@ const routes: RouteObject[] = [
                   {
                     path: '/settings/storefront',
                     element: <StorefrontSettingsPage />,
+                  },
+                  {
+                    path: '/settings/storefront/payments',
+                    element: <PaymentSandboxPage />,
                   },
                 ],
               },

@@ -117,6 +117,7 @@ export function StorefrontSettingsPage() {
           <p className="eyebrow">รับออเดอร์ออนไลน์</p>
           <h1>ตั้งค่าหน้าร้านออนไลน์</h1>
         </div>
+        <Link to="/settings/storefront/payments">ทดสอบ Stripe sandbox</Link>
         <Link to="/online-orders">จัดการออเดอร์</Link>
       </div>
       <p className="notice">

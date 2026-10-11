@@ -6,9 +6,13 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     strictPort: true,
+    ws: process.env.SMARTPOS_HMR_CLIENT_PORT
+      ? { clientPort: Number(process.env.SMARTPOS_HMR_CLIENT_PORT) }
+      : undefined,
     proxy: {
-      '/api': 'http://127.0.0.1:8080',
-      '/health': 'http://127.0.0.1:8080',
+      '/api': process.env.SMARTPOS_API_PROXY_TARGET ?? 'http://127.0.0.1:8080',
+      '/health':
+        process.env.SMARTPOS_API_PROXY_TARGET ?? 'http://127.0.0.1:8080',
     },
   },
   test: {

@@ -1,0 +1,43 @@
+services:
+  web:
+    build:
+      target: development
+    environment:
+      SMARTPOS_HMR_CLIENT_PORT: ${GATEWAY_PORT:-8088}
+      SMARTPOS_API_PROXY_TARGET: http://api:8080
+    init: true
+    develop:
+      watch:
+        - action: sync
+          path: ./apps/web
+          target: /workspace/apps/web
+          initial_sync: true
+          ignore:
+            - node_modules/
+            - dist/
+            - '*.tsbuildinfo'
+            - '.env*'
+            - package.json
+            - Dockerfile
+            - vite.config.ts
+        - action: sync+restart
+          path: ./apps/web/vite.config.ts
+          target: /workspace/apps/web/vite.config.ts
+          initial_sync: true
+        - action: sync
+          path: ./packages/contracts/routes.json
+          target: /workspace/packages/contracts/routes.json
+          initial_sync: true
+        - action: rebuild
+          path: ./package.json
+        - action: rebuild
+          path: ./package-lock.json
+        - action: rebuild
+          path: ./apps/web/package.json
+        - action: rebuild
+          path: ./apps/web/Dockerfile
+  caddy:
+    environment:
+      GATEWAY_PORT: ${GATEWAY_PORT:-8088}
+    volumes:
+      - ./infra/caddy/Caddyfile.dev:/etc/caddy/Caddyfile:ro

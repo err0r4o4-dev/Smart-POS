@@ -172,6 +172,48 @@ Open **http://localhost:8088** and check [readiness](#api-and-health-checks). Ma
 
 Review schema, backups and migration impact before approving an upgrade. API/web from this revision require **clean schema 14**. The migration and matching API/web must roll out together; prior verification did not upgrade the persistent primary stack automatically. See [storefront rollout](docs/architecture/storefront.md) and [migrations](#database-migrations).
 
+### Frontend auto-update through the gateway
+
+With an already-running local stack, use Docker Compose 2.32 or newer:
+
+```powershell
+npm run stack:dev
+```
+
+Keep this terminal open and visit **http://localhost:8088**. The development
+override runs Vite instead of the built SPA. Compose Watch syncs React, CSS,
+public assets and the route inventory into the container; Vite updates the browser
+through the gateway WebSocket. Vite config changes sync and restart the web
+container. Package manifests, the lockfile and the web Dockerfile trigger a web
+image rebuild. No host node_modules or environment files are synced.
+
+These commands target only web/caddy with --no-deps: they do not start, migrate,
+rebuild or restart the database, API or AI. Start the required local backend
+separately through the approved setup workflow if it is not already running.
+
+For detached services with a separate watch terminal:
+
+```powershell
+npm run stack:dev:up
+npm run stack:dev:watch
+```
+
+Keep the watch command running; stopping it stops automatic source sync. Restart
+it to sync changes made while it was stopped. Do not run two watchers for the
+same stack. Compose Watch syncs inside Linux, so Windows file changes do not need
+Vite polling by default. Custom GATEWAY_PORT values are passed to both HMR and
+the development gateway CSP. The gateway permits inline React Refresh setup and
+loopback WebSockets only in its development config; the original CSP is unchanged.
+Development mode is local-only, not a production server. Tests are not run on save.
+Run npm run test:dev-stack for the development config regression checks. Gateway
+or Compose config changes require rerunning stack:dev:up and restarting watch.
+
+To return to the built frontend, stop the watch command first, then run:
+
+```powershell
+docker compose up --build -d --wait --no-deps web caddy
+```
+
 ### Optional native development
 
 For a host frontend, stop the container web service on an approved local stack first to avoid occupying the same port:
@@ -181,7 +223,7 @@ docker compose stop web
 npm run dev
 ```
 
-Vite uses `5173` with `strictPort: true` and proxies `/api` and `/health` to `127.0.0.1:8080`. Include the actual Vite origin in `DEV_ORIGINS`. Changing `API_PORT` does not change the hardcoded [Vite proxy](apps/web/vite.config.ts); configure it deliberately for another API port. Gateway mode serves the built SPA, not Vite hot reload.
+Vite uses `5173` with `strictPort: true` and proxies `/api` and `/health` to `127.0.0.1:8080`. Include the actual Vite origin in `DEV_ORIGINS`. For another API port, set `SMARTPOS_API_PROXY_TARGET` deliberately before starting Vite. The default gateway serves the built SPA; use the development override above for hot reload through the gateway.
 
 For native Go, configure required shell variables from [the API example](apps/api/.env.example), including a reachable SMTP service and migrated local database, then run from the repository root:
 

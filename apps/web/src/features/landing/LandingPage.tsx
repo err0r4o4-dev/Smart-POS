@@ -227,11 +227,6 @@ export function LandingPage() {
             <Link to="/" aria-label="VELO POS หน้าแรก">
               <Brand />
             </Link>
-            <p>
-              SmartPOS เครื่องมือจัดการร้านที่เชื่อมต่อการขาย สินค้า และทีมงาน
-              <br className="landing-desktop-break" />{' '}
-              ให้ทุกวันของร้านเดินหน้าได้อย่างมั่นใจ
-            </p>
           </div>
           <div className="landing-footer-links">
             <nav aria-label="ลิงก์ท้ายหน้า">

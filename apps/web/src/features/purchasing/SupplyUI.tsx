@@ -92,15 +92,24 @@ export function Pagination({
   size?: number;
   change: (page: number) => void;
 }) {
+  const pages = Math.max(1, Math.ceil(total / size));
   return (
-    <div className="catalog-actions">
-      <Button disabled={page <= 1} onClick={() => change(page - 1)}>
+    <div className="catalog-pagination">
+      <Button
+        className="button-secondary"
+        disabled={page <= 1}
+        onClick={() => change(page - 1)}
+      >
         ก่อนหน้า
       </Button>
       <span>
-        หน้า {page} · {total} รายการ
+        หน้า {page} / {pages} • {total} รายการ
       </span>
-      <Button disabled={page * size >= total} onClick={() => change(page + 1)}>
+      <Button
+        className="button-secondary"
+        disabled={page >= pages}
+        onClick={() => change(page + 1)}
+      >
         ถัดไป
       </Button>
     </div>

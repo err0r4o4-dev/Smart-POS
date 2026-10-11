@@ -1,4 +1,5 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createBrowserRouter } from 'react-router-dom';
+import { LandingPage } from '../features/landing/LandingPage';
 import { ManagementLayout } from '../layouts/ManagementLayout';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { HelpPage } from '../features/help/HelpPage';
@@ -48,10 +49,10 @@ import {
 } from '../features/auth/AuthPages';
 
 export const router = createBrowserRouter([
+  { path: '/', element: <LandingPage /> },
   {
     element: <ManagementLayout />,
     children: [
-      { path: '/', element: <Navigate to={paths.dashboard} replace /> },
       { path: paths.dashboard, element: <DashboardPage /> },
       { path: paths.help, element: <HelpPage /> },
       { path: paths.setup, element: <SetupPage /> },

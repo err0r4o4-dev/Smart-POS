@@ -1,4 +1,4 @@
-import { useState, useRef, type ReactNode } from 'react';
+import { useEffect, useState, useRef, type ReactNode } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavigate';
@@ -140,6 +140,13 @@ function WorkspaceProvider({
   const [cartID, setCartID] = useState('');
   const [busy, setBusy] = useState(false);
   const locked = useRef(false);
+  const controller = useRef(new AbortController());
+  const retryKeys = useRef(new Map<string, string>());
+  useEffect(() => {
+    const current = new AbortController();
+    controller.current = current;
+    return () => current.abort();
+  }, []);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const key = ['tenant', user, org, 'pos', branch];
@@ -193,23 +200,33 @@ function WorkspaceProvider({
     path: string,
     body: object,
     method = 'POST',
-    idempotency: string = crypto.randomUUID(),
+    idempotency?: string,
   ): Promise<Result | undefined> => {
     if (locked.current) return;
     locked.current = true;
     setBusy(true);
     setError('');
     setMessage('');
+    const current = controller.current;
+    const fingerprint = `${method}:${path}:${JSON.stringify(body)}`;
+    const requestKey =
+      idempotency ?? retryKeys.current.get(fingerprint) ?? crypto.randomUUID();
+    retryKeys.current.set(fingerprint, requestKey);
     try {
       const result = await posRequest<Result>(org, path, {
         method,
         body,
         csrf,
-        key: idempotency,
+        key: requestKey,
+        signal: current.signal,
       });
+      if (current.signal.aborted) return;
       await refresh();
+      if (current.signal.aborted) return;
+      retryKeys.current.delete(fingerprint);
       return result;
     } catch (problem) {
+      if (current.signal.aborted) return;
       setError(
         problem instanceof Error ? problem.message : 'ทำรายการไม่สำเร็จ',
       );
@@ -217,7 +234,7 @@ function WorkspaceProvider({
       return undefined;
     } finally {
       locked.current = false;
-      setBusy(false);
+      if (!current.signal.aborted) setBusy(false);
     }
   };
   const failure = terminals.error ?? shifts.error ?? carts.error ?? cart.error;

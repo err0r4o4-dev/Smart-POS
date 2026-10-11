@@ -1,21 +1,62 @@
+import { Suspense } from 'react';
+import {
+  LandingPage,
+  StorefrontPage,
+  ShopCartPage,
+  ShopTrackingPage,
+  OnlineOrdersPage,
+  OnlineOrderPage,
+  StorefrontSettingsPage,
+  DashboardPage,
+  HelpPage,
+  SystemPage,
+  ProductsPage,
+  ProductDetailsPage,
+  ProductEditorPage,
+  TaxonomyPage,
+  ImportPage,
+  LabelsPage,
+  InventoryPage,
+  PurchasingPage,
+  ShelfPage,
+  ReturnsPage,
+  AdjustmentsPage,
+  POSWorkspace,
+  PricingPage,
+  CustomersPage,
+  LoyaltyPage,
+  QualityPage,
+  POSTerminalPage,
+  HeldCartsPage,
+  CheckoutPage,
+  POSRegisterPage,
+  SalesPage,
+  SaleDetailsPage,
+  SetupPage,
+  StorePage,
+  BranchesPage,
+  EmployeesPage,
+  EmployeePage,
+  RolesPage,
+  AccountPage,
+  ForgotPasswordPage,
+  LoginPage,
+  RegisterPage,
+  ResetPasswordPage,
+} from './route-pages';
+import { OrganizationGate } from '../features/organization/OrganizationGate';
+import { PageError } from '../components/feedback/PageError';
+import { Loading } from '../components/ui/primitives';
 import {
   createBrowserRouter,
   Navigate,
+  Outlet,
   type RouteObject,
 } from 'react-router-dom';
 import { scopeWorkspaceRoutes } from './workspace-routes';
 import { LegacyWorkspaceRedirect } from '../features/workspace/WorkspaceRouting';
-import { LandingPage } from '../features/landing/LandingPage';
 import { RoleWorkspaceLayout } from '../layouts/RoleWorkspaceLayout';
 import { StorefrontLayout } from '../layouts/StorefrontLayout';
-import { StorefrontPage } from '../features/storefront/StorefrontPage';
-import { ShopCartPage } from '../features/storefront/ShopCartPage';
-import { ShopTrackingPage } from '../features/storefront/ShopTrackingPage';
-import {
-  StorefrontSettingsPage,
-  OnlineOrdersPage,
-  OnlineOrderPage,
-} from '../features/storefront/OnlineOrderPages';
 import {
   ManagementHomePage,
   StaffHomePage,
@@ -23,52 +64,8 @@ import {
   OrganizationWorkspaceProvider,
 } from '../features/workspace/WorkspacePages';
 import { managementRoles } from './access';
-import { DashboardPage } from '../features/dashboard/DashboardPage';
-import { HelpPage } from '../features/help/HelpPage';
-import { SystemPage } from '../features/system/SystemPage';
 import { paths } from './routes';
 import { RequireSession } from './ProtectedRoute';
-import { OrganizationGate } from '../features/organization/OrganizationGate';
-import {
-  ProductsPage,
-  ProductDetailsPage,
-  ProductEditorPage,
-} from '../features/catalog/ProductPages';
-import { TaxonomyPage } from '../features/catalog/TaxonomyPage';
-import { ImportPage } from '../features/catalog/ImportPage';
-import { LabelsPage } from '../features/catalog/LabelsPage';
-import { InventoryPage } from '../features/inventory/InventoryPage';
-import { PurchasingPage } from '../features/purchasing/PurchasingPage';
-import { ShelfPage } from '../features/purchasing/ShelfPage';
-import { ReturnsPage } from '../features/returns/ReturnsPage';
-import { AdjustmentsPage } from '../features/returns/AdjustmentsPage';
-import { POSWorkspace } from '../features/pos/POSWorkspace';
-import { PricingPage } from '../features/pricing/PricingPage';
-import { CustomersPage } from '../features/customers/CustomerPages';
-import { LoyaltyPage } from '../features/loyalty/LoyaltyPage';
-import { QualityPage } from '../features/quality/QualityPage';
-import {
-  POSTerminalPage,
-  HeldCartsPage,
-  CheckoutPage,
-  RegisterPage as POSRegisterPage,
-} from '../features/pos/POSPages';
-import { SalesPage, SaleDetailsPage } from '../features/pos/SalesPages';
-import {
-  SetupPage,
-  StorePage,
-  BranchesPage,
-  EmployeesPage,
-  EmployeePage,
-  RolesPage,
-} from '../features/organization/OrganizationPages';
-import {
-  AccountPage,
-  ForgotPasswordPage,
-  LoginPage,
-  RegisterPage,
-  ResetPasswordPage,
-} from '../features/auth/AuthPages';
 
 const routes: RouteObject[] = [
   { path: '/', element: <LandingPage /> },
@@ -510,4 +507,20 @@ const routes: RouteObject[] = [
   { path: '*', element: <SystemPage /> },
 ];
 
-export const router = createBrowserRouter(scopeWorkspaceRoutes(routes));
+export const router = createBrowserRouter([
+  {
+    element: (
+      <Suspense
+        fallback={
+          <main className="standalone">
+            <Loading>กำลังเปิดหน้า…</Loading>
+          </main>
+        }
+      >
+        <Outlet />
+      </Suspense>
+    ),
+    errorElement: <PageError />,
+    children: scopeWorkspaceRoutes(routes),
+  },
+]);

@@ -241,22 +241,4 @@ export function VariantPicker({
     </div>
   );
 }
-export function QueryFeedback({
-  loading,
-  error,
-  empty = false,
-}: {
-  loading: boolean;
-  error: unknown;
-  empty?: boolean;
-}) {
-  return (
-    <>
-      {loading && <Loading />}
-      <CatalogError error={error} />
-      {empty && !loading && !error && (
-        <p>ไม่พบข้อมูลในขอบเขตนี้ — ไม่มีข้อมูลตัวอย่าง</p>
-      )}
-    </>
-  );
-}
+export { QueryFeedback } from '../../components/feedback/QueryFeedback';

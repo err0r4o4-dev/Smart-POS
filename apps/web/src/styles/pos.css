@@ -259,3 +259,65 @@
     break-inside: avoid;
   }
 }
+
+.pos-cash-field {
+  display: grid;
+  gap: 10px;
+}
+.quick-cash-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.quick-cash-btn {
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-small, 8px);
+  cursor: pointer;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #cbd5e1);
+  color: var(--text-primary, #0f172a);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.quick-cash-btn:hover:not(:disabled) {
+  background: var(--primary-soft, #fff7db);
+  border-color: var(--primary, #f4c542);
+  color: var(--primary-strong, #854d0e);
+}
+.quick-cash-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.pos-change-hint {
+  padding: 10px 14px;
+  border-radius: var(--radius-small, 8px);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.change-valid {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+.change-short {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+.shortcut-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-family: monospace;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+  background: var(--secondary, #f1f5f9);
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 4px;
+  margin-left: 6px;
+}

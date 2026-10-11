@@ -154,7 +154,11 @@ function PurchasingScreen({ view, id }: { view: string; id?: string }) {
               ))}
             </SupplyTable>
             {query.data && (
-              <Pagination page={page} total={query.data.total} change={setPage} />
+              <Pagination
+                page={page}
+                total={query.data.total}
+                change={setPage}
+              />
             )}
           </Card>
         </>

@@ -45,7 +45,7 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
     staff: 'พื้นที่พนักงาน',
     account: 'บัญชีและการเข้าใช้งาน',
   }[area];
-  const items =
+  const rawItems =
     area === 'management'
       ? navigation
       : area === 'staff'
@@ -70,6 +70,17 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
                 icon: 'auth' as const,
               },
             ];
+  const items = rawItems.map((item) =>
+    tenant.storeMode === 'single' && item.to === paths.setup
+      ? {
+          ...item,
+          label:
+            area === 'management'
+              ? 'เข้าร้าน / รับคำเชิญ'
+              : 'รับคำเชิญเข้าร้าน',
+        }
+      : item,
+  );
   const groups =
     area === 'management'
       ? navigationGroups

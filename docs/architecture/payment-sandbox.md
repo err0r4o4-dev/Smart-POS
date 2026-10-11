@@ -38,7 +38,9 @@ Prefix: `/api/v1/organizations/{id}/storefront/payment-sandbox`.
 
 POSTs require the normal session, allowed Origin and CSRF token. All routes use `storefront.manage`. The adapter pins Stripe API `2024-06-20`, uses bounded HTTP/context timeouts, refuses redirects, bounds responses, does not retry automatically and never echoes raw provider/network errors or credentials. No SDK/dependency installation was required.
 
-## Remaining approved work — not implemented by this slice
+## Remaining approved work — not implemented by this sandbox slice
+
+The subsequent [single-store source slice](single-store.md) adds explicit existing-organization deployment scoping and matching UI. It does not complete the stock/payment/delivery work below, and no primary runtime setting was changed.
 
 1. Enforce/select the single shop without deleting existing tenants or weakening authorization; remove multi-organization UI from normal usage.
 2. Configure separate front/back stock locations, real transfers and publication. Online availability must use backroom available stock.

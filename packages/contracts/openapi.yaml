@@ -1046,11 +1046,14 @@ paths:
     get:
       operationId: listPublicStorefronts
       security: []
-      description: Published stores only.
+      description: Published active stores only. With SINGLE_STORE_ORGANIZATION_ID, returns only that store or an empty array; other stores are never included. X-SmartPOS-Store-Mode exposes only single/multi, not the configured organization UUID.
       parameters: []
       responses:
         '200':
           description: Successful result
+          headers:
+            X-SmartPOS-Store-Mode:
+              $ref: '#/components/headers/StoreMode'
           content:
             application/json:
               schema:
@@ -3237,7 +3240,10 @@ paths:
       security: [{ sessionCookie: [] }]
       responses:
         '200':
-          description: Active memberships only; subordinate roles receive redacted contact fields.
+          description: Active memberships only; subordinate roles receive redacted contact fields. In single-store mode, only active membership in the configured store is returned; no membership returns an empty array.
+          headers:
+            X-SmartPOS-Store-Mode:
+              $ref: '#/components/headers/StoreMode'
           content:
             application/json:
               schema:
@@ -3257,7 +3263,7 @@ paths:
     post:
       operationId: createOrganization
       security: [{ sessionCookie: [] }]
-      description: Atomically creates organization, OWNER membership, active main branch, default THB/Asia-Bangkok configuration and audit. Replaying the same per-user key/payload returns the same context; different payload returns 409.
+      description: Atomically creates organization, OWNER membership, active main branch, default THB/Asia-Bangkok configuration and audit. Replaying the same per-user key/payload returns the same context; different payload returns 409. Disabled with 403 in single-store mode, including retries; use an existing explicitly configured organization, not first-user ownership.
       parameters:
         - { $ref: '#/components/parameters/CSRF' }
         - {
@@ -24916,6 +24922,9 @@ components:
             - 'null'
           format: uuid
   headers:
+    StoreMode:
+      description: Server-configured store selection mode. Older servers may omit this additive header; clients retain multi-store compatibility. No organization identifier or membership grant is included.
+      schema: { type: string, enum: [single, multi] }
     RequestID:
       description: Generated opaque request correlation ID.
       schema: { type: string, pattern: '^[a-f0-9]{32}$' }

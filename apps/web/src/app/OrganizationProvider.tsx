@@ -7,6 +7,8 @@ import {
 } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './AuthProvider';
+import { ApiError } from '../lib/api';
+import type { StoreMode } from '../lib/store-mode';
 import {
   organizationRequest,
   type Organization,
@@ -18,6 +20,7 @@ interface Selection {
   branchID: string;
 }
 interface OrganizationState {
+  storeMode: StoreMode | null;
   organizations: Organization[];
   context: OrganizationContext | null;
   branchID: string;
@@ -83,14 +86,37 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     selection.userID === userID ? selection : readSelection(userID);
   const organizationsQuery = useQuery({
     queryKey: ['tenant', userID, 'organizations'],
-    queryFn: ({ signal }) =>
-      organizationRequest<Organization[]>('/organizations', { signal }),
+    queryFn: async ({ signal }) => {
+      const metadata: { storeMode: StoreMode } = { storeMode: 'multi' };
+      const items = await organizationRequest<Organization[]>(
+        '/organizations',
+        {
+          signal,
+          storeMode: (mode) => {
+            metadata.storeMode = mode;
+          },
+        },
+      );
+      if (metadata.storeMode === 'single' && items.length > 1)
+        throw new ApiError(
+          502,
+          'ข้อมูลร้านเดียวไม่ถูกต้อง กรุณาตรวจการตั้งค่าระบบ',
+        );
+      return { items, storeMode: metadata.storeMode };
+    },
     enabled: !!userID,
     refetchOnWindowFocus: true,
     refetchInterval: 30_000,
     retry: false,
   });
-  const organizations = userID ? (organizationsQuery.data ?? []) : [];
+  const organizations =
+    userID && !organizationsQuery.isError
+      ? (organizationsQuery.data?.items ?? [])
+      : [];
+  const storeMode =
+    userID && !organizationsQuery.isError
+      ? (organizationsQuery.data?.storeMode ?? null)
+      : null;
   const orgID =
     organizations.find((item) => item.id === chosen.orgID)?.id ??
     organizations[0]?.id ??
@@ -117,11 +143,9 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     '';
   const select = (target: string, branch = '') => {
     const available =
-      queryClient.getQueryData<Organization[]>([
-        'tenant',
-        userID,
-        'organizations',
-      ]) ?? organizations;
+      queryClient.getQueryData<{ items: Organization[]; storeMode: StoreMode }>(
+        ['tenant', userID, 'organizations'],
+      )?.items ?? organizations;
     if (!available.some((item) => item.id === target)) return;
     if (
       branch &&
@@ -149,6 +173,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   return (
     <OrganizationStateContext.Provider
       value={{
+        storeMode,
         organizations,
         context,
         branchID,

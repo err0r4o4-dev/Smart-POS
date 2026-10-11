@@ -63,7 +63,7 @@ func (service *Service) public(ctx context.Context, slug string, lock bool) (pgx
 	if err = tx.QueryRow(ctx, "SELECT storefront_resolve($1)::text", slug).Scan(&org); err != nil {
 		return fail(err)
 	}
-	if org == nil {
+	if !service.resolvedOrganizationAllowed(org) {
 		return fail(ErrNotFound)
 	}
 	if _, err = tx.Exec(ctx, "SELECT set_config('app.organization_id',$1,true),set_config('app.user_id','',true)", *org); err != nil {
@@ -80,9 +80,27 @@ func (service *Service) public(ctx context.Context, slug string, lock bool) (pgx
 	return tx, *org, nil
 }
 func (service *Service) Directory(ctx context.Context) (json.RawMessage, error) {
+	if service.Organization.SingleStoreOrganizationID != "" {
+		tx, err := service.Organization.Pool.Begin(ctx)
+		if err != nil {
+			return nil, err
+		}
+		defer tx.Rollback(ctx)
+		org := service.Organization.SingleStoreOrganizationID
+		if _, err = tx.Exec(ctx, "SELECT set_config('app.organization_id',$1,true),set_config('app.user_id','',true)", org); err != nil {
+			return nil, err
+		}
+		var result []byte
+		err = tx.QueryRow(ctx, `SELECT COALESCE(jsonb_agg(jsonb_build_object('slug',shop.slug,'name',shop.name,'accepting_orders',shop.accepting_orders)),'[]'::jsonb) FROM storefronts shop JOIN organizations org ON org.id=shop.organization_id WHERE shop.organization_id=$1 AND shop.published AND org.status='ACTIVE'`, org).Scan(&result)
+		return json.RawMessage(result), dbError(err)
+	}
 	var result []byte
 	err := service.Organization.Pool.QueryRow(ctx, "SELECT storefront_directory()").Scan(&result)
 	return json.RawMessage(result), dbError(err)
+}
+
+func (service *Service) resolvedOrganizationAllowed(org *string) bool {
+	return org != nil && uuidPattern.MatchString(*org) && service.Organization.AllowsOrganization(*org)
 }
 func settings(ctx context.Context, tx pgx.Tx, org string) (Settings, error) {
 	var result Settings

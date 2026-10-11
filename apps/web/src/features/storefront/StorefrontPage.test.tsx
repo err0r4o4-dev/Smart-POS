@@ -81,6 +81,53 @@ function view(path: string) {
     </QueryClientProvider>,
   );
 }
+it('opens the configured store directly without a public store selector', async () => {
+  fetchMock.mockImplementation(async (url: string) => {
+    if (url === '/api/v1/storefronts')
+      return {
+        ...response([
+          { slug: settings.slug, name: settings.name, accepting_orders: true },
+        ]),
+        headers: new Headers({ 'X-SmartPOS-Store-Mode': 'single' }),
+      };
+    if (url.endsWith('/products?search=&page=1'))
+      return response({ items: [product], total: 1, page: 1, page_size: 24 });
+    return response(settings);
+  });
+  view('/shop');
+  expect(await screen.findByText('กาแฟ')).toBeVisible();
+  expect(
+    screen.queryByRole('link', { name: 'ดูสินค้า' }),
+  ).not.toBeInTheDocument();
+});
+it('does not fall back to another store when the configured store is unpublished', async () => {
+  fetchMock.mockResolvedValue({
+    ...response([]),
+    headers: new Headers({ 'X-SmartPOS-Store-Mode': 'single' }),
+  });
+  view('/shop');
+  expect(await screen.findByText('ยังไม่มีร้านที่เปิดเผยแพร่')).toBeVisible();
+  expect(
+    screen.queryByRole('link', { name: 'ดูสินค้า' }),
+  ).not.toBeInTheDocument();
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+it('rejects a single-store directory containing multiple shops instead of presenting a selector', async () => {
+  fetchMock.mockResolvedValue({
+    ...response([
+      { slug: 'first', name: 'First', accepting_orders: true },
+      { slug: 'second', name: 'Second', accepting_orders: true },
+    ]),
+    headers: new Headers({ 'X-SmartPOS-Store-Mode': 'single' }),
+  });
+  view('/shop');
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'ข้อมูลร้านเดียวไม่ถูกต้อง',
+  );
+  expect(
+    screen.queryByRole('link', { name: 'ดูสินค้า' }),
+  ).not.toBeInTheDocument();
+});
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();

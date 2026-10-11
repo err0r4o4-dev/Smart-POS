@@ -6,6 +6,7 @@ import (
 	"net/netip"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -15,21 +16,24 @@ import (
 )
 
 type Config struct {
-	Address        string
-	DatabaseURL    string
-	Environment    string
-	PublicOrigin   string
-	AllowedOrigins []string
-	SessionTTL     time.Duration
-	SMTPAddr       string
-	SMTPUser       string
-	SMTPPassword   string
-	MailFrom       string
-	TrustedProxyIP netip.Addr
-	PaymentSandbox *stripe.Client
+	Address                   string
+	DatabaseURL               string
+	Environment               string
+	PublicOrigin              string
+	AllowedOrigins            []string
+	SessionTTL                time.Duration
+	SMTPAddr                  string
+	SMTPUser                  string
+	SMTPPassword              string
+	MailFrom                  string
+	TrustedProxyIP            netip.Addr
+	PaymentSandbox            *stripe.Client
+	SingleStoreOrganizationID string
 }
 
 func Load() (Config, error) { return Parse(os.Getenv) }
+
+var organizationIDPattern = regexp.MustCompile(`^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$`)
 
 func Parse(getenv func(string) string) (Config, error) {
 	address := getenv("API_ADDR")
@@ -107,5 +111,9 @@ func Parse(getenv func(string) string) (Config, error) {
 	if environment != "development" && sandbox.Configured() {
 		return Config{}, errors.New("Stripe sandbox is allowed only in development")
 	}
-	return Config{Address: address, DatabaseURL: databaseURL, Environment: environment, PublicOrigin: origin, AllowedOrigins: origins, SessionTTL: time.Duration(hours) * time.Hour, SMTPAddr: smtpAddr, SMTPUser: getenv("SMTP_USER"), SMTPPassword: getenv("SMTP_PASSWORD"), MailFrom: mailFrom, TrustedProxyIP: trustedProxyIP, PaymentSandbox: sandbox}, nil
+	singleStore := getenv("SINGLE_STORE_ORGANIZATION_ID")
+	if singleStore != "" && !organizationIDPattern.MatchString(singleStore) {
+		return Config{}, errors.New("SINGLE_STORE_ORGANIZATION_ID must be one organization UUID")
+	}
+	return Config{Address: address, DatabaseURL: databaseURL, Environment: environment, PublicOrigin: origin, AllowedOrigins: origins, SessionTTL: time.Duration(hours) * time.Hour, SMTPAddr: smtpAddr, SMTPUser: getenv("SMTP_USER"), SMTPPassword: getenv("SMTP_PASSWORD"), MailFrom: mailFrom, TrustedProxyIP: trustedProxyIP, PaymentSandbox: sandbox, SingleStoreOrganizationID: strings.ToLower(singleStore)}, nil
 }

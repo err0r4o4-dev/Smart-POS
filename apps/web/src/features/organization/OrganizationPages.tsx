@@ -253,6 +253,15 @@ export function SetupPage() {
         </Link>
       </Card>
     );
+  if (tenant.loading)
+    return <Loading>กำลังตรวจสอบโหมดร้านและสิทธิ์เข้าใช้งาน…</Loading>;
+  if (tenant.error)
+    return (
+      <div className="tenant-page">
+        <ErrorMessage message={tenant.error} />
+        <Button onClick={() => void tenant.refresh()}>ตรวจสิทธิ์ใหม่</Button>
+      </div>
+    );
   const accept = async () => {
     setPending(true);
     setError('');
@@ -279,6 +288,10 @@ export function SetupPage() {
   };
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (tenant.storeMode === 'single') {
+      setError('ระบบร้านเดียวไม่อนุญาตให้สร้างองค์กรเพิ่ม');
+      return;
+    }
     setError('');
     if (step < 2) {
       setStep(step + 1);
@@ -318,7 +331,11 @@ export function SetupPage() {
       <header>
         <Tag tone="amber">STORE ONBOARDING</Tag>
         <h1>ตั้งค่าร้าน</h1>
-        <p>สร้างองค์กรพร้อม Owner และสาขาหลักในธุรกรรมเดียว</p>
+        <p>
+          {tenant.storeMode === 'single'
+            ? 'ระบบร้านเดียว ใช้สิทธิ์สมาชิกของร้านที่กำหนดเท่านั้น'
+            : 'สร้างองค์กรพร้อม Owner และสาขาหลักในธุรกรรมเดียว'}
+        </p>
       </header>
       {tenant.invitationToken && (
         <Card>
@@ -331,7 +348,9 @@ export function SetupPage() {
       )}
       {tenant.organizations.length > 0 && (
         <Card>
-          <h2>องค์กรของคุณ</h2>
+          <h2>
+            {tenant.storeMode === 'single' ? 'ร้านของคุณ' : 'องค์กรของคุณ'}
+          </h2>
           <div className="tenant-actions">
             {tenant.organizations.map((item) => (
               <Button
@@ -348,62 +367,79 @@ export function SetupPage() {
           </div>
         </Card>
       )}
-      <Card>
-        <p className="tenant-step" role="status">
-          ขั้นตอน {step + 1} / 3 ·{' '}
-          {['ข้อมูลธุรกิจ', 'สาขาหลัก', 'ตรวจสอบข้อมูล'][step]}
-        </p>
-        <form onSubmit={(event) => void submit(event)}>
-          <fieldset disabled={pending}>
-            {step === 0 && (
-              <OrganizationFields
-                value={organization}
-                change={setOrganization}
-              />
-            )}
-            {step === 1 && (
-              <BranchFields value={branch} change={setBranch} owner={false} />
-            )}
-            {step === 2 && (
-              <dl>
-                <dt>องค์กร</dt>
-                <dd>
-                  {organization.name} ({organization.code})
-                </dd>
-                <dt>ประเภทธุรกิจ / ติดต่อ</dt>
-                <dd>
-                  {organization.business_type} ·{' '}
-                  {organization.contact_email || 'ไม่ระบุ'} ·{' '}
-                  {organization.contact_phone || 'ไม่ระบุ'}
-                </dd>
-                <dt>สาขาหลัก</dt>
-                <dd>
-                  {branch.name} ({branch.code}) ·{' '}
-                  {branch.address || 'ไม่ระบุที่อยู่'}
-                </dd>
-                <dt>Owner</dt>
-                <dd>
-                  {state.session.user.display_name} · {state.session.user.email}
-                </dd>
-              </dl>
-            )}
-            <ErrorMessage message={error} />
-            <div className="tenant-actions">
-              {step > 0 && (
-                <Button
-                  className="button-secondary"
-                  onClick={() => setStep(step - 1)}
-                >
-                  ย้อนกลับ
-                </Button>
+      {tenant.storeMode === 'single' && tenant.organizations.length === 0 && (
+        <Card>
+          <h2>ยังไม่มีสิทธิ์เข้าร้านนี้</h2>
+          <p>
+            ขอคำเชิญจากเจ้าของร้าน แล้วเข้าสู่ระบบด้วยบัญชีที่ได้รับคำเชิญ
+            การสมัครบัญชีไม่เพิ่มสิทธิ์เข้าร้านให้อัตโนมัติ
+          </p>
+        </Card>
+      )}
+      {tenant.storeMode === 'single' && <ErrorMessage message={error} />}
+      {tenant.storeMode !== 'single' && (
+        <Card>
+          <p className="tenant-step" role="status">
+            ขั้นตอน {step + 1} / 3 ·{' '}
+            {['ข้อมูลธุรกิจ', 'สาขาหลัก', 'ตรวจสอบข้อมูล'][step]}
+          </p>
+          <form onSubmit={(event) => void submit(event)}>
+            <fieldset disabled={pending}>
+              {step === 0 && (
+                <OrganizationFields
+                  value={organization}
+                  change={setOrganization}
+                />
               )}
-              <Button type="submit">
-                {pending ? 'กำลังบันทึก…' : step === 2 ? 'สร้างร้าน' : 'ถัดไป'}
-              </Button>
-            </div>
-          </fieldset>
-        </form>
-      </Card>
+              {step === 1 && (
+                <BranchFields value={branch} change={setBranch} owner={false} />
+              )}
+              {step === 2 && (
+                <dl>
+                  <dt>องค์กร</dt>
+                  <dd>
+                    {organization.name} ({organization.code})
+                  </dd>
+                  <dt>ประเภทธุรกิจ / ติดต่อ</dt>
+                  <dd>
+                    {organization.business_type} ·{' '}
+                    {organization.contact_email || 'ไม่ระบุ'} ·{' '}
+                    {organization.contact_phone || 'ไม่ระบุ'}
+                  </dd>
+                  <dt>สาขาหลัก</dt>
+                  <dd>
+                    {branch.name} ({branch.code}) ·{' '}
+                    {branch.address || 'ไม่ระบุที่อยู่'}
+                  </dd>
+                  <dt>Owner</dt>
+                  <dd>
+                    {state.session.user.display_name} ·{' '}
+                    {state.session.user.email}
+                  </dd>
+                </dl>
+              )}
+              <ErrorMessage message={error} />
+              <div className="tenant-actions">
+                {step > 0 && (
+                  <Button
+                    className="button-secondary"
+                    onClick={() => setStep(step - 1)}
+                  >
+                    ย้อนกลับ
+                  </Button>
+                )}
+                <Button type="submit">
+                  {pending
+                    ? 'กำลังบันทึก…'
+                    : step === 2
+                      ? 'สร้างร้าน'
+                      : 'ถัดไป'}
+                </Button>
+              </div>
+            </fieldset>
+          </form>
+        </Card>
+      )}
     </div>
   );
 }

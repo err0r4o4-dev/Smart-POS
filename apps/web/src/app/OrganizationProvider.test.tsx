@@ -77,6 +77,8 @@ function Probe() {
   return (
     <>
       <output>{tenant.context?.organization.id ?? 'none'}</output>
+      <span>{tenant.storeMode ?? 'mode-pending'}</span>
+      {tenant.error && <p role="alert">{tenant.error}</p>}
       <span>{tenant.branchID}</span>
       <span>
         {tenant.can('employee.read') ? 'employees-visible' : 'employees-denied'}
@@ -124,6 +126,48 @@ it('switches organizations and permissions without rendering old tenant data', a
   expect(screen.getByText('none')).toBeVisible();
   expect(await screen.findByText('b')).toBeVisible();
   expect(screen.getByText('employees-denied')).toBeVisible();
+});
+it('ignores a remembered foreign organization in single-store mode', async () => {
+  sessionStorage.setItem(
+    'smartpos-context:user',
+    JSON.stringify({ orgID: 'b', branchID: 'b-main' }),
+  );
+  mocks.request.mockImplementation(
+    (path: string, options: { storeMode?: (mode: 'single') => void }) => {
+      if (path === '/organizations') {
+        options.storeMode?.('single');
+        return Promise.resolve([organizations[0]]);
+      }
+      return Promise.resolve(context('a'));
+    },
+  );
+  mount();
+  expect(await screen.findByText('single')).toBeVisible();
+  expect(await screen.findByText('a')).toBeVisible();
+  fireEvent.click(screen.getByText('Switch B'));
+  expect(screen.getByText('a')).toBeVisible();
+  expect(mocks.request.mock.calls.some(([path]) => path.includes('/b/'))).toBe(
+    false,
+  );
+});
+it('fails closed when single-store metadata is returned with multiple organizations', async () => {
+  mocks.request.mockImplementation(
+    (path: string, options: { storeMode?: (mode: 'single') => void }) => {
+      if (path === '/organizations') {
+        options.storeMode?.('single');
+        return Promise.resolve(organizations);
+      }
+      return Promise.resolve(context('a'));
+    },
+  );
+  mount();
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'ข้อมูลร้านเดียวไม่ถูกต้อง',
+  );
+  expect(screen.getByText('none')).toBeVisible();
+  expect(
+    mocks.request.mock.calls.every(([path]) => path === '/organizations'),
+  ).toBe(true);
 });
 it('validates branches and restores only authorized preferences', async () => {
   sessionStorage.setItem(

@@ -1,3 +1,4 @@
+import { useEffect, useRef, type PointerEvent } from 'react';
 import {
   ArrowRight,
   Barcode,
@@ -18,17 +19,73 @@ const products = [
 ];
 
 export function POSPreview() {
+  const previewRef = useRef<HTMLElement>(null);
+
+  function resetTilt() {
+    previewRef.current?.style.removeProperty('--preview-rotate-x');
+    previewRef.current?.style.removeProperty('--preview-rotate-y');
+  }
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
+    const capability = window.matchMedia(
+      '(prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: fine) and (min-width: 1024px)',
+    );
+    capability.addEventListener('change', resetTilt);
+    return () => capability.removeEventListener('change', resetTilt);
+  }, []);
+
+  function tiltPreview(event: PointerEvent<HTMLElement>) {
+    if (
+      event.pointerType !== 'mouse' ||
+      typeof window.matchMedia !== 'function' ||
+      !window.matchMedia(
+        '(prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: fine) and (min-width: 1024px)',
+      ).matches
+    ) {
+      resetTilt();
+      return;
+    }
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const horizontal = Math.max(
+      -1,
+      Math.min(1, ((event.clientX - bounds.left) / bounds.width - 0.5) * 2),
+    );
+    const vertical = Math.max(
+      -1,
+      Math.min(1, ((event.clientY - bounds.top) / bounds.height - 0.5) * 2),
+    );
+    event.currentTarget.style.setProperty(
+      '--preview-rotate-x',
+      `${-vertical * 3}deg`,
+    );
+    event.currentTarget.style.setProperty(
+      '--preview-rotate-y',
+      `${horizontal * 3}deg`,
+    );
+  }
+
   return (
     <figure
+      ref={previewRef}
       className="landing-preview"
       aria-labelledby="landing-preview-caption"
+      onPointerMove={tiltPreview}
+      onPointerLeave={resetTilt}
+      onPointerCancel={resetTilt}
     >
       <div className="landing-preview-glow" aria-hidden="true" />
+      <div className="landing-preview-orbits" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </div>
       <div
         className="landing-preview-float landing-preview-float-top"
         aria-hidden="true"
       >
         <Barcode size={25} strokeWidth={1.7} />
+        <span className="landing-preview-label">ทุกงานร้าน ในพื้นที่เดียว</span>
       </div>
       <div className="landing-pos-window" aria-hidden="true">
         <div className="landing-pos-topbar">

@@ -14,6 +14,7 @@ import { useAuth } from '../../app/AuthProvider';
 import { paths } from '../../app/routes';
 import { Brand } from '../../components/ui/primitives';
 import { POSPreview } from './POSPreview';
+import { useLandingReveal } from './useLandingReveal';
 import './landing.css';
 
 const steps = [
@@ -60,17 +61,22 @@ const features = [
 ];
 
 export function LandingPage() {
+  const landingRef = useLandingReveal();
   const { state } = useAuth();
   const authenticated = state.status === 'authenticated';
   const loading = state.status === 'loading';
   return (
-    <div className="landing-page">
+    <div className="landing-page" ref={landingRef}>
       <a className="skip-link" href="#landing-main">
         ข้ามไปเนื้อหาหลัก
       </a>
       <header className="landing-header">
         <div className="landing-container landing-header-inner">
-          <Link to="/" aria-label="VELO POS หน้าแรก">
+          <Link
+            className="landing-brand-link"
+            to="/"
+            aria-label="VELO POS หน้าแรก"
+          >
             <Brand />
           </Link>
           <nav className="landing-navigation" aria-label="เมนูหน้าแรก">
@@ -167,7 +173,7 @@ export function LandingPage() {
                 เริ่มจัดการทุกอย่างให้เป็นระบบไปด้วยกัน
               </p>
             </div>
-            <ol className="landing-steps">
+            <ol className="landing-steps" data-landing-reveal="idle">
               {steps.map(({ number, icon: Icon, title, description }) => (
                 <li className="landing-step" key={number}>
                   <div className="landing-step-top">
@@ -206,7 +212,7 @@ export function LandingPage() {
                 ลดความยุ่งยากของงานหลังร้าน
                 ให้คุณและทีมทำงานร่วมกันได้อย่างเป็นระบบ
               </p>
-              <div className="landing-feature-grid">
+              <div className="landing-feature-grid" data-landing-reveal="idle">
                 {features.map(({ icon: Icon, title, description }) => (
                   <article key={title}>
                     <span className="landing-feature-icon">
@@ -223,16 +229,11 @@ export function LandingPage() {
       </main>
       <footer className="landing-footer">
         <div className="landing-container landing-footer-inner">
-          <div className="landing-footer-brand">
-            <Link to="/" aria-label="VELO POS หน้าแรก">
-              <Brand />
-            </Link>
-          </div>
+          <nav className="landing-footer-navigation" aria-label="ลิงก์ท้ายหน้า">
+            <Link to={paths.help}>คู่มือการใช้งาน</Link>
+            <a href="#how-it-works">วิธีเริ่มต้น</a>
+          </nav>
           <div className="landing-footer-links">
-            <nav aria-label="ลิงก์ท้ายหน้า">
-              <Link to={paths.help}>คู่มือการใช้งาน</Link>
-              <a href="#how-it-works">วิธีเริ่มต้น</a>
-            </nav>
             <small>© {new Date().getFullYear()} VELO POS · SmartPOS</small>
           </div>
         </div>

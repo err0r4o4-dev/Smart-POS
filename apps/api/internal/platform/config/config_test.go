@@ -1,6 +1,7 @@
 package config
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -26,6 +27,60 @@ func TestStripeSandboxConfiguration(t *testing.T) {
 				t.Fatal("incorrect sandbox configuration")
 			}
 		})
+	}
+}
+
+func TestRejectsMalformedSingleStoreOrganization(t *testing.T) {
+	for _, value := range []string{"first-store", "11111111-1111-4111-8111-111111111111,22222222-2222-4222-8222-222222222222", " 11111111-1111-4111-8111-111111111111", "11111111-1111-4111-8111-111111111111\n"} {
+		t.Run(value, func(t *testing.T) {
+			_, err := Parse(func(key string) string {
+				switch key {
+				case "DATABASE_URL":
+					return "postgres://localhost/smartpos"
+				case "APP_ENV":
+					return "development"
+				case "PUBLIC_ORIGIN":
+					return "http://localhost:8088"
+				case "SINGLE_STORE_ORGANIZATION_ID":
+					return value
+				case "SMTP_ADDR":
+					return "localhost:1025"
+				case "MAIL_FROM":
+					return "noreply@localhost"
+				default:
+					return ""
+				}
+			})
+			if err == nil {
+				t.Fatal("malformed single-store configuration was accepted")
+			}
+		})
+	}
+}
+
+func TestSingleStoreConfigurationNormalizesValidUUID(t *testing.T) {
+	for _, value := range []string{"", "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA"} {
+		settings, err := Parse(func(key string) string {
+			switch key {
+			case "DATABASE_URL":
+				return "postgres://localhost/smartpos"
+			case "APP_ENV":
+				return "development"
+			case "PUBLIC_ORIGIN":
+				return "http://localhost:8088"
+			case "SMTP_ADDR":
+				return "localhost:1025"
+			case "MAIL_FROM":
+				return "noreply@localhost"
+			case "SINGLE_STORE_ORGANIZATION_ID":
+				return value
+			default:
+				return ""
+			}
+		})
+		if err != nil || settings.SingleStoreOrganizationID != strings.ToLower(value) {
+			t.Fatalf("valid single-store config: %v", err)
+		}
 	}
 }
 

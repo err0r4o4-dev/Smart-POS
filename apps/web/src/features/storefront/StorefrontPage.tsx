@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { PackageOpen, ShoppingBag } from 'lucide-react';
 import { Button, Card, Loading, Tag } from '../../components/ui/primitives';
@@ -12,6 +12,8 @@ import {
 } from '../../lib/storefront-api';
 import { exactDecimal, moneyText } from '../../lib/pos-api';
 import { useShopCart } from './shop-cart';
+import { ApiError } from '../../lib/api';
+import type { StoreMode } from '../../lib/store-mode';
 import './storefront.css';
 
 export function StorefrontPage() {
@@ -21,9 +23,30 @@ export function StorefrontPage() {
 function ShopDirectory() {
   const shops = useQuery({
     queryKey: ['storefront-directory'],
-    queryFn: ({ signal }) => storefrontRequest<ShopSummary[]>('', { signal }),
+    queryFn: async ({ signal }) => {
+      const metadata: { storeMode: StoreMode } = { storeMode: 'multi' };
+      const items = await storefrontRequest<ShopSummary[]>('', {
+        signal,
+        storeMode: (mode) => {
+          metadata.storeMode = mode;
+        },
+      });
+      if (metadata.storeMode === 'single' && items.length > 1)
+        throw new ApiError(
+          502,
+          'ข้อมูลร้านเดียวไม่ถูกต้อง กรุณาตรวจการตั้งค่าระบบ',
+        );
+      return { items, storeMode: metadata.storeMode };
+    },
     retry: false,
   });
+  if (shops.data?.storeMode === 'single' && shops.data.items.length === 1)
+    return (
+      <Navigate
+        to={`/shop/${encodeURIComponent(shops.data.items[0].slug)}`}
+        replace
+      />
+    );
   return (
     <>
       <section className="storefront-hero" aria-labelledby="storefront-title">
@@ -42,7 +65,7 @@ function ShopDirectory() {
         {shops.error && (
           <ShopError error={shops.error} retry={() => void shops.refetch()} />
         )}
-        {shops.data?.length === 0 && (
+        {shops.data?.items.length === 0 && (
           <Card className="storefront-status">
             <PackageOpen size={40} aria-hidden="true" />
             <h2>ยังไม่มีร้านที่เปิดเผยแพร่</h2>
@@ -53,7 +76,7 @@ function ShopDirectory() {
           </Card>
         )}
         <div className="shop-grid">
-          {shops.data?.map((shop) => (
+          {shops.data?.items.map((shop) => (
             <Card key={shop.slug} className="shop-product">
               <h2>{shop.name}</h2>
               <Tag tone={shop.accepting_orders ? 'success' : 'amber'}>

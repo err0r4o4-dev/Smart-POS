@@ -1,5 +1,6 @@
 import { ApiError } from './api';
 import { exactDecimal } from './pos-api';
+import { responseStoreMode, type StoreMode } from './store-mode';
 
 export interface ShopSummary {
   slug: string;
@@ -110,7 +111,12 @@ export class StorefrontError extends ApiError {
 }
 export async function storefrontRequest<Result>(
   path: string,
-  options: { body?: object; key?: string; signal?: AbortSignal } = {},
+  options: {
+    body?: object;
+    key?: string;
+    signal?: AbortSignal;
+    storeMode?: (mode: StoreMode) => void;
+  } = {},
 ): Promise<Result> {
   const response = await fetch(`/api/v1/storefronts${path}`, {
     method: options.body === undefined ? 'GET' : 'POST',
@@ -137,6 +143,7 @@ export async function storefrontRequest<Result>(
       result.error?.code ?? 'UNAVAILABLE',
       result.error?.message ?? 'เชื่อมต่อหน้าร้านไม่ได้ กรุณาลองใหม่',
     );
+  options.storeMode?.(responseStoreMode(response.headers));
   return result.data;
 }
 export function newTrackingToken() {

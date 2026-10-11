@@ -1,5 +1,6 @@
 import type { Role } from '../app/access';
 import { ApiError } from './api';
+import { responseStoreMode, type StoreMode } from './store-mode';
 export interface OrganizationInput {
   name: string;
   code: string;
@@ -66,6 +67,7 @@ export async function organizationRequest<Result>(
     csrf?: string;
     key?: string;
     signal?: AbortSignal;
+    storeMode?: (mode: StoreMode) => void;
   } = {},
 ): Promise<Result> {
   const response = await fetch(`/api/v1${path}`, {
@@ -89,5 +91,6 @@ export async function organizationRequest<Result>(
       response.status,
       result.error?.message ?? 'Organization service unavailable',
     );
+  options.storeMode?.(responseStoreMode(response.headers));
   return result.data;
 }

@@ -128,7 +128,7 @@ func (service *Service) Track(ctx context.Context, slug string, input TrackingIn
 	if err = tx.QueryRow(ctx, "SELECT storefront_tracking_resolve($1,$2,$3)::text", slug, input.OrderID, accessHash(input.AccessToken)).Scan(&org); err != nil {
 		return Order{}, dbError(err)
 	}
-	if org == nil {
+	if !service.resolvedOrganizationAllowed(org) {
 		return Order{}, ErrNotFound
 	}
 	if _, err = tx.Exec(ctx, "SELECT set_config('app.organization_id',$1,true),set_config('app.user_id','',true)", *org); err != nil {

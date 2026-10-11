@@ -336,6 +336,23 @@ assert.equal(
   compose.services.api.environment.STRIPE_TEST_SECRET_KEY,
   '${STRIPE_TEST_SECRET_KEY:-}',
 );
+assert.equal(
+  compose.services.api.environment.SINGLE_STORE_ORGANIZATION_ID,
+  '${SINGLE_STORE_ORGANIZATION_ID:-}',
+);
+assert.deepEqual(api.components.headers.StoreMode.schema.enum, [
+  'single',
+  'multi',
+]);
+for (const path of ['/api/v1/organizations', '/api/v1/storefronts']) {
+  assert.equal(
+    api.paths[path].get.responses['200'].headers['X-SmartPOS-Store-Mode'].$ref,
+    '#/components/headers/StoreMode',
+  );
+}
+assert.ok(
+  api.paths['/api/v1/organizations'].post.description.includes('single-store'),
+);
 for (const path of storefrontPaths) {
   for (const method of ['get', 'post', 'put']) {
     const operation = api.paths[path][method];

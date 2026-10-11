@@ -17,6 +17,7 @@
     "test:logs": "node --test scripts/log-format.test.mjs",
     "test:dev-stack": "node --test scripts/dev-stack.test.mjs",
     "contracts:check": "node scripts/check-contracts.mjs",
+    "verify:single-store": "node scripts/check-single-store.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "e2e": "playwright test",

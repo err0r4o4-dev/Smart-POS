@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavigate';
 import { Card, Button } from '../../components/ui/primitives';
 import type { StockLocation } from '../../lib/inventory-api';
 import type {

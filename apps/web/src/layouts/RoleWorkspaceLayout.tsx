@@ -2,7 +2,7 @@ import { useLocation } from 'react-router-dom';
 import { useAuth } from '../app/AuthProvider';
 import { useOrganization } from '../app/OrganizationProvider';
 import { isManagementRole } from '../app/access';
-import { paths } from '../app/routes';
+import { businessArea } from '../app/workspace-paths';
 import { Loading } from '../components/ui/primitives';
 import { ManagementLayout, WorkspaceShell } from './ManagementLayout';
 import { StaffLayout } from './StaffLayout';
@@ -22,7 +22,7 @@ export function RoleWorkspaceLayout() {
       ? tenant.context?.membership.role
       : undefined;
   if (!role) return <WorkspaceShell area="account" />;
-  if (!isManagementRole(role) || pathname === paths.staff)
+  if (!isManagementRole(role) || businessArea(pathname) === 'staff')
     return <StaffLayout />;
   return <ManagementLayout />;
 }

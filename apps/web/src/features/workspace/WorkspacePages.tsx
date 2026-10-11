@@ -1,4 +1,4 @@
-import { Link, Navigate, Outlet } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { ArrowRight, BookOpen, ShieldCheck, ShoppingBag } from 'lucide-react';
 import {
   useOrganization,
@@ -17,11 +17,12 @@ import {
   type NavigationItem,
 } from '../../app/routes';
 import { Card, ErrorState, Loading, Tag } from '../../components/ui/primitives';
+import { WorkspaceAreaGate } from './WorkspaceRouting';
 
 export function OrganizationWorkspaceProvider() {
   return (
     <OrganizationProvider>
-      <Outlet />
+      <WorkspaceAreaGate />
     </OrganizationProvider>
   );
 }

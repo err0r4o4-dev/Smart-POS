@@ -191,7 +191,7 @@ test('Phase 1C: catalog workflows, imports, labels, tenant/RBAC and nine respons
       await expect(owner).toHaveURL(/\/products\/[a-f0-9-]+$/);
       product = await read<Product>(
         owner,
-        `${scope}${new URL(owner.url()).pathname}`,
+        `${scope}${new URL(owner.url()).pathname.replace(/^\/(?:manage|work)(?=\/)/, '')}`,
       );
       expect(product.variants).toHaveLength(1);
       expect(product.variants[0].selling_price).toBe('18.00');

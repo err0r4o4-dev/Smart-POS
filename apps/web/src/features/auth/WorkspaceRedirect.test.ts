@@ -10,6 +10,8 @@ it.each([
   '',
   '/dashboard',
   '/staff',
+  '/manage/dashboard',
+  '/work/products',
   '//example.test',
   'https://example.test',
   '/dashboard?role=OWNER',

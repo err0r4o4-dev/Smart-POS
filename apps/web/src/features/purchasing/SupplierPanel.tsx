@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Card, Button } from '../../components/ui/primitives';
-import { Link } from 'react-router-dom';
+import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import type { Supplier, SupplierProduct } from '../../lib/purchasing-api';
 import type { Taxonomy } from '../../lib/catalog-api';
 import {

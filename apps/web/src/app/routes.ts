@@ -1,11 +1,12 @@
 import { managementRoles, type Role } from './access';
+import { workspacePath } from './workspace-paths';
 
 export const paths = {
   workspace: '/workspace',
-  staff: '/staff',
+  staff: '/work',
   shop: '/shop',
   system: '/help/system',
-  dashboard: '/dashboard',
+  dashboard: '/manage/dashboard',
   login: '/login',
   register: '/register',
   forgotPassword: '/forgot-password',
@@ -174,10 +175,11 @@ const managementItems: NavigationItem[] = [
 
 export const navigation: NavigationItem[] = managementItems.map((item) => ({
   ...item,
+  to: workspacePath(item.to, 'management'),
   roles: managementRoles,
 }));
 
-export const staffNavigation: NavigationItem[] = [
+const staffItems: NavigationItem[] = [
   { to: paths.staff, label: 'งานของฉัน', icon: 'dashboard' },
   {
     to: '/pos/register/open',
@@ -219,6 +221,11 @@ export const staffNavigation: NavigationItem[] = [
   { to: paths.help, label: 'คู่มือการใช้งาน', icon: 'help' },
 ];
 
+export const staffNavigation: NavigationItem[] = staffItems.map((item) => ({
+  ...item,
+  to: workspacePath(item.to, 'staff'),
+}));
+
 export const accountNavigation: NavigationItem[] = [
   { to: paths.workspace, label: 'เข้าสู่พื้นที่ทำงาน', icon: 'dashboard' },
   { to: paths.account, label: 'บัญชีของฉัน', icon: 'auth' },
@@ -232,7 +239,7 @@ export interface NavigationGroup {
   paths: string[];
 }
 
-export const navigationGroups: NavigationGroup[] = [
+const managementGroups: NavigationGroup[] = [
   { id: 'sales', label: 'การขาย', paths: ['/pos', '/sales', '/receipts'] },
   {
     id: 'returns',
@@ -278,7 +285,7 @@ export const navigationGroups: NavigationGroup[] = [
   },
 ];
 
-export const staffNavigationGroups: NavigationGroup[] = [
+const staffGroups: NavigationGroup[] = [
   {
     id: 'staff-sales',
     label: 'งานขายหน้าร้าน',
@@ -311,3 +318,16 @@ export const staffNavigationGroups: NavigationGroup[] = [
     paths: ['/customers', '/loyalty'],
   },
 ];
+
+export const navigationGroups: NavigationGroup[] = managementGroups.map(
+  (group) => ({
+    ...group,
+    paths: group.paths.map((path) => workspacePath(path, 'management')),
+  }),
+);
+export const staffNavigationGroups: NavigationGroup[] = staffGroups.map(
+  (group) => ({
+    ...group,
+    paths: group.paths.map((path) => workspacePath(path, 'staff')),
+  }),
+);

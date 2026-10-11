@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { Button, Loading } from '../../components/ui/primitives';
 import type { CatalogStatus, Taxonomy } from '../../lib/catalog-api';
 export function CatalogHeader({

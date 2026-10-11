@@ -20,7 +20,7 @@ export function isManagementRole(role: Role) {
 }
 
 export function workspaceHome(role: Role) {
-  return isManagementRole(role) ? '/dashboard' : '/staff';
+  return isManagementRole(role) ? '/manage/dashboard' : '/work';
 }
 
 export function canAccess(

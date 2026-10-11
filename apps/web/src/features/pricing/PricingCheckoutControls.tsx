@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { Button } from '../../components/ui/primitives';
 import { usePOS } from '../pos/POSContext';
 import {

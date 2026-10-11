@@ -1,10 +1,7 @@
 import { useState, type FormEvent } from 'react';
-import {
-  Link,
-  useNavigate,
-  useParams,
-  useSearchParams,
-} from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
+import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
+import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavigate';
 import { Package } from 'lucide-react';
 import { Button, Card, Tag } from '../../components/ui/primitives';
 import {

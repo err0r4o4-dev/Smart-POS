@@ -94,6 +94,24 @@ async function mockTeam(page: Page, role: Role | null, permissions?: string[]) {
           },
         },
       });
+    } else if (
+      ['products', 'pos/terminals', 'pos/shifts', 'pos/carts'].some(
+        (resource) =>
+          path === '/api/v1/organizations/workspace-shop/' + resource,
+      )
+    ) {
+      await route.fulfill({
+        json: { data: { items: [], total: 0, page: 1, page_size: 20 } },
+      });
+    } else if (
+      ['categories', 'brands', 'units'].some(
+        (resource) =>
+          path === '/api/v1/organizations/workspace-shop/' + resource,
+      )
+    ) {
+      await route.fulfill({
+        json: { data: { items: [], total: 0, page: 1, page_size: 20 } },
+      });
     } else {
       await route.fulfill({
         status: 404,
@@ -122,7 +140,7 @@ for (const role of [
       await page.goto('/workspace');
       const management = role === 'OWNER' || role === 'MANAGER';
       await expect(page).toHaveURL(
-        new RegExp(management ? '/dashboard$' : '/staff$'),
+        new RegExp(management ? '/manage/dashboard$' : '/work$'),
       );
       await expect(
         page.getByRole('heading', {
@@ -143,14 +161,18 @@ for (const role of [
           '/settings/branches',
           '/pricing',
         ])
-          await expect(page.locator(`a[href="${path}"]`)).toHaveCount(0);
+          await expect(
+            page.locator(`a[href="/manage${path}"], a[href="/work${path}"]`),
+          ).toHaveCount(0);
       }
       if (role === 'CASHIER')
-        await expect(page.locator('a[href="/inventory"]')).toHaveCount(0);
+        await expect(page.locator('a[href="/work/inventory"]')).toHaveCount(0);
       if (role === 'INVENTORY_STAFF' || role === 'PURCHASING_STAFF')
-        await expect(page.locator('a[href="/pos"]')).toHaveCount(0);
+        await expect(page.locator('a[href="/work/pos"]')).toHaveCount(0);
       if (role === 'MANAGER')
-        await expect(page.locator('a[href="/employees"]')).toHaveCount(0);
+        await expect(page.locator('a[href="/manage/employees"]')).toHaveCount(
+          0,
+        );
       await page.screenshot({
         path: testInfo.outputPath('workspace-area.png'),
         fullPage: true,
@@ -168,11 +190,11 @@ test('a staff member cannot select ownership from a public entrance', async ({
   await page
     .getByRole('link', { name: 'เข้าสู่การจัดการร้าน', exact: true })
     .click();
-  await expect(page).toHaveURL(/\/staff$/);
+  await expect(page).toHaveURL(/\/work$/);
   await expect(
     page.getByRole('heading', { name: 'งานของฉัน', exact: true }),
   ).toBeVisible();
-  await expect(page.locator('a[href="/employees"]')).toHaveCount(0);
+  await expect(page.locator('a[href="/manage/employees"]')).toHaveCount(0);
 });
 
 for (const role of [
@@ -189,6 +211,9 @@ for (const role of [
       '/settings/branches',
       '/employees',
       '/roles',
+      '/manage/settings/store',
+      '/manage/products',
+      '/manage/pos',
     ]) {
       await page.goto(path);
       await expect(page).toHaveURL(/\/403$/);
@@ -235,7 +260,7 @@ test('mobile staff menu navigates without exposing management links', async ({
 }) => {
   await mockTeam(page, 'CASHIER');
   await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto('/staff');
+  await page.goto('/work');
   await page.getByRole('button', { name: 'Open navigation' }).click();
   const dialog = page.getByRole('dialog', { name: 'Navigation', exact: true });
   const menu = dialog.getByRole('navigation', {
@@ -243,7 +268,7 @@ test('mobile staff menu navigates without exposing management links', async ({
     exact: true,
   });
   await expect(dialog).toContainText('พื้นที่พนักงาน · แคชเชียร์');
-  await expect(menu.locator('a[href="/employees"]')).toHaveCount(0);
+  await expect(menu.locator('a[href="/manage/employees"]')).toHaveCount(0);
   await menu
     .getByRole('link', { name: 'คู่มือการใช้งาน', exact: true })
     .click();
@@ -261,7 +286,15 @@ test('anonymous visitors cannot enter either team workspace', async ({
   page,
 }) => {
   await mockTeam(page, null);
-  for (const path of ['/workspace', '/dashboard', '/staff']) {
+  for (const path of [
+    '/workspace',
+    '/manage/dashboard',
+    '/work',
+    '/manage/products',
+    '/work/products',
+    '/dashboard',
+    '/staff',
+  ]) {
     await page.goto(path);
     await expect(page).toHaveURL(
       new RegExp('/login\\?returnTo=' + encodeURIComponent(path) + '$'),
@@ -269,4 +302,105 @@ test('anonymous visitors cannot enter either team workspace', async ({
     await expect(page.getByLabel('Email address')).toBeVisible();
     await expect(page.locator('.sidebar')).toHaveCount(0);
   }
+});
+
+for (const width of [375, 1440]) {
+  test(`owner stays in work through product and POS navigation at ${width}px`, async ({
+    page,
+  }, testInfo) => {
+    const requests = await mockTeam(page, 'OWNER');
+    const errors: string[] = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/work');
+    await page.getByRole('link', { name: 'ข้อมูลสินค้า', exact: true }).click();
+    await expect(page).toHaveURL(/\/work\/products$/);
+    await expect(page.locator('[data-workspace="staff"]')).toBeVisible();
+    await expect(page.locator('a[href="/manage/employees"]')).toHaveCount(0);
+    await expect(
+      page.locator('.catalog-nav a[href="/work/categories"]'),
+    ).toBeVisible();
+    await page.locator('.catalog-nav a[href="/work/categories"]').click();
+    await expect(page).toHaveURL(/\/work\/categories$/);
+    await expect(page.locator('[data-workspace="staff"]')).toBeVisible();
+    await page.goto('/work/pos');
+    await expect(
+      page.getByRole('heading', { name: 'ขายสินค้า', exact: true }),
+    ).toBeVisible();
+    await expect(page.locator('.pos-header')).toContainText('เจ้าของร้าน');
+    await expect(
+      page.getByRole('link', { name: 'กลับพื้นที่ทำงาน', exact: true }),
+    ).toHaveAttribute('href', '/work');
+    await page.getByRole('link', { name: /ตะกร้าพัก/ }).click();
+    await expect(page).toHaveURL(/\/work\/pos\/held-carts$/);
+    await page
+      .getByRole('link', { name: 'กลับพื้นที่ทำงาน', exact: true })
+      .click();
+    await expect(page).toHaveURL(/\/work$/);
+    await expect(page.locator('[data-workspace="staff"]')).toBeVisible();
+    expect(
+      requests.some((path) => /\/api\/v1\/.+\/(?:work|manage)\//.test(path)),
+    ).toBe(false);
+    expect(errors).toEqual([]);
+    await expect(page.getByText('Unexpected Application Error!')).toHaveCount(
+      0,
+    );
+    await page.screenshot({
+      path: testInfo.outputPath('work-navigation.png'),
+      fullPage: true,
+    });
+  });
+}
+
+test('management module links stay under manage', async ({ page }) => {
+  await mockTeam(page, 'OWNER');
+  await page.goto('/manage/dashboard');
+  await page.getByRole('link', { name: 'จัดการสินค้า', exact: true }).click();
+  await expect(page).toHaveURL(/\/manage\/products$/);
+  await expect(page.locator('[data-workspace="management"]')).toBeVisible();
+  await page.locator('.catalog-nav a[href="/manage/categories"]').click();
+  await expect(page).toHaveURL(/\/manage\/categories$/);
+  await expect(page.locator('[data-workspace="management"]')).toBeVisible();
+});
+
+for (const [role, prefix] of [
+  ['OWNER', '/manage'],
+  ['INVENTORY_STAFF', '/work'],
+] as const) {
+  test(`legacy product URL preserves query and hash for ${role}`, async ({
+    page,
+  }) => {
+    await mockTeam(page, role);
+    await page.goto('/products?search=abc#results');
+    await expect(page).toHaveURL(
+      new RegExp(prefix + '/products\\?search=abc#results$'),
+    );
+    await page.goto('/products/item-1?search=abc#details');
+    await expect(page).toHaveURL(
+      new RegExp(prefix + '/products/item-1\\?search=abc#details$'),
+    );
+    await page.goto('/dashboard');
+    await expect(page).toHaveURL(
+      new RegExp(role === 'OWNER' ? '/manage/dashboard$' : '/work$'),
+    );
+    await page.goto('/staff');
+    await expect(page).toHaveURL(/\/work$/);
+  });
+}
+
+test('work does not expose administration namespaces and retains permission denial', async ({
+  page,
+}) => {
+  await mockTeam(page, 'OWNER');
+  for (const path of [
+    '/work/settings/store',
+    '/work/employees',
+    '/work/pricing',
+  ]) {
+    await page.goto(path);
+    await expect(page.getByText('404 · NOT FOUND')).toBeVisible();
+  }
+  await mockTeam(page, 'CASHIER');
+  await page.goto('/work/products');
+  await expect(page).toHaveURL(/\/403$/);
 });

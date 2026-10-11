@@ -5,7 +5,9 @@ Intelligent Retail Management System - Modular Go monolith, React/TypeScript, in
 ## Workspaces and entrances
 
 - `/` explains the three entrances; `/shop` is the separate customer-facing area with no employee sidebar or organization context requests.
-- `/login` and `/register` are team-account authentication, not customer-shopping accounts. After sign-in, `/workspace` resolves the current organization membership: Owner/Manager go to `/dashboard`, Cashier/Inventory/Purchasing staff go to `/staff`; users without a membership continue at `/account` for onboarding.
+- `/login` and `/register` are team-account authentication, not customer-shopping accounts. After sign-in, `/workspace` resolves the current organization membership: Owner/Manager go to `/manage/dashboard`, Cashier/Inventory/Purchasing staff go to `/work`; users without a membership continue at `/account` for onboarding.
+- Business pages use `/manage/...` for management and `/work/...` for daily work. An owner using `/work/products` or `/work/pos` stays in the work area, including internal links and POS return navigation. Administrative pages are available only under `/manage/...` and still require a management role and existing permissions.
+- Legacy `/dashboard`, `/staff` and unprefixed module bookmarks redirect to canonical paths, retaining IDs, query parameters and fragments. HTTP API paths remain unchanged.
 - Management and staff have separate menu sets and visible area/role labels. Shared operational routes keep their existing permission checks. Direct store-settings, employee-management and role-matrix pages also require Owner/Manager. Changing workspace never changes membership or grants permissions.
 - Public development readiness information moves to `/help/system`; it is not the management home or business reporting.
 - **Online sales are not enabled:** `/shop` explicitly states that public catalog, customer checkout, orders, shipping and online settlement are not connected. It displays no mock products and accepts no orders, delivery details or money. POS and its existing transaction flow remain unchanged.

@@ -1,4 +1,10 @@
-import { createBrowserRouter } from 'react-router-dom';
+import {
+  createBrowserRouter,
+  Navigate,
+  type RouteObject,
+} from 'react-router-dom';
+import { scopeWorkspaceRoutes } from './workspace-routes';
+import { LegacyWorkspaceRedirect } from '../features/workspace/WorkspaceRouting';
 import { LandingPage } from '../features/landing/LandingPage';
 import { RoleWorkspaceLayout } from '../layouts/RoleWorkspaceLayout';
 import { StorefrontLayout } from '../layouts/StorefrontLayout';
@@ -57,7 +63,7 @@ import {
   ResetPasswordPage,
 } from '../features/auth/AuthPages';
 
-export const router = createBrowserRouter([
+const routes: RouteObject[] = [
   { path: '/', element: <LandingPage /> },
   {
     path: paths.shop,
@@ -77,6 +83,18 @@ export const router = createBrowserRouter([
             element: <RequireSession />,
             children: [
               { path: paths.workspace, element: <WorkspaceEntryPage /> },
+              {
+                path: '/dashboard',
+                element: <LegacyWorkspaceRedirect path="/dashboard" />,
+              },
+              {
+                path: '/staff',
+                element: <LegacyWorkspaceRedirect path="/staff" />,
+              },
+              {
+                path: '/manage',
+                element: <Navigate to={paths.dashboard} replace />,
+              },
               {
                 element: <OrganizationGate />,
                 children: [
@@ -191,7 +209,10 @@ export const router = createBrowserRouter([
               {
                 element: <OrganizationGate permission="refunds.read" />,
                 children: [
-                  { path: '/sales/refunds', element: <ReturnsPage refunds /> },
+                  {
+                    path: '/sales/refunds',
+                    element: <ReturnsPage refunds />,
+                  },
                 ],
               },
               {
@@ -253,7 +274,10 @@ export const router = createBrowserRouter([
               {
                 element: <OrganizationGate permission="shelf.read" />,
                 children: [
-                  { path: '/shelves', element: <ShelfPage view="overview" /> },
+                  {
+                    path: '/shelves',
+                    element: <ShelfPage view="overview" />,
+                  },
                   {
                     path: '/shelves/:id',
                     element: <ShelfPage view="detail" />,
@@ -448,4 +472,6 @@ export const router = createBrowserRouter([
   { path: paths.forbidden, element: <SystemPage forbidden /> },
   { path: paths.notFound, element: <SystemPage /> },
   { path: '*', element: <SystemPage /> },
-]);
+];
+
+export const router = createBrowserRouter(scopeWorkspaceRoutes(routes));

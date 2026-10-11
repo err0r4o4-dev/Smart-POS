@@ -374,7 +374,7 @@ export function AccountPage() {
             isManagementRole(tenant.context.membership.role) && (
               <>
                 {' '}
-                · <Link to="/settings/store">จัดการองค์กรและสาขา</Link>
+                · <Link to="/manage/settings/store">จัดการองค์กรและสาขา</Link>
               </>
             )}
         </p>

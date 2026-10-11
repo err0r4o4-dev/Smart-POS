@@ -25,7 +25,7 @@ type Readiness interface{ Ready(context.Context) error }
 
 func Router(checker Readiness, logger *slog.Logger, authentication ...identity.Handler) http.Handler {
 	router := chi.NewRouter()
-	router.Use(httpx.RequestIDs, httpx.Security, httpx.Recover(logger), httpx.AccessLog(logger))
+	router.Use(httpx.RequestIDs, httpx.Security, httpx.AccessLog(logger), httpx.Recover(logger))
 	router.Get("/health/live", func(writer http.ResponseWriter, request *http.Request) {
 		httpx.JSON(writer, 200, map[string]string{"status": "ok"})
 	})

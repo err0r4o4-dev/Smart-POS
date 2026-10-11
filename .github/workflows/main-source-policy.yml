@@ -1,0 +1,28 @@
+name: Main source policy
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, reopened, synchronize, edited, ready_for_review]
+
+permissions: {}
+
+jobs:
+  main-source-policy:
+    name: Main source policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require develop from this repository
+        shell: bash
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_REPOSITORY_ID: ${{ github.event.pull_request.head.repo.id }}
+          REPOSITORY_ID: ${{ github.repository_id }}
+        run: |
+          if [[ "$BASE_REF" != "main" || "$HEAD_REF" != "develop" || "$HEAD_REPOSITORY_ID" != "$REPOSITORY_ID" ]]; then
+            printf '%s\n' '::error::Only develop from this repository may be merged into main.'
+            exit 1
+          fi
+          printf '%s\n' 'Source policy passed: develop from this repository targets main.'

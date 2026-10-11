@@ -1,12 +1,13 @@
 package transport
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"log/slog"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"smartpos/api/internal/platform/httpx"
@@ -44,7 +45,8 @@ func TestRoutes(t *testing.T) {
 	}
 	for _, item := range cases {
 		t.Run(item.name, func(t *testing.T) {
-			logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
+			var output bytes.Buffer
+			logger := slog.New(slog.NewJSONHandler(&output, nil))
 			request := httptest.NewRequest(item.method, item.path, nil)
 			request.Header.Set("X-Request-ID", "untrusted")
 			writer := httptest.NewRecorder()
@@ -58,6 +60,22 @@ func TestRoutes(t *testing.T) {
 			}
 			if writer.Header().Get("X-Content-Type-Options") != "nosniff" {
 				t.Fatal("missing security header")
+			}
+			accessCount := 0
+			for _, line := range strings.Split(strings.TrimSpace(output.String()), "\n") {
+				var entry map[string]any
+				if err := json.Unmarshal([]byte(line), &entry); err != nil {
+					t.Fatal(err)
+				}
+				if entry["msg"] == "http_request" {
+					accessCount++
+					if entry["status"] != float64(item.status) || entry["request_id"] != id || entry["path"] != item.path {
+						t.Fatalf("incorrect access log: %v", entry)
+					}
+				}
+			}
+			if accessCount != 1 {
+				t.Fatalf("access logs=%d", accessCount)
 			}
 			if item.code != "" {
 				var result struct {

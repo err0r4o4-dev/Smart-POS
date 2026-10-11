@@ -17,7 +17,7 @@ import (
 )
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil)).With("service", "api")
 	if err := run(logger); err != nil {
 		logger.Error("server stopped", "reason", err.Error())
 		os.Exit(1)
@@ -44,7 +44,7 @@ func run(logger *slog.Logger) error {
 	server := &http.Server{Addr: settings.Address, Handler: transport.Router(database.Checker{Pool: pool}, logger, identity.Handler{Service: authentication, Origins: settings.AllowedOrigins, Production: settings.Environment == "production", TrustedProxyIP: settings.TrustedProxyIP}), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 1 << 20}
 	failures := make(chan error, 1)
 	go func() { failures <- server.ListenAndServe() }()
-	logger.Info("server starting", "address", settings.Address)
+	logger.Info("server starting", "event", "server_starting", "address", settings.Address)
 	select {
 	case err := <-failures:
 		if errors.Is(err, http.ErrServerClosed) {
@@ -58,7 +58,7 @@ func run(logger *slog.Logger) error {
 			_ = server.Close()
 			return errors.New("graceful shutdown timed out")
 		}
-		logger.Info("server stopped gracefully")
+		logger.Info("server stopped gracefully", "event", "server_stopped")
 		return nil
 	}
 }

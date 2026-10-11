@@ -70,7 +70,11 @@
 }
 .shelf-metric-card.warning-card {
   border-color: var(--primary-border);
-  background: linear-gradient(180deg, var(--surface) 0%, var(--primary-subtle) 100%);
+  background: linear-gradient(
+    180deg,
+    var(--surface) 0%,
+    var(--primary-subtle) 100%
+  );
 }
 .shelf-cell-zone {
   display: flex;
@@ -101,4 +105,3 @@
   border-radius: var(--radius-small);
   white-space: nowrap;
 }
-

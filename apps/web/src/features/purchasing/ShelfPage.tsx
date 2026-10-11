@@ -129,14 +129,19 @@ function ShelfScreen({ view, id }: { view: string; id?: string }) {
               {view === 'overview' ? (
                 <>
                   {list.data?.items && list.data.items.length > 0 && (
-                    <div className="supply-layout" style={{ marginBottom: '16px' }}>
+                    <div
+                      className="supply-layout"
+                      style={{ marginBottom: '16px' }}
+                    >
                       <Card className="shelf-metric-card">
                         <div className="shelf-metric-header">
                           <span>ชั้นวางทั้งหมด</span>
                           <Layers size={18} aria-hidden="true" />
                         </div>
                         <div className="shelf-metric-value">
-                          <span>{list.data.total ?? list.data.items.length}</span>
+                          <span>
+                            {list.data.total ?? list.data.items.length}
+                          </span>
                           <small>จุดชั้นวาง</small>
                         </div>
                       </Card>
@@ -157,7 +162,9 @@ function ShelfScreen({ view, id }: { view: string; id?: string }) {
                       </Card>
                       <Card
                         className={`shelf-metric-card ${
-                          list.data.items.some((s) => (s.low_stock_count ?? 0) > 0)
+                          list.data.items.some(
+                            (s) => (s.low_stock_count ?? 0) > 0,
+                          )
                             ? 'warning-card'
                             : ''
                         }`}
@@ -251,7 +258,9 @@ function ShelfScreen({ view, id }: { view: string; id?: string }) {
                                   โซน: {shelf.zone}
                                 </span>
                               ) : (
-                                <small style={{ color: 'var(--text-tertiary)' }}>
+                                <small
+                                  style={{ color: 'var(--text-tertiary)' }}
+                                >
                                   ไม่ระบุโซน
                                 </small>
                               )}

@@ -295,7 +295,9 @@ export function ProductDetailsPage() {
                   </dd>
                   <dt>สถานะ</dt>
                   <dd>
-                    <Tag tone={statusTone(variant.status)}>{variant.status}</Tag>
+                    <Tag tone={statusTone(variant.status)}>
+                      {variant.status}
+                    </Tag>
                   </dd>
                   {Object.entries(variant.attributes).map(([key, value]) => (
                     <div className="catalog-dl-row" key={key}>

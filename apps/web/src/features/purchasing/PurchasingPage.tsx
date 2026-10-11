@@ -102,14 +102,18 @@ function PurchasingScreen({ view, id }: { view: string; id?: string }) {
               }}
             />
             <Field label="สถานะ">
-              <input
+              <select
                 value={status}
-                placeholder="ACTIVE / ORDERED / POSTED"
                 onChange={(event) => {
                   setStatus(event.target.value);
                   setPage(1);
                 }}
-              />
+              >
+                <option value="">ทั้งหมด</option>
+                <option value="ACTIVE">ACTIVE</option>
+                <option value="ORDERED">ORDERED</option>
+                <option value="POSTED">POSTED</option>
+              </select>
             </Field>
           </div>
           <QueryFeedback
@@ -149,6 +153,9 @@ function PurchasingScreen({ view, id }: { view: string; id?: string }) {
                 </tr>
               ))}
             </SupplyTable>
+            {query.data && (
+              <Pagination page={page} total={query.data.total} change={setPage} />
+            )}
           </Card>
         </>
       )}
@@ -240,6 +247,9 @@ function PurchasingScreen({ view, id }: { view: string; id?: string }) {
               </tr>
             ))}
           </SupplyTable>
+          {query.data && (
+            <Pagination page={page} total={query.data.total} change={setPage} />
+          )}
         </Card>
       )}
       {(['receipts', 'returns'] as const)
@@ -336,15 +346,15 @@ function PurchasingScreen({ view, id }: { view: string; id?: string }) {
               </tr>
             ))}
           </SupplyTable>
+          {query.data && (
+            <Pagination page={page} total={query.data.total} change={setPage} />
+          )}
           {selected && (
             <Link to={'/purchasing/orders/' + selected}>
               เปิด Draft ที่สร้าง
             </Link>
           )}
         </Card>
-      )}
-      {query.data && (
-        <Pagination page={page} total={query.data.total} change={setPage} />
       )}
     </section>
   );

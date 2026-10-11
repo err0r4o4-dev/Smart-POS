@@ -1,9 +1,11 @@
-import { Link, Outlet } from 'react-router-dom';
+import { Link, Outlet, useParams } from 'react-router-dom';
 import { ShoppingBag } from 'lucide-react';
 import { Brand, Tag } from '../components/ui/primitives';
 import { paths } from '../app/routes';
 
 export function StorefrontLayout() {
+  const { slug } = useParams();
+  const home = slug ? `/shop/${slug}` : paths.shop;
   return (
     <div className="storefront-shell" data-workspace="customer">
       <a className="skip-link" href="#main-content">
@@ -17,8 +19,9 @@ export function StorefrontLayout() {
           <ShoppingBag size={15} aria-hidden="true" /> สำหรับลูกค้า
         </Tag>
         <nav aria-label="เมนูหน้าร้านลูกค้า">
-          <Link to={paths.shop}>หน้าร้าน</Link>
-          <a href="#online-status">สถานะการเปิดขาย</a>
+          <Link to={home}>หน้าร้าน</Link>
+          <Link to={`${home}#online-status`}>สถานะการเปิดขาย</Link>
+          {slug && <Link to={`${home}/cart`}>ตะกร้าสินค้า</Link>}
         </nav>
       </header>
       <main id="main-content" className="storefront-content">

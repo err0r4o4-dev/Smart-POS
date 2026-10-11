@@ -6,6 +6,929 @@ info:
 servers:
   - url: /
 paths:
+  /api/v1/organizations/{id}/online-orders/{orderId}/pos-cart:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: importOnlineOrderToPOS
+      security:
+        - sessionCookie: []
+      description: online_orders.manage, pos.cart.manage, pos.checkout; READY, exact terminal/location and own open shift. Linked cart replay/resume is cashier-owned. Items/quantities locked; batch and latest price review required.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      responses:
+        '200':
+          description: Successful result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/POSCart'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '403':
+          description: Permission or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '404':
+          description: Not accessible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '409':
+          description: Revision, price, stock, source or state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OnlineOrderImportInput'
+  /api/v1/organizations/{id}/online-orders/{orderId}/status:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: transitionOnlineOrder
+      security:
+        - sessionCookie: []
+      description: online_orders.manage; PENDING -> PREPARING -> READY; rejection/cancellation requires public reason; no manual completion; linked cart must be reconciled in POS.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      responses:
+        '200':
+          description: Successful result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/OnlineOrder'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '403':
+          description: Permission or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '404':
+          description: Not accessible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '409':
+          description: Revision, price, stock, source or state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OnlineOrderTransitionInput'
+  /api/v1/organizations/{id}/online-orders/{orderId}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getOnlineOrder
+      security:
+        - sessionCookie: []
+      description: online_orders.read and branch access; staff-only contact.
+      parameters: []
+      responses:
+        '200':
+          description: Successful result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/OnlineOrder'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '403':
+          description: Permission or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '404':
+          description: Not accessible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '409':
+          description: Revision, price, stock, source or state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+  /api/v1/organizations/{id}/online-orders:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: listOnlineOrders
+      security:
+        - sessionCookie: []
+      description: online_orders.read; authorized branches only; 20 per page.
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+            default: 1
+        - name: branch_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - PENDING
+              - PREPARING
+              - READY
+              - COMPLETED
+              - REJECTED
+              - CANCELLED
+              - EXPIRED
+      responses:
+        '200':
+          description: Successful result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/OnlineOrderPage'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '403':
+          description: Permission or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '404':
+          description: Not accessible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '409':
+          description: Revision, price, stock, source or state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+  /api/v1/organizations/{id}/storefront/products/{variantId}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - name: variantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      operationId: publishStorefrontProduct
+      security:
+        - sessionCookie: []
+      description: storefront.manage; optimistic storefront revision increments.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      responses:
+        '200':
+          description: Successful result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/StorefrontProduct'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '403':
+          description: Permission or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '404':
+          description: Not accessible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '409':
+          description: Revision, price, stock, source or state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StorefrontPublishInput'
+  /api/v1/organizations/{id}/storefront/products:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: listManagedStorefrontProducts
+      security:
+        - sessionCookie: []
+      description: storefront.manage and branch access; 24 per page.
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+            default: 1
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 100
+      responses:
+        '200':
+          description: Successful result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/StorefrontProductPage'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '403':
+          description: Permission or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '404':
+          description: Not accessible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '409':
+          description: Revision, price, stock, source or state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+  /api/v1/organizations/{id}/storefront:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: getManagedStorefront
+      security:
+        - sessionCookie: []
+      description: storefront.manage and branch access; 404 until configured.
+      parameters: []
+      responses:
+        '200':
+          description: Successful result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/StorefrontSettings'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '403':
+          description: Permission or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '404':
+          description: Not accessible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '409':
+          description: Revision, price, stock, source or state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+    put:
+      operationId: saveManagedStorefront
+      security:
+        - sessionCookie: []
+      description: storefront.manage; initial revision 0; slug cannot change after any order; cannot move terminal/unpublish while live orders remain.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      responses:
+        '200':
+          description: Successful result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/StorefrontSettings'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '403':
+          description: Permission or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '404':
+          description: Not accessible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '409':
+          description: Revision, price, stock, source or state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StorefrontSettingsInput'
+  /api/v1/storefronts/{slug}/track:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[a-z][a-z0-9-]{2,49}$
+    post:
+      operationId: trackGuestOnlineOrder
+      security: []
+      description: Allowed Origin, 120/IP/minute; token in JSON body only, never URL path/query. Omits customer contact and internal IDs; works after unpublishing.
+      parameters: []
+      responses:
+        '200':
+          description: Successful result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PublicOnlineOrder'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '403':
+          description: Permission or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '404':
+          description: Not accessible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '409':
+          description: Revision, price, stock, source or state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StorefrontTrackingInput'
+  /api/v1/storefronts/{slug}/orders:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[a-z][a-z0-9-]{2,49}$
+    post:
+      operationId: createGuestOnlineOrder
+      security: []
+      description: Allowed Origin, 20/IP/hour; UUID Idempotency-Key becomes order ID; full-body fingerprint prevents duplicate retry; hashed access token; immutable snapshots; 48-hour expiry when unlinked. No reservation or online payment.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '201':
+          description: Successful result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PublicOnlineOrder'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '403':
+          description: Permission or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '404':
+          description: Not accessible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '409':
+          description: Revision, price, stock, source or state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StorefrontOrderInput'
+  /api/v1/storefronts/{slug}/quote:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[a-z][a-z0-9-]{2,49}$
+    post:
+      operationId: quoteGuestOnlineOrder
+      security: []
+      description: Allowed Origin, 120/IP/minute; authoritative estimate, no reservation; promotions confirmed at POS.
+      parameters: []
+      responses:
+        '200':
+          description: Successful result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/StorefrontQuote'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '403':
+          description: Permission or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '404':
+          description: Not accessible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '409':
+          description: Revision, price, stock, source or state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StorefrontQuoteInput'
+  /api/v1/storefronts/{slug}/products:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[a-z][a-z0-9-]{2,49}$
+    get:
+      operationId: listPublicStorefrontProducts
+      security: []
+      description: Published active variants; saleable source availability; 24 per page.
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+            default: 1
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 100
+      responses:
+        '200':
+          description: Successful result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/StorefrontProductPage'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '403':
+          description: Permission or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '404':
+          description: Not accessible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '409':
+          description: Revision, price, stock, source or state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+  /api/v1/storefronts/{slug}:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[a-z][a-z0-9-]{2,49}$
+    get:
+      operationId: getPublicStorefront
+      security: []
+      description: Internal source IDs omitted.
+      parameters: []
+      responses:
+        '200':
+          description: Successful result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/StorefrontSettings'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '403':
+          description: Permission or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '404':
+          description: Not accessible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '409':
+          description: Revision, price, stock, source or state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+  /api/v1/storefronts:
+    parameters: []
+    get:
+      operationId: listPublicStorefronts
+      security: []
+      description: Published stores only.
+      parameters: []
+      responses:
+        '200':
+          description: Successful result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    maxItems: 100
+                    items:
+                      $ref: '#/components/schemas/StorefrontDirectoryEntry'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '403':
+          description: Permission or Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '404':
+          description: Not accessible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '409':
+          description: Revision, price, stock, source or state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
   /api/v1/organizations/{id}/categories:
     parameters:
       - $ref: '#/components/parameters/OrganizationID'
@@ -16741,6 +17664,575 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
   schemas:
+    StorefrontSettings:
+      type: object
+      additionalProperties: false
+      required:
+        - slug
+        - name
+        - description
+        - contact_phone
+        - pickup_instructions
+        - published
+        - accepting_orders
+        - revision
+      properties:
+        slug:
+          type: string
+          pattern: ^[a-z][a-z0-9-]{2,49}$
+        name:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 1000
+        contact_phone:
+          type: string
+          maxLength: 30
+        pickup_instructions:
+          type: string
+          maxLength: 1000
+        published:
+          type: boolean
+        accepting_orders:
+          type: boolean
+        revision:
+          type: integer
+          minimum: 1
+        terminal_id:
+          type: string
+          format: uuid
+        branch_id:
+          type: string
+          format: uuid
+        stock_location_id:
+          type: string
+          format: uuid
+    StorefrontSettingsInput:
+      type: object
+      additionalProperties: false
+      required:
+        - slug
+        - name
+        - description
+        - contact_phone
+        - pickup_instructions
+        - published
+        - accepting_orders
+        - revision
+        - terminal_id
+      properties:
+        slug:
+          type: string
+          pattern: ^[a-z][a-z0-9-]{2,49}$
+        name:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 1000
+        contact_phone:
+          type: string
+          maxLength: 30
+        pickup_instructions:
+          type: string
+          maxLength: 1000
+        published:
+          type: boolean
+        accepting_orders:
+          type: boolean
+        revision:
+          type: integer
+          minimum: 0
+        terminal_id:
+          type: string
+          format: uuid
+    StorefrontDirectoryEntry:
+      type: object
+      additionalProperties: false
+      required:
+        - slug
+        - name
+        - accepting_orders
+      properties:
+        slug:
+          type: string
+        name:
+          type: string
+        accepting_orders:
+          type: boolean
+    StorefrontProduct:
+      type: object
+      additionalProperties: false
+      required:
+        - variant_id
+        - product_name
+        - variant_name
+        - sku
+        - unit
+        - unit_type
+        - unit_price
+        - available
+        - saleable
+        - published
+      properties:
+        variant_id:
+          type: string
+          format: uuid
+        product_name:
+          type: string
+        variant_name:
+          type: string
+        sku:
+          type: string
+        unit:
+          type: string
+        unit_type:
+          type: string
+          enum:
+            - COUNT
+            - WEIGHT
+            - VOLUME
+            - PACKAGING
+        unit_price:
+          $ref: '#/components/schemas/POSMoney'
+        available:
+          $ref: '#/components/schemas/InventoryQuantity'
+        saleable:
+          type: boolean
+        published:
+          type: boolean
+    StorefrontItemInput:
+      type: object
+      additionalProperties: false
+      required:
+        - variant_id
+        - quantity
+      properties:
+        variant_id:
+          type: string
+          format: uuid
+        quantity:
+          $ref: '#/components/schemas/InventoryQuantity'
+    StorefrontQuoteInput:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/StorefrontItemInput'
+          minItems: 1
+          maxItems: 100
+    StorefrontLine:
+      type: object
+      additionalProperties: false
+      required:
+        - variant_id
+        - product_name
+        - variant_name
+        - sku
+        - unit
+        - quantity
+        - unit_price
+        - line_total
+      properties:
+        variant_id:
+          type: string
+          format: uuid
+        product_name:
+          type: string
+        variant_name:
+          type: string
+        sku:
+          type: string
+        unit:
+          type: string
+        quantity:
+          $ref: '#/components/schemas/InventoryQuantity'
+        unit_price:
+          $ref: '#/components/schemas/POSMoney'
+        line_total:
+          $ref: '#/components/schemas/POSMoney'
+    StorefrontQuote:
+      type: object
+      additionalProperties: false
+      required:
+        - quote_id
+        - items
+        - estimated_total
+        - currency
+      properties:
+        quote_id:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/StorefrontLine'
+        estimated_total:
+          $ref: '#/components/schemas/POSMoney'
+        currency:
+          const: THB
+          type: string
+    StorefrontOrderInput:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - quote_id
+        - customer_name
+        - contact_phone
+        - customer_note
+        - access_token
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/StorefrontItemInput'
+          minItems: 1
+          maxItems: 100
+        quote_id:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        customer_name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        contact_phone:
+          type: string
+          pattern: ^[0-9+() .-]{3,30}$
+        customer_note:
+          type: string
+          maxLength: 1000
+        access_token:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+          writeOnly: true
+    StorefrontTrackingInput:
+      type: object
+      additionalProperties: false
+      required:
+        - order_id
+        - access_token
+      properties:
+        order_id:
+          type: string
+          format: uuid
+        access_token:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+          writeOnly: true
+    OnlineOrderEvent:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+        - message
+        - created_at
+      properties:
+        status:
+          type: string
+        message:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    PublicOnlineOrder:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - number
+        - status
+        - payment_status
+        - store_name
+        - store_phone
+        - pickup_instructions
+        - estimated_total
+        - final_total
+        - receipt_number
+        - revision
+        - created_at
+        - expires_at
+        - items
+        - events
+      properties:
+        id:
+          type: string
+          format: uuid
+        number:
+          type: string
+        status:
+          type: string
+          enum:
+            - PENDING
+            - PREPARING
+            - READY
+            - COMPLETED
+            - REJECTED
+            - CANCELLED
+            - EXPIRED
+        payment_status:
+          type: string
+          enum:
+            - UNPAID
+            - PAID_AT_STORE
+        store_name:
+          type: string
+        store_phone:
+          type: string
+        pickup_instructions:
+          type: string
+        estimated_total:
+          $ref: '#/components/schemas/POSMoney'
+        final_total:
+          anyOf:
+            - $ref: '#/components/schemas/POSMoney'
+            - type: 'null'
+        receipt_number:
+          type:
+            - string
+            - 'null'
+        revision:
+          type: integer
+          minimum: 1
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/StorefrontLine'
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/OnlineOrderEvent'
+    OnlineOrder:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - number
+        - status
+        - payment_status
+        - store_name
+        - store_phone
+        - pickup_instructions
+        - estimated_total
+        - final_total
+        - receipt_number
+        - revision
+        - created_at
+        - expires_at
+        - items
+        - events
+        - customer_name
+        - contact_phone
+        - branch_id
+        - terminal_id
+      properties:
+        id:
+          type: string
+          format: uuid
+        number:
+          type: string
+        status:
+          type: string
+          enum:
+            - PENDING
+            - PREPARING
+            - READY
+            - COMPLETED
+            - REJECTED
+            - CANCELLED
+            - EXPIRED
+        payment_status:
+          type: string
+          enum:
+            - UNPAID
+            - PAID_AT_STORE
+        store_name:
+          type: string
+        store_phone:
+          type: string
+        pickup_instructions:
+          type: string
+        estimated_total:
+          $ref: '#/components/schemas/POSMoney'
+        final_total:
+          anyOf:
+            - $ref: '#/components/schemas/POSMoney'
+            - type: 'null'
+        receipt_number:
+          type:
+            - string
+            - 'null'
+        revision:
+          type: integer
+          minimum: 1
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/StorefrontLine'
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/OnlineOrderEvent'
+        customer_name:
+          type: string
+        contact_phone:
+          type: string
+        customer_note:
+          type: string
+        branch_id:
+          type: string
+          format: uuid
+        terminal_id:
+          type: string
+          format: uuid
+        cart_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        sale_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+    OnlineOrderTransitionInput:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+        - message
+        - revision
+      properties:
+        status:
+          type: string
+          enum:
+            - PREPARING
+            - READY
+            - REJECTED
+            - CANCELLED
+        message:
+          type: string
+          maxLength: 1000
+        revision:
+          type: integer
+          minimum: 1
+    StorefrontPublishInput:
+      type: object
+      additionalProperties: false
+      required:
+        - published
+        - revision
+      properties:
+        published:
+          type: boolean
+        revision:
+          type: integer
+          minimum: 1
+    OnlineOrderImportInput:
+      type: object
+      additionalProperties: false
+      required:
+        - revision
+      properties:
+        revision:
+          type: integer
+          minimum: 1
+    OnlineOrderLink:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - number
+        - estimated_total
+      properties:
+        id:
+          type: string
+          format: uuid
+        number:
+          type: string
+        estimated_total:
+          $ref: '#/components/schemas/POSMoney'
+    StorefrontProductPage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - total
+        - page
+        - page_size
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/StorefrontProduct'
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          const: 24
+    OnlineOrderPage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - total
+        - page
+        - page_size
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OnlineOrder'
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          const: 20
+    StorefrontError:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required:
+            - code
+            - message
+            - request_id
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            request_id:
+              type: string
     LoyaltyProgramInput:
       type: object
       additionalProperties: false
@@ -21228,6 +22720,8 @@ components:
         - total
         - review_required
       properties:
+        online_order:
+          $ref: '#/components/schemas/OnlineOrderLink'
         customer_id:
           type:
             - string

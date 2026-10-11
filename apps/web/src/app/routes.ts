@@ -36,6 +36,18 @@ export interface NavigationItem {
 }
 const managementItems: NavigationItem[] = [
   {
+    to: '/settings/storefront',
+    label: 'หน้าร้านออนไลน์',
+    icon: 'dashboard',
+    permission: 'storefront.manage',
+  },
+  {
+    to: '/online-orders',
+    label: 'ออเดอร์ออนไลน์',
+    icon: 'pos',
+    permission: 'online_orders.read',
+  },
+  {
     to: '/inventory/batches',
     label: 'Batch/Expiry/Quality',
     icon: 'dashboard',
@@ -208,6 +220,7 @@ const staffItems: NavigationItem[] = [
       '/suppliers',
       '/purchasing/orders',
       '/customers',
+      '/online-orders',
       '/loyalty',
     ].includes(item.to),
   ),
@@ -240,7 +253,11 @@ export interface NavigationGroup {
 }
 
 const managementGroups: NavigationGroup[] = [
-  { id: 'sales', label: 'การขาย', paths: ['/pos', '/sales', '/receipts'] },
+  {
+    id: 'sales',
+    label: 'การขาย',
+    paths: ['/pos', '/online-orders', '/sales', '/receipts'],
+  },
   {
     id: 'returns',
     label: 'คืนสินค้าและคืนเงิน',
@@ -277,6 +294,7 @@ const managementGroups: NavigationGroup[] = [
     paths: [
       paths.setup,
       paths.store,
+      '/settings/storefront',
       paths.branches,
       paths.employees,
       paths.roles,
@@ -291,6 +309,7 @@ const staffGroups: NavigationGroup[] = [
     label: 'งานขายหน้าร้าน',
     paths: [
       '/pos/register/open',
+      '/online-orders',
       '/pos',
       '/pos/register/close',
       '/sales',

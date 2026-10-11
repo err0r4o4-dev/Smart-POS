@@ -13,6 +13,7 @@ const businessRoots = [
   '/receipts',
   '/pos',
   '/customers',
+  '/online-orders',
   '/loyalty',
   '/pricing',
   '/promotions',

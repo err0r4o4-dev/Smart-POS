@@ -10,13 +10,13 @@ Intelligent Retail Management System - Modular Go monolith, React/TypeScript, in
 - Legacy `/dashboard`, `/staff` and unprefixed module bookmarks redirect to canonical paths, retaining IDs, query parameters and fragments. HTTP API paths remain unchanged.
 - Management and staff have separate menu sets and visible area/role labels. Shared operational routes keep their existing permission checks. Direct store-settings, employee-management and role-matrix pages also require Owner/Manager. Changing workspace never changes membership or grants permissions.
 - Public development readiness information moves to `/help/system`; it is not the management home or business reporting.
-- **Online sales are not enabled:** `/shop` explicitly states that public catalog, customer checkout, orders, shipping and online settlement are not connected. It displays no mock products and accepts no orders, delivery details or money. POS and its existing transaction flow remain unchanged.
+- **Pickup orders are implemented:** `/shop` lists published stores and selected real products. Guests create an unpaid order, staff prepares it, and the customer pays at the store through existing POS. There is no reservation, shipping, customer account, or online payment. See [setup and usage](docs/architecture/storefront.md).
 
-See [workspace boundaries](docs/architecture/workspaces.md). No database/API migration is required for this UI separation.
+See [workspace boundaries](docs/architecture/workspaces.md). The original workspace separation is UI-only; the storefront extension requires migration 14 and the matching API/web release. The persistent primary stack is not upgraded automatically by verification.
 
 ## Quick start
 
-Prerequisites: Docker Desktop Linux containers with Docker Compose; Node.js24 for host frontend. Go/Python run through Docker. Startup below automatically migrates through version12: use only for an explicitly approved new/local database. Never use the persistent primary volume as a verification target; acceptance uses isolated `smartpos-auth-test`.
+Prerequisites: Docker Desktop Linux containers with Docker Compose; Node.js24 for host frontend. Go/Python run through Docker. Startup below automatically migrates through version14: use only for an explicitly approved new/local database. Never use the persistent primary volume as a verification target; acceptance uses isolated `smartpos-auth-test`.
 
 ```powershell
 Copy-Item .env.example .env
@@ -70,7 +70,7 @@ Host Vite at http://localhost:5173 proxies `/api` and `/health` to Go at port 80
 - **Phase5.5 completed (Local):** PostgreSQL rules/accounts, immutable points, exact committed earning/reward reservations/discounts, authorized adjustments and historical Return/Exchange/reversal compensation. Two routes, schema12,249 Loyalty API assertions,144 frontend/37 browser tests and17 zero-mismatch checks; see [Loyalty](docs/architecture/loyalty.md) and [acceptance](docs/development/phase55-verification.md).
 - **Phase5.6 completed (Local):** explicit tracked/untracked stock, batch receiving/picking, FEFO/expiry/quarantine, approved write-offs and irreversible recalls. Four routes and schema13; [Quality architecture](docs/architecture/quality.md) documents operational limits.
 - **Phase5.7 completed (Local):** 23 API suites/2620 numbered assertions plus Auth/Organization checks, 120 frontend tests, 37 gateway browser tests, fresh1–13/10 SQL suites, Go race, isolated resilience and32 zero-mismatch checks. See [final acceptance](docs/development/phase57-verification.md).
-- **Documented/planned:** canonical16 modules/106 planned routes do not mean106 implemented pages. Valuation, split-lot picking, hardware/payment certification and Phase6–7 remain deferred.
+- **Documented/planned:** canonical17 modules/113 logical routes include both implemented and planned pages. Valuation, split-lot picking, hardware/payment certification and Phase6–7 remain deferred.
 
 Current verification: `node scripts/check-phase56-migrations.mjs --start` creates and retains a fresh isolated schema13 DB and points only the test stack to it. Set `AUTH_TEST_DATABASE` from `.local/phase56-database.json`; run `npm run verify:loyalty`, `npm run verify:quality`, `node tests/integration/phase57-flow.mjs` and `node scripts/check-auth.mjs --workers=2`. Never use the primary DB. Historical schema12 checkers are not current acceptance tools. See the final report for exact safe environment and resilience settings.
 

@@ -39,6 +39,7 @@ export interface POSItem {
   previous_price: string;
 }
 export interface POSCart {
+  online_order?: { id: string; number: string; estimated_total: string };
   customer_id?: string | null;
   customer?: CustomerSelection | null;
   customer_cleared?: boolean;

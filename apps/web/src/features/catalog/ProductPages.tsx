@@ -32,6 +32,12 @@ import { ProductFields, VariantFields, VariantEditor } from './ProductForm';
 import { BarcodeScanner } from './BarcodeScanner';
 import { BarcodeManager } from './BarcodeManager';
 
+function statusTone(status: string): 'success' | 'amber' | 'neutral' {
+  if (status === 'ACTIVE') return 'success';
+  if (status === 'INACTIVE') return 'amber';
+  return 'neutral';
+}
+
 export function ProductsPage() {
   const catalog = useCatalog();
   const [params, setParams] = useSearchParams();
@@ -213,11 +219,7 @@ export function ProductsPage() {
                         ))}
                       </td>
                       <td>
-                        <Tag
-                          tone={
-                            product.status === 'ACTIVE' ? 'success' : 'neutral'
-                          }
-                        >
+                        <Tag tone={statusTone(product.status)}>
                           {product.status}
                         </Tag>
                       </td>
@@ -264,9 +266,7 @@ export function ProductDetailsPage() {
               </span>
               <div>
                 <h2>{query.data.name}</h2>
-                <Tag
-                  tone={query.data.status === 'ACTIVE' ? 'success' : 'neutral'}
-                >
+                <Tag tone={statusTone(query.data.status)}>
                   {query.data.status}
                 </Tag>
                 <p>{query.data.description || 'ไม่มีคำอธิบาย'}</p>
@@ -294,7 +294,9 @@ export function ProductDetailsPage() {
                     {variant.currency}
                   </dd>
                   <dt>สถานะ</dt>
-                  <dd>{variant.status}</dd>
+                  <dd>
+                    <Tag tone={statusTone(variant.status)}>{variant.status}</Tag>
+                  </dd>
                   {Object.entries(variant.attributes).map(([key, value]) => (
                     <div className="catalog-dl-row" key={key}>
                       <dt>{key}</dt>

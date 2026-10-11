@@ -33,6 +33,13 @@
 .customer-record p {
   margin: 0;
 }
+.customer-record > a {
+  line-height: 1.6;
+}
+.customer-contact-label,
+.customer-record > small {
+  color: var(--text-strong);
+}
 .customer-form {
   display: grid;
   gap: 14px;

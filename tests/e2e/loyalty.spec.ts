@@ -69,10 +69,17 @@ test('Loyalty real program/enrollment/adjustment, POS redemption, history and re
     await page
       .getByRole('button', { name: 'บันทึก / Save', exact: true })
       .click();
+    const program = page
+      .locator('.loyalty-program')
+      .filter({ hasText: 'Browser loyalty' });
     await expect(
-      page.getByText('Browser loyalty · ACTIVE · 1.00 THB → 1 points', {
-        exact: true,
-      }),
+      program.getByText('Browser loyalty', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      program.getByText('เปิดใช้งาน / Active', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      program.getByText('ยอดซื้อทุก 1.00 บาท ได้ 1 แต้ม', { exact: true }),
     ).toBeVisible();
     await page
       .getByRole('combobox', { name: 'ลูกค้า / Customer', exact: true })
@@ -102,7 +109,12 @@ test('Loyalty real program/enrollment/adjustment, POS redemption, history and re
     await account
       .getByRole('button', { name: 'ปรับแต้ม / Adjust points', exact: true })
       .click();
-    await expect(account).toContainText('Ledger balance: 20');
+    await expect(
+      account
+        .locator('.loyalty-balances > div')
+        .filter({ hasText: 'แต้มคงเหลือ / Points balance' })
+        .locator('dd'),
+    ).toHaveText('20');
     for (const width of [320, 375, 768, 1280, 1920]) {
       await page.setViewportSize({ width, height: 1000 });
       await page.evaluate(() => window.scrollTo(0, 0));
@@ -169,10 +181,16 @@ test('Loyalty real program/enrollment/adjustment, POS redemption, history and re
     ).toBe('11');
     await page.goto(`/loyalty/history?customer_id=${customer.id}`);
     await expect(
-      page.getByRole('heading', { name: 'EARN · 1', exact: true }),
+      page.getByRole('heading', {
+        name: 'ได้รับแต้มจากการซื้อ · +1 แต้ม',
+        exact: true,
+      }),
     ).toBeVisible();
     await expect(
-      page.getByRole('heading', { name: 'REDEEM · -10', exact: true }),
+      page.getByRole('heading', {
+        name: 'ใช้แต้มเป็นส่วนลด · -10 แต้ม',
+        exact: true,
+      }),
     ).toBeVisible();
     await page
       .getByText('รายละเอียดกฎ / Rule snapshot', { exact: true })

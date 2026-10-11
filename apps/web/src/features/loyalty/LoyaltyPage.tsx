@@ -4,7 +4,8 @@ import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
-import { Button, Card, Loading } from '../../components/ui/primitives';
+import { Button, Card, Loading, Tag } from '../../components/ui/primitives';
+import { moneyText } from '../../lib/pos-api';
 import { Field } from '../purchasing/SupplyUI';
 import {
   customerRequest,
@@ -36,7 +37,7 @@ const copy = {
   customer: 'ลูกค้า / Customer',
   choose: 'เลือกลูกค้า / Choose customer',
   search: 'ค้นหารหัสหรือชื่อ / Search code or name',
-  balance: 'ยอด ledger / Ledger balance',
+  balance: 'แต้มคงเหลือ / Points balance',
   available: 'แต้มใช้ได้ / Available points',
   reason: 'เหตุผล (จำเป็น) / Reason (required)',
   adjust: 'ปรับแต้ม / Adjust points',
@@ -54,6 +55,27 @@ const copy = {
   suspend: 'ระงับบัญชี / Suspend account',
   activate: 'เปิดบัญชี / Activate account',
 } as const;
+const entryLabels: Record<string, string> = {
+  ADJUST: 'ปรับแต้ม',
+  EARN: 'ได้รับแต้มจากการซื้อ',
+  REDEEM: 'ใช้แต้มเป็นส่วนลด',
+  EARN_REVERSAL: 'หักแต้มที่เคยได้รับ',
+  REDEEM_REVERSAL: 'คืนแต้มที่ใช้เป็นส่วนลด',
+};
+function pointsText(value: string) {
+  return value.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+function MemberStatus({ status }: { status: string }) {
+  return (
+    <Tag tone={status === 'ACTIVE' ? 'success' : 'neutral'}>
+      {status === 'ACTIVE'
+        ? copy.active
+        : status === 'SUSPENDED'
+          ? copy.suspended
+          : status}
+    </Tag>
+  );
+}
 function useScope() {
   const tenant = useOrganization(),
     { state } = useAuth();
@@ -159,19 +181,34 @@ export function LoyaltyPage({ history = false }: { history?: boolean }) {
       {query.data?.items.length === 0 && <p>{copy.empty}</p>}
       {history
         ? entries.data?.items.map((entry) => (
-            <Card key={entry.id}>
+            <Card key={entry.id} className="loyalty-entry">
               <h2>
-                {entry.kind} · {entry.points}
+                {entryLabels[entry.kind] ?? entry.kind} ·{' '}
+                <span className="loyalty-points">
+                  {entry.points.startsWith('-') || entry.points === '0'
+                    ? ''
+                    : '+'}
+                  {pointsText(entry.points)} แต้ม
+                </span>
               </h2>
-              <p>
-                {entry.reason} · {new Date(entry.created_at).toLocaleString()}
+              <p className="loyalty-entry-date">
+                <time dateTime={entry.created_at}>
+                  {new Date(entry.created_at).toLocaleString('th-TH', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </time>
               </p>
+              <p>{entry.reason}</p>
               {entry.sale_id && (
-                <Link to={`/sales/${entry.sale_id}`}>Sale</Link>
+                <Link to={`/sales/${entry.sale_id}`}>ดูรายการขาย / Sale</Link>
               )}{' '}
               {entry.return_id && (
                 <Link to={`/pos/returns?return_id=${entry.return_id}`}>
-                  Return
+                  ดูรายการคืนสินค้า / Return
                 </Link>
               )}
               <details>
@@ -229,10 +266,14 @@ function Programs() {
       <Feedback error={query.error} />
       {query.data?.items.map((program) => (
         <div className="loyalty-actions" key={program.id}>
-          <span>
-            {program.name} · {program.status} · {program.spend} THB →{' '}
-            {program.earn_points} points
-          </span>
+          <div className="loyalty-program">
+            <strong>{program.name}</strong>
+            <MemberStatus status={program.status} />
+            <p>
+              ยอดซื้อทุก {moneyText(program.spend)} บาท ได้{' '}
+              {program.earn_points.toLocaleString('th-TH')} แต้ม
+            </p>
+          </div>
           {scope.tenant.can('loyalty.manage') && (
             <Button
               onClick={() => {
@@ -431,40 +472,56 @@ function Account({ account }: { account: LoyaltyAccount }) {
     [points, setPoints] = useState(''),
     [reason, setReason] = useState('');
   return (
-    <Card>
+    <Card className="loyalty-account">
       <h2>
         {account.customer_code} · {account.customer_name}
       </h2>
       <p>
-        {account.program_name} · {account.status} / {account.program_status}
+        {copy.program}: {account.program_name}
       </p>
-      <p>
-        {copy.balance}: <strong>{account.balance}</strong> · {copy.available}:{' '}
-        <strong>{account.available}</strong>
-      </p>
-      <Link to={`/loyalty/history?customer_id=${account.customer_id}`}>
-        {copy.history}
-      </Link>{' '}
-      <Link to={`/customers/${account.customer_id}`}>{copy.customer}</Link>
-      {scope.tenant.can('loyalty.manage') && (
-        <Button
-          disabled={command.isPending}
-          onClick={() =>
-            command.mutate({
-              path: `/loyalty/accounts/${account.id}`,
-              method: 'PUT',
-              body: {
-                customer_id: account.customer_id,
-                program_id: account.program_id,
-                status: account.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE',
-                revision: account.revision,
-              },
-            })
-          }
-        >
-          {account.status === 'ACTIVE' ? copy.suspend : copy.activate}
-        </Button>
-      )}
+      <div className="loyalty-actions">
+        <span>
+          สถานะสมาชิก: <MemberStatus status={account.status} />
+        </span>
+        <span>
+          สถานะโปรแกรม: <MemberStatus status={account.program_status} />
+        </span>
+      </div>
+      <dl className="loyalty-balances">
+        <div>
+          <dt>{copy.balance}</dt>
+          <dd>{pointsText(account.balance)}</dd>
+        </div>
+        <div>
+          <dt>{copy.available}</dt>
+          <dd>{pointsText(account.available)}</dd>
+        </div>
+      </dl>
+      <div className="loyalty-actions loyalty-account-actions">
+        <Link to={`/loyalty/history?customer_id=${account.customer_id}`}>
+          {copy.history}
+        </Link>
+        <Link to={`/customers/${account.customer_id}`}>{copy.customer}</Link>
+        {scope.tenant.can('loyalty.manage') && (
+          <Button
+            disabled={command.isPending}
+            onClick={() =>
+              command.mutate({
+                path: `/loyalty/accounts/${account.id}`,
+                method: 'PUT',
+                body: {
+                  customer_id: account.customer_id,
+                  program_id: account.program_id,
+                  status: account.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE',
+                  revision: account.revision,
+                },
+              })
+            }
+          >
+            {account.status === 'ACTIVE' ? copy.suspend : copy.activate}
+          </Button>
+        )}
+      </div>
       {scope.tenant.can('loyalty.adjust') && account.status === 'ACTIVE' && (
         <form
           className="loyalty-form"

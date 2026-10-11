@@ -7,6 +7,7 @@ import { Button, Card, Loading, Tag } from '../../components/ui/primitives';
 import { CatalogError } from '../catalog/CatalogUI';
 import { Field, SupplyTable } from '../purchasing/SupplyUI';
 import type { POSPage, POSShift, SaleSummary } from '../../lib/pos-api';
+import { moneyText } from '../../lib/pos-api';
 import {
   validReturnQuantity,
   type CustomerReturn,
@@ -21,6 +22,24 @@ import { untrackedBatch } from '../../lib/quality-api';
 
 type Command = ReturnType<typeof useReturnsCommand>;
 type Location = { id: string; name: string; type: string; status: string };
+function RefundStatus({ status, text }: { status: string; text: ReturnsCopy }) {
+  return (
+    <Tag
+      tone={
+        status === 'CONFIRMED'
+          ? 'success'
+          : status === 'RECONCILIATION_REQUIRED'
+            ? 'error'
+            : status === 'PENDING_SETTLEMENT' ||
+                status === 'SETTLEMENT_REPORTED'
+              ? 'amber'
+              : 'neutral'
+      }
+    >
+      {text.refundStatuses[status] ?? status}
+    </Tag>
+  );
+}
 export function ReturnsPage({ refunds = false }: { refunds?: boolean }) {
   const tenant = useOrganization(),
     { state } = useAuth();
@@ -82,7 +101,7 @@ function ReturnsWorkspace({ refunds }: { refunds: boolean }) {
       {!refunds && tenant.can('returns.create') && (
         <ReturnForm text={text} command={command} created={setSelected} />
       )}
-      <Card>
+      <Card className="returns-history">
         <h2>{refunds ? text.refundList : text.list}</h2>
         <Field label={text.filter}>
           <input
@@ -115,9 +134,15 @@ function ReturnsWorkspace({ refunds }: { refunds: boolean }) {
                     </Button>
                   </td>
                   <td>
-                    <Tag>{item.status}</Tag>
+                    {refunds ? (
+                      <RefundStatus status={item.status} text={text} />
+                    ) : (
+                      <Tag>{item.status}</Tag>
+                    )}
                   </td>
-                  <td>{item.amount} THB</td>
+                  <td className="returns-amount">
+                    {moneyText(item.amount)} THB
+                  </td>
                 </tr>
               ))}
             </SupplyTable>
@@ -579,13 +604,23 @@ function RefundDetails({
   return (
     <>
       <p className="returns-reference">{refund.id}</p>
-      <Tag>{refund.status}</Tag>
+      <RefundStatus status={refund.status} text={text} />
       <p>
-        {text.amount}: {refund.amount} THB
+        {text.amount}: <strong>{moneyText(refund.amount)} THB</strong>
       </p>
       <p>{text.warning}</p>
       <p>
-        {refund.method} {refund.reference}
+        {text.method}:{' '}
+        {refund.method === 'CASH_REFUND'
+          ? text.cash
+          : refund.method === 'MANUAL_BANK_REFUND'
+            ? text.bank
+            : refund.method === 'MANUAL_ORIGINAL_METHOD_REFUND'
+              ? text.original
+              : refund.method || text.notReported}
+      </p>
+      <p>
+        {text.reference}: {refund.reference || text.notReported}
       </p>
       <p>{refund.settlement_note}</p>
       <p className="returns-reference">

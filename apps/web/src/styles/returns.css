@@ -32,6 +32,23 @@
 .returns-page li {
   overflow-wrap: anywhere;
 }
+.returns-page .returns-amount {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.returns-history .catalog-table th:last-child {
+  text-align: right;
+}
+.returns-history > .catalog-actions {
+  align-items: center;
+  margin-block: 24px 0;
+}
+.returns-page .tag {
+  white-space: normal;
+  text-align: start;
+}
 .returns-ack {
   display: flex;
   align-items: flex-start;

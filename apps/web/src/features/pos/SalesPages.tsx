@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { Printer } from 'lucide-react';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
@@ -9,6 +10,7 @@ import {
   Card,
   ErrorState,
   Loading,
+  Tag,
 } from '../../components/ui/primitives';
 import {
   posRequest,
@@ -70,8 +72,9 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
           <p className="eyebrow">COMMITTED TRANSACTIONS</p>
           <h1>{receipts ? 'ใบเสร็จ' : 'ประวัติการขาย'}</h1>
           <p>
-            แคชเชียร์เห็นเฉพาะรายการของตนเอง
-            สาขาที่ไม่มีสิทธิ์ถูกปฏิเสธโดยเซิร์ฟเวอร์
+            {receipts
+              ? 'ค้นหาใบเสร็จและเปิดรายละเอียดเพื่อพิมพ์ซ้ำ'
+              : 'ตรวจสอบยอดขาย วิธีชำระเงิน และรายการขายที่เสร็จสมบูรณ์'}
           </p>
         </div>
         <Link to="/pos">ไปขายสินค้า</Link>
@@ -123,7 +126,7 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
             </select>
           </label>
           <label>
-            Cashier UUID
+            รหัสแคชเชียร์ (UUID)
             <input
               value={cashier}
               onChange={(event) => {
@@ -142,7 +145,7 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
               }}
             >
               <option value="">ทั้งหมด</option>
-              <option value="COMPLETED">COMPLETED</option>
+              <option value="COMPLETED">ขายสำเร็จ</option>
             </select>
           </label>
           <label>
@@ -175,7 +178,12 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
             retry={() => void query.refetch()}
           />
         )}
-        <div className="table-scroll">
+        <div
+          className="table-scroll sales-history-table"
+          role="region"
+          aria-label={receipts ? 'รายการใบเสร็จ' : 'รายการขาย'}
+          tabIndex={0}
+        >
           <table>
             <thead>
               <tr>
@@ -183,7 +191,7 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
                 <th>วัน / เวลา</th>
                 <th>สาขา / เครื่อง</th>
                 <th>แคชเชียร์</th>
-                <th>ยอดรวม</th>
+                <th className="sales-amount">ยอดรวม (บาท)</th>
                 <th>ชำระเงิน / สถานะ</th>
                 <th>รายการ</th>
               </tr>
@@ -191,29 +199,86 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
             <tbody>
               {query.data?.items.map((item) => (
                 <tr key={item.id}>
-                  <td>{receipts ? item.receipt_number : item.sale_number}</td>
-                  <td>{new Date(item.completed_at).toLocaleString('th-TH')}</td>
+                  <td className="sales-number">
+                    <strong>
+                      {receipts ? item.receipt_number : item.sale_number}
+                    </strong>
+                  </td>
+                  <td className="sales-date">
+                    <time dateTime={item.completed_at}>
+                      {new Date(item.completed_at).toLocaleDateString('th-TH', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                      <span className="sales-secondary">
+                        {new Date(item.completed_at).toLocaleTimeString(
+                          'th-TH',
+                          {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          },
+                        )}{' '}
+                        น.
+                      </span>
+                    </time>
+                  </td>
                   <td>
                     {item.branch_name}
-                    <br />
-                    {item.terminal_name}
+                    <span className="sales-secondary">
+                      {item.terminal_name}
+                    </span>
                   </td>
                   <td>{item.cashier_name}</td>
-                  <td>{moneyText(item.grand_total)} บาท</td>
-                  <td>
-                    {paymentLabels[item.method]}
-                    <br />
-                    {item.payment_status} · {item.status}
+                  <td className="sales-amount">
+                    <strong>{moneyText(item.grand_total)}</strong>
                   </td>
                   <td>
-                    <Link to={`/sales/${item.id}`}>ดูรายละเอียด / พิมพ์</Link>
+                    {paymentLabels[item.method]}
+                    <div className="sales-statuses">
+                      <Tag
+                        tone={
+                          item.payment_status === 'CONFIRMED'
+                            ? 'success'
+                            : 'neutral'
+                        }
+                      >
+                        {item.payment_status === 'CONFIRMED'
+                          ? 'ยืนยันชำระแล้ว'
+                          : item.payment_status}
+                      </Tag>
+                      <Tag
+                        tone={
+                          item.status === 'COMPLETED' ? 'success' : 'neutral'
+                        }
+                      >
+                        {item.status === 'COMPLETED'
+                          ? 'ขายสำเร็จ'
+                          : item.status}
+                      </Tag>
+                    </div>
+                  </td>
+                  <td>
+                    <Link
+                      to={`/sales/${item.id}`}
+                      className="button button-secondary sales-detail-link"
+                    >
+                      <Printer size={16} aria-hidden="true" />
+                      <span>ดูรายละเอียด / พิมพ์</span>
+                    </Link>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        {query.data?.total === 0 && <p>ยังไม่มีรายการขายที่ตรงเงื่อนไข</p>}
+        {query.data?.total === 0 && (
+          <p>
+            {receipts
+              ? 'ยังไม่มีใบเสร็จที่ตรงเงื่อนไข'
+              : 'ยังไม่มีรายการขายที่ตรงเงื่อนไข'}
+          </p>
+        )}
         <div className="pos-pagination">
           <Button
             disabled={page <= 1 || query.isFetching}
@@ -426,7 +491,10 @@ export function Receipt({
         </strong>
       </div>
       <p>
-        {paymentLabels[sale.payment.method]} · {sale.payment.status}
+        {paymentLabels[sale.payment.method]} ·{' '}
+        {sale.payment.status === 'CONFIRMED'
+          ? 'ยืนยันชำระแล้ว'
+          : sale.payment.status}
       </p>
       <p>
         เงินรับ {moneyText(sale.payment.received)} · ทอน{' '}

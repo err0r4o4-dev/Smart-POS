@@ -55,6 +55,46 @@
   align-items: start;
   grid-template-columns: minmax(0, 1.7fr) minmax(300px, 1fr);
 }
+.sales-history-table td {
+  vertical-align: top;
+  line-height: 1.6;
+}
+.sales-history-table .sales-number {
+  min-width: 160px;
+  max-width: 240px;
+  overflow-wrap: anywhere;
+}
+.sales-history-table .sales-date,
+.sales-history-table .sales-amount {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.sales-history-table .sales-amount {
+  text-align: right;
+}
+.sales-secondary {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-strong);
+  font-size: var(--font-caption);
+}
+.sales-statuses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.sales-detail-link {
+  white-space: nowrap;
+}
+.sales-page .pos-pagination {
+  justify-content: center;
+  margin: 24px 0 0;
+  text-align: center;
+}
+.sales-page .pos-pagination > .button {
+  min-width: 104px;
+}
 .pos-search {
   display: flex;
   align-items: end;

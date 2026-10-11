@@ -305,10 +305,23 @@ function CustomerList({ text }: { text: Text }) {
                 {item.name || text('ไม่ระบุชื่อ', 'Unnamed')}
               </Link>
               <Tag tone={item.status === 'ACTIVE' ? 'success' : 'neutral'}>
-                {item.status}
+                {item.status === 'ACTIVE'
+                  ? text('ใช้งานอยู่', 'Active')
+                  : item.status === 'ARCHIVED'
+                    ? text('เก็บถาวร', 'Archived')
+                    : item.status}
               </Tag>
               <p>
-                {item.phone || '—'} · {item.email || '—'}
+                <span className="customer-contact-label">
+                  {text('โทรศัพท์', 'Phone')}:{' '}
+                </span>
+                {item.phone || text('ไม่ระบุ', 'Not provided')}
+              </p>
+              <p>
+                <span className="customer-contact-label">
+                  {text('อีเมล', 'Email')}:{' '}
+                </span>
+                {item.email || text('ไม่ระบุ', 'Not provided')}
               </p>
               <small>
                 {item.groups.map((entry) => entry.name).join(', ') ||

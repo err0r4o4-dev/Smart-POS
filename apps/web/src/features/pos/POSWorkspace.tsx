@@ -16,6 +16,7 @@ import {
 
 import { WorkspaceContext } from './POSContext';
 import { usePOS } from './POSContext';
+import { roleLabels, workspaceHome } from '../../app/access';
 
 export function POSWorkspace() {
   const tenant = useOrganization();
@@ -34,8 +35,13 @@ export function POSWorkspace() {
           ข้ามไปเนื้อหา
         </a>
         <header className="pos-header">
-          <Link to="/dashboard">กลับภาพรวม</Link>
+          <Link to={workspaceHome(tenant.context.membership.role)}>
+            กลับพื้นที่ทำงาน
+          </Link>
           <Brand />
+          <span className="tag tag-amber">
+            ขายหน้าร้าน · {roleLabels[tenant.context.membership.role]}
+          </span>
           <ContextSwitchers />
         </header>
         <nav className="pos-navigation" aria-label="เมนูขาย">

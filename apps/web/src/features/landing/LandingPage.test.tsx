@@ -39,7 +39,16 @@ it('shows landing sections and real destinations without the management sidebar'
     'href',
     '/help',
   );
-  expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(6);
+  expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(9);
+  expect(
+    screen.getByRole('link', { name: 'ไปหน้าร้านลูกค้า' }),
+  ).toHaveAttribute('href', '/shop');
+  expect(
+    screen.getByRole('link', { name: 'เข้าสู่การจัดการร้าน' }),
+  ).toHaveAttribute('href', '/login');
+  expect(
+    screen.getByRole('link', { name: 'เข้าสู่พื้นที่พนักงาน' }),
+  ).toHaveAttribute('href', '/login');
   expect(
     screen.getByText('ภาพตัวอย่างประกอบระบบ POS ไม่ใช่ข้อมูลการขายจริง'),
   ).toBeVisible();
@@ -52,7 +61,7 @@ it('shows landing sections and real destinations without the management sidebar'
     '-1',
   );
 });
-it('offers the existing dashboard to authenticated users', () => {
+it('resolves the real role instead of treating every signed-in user as an owner', () => {
   mocks.status = 'authenticated';
   renderLanding();
   const workspaceLinks = screen.getAllByRole('link', {
@@ -60,7 +69,13 @@ it('offers the existing dashboard to authenticated users', () => {
   });
   expect(workspaceLinks).toHaveLength(2);
   for (const link of workspaceLinks)
-    expect(link).toHaveAttribute('href', '/dashboard');
+    expect(link).toHaveAttribute('href', '/workspace');
+  expect(
+    screen.getByRole('link', { name: 'เข้าสู่การจัดการร้าน' }),
+  ).toHaveAttribute('href', '/workspace');
+  expect(
+    screen.getByRole('link', { name: 'เข้าสู่พื้นที่พนักงาน' }),
+  ).toHaveAttribute('href', '/workspace');
   expect(
     screen.queryByRole('link', { name: 'เริ่มต้นใช้งาน' }),
   ).not.toBeInTheDocument();

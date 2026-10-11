@@ -113,22 +113,22 @@ test('anonymous foundation navigation excludes tenant modules', async ({
     route.fulfill({ status: 401, json: { error: { code: 'UNAUTHORIZED' } } }),
   );
   await page.setViewportSize({ width: 1440, height: 720 });
-  await page.goto('/dashboard');
+  await page.goto('/help/system');
   const menu = page.getByRole('navigation', {
     name: 'Main navigation',
     exact: true,
   });
   await expect(
-    menu.getByRole('link', { name: 'Overview', exact: true }),
+    menu.getByRole('link', { name: 'สถานะระบบ', exact: true }),
   ).toBeVisible();
   await expect(
-    menu.getByRole('link', { name: 'Getting started', exact: true }),
+    menu.getByRole('link', { name: 'คู่มือการใช้งาน', exact: true }),
   ).toBeVisible();
-  await expect(menu.getByRole('link')).toHaveCount(2);
+  await expect(menu.getByRole('link')).toHaveCount(4);
   await expect(menu.locator('a[href^="/preview/"]')).toHaveCount(0);
   await expect(menu.locator('a[href="/customers"]')).toHaveCount(0);
   await expect(page.locator('.sidebar-note')).toContainText(
-    'Built for what’s next',
+    'บัญชีและการเข้าใช้งาน',
   );
 });
 
@@ -152,7 +152,7 @@ test('mobile navigation still opens, navigates and dismisses', async ({
   await expect(menu.getByRole('button')).toHaveCount(7);
   await page.keyboard.press('Shift+Tab');
   await expect(
-    menu.getByRole('link', { name: 'Getting started', exact: true }),
+    menu.getByRole('link', { name: 'คู่มือการใช้งาน', exact: true }),
   ).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(
@@ -168,7 +168,7 @@ test('mobile navigation still opens, navigates and dismisses', async ({
   await expect(firstGroup).toHaveAttribute('aria-expanded', 'false');
   await expect(menu.locator('a[href="/pos"]')).toBeHidden();
   await menu
-    .getByRole('link', { name: 'Getting started', exact: true })
+    .getByRole('link', { name: 'คู่มือการใช้งาน', exact: true })
     .click();
   await expect(page).toHaveURL(/\/help$/);
   await expect(page.getByRole('dialog')).toHaveCount(0);

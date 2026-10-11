@@ -6,7 +6,7 @@ for (const width of [320, 375, 640, 768, 1024, 1440, 1920]) {
   }) => {
     await page.setViewportSize({ width, height: 1000 });
     for (const route of [
-      '/dashboard',
+      '/help/system',
       '/help',
       '/login',
       '/register',
@@ -21,7 +21,7 @@ for (const width of [320, 375, 640, 768, 1024, 1440, 1920]) {
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       await expect(page.locator('body')).toHaveJSProperty('scrollWidth', width);
       expect(errors).toEqual([]);
-      if (route === '/dashboard') {
+      if (route === '/help/system') {
         await expect(page.getByText('API & database ready')).toBeVisible();
         await page.screenshot({
           path: `test-results/dashboard-${width}.png`,
@@ -46,7 +46,7 @@ test('mobile navigation supports keyboard, dismissal and real routes', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto('/dashboard');
+  await page.goto('/help/system');
   await page.getByRole('button', { name: 'Open navigation' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await page.keyboard.press('Shift+Tab');
@@ -63,7 +63,7 @@ test('mobile navigation supports keyboard, dismissal and real routes', async ({
   await page.getByRole('button', { name: 'Open navigation' }).click();
   await page
     .getByRole('navigation', { name: 'Mobile navigation' })
-    .getByRole('link', { name: 'Getting started', exact: true })
+    .getByRole('link', { name: 'คู่มือการใช้งาน', exact: true })
     .click();
   await expect(page).toHaveURL(/\/help$/);
   await expect(
@@ -122,7 +122,7 @@ test('loading remains explicit until the real readiness response arrives', async
     await responseGate;
     await route.continue();
   });
-  await page.goto('/dashboard');
+  await page.goto('/help/system');
   await expect(page.getByRole('status')).toHaveText(
     'Checking service readiness\u2026',
   );
@@ -140,7 +140,7 @@ test('readiness failure stays honest and refresh recovers', async ({
       body: '{"error":{"code":"DEPENDENCY_UNAVAILABLE"}}',
     }),
   );
-  await page.goto('/dashboard');
+  await page.goto('/help/system');
   await expect(page.getByRole('alert')).toContainText('Service not ready');
   await expect(page.getByText('API & database ready')).toHaveCount(0);
   await page.unroute('**/health/ready');

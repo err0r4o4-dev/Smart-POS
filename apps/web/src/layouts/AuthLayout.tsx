@@ -26,9 +26,9 @@ export function AuthLayout({ children }: { children: ReactNode }) {
         <small>VELO · Smart POS Platform</small>
       </section>
       <section className="auth-form-section">
-        <Link to="/dashboard" className="back-link">
+        <Link to="/" className="back-link">
           <ArrowLeft size={18} />
-          Back to overview
+          กลับหน้าหลักและทางเข้า
         </Link>
         <div className="auth-form">{children}</div>
       </section>

@@ -1,5 +1,11 @@
 import { expect, test } from '@playwright/test';
 
+test.beforeEach(async ({ page }) => {
+  await page.route('**/api/v1/auth/me', (route) =>
+    route.fulfill({ status: 401, json: { error: { code: 'UNAUTHORIZED' } } }),
+  );
+});
+
 for (const width of [320, 375, 768, 1024, 1440, 1920]) {
   test(`landing page fits the viewport at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 1000 });

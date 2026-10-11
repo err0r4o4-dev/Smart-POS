@@ -58,7 +58,7 @@ test('mobile grouped navigation remains available after real login and setup', a
     await expect(inventoryGroup).toHaveAttribute('aria-expanded', 'true');
     await page
       .getByRole('navigation', { name: 'Mobile navigation' })
-      .getByRole('link', { name: 'สินค้า / แค็ตตาล็อก', exact: true })
+      .getByRole('link', { name: 'จัดการสินค้า', exact: true })
       .click();
     await expect(page).toHaveURL(/\/products$/);
     expect(errors).toEqual([]);

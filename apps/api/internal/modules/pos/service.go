@@ -176,7 +176,7 @@ func (service *Service) SaveTerminal(ctx context.Context, user, org, id string, 
 			return Terminal{}, ErrConflict
 		}
 		var busy bool
-		if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM register_shifts WHERE organization_id=$1 AND terminal_id=$2 AND status='OPEN') OR EXISTS(SELECT 1 FROM pos_carts WHERE organization_id=$1 AND terminal_id=$2 AND status IN ('ACTIVE','HELD')) OR EXISTS(SELECT 1 FROM online_orders WHERE organization_id=$1 AND terminal_id=$2 AND status IN ('PENDING','PREPARING','READY') AND (expires_at>now() OR cart_id IS NOT NULL))", org, id).Scan(&busy); err != nil {
+		if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM register_shifts WHERE organization_id=$1 AND terminal_id=$2 AND status='OPEN') OR EXISTS(SELECT 1 FROM pos_carts WHERE organization_id=$1 AND terminal_id=$2 AND status IN ('ACTIVE','HELD')) OR EXISTS(SELECT 1 FROM online_orders WHERE organization_id=$1 AND terminal_id=$2 AND storefront_order_live(organization_id,id))", org, id).Scan(&busy); err != nil {
 			return Terminal{}, err
 		}
 		if busy {

@@ -62,6 +62,13 @@ func (service *Service) ImportOnlineOrder(ctx context.Context, user, org, id str
 	if status != "READY" {
 		return Cart{}, ErrConflict
 	}
+	var paymentBacked bool
+	if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM online_payment_attempts WHERE organization_id=$1 AND order_id=$2)", org, id).Scan(&paymentBacked); err != nil {
+		return Cart{}, err
+	}
+	if paymentBacked {
+		return Cart{}, ErrConflict
+	}
 	value, err := terminal(ctx, tx, actor, org, terminalID, true)
 	if err != nil {
 		return Cart{}, err

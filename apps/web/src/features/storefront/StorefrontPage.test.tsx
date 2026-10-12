@@ -81,25 +81,32 @@ function view(path: string) {
     </QueryClientProvider>,
   );
 }
-it('opens the configured store directly without a public store selector', async () => {
-  fetchMock.mockImplementation(async (url: string) => {
-    if (url === '/api/v1/storefronts')
-      return {
-        ...response([
-          { slug: settings.slug, name: settings.name, accepting_orders: true },
-        ]),
-        headers: new Headers({ 'X-SmartPOS-Store-Mode': 'single' }),
-      };
-    if (url.endsWith('/products?search=&page=1'))
-      return response({ items: [product], total: 1, page: 1, page_size: 24 });
-    return response(settings);
-  });
-  view('/shop');
-  expect(await screen.findByText('กาแฟ')).toBeVisible();
-  expect(
-    screen.queryByRole('link', { name: 'ดูสินค้า' }),
-  ).not.toBeInTheDocument();
-});
+it.each(['single', 'multi', undefined])(
+  'opens the only store directly without a public store selector (mode: %s)',
+  async (mode) => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === '/api/v1/storefronts')
+        return {
+          ...response([
+            {
+              slug: settings.slug,
+              name: settings.name,
+              accepting_orders: true,
+            },
+          ]),
+          headers: new Headers(mode ? { 'X-SmartPOS-Store-Mode': mode } : {}),
+        };
+      if (url.endsWith('/products?search=&page=1'))
+        return response({ items: [product], total: 1, page: 1, page_size: 24 });
+      return response(settings);
+    });
+    view('/shop');
+    expect(await screen.findByText('กาแฟ')).toBeVisible();
+    expect(
+      screen.queryByRole('link', { name: 'ดูสินค้า' }),
+    ).not.toBeInTheDocument();
+  },
+);
 it('does not fall back to another store when the configured store is unpublished', async () => {
   fetchMock.mockResolvedValue({
     ...response([]),
@@ -112,22 +119,25 @@ it('does not fall back to another store when the configured store is unpublished
   ).not.toBeInTheDocument();
   expect(fetchMock).toHaveBeenCalledTimes(1);
 });
-it('rejects a single-store directory containing multiple shops instead of presenting a selector', async () => {
-  fetchMock.mockResolvedValue({
-    ...response([
-      { slug: 'first', name: 'First', accepting_orders: true },
-      { slug: 'second', name: 'Second', accepting_orders: true },
-    ]),
-    headers: new Headers({ 'X-SmartPOS-Store-Mode': 'single' }),
-  });
-  view('/shop');
-  expect(await screen.findByRole('alert')).toHaveTextContent(
-    'ข้อมูลร้านเดียวไม่ถูกต้อง',
-  );
-  expect(
-    screen.queryByRole('link', { name: 'ดูสินค้า' }),
-  ).not.toBeInTheDocument();
-});
+it.each(['single', 'multi', undefined])(
+  'rejects multiple shops instead of presenting a selector (mode: %s)',
+  async (mode) => {
+    fetchMock.mockResolvedValue({
+      ...response([
+        { slug: 'first', name: 'First', accepting_orders: true },
+        { slug: 'second', name: 'Second', accepting_orders: true },
+      ]),
+      headers: new Headers(mode ? { 'X-SmartPOS-Store-Mode': mode } : {}),
+    });
+    view('/shop');
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'ข้อมูลร้านเดียวไม่ถูกต้อง',
+    );
+    expect(
+      screen.queryByRole('link', { name: 'ดูสินค้า' }),
+    ).not.toBeInTheDocument();
+  },
+);
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
@@ -190,7 +200,152 @@ it('shows real published products and persists cart separately for each store', 
     JSON.parse(localStorage.getItem('shop-cart:test-shop')!)[0].variant_id,
   ).toBe(product.variant_id);
   expect(localStorage.getItem('shop-cart:another-shop')).toBeNull();
-  expect(screen.getByText(/ระบบกันสินค้าหลังส่งออเดอร์สำเร็จ/)).toBeVisible();
+  expect(screen.queryByRole('link', { name: /^หน้าร้าน$/ })).toBeNull();
+  expect(screen.queryByRole('link', { name: 'ค้นหาสินค้า' })).toBeNull();
+  expect(
+    screen.queryByRole('region', { name: 'ข้อมูลร้าน' }),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByText('ข้อมูลการรับสินค้า')).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('link', { name: 'สถานะการเปิดขาย' }),
+  ).not.toBeInTheDocument();
+});
+
+it('adds the selected exact quantity and updates the shared header cart badge', async () => {
+  view('/shop/test-shop');
+  await screen.findByRole('heading', { name: 'กาแฟ' });
+  fireEvent.change(screen.getByRole('spinbutton', { name: 'จำนวน กาแฟ' }), {
+    target: { value: '3' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'เพิ่มลงตะกร้า' }));
+  expect(
+    JSON.parse(localStorage.getItem('shop-cart:test-shop')!)[0].quantity,
+  ).toBe('3.000');
+  expect(screen.getByRole('link', { name: 'ตะกร้า (1)' })).toBeVisible();
+  expect(
+    screen.getByRole('status', { name: 'ผลการเพิ่มสินค้า' }),
+  ).toHaveTextContent('เพิ่ม กาแฟ');
+});
+
+it('validates quantity against available stock including the existing cart', async () => {
+  localStorage.setItem(
+    'shop-cart:test-shop',
+    JSON.stringify([{ ...product, quantity: '4.000' }]),
+  );
+  view('/shop/test-shop');
+  await screen.findByRole('heading', { name: 'กาแฟ' });
+  const input = screen.getByRole('spinbutton', { name: 'จำนวน กาแฟ' });
+  fireEvent.change(input, { target: { value: '2' } });
+  expect(screen.getByRole('button', { name: 'เพิ่มลงตะกร้า' })).toBeDisabled();
+  fireEvent.change(input, { target: { value: '0.5' } });
+  expect(screen.getByRole('button', { name: 'เพิ่มลงตะกร้า' })).toBeDisabled();
+  fireEvent.change(input, { target: { value: '1' } });
+  fireEvent.click(screen.getByRole('button', { name: 'เพิ่มลงตะกร้า' }));
+  expect(
+    JSON.parse(localStorage.getItem('shop-cart:test-shop')!)[0].quantity,
+  ).toBe('5.000');
+  expect(screen.getByRole('button', { name: 'เพิ่มลงตะกร้า' })).toBeDisabled();
+});
+
+it('requests category, price and sort without an availability filter and resets pagination', async () => {
+  const category = '22222222-2222-4222-8222-222222222222';
+  fetchMock.mockImplementation(async (url: string) => {
+    if (url.includes('/products?')) {
+      const page = Number(
+        new URL(url, 'http://fixture.test').searchParams.get('page'),
+      );
+      return response({
+        items: [
+          { ...product, category_id: category, category_name: 'เครื่องดื่ม' },
+        ],
+        total: 30,
+        page,
+        page_size: 24,
+        categories: [{ id: category, name: 'เครื่องดื่ม', count: 30 }],
+      });
+    }
+    return response(settings);
+  });
+  view('/shop/test-shop');
+  await screen.findByRole('heading', { name: 'กาแฟ' });
+  fireEvent.click(screen.getByRole('button', { name: 'ถัดไป' }));
+  await screen.findByText('หน้า 2 · 30 รายการ');
+  fireEvent.click(screen.getByRole('button', { name: 'เครื่องดื่ม 30' }));
+  await waitFor(() => {
+    const url = new URL(fetchMock.mock.calls.at(-1)![0], 'http://fixture.test');
+    expect(url.searchParams.get('category_id')).toBe(category);
+    expect(url.searchParams.get('page')).toBe('1');
+  });
+  fireEvent.change(screen.getByLabelText('ราคาต่ำสุด'), {
+    target: { value: '10' },
+  });
+  fireEvent.change(screen.getByLabelText('ราคาสูงสุด'), {
+    target: { value: '50' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'ใช้ช่วงราคา' }));
+  expect(screen.queryByLabelText('สถานะสินค้า')).toBeNull();
+  fireEvent.change(screen.getByLabelText('เรียงสินค้า'), {
+    target: { value: 'price_asc' },
+  });
+  await waitFor(() => {
+    const url = new URL(fetchMock.mock.calls.at(-1)![0], 'http://fixture.test');
+    expect(url.searchParams.get('min_price')).toBe('10');
+    expect(url.searchParams.get('max_price')).toBe('50');
+    expect(url.searchParams.has('availability')).toBe(false);
+    expect(url.searchParams.get('sort')).toBe('price_asc');
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'ล้างตัวกรอง' }));
+  await waitFor(() => {
+    const url = new URL(fetchMock.mock.calls.at(-1)![0], 'http://fixture.test');
+    expect(url.searchParams.has('category_id')).toBe(false);
+    expect(url.searchParams.has('min_price')).toBe(false);
+    expect(url.searchParams.has('availability')).toBe(false);
+  });
+});
+
+it('switches grid/list display without discarding the cart', async () => {
+  view('/shop/test-shop');
+  await screen.findByRole('heading', { name: 'กาแฟ' });
+  fireEvent.click(screen.getByRole('button', { name: 'เพิ่มลงตะกร้า' }));
+  fireEvent.click(screen.getByRole('button', { name: 'แสดงแบบรายการ' }));
+  expect(screen.getByRole('button', { name: 'แสดงแบบรายการ' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  expect(screen.getByRole('link', { name: 'ตะกร้า (1)' })).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'แสดงแบบตาราง' }));
+  expect(screen.getByRole('button', { name: 'แสดงแบบตาราง' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+});
+
+it('rejects an invalid price range without requesting incorrect results', async () => {
+  fetchMock.mockImplementation(async (url: string) =>
+    url.includes('/products?')
+      ? response({
+          items: [product],
+          total: 1,
+          page: 1,
+          page_size: 24,
+          categories: [],
+        })
+      : response(settings),
+  );
+  view('/shop/test-shop');
+  await screen.findByRole('heading', { name: 'กาแฟ' });
+  const calls = fetchMock.mock.calls.length;
+  fireEvent.change(screen.getByLabelText('ราคาต่ำสุด'), {
+    target: { value: '20' },
+  });
+  fireEvent.change(screen.getByLabelText('ราคาสูงสุด'), {
+    target: { value: '10' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'ใช้ช่วงราคา' }));
+  expect(screen.getByRole('alert')).toHaveTextContent(
+    'ราคาต่ำสุดต้องไม่เกินราคาสูงสุด',
+  );
+  expect(fetchMock).toHaveBeenCalledTimes(calls);
 });
 it('disables ordering while the published store is closed', async () => {
   fetchMock.mockImplementation(async (url: string) =>
@@ -204,7 +359,9 @@ it('disables ordering while the published store is closed', async () => {
   expect(
     await screen.findByRole('button', { name: 'เพิ่มลงตะกร้า' }),
   ).toBeDisabled();
-  expect(screen.getByText('ปิดรับออเดอร์ชั่วคราว')).toBeVisible();
+  expect(
+    screen.queryByRole('region', { name: 'ข้อมูลร้าน' }),
+  ).not.toBeInTheDocument();
 });
 it('does not invent an empty shop when loading fails', async () => {
   fetchMock.mockResolvedValue({

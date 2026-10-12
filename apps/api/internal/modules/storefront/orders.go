@@ -6,16 +6,14 @@ import (
 	"errors"
 	"github.com/jackc/pgx/v5"
 	"smartpos/api/internal/modules/organization"
-	"time"
 )
 
 func readOrder(ctx context.Context, tx pgx.Tx, org, id string, public bool) (Order, error) {
 	result := Order{Items: []Line{}, Events: []Event{}, PaymentStatus: "UNPAID"}
-	err := tx.QueryRow(ctx, `SELECT doc.id::text,doc.number,doc.status,doc.customer_name,doc.contact_phone,doc.customer_note,doc.store_name,doc.store_phone,doc.pickup_instructions,doc.estimated_total::text,doc.branch_id::text,doc.terminal_id::text,doc.cart_id::text,doc.sale_id::text,doc.revision,doc.created_at,doc.expires_at,sale.grand_total::text,receipt.receipt_number FROM online_orders doc LEFT JOIN sales sale ON sale.organization_id=doc.organization_id AND sale.id=doc.sale_id LEFT JOIN receipts receipt ON receipt.organization_id=doc.organization_id AND receipt.sale_id=doc.sale_id WHERE doc.organization_id=$1 AND doc.id=$2`, org, id).Scan(&result.ID, &result.Number, &result.Status, &result.CustomerName, &result.ContactPhone, &result.CustomerNote, &result.StoreName, &result.StorePhone, &result.PickupInstructions, &result.EstimatedTotal, &result.BranchID, &result.TerminalID, &result.CartID, &result.SaleID, &result.Revision, &result.CreatedAt, &result.ExpiresAt, &result.FinalTotal, &result.ReceiptNumber)
+	err := tx.QueryRow(ctx, `SELECT doc.id::text,doc.number,CASE WHEN doc.status IN ('PENDING','PREPARING','READY') AND NOT storefront_order_live(doc.organization_id,doc.id) THEN 'EXPIRED' ELSE doc.status END,doc.customer_name,doc.contact_phone,doc.customer_note,doc.store_name,doc.store_phone,doc.pickup_instructions,doc.estimated_total::text,doc.branch_id::text,doc.terminal_id::text,doc.cart_id::text,doc.sale_id::text,doc.revision,doc.created_at,doc.expires_at,sale.grand_total::text,receipt.receipt_number FROM online_orders doc LEFT JOIN sales sale ON sale.organization_id=doc.organization_id AND sale.id=doc.sale_id LEFT JOIN receipts receipt ON receipt.organization_id=doc.organization_id AND receipt.sale_id=doc.sale_id WHERE doc.organization_id=$1 AND doc.id=$2`, org, id).Scan(&result.ID, &result.Number, &result.Status, &result.CustomerName, &result.ContactPhone, &result.CustomerNote, &result.StoreName, &result.StorePhone, &result.PickupInstructions, &result.EstimatedTotal, &result.BranchID, &result.TerminalID, &result.CartID, &result.SaleID, &result.Revision, &result.CreatedAt, &result.ExpiresAt, &result.FinalTotal, &result.ReceiptNumber)
 	if err != nil {
 		return result, dbError(err)
 	}
-	result.Status = effectiveStatus(result.Status, result.ExpiresAt, result.CartID, time.Now())
 	if result.Status == "COMPLETED" {
 		result.PaymentStatus = "PAID_AT_STORE"
 	}
@@ -170,7 +168,7 @@ func (service *Service) Orders(ctx context.Context, user, org, branch, status st
 	if status != "" && status != "PENDING" && status != "PREPARING" && status != "READY" && status != "COMPLETED" && status != "REJECTED" && status != "CANCELLED" && status != "EXPIRED" {
 		return result, ErrInput
 	}
-	where := ` FROM online_orders WHERE organization_id=$1 AND branch_id=$2 AND ($3='' OR CASE WHEN status IN ('PENDING','PREPARING','READY') AND expires_at<=now() AND cart_id IS NULL THEN 'EXPIRED' ELSE status END=$3)`
+	where := ` FROM online_orders WHERE organization_id=$1 AND branch_id=$2 AND ($3='' OR CASE WHEN status IN ('PENDING','PREPARING','READY') AND NOT storefront_order_live(organization_id,id) THEN 'EXPIRED' ELSE status END=$3)`
 	if err = tx.QueryRow(ctx, "SELECT count(*)"+where, org, branch, status).Scan(&result.Total); err != nil {
 		return result, err
 	}

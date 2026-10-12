@@ -28,6 +28,7 @@ type Config struct {
 	MailFrom                  string
 	TrustedProxyIP            netip.Addr
 	PaymentSandbox            *stripe.Client
+	CustomerPayments          *stripe.CustomerClient
 	SingleStoreOrganizationID string
 }
 
@@ -111,9 +112,21 @@ func Parse(getenv func(string) string) (Config, error) {
 	if environment != "development" && sandbox.Configured() {
 		return Config{}, errors.New("Stripe sandbox is allowed only in development")
 	}
+	checkoutFlag := getenv("STRIPE_CUSTOMER_CHECKOUT_ENABLED")
+	if checkoutFlag != "" && checkoutFlag != "true" && checkoutFlag != "false" {
+		return Config{}, errors.New("STRIPE_CUSTOMER_CHECKOUT_ENABLED must be true or false")
+	}
+	webhookSecret := getenv("STRIPE_CUSTOMER_WEBHOOK_SECRET")
+	if environment != "development" && (checkoutFlag == "true" || webhookSecret != "") {
+		return Config{}, errors.New("customer Stripe test payments are allowed only in development")
+	}
+	customerPayments, err := stripe.NewCustomerClient(sandbox, webhookSecret, checkoutFlag == "true")
+	if err != nil {
+		return Config{}, err
+	}
 	singleStore := getenv("SINGLE_STORE_ORGANIZATION_ID")
 	if singleStore != "" && !organizationIDPattern.MatchString(singleStore) {
 		return Config{}, errors.New("SINGLE_STORE_ORGANIZATION_ID must be one organization UUID")
 	}
-	return Config{Address: address, DatabaseURL: databaseURL, Environment: environment, PublicOrigin: origin, AllowedOrigins: origins, SessionTTL: time.Duration(hours) * time.Hour, SMTPAddr: smtpAddr, SMTPUser: getenv("SMTP_USER"), SMTPPassword: getenv("SMTP_PASSWORD"), MailFrom: mailFrom, TrustedProxyIP: trustedProxyIP, PaymentSandbox: sandbox, SingleStoreOrganizationID: strings.ToLower(singleStore)}, nil
+	return Config{Address: address, DatabaseURL: databaseURL, Environment: environment, PublicOrigin: origin, AllowedOrigins: origins, SessionTTL: time.Duration(hours) * time.Hour, SMTPAddr: smtpAddr, SMTPUser: getenv("SMTP_USER"), SMTPPassword: getenv("SMTP_PASSWORD"), MailFrom: mailFrom, TrustedProxyIP: trustedProxyIP, PaymentSandbox: sandbox, CustomerPayments: customerPayments, SingleStoreOrganizationID: strings.ToLower(singleStore)}, nil
 }

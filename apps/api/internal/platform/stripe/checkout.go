@@ -1,6 +1,7 @@
 package stripe
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -14,6 +15,7 @@ import (
 
 const sandboxAmount = 2000
 const sandboxPurpose = "sandbox_connection_check"
+const stripeAPIVersion = "2024-06-20"
 
 var uuidPattern = regexp.MustCompile(`^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$`)
 var sessionPattern = regexp.MustCompile(`^cs_test_[A-Za-z0-9]{1,220}$`)
@@ -83,7 +85,7 @@ func (client *Client) request(ctx context.Context, method, path, key string, for
 		return ErrUnavailable
 	}
 	request.SetBasicAuth(client.secret, "")
-	request.Header.Set("Stripe-Version", "2024-06-20")
+	request.Header.Set("Stripe-Version", stripeAPIVersion)
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	if key != "" {
 		request.Header.Set("Idempotency-Key", key)
@@ -105,7 +107,11 @@ func (client *Client) request(ctx context.Context, method, path, key string, for
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return ErrUnavailable
 	}
-	decoder := json.NewDecoder(io.LimitReader(response.Body, (1<<20)+1))
+	body, err := io.ReadAll(io.LimitReader(response.Body, (1<<20)+1))
+	if err != nil || len(body) > 1<<20 {
+		return ErrUnavailable
+	}
+	decoder := json.NewDecoder(bytes.NewReader(body))
 	if decoder.Decode(result) != nil || decoder.Decode(new(any)) != io.EOF {
 		return ErrUnavailable
 	}

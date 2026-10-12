@@ -150,43 +150,47 @@ async function fixture(page, { member = true, mode = 'single' } = {}) {
       return;
     }
     await route.fulfill({
-      headers: { 'X-SmartPOS-Store-Mode': mode },
+      headers: mode ? { 'X-SmartPOS-Store-Mode': mode } : {},
       json: { data },
     });
   });
   return writes;
 }
 
-test('single-store catalog opens directly and remains usable at three viewport widths (API fixtures)', async ({
-  page,
-}, testInfo) => {
-  const writes = await fixture(page);
-  await page.goto('/shop');
-  await expect(page).toHaveURL(/\/shop\/single-fixture$/);
-  await expect(
-    page.getByRole('heading', { name: 'ร้านทดสอบร้านเดียว', exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole('link', { name: 'ดูสินค้า', exact: true }),
-  ).toHaveCount(0);
-  for (const width of [390, 768, 1440]) {
-    await page.setViewportSize({ width, height: 1000 });
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= innerWidth,
-      ),
-    ).toBe(true);
-    await page.screenshot({
-      path: testInfo.outputPath(`single-store-catalog-${width}.png`),
-      fullPage: true,
-    });
-  }
-  expect(writes).toEqual([]);
-  await page
-    .getByRole('link', { name: 'สถานะการเปิดขาย', exact: true })
-    .click();
-  await expect(page).toHaveURL(/\/shop\/single-fixture#online-status$/);
-});
+for (const mode of ['single', 'multi', null]) {
+  test(`single-store catalog opens directly and remains usable at three viewport widths (API fixtures, mode: ${mode ?? 'absent'})`, async ({
+    page,
+  }, testInfo) => {
+    const writes = await fixture(page, { mode });
+    await page.goto('/shop');
+    await expect(page).toHaveURL(/\/shop\/single-fixture$/);
+    await expect(
+      page.getByRole('searchbox', { name: 'ค้นหาสินค้า', exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: 'ดูสินค้า', exact: true }),
+    ).toHaveCount(0);
+    for (const width of [390, 768, 1440]) {
+      await page.setViewportSize({ width, height: 1000 });
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      await page.screenshot({
+        path: testInfo.outputPath(`single-store-catalog-${width}.png`),
+        fullPage: true,
+      });
+    }
+    expect(writes).toEqual([]);
+    await expect(
+      page.getByRole('region', { name: 'ข้อมูลร้าน' }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole('link', { name: 'สถานะการเปิดขาย', exact: true }),
+    ).toHaveCount(0);
+  });
+}
 
 test('single-store management hides organization selection but preserves branch context (API fixtures)', async ({
   page,
@@ -238,14 +242,36 @@ test('an account without pinned membership cannot create or select another store
   expect(writes).toEqual([]);
 });
 
-test('legacy multi-store mode retains the published-store directory (API fixtures)', async ({
+test('multi-store directory rejects multiple shops without showing a public selector (API fixtures)', async ({
   page,
 }) => {
   await fixture(page, { mode: 'multi' });
+  await page.route('**/api/v1/storefronts', (route) =>
+    route.fulfill({
+      headers: { 'X-SmartPOS-Store-Mode': 'multi' },
+      json: {
+        data: [
+          {
+            slug: 'single-fixture',
+            name: 'Synthetic first',
+            accepting_orders: true,
+          },
+          {
+            slug: 'other-fixture',
+            name: 'Synthetic other',
+            accepting_orders: true,
+          },
+        ],
+      },
+    }),
+  );
   await page.goto('/shop');
+  await expect(page.getByRole('alert')).toContainText(
+    'ข้อมูลร้านเดียวไม่ถูกต้อง',
+  );
   await expect(
     page.getByRole('link', { name: 'ดูสินค้า', exact: true }),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await expect(page).toHaveURL(/\/shop$/);
 });
 

@@ -930,7 +930,7 @@ paths:
     get:
       operationId: listPublicStorefrontProducts
       security: []
-      description: Published active variants; saleable source availability; 24 per page.
+      description: Published active variants; source availability minus live reservations; exact effective branch prices; global filtering and sorting before pagination. Category counts respect search, price and availability but exclude the selected category.
       parameters:
         - name: page
           in: query
@@ -944,6 +944,34 @@ paths:
           schema:
             type: string
             maxLength: 100
+        - name: category_id
+          in: query
+          schema:
+            type: string
+            description: Category UUID or uncategorized; omitted means all categories.
+        - name: min_price
+          in: query
+          schema:
+            type: string
+            pattern: '^[0-9]{1,16}(\.[0-9]{1,2})?$'
+        - name: max_price
+          in: query
+          schema:
+            type: string
+            pattern: '^[0-9]{1,16}(\.[0-9]{1,2})?$'
+            description: Must not be less than min_price.
+        - name: availability
+          in: query
+          schema:
+            type: string
+            enum: [available, unavailable]
+            description: Saleable with enough available quantity for the unit type, or its inverse.
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [name, price_asc, price_desc]
+            default: name
       responses:
         '200':
           description: Successful result
@@ -955,7 +983,7 @@ paths:
                   - data
                 properties:
                   data:
-                    $ref: '#/components/schemas/StorefrontProductPage'
+                    $ref: '#/components/schemas/StorefrontCatalogPage'
         '400':
           description: Invalid input
           content:
@@ -18022,6 +18050,92 @@ components:
           type: string
         accepting_orders:
           type: boolean
+    StorefrontCatalogProduct:
+      type: object
+      additionalProperties: false
+      required:
+        - variant_id
+        - product_name
+        - variant_name
+        - sku
+        - unit
+        - unit_type
+        - unit_price
+        - available
+        - saleable
+        - published
+        - category_id
+        - category_name
+      properties:
+        variant_id:
+          type: string
+          format: uuid
+        product_name:
+          type: string
+        variant_name:
+          type: string
+        sku:
+          type: string
+        unit:
+          type: string
+        unit_type:
+          type: string
+          enum:
+            - COUNT
+            - WEIGHT
+            - VOLUME
+            - PACKAGING
+        unit_price:
+          $ref: '#/components/schemas/POSMoney'
+        available:
+          $ref: '#/components/schemas/InventoryQuantity'
+          description: Saleable quality quantity at the configured source, minus live online reservations; a quote or browser cart does not reserve stock.
+        saleable:
+          type: boolean
+        published:
+          type: boolean
+        category_id:
+          type: string
+          description: Same-store category UUID or uncategorized.
+        category_name:
+          type: string
+        image_url:
+          type: string
+          description: Optional public image from variant attributes.storefront_image_url; sanitized root-relative path or credential-free HTTPS URL. Missing or invalid images are omitted; no upload subsystem is implied.
+    StorefrontCatalogCategory:
+      type: object
+      additionalProperties: false
+      required: [id, name, count]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        count:
+          type: integer
+          minimum: 0
+    StorefrontCatalogPage:
+      type: object
+      additionalProperties: false
+      required: [items, total, page, page_size, categories]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/StorefrontCatalogProduct'
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          const: 24
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/StorefrontCatalogCategory'
     StorefrontProduct:
       type: object
       additionalProperties: false

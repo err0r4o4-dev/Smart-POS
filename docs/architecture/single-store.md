@@ -15,7 +15,7 @@ Date: 2026-10-12. This is the first completed source slice after the Stripe conn
 ## API and UI compatibility
 
 - Directory JSON shapes are unchanged. `GET /api/v1/organizations` and `GET /api/v1/storefronts` add `X-SmartPOS-Store-Mode: single|multi`. The header includes no organization UUID, secret or permission grant.
-- The UI reads mode from the same successful directory response. Older servers without this additive header retain multi-store compatibility; an invalid header or multiple entries declared as single-store is an error, not authority to choose a store.
+- Management/account UI reads mode from the same successful directory response. Older servers without this additive header retain multi-store compatibility there. Public `/shop` opens the only published shop regardless of mode and no longer displays a shop selector. Invalid headers or multiple public directory entries are errors, not authority to choose a store.
 - `/shop` opens the one configured published storefront directly. Management/account setup hides organization creation and organization switching; authorized branch selection remains available. Empty membership shows invitation guidance instead of a first-user setup form.
 - Existing storefront purchases remain pickup-and-pay-at-POS. The single-store UI must not describe online payment or delivery as available until the later order/reservation/payment/shipment slices are integrated and verified.
 

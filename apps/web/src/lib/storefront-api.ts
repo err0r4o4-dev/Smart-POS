@@ -29,6 +29,17 @@ export interface ShopProduct {
   available: string;
   saleable: boolean;
   published: boolean;
+  category_id?: string;
+  category_name?: string;
+  image_url?: string;
+}
+export interface ShopCategory {
+  id: string;
+  name: string;
+  count: number;
+}
+export interface ShopCatalogPage extends ShopPage<ShopProduct> {
+  categories?: ShopCategory[];
 }
 export interface ShopPage<Item> {
   items: Item[];

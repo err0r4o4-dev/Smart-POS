@@ -93,11 +93,11 @@ func (handler Handler) PublicRoutes(router chi.Router) {
 			return service.PublicSettings(ctx, chi.URLParam(request, "slug"))
 		}))
 		public.Get("/products", endpoint(200, func(ctx context.Context, _, _ string, request *http.Request) (any, error) {
-			number, err := page(request)
+			query, err := catalogQuery(request)
 			if err != nil {
 				return nil, err
 			}
-			return service.Products(ctx, "", "", chi.URLParam(request, "slug"), request.URL.Query().Get("search"), number)
+			return service.BrowseProducts(ctx, chi.URLParam(request, "slug"), query)
 		}))
 		public.With(handler.Authentication.RequirePublicWrite("storefront.quote", 120, time.Minute)).Post("/quote", writeEndpoint(200, func(ctx context.Context, _, _ string, request *http.Request, input QuoteInput) (any, error) {
 			return service.Quote(ctx, chi.URLParam(request, "slug"), input)

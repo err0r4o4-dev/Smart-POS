@@ -8,9 +8,22 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"smartpos/api/internal/modules/inventory"
 	"smartpos/api/internal/modules/organization"
+	"smartpos/api/internal/platform/stripe"
+	"time"
 )
 
-type Service struct{ Organization *organization.Service }
+type CustomerPaymentGateway interface {
+	Enabled() bool
+	CustomerRequestFingerprint(stripe.CustomerCharge) (string, error)
+	CreateCustomerCheckout(context.Context, stripe.CustomerCharge) (stripe.CustomerSession, error)
+	RetrieveCustomerCheckout(context.Context, stripe.CustomerCharge, string) (stripe.CustomerSession, error)
+	VerifyCustomerEvent([]byte, string, time.Time) (stripe.CustomerEvent, error)
+}
+
+type Service struct {
+	Organization     *organization.Service
+	CustomerPayments CustomerPaymentGateway
+}
 
 func dbError(err error) error {
 	if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, organization.ErrNotFound) {
@@ -198,7 +211,7 @@ func (service *Service) SaveSettings(ctx context.Context, user, org string, inpu
 	}
 	if err == nil && (current.TerminalID != input.TerminalID || current.OnlineTerminalID != input.OnlineTerminalID || current.Slug != input.Slug || !input.Published) {
 		var live bool
-		if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM online_orders WHERE organization_id=$1 AND status IN ('PENDING','PREPARING','READY') AND (expires_at>now() OR cart_id IS NOT NULL))`, org).Scan(&live); err != nil {
+		if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM online_orders WHERE organization_id=$1 AND storefront_order_live(organization_id,id))`, org).Scan(&live); err != nil {
 			return Settings{}, err
 		}
 		if live {

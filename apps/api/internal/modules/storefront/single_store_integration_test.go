@@ -264,6 +264,34 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 			t.Fatalf("staff received management authority: %v", problem)
 		}
 	})
+	t.Run("durable customer payment persistence", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "f1111111-1111-4111-8111-111111111111", createInput("PAYMENT"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		paymentPersistenceAcceptance(t, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "payment-fixture"), first.Organization.ID)
+	})
+	t.Run("customer payment stock hold lifecycle", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "9a111111-1111-4111-8111-111111111111", createInput("HOLDS"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		paymentHoldAcceptance(t, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "payment-hold-fixture"), first.Organization.ID)
+	})
+	t.Run("customer checkout orchestration and retrieval recovery", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "8a111111-1111-4111-8111-111111111111", createInput("CHECKOUT"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		paymentCheckoutAcceptance(t, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "checkout-fixture"), first.Organization.ID)
+	})
+	t.Run("customer prepaid POS settlement", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "7a111111-1111-4111-8111-111111111111", createInput("PREPAID"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		paymentPrepaidAcceptance(t, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "prepaid-fixture"), first.Organization.ID, guest.ID)
+	})
 	t.Run("atomic online reservation foundation", func(t *testing.T) {
 		reservationAcceptance(t, ctx, multi, owner.ID, first.Organization.ID, firstShop)
 	})
@@ -283,5 +311,12 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 			t.Fatal(problem)
 		}
 		sourceAcceptance(t, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "source-fixture"), firstShop.TerminalID, guest.ID)
+	})
+	t.Run("public catalog layout query acceptance", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "e1111111-1111-4111-8111-111111111111", createInput("CATALOG"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		catalogAcceptance(t, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "catalog-fixture"))
 	})
 }

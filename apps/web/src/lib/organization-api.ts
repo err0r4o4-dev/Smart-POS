@@ -1,5 +1,5 @@
 import type { Role } from '../app/access';
-import { ApiError } from './api';
+import { requestData } from './api';
 import { responseStoreMode, type StoreMode } from './store-mode';
 export interface OrganizationInput {
   name: string;
@@ -70,27 +70,22 @@ export async function organizationRequest<Result>(
     storeMode?: (mode: StoreMode) => void;
   } = {},
 ): Promise<Result> {
-  const response = await fetch(`/api/v1${path}`, {
-    method: options.method ?? 'GET',
-    credentials: 'same-origin',
-    signal: options.signal,
-    headers: {
-      Accept: 'application/json',
-      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-      ...(options.csrf ? { 'X-CSRF-Token': options.csrf } : {}),
-      ...(options.key ? { 'Idempotency-Key': options.key } : {}),
+  return requestData<Result>(
+    `/api/v1${path}`,
+    {
+      method: options.method ?? 'GET',
+      credentials: 'same-origin',
+      signal: options.signal,
+      headers: {
+        Accept: 'application/json',
+        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(options.csrf ? { 'X-CSRF-Token': options.csrf } : {}),
+        ...(options.key ? { 'Idempotency-Key': options.key } : {}),
+      },
+      ...(options.body ? { body: JSON.stringify(options.body) } : {}),
     },
-    ...(options.body ? { body: JSON.stringify(options.body) } : {}),
-  });
-  const result = (await response.json()) as {
-    data?: Result;
-    error?: { message?: string };
-  };
-  if (!response.ok || result.data === undefined)
-    throw new ApiError(
-      response.status,
-      result.error?.message ?? 'Organization service unavailable',
-    );
-  options.storeMode?.(responseStoreMode(response.headers));
-  return result.data;
+    options.storeMode
+      ? (headers) => options.storeMode?.(responseStoreMode(headers))
+      : undefined,
+  );
 }

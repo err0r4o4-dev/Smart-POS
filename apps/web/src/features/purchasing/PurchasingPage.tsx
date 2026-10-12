@@ -75,12 +75,9 @@ function PurchasingScreen({ view, id }: { view: string; id?: string }) {
     <section className="catalog-page supply-page">
       <header className="catalog-header">
         <div>
-          <p className="eyebrow">PURCHASING · PHASE 4</p>
+          <p className="eyebrow">จัดซื้อและรับสินค้า</p>
           <h1>{titles[view]}</h1>
-          <p>
-            เอกสารจริง · สต็อกจาก Inventory Ledger · คำแนะนำแบบ deterministic
-            ไม่ใช่ AI
-          </p>
+          <p>จัดการผู้จำหน่าย ใบสั่งซื้อ และการรับสินค้าของสาขา</p>
         </div>
         {view === 'orders' && state.tenant.can('purchasing.order.create') && (
           <Link className="button" to="/purchasing/orders/new">
@@ -105,18 +102,23 @@ function PurchasingScreen({ view, id }: { view: string; id?: string }) {
               }}
             />
             <Field label="สถานะ">
-              <input
+              <select
                 value={status}
-                placeholder="ACTIVE / ORDERED / POSTED"
                 onChange={(event) => {
                   setStatus(event.target.value);
                   setPage(1);
                 }}
-              />
+              >
+                <option value="">ทั้งหมด</option>
+                <option value="ACTIVE">ACTIVE</option>
+                <option value="ORDERED">ORDERED</option>
+                <option value="POSTED">POSTED</option>
+              </select>
             </Field>
           </div>
           <QueryFeedback
-            loading={query.isLoading}
+            retry={() => void query.refetch()}
+            loading={query.isFetching}
             error={query.error}
             empty={query.data?.total === 0}
           />
@@ -151,12 +153,23 @@ function PurchasingScreen({ view, id }: { view: string; id?: string }) {
                 </tr>
               ))}
             </SupplyTable>
+            {query.data && (
+              <Pagination
+                page={page}
+                total={query.data.total}
+                change={setPage}
+              />
+            )}
           </Card>
         </>
       )}
       {view === 'supplier' && (
         <>
-          <QueryFeedback loading={supplier.isLoading} error={supplier.error} />
+          <QueryFeedback
+            retry={() => void supplier.refetch()}
+            loading={supplier.isFetching}
+            error={supplier.error}
+          />
           {supplier.data && (
             <>
               <Card>
@@ -182,7 +195,8 @@ function PurchasingScreen({ view, id }: { view: string; id?: string }) {
               <Card>
                 <h2>ประวัติ PO ในสาขาที่เลือก · ล่าสุด 20 รายการ</h2>
                 <QueryFeedback
-                  loading={history.isLoading}
+                  retry={() => void history.refetch()}
+                  loading={history.isFetching}
                   error={history.error}
                 />
                 {history.data?.items.map((doc) => (
@@ -237,6 +251,9 @@ function PurchasingScreen({ view, id }: { view: string; id?: string }) {
               </tr>
             ))}
           </SupplyTable>
+          {query.data && (
+            <Pagination page={page} total={query.data.total} change={setPage} />
+          )}
         </Card>
       )}
       {(['receipts', 'returns'] as const)
@@ -333,15 +350,15 @@ function PurchasingScreen({ view, id }: { view: string; id?: string }) {
               </tr>
             ))}
           </SupplyTable>
+          {query.data && (
+            <Pagination page={page} total={query.data.total} change={setPage} />
+          )}
           {selected && (
             <Link to={'/purchasing/orders/' + selected}>
               เปิด Draft ที่สร้าง
             </Link>
           )}
         </Card>
-      )}
-      {query.data && (
-        <Pagination page={page} total={query.data.total} change={setPage} />
       )}
     </section>
   );
@@ -360,7 +377,8 @@ function Discrepancies({
   return (
     <>
       <QueryFeedback
-        loading={query.isLoading}
+        retry={() => void query.refetch()}
+        loading={query.isFetching}
         error={query.error}
         empty={query.data?.total === 0}
       />
@@ -432,7 +450,11 @@ export function DocumentDetail({
   const doc = query.data;
   return (
     <Card>
-      <QueryFeedback loading={query.isLoading} error={query.error} />
+      <QueryFeedback
+        retry={() => void query.refetch()}
+        loading={query.isFetching}
+        error={query.error}
+      />
       {doc && (
         <>
           <h2>

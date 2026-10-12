@@ -5,6 +5,13 @@ import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavig
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
 import { Button, Card, Tag } from '../../components/ui/primitives';
+import {
+  AlertTriangle,
+  Boxes,
+  CheckCircle2,
+  ChevronRight,
+  Layers,
+} from 'lucide-react';
 import { CartBatchPicker } from '../quality/BatchPicker';
 import { untrackedBatch } from '../../lib/quality-api';
 import type { StockLocation } from '../../lib/inventory-api';
@@ -114,42 +121,236 @@ function ShelfScreen({ view, id }: { view: string; id?: string }) {
                 </Field>
               </div>
               <QueryFeedback
-                loading={list.isLoading}
+                retry={() => void list.refetch()}
+                loading={list.isFetching}
                 error={list.error}
                 empty={list.data?.total === 0}
               />
               {view === 'overview' ? (
-                <Card>
-                  <SupplyTable
-                    headers={[
-                      'Code',
-                      'Shelf / Zone',
-                      'Assignments',
-                      'Low stock',
-                      'Status',
-                      'รายละเอียด',
-                    ]}
-                  >
-                    {list.data?.items.map((shelf) => (
-                      <tr key={shelf.id}>
-                        <td>{shelf.code}</td>
-                        <td>
-                          {shelf.name}
-                          <br />
-                          {shelf.zone}
-                        </td>
-                        <td>{shelf.assignment_count}</td>
-                        <td>{shelf.low_stock_count}</td>
-                        <td>
-                          <Tag>{shelf.status}</Tag>
-                        </td>
-                        <td>
-                          <Link to={'/shelves/' + shelf.id}>เปิดชั้นวาง</Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </SupplyTable>
-                </Card>
+                <>
+                  {list.data?.items && list.data.items.length > 0 && (
+                    <div
+                      className="supply-layout"
+                      style={{ marginBottom: '16px' }}
+                    >
+                      <Card className="shelf-metric-card">
+                        <div className="shelf-metric-header">
+                          <span>ชั้นวางทั้งหมด</span>
+                          <Layers size={18} aria-hidden="true" />
+                        </div>
+                        <div className="shelf-metric-value">
+                          <span>
+                            {list.data.total ?? list.data.items.length}
+                          </span>
+                          <small>จุดชั้นวาง</small>
+                        </div>
+                      </Card>
+                      <Card className="shelf-metric-card">
+                        <div className="shelf-metric-header">
+                          <span>สินค้าที่ผูกไว้ทั้งหมด</span>
+                          <Boxes size={18} aria-hidden="true" />
+                        </div>
+                        <div className="shelf-metric-value">
+                          <span>
+                            {list.data.items.reduce(
+                              (acc, s) => acc + (s.assignment_count ?? 0),
+                              0,
+                            )}
+                          </span>
+                          <small>รายการ (Assignments)</small>
+                        </div>
+                      </Card>
+                      <Card
+                        className={`shelf-metric-card ${
+                          list.data.items.some(
+                            (s) => (s.low_stock_count ?? 0) > 0,
+                          )
+                            ? 'warning-card'
+                            : ''
+                        }`}
+                      >
+                        <div className="shelf-metric-header">
+                          <span>จุดที่ต้องเติมสินค้าด่วน</span>
+                          <AlertTriangle
+                            size={18}
+                            aria-hidden="true"
+                            color={
+                              list.data.items.some(
+                                (s) => (s.low_stock_count ?? 0) > 0,
+                              )
+                                ? 'var(--primary-strong)'
+                                : 'var(--text-secondary)'
+                            }
+                          />
+                        </div>
+                        <div className="shelf-metric-value">
+                          <span
+                            style={{
+                              color: list.data.items.some(
+                                (s) => (s.low_stock_count ?? 0) > 0,
+                              )
+                                ? 'var(--primary-strong)'
+                                : 'inherit',
+                            }}
+                          >
+                            {
+                              list.data.items.filter(
+                                (s) => (s.low_stock_count ?? 0) > 0,
+                              ).length
+                            }
+                          </span>
+                          <small>
+                            {list.data.items.some(
+                              (s) => (s.low_stock_count ?? 0) > 0,
+                            )
+                              ? 'ชั้นวางที่ของใกล้หมด'
+                              : 'ทุกชั้นสต็อกพร้อมขาย'}
+                          </small>
+                        </div>
+                        {list.data.items.some(
+                          (s) => (s.low_stock_count ?? 0) > 0,
+                        ) && (
+                          <Link
+                            to="/shelves/replenishments"
+                            className="button button-secondary"
+                            style={{
+                              marginTop: '6px',
+                              minHeight: '32px',
+                              padding: '4px 10px',
+                              fontSize: '12px',
+                              alignSelf: 'flex-start',
+                            }}
+                          >
+                            ไปที่หน้าเติมสินค้า ➔
+                          </Link>
+                        )}
+                      </Card>
+                    </div>
+                  )}
+                  <Card>
+                    <SupplyTable
+                      headers={[
+                        'Code',
+                        'Shelf / Zone',
+                        'Assignments',
+                        'Low stock',
+                        'Status',
+                        'การจัดการ',
+                      ]}
+                    >
+                      {list.data?.items.map((shelf) => (
+                        <tr key={shelf.id}>
+                          <td>
+                            <span className="shelf-code">{shelf.code}</span>
+                          </td>
+                          <td>
+                            <div className="shelf-cell-zone">
+                              <strong>{shelf.name}</strong>
+                              {shelf.zone ? (
+                                <span
+                                  className="tag"
+                                  style={{
+                                    alignSelf: 'flex-start',
+                                    fontSize: '12px',
+                                    padding: '1px 8px',
+                                  }}
+                                >
+                                  โซน: {shelf.zone}
+                                </span>
+                              ) : (
+                                <small
+                                  style={{ color: 'var(--text-tertiary)' }}
+                                >
+                                  ไม่ระบุโซน
+                                </small>
+                              )}
+                            </div>
+                          </td>
+                          <td>
+                            <span style={{ fontWeight: 600 }}>
+                              {shelf.assignment_count}
+                            </span>{' '}
+                            <small
+                              style={{
+                                display: 'inline',
+                                color: 'var(--text-secondary)',
+                              }}
+                            >
+                              รายการ
+                            </small>
+                          </td>
+                          <td>
+                            {shelf.low_stock_count > 0 ? (
+                              <Tag tone="amber">
+                                <AlertTriangle
+                                  size={14}
+                                  aria-hidden="true"
+                                  style={{
+                                    display: 'inline',
+                                    marginRight: '4px',
+                                    verticalAlign: '-2px',
+                                  }}
+                                />
+                                {shelf.low_stock_count} จุดต้องเติม
+                              </Tag>
+                            ) : (
+                              <Tag tone="success">
+                                <CheckCircle2
+                                  size={14}
+                                  aria-hidden="true"
+                                  style={{
+                                    display: 'inline',
+                                    marginRight: '4px',
+                                    verticalAlign: '-2px',
+                                  }}
+                                />
+                                ปกติ
+                              </Tag>
+                            )}
+                          </td>
+                          <td>
+                            <Tag
+                              tone={
+                                shelf.status === 'ACTIVE'
+                                  ? 'success'
+                                  : shelf.status === 'ARCHIVED'
+                                    ? 'error'
+                                    : 'neutral'
+                              }
+                            >
+                              {shelf.status}
+                            </Tag>
+                          </td>
+                          <td>
+                            <div className="shelf-table-actions">
+                              <Link
+                                className="button button-secondary"
+                                to={'/shelves/' + shelf.id}
+                              >
+                                เปิดชั้นวาง
+                                <ChevronRight size={14} aria-hidden="true" />
+                              </Link>
+                              {shelf.low_stock_count > 0 && (
+                                <Link
+                                  className="button"
+                                  to="/shelves/replenishments"
+                                  title="สร้างใบงานเติมสินค้า"
+                                >
+                                  เติมของ
+                                </Link>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </SupplyTable>
+                    <Pagination
+                      page={page}
+                      total={list.data?.total ?? 0}
+                      change={setPage}
+                    />
+                  </Card>
+                </>
               ) : (
                 <>
                   <p>
@@ -184,13 +385,13 @@ function ShelfScreen({ view, id }: { view: string; id?: string }) {
                       readonly
                     />
                   )}
+                  <Pagination
+                    page={page}
+                    total={list.data?.total ?? 0}
+                    change={setPage}
+                  />
                 </>
               )}
-              <Pagination
-                page={page}
-                total={list.data?.total ?? 0}
-                change={setPage}
-              />
             </>
           )}
           {view === 'replenishments' && <Replenishments state={state} />}
@@ -324,7 +525,11 @@ function ShelfDetail({
   const shelf = query.data;
   return (
     <>
-      <QueryFeedback loading={query.isLoading} error={query.error} />
+      <QueryFeedback
+        retry={() => void query.refetch()}
+        loading={query.isFetching}
+        error={query.error}
+      />
       {shelf && (
         <>
           <Card>
@@ -622,7 +827,8 @@ function Replenishments({ state }: { state: SupplyScope }) {
           ไม่จองสต็อกและตรวจ stock/capacity ใหม่ตอน complete
         </p>
         <QueryFeedback
-          loading={suggestions.isLoading}
+          retry={() => void suggestions.refetch()}
+          loading={suggestions.isFetching}
           error={suggestions.error}
           empty={suggestions.data?.total === 0}
         />
@@ -723,7 +929,8 @@ function Replenishments({ state }: { state: SupplyScope }) {
           </Field>
         </div>
         <QueryFeedback
-          loading={tasks.isLoading}
+          retry={() => void tasks.refetch()}
+          loading={tasks.isFetching}
           error={tasks.error}
           empty={tasks.data?.total === 0}
         />
@@ -793,7 +1000,11 @@ function TaskDetail({ state, id }: { state: SupplyScope; id: string }) {
   return (
     <Card>
       <h2>Task Detail</h2>
-      <QueryFeedback loading={query.isLoading} error={query.error} />
+      <QueryFeedback
+        retry={() => void query.refetch()}
+        loading={query.isFetching}
+        error={query.error}
+      />
       {task && (
         <>
           <p>
@@ -810,7 +1021,8 @@ function TaskDetail({ state, id }: { state: SupplyScope; id: string }) {
             ['OPEN', 'ASSIGNED'].includes(task.status) && (
               <>
                 <QueryFeedback
-                  loading={members.isLoading}
+                  retry={() => void members.refetch()}
+                  loading={members.isFetching}
                   error={members.error}
                 />
                 <Field label="ผู้รับผิดชอบ Task">

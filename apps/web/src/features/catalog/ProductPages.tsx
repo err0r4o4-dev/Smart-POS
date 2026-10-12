@@ -4,6 +4,7 @@ import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavigate';
 import { Package } from 'lucide-react';
 import { Button, Card, Tag } from '../../components/ui/primitives';
+import { QueryFeedback } from '../../components/feedback/QueryFeedback';
 import {
   productInput,
   blankProduct,
@@ -30,6 +31,12 @@ import {
 import { ProductFields, VariantFields, VariantEditor } from './ProductForm';
 import { BarcodeScanner } from './BarcodeScanner';
 import { BarcodeManager } from './BarcodeManager';
+
+function statusTone(status: string): 'success' | 'amber' | 'neutral' {
+  if (status === 'ACTIVE') return 'success';
+  if (status === 'INACTIVE') return 'amber';
+  return 'neutral';
+}
 
 export function ProductsPage() {
   const catalog = useCatalog();
@@ -144,11 +151,25 @@ export function ProductsPage() {
           </label>
           <Button type="submit">ค้นหาสินค้า</Button>
         </form>
-        <CatalogLoading pending={query.isPending} />
-        <CatalogError error={query.error ?? categories.error ?? brands.error} />
+        <QueryFeedback
+          loading={
+            query.isFetching || categories.isFetching || brands.isFetching
+          }
+          error={query.error ?? categories.error ?? brands.error}
+          retry={() => {
+            void query.refetch();
+            void categories.refetch();
+            void brands.refetch();
+          }}
+        />
         {query.data && (
           <>
-            <div className="catalog-table-wrap">
+            <div
+              className="catalog-table-wrap"
+              tabIndex={0}
+              role="region"
+              aria-label="รายการสินค้า"
+            >
               <table className="catalog-table">
                 <thead>
                   <tr>
@@ -198,11 +219,7 @@ export function ProductsPage() {
                         ))}
                       </td>
                       <td>
-                        <Tag
-                          tone={
-                            product.status === 'ACTIVE' ? 'success' : 'neutral'
-                          }
-                        >
+                        <Tag tone={statusTone(product.status)}>
                           {product.status}
                         </Tag>
                       </td>
@@ -249,9 +266,7 @@ export function ProductDetailsPage() {
               </span>
               <div>
                 <h2>{query.data.name}</h2>
-                <Tag
-                  tone={query.data.status === 'ACTIVE' ? 'success' : 'neutral'}
-                >
+                <Tag tone={statusTone(query.data.status)}>
                   {query.data.status}
                 </Tag>
                 <p>{query.data.description || 'ไม่มีคำอธิบาย'}</p>
@@ -262,9 +277,8 @@ export function ProductDetailsPage() {
               </div>
             </div>
             <p className="notice">
-              รูปสินค้า: storage ยังไม่ถูกตั้งค่า • ดูยอดสต็อกจริงตามสาขาได้ที่{' '}
-              <Link to="/inventory/balances">Inventory balances</Link> • POS
-              ยังไม่เริ่ม
+              ดูยอดสต็อกตามสาขาได้ที่{' '}
+              <Link to="/inventory/balances">ยอดสต็อก</Link>
             </p>
           </Card>
           {query.data.variants.map((variant) => (
@@ -280,7 +294,11 @@ export function ProductDetailsPage() {
                     {variant.currency}
                   </dd>
                   <dt>สถานะ</dt>
-                  <dd>{variant.status}</dd>
+                  <dd>
+                    <Tag tone={statusTone(variant.status)}>
+                      {variant.status}
+                    </Tag>
+                  </dd>
                   {Object.entries(variant.attributes).map(([key, value]) => (
                     <div className="catalog-dl-row" key={key}>
                       <dt>{key}</dt>

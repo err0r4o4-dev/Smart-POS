@@ -1,5 +1,7 @@
 # Online reservation foundation
 
+Continuation: [separate online stock sources](online-stock-sources.md) adds optional same-branch warehouse sourcing in schema16. The schema15 scope/results below remain historical; customer payment/delivery acceptance is still separate.
+
 Status: implemented and verified locally on 2026-10-12 with official schema15 in a new isolated PostgreSQL. Not deployed or migrated on the primary stack; not customer payment/delivery acceptance.
 
 ## Scope and ownership

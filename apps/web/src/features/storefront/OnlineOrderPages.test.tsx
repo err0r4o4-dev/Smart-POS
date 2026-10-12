@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, expect, it, vi } from 'vitest';
@@ -137,6 +143,131 @@ it('does not turn settings permission failure into a create form', async () => {
   expect(
     screen.queryByRole('button', { name: 'บันทึกการตั้งค่า' }),
   ).not.toBeInTheDocument();
+});
+it('saves a separate online terminal without replacing the front terminal', async () => {
+  const backTerminal = {
+    ...terminal,
+    id: 'back-terminal',
+    name: 'เครื่องขายหลังร้าน',
+    code: 'ONLINE',
+    stock_location_id: 'warehouse',
+  };
+  mocks.request.mockImplementation(
+    async (_org: string, path: string, options: { method?: string }) => {
+      if (path.startsWith('/pos/terminals'))
+        return { items: [terminal, backTerminal] };
+      if (path === '/storefront' && options.method !== 'PUT')
+        throw new ApiError(404, 'Not configured');
+      return {};
+    },
+  );
+  view(true);
+  await screen.findByRole('button', { name: 'บันทึกการตั้งค่า' });
+  fireEvent.change(screen.getByLabelText(/ชื่อใน URL/), {
+    target: { value: 'test-shop' },
+  });
+  fireEvent.change(screen.getByLabelText(/เครื่องขาย \/ สาขา/), {
+    target: { value: 'terminal' },
+  });
+  fireEvent.change(screen.getByLabelText(/เครื่องขายออนไลน์จากคลังหลังร้าน/), {
+    target: { value: 'back-terminal' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'บันทึกการตั้งค่า' }));
+  await waitFor(() =>
+    expect(mocks.request).toHaveBeenCalledWith(
+      'org',
+      '/storefront',
+      expect.objectContaining({
+        method: 'PUT',
+        body: expect.objectContaining({
+          terminal_id: 'terminal',
+          online_terminal_id: 'back-terminal',
+        }),
+      }),
+    ),
+  );
+});
+it('loads the stored online source and clears it when the front terminal changes', async () => {
+  const backTerminal = {
+    ...terminal,
+    id: 'back-terminal',
+    name: 'เครื่องขายหลังร้าน',
+    stock_location_id: 'warehouse',
+  };
+  mocks.request.mockImplementation(async (_org: string, path: string) => {
+    if (path.startsWith('/pos/terminals'))
+      return { items: [terminal, backTerminal] };
+    if (path === '/storefront')
+      return {
+        slug: 'test-shop',
+        name: 'ร้านทดสอบ',
+        terminal_id: 'terminal',
+        online_terminal_id: 'back-terminal',
+        revision: 2,
+      };
+    return { items: [] };
+  });
+  view(true);
+  const selector = await screen.findByRole('combobox', {
+    name: /เครื่องขายออนไลน์จากคลังหลังร้าน/,
+  });
+  expect(selector).toHaveValue('back-terminal');
+  expect(
+    within(selector).queryByRole('option', { name: /เครื่องขายหลัก/ }),
+  ).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText(/เครื่องขาย \/ สาขา/), {
+    target: { value: 'back-terminal' },
+  });
+  expect(selector).toHaveValue('');
+  expect(
+    within(selector).queryByRole('option', { name: /เครื่องขายหลังร้าน/ }),
+  ).not.toBeInTheDocument();
+});
+it('sends an explicit shared source and preserves the choice after a conflict', async () => {
+  const backTerminal = {
+    ...terminal,
+    id: 'back-terminal',
+    name: 'เครื่องขายหลังร้าน',
+    stock_location_id: 'warehouse',
+  };
+  mocks.request.mockImplementation(
+    async (_org: string, path: string, options: { method?: string }) => {
+      if (path.startsWith('/pos/terminals'))
+        return { items: [terminal, backTerminal] };
+      if (path === '/storefront' && options.method === 'PUT')
+        throw new ApiError(409, 'ยังมีออเดอร์ค้างอยู่');
+      if (path === '/storefront')
+        return {
+          slug: 'test-shop',
+          name: 'ร้านทดสอบ',
+          terminal_id: 'terminal',
+          online_terminal_id: 'back-terminal',
+          revision: 2,
+        };
+      return { items: [] };
+    },
+  );
+  view(true);
+  const selector = await screen.findByRole('combobox', {
+    name: /เครื่องขายออนไลน์จากคลังหลังร้าน/,
+  });
+  fireEvent.change(selector, { target: { value: '' } });
+  fireEvent.click(screen.getByRole('button', { name: 'บันทึกการตั้งค่า' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'ยังมีออเดอร์ค้างอยู่',
+  );
+  expect(selector).toHaveValue('');
+  expect(mocks.request).toHaveBeenCalledWith(
+    'org',
+    '/storefront',
+    expect.objectContaining({
+      method: 'PUT',
+      body: expect.objectContaining({
+        terminal_id: 'terminal',
+        online_terminal_id: '',
+      }),
+    }),
+  );
 });
 it('requires a visible reason to reject and sends the current order revision', async () => {
   view();

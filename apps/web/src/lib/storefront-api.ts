@@ -12,6 +12,7 @@ export interface ShopSettings extends ShopSummary {
   contact_phone: string;
   pickup_instructions: string;
   terminal_id?: string;
+  online_terminal_id?: string;
   branch_id?: string;
   stock_location_id?: string;
   published: boolean;

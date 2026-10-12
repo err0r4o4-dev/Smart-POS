@@ -277,4 +277,11 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 			t.Fatalf("unpublished store leaked a fallback: %v", problem)
 		}
 	})
+	t.Run("separate front and back online stock sources", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "d1111111-1111-4111-8111-111111111111", createInput("SOURCE"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		sourceAcceptance(t, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "source-fixture"), firstShop.TerminalID, guest.ID)
+	})
 }

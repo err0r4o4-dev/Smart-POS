@@ -18,7 +18,7 @@ import {
 
 import { WorkspaceContext } from './POSContext';
 import { usePOS } from './POSContext';
-import { roleLabels, workspaceHome } from '../../app/access';
+import { workspaceHome } from '../../app/access';
 import { businessArea } from '../../app/workspace-paths';
 import { paths } from '../../app/routes';
 
@@ -50,9 +50,6 @@ export function POSWorkspace() {
             กลับพื้นที่ทำงาน
           </Link>
           <Brand />
-          <span className="tag tag-amber">
-            ขายหน้าร้าน · {roleLabels[tenant.context.membership.role]}
-          </span>
           <ContextSwitchers />
         </header>
         <nav className="pos-navigation" aria-label="เมนูขาย">

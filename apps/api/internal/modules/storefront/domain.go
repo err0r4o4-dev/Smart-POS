@@ -31,6 +31,7 @@ type Settings struct {
 	ContactPhone       string `json:"contact_phone"`
 	PickupInstructions string `json:"pickup_instructions"`
 	TerminalID         string `json:"terminal_id,omitempty"`
+	OnlineTerminalID   string `json:"online_terminal_id,omitempty"`
 	Published          bool   `json:"published"`
 	AcceptingOrders    bool   `json:"accepting_orders"`
 	Revision           int64  `json:"revision"`
@@ -44,6 +45,7 @@ type SettingsInput struct {
 	ContactPhone       string `json:"contact_phone"`
 	PickupInstructions string `json:"pickup_instructions"`
 	TerminalID         string `json:"terminal_id"`
+	OnlineTerminalID   string `json:"online_terminal_id"`
 	Published          bool   `json:"published"`
 	AcceptingOrders    bool   `json:"accepting_orders"`
 	Revision           int64  `json:"revision"`
@@ -172,10 +174,21 @@ func (input *SettingsInput) validate() error {
 	input.Slug = strings.TrimSpace(input.Slug)
 	input.Name = strings.TrimSpace(input.Name)
 	input.ContactPhone = strings.TrimSpace(input.ContactPhone)
+	input.TerminalID = strings.ToLower(input.TerminalID)
+	input.OnlineTerminalID = strings.ToLower(input.OnlineTerminalID)
+	if input.OnlineTerminalID != "" && (!uuidPattern.MatchString(input.OnlineTerminalID) || input.OnlineTerminalID == input.TerminalID) {
+		return ErrInput
+	}
 	if !slugPattern.MatchString(input.Slug) || strings.HasSuffix(input.Slug, "-") || strings.Contains(input.Slug, "--") || !text(input.Name, 200, true) || !text(input.Description, 1000, false) || !text(input.PickupInstructions, 1000, false) || !text(input.ContactPhone, 30, false) || !uuidPattern.MatchString(input.TerminalID) || input.Revision < 0 || (input.AcceptingOrders && !input.Published) {
 		return ErrInput
 	}
 	return nil
+}
+func (shop Settings) orderTerminalID() string {
+	if shop.OnlineTerminalID != "" {
+		return shop.OnlineTerminalID
+	}
+	return shop.TerminalID
 }
 func (input *OrderInput) validate() error {
 	input.CustomerName = strings.TrimSpace(input.CustomerName)

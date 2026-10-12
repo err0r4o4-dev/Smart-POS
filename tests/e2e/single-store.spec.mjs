@@ -7,6 +7,17 @@ const branchID = '33333333-3333-4333-8333-333333333333';
 
 async function fixture(page, { member = true, mode = 'single' } = {}) {
   const writes = [];
+  let settings = {
+    slug: 'single-fixture',
+    name: 'ร้านทดสอบร้านเดียว',
+    description: '',
+    contact_phone: '',
+    pickup_instructions: 'รับสินค้าที่เคาน์เตอร์',
+    terminal_id: '44444444-4444-4444-8444-444444444444',
+    published: true,
+    accepting_orders: true,
+    revision: 1,
+  };
   await page.route('**/api/**', async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
@@ -95,6 +106,41 @@ async function fixture(page, { member = true, mode = 'single' } = {}) {
         revision: 1,
       };
     else if (path === '/api/v1/storefronts/single-fixture/products')
+      data = { items: [], total: 0, page: 1, page_size: 24 };
+    else if (path === `/api/v1/organizations/${organizationID}/storefront`) {
+      if (request.method() === 'PUT')
+        settings = {
+          ...request.postDataJSON(),
+          revision: settings.revision + 1,
+        };
+      data = settings;
+    } else if (path === `/api/v1/organizations/${organizationID}/pos/terminals`)
+      data = {
+        items: [
+          {
+            id: '44444444-4444-4444-8444-444444444444',
+            branch_id: branchID,
+            name: 'เครื่องขายหน้าร้าน',
+            code: 'FRONT',
+            stock_location_id: '66666666-6666-4666-8666-666666666666',
+            status: 'ACTIVE',
+          },
+          {
+            id: '55555555-5555-4555-8555-555555555555',
+            branch_id: branchID,
+            name: 'เครื่องขายคลังหลังร้าน',
+            code: 'ONLINE',
+            stock_location_id: '77777777-7777-4777-8777-777777777777',
+            status: 'ACTIVE',
+          },
+        ],
+        total: 2,
+        page: 1,
+        page_size: 100,
+      };
+    else if (
+      path === `/api/v1/organizations/${organizationID}/storefront/products`
+    )
       data = { items: [], total: 0, page: 1, page_size: 24 };
     else {
       await route.fulfill({
@@ -201,4 +247,51 @@ test('legacy multi-store mode retains the published-store directory (API fixture
     page.getByRole('link', { name: 'ดูสินค้า', exact: true }),
   ).toBeVisible();
   await expect(page).toHaveURL(/\/shop$/);
+});
+
+test('front and back source settings save independently at three widths (API fixtures)', async ({
+  page,
+}, testInfo) => {
+  const writes = await fixture(page);
+  await page.goto('/manage/settings/storefront');
+  const front = page.getByRole('combobox', { name: /เครื่องขาย \/ สาขา/ });
+  const back = page.getByRole('combobox', {
+    name: /เครื่องขายออนไลน์จากคลังหลังร้าน/,
+  });
+  await expect(front).toHaveValue('44444444-4444-4444-8444-444444444444');
+  await expect(back).toHaveValue('');
+  await back.focus();
+  await expect(back).toBeFocused();
+  await back.selectOption('55555555-5555-4555-8555-555555555555');
+  const saved = page.waitForRequest(
+    (request) =>
+      request.method() === 'PUT' &&
+      new URL(request.url()).pathname ===
+        `/api/v1/organizations/${organizationID}/storefront`,
+  );
+  await page.getByRole('button', { name: 'บันทึกการตั้งค่า' }).click();
+  expect((await saved).postDataJSON()).toMatchObject({
+    terminal_id: '44444444-4444-4444-8444-444444444444',
+    online_terminal_id: '55555555-5555-4555-8555-555555555555',
+  });
+  await expect(back).toHaveValue('55555555-5555-4555-8555-555555555555');
+  for (const width of [390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await expect(back).toBeVisible();
+    await expect(front).toHaveValue('44444444-4444-4444-8444-444444444444');
+    await page.getByRole('heading', { name: 'ตั้งค่าหน้าร้านออนไลน์' }).click();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: testInfo.outputPath(`online-sources-${width}.png`),
+      fullPage: true,
+    });
+  }
+  expect(writes).toEqual([
+    `/api/v1/organizations/${organizationID}/storefront`,
+  ]);
 });

@@ -36,6 +36,29 @@ func TestOrderInputValidation(t *testing.T) {
 		})
 	}
 }
+
+func TestSeparateSourceInputAndTerminalSelection(t *testing.T) {
+	front := "11111111-1111-4111-8111-111111111111"
+	back := "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA"
+	input := SettingsInput{Slug: "source-shop", Name: "Synthetic shop", TerminalID: front, OnlineTerminalID: back}
+	if err := input.validate(); err != nil || input.OnlineTerminalID != strings.ToLower(back) {
+		t.Fatalf("valid separate source: %+v error %v", input, err)
+	}
+	shop := Settings{TerminalID: front, OnlineTerminalID: input.OnlineTerminalID}
+	if shop.orderTerminalID() != strings.ToLower(back) {
+		t.Fatal("online terminal must override the front source")
+	}
+	shop.OnlineTerminalID = ""
+	if shop.orderTerminalID() != front {
+		t.Fatal("legacy shared-source configuration must be preserved")
+	}
+	for _, invalid := range []string{front, "not-a-terminal"} {
+		input.OnlineTerminalID = invalid
+		if input.validate() == nil {
+			t.Fatalf("invalid separate source accepted: %s", invalid)
+		}
+	}
+}
 func TestSettingsValidation(t *testing.T) {
 	input := SettingsInput{Slug: "test-shop", Name: "ร้านทดสอบ", TerminalID: "11111111-1111-4111-8111-111111111111"}
 	if input.validate() != nil {

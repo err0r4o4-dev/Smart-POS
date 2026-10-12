@@ -17953,12 +17953,18 @@ components:
         terminal_id:
           type: string
           format: uuid
+          description: Management-only front terminal; unchanged when a separate online source is selected.
+        online_terminal_id:
+          type: string
+          format: uuid
+          description: Management-only optional same-branch warehouse terminal for online orders. Omitted for a shared source and all public responses.
         branch_id:
           type: string
           format: uuid
         stock_location_id:
           type: string
           format: uuid
+          description: Management-only effective online stock source, not an aggregate of front and back stock.
     StorefrontSettingsInput:
       type: object
       additionalProperties: false
@@ -17998,6 +18004,10 @@ components:
         terminal_id:
           type: string
           format: uuid
+        online_terminal_id:
+          type: string
+          pattern: ^$|^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$
+          description: Optional same-branch terminal at a distinct WAREHOUSE. Omit or send an empty string to share the front source. Source changes conflict while any live order remains. A dedicated terminal shift is required for pickup POS settlement.
     StorefrontDirectoryEntry:
       type: object
       additionalProperties: false

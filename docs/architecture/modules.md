@@ -1,18 +1,20 @@
 # Module specifications
 
-Phase 0 implements platform/presentation, Phase 1A implements identity, Phase 1B implements organization/branch/employee membership management with fixed RBAC Phase 1C implements product catalog and Phase 2 implements inventory core. Other business functionality remains planned. API groups/events below are proposals unless explicitly marked implemented; the live source is OpenAPI. Page counts now use the canonical 17-module/113-route inventory including Storefront. Upstream dependencies are constrained by dependencies.md. See [Phase 1B architecture](organization.md) and [Phase 1C architecture](catalog.md).
+Current online-extension status (2026-10-12): **PARTIAL / PAUSED by user request**, clean schema23 required by Go. Existing storefront pickup/source/reservation behavior and internal payment/reconciliation/delivery-snapshot/pre-shipment-refund services do not complete customer Checkout/refund HTTP/runtime/UI, shipment/returns or online reports. Inventory entries remain specifications, not proof of capability. See [current cumulative scope and policy](payment-sandbox.md#current-online-flow-status-2026-10-12) and [recorded evidence](../development/verification.md).
 
-Current status supersedes older introductory scope: Phase0–4 and Phase5.1–5.7 COMPLETED (Local); Phase5 overall COMPLETED (Local); Phase6–7 NOT STARTED; Phase6 NOT READY; Production Ready NO. Existing POS/payment/stock/pricing engines are retained; Quality extends Inventory and Loyalty extends Customers. The original Phase5 checkpoint counted16 modules/106 routes; the storefront extension now brings the inventory to17 modules/113 routes. See [Quality](quality.md), [Loyalty](loyalty.md) and [final acceptance](../development/phase57-verification.md).
+Phases0–2 implement platform/presentation, identity, organization/branch/employee membership with fixed RBAC, catalog and inventory core. Phases3–5 add locally accepted POS, purchasing/shelves, business exceptions, pricing, customers/Loyalty and Quality; reporting/intelligence and other unimplemented groups remain planned. API groups/events below are proposals unless explicitly marked implemented; actual router registration and OpenAPI determine the public contract. Page counts use the canonical17-module/114-route inventory including Storefront and its sandbox diagnostic. Upstream dependencies are constrained by dependencies.md. See [Phase1B architecture](organization.md), [Phase1C architecture](catalog.md) and the dated current-status boundaries below.
 
-## Storefront (7 pages)
+Current status supersedes older introductory scope: Phase0–4 and Phase5.1–5.7 COMPLETED (Local); Phase5 overall COMPLETED (Local); Phase6–7 NOT STARTED; Phase6 NOT READY; Production Ready NO. Existing POS/payment/stock/pricing engines are retained; Quality extends Inventory and Loyalty extends Customers. The original Phase5 checkpoint counted16 modules/106 routes; storefront and sandbox diagnostics bring the current inventory to17 modules/114 routes. See [Quality](quality.md), [Loyalty](loyalty.md) and [final acceptance](../development/phase57-verification.md).
+
+## Storefront (8 pages)
 
 - Purpose: Published catalog and guest orders for pickup and payment at the store.
-- Pages: `/shop`, `/shop/:slug`, `/shop/:slug/cart`, `/shop/:slug/track/:orderId`, `/settings/storefront`, `/online-orders`, `/online-orders/:orderId`.
+- Pages: `/shop`, `/shop/:slug`, `/shop/:slug/cart`, `/shop/:slug/track/:orderId`, `/settings/storefront`, `/settings/storefront/payments`, `/online-orders`, `/online-orders/:orderId`.
 - Owner: public Go storefront module; existing POS owns payment, sales, inventory posting and receipts.
 - Permissions: storefront.manage for Owner/Manager; online_orders.read/manage for Owner/Manager/Cashier with branch scope.
 - Invariants: explicit product publication, immutable estimates and pickup snapshots, hashed tracking access, idempotent creation/import/settlement, no stock reservation, no invented completion.
-- Boundaries: no customer account, shipping, online payment, costing, or new payment engine. See [Storefront](storefront.md).
-- Current canonical inventory: 17 modules / 113 logical routes; dated Phase5 acceptance counts below remain historical evidence, not storefront verification.
+- Boundaries: customer accounts, shipping, customer online payment and costing remain unimplemented. A management-only Stripe sandbox diagnostic can create/check/refund synthetic test payments without touching local orders, sales or stock. See [Storefront](storefront.md) and [sandbox](payment-sandbox.md).
+- Current canonical inventory: 17 modules / 114 logical routes; dated Phase5 acceptance counts below remain historical evidence, not sandbox verification.
 
 ## Authentication (6 pages)
 

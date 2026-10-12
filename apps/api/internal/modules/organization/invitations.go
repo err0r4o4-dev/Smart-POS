@@ -125,6 +125,9 @@ func (service *Service) Accept(ctx context.Context, user identity.Profile, token
 	if err != nil {
 		return Context{}, dbError(err)
 	}
+	if !service.AllowsOrganization(orgID) {
+		return Context{}, ErrNotFound
+	}
 	tx, err := service.transaction(ctx, user.ID, orgID)
 	if err != nil {
 		return Context{}, err

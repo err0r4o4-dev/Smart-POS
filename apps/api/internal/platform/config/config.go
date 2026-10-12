@@ -6,28 +6,35 @@ import (
 	"net/netip"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"smartpos/api/internal/platform/stripe"
 )
 
 type Config struct {
-	Address        string
-	DatabaseURL    string
-	Environment    string
-	PublicOrigin   string
-	AllowedOrigins []string
-	SessionTTL     time.Duration
-	SMTPAddr       string
-	SMTPUser       string
-	SMTPPassword   string
-	MailFrom       string
-	TrustedProxyIP netip.Addr
+	Address                   string
+	DatabaseURL               string
+	Environment               string
+	PublicOrigin              string
+	AllowedOrigins            []string
+	SessionTTL                time.Duration
+	SMTPAddr                  string
+	SMTPUser                  string
+	SMTPPassword              string
+	MailFrom                  string
+	TrustedProxyIP            netip.Addr
+	PaymentSandbox            *stripe.Client
+	CustomerPayments          *stripe.CustomerClient
+	SingleStoreOrganizationID string
 }
 
 func Load() (Config, error) { return Parse(os.Getenv) }
+
+var organizationIDPattern = regexp.MustCompile(`^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$`)
 
 func Parse(getenv func(string) string) (Config, error) {
 	address := getenv("API_ADDR")
@@ -98,5 +105,28 @@ func Parse(getenv func(string) string) (Config, error) {
 			return Config{}, errors.New("AUTH_SESSION_HOURS must be 1 through 720")
 		}
 	}
-	return Config{Address: address, DatabaseURL: databaseURL, Environment: environment, PublicOrigin: origin, AllowedOrigins: origins, SessionTTL: time.Duration(hours) * time.Hour, SMTPAddr: smtpAddr, SMTPUser: getenv("SMTP_USER"), SMTPPassword: getenv("SMTP_PASSWORD"), MailFrom: mailFrom, TrustedProxyIP: trustedProxyIP}, nil
+	sandbox, err := stripe.NewSandbox(getenv("STRIPE_TEST_SECRET_KEY"), origin)
+	if err != nil {
+		return Config{}, err
+	}
+	if environment != "development" && sandbox.Configured() {
+		return Config{}, errors.New("Stripe sandbox is allowed only in development")
+	}
+	checkoutFlag := getenv("STRIPE_CUSTOMER_CHECKOUT_ENABLED")
+	if checkoutFlag != "" && checkoutFlag != "true" && checkoutFlag != "false" {
+		return Config{}, errors.New("STRIPE_CUSTOMER_CHECKOUT_ENABLED must be true or false")
+	}
+	webhookSecret := getenv("STRIPE_CUSTOMER_WEBHOOK_SECRET")
+	if environment != "development" && (checkoutFlag == "true" || webhookSecret != "") {
+		return Config{}, errors.New("customer Stripe test payments are allowed only in development")
+	}
+	customerPayments, err := stripe.NewCustomerClient(sandbox, webhookSecret, checkoutFlag == "true")
+	if err != nil {
+		return Config{}, err
+	}
+	singleStore := getenv("SINGLE_STORE_ORGANIZATION_ID")
+	if singleStore != "" && !organizationIDPattern.MatchString(singleStore) {
+		return Config{}, errors.New("SINGLE_STORE_ORGANIZATION_ID must be one organization UUID")
+	}
+	return Config{Address: address, DatabaseURL: databaseURL, Environment: environment, PublicOrigin: origin, AllowedOrigins: origins, SessionTTL: time.Duration(hours) * time.Hour, SMTPAddr: smtpAddr, SMTPUser: getenv("SMTP_USER"), SMTPPassword: getenv("SMTP_PASSWORD"), MailFrom: mailFrom, TrustedProxyIP: trustedProxyIP, PaymentSandbox: sandbox, CustomerPayments: customerPayments, SingleStoreOrganizationID: strings.ToLower(singleStore)}, nil
 }

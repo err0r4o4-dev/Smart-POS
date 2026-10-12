@@ -1,5 +1,6 @@
 import { ApiError } from './api';
 import { exactDecimal } from './pos-api';
+import { responseStoreMode, type StoreMode } from './store-mode';
 
 export interface ShopSummary {
   slug: string;
@@ -11,6 +12,7 @@ export interface ShopSettings extends ShopSummary {
   contact_phone: string;
   pickup_instructions: string;
   terminal_id?: string;
+  online_terminal_id?: string;
   branch_id?: string;
   stock_location_id?: string;
   published: boolean;
@@ -27,6 +29,17 @@ export interface ShopProduct {
   available: string;
   saleable: boolean;
   published: boolean;
+  category_id?: string;
+  category_name?: string;
+  image_url?: string;
+}
+export interface ShopCategory {
+  id: string;
+  name: string;
+  count: number;
+}
+export interface ShopCatalogPage extends ShopPage<ShopProduct> {
+  categories?: ShopCategory[];
 }
 export interface ShopPage<Item> {
   items: Item[];
@@ -110,7 +123,12 @@ export class StorefrontError extends ApiError {
 }
 export async function storefrontRequest<Result>(
   path: string,
-  options: { body?: object; key?: string; signal?: AbortSignal } = {},
+  options: {
+    body?: object;
+    key?: string;
+    signal?: AbortSignal;
+    storeMode?: (mode: StoreMode) => void;
+  } = {},
 ): Promise<Result> {
   const response = await fetch(`/api/v1/storefronts${path}`, {
     method: options.body === undefined ? 'GET' : 'POST',
@@ -137,6 +155,7 @@ export async function storefrontRequest<Result>(
       result.error?.code ?? 'UNAVAILABLE',
       result.error?.message ?? 'เชื่อมต่อหน้าร้านไม่ได้ กรุณาลองใหม่',
     );
+  options.storeMode?.(responseStoreMode(response.headers));
   return result.data;
 }
 export function newTrackingToken() {

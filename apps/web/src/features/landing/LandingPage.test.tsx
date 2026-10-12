@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { LandingPage } from './LandingPage';
@@ -17,6 +17,31 @@ function renderLanding() {
     </MemoryRouter>,
   );
 }
+
+it('replaces the footer logo with guide links while keeping the header brand', () => {
+  renderLanding();
+  const footer = within(screen.getByRole('contentinfo'));
+  expect(
+    footer.queryByRole('link', { name: 'VELO POS หน้าแรก' }),
+  ).not.toBeInTheDocument();
+  const navigation = within(
+    footer.getByRole('navigation', { name: 'ลิงก์ท้ายหน้า' }),
+  );
+  expect(
+    navigation.getByRole('link', { name: 'คู่มือการใช้งาน' }),
+  ).toHaveAttribute('href', '/help');
+  expect(
+    navigation.getByRole('link', { name: 'วิธีเริ่มต้น' }),
+  ).toHaveAttribute('href', '#how-it-works');
+  expect(
+    footer.getByText(`© ${new Date().getFullYear()} VELO POS · SmartPOS`),
+  ).toBeVisible();
+  expect(
+    within(screen.getByRole('banner')).getByRole('link', {
+      name: 'VELO POS หน้าแรก',
+    }),
+  ).toBeVisible();
+});
 
 it('shows landing sections and real destinations without the management sidebar', () => {
   renderLanding();

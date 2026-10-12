@@ -217,6 +217,7 @@
       "/shop/:slug/cart",
       "/shop/:slug/track/:orderId",
       "/settings/storefront",
+      "/settings/storefront/payments",
       "/online-orders",
       "/online-orders/:orderId"
     ]

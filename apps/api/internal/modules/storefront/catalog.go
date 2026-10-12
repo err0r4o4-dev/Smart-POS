@@ -13,6 +13,9 @@ import (
 )
 
 func product(ctx context.Context, tx pgx.Tx, org string, shop Settings, id string) (Product, error) {
+	return productForOrder(ctx, tx, org, shop, id, "")
+}
+func productForOrder(ctx context.Context, tx pgx.Tx, org string, shop Settings, id, order string) (Product, error) {
 	value, err := catalog.ReadSaleVariant(ctx, tx, org, id)
 	if err != nil {
 		if errors.Is(err, catalog.ErrNotFound) {
@@ -27,7 +30,7 @@ func product(ctx context.Context, tx pgx.Tx, org string, shop Settings, id strin
 	}
 	_, priceError := pos.EstimateOnlineLine(result.UnitPrice, "1.000", result.UnitType)
 	result.Saleable = value.ProductStatus == "ACTIVE" && value.VariantStatus == "ACTIVE" && value.UnitStatus == "ACTIVE" && value.Currency == "THB" && priceError == nil
-	err = tx.QueryRow(ctx, `SELECT COALESCE((SELECT published FROM storefront_products WHERE organization_id=$1 AND variant_id=$2),false),COALESCE((SELECT sum(balance.quantity)::text FROM quality_stock_balances balance LEFT JOIN product_batches batch ON batch.organization_id=balance.organization_id AND batch.id=balance.batch_id WHERE balance.organization_id=$1 AND balance.variant_id=$2 AND balance.location_id=$3 AND (batch.id IS NULL OR (batch.status='ACTIVE' AND (batch.expires_on IS NULL OR batch.expires_on>(statement_timestamp() AT TIME ZONE 'Asia/Bangkok')::date))) AND NOT EXISTS(SELECT 1 FROM quality_recalls recall WHERE recall.organization_id=balance.organization_id AND recall.variant_id=balance.variant_id AND (recall.batch_id IS NULL OR recall.batch_id=balance.batch_id))),'0.000')`, org, id, shop.LocationID).Scan(&result.Published, &result.Available)
+	err = tx.QueryRow(ctx, `SELECT COALESCE((SELECT published FROM storefront_products WHERE organization_id=$1 AND variant_id=$2),false),greatest(0.000,storefront_sellable_quantity($1,$3,$2)-storefront_reserved_quantity($1,$3,$2)+COALESCE((SELECT item.quantity FROM online_order_items item JOIN online_orders doc ON doc.organization_id=item.organization_id AND doc.id=item.order_id WHERE item.organization_id=$1 AND item.variant_id=$2 AND doc.id=nullif($4,'')::uuid AND doc.stock_location_id=$3 AND doc.stock_reserved AND storefront_order_live(doc.organization_id,doc.id)),0.000))::text`, org, id, shop.LocationID, order).Scan(&result.Published, &result.Available)
 	return result, dbError(err)
 }
 func products(ctx context.Context, tx pgx.Tx, org string, shop Settings, search string, page int, public bool) (Page[Product], error) {
@@ -133,8 +136,18 @@ func (service *Service) Publish(ctx context.Context, user, org, id string, input
 	value.Published = input.Published
 	return value, dbError(tx.Commit(ctx))
 }
-func quote(ctx context.Context, tx pgx.Tx, org string, shop Settings, items []ItemInput) (Quote, error) {
-	result := Quote{Items: []Line{}, Currency: "THB"}
+func quote(ctx context.Context, tx pgx.Tx, org string, shop Settings, items []ItemInput, modes ...string) (Quote, error) {
+	mode := "PICKUP"
+	if len(modes) > 0 {
+		mode = fulfillmentMode(modes[0])
+	}
+	result := Quote{Items: []Line{}, Currency: "THB", Fulfillment: mode, ShippingFee: "0.00"}
+	if mode != "PICKUP" && mode != "DELIVERY" {
+		return result, ErrInput
+	}
+	if mode == "DELIVERY" && !shop.DeliveryEnabled {
+		return result, ErrClosed
+	}
 	if !shop.Published || !shop.AcceptingOrders {
 		return result, ErrClosed
 	}
@@ -173,6 +186,15 @@ func quote(ctx context.Context, tx pgx.Tx, org string, shop Settings, items []It
 	if total <= 0 {
 		return result, ErrInput
 	}
+	result.Subtotal = money(total)
+	if mode == "DELIVERY" {
+		fee, problem := pricing.Decimal(shop.ShippingFee, 2)
+		if problem != nil || total > 99999999-fee {
+			return result, ErrInput
+		}
+		result.ShippingFee = money(fee)
+		total += fee
+	}
 	result.Total = money(total)
 	result.ID = digest(struct {
 		Revision int64
@@ -190,7 +212,7 @@ func (service *Service) Quote(ctx context.Context, slug string, input QuoteInput
 	if err != nil {
 		return Quote{}, err
 	}
-	result, err := quote(ctx, tx, org, shop, input.Items)
+	result, err := quote(ctx, tx, org, shop, input.Items, input.Fulfillment)
 	if err != nil {
 		return result, fmt.Errorf("quote: %w", err)
 	}

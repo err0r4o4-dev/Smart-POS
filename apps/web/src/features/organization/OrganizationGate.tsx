@@ -31,24 +31,26 @@ export function ContextSwitchers() {
   if (!tenant.organizations.length) return null;
   return (
     <div className="tenant-switchers">
-      <label>
-        องค์กร
-        <select
-          aria-label="องค์กรที่ใช้งาน"
-          value={tenant.context?.organization.id ?? ''}
-          disabled={tenant.loading}
-          onChange={(event) => tenant.select(event.target.value)}
-        >
-          <option value="" disabled>
-            เลือกองค์กร
-          </option>
-          {tenant.organizations.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name}
+      {tenant.storeMode !== 'single' && (
+        <label>
+          องค์กร
+          <select
+            aria-label="องค์กรที่ใช้งาน"
+            value={tenant.context?.organization.id ?? ''}
+            disabled={tenant.loading}
+            onChange={(event) => tenant.select(event.target.value)}
+          >
+            <option value="" disabled>
+              เลือกองค์กร
             </option>
-          ))}
-        </select>
-      </label>
+            {tenant.organizations.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <label>
         สาขา
         <select

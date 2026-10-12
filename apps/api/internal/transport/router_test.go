@@ -10,12 +10,26 @@ import (
 	"strings"
 	"testing"
 
+	"smartpos/api/internal/modules/identity"
 	"smartpos/api/internal/platform/httpx"
 )
 
 type readinessStub struct {
 	err        error
 	panicValue bool
+}
+
+func TestSandboxRoutesRequireAuthentication(t *testing.T) {
+	router := RouterWithSandbox(readinessStub{}, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)), nil, identity.Handler{Service: &identity.Service{}})
+	for _, route := range []struct{ method, suffix string }{
+		{"GET", ""}, {"POST", "/checkouts"}, {"GET", "/checkouts/cs_test_synthetic"}, {"POST", "/checkouts/cs_test_synthetic/refund"},
+	} {
+		response := httptest.NewRecorder()
+		router.ServeHTTP(response, httptest.NewRequest(route.method, "/api/v1/organizations/11111111-1111-4111-8111-111111111111/storefront/payment-sandbox"+route.suffix, nil))
+		if response.Code != 401 {
+			t.Fatalf("%s %s: %d", route.method, route.suffix, response.Code)
+		}
+	}
 }
 
 func (stub readinessStub) Ready(ctx context.Context) error {

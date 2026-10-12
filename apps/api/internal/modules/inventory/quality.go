@@ -19,11 +19,15 @@ type BatchInput struct {
 }
 
 func QualityAvailability(ctx context.Context, tx pgx.Tx, org, location, variant string, batch *string, available *string, sellable *bool) error {
+	return QualityAvailabilityForCart(ctx, tx, org, location, variant, batch, "", available, sellable)
+}
+
+func QualityAvailabilityForCart(ctx context.Context, tx pgx.Tx, org, location, variant string, batch *string, cart string, available *string, sellable *bool) error {
 	if err := validateBatchReference(ctx, tx, org, variant, batch); err != nil {
 		return err
 	}
 	var safe bool
-	err := tx.QueryRow(ctx, `SELECT COALESCE((SELECT quantity::text FROM quality_stock_balances WHERE organization_id=$1 AND location_id=$2 AND variant_id=$3 AND batch_id IS NOT DISTINCT FROM $4::uuid),'0.000'),NOT EXISTS(SELECT 1 FROM quality_recalls WHERE organization_id=$1 AND variant_id=$3 AND (batch_id IS NULL OR batch_id=$4)) AND ($4::uuid IS NULL OR EXISTS(SELECT 1 FROM product_batches WHERE organization_id=$1 AND variant_id=$3 AND id=$4 AND status='ACTIVE' AND (expires_on IS NULL OR expires_on>(statement_timestamp() AT TIME ZONE 'Asia/Bangkok')::date)))`, org, location, variant, batch).Scan(available, &safe)
+	err := tx.QueryRow(ctx, `SELECT greatest(0.000,least(COALESCE((SELECT quantity FROM quality_stock_balances WHERE organization_id=$1 AND location_id=$2 AND variant_id=$3 AND batch_id IS NOT DISTINCT FROM $4::uuid),0.000),storefront_sellable_quantity($1,$2,$3)-storefront_reserved_quantity($1,$2,$3,nullif($5,'')::uuid)))::text,NOT EXISTS(SELECT 1 FROM quality_recalls WHERE organization_id=$1 AND variant_id=$3 AND (batch_id IS NULL OR batch_id=$4)) AND ($4::uuid IS NULL OR EXISTS(SELECT 1 FROM product_batches WHERE organization_id=$1 AND variant_id=$3 AND id=$4 AND status='ACTIVE' AND (expires_on IS NULL OR expires_on>(statement_timestamp() AT TIME ZONE 'Asia/Bangkok')::date)))`, org, location, variant, batch, cart).Scan(available, &safe)
 	*sellable = *sellable && safe
 	return databaseError(err)
 }

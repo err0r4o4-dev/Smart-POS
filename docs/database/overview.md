@@ -1,6 +1,12 @@
 # Database foundation
 
-Current schema/readiness is exact clean version **13**. Migrations1–11 unchanged. Forward-only12 adds loyalty_programs/accounts/immutable loyalty_ledger and reservations;13 adds product_batches, quality_stock_balances, quality_write_offs, quality_recalls and tenant-safe batch references. Existing movement ledger remains authoritative; tracked+untracked equals aggregate transactionally. FORCE RLS, scoped runtime grants and immutable/deferred consistency guards apply. See [Loyalty](../architecture/loyalty.md), [Quality](../architecture/quality.md) and [fresh-chain/final evidence](../development/phase57-verification.md). No primary volume migrated for acceptance.
+## Current online extension (2026-10-12)
+
+**PARTIAL / PAUSED by user request.** Go requires version23 with `dirty=false`; this is checked-in readiness behavior, not proof of a migrated primary database. Official migrations14–23 add storefront orders, reservations, optional source separation, internal payment attempts/inbox/holds/observations/prepaid linkage/reconciliation, delivery snapshots and pre-shipment refund intents/observations. Existing history remains immutable; no direct stock-balance rewrite or primary migration is authorized by this documentation refresh.
+
+Fresh owned-tmpfs schema23 acceptance was recorded in the prior implementation task. Retained-data upgrade and primary rollout have not been performed. The phase-specific migration evidence below is historical; use [current payment/delivery scope and limitations](../architecture/payment-sandbox.md#current-online-flow-status-2026-10-12), [migration filenames](../../README.md#database-migrations) and [recorded verification](../development/verification.md) rather than treating an older schema number as current readiness.
+
+Current Go schema/readiness requirement is exact clean version **23**, not the observed primary-database version. Migrations1–11 unchanged. Forward-only12 adds loyalty_programs/accounts/immutable loyalty_ledger and reservations;13 adds product_batches, quality_stock_balances, quality_write_offs, quality_recalls and tenant-safe batch references. Existing movement ledger remains authoritative; tracked+untracked equals aggregate transactionally. FORCE RLS, scoped runtime grants and immutable/deferred consistency guards apply. See [Loyalty](../architecture/loyalty.md), [Quality](../architecture/quality.md) and [fresh-chain/final evidence](../development/phase57-verification.md). No primary volume migrated for acceptance.
 
 Migration 000001 creates organizations/branches: UUID keys supplied by app, timestamptz, composite tenant references, organization-scoped unique branch code, explicit checks. Migration 000002 adds global users, hashed auth sessions, hashed reset tokens, auth audit events and hashed rate-limit keys. No seed credentials/users/sales or extensions.
 
@@ -36,7 +42,7 @@ All seven tables FORCE RLS using transaction-local organization context. Runtime
 
 Runtime is SELECT-only on stock_balances and SELECT/INSERT-only on stock_movements. Append-only triggers also reject ledger UPDATE/DELETE; the SECURITY DEFINER posting trigger has fixed search_path, revoked PUBLIC execution, explicit tenant/user/unfinished-operation validation and locked quantity/version updates. A Variant unit cannot change after stock history. Opening is positive, once per identity and before any ledger history. No existing migration 1–4 was edited, no down migration or original-volume change was performed.
 
-Migration up and repeated no-change were verified only in smartpos-auth-test, together with rollback-only constraints, RLS, precision, grants and reconciliation assertions. Inventory originally required clean schema5, POS introduced6; current readiness is clean13. Production needs distinct least-privileged runtime LOGIN and migration credentials plus backup/recovery planning; see [ledger design](inventory-ledger.md).
+Migration up and repeated no-change were verified only in smartpos-auth-test, together with rollback-only constraints, RLS, precision, grants and reconciliation assertions. Inventory originally required clean schema5, POS introduced6; current Go readiness requires clean23; the schema5/6 verification here is historical. Production needs distinct least-privileged runtime LOGIN and migration credentials plus backup/recovery planning; see [ledger design](inventory-ledger.md).
 
 ## Phase 3 POS and sales migration
 

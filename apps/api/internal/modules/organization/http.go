@@ -74,6 +74,7 @@ func (handler Handler) Routes(router chi.Router, tenantExtensions ...func(chi.Ro
 		private.Use(handler.Authentication.RequireAuth, handler.Authentication.RequireWrite)
 		private.Use(func(next http.Handler) http.Handler {
 			return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+				writer.Header().Set("X-SmartPOS-Store-Mode", service.StoreMode())
 				next.ServeHTTP(writer, request.WithContext(WithRequestID(request.Context(), httpx.RequestID(request.Context()))))
 			})
 		})

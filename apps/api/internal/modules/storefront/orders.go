@@ -6,16 +6,17 @@ import (
 	"errors"
 	"github.com/jackc/pgx/v5"
 	"smartpos/api/internal/modules/organization"
-	"time"
 )
 
 func readOrder(ctx context.Context, tx pgx.Tx, org, id string, public bool) (Order, error) {
 	result := Order{Items: []Line{}, Events: []Event{}, PaymentStatus: "UNPAID"}
-	err := tx.QueryRow(ctx, `SELECT doc.id::text,doc.number,doc.status,doc.customer_name,doc.contact_phone,doc.customer_note,doc.store_name,doc.store_phone,doc.pickup_instructions,doc.estimated_total::text,doc.branch_id::text,doc.terminal_id::text,doc.cart_id::text,doc.sale_id::text,doc.revision,doc.created_at,doc.expires_at,sale.grand_total::text,receipt.receipt_number FROM online_orders doc LEFT JOIN sales sale ON sale.organization_id=doc.organization_id AND sale.id=doc.sale_id LEFT JOIN receipts receipt ON receipt.organization_id=doc.organization_id AND receipt.sale_id=doc.sale_id WHERE doc.organization_id=$1 AND doc.id=$2`, org, id).Scan(&result.ID, &result.Number, &result.Status, &result.CustomerName, &result.ContactPhone, &result.CustomerNote, &result.StoreName, &result.StorePhone, &result.PickupInstructions, &result.EstimatedTotal, &result.BranchID, &result.TerminalID, &result.CartID, &result.SaleID, &result.Revision, &result.CreatedAt, &result.ExpiresAt, &result.FinalTotal, &result.ReceiptNumber)
+	err := tx.QueryRow(ctx, `SELECT doc.id::text,doc.number,CASE WHEN doc.status IN ('PENDING','PREPARING','READY') AND NOT storefront_order_live(doc.organization_id,doc.id) THEN 'EXPIRED' ELSE doc.status END,doc.customer_name,doc.contact_phone,doc.customer_note,doc.store_name,doc.store_phone,doc.pickup_instructions,doc.estimated_total::text,doc.branch_id::text,doc.terminal_id::text,doc.cart_id::text,doc.sale_id::text,doc.revision,doc.created_at,doc.expires_at,sale.grand_total::text,receipt.receipt_number FROM online_orders doc LEFT JOIN sales sale ON sale.organization_id=doc.organization_id AND sale.id=doc.sale_id LEFT JOIN receipts receipt ON receipt.organization_id=doc.organization_id AND receipt.sale_id=doc.sale_id WHERE doc.organization_id=$1 AND doc.id=$2`, org, id).Scan(&result.ID, &result.Number, &result.Status, &result.CustomerName, &result.ContactPhone, &result.CustomerNote, &result.StoreName, &result.StorePhone, &result.PickupInstructions, &result.EstimatedTotal, &result.BranchID, &result.TerminalID, &result.CartID, &result.SaleID, &result.Revision, &result.CreatedAt, &result.ExpiresAt, &result.FinalTotal, &result.ReceiptNumber)
 	if err != nil {
 		return result, dbError(err)
 	}
-	result.Status = effectiveStatus(result.Status, result.ExpiresAt, result.CartID, time.Now())
+	if err = tx.QueryRow(ctx, "SELECT fulfillment,shipping_fee::text,(estimated_total-shipping_fee)::text,delivery_address FROM online_orders WHERE organization_id=$1 AND id=$2", org, id).Scan(&result.Fulfillment, &result.ShippingFee, &result.Subtotal, &result.DeliveryAddress); err != nil {
+		return result, dbError(err)
+	}
 	if result.Status == "COMPLETED" {
 		result.PaymentStatus = "PAID_AT_STORE"
 	}
@@ -51,6 +52,7 @@ func readOrder(ctx context.Context, tx pgx.Tx, org, id string, public bool) (Ord
 	err = rows.Err()
 	rows.Close()
 	if public {
+		result.DeliveryAddress = ""
 		result.CustomerName = ""
 		result.ContactPhone = ""
 		result.CustomerNote = ""
@@ -89,14 +91,14 @@ func (service *Service) CreateOrder(ctx context.Context, slug, key string, input
 	if err != nil {
 		return Order{}, err
 	}
-	quote, err := quote(ctx, tx, org, shop, input.Items)
+	quote, err := quote(ctx, tx, org, shop, input.Items, input.Fulfillment)
 	if err != nil {
 		return Order{}, err
 	}
 	if quote.ID != input.QuoteID {
 		return Order{}, ErrQuote
 	}
-	_, err = tx.Exec(ctx, `INSERT INTO online_orders(id,organization_id,branch_id,terminal_id,stock_location_id,customer_name,contact_phone,customer_note,pickup_instructions,store_name,store_phone,estimated_total,access_hash,request_fingerprint) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`, key, org, shop.BranchID, shop.TerminalID, shop.LocationID, input.CustomerName, input.ContactPhone, input.CustomerNote, shop.PickupInstructions, shop.Name, shop.ContactPhone, quote.Total, accessHash(input.AccessToken), fingerprint)
+	_, err = tx.Exec(ctx, `INSERT INTO online_orders(id,organization_id,branch_id,terminal_id,stock_location_id,customer_name,contact_phone,customer_note,pickup_instructions,store_name,store_phone,estimated_total,access_hash,request_fingerprint,fulfillment,shipping_fee,delivery_address) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`, key, org, shop.BranchID, shop.orderTerminalID(), shop.LocationID, input.CustomerName, input.ContactPhone, input.CustomerNote, shop.PickupInstructions, shop.Name, shop.ContactPhone, quote.Total, accessHash(input.AccessToken), fingerprint, input.Fulfillment, quote.ShippingFee, input.DeliveryAddress)
 	if err != nil {
 		return Order{}, dbError(err)
 	}
@@ -128,7 +130,7 @@ func (service *Service) Track(ctx context.Context, slug string, input TrackingIn
 	if err = tx.QueryRow(ctx, "SELECT storefront_tracking_resolve($1,$2,$3)::text", slug, input.OrderID, accessHash(input.AccessToken)).Scan(&org); err != nil {
 		return Order{}, dbError(err)
 	}
-	if org == nil {
+	if !service.resolvedOrganizationAllowed(org) {
 		return Order{}, ErrNotFound
 	}
 	if _, err = tx.Exec(ctx, "SELECT set_config('app.organization_id',$1,true),set_config('app.user_id','',true)", *org); err != nil {
@@ -170,7 +172,7 @@ func (service *Service) Orders(ctx context.Context, user, org, branch, status st
 	if status != "" && status != "PENDING" && status != "PREPARING" && status != "READY" && status != "COMPLETED" && status != "REJECTED" && status != "CANCELLED" && status != "EXPIRED" {
 		return result, ErrInput
 	}
-	where := ` FROM online_orders WHERE organization_id=$1 AND branch_id=$2 AND ($3='' OR CASE WHEN status IN ('PENDING','PREPARING','READY') AND expires_at<=now() AND cart_id IS NULL THEN 'EXPIRED' ELSE status END=$3)`
+	where := ` FROM online_orders WHERE organization_id=$1 AND branch_id=$2 AND ($3='' OR CASE WHEN status IN ('PENDING','PREPARING','READY') AND NOT storefront_order_live(organization_id,id) THEN 'EXPIRED' ELSE status END=$3)`
 	if err = tx.QueryRow(ctx, "SELECT count(*)"+where, org, branch, status).Scan(&result.Total); err != nil {
 		return result, err
 	}
@@ -232,7 +234,7 @@ func (service *Service) Transition(ctx context.Context, user, org, id string, in
 			return current, err
 		}
 		for _, line := range current.Items {
-			value, err := product(ctx, tx, org, shop, line.VariantID)
+			value, err := productForOrder(ctx, tx, org, shop, line.VariantID, id)
 			if err != nil {
 				return current, err
 			}

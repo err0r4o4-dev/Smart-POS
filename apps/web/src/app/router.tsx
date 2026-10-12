@@ -4,6 +4,7 @@ import {
   StorefrontPage,
   ShopCartPage,
   ShopTrackingPage,
+  PaymentSandboxPage,
   OnlineOrdersPage,
   OnlineOrderPage,
   StorefrontSettingsPage,
@@ -142,6 +143,10 @@ const routes: RouteObject[] = [
                   {
                     path: '/settings/storefront',
                     element: <StorefrontSettingsPage />,
+                  },
+                  {
+                    path: '/settings/storefront/payments',
+                    element: <PaymentSandboxPage />,
                   },
                 ],
               },

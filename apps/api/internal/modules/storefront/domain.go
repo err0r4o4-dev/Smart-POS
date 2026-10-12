@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"smartpos/api/internal/modules/pricing"
 	"sort"
 	"strings"
 	"time"
@@ -25,12 +26,15 @@ var slugPattern = regexp.MustCompile(`^[a-z][a-z0-9-]{2,49}$`)
 var phonePattern = regexp.MustCompile(`^[0-9+() .-]{3,30}$`)
 
 type Settings struct {
+	DeliveryEnabled    bool   `json:"delivery_enabled"`
+	ShippingFee        string `json:"shipping_fee"`
 	Slug               string `json:"slug"`
 	Name               string `json:"name"`
 	Description        string `json:"description"`
 	ContactPhone       string `json:"contact_phone"`
 	PickupInstructions string `json:"pickup_instructions"`
 	TerminalID         string `json:"terminal_id,omitempty"`
+	OnlineTerminalID   string `json:"online_terminal_id,omitempty"`
 	Published          bool   `json:"published"`
 	AcceptingOrders    bool   `json:"accepting_orders"`
 	Revision           int64  `json:"revision"`
@@ -38,12 +42,15 @@ type Settings struct {
 	LocationID         string `json:"stock_location_id,omitempty"`
 }
 type SettingsInput struct {
+	DeliveryEnabled    bool   `json:"delivery_enabled"`
+	ShippingFee        string `json:"shipping_fee"`
 	Slug               string `json:"slug"`
 	Name               string `json:"name"`
 	Description        string `json:"description"`
 	ContactPhone       string `json:"contact_phone"`
 	PickupInstructions string `json:"pickup_instructions"`
 	TerminalID         string `json:"terminal_id"`
+	OnlineTerminalID   string `json:"online_terminal_id"`
 	Published          bool   `json:"published"`
 	AcceptingOrders    bool   `json:"accepting_orders"`
 	Revision           int64  `json:"revision"`
@@ -71,15 +78,18 @@ type ItemInput struct {
 	Quantity  string `json:"quantity"`
 }
 type QuoteInput struct {
-	Items []ItemInput `json:"items"`
+	Items       []ItemInput `json:"items"`
+	Fulfillment string      `json:"fulfillment"`
 }
 type OrderInput struct {
-	Items        []ItemInput `json:"items"`
-	QuoteID      string      `json:"quote_id"`
-	CustomerName string      `json:"customer_name"`
-	ContactPhone string      `json:"contact_phone"`
-	CustomerNote string      `json:"customer_note"`
-	AccessToken  string      `json:"access_token"`
+	Fulfillment     string      `json:"fulfillment"`
+	DeliveryAddress string      `json:"delivery_address"`
+	Items           []ItemInput `json:"items"`
+	QuoteID         string      `json:"quote_id"`
+	CustomerName    string      `json:"customer_name"`
+	ContactPhone    string      `json:"contact_phone"`
+	CustomerNote    string      `json:"customer_note"`
+	AccessToken     string      `json:"access_token"`
 }
 type Line struct {
 	VariantID   string `json:"variant_id"`
@@ -92,10 +102,13 @@ type Line struct {
 	LineTotal   string `json:"line_total"`
 }
 type Quote struct {
-	ID       string `json:"quote_id"`
-	Items    []Line `json:"items"`
-	Total    string `json:"estimated_total"`
-	Currency string `json:"currency"`
+	Fulfillment string `json:"fulfillment"`
+	Subtotal    string `json:"subtotal"`
+	ShippingFee string `json:"shipping_fee"`
+	ID          string `json:"quote_id"`
+	Items       []Line `json:"items"`
+	Total       string `json:"estimated_total"`
+	Currency    string `json:"currency"`
 }
 type Event struct {
 	Status    string    `json:"status"`
@@ -103,6 +116,10 @@ type Event struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 type Order struct {
+	Fulfillment        string    `json:"fulfillment"`
+	DeliveryAddress    string    `json:"delivery_address,omitempty"`
+	ShippingFee        string    `json:"shipping_fee"`
+	Subtotal           string    `json:"subtotal"`
 	ID                 string    `json:"id"`
 	Number             string    `json:"number"`
 	Status             string    `json:"status"`
@@ -169,15 +186,39 @@ func normalizeItems(items []ItemInput) error {
 	return nil
 }
 func (input *SettingsInput) validate() error {
+	if input.ShippingFee == "" {
+		input.ShippingFee = "0.00"
+	}
+	fee, err := pricing.Decimal(input.ShippingFee, 2)
+	if err != nil || fee > 99999999 {
+		return ErrInput
+	}
+	input.ShippingFee = pricing.Money(fee)
 	input.Slug = strings.TrimSpace(input.Slug)
 	input.Name = strings.TrimSpace(input.Name)
 	input.ContactPhone = strings.TrimSpace(input.ContactPhone)
+	input.TerminalID = strings.ToLower(input.TerminalID)
+	input.OnlineTerminalID = strings.ToLower(input.OnlineTerminalID)
+	if input.OnlineTerminalID != "" && (!uuidPattern.MatchString(input.OnlineTerminalID) || input.OnlineTerminalID == input.TerminalID) {
+		return ErrInput
+	}
 	if !slugPattern.MatchString(input.Slug) || strings.HasSuffix(input.Slug, "-") || strings.Contains(input.Slug, "--") || !text(input.Name, 200, true) || !text(input.Description, 1000, false) || !text(input.PickupInstructions, 1000, false) || !text(input.ContactPhone, 30, false) || !uuidPattern.MatchString(input.TerminalID) || input.Revision < 0 || (input.AcceptingOrders && !input.Published) {
 		return ErrInput
 	}
 	return nil
 }
+func (shop Settings) orderTerminalID() string {
+	if shop.OnlineTerminalID != "" {
+		return shop.OnlineTerminalID
+	}
+	return shop.TerminalID
+}
 func (input *OrderInput) validate() error {
+	input.Fulfillment = fulfillmentMode(input.Fulfillment)
+	input.DeliveryAddress = strings.TrimSpace(input.DeliveryAddress)
+	if input.Fulfillment != "PICKUP" && input.Fulfillment != "DELIVERY" || !text(input.DeliveryAddress, 2000, input.Fulfillment == "DELIVERY") || input.Fulfillment == "PICKUP" && input.DeliveryAddress != "" {
+		return ErrInput
+	}
 	input.CustomerName = strings.TrimSpace(input.CustomerName)
 	input.ContactPhone = strings.TrimSpace(input.ContactPhone)
 	input.CustomerNote = strings.TrimSpace(input.CustomerNote)
@@ -185,6 +226,12 @@ func (input *OrderInput) validate() error {
 		return ErrInput
 	}
 	return normalizeItems(input.Items)
+}
+func fulfillmentMode(mode string) string {
+	if mode == "" {
+		return "PICKUP"
+	}
+	return mode
 }
 func canTransition(current, next string) bool {
 	switch current {

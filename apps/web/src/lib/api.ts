@@ -68,6 +68,7 @@ function isAbort(error: unknown) {
 export async function requestData<Result>(
   url: string,
   options: RequestInit,
+  onSuccess?: (headers: Headers) => void,
 ): Promise<Result> {
   let response: Response;
   try {
@@ -109,6 +110,7 @@ export async function requestData<Result>(
       'รูปแบบผลตอบกลับไม่ถูกต้อง กรุณาตรวจสอบสถานะรายการก่อนทำซ้ำ',
     );
   }
+  onSuccess?.(response.headers);
   return envelope.data;
 }
 

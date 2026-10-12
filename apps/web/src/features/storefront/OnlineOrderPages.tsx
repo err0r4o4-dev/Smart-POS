@@ -93,7 +93,7 @@ type SettingsInput = Pick<
   | 'published'
   | 'accepting_orders'
   | 'revision'
-> & { terminal_id: string };
+> & { terminal_id: string; online_terminal_id: string };
 
 export function StorefrontSettingsPage() {
   const scope = useScope();
@@ -117,10 +117,12 @@ export function StorefrontSettingsPage() {
           <p className="eyebrow">รับออเดอร์ออนไลน์</p>
           <h1>ตั้งค่าหน้าร้านออนไลน์</h1>
         </div>
+        <Link to="/settings/storefront/payments">ทดสอบ Stripe sandbox</Link>
         <Link to="/online-orders">จัดการออเดอร์</Link>
       </div>
       <p className="notice">
-        เผยแพร่เฉพาะสินค้าที่เลือก รับสินค้าที่ร้านและชำระผ่าน POS ไม่กันสต็อก
+        เผยแพร่เฉพาะสินค้าที่เลือก รับสินค้าที่ร้านและชำระผ่าน POS
+        ออเดอร์ใหม่กันจำนวนสินค้าจนหมดอายุ แต่ยังต้องตรวจ lot และราคาสุดท้าย
         ไม่รับโอน/จัดส่งออนไลน์ ออเดอร์ที่ยังไม่เข้า POS หมดอายุใน 48 ชั่วโมง
       </p>
       {settings.isPending || terminals.isPending ? (
@@ -254,12 +256,21 @@ function SettingsForm({
     contact_phone: initial?.contact_phone ?? '',
     pickup_instructions: initial?.pickup_instructions ?? '',
     terminal_id: initial?.terminal_id ?? '',
+    online_terminal_id: initial?.online_terminal_id ?? '',
     published: initial?.published ?? false,
     accepting_orders: initial?.accepting_orders ?? false,
     revision: initial?.revision ?? 0,
   }));
   const set = (key: keyof SettingsInput, value: string | boolean) =>
     setForm({ ...form, [key]: value });
+  const frontTerminal = terminals.find(
+    (terminal) => terminal.id === form.terminal_id,
+  );
+  const onlineTerminals = terminals.filter(
+    (terminal) =>
+      terminal.branch_id === frontTerminal?.branch_id &&
+      terminal.stock_location_id !== frontTerminal?.stock_location_id,
+  );
   const submit = (event: FormEvent) => {
     event.preventDefault();
     command.mutate({ path: '/storefront', body: form, method: 'PUT' });
@@ -294,7 +305,13 @@ function SettingsForm({
           <select
             required
             value={form.terminal_id}
-            onChange={(event) => set('terminal_id', event.target.value)}
+            onChange={(event) =>
+              setForm({
+                ...form,
+                terminal_id: event.target.value,
+                online_terminal_id: '',
+              })
+            }
           >
             <option value="">เลือกเครื่องขายของสาขาปัจจุบัน</option>
             {terminals.map((terminal) => (
@@ -304,7 +321,27 @@ function SettingsForm({
             ))}
           </select>
           <small>
-            ใช้สาขาและจุดสต็อกของเครื่องขายนี้ ไม่มีการรวมสต็อกข้ามสาขา
+            แหล่งสต็อกหน้าร้านและค่าเริ่มต้นสำหรับออนไลน์ ไม่รวมสต็อกข้ามสาขา
+          </small>
+        </label>
+        <label>
+          เครื่องขายออนไลน์จากคลังหลังร้าน (ไม่บังคับ)
+          <select
+            value={form.online_terminal_id}
+            disabled={!frontTerminal}
+            onChange={(event) => set('online_terminal_id', event.target.value)}
+          >
+            <option value="">ใช้แหล่งสต็อกร่วมกับหน้าร้าน</option>
+            {onlineTerminals.map((terminal) => (
+              <option value={terminal.id} key={terminal.id}>
+                {terminal.name} · {terminal.code}
+              </option>
+            ))}
+          </select>
+          <small>
+            เลือกเครื่องขายที่ผูกคลัง WAREHOUSE คนละจุดกับหน้าร้านในสาขาเดียวกัน
+            ออนไลน์จะกันและตัดจากคลังนี้เท่านั้น ไม่มีการดึงสต็อกหน้าร้านมาชดเชย
+            พนักงานต้องเปิดกะเครื่องขายนี้เพื่อรับชำระออเดอร์ผ่าน POS
           </small>
         </label>
         <label>
@@ -358,7 +395,7 @@ function SettingsForm({
         </label>
         <p className="online-wide">
           หากมีออเดอร์ค้างอยู่ ให้ปิดรับออเดอร์ชั่วคราวแทนการซ่อนร้านหรือเปลี่ยน
-          URL/เครื่องขาย เพื่อให้ลูกค้าติดตามต่อได้
+          URL/เครื่องขาย/แหล่งสต็อก เพื่อให้ลูกค้าติดตามต่อได้
         </p>
         {!terminals.length && (
           <p role="status">

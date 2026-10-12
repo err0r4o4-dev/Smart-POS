@@ -5,15 +5,15 @@ import YAML from 'yaml';
 const modules = JSON.parse(
   readFileSync('packages/contracts/routes.json', 'utf8'),
 );
-const expected = [6, 4, 9, 6, 9, 11, 7, 8, 5, 5, 4, 6, 7, 5, 10, 4, 7];
+const expected = [6, 4, 9, 6, 9, 11, 7, 8, 5, 5, 4, 6, 7, 5, 10, 4, 8];
 assert.equal(modules.length, 17);
 assert.deepEqual(
   modules.map((item) => item.routes.length),
   expected,
 );
 const routes = modules.flatMap((item) => item.routes);
-assert.equal(routes.length, 113);
-assert.equal(new Set(routes).size, 113);
+assert.equal(routes.length, 114);
+assert.equal(new Set(routes).size, 114);
 const routeDocs = readFileSync('docs/architecture/routes.md', 'utf8');
 const moduleDocs = readFileSync('docs/architecture/modules.md', 'utf8');
 for (const item of modules) {
@@ -25,6 +25,14 @@ for (const item of modules) {
     assert.ok(routeDocs.includes('`' + route + '`'), `Missing route ${route}`);
 }
 const api = YAML.parse(readFileSync('packages/contracts/openapi.yaml', 'utf8'));
+const sandboxPaths = [
+  '',
+  '/checkouts',
+  '/checkouts/{sessionId}',
+  '/checkouts/{sessionId}/refund',
+].map(
+  (suffix) => '/api/v1/organizations/{id}/storefront/payment-sandbox' + suffix,
+);
 const storefrontPaths = [
   '/api/v1/storefronts',
   ...['', '/products', '/quote', '/orders', '/track'].map(
@@ -228,6 +236,7 @@ assert.deepEqual(
     ...loyaltyPaths,
     ...qualityPaths,
     ...storefrontPaths,
+    ...sandboxPaths,
     '/api/v1/auth/forgot-password',
     '/api/v1/auth/login',
     '/api/v1/auth/logout',
@@ -288,6 +297,62 @@ for (const [path, item] of Object.entries(api.paths)) {
   }
 }
 const compose = YAML.parse(readFileSync('docker-compose.yml', 'utf8'));
+for (const path of sandboxPaths) {
+  for (const method of ['get', 'post']) {
+    const operation = api.paths[path][method];
+    if (!operation) continue;
+    assert.deepEqual(operation.security, [{ sessionCookie: [] }]);
+    for (const status of ['400', '401', '403', '404', '409', '503'])
+      assert.ok(operation.responses[status]);
+    if (method === 'post') {
+      assert.ok(
+        operation.parameters.some(
+          (parameter) => parameter.$ref === '#/components/parameters/CSRF',
+        ),
+      );
+      assert.equal(
+        operation.requestBody.content['application/json'].schema
+          .additionalProperties,
+        false,
+      );
+    }
+  }
+}
+assert.equal(
+  api.components.schemas.PaymentSandboxStatus.properties
+    .customer_checkout_enabled.const,
+  false,
+);
+assert.equal(
+  api.components.schemas.PaymentSandboxCheckout.properties.amount_minor.const,
+  2000,
+);
+assert.ok(
+  api.paths[sandboxPaths[1]].post.parameters.some(
+    (parameter) => parameter.name === 'Idempotency-Key' && parameter.required,
+  ),
+);
+assert.equal(
+  compose.services.api.environment.STRIPE_TEST_SECRET_KEY,
+  '${STRIPE_TEST_SECRET_KEY:-}',
+);
+assert.equal(
+  compose.services.api.environment.SINGLE_STORE_ORGANIZATION_ID,
+  '${SINGLE_STORE_ORGANIZATION_ID:-}',
+);
+assert.deepEqual(api.components.headers.StoreMode.schema.enum, [
+  'single',
+  'multi',
+]);
+for (const path of ['/api/v1/organizations', '/api/v1/storefronts']) {
+  assert.equal(
+    api.paths[path].get.responses['200'].headers['X-SmartPOS-Store-Mode'].$ref,
+    '#/components/headers/StoreMode',
+  );
+}
+assert.ok(
+  api.paths['/api/v1/organizations'].post.description.includes('single-store'),
+);
 for (const path of storefrontPaths) {
   for (const method of ['get', 'post', 'put']) {
     const operation = api.paths[path][method];
@@ -744,5 +809,5 @@ assert.ok(
   'Internal AI must not publish a host port',
 );
 console.log(
-  'PASS: 17 modules, 113 unique documented routes, storefront/POS contract and service health wiring',
+  'PASS: 17 modules, 114 unique documented routes, Stripe sandbox/storefront/POS contracts and service health wiring',
 );

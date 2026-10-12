@@ -69,8 +69,9 @@ type InvitationMailer interface {
 	SendInvitation(context.Context, string, string) error
 }
 type Service struct {
-	Pool   *pgxpool.Pool
-	Mailer InvitationMailer
+	Pool                      *pgxpool.Pool
+	Mailer                    InvitationMailer
+	SingleStoreOrganizationID string
 }
 type auditKey struct{}
 
@@ -111,6 +112,9 @@ func dbError(err error) error {
 	return err
 }
 func (service *Service) transaction(ctx context.Context, userID, orgID string) (pgx.Tx, error) {
+	if orgID != "" && !service.AllowsOrganization(orgID) {
+		return nil, ErrNotFound
+	}
 	if !uuidPattern.MatchString(userID) || (orgID != "" && !uuidPattern.MatchString(orgID)) {
 		return nil, ErrNotFound
 	}
@@ -212,7 +216,7 @@ func (service *Service) List(ctx context.Context, userID string) ([]Organization
 		return nil, err
 	}
 	defer tx.Rollback(ctx)
-	rows, err := tx.Query(ctx, `SELECT o.id,o.name,o.code,o.business_type,CASE WHEN m.role IN ('OWNER','MANAGER') THEN o.contact_email ELSE '' END,CASE WHEN m.role IN ('OWNER','MANAGER') THEN o.contact_phone ELSE '' END,CASE WHEN m.role IN ('OWNER','MANAGER') THEN o.address ELSE '' END,o.currency,o.status FROM organizations o JOIN organization_memberships m ON m.organization_id=o.id WHERE m.user_id=$1 AND m.status='ACTIVE' AND o.status='ACTIVE' ORDER BY o.name`, userID)
+	rows, err := tx.Query(ctx, `SELECT o.id,o.name,o.code,o.business_type,CASE WHEN m.role IN ('OWNER','MANAGER') THEN o.contact_email ELSE '' END,CASE WHEN m.role IN ('OWNER','MANAGER') THEN o.contact_phone ELSE '' END,CASE WHEN m.role IN ('OWNER','MANAGER') THEN o.address ELSE '' END,o.currency,o.status FROM organizations o JOIN organization_memberships m ON m.organization_id=o.id WHERE m.user_id=$1 AND m.status='ACTIVE' AND o.status='ACTIVE' AND ($2::uuid IS NULL OR o.id=$2) ORDER BY o.name`, userID, service.storeFilter())
 	if err != nil {
 		return nil, err
 	}
@@ -246,6 +250,9 @@ func (service *Service) Context(ctx context.Context, userID, orgID string) (Cont
 	return Context{org, actor, allowed, actor.Permissions}, err
 }
 func (service *Service) Create(ctx context.Context, userID, key string, input CreateInput) (Context, error) {
+	if service.SingleStoreOrganizationID != "" {
+		return Context{}, ErrDenied
+	}
 	if !uuidPattern.MatchString(key) || input.validate() != nil || input.Branch.validate() != nil || input.Branch.Status != "ACTIVE" {
 		return Context{}, ErrInput
 	}

@@ -1,0 +1,543 @@
+{
+  "version": 1,
+  "recordedOn": "2026-10-12",
+  "scope": "repository-local",
+  "notes": [
+    "Adapted entrypoints are not untouched installer packages.",
+    "Pinto lockfile hashes identify upstream packages but not the exact local Git commit.",
+    "Imported snapshot hashes normalize installed line endings to LF."
+  ],
+  "skills": [
+    {
+      "name": "ai-data-preparation",
+      "origin": "local-authored"
+    },
+    {
+      "name": "ai-evaluation",
+      "origin": "local-authored"
+    },
+    {
+      "name": "diagnose",
+      "origin": "adapted-from-pinto",
+      "source": {
+        "repository": "mattpocock/skills",
+        "origin": "skills/engineering/diagnose/SKILL.md",
+        "pintoLockHash": "15939a26f86edec2d4862042b8564e5a062cb81d04e047a0cea6305c8830b5f5",
+        "manifestSha256": "dd1506e36aa87c8c462a08fe139033dca4eed6673fc62527acb20e00f55da6b1"
+      },
+      "adaptations": [
+        "Concise task-specific routing",
+        "Repository scope and permission precedence",
+        "No automatic delegation, installation or external mutation"
+      ]
+    },
+    {
+      "name": "frontend-testing",
+      "origin": "local-authored"
+    },
+    {
+      "name": "golang-code-style",
+      "origin": "adapted-from-pinto",
+      "source": {
+        "repository": "samber/cc-skills-golang",
+        "origin": "skills/golang-code-style/SKILL.md",
+        "pintoLockHash": "e6f1337834b99ac142241c31839768b156ac582c1bc1fe353bf080f4dcd419f8",
+        "manifestSha256": "8117c039b3c1ef116ea3b47237d227891ad6c363e6c2b11e020678e92b2ba39b"
+      },
+      "adaptations": [
+        "Concise task-specific routing",
+        "Repository scope and permission precedence",
+        "No automatic delegation, installation or external mutation"
+      ]
+    },
+    {
+      "name": "golang-concurrency",
+      "origin": "adapted-from-pinto",
+      "source": {
+        "repository": "samber/cc-skills-golang",
+        "origin": "skills/golang-concurrency/SKILL.md",
+        "pintoLockHash": "5c698f462f103290bd4862a152fa308cd3e100ef4d350afd169f85d23aa222fa",
+        "manifestSha256": "0f3c04b647491e5803df4561214e5b431c132762261c86c88b8833806e31ed6e"
+      },
+      "adaptations": [
+        "Concise task-specific routing",
+        "Repository scope and permission precedence",
+        "No automatic delegation, installation or external mutation"
+      ]
+    },
+    {
+      "name": "golang-context",
+      "origin": "adapted-from-pinto",
+      "source": {
+        "repository": "samber/cc-skills-golang",
+        "origin": "skills/golang-context/SKILL.md",
+        "pintoLockHash": "cb1fc645874a13767366ba4d9f685d3865435e6e490bf2d9124197e25add9d52",
+        "manifestSha256": "a8ed49f371a9ce5fb1b9c37c83e565a37957d994a6f82d6a5e192ba8f8eb27bb"
+      },
+      "adaptations": [
+        "Concise task-specific routing",
+        "Repository scope and permission precedence",
+        "No automatic delegation, installation or external mutation"
+      ]
+    },
+    {
+      "name": "golang-database",
+      "origin": "adapted-from-pinto",
+      "source": {
+        "repository": "samber/cc-skills-golang",
+        "origin": "skills/golang-database/SKILL.md",
+        "pintoLockHash": "16a982a8e40660486d662049f391f4c6ddba8166c56af7d59757b7d09e0c876c",
+        "manifestSha256": "010bc796c182fe69dee820b7d41e21da3772feb71d3e9d85bd23175b37cbb6d4"
+      },
+      "adaptations": [
+        "Concise task-specific routing",
+        "Repository scope and permission precedence",
+        "No automatic delegation, installation or external mutation"
+      ]
+    },
+    {
+      "name": "golang-error-handling",
+      "origin": "adapted-from-pinto",
+      "source": {
+        "repository": "samber/cc-skills-golang",
+        "origin": "skills/golang-error-handling/SKILL.md",
+        "pintoLockHash": "34c52432d26a41f7ecda55d245a3920a0d87920107f12c2b39d4f2398ae90914",
+        "manifestSha256": "12c32b35a3948555702f97b8bf764fff7b69405efae5bc8b08df3793228eefb8"
+      },
+      "adaptations": [
+        "Concise task-specific routing",
+        "Repository scope and permission precedence",
+        "No automatic delegation, installation or external mutation"
+      ]
+    },
+    {
+      "name": "golang-observability",
+      "origin": "adapted-from-pinto",
+      "source": {
+        "repository": "samber/cc-skills-golang",
+        "origin": "skills/golang-observability/SKILL.md",
+        "pintoLockHash": "14bda60d9cef26d66d2109f94257e46de559ba40528f9ebf5216dc24e1f644ea",
+        "manifestSha256": "95b0b9ed93be48f94e09f426fc59d3656d93a77cf5ff1aa846fdabfcd8a1573b"
+      },
+      "adaptations": [
+        "Concise task-specific routing",
+        "Repository scope and permission precedence",
+        "No automatic delegation, installation or external mutation"
+      ]
+    },
+    {
+      "name": "golang-performance",
+      "origin": "adapted-from-pinto",
+      "source": {
+        "repository": "samber/cc-skills-golang",
+        "origin": "skills/golang-performance/SKILL.md",
+        "pintoLockHash": "135caf748d622523c2612714b2e3ec03f277c42dab033e295715baa6fcb9e7a6",
+        "manifestSha256": "0080ed70d76a75bf3583d047708ae2e5425b11e632473415bc40c690438e6d06"
+      },
+      "adaptations": [
+        "Concise task-specific routing",
+        "Repository scope and permission precedence",
+        "No automatic delegation, installation or external mutation"
+      ]
+    },
+    {
+      "name": "golang-swagger",
+      "origin": "adapted-from-pinto",
+      "source": {
+        "repository": "samber/cc-skills-golang",
+        "origin": "skills/golang-swagger/SKILL.md",
+        "pintoLockHash": "c86d9cdfc146711200440f1f25c58544d6805f45d040466b4fa6d77905fa4e27",
+        "manifestSha256": "c67119ec91d2b10297e09c386faed73ea93d4f286bc5cb599dc8a2db1192d456"
+      },
+      "adaptations": [
+        "Concise task-specific routing",
+        "Repository scope and permission precedence",
+        "No automatic delegation, installation or external mutation"
+      ]
+    },
+    {
+      "name": "golang-testing",
+      "origin": "adapted-from-pinto",
+      "source": {
+        "repository": "samber/cc-skills-golang",
+        "origin": "skills/golang-testing/SKILL.md",
+        "pintoLockHash": "fc6dcf385d2432a3407f3abcb763ceda4f06bf2a65a9bde616ee4d33af8415c1",
+        "manifestSha256": "5ae811407830dd861967f03644ef8ec07d79f060dd78bba2e4df78055c5396ba"
+      },
+      "adaptations": [
+        "Concise task-specific routing",
+        "Repository scope and permission precedence",
+        "No automatic delegation, installation or external mutation"
+      ]
+    },
+    {
+      "name": "handoff",
+      "origin": "adapted-from-pinto",
+      "source": {
+        "repository": "mattpocock/skills",
+        "origin": "skills/productivity/handoff/SKILL.md",
+        "pintoLockHash": "d543685cbfb0c64b7bc51a8dc3465975528da9b64f987f863765973b2f3867ab",
+        "manifestSha256": "a10d0dbc21b4ed7431f8e3228a6b5e155edad7c215a34507a5a6e9d8b4e607eb"
+      },
+      "adaptations": [
+        "Concise task-specific routing",
+        "Repository scope and permission precedence",
+        "No automatic delegation, installation or external mutation"
+      ]
+    },
+    {
+      "name": "python-fastapi",
+      "origin": "local-authored"
+    },
+    {
+      "name": "python-testing",
+      "origin": "local-authored"
+    },
+    {
+      "name": "react-best-practices",
+      "origin": "adapted-from-vercel",
+      "source": {
+        "repository": "vercel-labs/agent-skills",
+        "commit": "063bee94c3f4df8453406c830b0a7df0f2860278",
+        "origin": "skills/react-best-practices/SKILL.md",
+        "manifestSha256": "71ed7794962fa6e803ee83030517b5b93a9f70fbfeb431ec4535c5480a8d8355",
+        "declaredLicense": "MIT"
+      },
+      "adaptations": [
+        "Local skill name react-best-practices",
+        "React/Vite client examples only",
+        "No Next.js, SWR or design-system migration"
+      ]
+    },
+    {
+      "name": "smartpos-ai-evaluation",
+      "origin": "existing-project"
+    },
+    {
+      "name": "smartpos-ai-service",
+      "origin": "existing-project"
+    },
+    {
+      "name": "smartpos-api-contract",
+      "origin": "existing-project"
+    },
+    {
+      "name": "smartpos-cross-platform-design",
+      "origin": "existing-project"
+    },
+    {
+      "name": "smartpos-frontend",
+      "origin": "existing-project"
+    },
+    {
+      "name": "smartpos-go-backend",
+      "origin": "existing-project"
+    },
+    {
+      "name": "smartpos-go-database",
+      "origin": "existing-project"
+    },
+    {
+      "name": "smartpos-go-testing",
+      "origin": "existing-project"
+    },
+    {
+      "name": "smartpos-project-context",
+      "origin": "existing-project"
+    },
+    {
+      "name": "smartpos-ui-guidelines",
+      "origin": "existing-project"
+    },
+    {
+      "name": "smartpos-ui-verification",
+      "origin": "existing-project"
+    },
+    {
+      "name": "tdd",
+      "origin": "adapted-from-pinto",
+      "source": {
+        "repository": "mattpocock/skills",
+        "origin": "skills/engineering/tdd/SKILL.md",
+        "pintoLockHash": "15a7b5e36383ebadb2dec5e586679e55e9663d292da418926b8da6fc0ef27d84",
+        "manifestSha256": "95f66cc273f0dff4919d4251cd6572f0029cd551167d38024b4867f6b2816eba"
+      },
+      "adaptations": [
+        "Concise task-specific routing",
+        "Repository scope and permission precedence",
+        "No automatic delegation, installation or external mutation"
+      ]
+    },
+    {
+      "name": "triage",
+      "origin": "adapted-from-pinto",
+      "source": {
+        "repository": "mattpocock/skills",
+        "origin": "skills/engineering/triage/SKILL.md",
+        "pintoLockHash": "2b6efb6da12d92551772fcc04acf331f4e0e6f7bd9d4cb23ce0b301e0b128feb",
+        "manifestSha256": "acdc9b0a40f8821ce9a6479e5781c37c30ac2e1e1e27a8377437af09472c16fe"
+      },
+      "adaptations": [
+        "Concise task-specific routing",
+        "Repository scope and permission precedence",
+        "No automatic delegation, installation or external mutation"
+      ]
+    },
+    {
+      "name": "typescript-quality",
+      "origin": "local-authored"
+    },
+    {
+      "name": "web-design-guidelines",
+      "origin": "local-authored"
+    }
+  ],
+  "snapshots": [
+    {
+      "path": ".agents/skills/golang-code-style/references/details.md",
+      "sha256LF": "3969d18fb54e59c032de0463b44b6b5bd125dfe8b726ef0f009190da81f3df07",
+      "source": {
+        "type": "pinto-snapshot",
+        "repository": "samber/cc-skills-golang",
+        "origin": ".agents/skills/golang-code-style/references/details.md",
+        "sha256": "75696f77e95b5b0c2ab6b232b75e1f65f288de26fd0ab1bd7acf2306c9614e3c"
+      }
+    },
+    {
+      "path": ".agents/skills/golang-error-handling/references/error-wrapping.md",
+      "sha256LF": "546a8a969021a0573d350727a143117d7baac945d93523eebb0c391862b5b18b",
+      "source": {
+        "type": "pinto-snapshot",
+        "repository": "samber/cc-skills-golang",
+        "origin": ".agents/skills/golang-error-handling/references/error-wrapping.md",
+        "sha256": "12eadea2e2482571ab7900f1483f29a4c860ee9ac9d35e46d5d85ca0051d2366"
+      }
+    },
+    {
+      "path": ".agents/skills/golang-context/references/cancellation.md",
+      "sha256LF": "d9159283a0c4aa6695c05f189b30366b1e9402831834529e11ed5ffe7131b774",
+      "source": {
+        "type": "pinto-snapshot",
+        "repository": "samber/cc-skills-golang",
+        "origin": ".agents/skills/golang-context/references/cancellation.md",
+        "sha256": "765d34fe6c682f7c606c0061ffa621a6310841852762ffb1ccd1ae4709371276"
+      }
+    },
+    {
+      "path": ".agents/skills/golang-context/references/http-services.md",
+      "sha256LF": "2666634a2c5db4fa4559c8bd9b5dd260a6d6884e7f41eda397a4c0d2578f0175",
+      "source": {
+        "type": "pinto-snapshot",
+        "repository": "samber/cc-skills-golang",
+        "origin": ".agents/skills/golang-context/references/http-services.md",
+        "sha256": "f47d1c555065ea81285f1247ee6772f93ab8942e72e1a3151a30a885d8de2423"
+      }
+    },
+    {
+      "path": ".agents/skills/golang-concurrency/references/sync-primitives.md",
+      "sha256LF": "cf81d3456d70d7e980df920ab9766ba8fd99d508988491d6c2e6561102f5a7ad",
+      "source": {
+        "type": "pinto-snapshot",
+        "repository": "samber/cc-skills-golang",
+        "origin": ".agents/skills/golang-concurrency/references/sync-primitives.md",
+        "sha256": "660959f21ffc44d4761ff9bb360e2e02a7395546f93496ea6e215493533083ab"
+      }
+    },
+    {
+      "path": ".agents/skills/golang-concurrency/references/pipelines.md",
+      "sha256LF": "19eeb2489adba808a190e4df4a2da60739f22df0718b6ebdbb225fd587ed5f32",
+      "source": {
+        "type": "pinto-snapshot",
+        "repository": "samber/cc-skills-golang",
+        "origin": ".agents/skills/golang-concurrency/references/pipelines.md",
+        "sha256": "d2dcabf1f8835b32a38bb0bc2bc0130e94734c127ec2a371d16a5859ad7f7edf"
+      }
+    },
+    {
+      "path": ".agents/skills/golang-database/references/transactions.md",
+      "sha256LF": "f5a2ccec4d0f8a6f94529e178dfc711f96f7768ce32695060f9cb8084d733819",
+      "source": {
+        "type": "pinto-snapshot",
+        "repository": "samber/cc-skills-golang",
+        "origin": ".agents/skills/golang-database/references/transactions.md",
+        "sha256": "3cfb178493766fa5f6526094eb362587b4edef169d4d085d13f63bec9d3f5db2"
+      }
+    },
+    {
+      "path": ".agents/skills/golang-database/references/scanning.md",
+      "sha256LF": "f89c7f6f17a4a21f90e22dd4ff1f9c3bea3d6c6a42de0b4d11869cae206ca678",
+      "source": {
+        "type": "pinto-snapshot",
+        "repository": "samber/cc-skills-golang",
+        "origin": ".agents/skills/golang-database/references/scanning.md",
+        "sha256": "3ef134664b40e03c8359b1381dc7c09e1831dbcc7f49bc2a869ae73fdbda2427"
+      }
+    },
+    {
+      "path": ".agents/skills/golang-testing/references/http-testing.md",
+      "sha256LF": "39381274d7887651b86bde513085835f52860aa0832eb6f945f79c008f240e0f",
+      "source": {
+        "type": "pinto-snapshot",
+        "repository": "samber/cc-skills-golang",
+        "origin": ".agents/skills/golang-testing/references/http-testing.md",
+        "sha256": "84e3ee42423e113d5440dc8d5feb319b13a1f0de5b173e51dcb99e3188e8b133"
+      }
+    },
+    {
+      "path": ".agents/skills/golang-testing/references/mocking.md",
+      "sha256LF": "f40022ada1d1b359fdb1ffe66c077e3f6b9575d177ec4834cf78afc2956cf10b",
+      "source": {
+        "type": "pinto-snapshot",
+        "repository": "samber/cc-skills-golang",
+        "origin": ".agents/skills/golang-testing/references/mocking.md",
+        "sha256": "e1bd4776733b01e9f2574912ca7ab298f3f775805c5cca53bfa55f693a86c470"
+      }
+    },
+    {
+      "path": ".agents/skills/golang-testing/references/integration-testing.md",
+      "sha256LF": "e5e7698f43d5d87ef58ae542fab4aad6958fcc23bd2d856d04984d8c862b4313",
+      "source": {
+        "type": "pinto-snapshot",
+        "repository": "samber/cc-skills-golang",
+        "origin": ".agents/skills/golang-testing/references/integration-testing.md",
+        "sha256": "7ce03cbdd4cf36d628dbc739cbf59dcaa174d8f9b663445708a14309c40bdccc"
+      }
+    },
+    {
+      "path": ".agents/skills/golang-observability/references/logging.md",
+      "sha256LF": "5b19a1feed983ac9e7f83c1a0f9ae6625b8f270ba47bccc32ce799bc1db1e9b9",
+      "source": {
+        "type": "pinto-snapshot",
+        "repository": "samber/cc-skills-golang",
+        "origin": ".agents/skills/golang-observability/references/logging.md",
+        "sha256": "6c62d45a03663dce2226ae5a89c28c09f9b9d20040a7c79a289b196ec72fc25e"
+      }
+    },
+    {
+      "path": ".agents/skills/golang-observability/references/metrics.md",
+      "sha256LF": "23b8cae9e0df9c1835a66ae28237910eaf6671e42def66be42aab5d6937cc22a",
+      "source": {
+        "type": "pinto-snapshot",
+        "repository": "samber/cc-skills-golang",
+        "origin": ".agents/skills/golang-observability/references/metrics.md",
+        "sha256": "5380bce76d2c276b6acdf9109e3c6512e69bbb419f16cda52543d941bd249092"
+      }
+    },
+    {
+      "path": ".agents/skills/golang-performance/references/memory.md",
+      "sha256LF": "c4eaef320290e39a6fa45d509a9979cbfd2306ca6b4ddb8508ad7a9f47857f51",
+      "source": {
+        "type": "pinto-snapshot",
+        "repository": "samber/cc-skills-golang",
+        "origin": ".agents/skills/golang-performance/references/memory.md",
+        "sha256": "fab7b34ae63020483a7a6fb1ed986686dacbbe8a1c988b47f50706caf9b517ba"
+      }
+    },
+    {
+      "path": ".agents/skills/golang-performance/references/caching.md",
+      "sha256LF": "4f1439f1fbbd74c38ab00490bf90505a9984748800162d2909caa51c482a2b92",
+      "source": {
+        "type": "pinto-snapshot",
+        "repository": "samber/cc-skills-golang",
+        "origin": ".agents/skills/golang-performance/references/caching.md",
+        "sha256": "f97f7edffaeb6c2aae3c3f9395fc3b79ee5c4ef6aa2da1f6bfffa0f07e2d1159"
+      }
+    },
+    {
+      "path": ".agents/skills/tdd/tests.md",
+      "sha256LF": "e12182f5c4c6a844b7c6ab4b8d2623b642aaaae5460fe58ed087efd4f3d5fb8a",
+      "source": {
+        "type": "pinto-snapshot",
+        "repository": "mattpocock/skills",
+        "origin": ".agents/skills/tdd/tests.md",
+        "sha256": "0ea0dcd32d5ad1d1ccd157baa3acf207507136592480bbef013b33b318a7526e"
+      }
+    },
+    {
+      "path": ".agents/skills/tdd/mocking.md",
+      "sha256LF": "3ceb807fdf4a47d6a93d4d9a891e5ba6d362a6247bd08adc451feebfc17361ef",
+      "source": {
+        "type": "pinto-snapshot",
+        "repository": "mattpocock/skills",
+        "origin": ".agents/skills/tdd/mocking.md",
+        "sha256": "73a10b6a26b56197c738a764c1e4205af98c74553f4a713795997f6bc35b917d"
+      }
+    },
+    {
+      "path": ".agents/skills/react-best-practices/references/async-parallel.md",
+      "sha256LF": "6d2f841896279e976dfcdc1ac89e70771ac188baadfd43c096b5706cb838b961",
+      "source": {
+        "type": "github-snapshot",
+        "repository": "vercel-labs/agent-skills",
+        "commit": "063bee94c3f4df8453406c830b0a7df0f2860278",
+        "origin": "skills/react-best-practices/rules/async-parallel.md",
+        "sha256": "6d2f841896279e976dfcdc1ac89e70771ac188baadfd43c096b5706cb838b961"
+      }
+    },
+    {
+      "path": ".agents/skills/react-best-practices/references/rerender-derived-state-no-effect.md",
+      "sha256LF": "cb11ec76f50aa7b6847269f02d79b120c889a30d9ecd2c1d578f75144419c77a",
+      "source": {
+        "type": "github-snapshot",
+        "repository": "vercel-labs/agent-skills",
+        "commit": "063bee94c3f4df8453406c830b0a7df0f2860278",
+        "origin": "skills/react-best-practices/rules/rerender-derived-state-no-effect.md",
+        "sha256": "cb11ec76f50aa7b6847269f02d79b120c889a30d9ecd2c1d578f75144419c77a"
+      }
+    },
+    {
+      "path": ".agents/skills/react-best-practices/references/rerender-functional-setstate.md",
+      "sha256LF": "5e68df6b2ae8058e67f476ff1ac67bde159f5a9d18df439e46eabcdeb7b52e58",
+      "source": {
+        "type": "github-snapshot",
+        "repository": "vercel-labs/agent-skills",
+        "commit": "063bee94c3f4df8453406c830b0a7df0f2860278",
+        "origin": "skills/react-best-practices/rules/rerender-functional-setstate.md",
+        "sha256": "5e68df6b2ae8058e67f476ff1ac67bde159f5a9d18df439e46eabcdeb7b52e58"
+      }
+    },
+    {
+      "path": ".agents/skills/react-best-practices/references/rendering-conditional-render.md",
+      "sha256LF": "2ec2fa23c4148285144687050c52369adba3da2fbe3d486f8d3e0aad8f06f2bc",
+      "source": {
+        "type": "github-snapshot",
+        "repository": "vercel-labs/agent-skills",
+        "commit": "063bee94c3f4df8453406c830b0a7df0f2860278",
+        "origin": "skills/react-best-practices/rules/rendering-conditional-render.md",
+        "sha256": "2ec2fa23c4148285144687050c52369adba3da2fbe3d486f8d3e0aad8f06f2bc"
+      }
+    },
+    {
+      "path": ".agents/skill-support/licenses/samber-MIT.txt",
+      "sha256LF": "a6735e3815503be2fc1ae4813758cb3d0c24a5309df508309ce180cf5a4ead58",
+      "source": {
+        "type": "github-snapshot",
+        "repository": "samber/cc-skills-golang",
+        "commit": "8e899e20ff0cd4dc524af3993e4c62d8ee8c5717",
+        "origin": "LICENSE",
+        "sha256": "a6735e3815503be2fc1ae4813758cb3d0c24a5309df508309ce180cf5a4ead58"
+      }
+    },
+    {
+      "path": ".agents/skill-support/licenses/mattpocock-MIT.txt",
+      "sha256LF": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5",
+      "source": {
+        "type": "github-snapshot",
+        "repository": "mattpocock/skills",
+        "commit": "49dd158d1076134a641b33efb035946536778336",
+        "origin": "LICENSE",
+        "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+      }
+    },
+    {
+      "path": ".agents/skills/golang-observability/references/alerting.md",
+      "sha256LF": "b4c4c27671728f9b6feb0683e244eef356de078f08c51de94467c200e3039c55",
+      "source": {
+        "type": "pinto-snapshot",
+        "repository": "samber/cc-skills-golang",
+        "origin": ".agents/skills/golang-observability/references/alerting.md",
+        "sha256": "bc74da7ef601806b508b9550ffa6afc7e5c790a395661c7ba0ed7f52631885ab"
+      }
+    }
+  ]
+}

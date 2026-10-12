@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   request: vi.fn(),
   refresh: vi.fn(),
   select: vi.fn(),
+  storeMode: 'multi' as 'single' | 'multi',
 }));
 vi.mock('../../app/AuthProvider', () => ({
   useAuth: () => ({
@@ -24,6 +25,7 @@ vi.mock('../../app/AuthProvider', () => ({
 }));
 vi.mock('../../app/OrganizationProvider', () => ({
   useOrganization: () => ({
+    storeMode: mocks.storeMode,
     organizations: [],
     invitationToken: '',
     refresh: mocks.refresh,
@@ -35,7 +37,22 @@ vi.mock('../../lib/organization-api', () => ({
 }));
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.storeMode = 'multi';
   mocks.refresh.mockResolvedValue(undefined);
+});
+it('does not offer organization creation for an account outside the configured store', () => {
+  mocks.storeMode = 'single';
+  render(
+    <MemoryRouter>
+      <SetupPage />
+    </MemoryRouter>,
+  );
+  expect(screen.queryByLabelText('ชื่อองค์กร')).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'ถัดไป' }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByText(/ขอคำเชิญจากเจ้าของร้าน/)).toBeVisible();
+  expect(mocks.request).not.toHaveBeenCalled();
 });
 it('requires organization fields and creates a complete atomic onboarding payload', async () => {
   mocks.request.mockResolvedValue({ organization: { id: 'new-org' } });

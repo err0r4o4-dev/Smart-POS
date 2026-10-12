@@ -1,5 +1,6 @@
 import type { Role } from '../app/access';
 import { requestData } from './api';
+import { responseStoreMode, type StoreMode } from './store-mode';
 export interface OrganizationInput {
   name: string;
   code: string;
@@ -66,18 +67,25 @@ export async function organizationRequest<Result>(
     csrf?: string;
     key?: string;
     signal?: AbortSignal;
+    storeMode?: (mode: StoreMode) => void;
   } = {},
 ): Promise<Result> {
-  return requestData<Result>(`/api/v1${path}`, {
-    method: options.method ?? 'GET',
-    credentials: 'same-origin',
-    signal: options.signal,
-    headers: {
-      Accept: 'application/json',
-      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-      ...(options.csrf ? { 'X-CSRF-Token': options.csrf } : {}),
-      ...(options.key ? { 'Idempotency-Key': options.key } : {}),
+  return requestData<Result>(
+    `/api/v1${path}`,
+    {
+      method: options.method ?? 'GET',
+      credentials: 'same-origin',
+      signal: options.signal,
+      headers: {
+        Accept: 'application/json',
+        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(options.csrf ? { 'X-CSRF-Token': options.csrf } : {}),
+        ...(options.key ? { 'Idempotency-Key': options.key } : {}),
+      },
+      ...(options.body ? { body: JSON.stringify(options.body) } : {}),
     },
-    ...(options.body ? { body: JSON.stringify(options.body) } : {}),
-  });
+    options.storeMode
+      ? (headers) => options.storeMode?.(responseStoreMode(headers))
+      : undefined,
+  );
 }

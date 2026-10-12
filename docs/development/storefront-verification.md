@@ -1,5 +1,7 @@
 # Storefront pickup flow — local verification
 
+หมายเหตุสถานะล่าสุด 2026-10-12: รายงานนี้เป็นหลักฐาน pickup/schema14 ในอดีต ไม่ใช่ผลทดสอบที่รันใหม่ Current Go readiness ต้องการ clean schema23 และมี reservation/source/internal payment/refund/delivery-snapshot slices เพิ่มแล้ว แต่ online flow รวมยัง **PARTIAL / PAUSED ตามคำขอผู้ใช้** ดู [สถานะและนโยบายรวม](../architecture/payment-sandbox.md#current-online-flow-status-2026-10-12) และ [หลักฐาน schema22/23 ที่บันทึกไว้](verification.md) ข้อจำกัดด้าน reservation/payment ในรายงานเดิมจึงอธิบายเฉพาะ checkpoint นั้น ไม่ใช่ข้อสรุปโค้ดปัจจุบัน
+
 วันที่ตรวจ: 2026-10-11 (Asia/Bangkok). เป็นงานขยาย flow สั่งสินค้าแล้วรับ/จ่ายที่ร้าน ไม่ใช่การรับรอง Production Ready หรือการเริ่ม Phase6–7
 
 ## ขอบเขตและ environment

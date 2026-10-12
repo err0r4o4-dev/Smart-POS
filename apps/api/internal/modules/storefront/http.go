@@ -11,6 +11,7 @@ import (
 	"smartpos/api/internal/modules/identity"
 	"smartpos/api/internal/modules/organization"
 	"smartpos/api/internal/platform/httpx"
+	"smartpos/api/internal/platform/stripe"
 	"strconv"
 	"time"
 )
@@ -18,6 +19,7 @@ import (
 type Handler struct {
 	Service        *Service
 	Authentication identity.Handler
+	Sandbox        *stripe.Client
 }
 type operation func(context.Context, string, string, *http.Request) (any, error)
 
@@ -82,17 +84,20 @@ func page(request *http.Request) (int, error) {
 }
 func (handler Handler) PublicRoutes(router chi.Router) {
 	service := handler.Service
-	router.Get("/storefronts", endpoint(200, func(ctx context.Context, _, _ string, _ *http.Request) (any, error) { return service.Directory(ctx) }))
+	router.Get("/storefronts", func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("X-SmartPOS-Store-Mode", service.Organization.StoreMode())
+		endpoint(200, func(ctx context.Context, _, _ string, _ *http.Request) (any, error) { return service.Directory(ctx) })(writer, request)
+	})
 	router.Route("/storefronts/{slug}", func(public chi.Router) {
 		public.Get("/", endpoint(200, func(ctx context.Context, _, _ string, request *http.Request) (any, error) {
 			return service.PublicSettings(ctx, chi.URLParam(request, "slug"))
 		}))
 		public.Get("/products", endpoint(200, func(ctx context.Context, _, _ string, request *http.Request) (any, error) {
-			number, err := page(request)
+			query, err := catalogQuery(request)
 			if err != nil {
 				return nil, err
 			}
-			return service.Products(ctx, "", "", chi.URLParam(request, "slug"), request.URL.Query().Get("search"), number)
+			return service.BrowseProducts(ctx, chi.URLParam(request, "slug"), query)
 		}))
 		public.With(handler.Authentication.RequirePublicWrite("storefront.quote", 120, time.Minute)).Post("/quote", writeEndpoint(200, func(ctx context.Context, _, _ string, request *http.Request, input QuoteInput) (any, error) {
 			return service.Quote(ctx, chi.URLParam(request, "slug"), input)
@@ -106,6 +111,7 @@ func (handler Handler) PublicRoutes(router chi.Router) {
 	})
 }
 func (handler Handler) TenantRoutes(router chi.Router) {
+	SandboxHandler{Organization: handler.Service.Organization, Gateway: handler.Sandbox}.Routes(router)
 	service := handler.Service
 	router.Get("/storefront", endpoint(200, func(ctx context.Context, user, org string, _ *http.Request) (any, error) {
 		return service.Settings(ctx, user, org)

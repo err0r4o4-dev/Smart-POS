@@ -1,6 +1,6 @@
 # Business operations schema (current: Returns/Refunds only)
 
-`000008_business_operations.up.sql` is additive to migrations 1–7, which remain unchanged. It is forward-only like the existing migration chain. It has been applied only to isolated test/scratch databases, never the persistent primary volume. Required readiness is exact clean schema **8**; missing, dirty or other versions fail readiness.
+`000008_business_operations.up.sql` is additive to migrations 1–7, which remain unchanged. It is forward-only like the existing migration chain. It has been applied only to isolated test/scratch databases, never the persistent primary volume. This business-operations checkpoint required clean schema **8**; current Go readiness requires clean schema23; missing, dirty or other versions fail readiness.
 
 ## Tables and references
 

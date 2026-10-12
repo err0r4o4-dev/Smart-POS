@@ -6,6 +6,170 @@ info:
 servers:
   - url: /
 paths:
+  /api/v1/organizations/{id}/storefront/payment-sandbox:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: getPaymentSandboxStatus
+      security:
+        - sessionCookie: []
+      description: storefront.manage. Development-only Stripe diagnostics; configured means a test key is present, not that provider connectivity was verified. No customer payment, local order, sale or stock effects.
+      responses:
+        '200':
+          description: Local test-only configuration status; no secrets returned.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PaymentSandboxStatus'
+        '400':
+          $ref: '#/components/responses/PaymentSandboxFailure'
+        '401':
+          $ref: '#/components/responses/PaymentSandboxFailure'
+        '403':
+          $ref: '#/components/responses/PaymentSandboxFailure'
+        '404':
+          $ref: '#/components/responses/PaymentSandboxFailure'
+        '409':
+          $ref: '#/components/responses/PaymentSandboxFailure'
+        '503':
+          $ref: '#/components/responses/PaymentSandboxFailure'
+  /api/v1/organizations/{id}/storefront/payment-sandbox/checkouts:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    post:
+      operationId: createPaymentSandboxCheckout
+      security:
+        - sessionCookie: []
+      description: storefront.manage, allowed Origin and CSRF. Creates only a fixed THB 20.00 Stripe test Checkout, card/PromptPay subject to account support. Client cannot choose amount, redirect, currency, metadata or live mode. Same user/organization/key retries use the same Stripe idempotency key; retry promptly within provider retention. Not a customer order or fulfillment command.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+      responses:
+        '201':
+          description: Scoped test Checkout; no local business records changed.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PaymentSandboxCheckout'
+        '400':
+          $ref: '#/components/responses/PaymentSandboxFailure'
+        '401':
+          $ref: '#/components/responses/PaymentSandboxFailure'
+        '403':
+          $ref: '#/components/responses/PaymentSandboxFailure'
+        '404':
+          $ref: '#/components/responses/PaymentSandboxFailure'
+        '409':
+          $ref: '#/components/responses/PaymentSandboxFailure'
+        '415':
+          $ref: '#/components/responses/PaymentSandboxFailure'
+        '503':
+          $ref: '#/components/responses/PaymentSandboxFailure'
+  /api/v1/organizations/{id}/storefront/payment-sandbox/checkouts/{sessionId}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: '^cs_test_[A-Za-z0-9]{1,220}$'
+    get:
+      operationId: getPaymentSandboxCheckout
+      security:
+        - sessionCookie: []
+      description: storefront.manage. Reads authoritative test payment/refund status from Stripe; verifies test mode, purpose, organization, creator, amount and currency. Does not accept a success URL as payment evidence. Foreign creator/tenant/purpose returns 404.
+      responses:
+        '200':
+          description: Verified provider state; no local sale or order completion.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PaymentSandboxCheckout'
+        '400':
+          $ref: '#/components/responses/PaymentSandboxFailure'
+        '401':
+          $ref: '#/components/responses/PaymentSandboxFailure'
+        '403':
+          $ref: '#/components/responses/PaymentSandboxFailure'
+        '404':
+          $ref: '#/components/responses/PaymentSandboxFailure'
+        '409':
+          $ref: '#/components/responses/PaymentSandboxFailure'
+        '503':
+          $ref: '#/components/responses/PaymentSandboxFailure'
+  /api/v1/organizations/{id}/storefront/payment-sandbox/checkouts/{sessionId}/refund:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: '^cs_test_[A-Za-z0-9]{1,220}$'
+    post:
+      operationId: refundPaymentSandboxCheckout
+      security:
+        - sessionCookie: []
+      description: storefront.manage, Origin and CSRF. Full test refund only after retrieving a paid, owned, test Checkout. PaymentIntent and amount are server-derived. Deterministic per-session refund idempotency; existing refund is returned instead of creating another. Pending/requires_action/failed are not success. No POS refund, cash drawer or inventory effects.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+      responses:
+        '200':
+          description: Current test refund, possibly pending or requiring action.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PaymentSandboxRefund'
+        '400':
+          $ref: '#/components/responses/PaymentSandboxFailure'
+        '401':
+          $ref: '#/components/responses/PaymentSandboxFailure'
+        '403':
+          $ref: '#/components/responses/PaymentSandboxFailure'
+        '404':
+          $ref: '#/components/responses/PaymentSandboxFailure'
+        '409':
+          $ref: '#/components/responses/PaymentSandboxFailure'
+        '415':
+          $ref: '#/components/responses/PaymentSandboxFailure'
+        '503':
+          $ref: '#/components/responses/PaymentSandboxFailure'
   /api/v1/organizations/{id}/online-orders/{orderId}/pos-cart:
     parameters:
       - $ref: '#/components/parameters/OrganizationID'
@@ -766,7 +930,7 @@ paths:
     get:
       operationId: listPublicStorefrontProducts
       security: []
-      description: Published active variants; saleable source availability; 24 per page.
+      description: Published active variants; source availability minus live reservations; exact effective branch prices; global filtering and sorting before pagination. Category counts respect search, price and availability but exclude the selected category.
       parameters:
         - name: page
           in: query
@@ -780,6 +944,34 @@ paths:
           schema:
             type: string
             maxLength: 100
+        - name: category_id
+          in: query
+          schema:
+            type: string
+            description: Category UUID or uncategorized; omitted means all categories.
+        - name: min_price
+          in: query
+          schema:
+            type: string
+            pattern: '^[0-9]{1,16}(\.[0-9]{1,2})?$'
+        - name: max_price
+          in: query
+          schema:
+            type: string
+            pattern: '^[0-9]{1,16}(\.[0-9]{1,2})?$'
+            description: Must not be less than min_price.
+        - name: availability
+          in: query
+          schema:
+            type: string
+            enum: [available, unavailable]
+            description: Saleable with enough available quantity for the unit type, or its inverse.
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [name, price_asc, price_desc]
+            default: name
       responses:
         '200':
           description: Successful result
@@ -791,7 +983,7 @@ paths:
                   - data
                 properties:
                   data:
-                    $ref: '#/components/schemas/StorefrontProductPage'
+                    $ref: '#/components/schemas/StorefrontCatalogPage'
         '400':
           description: Invalid input
           content:
@@ -882,11 +1074,14 @@ paths:
     get:
       operationId: listPublicStorefronts
       security: []
-      description: Published stores only.
+      description: Published active stores only. With SINGLE_STORE_ORGANIZATION_ID, returns only that store or an empty array; other stores are never included. X-SmartPOS-Store-Mode exposes only single/multi, not the configured organization UUID.
       parameters: []
       responses:
         '200':
           description: Successful result
+          headers:
+            X-SmartPOS-Store-Mode:
+              $ref: '#/components/headers/StoreMode'
           content:
             application/json:
               schema:
@@ -3073,7 +3268,10 @@ paths:
       security: [{ sessionCookie: [] }]
       responses:
         '200':
-          description: Active memberships only; subordinate roles receive redacted contact fields.
+          description: Active memberships only; subordinate roles receive redacted contact fields. In single-store mode, only active membership in the configured store is returned; no membership returns an empty array.
+          headers:
+            X-SmartPOS-Store-Mode:
+              $ref: '#/components/headers/StoreMode'
           content:
             application/json:
               schema:
@@ -3093,7 +3291,7 @@ paths:
     post:
       operationId: createOrganization
       security: [{ sessionCookie: [] }]
-      description: Atomically creates organization, OWNER membership, active main branch, default THB/Asia-Bangkok configuration and audit. Replaying the same per-user key/payload returns the same context; different payload returns 409.
+      description: Atomically creates organization, OWNER membership, active main branch, default THB/Asia-Bangkok configuration and audit. Replaying the same per-user key/payload returns the same context; different payload returns 409. Disabled with 403 in single-store mode, including retries; use an existing explicitly configured organization, not first-user ownership.
       parameters:
         - { $ref: '#/components/parameters/CSRF' }
         - {
@@ -17568,6 +17766,12 @@ components:
       name: smartpos_session
       description: Development cookie name; production uses __Host-smartpos_session.
   responses:
+    PaymentSandboxFailure:
+      description: Invalid input (400), missing session (401), permission/Origin/CSRF denied (403), inaccessible test resource (404), payment/refund conflict (409), non-JSON body (415), or unconfigured/unavailable/invalid provider response (503). Provider payloads and credentials are never echoed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StorefrontError'
     OrganizationContext:
       description: Authorized organization context.
       content:
@@ -17664,6 +17868,81 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
   schemas:
+    PaymentSandboxStatus:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          provider,
+          mode,
+          configured,
+          amount_minor,
+          currency,
+          customer_checkout_enabled,
+        ]
+      properties:
+        provider:
+          type: string
+          const: stripe
+        mode:
+          type: string
+          const: test
+        configured:
+          type: boolean
+        amount_minor:
+          type: integer
+          const: 2000
+        currency:
+          type: string
+          const: thb
+        customer_checkout_enabled:
+          type: boolean
+          const: false
+    PaymentSandboxRefund:
+      type: object
+      additionalProperties: false
+      required: [id, status, amount_minor, currency]
+      properties:
+        id:
+          type: string
+          pattern: '^re_[A-Za-z0-9]{1,220}$'
+        status:
+          type: string
+          enum: [pending, requires_action, succeeded, failed, canceled]
+        amount_minor:
+          type: integer
+          const: 2000
+        currency:
+          type: string
+          const: thb
+    PaymentSandboxCheckout:
+      type: object
+      additionalProperties: false
+      required:
+        [id, url, status, payment_status, amount_minor, currency, refund]
+      properties:
+        id:
+          type: string
+          pattern: '^cs_test_[A-Za-z0-9]{1,220}$'
+        url:
+          type: string
+          description: Only an HTTPS checkout.stripe.com/c/pay/{id} URL is accepted; may be empty after completion/expiry.
+        status:
+          type: string
+          enum: [open, complete, expired]
+        payment_status:
+          type: string
+          enum: [paid, unpaid]
+        amount_minor:
+          type: integer
+          const: 2000
+        currency:
+          type: string
+          const: thb
+        refund:
+          oneOf:
+            - $ref: '#/components/schemas/PaymentSandboxRefund'
+            - type: 'null'
     StorefrontSettings:
       type: object
       additionalProperties: false
@@ -17702,12 +17981,18 @@ components:
         terminal_id:
           type: string
           format: uuid
+          description: Management-only front terminal; unchanged when a separate online source is selected.
+        online_terminal_id:
+          type: string
+          format: uuid
+          description: Management-only optional same-branch warehouse terminal for online orders. Omitted for a shared source and all public responses.
         branch_id:
           type: string
           format: uuid
         stock_location_id:
           type: string
           format: uuid
+          description: Management-only effective online stock source, not an aggregate of front and back stock.
     StorefrontSettingsInput:
       type: object
       additionalProperties: false
@@ -17747,6 +18032,10 @@ components:
         terminal_id:
           type: string
           format: uuid
+        online_terminal_id:
+          type: string
+          pattern: ^$|^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$
+          description: Optional same-branch terminal at a distinct WAREHOUSE. Omit or send an empty string to share the front source. Source changes conflict while any live order remains. A dedicated terminal shift is required for pickup POS settlement.
     StorefrontDirectoryEntry:
       type: object
       additionalProperties: false
@@ -17761,6 +18050,92 @@ components:
           type: string
         accepting_orders:
           type: boolean
+    StorefrontCatalogProduct:
+      type: object
+      additionalProperties: false
+      required:
+        - variant_id
+        - product_name
+        - variant_name
+        - sku
+        - unit
+        - unit_type
+        - unit_price
+        - available
+        - saleable
+        - published
+        - category_id
+        - category_name
+      properties:
+        variant_id:
+          type: string
+          format: uuid
+        product_name:
+          type: string
+        variant_name:
+          type: string
+        sku:
+          type: string
+        unit:
+          type: string
+        unit_type:
+          type: string
+          enum:
+            - COUNT
+            - WEIGHT
+            - VOLUME
+            - PACKAGING
+        unit_price:
+          $ref: '#/components/schemas/POSMoney'
+        available:
+          $ref: '#/components/schemas/InventoryQuantity'
+          description: Saleable quality quantity at the configured source, minus live online reservations; a quote or browser cart does not reserve stock.
+        saleable:
+          type: boolean
+        published:
+          type: boolean
+        category_id:
+          type: string
+          description: Same-store category UUID or uncategorized.
+        category_name:
+          type: string
+        image_url:
+          type: string
+          description: Optional public image from variant attributes.storefront_image_url; sanitized root-relative path or credential-free HTTPS URL. Missing or invalid images are omitted; no upload subsystem is implied.
+    StorefrontCatalogCategory:
+      type: object
+      additionalProperties: false
+      required: [id, name, count]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        count:
+          type: integer
+          minimum: 0
+    StorefrontCatalogPage:
+      type: object
+      additionalProperties: false
+      required: [items, total, page, page_size, categories]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/StorefrontCatalogProduct'
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          const: 24
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/StorefrontCatalogCategory'
     StorefrontProduct:
       type: object
       additionalProperties: false
@@ -17798,6 +18173,7 @@ components:
           $ref: '#/components/schemas/POSMoney'
         available:
           $ref: '#/components/schemas/InventoryQuantity'
+          description: Saleable quality quantity at the configured source, minus live online reservations; a quote or browser cart does not reserve stock.
         saleable:
           type: boolean
         published:
@@ -22453,8 +22829,10 @@ components:
           $ref: '#/components/schemas/InventoryQuantity'
         reserved:
           $ref: '#/components/schemas/InventoryQuantity'
+          description: Live online order quantities held at this exact stock location; legacy pre-reservation orders are excluded.
         available:
           $ref: '#/components/schemas/InventoryQuantity'
+          description: Saleable quality quantity minus live reservations, clamped to zero and subject to existing branch/location/catalog eligibility.
         version:
           type: integer
         sku:
@@ -24671,6 +25049,9 @@ components:
             - 'null'
           format: uuid
   headers:
+    StoreMode:
+      description: Server-configured store selection mode. Older servers may omit this additive header; clients retain multi-store compatibility. No organization identifier or membership grant is included.
+      schema: { type: string, enum: [single, multi] }
     RequestID:
       description: Generated opaque request correlation ID.
       schema: { type: string, pattern: '^[a-f0-9]{32}$' }

@@ -1,12 +1,14 @@
 # Getting started
 
+Current status (2026-10-12): Go requires clean schema23; the full customer payment/delivery/return flow is **PARTIAL / PAUSED by user request**. The instructions below require separate installation/startup/migration authorization for the intended target. This documentation refresh does not run them or upgrade the primary database. See [current scope and confirmed policy](../architecture/payment-sandbox.md#current-online-flow-status-2026-10-12) and [recorded verification](verification.md); enabling a customer payment environment flag alone does not register customer routes or finish the UI.
+
 ## Docker-first
 
 Docker Desktop Linux engine and Compose v2; Node 24/npm 11 for frontend commands. Root package-lock and AI uv.lock freeze application dependencies; Go module sums verify downloads. Container image tags are version-family pins, not immutable digests; freeze reviewed digests before production release.
 
 Copy `.env.example` to `.env` if you want custom ports. Defaults run locally without that file. Values are local examples, not production secrets. Never commit `.env`. Avoid exposing local port bindings. If port conflicts occur, change WEB_PORT/API_PORT/POSTGRES_PORT/GATEWAY_PORT before startup.
 
-`npm ci` -> `npm run stack:up` -> localhost:8088. Startup sequence: PostgreSQL healthy -> migration up finishes -> Go ready (ping + schema) -> Caddy. AI starts independently and is not a Go availability dependency. `npm run migrate` is safe to rerun (no change); never run down/drop/volume removal automatically.
+`npm ci` -> `npm run stack:up` -> localhost:8088. Startup sequence: PostgreSQL healthy -> migration up finishes -> Go ready (ping + schema) -> Caddy. AI starts independently and is not a Go availability dependency. `npm run migrate` is a no-op only when no migration is pending; otherwise it changes the selected database and requires target-specific approval; never run down/drop/volume removal automatically.
 
 ## Frontend development
 

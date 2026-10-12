@@ -136,7 +136,7 @@ func variant(ctx context.Context, tx pgx.Tx, org, location, id, quantity, oldPri
 	}
 	price, priceErr := scaled(value.UnitPrice, 2)
 	item.Saleable = value.ProductStatus == "ACTIVE" && value.VariantStatus == "ACTIVE" && value.UnitStatus == "ACTIVE" && value.Currency == "THB" && priceErr == nil && price > 0
-	err = tx.QueryRow(ctx, "SELECT COALESCE((SELECT quantity::text FROM stock_balances WHERE organization_id=$1 AND location_id=$2 AND variant_id=$3),'0.000')", org, location, id).Scan(&item.Available)
+	err = tx.QueryRow(ctx, "SELECT greatest(0.000,storefront_sellable_quantity($1,$2,$3)-storefront_reserved_quantity($1,$2,$3))::text", org, location, id).Scan(&item.Available)
 	if err != nil {
 		return item, err
 	}
@@ -176,7 +176,7 @@ func (service *Service) SaveTerminal(ctx context.Context, user, org, id string, 
 			return Terminal{}, ErrConflict
 		}
 		var busy bool
-		if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM register_shifts WHERE organization_id=$1 AND terminal_id=$2 AND status='OPEN') OR EXISTS(SELECT 1 FROM pos_carts WHERE organization_id=$1 AND terminal_id=$2 AND status IN ('ACTIVE','HELD')) OR EXISTS(SELECT 1 FROM online_orders WHERE organization_id=$1 AND terminal_id=$2 AND status IN ('PENDING','PREPARING','READY') AND (expires_at>now() OR cart_id IS NOT NULL))", org, id).Scan(&busy); err != nil {
+		if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM register_shifts WHERE organization_id=$1 AND terminal_id=$2 AND status='OPEN') OR EXISTS(SELECT 1 FROM pos_carts WHERE organization_id=$1 AND terminal_id=$2 AND status IN ('ACTIVE','HELD')) OR EXISTS(SELECT 1 FROM online_orders WHERE organization_id=$1 AND terminal_id=$2 AND storefront_order_live(organization_id,id))", org, id).Scan(&busy); err != nil {
 			return Terminal{}, err
 		}
 		if busy {

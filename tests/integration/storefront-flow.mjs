@@ -160,7 +160,7 @@ try {
     'access_hash',
   ])
     equal(field in created.data, false, 'public projection: ' + field);
-  equal(await stock(), '5.000', 'ordering does not reserve stock');
+  equal(await stock(), '5.000', 'ordering leaves physical on-hand unchanged');
   equal((await call('/online-orders')).status, 400, 'branch filter required');
   const concurrent = await Promise.all(
     Array.from({ length: 3 }, () => guest('/orders', created.body, created.id)),
@@ -328,7 +328,7 @@ try {
     owner,
     200,
   );
-  equal(cart.status, 'HELD', 'online cart can be held without reservation');
+  equal(cart.status, 'HELD', 'online cart can be held without stock deduction');
   cart = await ok(
     `/online-orders/${doc.id}/pos-cart`,
     'POST',

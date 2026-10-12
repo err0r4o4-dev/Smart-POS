@@ -2,6 +2,8 @@
 
 Continuation: [separate online stock sources](online-stock-sources.md) adds optional same-branch warehouse sourcing in schema16. The schema15 scope/results below remain historical; customer payment/delivery acceptance is still separate.
 
+Current cumulative status: Go readiness requires clean schema23. Reservations/source selection, internal payment holds/orchestration/reconciliation, delivery snapshots and internal pre-shipment refunds exist, but the full customer flow is **PARTIAL / PAUSED by the user**. See [current status and policy](payment-sandbox.md#current-online-flow-status-2026-10-12); schema15 evidence below is not a current rollout or full-flow acceptance.
+
 Status: implemented and verified locally on 2026-10-12 with official schema15 in a new isolated PostgreSQL. Not deployed or migrated on the primary stack; not customer payment/delivery acceptance.
 
 ## Scope and ownership
@@ -29,7 +31,7 @@ Customer/catalog/cart/consent and staff settings copy now describe reservation a
 
 ## Rollout and compatibility
 
-The API now requires schema **15**, not 14. Deploy matching API/web assets and authorize migration rollout separately; do not run `stack:up` as verification. Applied migrations 1–14 are unchanged. Primary settings, UUID configuration, services and data were not modified during this task.
+This reservation checkpoint introduced schema **15**; current API code requires clean schema23. Deploy matching API/web assets and authorize migration rollout separately; do not run `stack:up` as verification. Applied migrations 1–14 are unchanged. Primary settings, UUID configuration, services and data were not modified during this task.
 
 Existing orders remain unreserved rather than competing retroactively for insufficient stock. They still pass normal POS stock/quality checks and cannot consume newer orders' holds. A replay of a legacy order does not upgrade it. Historical snapshots, movements and payments are not rewritten. Upgrade against a retained schema14 dataset has **not** been exercised; fresh official migrations were exercised on disposable test databases.
 

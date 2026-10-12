@@ -2,6 +2,8 @@
 
 Implemented and verified locally on 2026-10-12, continuing the selected online-flow chat. This is an additive source-configuration slice for the existing pickup/reservation/POS flow, not customer Checkout, webhooks, shipping, refunds or channel-report acceptance. No primary-stack migration or restart was performed.
 
+Current cumulative status: the API code requires clean schema23, and downstream internal payment/reconciliation/delivery-snapshot/pre-shipment-refund slices exist. The complete online flow is **PARTIAL / PAUSED by the user**. The schema16 verification below is historical source-slice evidence, not a complete commerce acceptance run; see [current status and policy](payment-sandbox.md#current-online-flow-status-2026-10-12).
+
 ## Configuration and compatibility
 
 - `storefronts.terminal_id` remains the existing primary/front terminal. Without `online_terminal_id`, online catalog, quotes, reservations and pickup settlement continue to use that terminal's source.
@@ -27,7 +29,7 @@ Inventory responses retain the existing warehouse classification: physical `quan
 - Management `stock_location_id` is the effective online source. Management `terminal_id` remains the configured front terminal; a new order's `terminal_id` is the snapshotted effective order terminal.
 - Public settings omit both terminal IDs, branch and location. Customer order/tracking projections retain their existing redaction and token ownership.
 - Additive migration `000016_online_stock_sources.up.sql` adds one nullable composite tenant FK and source guards to existing FORCE-RLS tables. Existing rows remain shared-source; no order backfill, stock movement or balance rewrite is performed.
-- The API now requires clean schema16. Source/UI changes and migration must be rolled out together through an approved up-only process. No primary migration/restart is part of this task. The migration deliberately has no down/reset path; retained schema15-data upgrade acceptance is a separate rollout check.
+- This source checkpoint introduced schema16; current API code requires clean schema23. Source/UI changes and migration must be rolled out together through an approved up-only process. No primary migration/restart is part of this task. The migration deliberately has no down/reset path; retained schema15-data upgrade acceptance is a separate rollout check.
 
 ## Current verification
 
@@ -41,4 +43,4 @@ Inventory responses retain the existing warehouse classification: physical `quan
 
 ## Remaining online flow
 
-Customer Checkout and durable authenticated webhook reconciliation; delivery address/totals and lot allocation; packing/shipment posting; cancellation/payment compensation and refunds without automatic restock; channel reports and complete isolated Stripe test-mode acceptance remain in root `TODO.md`. No live Stripe request or production claim is made by this source slice.
+Internal Checkout/webhook evidence, delivery snapshots and durable pre-shipment cancellation refunds are implemented downstream. Still paused in root `TODO.md`: atomic packing/shipment and goods-return posting, explicit lot allocation UI, merchandise-only post-shipment refunds, remaining operational recovery, matching public/staff HTTP/contracts/runtime/UI, channel reports and complete isolated/browser/real-provider acceptance. No live Stripe request or production claim is made by this source slice.

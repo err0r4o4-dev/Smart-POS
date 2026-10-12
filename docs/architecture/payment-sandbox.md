@@ -2,6 +2,35 @@
 
 Date: 2026-10-12. This is a development-only connection diagnostic, not the completed single-store online sales flow and not production readiness.
 
+## Current online-flow status (2026-10-12)
+
+**PARTIAL / PAUSED by the user.** This documentation refresh does not resume implementation. Go readiness requires clean schema23; the primary database/runtime has not been upgraded or enabled by this task. The slice-specific sections below retain historical acceptance boundaries and counts; their earlier schema requirements and remaining-work lists are not the current cumulative status.
+
+| Schema | Implemented capability                                                                                  | Exposure / limit                                                                            |
+| ------ | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| 14     | Guest pickup orders, private tracking and POS handoff                                                   | Existing pickup UI/public API                                                               |
+| 15–16  | Atomic source-specific reservations and optional same-branch warehouse terminal                         | Existing pickup/source configuration; legacy orders stay unreserved                         |
+| 17–19  | Frozen payment attempts, signed webhook inbox, protected holds and durable create/retrieve observations | Internal services only; no customer payment/webhook HTTP registration                       |
+| 20     | Exactly-once prepaid pickup settlement                                                                  | Internal POS service; no second payment or shift cash effect                                |
+| 21     | Verified discovered-Session recovery and paid-unfulfillable review                                      | Internal staff service; review blocks settlement                                            |
+| 22     | Flat-fee delivery settings, quote subtotals and immutable address/charge snapshots                      | Backend DTO/service support; matching delivery UI/public contract integration is unfinished |
+| 23     | Durable full-charge pre-shipment cancellation refunds and verified Refund recovery                      | Internal service only; no refund HTTP/UI, shipment or post-shipment return integration      |
+
+### Confirmed business policy
+
+- Store management sets one flat shipping fee; the order freezes its charge and address rather than using later settings.
+- Staff manually enters carrier and tracking number. This is approved behavior to implement, not a completed shipment capability.
+- Before shipment, cancellation refunds the full frozen charge including shipping. Schema23 records intent before the bounded provider call; pending, unknown, mismatched, failed or canceled provider results do not cancel the order or release holds. Only successful provider evidence atomically cancels/releases the order.
+- After shipment, cancellation is not the path: use goods returns and refund merchandise only, excluding the original shipping fee. Online return/stock/refund integration remains unimplemented; existing POS full/partial return rules are not silently replaced by a full-order-only policy or automatic sellable restock.
+
+### Runtime boundary and remaining gates
+
+Configuration parses default-off `STRIPE_CUSTOMER_CHECKOUT_ENABLED` and server-only `STRIPE_CUSTOMER_WEBHOOK_SECRET`, but `cmd/server`/transport do not forward `CustomerPayments` into the storefront service. Compose forwards the sandbox test-key and explicit single-store settings, not the customer Checkout flag/webhook secret. Setting a flag does not expose customer Checkout, refund or webhook routes; the diagnostic still reports `customer_checkout_enabled=false`.
+
+Remaining work is atomic shipment/return inventory posting, post-shipment merchandise-only refund orchestration, operational resolution for unavailable Session/refund evidence and failed refunds, matching customer/staff HTTP contracts/runtime wiring/UI, channel reports, retained-data upgrade and full isolated end-to-end/browser/real-provider acceptance. An unknown refund is not replaced with another identity: unchanged create replay stops after23 hours; a supplied known Refund ID must be verified by GET against the frozen intent. An unfound provider object is not proof of absence or authority to release stock.
+
+The latest recorded implementation checks are the [schema22/23 refund checkpoint](../development/verification.md#delivery-snapshots-and-internal-pre-shipment-refunds-2026-10-12-asiabangkok): fresh owned-tmpfs acceptance, Go tests/vet/build, contracts17/114, frontend37 files/245 tests, typecheck/lint/build. They were not rerun by this documentation update; real provider, browser, primary/retained-data rollout and race-detector acceptance are not claimed. The unfinished [root checklist](../../TODO.md) remains intact.
+
 ## What exists
 
 - Management page `/manage/settings/storefront/payments`, linked from storefront settings. Owner/Manager must still have active membership and `storefront.manage` on every API request. Writes retain existing allowed-Origin and CSRF middleware.
@@ -74,7 +103,7 @@ Changed paths for this continuation: `database/migrations/000018_online_payment_
 
 ## Internal Checkout orchestration and retrieval recovery (2026-10-12)
 
-Forward migration `000019_online_payment_recovery.up.sql` adds immutable `online_payment_dispatches` and append-only `online_payment_observations`, both ENABLE/FORCE RLS. This orchestration checkpoint required clean schema19; current readiness is schema20 after the internal prepaid slice below. No primary migration/restart, retained-data upgrade, real Stripe request or public-route enablement was performed.
+Forward migration `000019_online_payment_recovery.up.sql` adds immutable `online_payment_dispatches` and append-only `online_payment_observations`, both ENABLE/FORCE RLS. This orchestration checkpoint required clean schema19; the later prepaid checkpoint required schema20; current cumulative readiness is schema23. No primary migration/restart, retained-data upgrade, real Stripe request or public-route enablement was performed.
 
 - `CreateCustomerCheckout` authenticates private tracking access, commits the frozen attempt and dispatch marker, then calls the existing customer adapter outside the database transaction with a ten-second child deadline. A marker records intent to dispatch, not proof that the provider received it. Errors and interrupted response commits retain the same unresolved attempt/hold; no automatic retry loop or replacement payment identity is created.
 - The stored request fingerprint is an HMAC covering the actual method/endpoint, unchanged API pin, unchanged scoped idempotency key and canonical form, keyed by the configured test credential. No key, tracking token, raw provider body or redirect URL is stored. Charge, return-origin, credential or request-identity drift fails closed for existing dispatches; credential/origin rotation is not silently authorized or reset by recovery.
@@ -97,7 +126,7 @@ Changed paths: `database/migrations/000019_online_payment_recovery.up.sql`; `app
 
 ## Internal prepaid pickup settlement (2026-10-12)
 
-Forward migration `000020_online_prepaid_settlement.up.sql` adds an immutable, unique tenant/order link and original order revision on `pos_checkouts`, with the `ONLINE_STRIPE` tender on checkout/payment records. Existing FORCE-RLS, history, sale, inventory and pricing constraints remain. API readiness now requires clean schema20; migration has been applied only to task-owned fresh tmpfs PostgreSQL, not the primary stack or retained data.
+Forward migration `000020_online_prepaid_settlement.up.sql` adds an immutable, unique tenant/order link and original order revision on `pos_checkouts`, with the `ONLINE_STRIPE` tender on checkout/payment records. Existing FORCE-RLS, history, sale, inventory and pricing constraints remain. This prepaid checkpoint introduced clean schema20; current API readiness requires clean schema23; migration has been applied only to task-owned fresh tmpfs PostgreSQL, not the primary stack or retained data.
 
 - `pos.Service.SettlePrepaidOnlineOrder` is internal-only, with no router wiring or new public contract. It accepts only the order ID/revision and authenticated staff context, not a browser-provided tender, amount, Session or acknowledgement. It requires `online_orders.manage`, `pos.cart.manage`, `pos.checkout`, active branch/source and the operator's own open shift.
 - Only a fulfillable `READY` order with server-owned `PAID` evidence, immutable Session/PaymentIntent, exact frozen THB amount and unreleased payment hold can settle. Neither original deadline expiry alone nor disabling new provider Checkout invalidates an unreleased paid hold; late PAID after confirmed hold release cannot revive it. Pending fulfillment, unresolved/expired evidence and cancelled orders cannot use this path.
@@ -117,7 +146,7 @@ Changed paths in this continuation: `apps/api/internal/modules/pos/prepaid.go`; 
 
 ## Internal operational reconciliation (2026-10-12)
 
-Forward migration `000021_online_payment_reconciliation.up.sql` adds append-only `online_payment_reconciliations`, tenant/order/Session/observation/actor foreign keys, FORCE RLS and SELECT/INSERT-only runtime grants. Current API readiness requires clean schema21. This migration was exercised only on the verifier's fresh task-owned tmpfs PostgreSQL; retained schema20 data and the primary stack were not migrated.
+Forward migration `000021_online_payment_reconciliation.up.sql` adds append-only `online_payment_reconciliations`, tenant/order/Session/observation/actor foreign keys, FORCE RLS and SELECT/INSERT-only runtime grants. This reconciliation checkpoint introduced clean schema21; current API readiness requires clean schema23. This migration was exercised only on the verifier's fresh task-owned tmpfs PostgreSQL; retained schema20 data and the primary stack were not migrated.
 
 - `ReconcileCustomerPayment` is an internal staff command requiring `storefront.manage`, `online_orders.manage` and order branch scope. Staff supplies only the order ID and a discovered test Session ID, with a UUID idempotency key. The server retrieves that exact Session with a bounded ten-second GET, outside business transactions, and validates frozen amount/currency/expiry, purpose, tenant/order, test mode, returned Session and payment state. Staff cannot assert payment success or expiry, override the frozen charge, search Sessions, create a second Checkout or submit raw provider payloads.
 - A missing local Session can be bound only after that authenticated retrieval. Binding, canonical `RETRIEVE` observation, monotonic state/hold update, immutable command journal and actor audit commit together after rechecking current staff authorization and dispatch fingerprint. The existing observation/terminal-evidence guards remain; first binding is nonterminal within the same uncommitted transaction before the validated terminal journal is applied. Any mismatch, changed bound Session/PaymentIntent or revoked authority rolls back everything.
@@ -160,7 +189,7 @@ Prefix: `/api/v1/organizations/{id}/storefront/payment-sandbox`.
 
 POSTs require the normal session, allowed Origin and CSRF token. All routes use `storefront.manage`. The adapter pins Stripe API `2024-06-20`, uses bounded HTTP/context timeouts, refuses redirects, bounds responses, does not retry automatically and never echoes raw provider/network errors or credentials. No SDK/dependency installation was required.
 
-## Remaining approved work — not implemented by this sandbox slice
+## Original sandbox follow-up checklist — historical, not current status
 
 The subsequent [single-store source slice](single-store.md) adds explicit existing-organization deployment scoping and matching UI. It does not complete the stock/payment/delivery work below, and no primary runtime setting was changed.
 

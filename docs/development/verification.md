@@ -1,5 +1,15 @@
 # Verification
 
+## Documentation status refresh (2026-10-12 Asia/Bangkok)
+
+**Documentation only; online implementation remains PARTIAL / PAUSED by user request.** Current source inspection confirms `RequiredVersion=23`, migration files1–23 and a17-module/114-route page inventory. Customer payment configuration exists but is not forwarded into the storefront runtime; customer payment/webhook/refund HTTP registration and shipment/return/UI/report integration remain unfinished.
+
+Current scope, confirmed shipping/refund policy, migration inventory and task status are aligned in the [README](../../README.md), [payment/fulfillment status](../architecture/payment-sandbox.md#current-online-flow-status-2026-10-12), architecture/database/setup documents and retained [TODO](../../TODO.md). The dated application, database, browser and provider statements below are historical evidence; no such acceptance is rerun or implied by this refresh. No code, API contract, environment, dependency, database or production changes are part of this task.
+
+- Passed in this documentation refresh: scoped Prettier checks on21 changed Markdown paths,239 local links/anchors, README migration filenames1–23 matched to existing files and `RequiredVersion=23`, page inventory17/114, source-level checks of unforwarded customer configuration, `npm run contracts:check`, `git diff --check` and documentation-only diff inspection. Unfinished implementation gates remain unchecked; only the temporary documentation-refresh checklist is removed after acceptance.
+- Corrected attempts: the first checklist patch used the wrong existing title, an overlapping README row patch did not match, and the initial Markdown check failed on two table layouts. Failed patches made no edits; a broad prefix/suffix formatting patch was rejected before application and replaced with bounded contiguous table hunks. Final scoped formatting passed without repository-wide auto-fix.
+- Not run: application tests/builds, database/migration acceptance, browser checks, real-provider calls, primary/retained-data rollout and race detection. Prior245 frontend tests and schema23/Go evidence below remain recorded implementation results, not fresh acceptance from this task. No installation, service startup, commit, deployment or production access occurred.
+
 ## Delivery snapshots and internal pre-shipment refunds (2026-10-12 Asia/Bangkok)
 
 **Partial internal implementation only; the complete customer delivery/payment/return flow is not ready.** The store owns a flat shipping fee, staff will enter carrier/tracking manually, pre-shipment cancellation refunds the full frozen charge including shipping, and post-shipment returns refund merchandise only. The latter shipment/return behavior, public payment/refund routes, runtime wiring, UI and channel reports remain unfinished; no customer enablement or production readiness is claimed.

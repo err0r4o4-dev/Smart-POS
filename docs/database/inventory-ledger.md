@@ -70,6 +70,6 @@ Integration checks reconciliation after successful, failed and racing commands. 
 
 ## Operational boundaries
 
-Migration 5 was applied only in smartpos-auth-test; repeated up reports no change and readiness requires clean schema 5. It is now immutable; later changes need additive migrations. Original volumes were not migrated/reset/deleted. Production migration/deployment and backup/restore are not part of acceptance.
+Migration 5 was applied only in smartpos-auth-test; repeated up reports no change and that checkpoint required clean schema5; current Go readiness requires clean schema23. It is now immutable; later changes need additive migrations. Original volumes were not migrated/reset/deleted. Production migration/deployment and backup/restore are not part of acceptance.
 
 Tenant serialization is not a high-throughput POS/load certification. No automated idempotency/audit/transit retention job, partial receipt, post-dispatch cancellation, batch/expiry, reservations or costing. Phase 3/4 must use authorized atomic inventory application commands, not direct balance writes.

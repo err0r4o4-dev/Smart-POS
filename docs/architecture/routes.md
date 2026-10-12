@@ -1,5 +1,7 @@
 # Complete route inventory
 
+Online-flow status (2026-10-12): **PARTIAL / PAUSED by the user**. The inventory remains17 modules/114 page routes; this refresh adds no routes or API contracts. Internal payment/webhook/refund services have no customer HTTP registration/runtime forwarding. Delivery snapshots do not imply a shipped/returned order UI or verified financial reporting. See [current capability boundary](payment-sandbox.md#current-online-flow-status-2026-10-12).
+
 Canonical source: packages/contracts/routes.json. Exactly 17 modules and 114 page routes (implemented and planned). Static routes are ranked before dynamic routes by React Router. Only ready pages are registered. A shell is not a completed business feature.
 
 Implemented identity routes are Phase 1A; organization/branch/member routes below are Phase 1B. These statuses supersede older planned labels without adding routes. Tenant routes require an authenticated session, active organization membership and the listed permission; Owner/Manager branch scope is enforced again by the API. `/setup` also supports memory-only email invitation acceptance after sign-in. See [organization architecture](organization.md).

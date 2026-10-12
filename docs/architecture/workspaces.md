@@ -2,7 +2,7 @@
 
 ## Customer area
 
-`/shop` uses StorefrontLayout, independent of OrganizationProvider and employee navigation. It never loads tenant catalog/customer data through employee endpoints. It now exposes published stores/products, a store-specific guest cart and private order tracking through the public storefront API. Orders are unpaid pickup requests, not sales or stock reservations. Customer accounts, shipping and online payment remain deferred. No fabricated catalog or placeholder financial completion is provided. See [storefront flow](storefront.md).
+`/shop` uses StorefrontLayout, independent of OrganizationProvider and employee navigation. It never loads tenant catalog/customer data through employee endpoints. It exposes published stores/products, a store-specific guest cart and private order tracking through the public storefront API. The customer UI still offers unpaid pickup requests, not completed sales; new orders reserve snapshotted source stock, while legacy orders stay unreserved. Optional warehouse sourcing and internal customer payment/refund/delivery snapshots exist, but customer accounts, enabled online payment and complete shipment/return UI remain unfinished. The online-flow implementation is paused by the user; no fabricated catalog or placeholder financial completion is provided. See [storefront flow](storefront.md) and [current payment/fulfillment status](payment-sandbox.md#current-online-flow-status-2026-10-12).
 
 ## Team entrances
 

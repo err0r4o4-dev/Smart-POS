@@ -1,6 +1,8 @@
 # หน้าร้านออนไลน์: สั่งล่วงหน้า รับและชำระที่ร้าน
 
-เพิ่มเติม 2026-10-12: มี [หน้าทดสอบ Stripe sandbox](payment-sandbox.md), [single-store mode แบบระบุองค์กรเดิมชัดเจน](single-store.md) และ [reservation foundation](online-reservations.md) สำหรับออเดอร์ใหม่หลัง migration15 โดยไม่ย้ายข้อมูลหรือเพิ่มสิทธิ์ ยังไม่เชื่อมการชำระของลูกค้า แยก source หน้าร้าน/หลังร้าน หรือจัดส่ง
+สถานะล่าสุด 2026-10-12: **งาน online flow ยังไม่ครบและพักตามคำขอผู้ใช้** API code ต้องการ clean schema23 มี [single-store mode](single-store.md), [reservation](online-reservations.md), [source หน้าร้าน/คลังแยก](online-stock-sources.md) และ backend payment/reconciliation, delivery snapshots, refund ก่อนส่งแล้ว แต่ยังไม่เชื่อม customer payment/refund routes/runtime/UI, จัดส่ง/รับคืน stock และรายงานครบวงจร ดู [สถานะรวมและนโยบายที่ยืนยัน](payment-sandbox.md#current-online-flow-status-2026-10-12) และ [หลักฐานล่าสุดที่บันทึกไว้](../development/verification.md) การอัปเดตเอกสารนี้ไม่ทำฟีเจอร์ต่อหรือ migrate ฐานข้อมูลหลัก
+
+ร้านตั้งค่าส่งเหมาจ่ายเอง พนักงานกรอกบริษัทขนส่ง/เลขพัสดุเอง ยกเลิกก่อนส่งคืนเต็มยอดรวมค่าส่ง ส่วนหลังส่งต้องคืนสินค้าก่อนและคืนเฉพาะค่าสินค้า ไม่คืนค่าส่งเดิม UI ที่ใช้งานอยู่ยังเป็น pickup; ห้ามตีความ backend snapshots หรือหน้า diagnostic ว่ารองรับจัดส่ง/คืนสินค้าของลูกค้าครบแล้ว
 
 ## ขอบเขต
 
@@ -36,6 +38,8 @@ Flow: `/shop` → สินค้าของร้านเดียว → ต
 
 ## สถานะและการแก้ไข
 
+รายการสถานะต่อไปนี้อธิบาย pickup UI เดิม ไม่ใช่ shipment/return flow ที่เสร็จแล้ว สำหรับ payment-backed orders ภายในระบบ ห้ามพนักงาน force ยกเลิก/หมดอายุหรือปล่อย hold จากคำยืนยันเอง unresolved payment อาจคุ้มครอง hold เกิน deadline เดิม และ PAID ก่อนส่งต้องมี refund สำเร็จที่ตรวจสอบแล้วจึงยกเลิก/ปล่อย hold ใน transaction เดียวกัน บริการ refund ยังไม่เชื่อม HTTP/UI; หลังส่งยังต้องทำ goods-return integration ก่อนใช้จริง
+
 - `PENDING → PREPARING → READY → COMPLETED`; ขั้นสุดท้ายเกิดจาก POS settlement เท่านั้น
 - `REJECTED` / `CANCELLED` ต้องมีเหตุผลที่ลูกค้าอ่านได้ ออเดอร์ที่เชื่อม POS แล้วต้องจัดการการชำระค้างและยกเลิกตะกร้าโดยเจ้าของตะกร้าก่อน
 - ยกเลิกตะกร้า POS จะปลดการเชื่อม ออเดอร์ยังเป็น READY ให้กลับมาตรวจและเปิดตะกร้าใหม่ได้ ไม่สร้างออเดอร์หรือขายซ้ำ
@@ -57,7 +61,7 @@ Flow: `/shop` → สินค้าของร้านเดียว → ต
 
 ## Rollout และการตรวจ
 
-Migration `000014_storefront.up.sql` เพิ่ม storefront เดิม และ `000015_online_reservations.up.sql` เพิ่ม reservation foundation โดยไม่แก้ migration ที่ใช้แล้วหรือข้อมูลขายย้อนหลัง API readiness ต้องตรง schema15 จึงต้องสำรองฐานและขออนุมัติ rollout ก่อน migrate/rebuild stack หลัก ห้ามใช้ `stack:up` เป็นคำสั่งทดสอบ เพราะรัน migrations อัตโนมัติ
+Migration `000014_storefront.up.sql` เพิ่ม storefront เดิม และ `000015_online_reservations.up.sql` เพิ่ม reservation foundation โดยไม่แก้ migration ที่ใช้แล้วหรือข้อมูลขายย้อนหลัง API code ปัจจุบันต้องการ clean schema23; รายละเอียด schema14/15 ในย่อหน้านี้เป็น checkpoint เดิม ไม่ใช่การอนุมัติ rollout จึงต้องสำรองฐานและขออนุมัติ rollout ก่อน migrate/rebuild stack หลัก ห้ามใช้ `stack:up` เป็นคำสั่งทดสอบ เพราะรัน migrations อัตโนมัติ
 
 การตรวจ integration ใช้ **เฉพาะ** isolated `smartpos-auth-test` และฐานใหม่ที่ยืนยันแล้ว:
 

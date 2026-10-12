@@ -2,7 +2,7 @@
 
 Intelligent Retail Management System for organization- and branch-scoped retail operations.
 
-This README is the onboarding entry point for the checked-in implementation, not a production deployment guarantee. **Phase 0–4 and Phase 5.1–5.7 are recorded as completed locally; Phase 6–7 have not started. Production Ready: NO.** The later storefront pickup extension requires **schema 14**. Local acceptance reports are dated **2026-10-11 (Asia/Bangkok)**; these are historical results, not checks rerun by reading this document.
+This README is the onboarding entry point for the checked-in implementation, not a production deployment guarantee. **Phase 0–4 and Phase 5.1–5.7 are recorded as completed locally; Phase 6–7 have not started. Production Ready: NO.** Current Go readiness requires **clean schema23**. The online-flow extension is **PARTIAL / PAUSED at the user's request (2026-10-12 Asia/Bangkok)**; customer payment/refund runtime wiring and delivery/return UI are not enabled. Acceptance reports dated2026-10-11 and2026-10-12 are historical evidence, not checks rerun by this documentation refresh.
 
 ## Table of contents
 
@@ -50,15 +50,17 @@ Continue with the owning [architecture](docs/architecture/overview.md), [busines
 
 [Final Phase 5 acceptance](docs/development/phase57-verification.md) covers the integrated supplier-to-sale/return/exchange/recall lifecycle on schema 13. [Storefront acceptance](docs/development/storefront-verification.md) covers the later schema 14 extension with narrower regression coverage. Neither certifies production readiness.
 
+Subsequent schemas15–23 implement online reservations, optional separate warehouse sourcing, internal payment attempts/webhook evidence/hold protection/orchestration, prepaid pickup settlement, staff reconciliation, delivery quote/order snapshots and durable full-charge pre-shipment cancellation refunds. The existing customer UI remains pickup-oriented; internal backend capability is not a finished customer payment/delivery flow. See [current online-flow status and policy](docs/architecture/payment-sandbox.md#current-online-flow-status-2026-10-12), [recorded verification](docs/development/verification.md) and the retained [implementation checklist](TODO.md).
+
 ### Not implemented or not certified
 
-- No online payment, shipping, customer-shopping account or stock reservation. Pickup totals are estimates until POS revalidates price, lot and stock.
-- No bank/payment-provider verification, split payments, offline settlement guarantee or certified scanner/receipt-printer integration.
+- No enabled customer online-payment/refund flow, shipment/goods-return integration, customer-shopping account or online channel reports. New orders use reservation guards; legacy pre-reservation orders remain unreserved. Pickup still uses POS revalidation, and delivery/payment backend snapshots do not imply matching UI or complete public contract integration.
+- No verified bank/manual payment settlement or complete real-customer provider acceptance. Internal test-mode provider validation/recovery exists, but split payments, offline settlement guarantees and certified scanner/receipt-printer integration remain unsupported/unverified.
 - No inventory valuation/costing, split-lot allocation or partial receipt of inter-branch stock transfers. Partial purchase receiving is a separate implemented flow.
 - No trained ML model, forecasting endpoint or automatic AI approval of stock, payments or purchase orders.
 - Production TLS/secrets, dedicated least-privilege database login, backup/restore, load/failover, retention/erasure and full accessibility gates remain outstanding.
 
-The contract inventory contains **17 modules and 113 logical UI routes**, including planned pages. Inventory entries and visible navigation do not prove implementation or permission.
+The contract inventory contains **17 modules and 114 logical UI routes**, including planned pages. Inventory entries and visible navigation do not prove implementation or permission.
 
 ## Architecture
 
@@ -324,6 +326,10 @@ Use [root `.env.example`](.env.example) for Compose, [API `.env.example`](apps/a
 
 Changing `GATEWAY_PORT` requires matching `PUBLIC_ORIGIN`. Change subnet and both fixed IPs together. Root overrides named `API_ADDR`, `DATABASE_URL` or `AUTH_TRUSTED_PROXY_IP` do not replace the fixed/derived Compose values. Production validation requires HTTPS origin, authenticated SMTP and trusted proxy; passing validation does not make this stack production-ready.
 
+### Online-flow configuration status
+
+Compose forwards server-only `STRIPE_TEST_SECRET_KEY` for the development diagnostic and optional `SINGLE_STORE_ORGANIZATION_ID` for explicit existing-organization scoping. Never put keys/secrets in browser bundles, URLs or documentation. Native configuration also parses default-off `STRIPE_CUSTOMER_CHECKOUT_ENABLED` and server-only `STRIPE_CUSTOMER_WEBHOOK_SECRET`, but customer config is not forwarded to the storefront service or through Compose, and no customer Checkout/webhook/refund routes are registered. These are internal foundation settings, not instructions to enable a completed customer flow. Implementation remains paused; this refresh does not change environment files or start services.
+
 ### Verification configuration
 
 | Variable                             | Purpose / constraint                                        | Safe example                                                      |
@@ -360,24 +366,33 @@ Public APIs use `/api/v1`, success `data` envelopes (health is separate), errors
 
 ## Database migrations
 
-[Go readiness](apps/api/internal/platform/database/database.go) requires `schema_migrations.version = 14` and `dirty = false`. The service uses `migrate/migrate:v4.18.3` and runs **up** from [database/migrations](database/migrations).
+[Go readiness](apps/api/internal/platform/database/database.go) requires `schema_migrations.version = 23` and `dirty = false`. This is a checked-in code requirement, not a claim that the primary database has been upgraded. The service uses `migrate/migrate:v4.18.3` and runs **up** from [database/migrations](database/migrations); stack startup is not a read-only verification command.
 
-| Version | Up migration                        |
-| ------- | ----------------------------------- |
-| 1       | `000001_foundation.up.sql`          |
-| 2       | `000002_identity.up.sql`            |
-| 3       | `000003_organization.up.sql`        |
-| 4       | `000004_catalog.up.sql`             |
-| 5       | `000005_inventory.up.sql`           |
-| 6       | `000006_pos_sales.up.sql`           |
-| 7       | `000007_purchasing_shelves.up.sql`  |
-| 8       | `000008_business_operations.up.sql` |
-| 9       | `000009_exchanges_voids.up.sql`     |
-| 10      | `000010_pricing_promotions.up.sql`  |
-| 11      | `000011_customers.up.sql`           |
-| 12      | `000012_loyalty.up.sql`             |
-| 13      | `000013_batch_quality.up.sql`       |
-| 14      | `000014_storefront.up.sql`          |
+| Version | Up migration                                  |
+| ------- | --------------------------------------------- |
+| 1       | `000001_foundation.up.sql`                    |
+| 2       | `000002_identity.up.sql`                      |
+| 3       | `000003_organization.up.sql`                  |
+| 4       | `000004_catalog.up.sql`                       |
+| 5       | `000005_inventory.up.sql`                     |
+| 6       | `000006_pos_sales.up.sql`                     |
+| 7       | `000007_purchasing_shelves.up.sql`            |
+| 8       | `000008_business_operations.up.sql`           |
+| 9       | `000009_exchanges_voids.up.sql`               |
+| 10      | `000010_pricing_promotions.up.sql`            |
+| 11      | `000011_customers.up.sql`                     |
+| 12      | `000012_loyalty.up.sql`                       |
+| 13      | `000013_batch_quality.up.sql`                 |
+| 14      | `000014_storefront.up.sql`                    |
+| 15      | `000015_online_reservations.up.sql`           |
+| 16      | `000016_online_stock_sources.up.sql`          |
+| 17      | `000017_online_payment_persistence.up.sql`    |
+| 18      | `000018_online_payment_holds.up.sql`          |
+| 19      | `000019_online_payment_recovery.up.sql`       |
+| 20      | `000020_online_prepaid_settlement.up.sql`     |
+| 21      | `000021_online_payment_reconciliation.up.sql` |
+| 22      | `000022_delivery_snapshots.up.sql`            |
+| 23      | `000023_online_refunds.up.sql`                |
 
 For an approved local target only, from the root:
 
@@ -506,14 +521,14 @@ These are documented conventions; actual remote protections and release automati
 
 | Limitation or discrepancy                                        | Consequence / evidence                                                                                                                         |
 | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Older docs reference schemas 3/5/13 or foundation-only endpoints | Readiness now requires **14**; check code/OpenAPI and dated evidence                                                                           |
-| Schema-13 checkers versus schema-14 storefront                   | No universal current full-regression setup is confirmed; do not repoint current API to schema 13 as a shortcut                                 |
+| Older docs reference schemas 3/5/13 or foundation-only endpoints | Current Go readiness requires **23**, not a primary upgrade claim; check code/OpenAPI and dated evidence                                       |
+| Schema-13 phase checkers versus schema23 extensions              | No universal current full-regression setup is confirmed; do not repoint current API to schema 13 as a shortcut                                 |
 | CI definition versus isolated resilience guard                   | Current successful remote integration run is unconfirmed                                                                                       |
 | Mailpit/database host bindings                                   | Compose advertises loopback ports; older local-operation evidence reports issues. Present host access is unconfirmed                           |
 | Batch picking/counting                                           | One batch per variant line, no split allocation; COUNT/CORRECTION blocked with positive tracked balances                                       |
 | Physical Quality assurance                                       | FEFO is guidance; write-off checkbox is UI operator acknowledgment, not server-certified physical verification. Recall has no release workflow |
 | Unknown expiry/untracked legacy                                  | No invented provenance/freshness guarantee; production policy remains unresolved                                                               |
-| Payment/hardware/tax                                             | No provider verification, split payments, certified statutory tax/hardware or offline settlement guarantee                                     |
+| Payment/hardware/tax                                             | No real-provider/customer acceptance, split payments, certified statutory tax/hardware or offline guarantee                                    |
 | Catalog images                                                   | Image upload/storage is not configured; adding object storage remains a separately scoped use case                                             |
 | Production operations                                            | Serialization favors correctness, not proven throughput; load/failover, backup/restore, retention and full accessibility remain unverified     |
 
@@ -527,7 +542,7 @@ Only the existing [incremental roadmap](docs/architecture/roadmap.md) is summari
 | ------------------------ | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | 0–4                      | Completed locally                         | Foundation, identity/catalog, Inventory, POS, purchasing/shelves; production gates separate                                  |
 | 5.1–5.7                  | Completed locally                         | Business exceptions, pricing, customers/Loyalty, Quality and final integration; schema-13 acceptance                         |
-| Storefront extension     | Implemented with local schema-14 evidence | Pickup/pay-at-store only; not Phase 6 or production certification                                                            |
+| Storefront extension     | Partial / paused; slices through schema23 | Pickup UI and internal source/payment/refund foundation; shipment/returns/customer integration unfinished                    |
 | 6 — AI Intelligence      | Not started; not ready                    | Bounded typed Go-to-AI snapshots, advisory/versioned forecasts, provenance/insufficient-data handling and outage isolation   |
 | 7 — Production Readiness | Not started                               | Hardening, load/accessibility, backup AND restore drills, monitoring, durable jobs/outbox, integrations and release/runbooks |
 
@@ -541,7 +556,7 @@ Read [Setup](#setup), [Current scope](#current-scope) and [Architecture](#archit
 
 ### Why does readiness fail after updating the API?
 
-Go accepts only clean schema 14. Missing, dirty or other versions return 503; DB availability is also checked. Inspect the approved target/logs, not volume deletion, forced schema state or old schema-13 setup against the primary stack.
+Go accepts only clean schema23. Missing, dirty or other versions return503; DB availability is also checked. Inspect the approved target/logs, not volume deletion or forced schema state. Schemas14–23 have isolated slice evidence, not a retained-data/primary rollout approval; do not start a migrating stack to fix readiness while work is paused.
 
 ### Why are there no products at `/shop`?
 
@@ -549,11 +564,11 @@ Only published stores and explicitly selected active variants appear. Migration 
 
 ### Does pickup reserve stock or take online payment?
 
-No. Staff prepares an unpaid guest order; the cashier revalidates it in POS at pickup and acknowledges actual funds. Only settlement marks it `COMPLETED` / `PAID_AT_STORE`.
+New orders reserve their snapshotted source stock; legacy orders remain unreserved. The customer UI still offers pickup and payment at the store. Internal customer payment/prepaid settlement/refund services exist but are not wired to customer routes or the UI; a redirect or staff assertion cannot mark an order paid. See [reservations](docs/architecture/online-reservations.md) and [current payment status](docs/architecture/payment-sandbox.md#current-online-flow-status-2026-10-12).
 
 ### Why does a documented route not work?
 
-The 17-module/113-route inventory includes plans. Router registration, roles/permissions and implementation determine availability. Legacy URLs redirect to `/manage/...` or `/work/...`; selecting a workspace grants no new permission.
+The 17-module/114-route inventory includes plans. Router registration, roles/permissions and implementation determine availability. Legacy URLs redirect to `/manage/...` or `/work/...`; selecting a workspace grants no new permission.
 
 ### Why can Vite fail or authenticated writes be rejected?
 

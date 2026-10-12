@@ -1,5 +1,7 @@
 # Local operation, not production deployment
 
+Current code/status (2026-10-12): Go requires clean schema23; the online extension is **PARTIAL / PAUSED by user request**. Primary migration/restart, retained-data upgrade and enabled customer payment/delivery acceptance are not claimed. Startup and `migrate` can apply pending migrations: the commands below are procedures for a separately authorized target, not actions performed by this documentation refresh. Do not run them merely to reconcile a paused task's readiness version. See [current online-flow boundary](../architecture/payment-sandbox.md#current-online-flow-status-2026-10-12) and [migration inventory](../../README.md#database-migrations).
+
 Compose provides web 5173, API 8080, PostgreSQL 5432, gateway 8088 on loopback. Python listens on internal 8001 only. data/intelligence networks are internal; Caddy only proxies web and API. Browser routes retain /api/v1 prefix. Vite is optional host development, not the container web server.
 
 The dedicated proxy subnet defaults to `172.30.42.0/28`, with Caddy `.2` and Go `.3`. Set `PROXY_SUBNET`, `CADDY_PROXY_IP` and `API_PROXY_IP` together if these conflict with another local network. Parallel Compose projects need non-overlapping proxy subnets. Go's trusted peer must remain the exact Caddy address, not a subnet or a forwarded header value.

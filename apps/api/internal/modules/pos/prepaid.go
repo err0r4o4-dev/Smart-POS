@@ -46,6 +46,13 @@ func (service *Service) SettlePrepaidOnlineOrder(ctx context.Context, user, org,
 	if status != "READY" || revision != input.Revision || cartID != nil {
 		return Checkout{}, ErrConflict
 	}
+	var reviewRequired bool
+	if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM online_payment_reconciliations WHERE organization_id=$1 AND order_id=$2 AND action='FULFILLMENT_REVIEW')", org, id).Scan(&reviewRequired); err != nil {
+		return Checkout{}, err
+	}
+	if reviewRequired {
+		return Checkout{}, ErrConflict
+	}
 	var reference string
 	var paid bool
 	err = tx.QueryRow(ctx, `SELECT COALESCE(payment_intent,''),state='PAID' AND NOT stock_hold_released AND amount_minor=($3::numeric*100)::bigint AND currency='thb' AND session_id IS NOT NULL FROM online_payment_attempts WHERE organization_id=$1 AND order_id=$2 FOR UPDATE`, org, id, total).Scan(&reference, &paid)

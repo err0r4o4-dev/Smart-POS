@@ -142,12 +142,31 @@ func (service *Service) recordCustomerObservation(ctx context.Context, slug stri
 	if err != nil {
 		return CustomerCheckout{}, err
 	}
+	attempt, _, err = storeCustomerObservation(ctx, tx, attempt, session, source)
+	if err != nil {
+		return CustomerCheckout{}, err
+	}
+	var redirectable bool
+	if err = tx.QueryRow(ctx, "SELECT state='OPEN' AND NOT stock_hold_released AND expires_at>statement_timestamp() FROM online_payment_attempts WHERE organization_id=$1 AND order_id=$2", org, input.OrderID).Scan(&redirectable); err != nil {
+		return CustomerCheckout{}, paymentError(err)
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return CustomerCheckout{}, paymentError(err)
+	}
+	result := CustomerCheckout{Attempt: attempt}
+	if redirectable && session.Status == "open" {
+		result.URL = session.URL
+	}
+	return result, nil
+}
+
+func storeCustomerObservation(ctx context.Context, tx pgx.Tx, attempt PaymentAttempt, session stripe.CustomerSession, source string) (PaymentAttempt, string, error) {
 	expected := ""
 	if attempt.SessionID != nil {
 		expected = *attempt.SessionID
 	}
-	if err = session.Validate(attempt.Charge(), expected); err != nil {
-		return CustomerCheckout{}, paymentError(err)
+	if err := session.Validate(attempt.Charge(), expected); err != nil {
+		return PaymentAttempt{}, "", paymentError(err)
 	}
 	outcome := "PROCESSING"
 	if session.Status == "open" {
@@ -168,25 +187,18 @@ func (service *Service) recordCustomerObservation(ctx context.Context, slug stri
 		Amount, Expires                                   int64
 		Intent                                            *string
 	}{session.ID, session.Status, session.PaymentStatus, outcome, session.Currency, session.AmountMinor, session.ExpiresAt, intent})
-	_, err = tx.Exec(ctx, `INSERT INTO online_payment_observations(organization_id,order_id,source,session_id,provider_status,provider_payment_status,outcome,payment_intent,amount_minor,currency,expires_at,fingerprint)
- VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) ON CONFLICT(organization_id,order_id,source,fingerprint) DO NOTHING`, org, input.OrderID, source, session.ID, session.Status, session.PaymentStatus, outcome, intent, session.AmountMinor, session.Currency, attempt.ExpiresAt, fingerprint)
+	_, err := tx.Exec(ctx, `INSERT INTO online_payment_observations(organization_id,order_id,source,session_id,provider_status,provider_payment_status,outcome,payment_intent,amount_minor,currency,expires_at,fingerprint)
+ VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) ON CONFLICT(organization_id,order_id,source,fingerprint) DO NOTHING`, attempt.OrganizationID, attempt.OrderID, source, session.ID, session.Status, session.PaymentStatus, outcome, intent, session.AmountMinor, session.Currency, attempt.ExpiresAt, fingerprint)
 	if err != nil {
-		return CustomerCheckout{}, paymentError(err)
+		return PaymentAttempt{}, "", paymentError(err)
+	}
+	var observation string
+	if err = tx.QueryRow(ctx, "SELECT id::text FROM online_payment_observations WHERE organization_id=$1 AND order_id=$2 AND source=$3 AND fingerprint=$4", attempt.OrganizationID, attempt.OrderID, source, fingerprint).Scan(&observation); err != nil {
+		return PaymentAttempt{}, "", paymentError(err)
 	}
 	attempt, err = observePayment(ctx, tx, attempt, session, outcome)
 	if err != nil {
-		return CustomerCheckout{}, err
+		return PaymentAttempt{}, "", err
 	}
-	var redirectable bool
-	if err = tx.QueryRow(ctx, "SELECT state='OPEN' AND NOT stock_hold_released AND expires_at>statement_timestamp() FROM online_payment_attempts WHERE organization_id=$1 AND order_id=$2", org, input.OrderID).Scan(&redirectable); err != nil {
-		return CustomerCheckout{}, paymentError(err)
-	}
-	if err = tx.Commit(ctx); err != nil {
-		return CustomerCheckout{}, paymentError(err)
-	}
-	result := CustomerCheckout{Attempt: attempt}
-	if redirectable && session.Status == "open" {
-		result.URL = session.URL
-	}
-	return result, nil
+	return attempt, observation, nil
 }

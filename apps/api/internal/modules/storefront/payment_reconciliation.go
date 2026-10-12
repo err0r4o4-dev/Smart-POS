@@ -245,7 +245,17 @@ func readPaymentReview(ctx context.Context, tx pgx.Tx, attempt PaymentAttempt, r
 	if err != nil {
 		return PaymentReview{}, paymentError(err)
 	}
+	var refundState *string
+	if err = tx.QueryRow(ctx, "SELECT (SELECT state FROM online_refund_intents WHERE organization_id=$1 AND order_id=$2)", attempt.OrganizationID, attempt.OrderID).Scan(&refundState); err != nil {
+		return PaymentReview{}, paymentError(err)
+	}
 	switch {
+	case refundState != nil && *refundState == "SUCCEEDED":
+		result.Status = "REFUNDED"
+	case refundState != nil && slices.Contains([]string{"FAILED", "CANCELED"}, *refundState):
+		result.Status = "REFUND_FAILED"
+	case refundState != nil:
+		result.Status = "REFUND_PENDING"
 	case status == "COMPLETED":
 		result.Status = "SETTLED"
 	case attempt.State == "PAID" && (result.StockHoldReleased || slices.Contains([]string{"CANCELLED", "REJECTED", "EXPIRED"}, status) || flagged):

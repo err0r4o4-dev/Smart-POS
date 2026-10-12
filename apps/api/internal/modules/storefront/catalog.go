@@ -136,8 +136,18 @@ func (service *Service) Publish(ctx context.Context, user, org, id string, input
 	value.Published = input.Published
 	return value, dbError(tx.Commit(ctx))
 }
-func quote(ctx context.Context, tx pgx.Tx, org string, shop Settings, items []ItemInput) (Quote, error) {
-	result := Quote{Items: []Line{}, Currency: "THB"}
+func quote(ctx context.Context, tx pgx.Tx, org string, shop Settings, items []ItemInput, modes ...string) (Quote, error) {
+	mode := "PICKUP"
+	if len(modes) > 0 {
+		mode = fulfillmentMode(modes[0])
+	}
+	result := Quote{Items: []Line{}, Currency: "THB", Fulfillment: mode, ShippingFee: "0.00"}
+	if mode != "PICKUP" && mode != "DELIVERY" {
+		return result, ErrInput
+	}
+	if mode == "DELIVERY" && !shop.DeliveryEnabled {
+		return result, ErrClosed
+	}
 	if !shop.Published || !shop.AcceptingOrders {
 		return result, ErrClosed
 	}
@@ -176,6 +186,15 @@ func quote(ctx context.Context, tx pgx.Tx, org string, shop Settings, items []It
 	if total <= 0 {
 		return result, ErrInput
 	}
+	result.Subtotal = money(total)
+	if mode == "DELIVERY" {
+		fee, problem := pricing.Decimal(shop.ShippingFee, 2)
+		if problem != nil || total > 99999999-fee {
+			return result, ErrInput
+		}
+		result.ShippingFee = money(fee)
+		total += fee
+	}
 	result.Total = money(total)
 	result.ID = digest(struct {
 		Revision int64
@@ -193,7 +212,7 @@ func (service *Service) Quote(ctx context.Context, slug string, input QuoteInput
 	if err != nil {
 		return Quote{}, err
 	}
-	result, err := quote(ctx, tx, org, shop, input.Items)
+	result, err := quote(ctx, tx, org, shop, input.Items, input.Fulfillment)
 	if err != nil {
 		return result, fmt.Errorf("quote: %w", err)
 	}

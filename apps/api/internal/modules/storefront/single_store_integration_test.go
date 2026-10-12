@@ -299,6 +299,13 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 		}
 		paymentReconciliationAcceptance(t, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "reconciliation-fixture"), first.Organization.ID, guest.ID)
 	})
+	t.Run("complete delivery flow", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "5a111111-1111-4111-8111-111111111111", createInput("DELIVERY"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		deliveryAcceptance(t, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "delivery-fixture"), first.Organization.ID, guest.ID)
+	})
 	t.Run("atomic online reservation foundation", func(t *testing.T) {
 		reservationAcceptance(t, ctx, multi, owner.ID, first.Organization.ID, firstShop)
 	})

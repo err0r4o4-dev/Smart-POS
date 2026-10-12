@@ -117,7 +117,7 @@ func (service *Service) resolvedOrganizationAllowed(org *string) bool {
 }
 func settings(ctx context.Context, tx pgx.Tx, org string) (Settings, error) {
 	var result Settings
-	err := tx.QueryRow(ctx, `SELECT shop.slug,shop.name,shop.description,shop.contact_phone,shop.pickup_instructions,shop.terminal_id::text,shop.published,shop.accepting_orders,shop.revision,terminal.branch_id::text,terminal.stock_location_id::text,COALESCE(shop.online_terminal_id::text,'') FROM storefronts shop JOIN pos_terminals terminal ON terminal.organization_id=shop.organization_id AND terminal.id=COALESCE(shop.online_terminal_id,shop.terminal_id) WHERE shop.organization_id=$1`, org).Scan(&result.Slug, &result.Name, &result.Description, &result.ContactPhone, &result.PickupInstructions, &result.TerminalID, &result.Published, &result.AcceptingOrders, &result.Revision, &result.BranchID, &result.LocationID, &result.OnlineTerminalID)
+	err := tx.QueryRow(ctx, `SELECT shop.slug,shop.name,shop.description,shop.contact_phone,shop.pickup_instructions,shop.terminal_id::text,shop.published,shop.accepting_orders,shop.revision,terminal.branch_id::text,terminal.stock_location_id::text,COALESCE(shop.online_terminal_id::text,''),shop.delivery_enabled,shop.shipping_fee::text FROM storefronts shop JOIN pos_terminals terminal ON terminal.organization_id=shop.organization_id AND terminal.id=COALESCE(shop.online_terminal_id,shop.terminal_id) WHERE shop.organization_id=$1`, org).Scan(&result.Slug, &result.Name, &result.Description, &result.ContactPhone, &result.PickupInstructions, &result.TerminalID, &result.Published, &result.AcceptingOrders, &result.Revision, &result.BranchID, &result.LocationID, &result.OnlineTerminalID, &result.DeliveryEnabled, &result.ShippingFee)
 	return result, dbError(err)
 }
 func (service *Service) PublicSettings(ctx context.Context, slug string) (Settings, error) {
@@ -220,6 +220,9 @@ func (service *Service) SaveSettings(ctx context.Context, user, org string, inpu
 	}
 	_, err = tx.Exec(ctx, `INSERT INTO storefronts(organization_id,slug,name,description,contact_phone,pickup_instructions,terminal_id,published,accepting_orders,online_terminal_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,nullif($10,'')::uuid) ON CONFLICT(organization_id) DO UPDATE SET slug=excluded.slug,name=excluded.name,description=excluded.description,contact_phone=excluded.contact_phone,pickup_instructions=excluded.pickup_instructions,terminal_id=excluded.terminal_id,published=excluded.published,accepting_orders=excluded.accepting_orders,online_terminal_id=excluded.online_terminal_id,revision=storefronts.revision+1,updated_at=now()`, org, input.Slug, input.Name, input.Description, input.ContactPhone, input.PickupInstructions, input.TerminalID, input.Published, input.AcceptingOrders, input.OnlineTerminalID)
 	if err != nil {
+		return Settings{}, dbError(err)
+	}
+	if _, err = tx.Exec(ctx, "UPDATE storefronts SET delivery_enabled=$2,shipping_fee=$3 WHERE organization_id=$1", org, input.DeliveryEnabled, input.ShippingFee); err != nil {
 		return Settings{}, dbError(err)
 	}
 	result, err := settings(ctx, tx, org)

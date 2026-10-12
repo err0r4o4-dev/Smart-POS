@@ -14,6 +14,9 @@ func readOrder(ctx context.Context, tx pgx.Tx, org, id string, public bool) (Ord
 	if err != nil {
 		return result, dbError(err)
 	}
+	if err = tx.QueryRow(ctx, "SELECT fulfillment,shipping_fee::text,(estimated_total-shipping_fee)::text,delivery_address FROM online_orders WHERE organization_id=$1 AND id=$2", org, id).Scan(&result.Fulfillment, &result.ShippingFee, &result.Subtotal, &result.DeliveryAddress); err != nil {
+		return result, dbError(err)
+	}
 	if result.Status == "COMPLETED" {
 		result.PaymentStatus = "PAID_AT_STORE"
 	}
@@ -49,6 +52,7 @@ func readOrder(ctx context.Context, tx pgx.Tx, org, id string, public bool) (Ord
 	err = rows.Err()
 	rows.Close()
 	if public {
+		result.DeliveryAddress = ""
 		result.CustomerName = ""
 		result.ContactPhone = ""
 		result.CustomerNote = ""
@@ -87,14 +91,14 @@ func (service *Service) CreateOrder(ctx context.Context, slug, key string, input
 	if err != nil {
 		return Order{}, err
 	}
-	quote, err := quote(ctx, tx, org, shop, input.Items)
+	quote, err := quote(ctx, tx, org, shop, input.Items, input.Fulfillment)
 	if err != nil {
 		return Order{}, err
 	}
 	if quote.ID != input.QuoteID {
 		return Order{}, ErrQuote
 	}
-	_, err = tx.Exec(ctx, `INSERT INTO online_orders(id,organization_id,branch_id,terminal_id,stock_location_id,customer_name,contact_phone,customer_note,pickup_instructions,store_name,store_phone,estimated_total,access_hash,request_fingerprint) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`, key, org, shop.BranchID, shop.orderTerminalID(), shop.LocationID, input.CustomerName, input.ContactPhone, input.CustomerNote, shop.PickupInstructions, shop.Name, shop.ContactPhone, quote.Total, accessHash(input.AccessToken), fingerprint)
+	_, err = tx.Exec(ctx, `INSERT INTO online_orders(id,organization_id,branch_id,terminal_id,stock_location_id,customer_name,contact_phone,customer_note,pickup_instructions,store_name,store_phone,estimated_total,access_hash,request_fingerprint,fulfillment,shipping_fee,delivery_address) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`, key, org, shop.BranchID, shop.orderTerminalID(), shop.LocationID, input.CustomerName, input.ContactPhone, input.CustomerNote, shop.PickupInstructions, shop.Name, shop.ContactPhone, quote.Total, accessHash(input.AccessToken), fingerprint, input.Fulfillment, quote.ShippingFee, input.DeliveryAddress)
 	if err != nil {
 		return Order{}, dbError(err)
 	}

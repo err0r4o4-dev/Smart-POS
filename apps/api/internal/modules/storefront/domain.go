@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"smartpos/api/internal/modules/pricing"
 	"sort"
 	"strings"
 	"time"
@@ -25,6 +26,8 @@ var slugPattern = regexp.MustCompile(`^[a-z][a-z0-9-]{2,49}$`)
 var phonePattern = regexp.MustCompile(`^[0-9+() .-]{3,30}$`)
 
 type Settings struct {
+	DeliveryEnabled    bool   `json:"delivery_enabled"`
+	ShippingFee        string `json:"shipping_fee"`
 	Slug               string `json:"slug"`
 	Name               string `json:"name"`
 	Description        string `json:"description"`
@@ -39,6 +42,8 @@ type Settings struct {
 	LocationID         string `json:"stock_location_id,omitempty"`
 }
 type SettingsInput struct {
+	DeliveryEnabled    bool   `json:"delivery_enabled"`
+	ShippingFee        string `json:"shipping_fee"`
 	Slug               string `json:"slug"`
 	Name               string `json:"name"`
 	Description        string `json:"description"`
@@ -73,15 +78,18 @@ type ItemInput struct {
 	Quantity  string `json:"quantity"`
 }
 type QuoteInput struct {
-	Items []ItemInput `json:"items"`
+	Items       []ItemInput `json:"items"`
+	Fulfillment string      `json:"fulfillment"`
 }
 type OrderInput struct {
-	Items        []ItemInput `json:"items"`
-	QuoteID      string      `json:"quote_id"`
-	CustomerName string      `json:"customer_name"`
-	ContactPhone string      `json:"contact_phone"`
-	CustomerNote string      `json:"customer_note"`
-	AccessToken  string      `json:"access_token"`
+	Fulfillment     string      `json:"fulfillment"`
+	DeliveryAddress string      `json:"delivery_address"`
+	Items           []ItemInput `json:"items"`
+	QuoteID         string      `json:"quote_id"`
+	CustomerName    string      `json:"customer_name"`
+	ContactPhone    string      `json:"contact_phone"`
+	CustomerNote    string      `json:"customer_note"`
+	AccessToken     string      `json:"access_token"`
 }
 type Line struct {
 	VariantID   string `json:"variant_id"`
@@ -94,10 +102,13 @@ type Line struct {
 	LineTotal   string `json:"line_total"`
 }
 type Quote struct {
-	ID       string `json:"quote_id"`
-	Items    []Line `json:"items"`
-	Total    string `json:"estimated_total"`
-	Currency string `json:"currency"`
+	Fulfillment string `json:"fulfillment"`
+	Subtotal    string `json:"subtotal"`
+	ShippingFee string `json:"shipping_fee"`
+	ID          string `json:"quote_id"`
+	Items       []Line `json:"items"`
+	Total       string `json:"estimated_total"`
+	Currency    string `json:"currency"`
 }
 type Event struct {
 	Status    string    `json:"status"`
@@ -105,6 +116,10 @@ type Event struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 type Order struct {
+	Fulfillment        string    `json:"fulfillment"`
+	DeliveryAddress    string    `json:"delivery_address,omitempty"`
+	ShippingFee        string    `json:"shipping_fee"`
+	Subtotal           string    `json:"subtotal"`
 	ID                 string    `json:"id"`
 	Number             string    `json:"number"`
 	Status             string    `json:"status"`
@@ -171,6 +186,14 @@ func normalizeItems(items []ItemInput) error {
 	return nil
 }
 func (input *SettingsInput) validate() error {
+	if input.ShippingFee == "" {
+		input.ShippingFee = "0.00"
+	}
+	fee, err := pricing.Decimal(input.ShippingFee, 2)
+	if err != nil || fee > 99999999 {
+		return ErrInput
+	}
+	input.ShippingFee = pricing.Money(fee)
 	input.Slug = strings.TrimSpace(input.Slug)
 	input.Name = strings.TrimSpace(input.Name)
 	input.ContactPhone = strings.TrimSpace(input.ContactPhone)
@@ -191,6 +214,11 @@ func (shop Settings) orderTerminalID() string {
 	return shop.TerminalID
 }
 func (input *OrderInput) validate() error {
+	input.Fulfillment = fulfillmentMode(input.Fulfillment)
+	input.DeliveryAddress = strings.TrimSpace(input.DeliveryAddress)
+	if input.Fulfillment != "PICKUP" && input.Fulfillment != "DELIVERY" || !text(input.DeliveryAddress, 2000, input.Fulfillment == "DELIVERY") || input.Fulfillment == "PICKUP" && input.DeliveryAddress != "" {
+		return ErrInput
+	}
 	input.CustomerName = strings.TrimSpace(input.CustomerName)
 	input.ContactPhone = strings.TrimSpace(input.ContactPhone)
 	input.CustomerNote = strings.TrimSpace(input.CustomerNote)
@@ -198,6 +226,12 @@ func (input *OrderInput) validate() error {
 		return ErrInput
 	}
 	return normalizeItems(input.Items)
+}
+func fulfillmentMode(mode string) string {
+	if mode == "" {
+		return "PICKUP"
+	}
+	return mode
 }
 func canTransition(current, next string) bool {
 	switch current {

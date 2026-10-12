@@ -49,7 +49,7 @@ func settle(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org
 		if err != nil {
 			return "", err
 		}
-		if err = inventory.QualityAvailability(ctx, tx, org, value.StockLocationID, snapshot.VariantID, snapshot.BatchID, &current.Available, &current.Saleable); err != nil {
+		if err = inventory.QualityAvailabilityForCart(ctx, tx, org, value.StockLocationID, snapshot.VariantID, snapshot.BatchID, item.CartID, &current.Available, &current.Saleable); err != nil {
 			return "", dbError(err)
 		}
 		if !current.Saleable {

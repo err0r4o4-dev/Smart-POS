@@ -232,7 +232,7 @@ func (service *Service) Transition(ctx context.Context, user, org, id string, in
 			return current, err
 		}
 		for _, line := range current.Items {
-			value, err := product(ctx, tx, org, shop, line.VariantID)
+			value, err := productForOrder(ctx, tx, org, shop, line.VariantID, id)
 			if err != nil {
 				return current, err
 			}

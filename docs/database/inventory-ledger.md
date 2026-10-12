@@ -1,6 +1,6 @@
 # Inventory ledger — Phase 2
 
-Implemented and verified against isolated local schema 5. See [inventory architecture](../architecture/inventory.md) and [verification](../development/verification.md). This is a quantity ledger, not costing, valuation, accounting or reservations.
+Implemented and verified against isolated local schema 5. See [inventory architecture](../architecture/inventory.md) and [verification](../development/verification.md). This is a quantity ledger, not costing, valuation or accounting. Schema15 adds [online reservation protection](../architecture/online-reservations.md) around the existing ledger; the Phase 2 evidence below remains historical.
 
 ## Identity and precision
 

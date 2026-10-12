@@ -138,8 +138,8 @@ function ShopCatalog({ slug }: { slug: string }) {
           {store.accepting_orders ? 'เปิดรับออเดอร์' : 'ปิดรับออเดอร์ชั่วคราว'}
         </Tag>
         <p>
-          การส่งออเดอร์ยังไม่กันสต็อก รอร้านตรวจสอบก่อนมารับสินค้า
-          ยอดสุดท้ายยืนยันที่ POS ก่อนชำระ
+          ระบบกันสินค้าหลังส่งออเดอร์สำเร็จจนถึงเวลาหมดอายุ
+          รอร้านตรวจสอบก่อนมารับสินค้า ยอดสุดท้ายยืนยันที่ POS ก่อนชำระ
         </p>
         {store.pickup_instructions && <p>{store.pickup_instructions}</p>}
         {store.contact_phone && <p>ติดต่อร้าน: {store.contact_phone}</p>}

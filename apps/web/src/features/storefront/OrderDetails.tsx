@@ -61,8 +61,8 @@ export function OrderDetails({
       </p>
       {['PENDING', 'PREPARING', 'READY'].includes(order.status) && (
         <p className="notice">
-          ยังไม่กันสต็อก · กรุณาติดต่อร้านก่อนเดินทาง ออเดอร์ที่ยังไม่เข้า POS
-          หมดอายุ {new Date(order.expires_at).toLocaleString('th-TH')}
+          กรุณารอร้านยืนยันพร้อมรับก่อนเดินทาง ออเดอร์ที่ยังไม่เข้า POS หมดอายุ{' '}
+          {new Date(order.expires_at).toLocaleString('th-TH')}
         </p>
       )}
       <h3>ความคืบหน้า</h3>

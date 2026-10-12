@@ -190,7 +190,7 @@ it('shows real published products and persists cart separately for each store', 
     JSON.parse(localStorage.getItem('shop-cart:test-shop')!)[0].variant_id,
   ).toBe(product.variant_id);
   expect(localStorage.getItem('shop-cart:another-shop')).toBeNull();
-  expect(screen.getByText(/การส่งออเดอร์ยังไม่กันสต็อก/)).toBeVisible();
+  expect(screen.getByText(/ระบบกันสินค้าหลังส่งออเดอร์สำเร็จ/)).toBeVisible();
 });
 it('disables ordering while the published store is closed', async () => {
   fetchMock.mockImplementation(async (url: string) =>
@@ -274,6 +274,11 @@ it('retries an uncertain order with the same body, token and idempotency key', a
   fireEvent.change(await screen.findByLabelText('ชื่อผู้รับสินค้า'), {
     target: { value: 'ลูกค้าทดสอบ' },
   });
+  expect(
+    screen.getByRole('checkbox', {
+      name: /ฉันเข้าใจว่าระบบกันสินค้าหลังส่งออเดอร์สำเร็จ/,
+    }),
+  ).toBeRequired();
   fireEvent.change(screen.getByLabelText('เบอร์ติดต่อ'), {
     target: { value: '0812345678' },
   });
@@ -296,6 +301,10 @@ it('retries an uncertain order with the same body, token and idempotency key', a
   const writes = fetchMock.mock.calls.filter(([url]) =>
     String(url).endsWith('/orders'),
   );
+  expect(
+    await screen.findByText(/กรุณารอร้านยืนยันพร้อมรับก่อนเดินทาง/),
+  ).toBeVisible();
+  expect(screen.queryByText(/ยังไม่กันสต็อก/)).not.toBeInTheDocument();
   expect(writes).toHaveLength(2);
   expect(writes[0][1].body).toBe(writes[1][1].body);
   expect(writes[0][1].headers['Idempotency-Key']).toBe(

@@ -101,6 +101,7 @@ it('allows initial store setup when settings do not exist', async () => {
   );
   view(true);
   const save = await screen.findByRole('button', { name: 'บันทึกการตั้งค่า' });
+  expect(screen.getByText(/ออเดอร์ใหม่กันจำนวนสินค้าจนหมดอายุ/)).toBeVisible();
   expect(save).toBeEnabled();
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   fireEvent.change(screen.getByLabelText(/ชื่อใน URL/), {

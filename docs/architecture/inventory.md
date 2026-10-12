@@ -2,6 +2,8 @@
 
 Phase 2.1–2.6 COMPLETED for local acceptance on 2026-10-09. Evidence is in docs/development/verification.md; this is not production readiness.
 
+Update 2026-10-12: schema15 adds [online reservation foundation](online-reservations.md). Balance lists now report actual online `reserved` and quality-aware free `available`; the Phase 2 descriptions of zero reservations below are historical. On-hand and the immutable movement ledger remain separate from holds. Existing location eligibility labels are unchanged.
+
 Inventory identity is organization + stock location + existing catalog Variant ID. Each location belongs to one branch. Stock may exist directly at any physical location; parent links organize navigation only. Aggregation sums each balance exactly once, never parent rollups plus child balances. Quantities are in the Variant's selected unit: exact NUMERIC(18,3), decimal strings in APIs; COUNT/PACKAGING require whole units. Conversion metadata is not automatically applied. Recorded stock is not sensor-observed physical stock. Unit-specific summaries never sum kilograms and pieces.
 
 The immutable ledger is the stock mutation entry point. A database trigger locks/creates the balance, validates the delta and nonnegative result, fills before/after and increments version atomically. Runtime cannot write balances or edit/delete movements. An authorized organization transaction already locks the tenant row; commands serialize within a tenant before balance locks, preventing lost updates and inconsistent multi-item transfers. This deliberately conservative policy trades throughput for correctness; production load assessment is a separate gate.

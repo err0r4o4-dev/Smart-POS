@@ -18049,6 +18049,7 @@ components:
           $ref: '#/components/schemas/POSMoney'
         available:
           $ref: '#/components/schemas/InventoryQuantity'
+          description: Saleable quality quantity at the configured source, minus live online reservations; a quote or browser cart does not reserve stock.
         saleable:
           type: boolean
         published:
@@ -22704,8 +22705,10 @@ components:
           $ref: '#/components/schemas/InventoryQuantity'
         reserved:
           $ref: '#/components/schemas/InventoryQuantity'
+          description: Live online order quantities held at this exact stock location; legacy pre-reservation orders are excluded.
         available:
           $ref: '#/components/schemas/InventoryQuantity'
+          description: Saleable quality quantity minus live reservations, clamped to zero and subject to existing branch/location/catalog eligibility.
         version:
           type: integer
         sku:

@@ -264,6 +264,9 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 			t.Fatalf("staff received management authority: %v", problem)
 		}
 	})
+	t.Run("atomic online reservation foundation", func(t *testing.T) {
+		reservationAcceptance(t, ctx, multi, owner.ID, first.Organization.ID, firstShop)
+	})
 	t.Run("unpublished pinned store does not fall back to another store", func(t *testing.T) {
 		_, problem := (&storefront.Service{Organization: multi}).SaveSettings(ctx, owner.ID, first.Organization.ID, storefront.SettingsInput{Slug: firstShop.Slug, Name: firstShop.Name, TerminalID: firstShop.TerminalID, Revision: firstShop.Revision})
 		if problem != nil {

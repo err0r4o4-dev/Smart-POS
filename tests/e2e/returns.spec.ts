@@ -80,7 +80,8 @@ test('Phase 5.1: real partial return, approval, settlement replay and responsive
     expect(completed.amount).toBe('2.00');
     expect(completed.items[0].movement_id).toBeTruthy();
     await page.goto('/sales/refunds');
-    await page.getByRole('button', { name: draft.number, exact: true }).click();
+    await page.getByRole('link', { name: draft.number, exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/sales/refunds/${draft.number}$`));
     const note = page.getByLabel('หลักฐานจ่ายคืน / บันทึกกระทบยอด');
     await page.getByLabel('เลขอ้างอิงการจ่ายคืน').fill('BROWSER-MANUAL-REFUND');
     await note.fill('Manual operator evidence; not bank verification');
@@ -130,7 +131,10 @@ test('Phase 5.1: real partial return, approval, settlement replay and responsive
         }),
       ).toBeVisible();
       await page
-        .getByRole('button', { name: draft.number, exact: true })
+        .getByRole(route === '/sales/refunds' ? 'link' : 'button', {
+          name: draft.number,
+          exact: true,
+        })
         .click();
       for (const width of [320, 375, 640, 768, 1024, 1440, 1920]) {
         await page.setViewportSize({ width, height: 1000 });

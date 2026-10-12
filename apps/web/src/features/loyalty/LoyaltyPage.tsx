@@ -6,7 +6,7 @@ import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
 import { Button, Card, Loading, Tag } from '../../components/ui/primitives';
 import { moneyText } from '../../lib/pos-api';
-import { Field } from '../purchasing/SupplyUI';
+import { Field, SupplyTable } from '../purchasing/SupplyUI';
 import {
   customerRequest,
   type Customer,
@@ -155,7 +155,15 @@ export function LoyaltyPage({ history = false }: { history?: boolean }) {
   return (
     <div className="catalog-page loyalty-page">
       <div className="page-heading">
-        <h1>{history ? copy.history : copy.title}</h1>
+        <div>
+          <p className="eyebrow">LOYALTY & REWARDS</p>
+          <h1>{history ? copy.history : copy.title}</h1>
+          <p>
+            {history
+              ? 'ตรวจสอบแต้มเข้า แต้มออก และรายการที่เกี่ยวข้อง'
+              : 'ตรวจสอบสถานะสมาชิก โปรแกรมสะสมแต้ม และแต้มที่ใช้ได้'}
+          </p>
+        </div>
       </div>
       <nav className="catalog-nav">
         <Link to="/loyalty">{copy.title}</Link>
@@ -179,61 +187,97 @@ export function LoyaltyPage({ history = false }: { history?: boolean }) {
       )}
       {query.isPending && <Loading>{copy.loading}</Loading>}
       {query.data?.items.length === 0 && <p>{copy.empty}</p>}
-      {history
-        ? entries.data?.items.map((entry) => (
-            <Card key={entry.id} className="loyalty-entry">
-              <h2>
-                {entryLabels[entry.kind] ?? entry.kind} ·{' '}
-                <span className="loyalty-points">
-                  {entry.points.startsWith('-') || entry.points === '0'
-                    ? ''
-                    : '+'}
-                  {pointsText(entry.points)} แต้ม
-                </span>
-              </h2>
-              <p className="loyalty-entry-date">
-                <time dateTime={entry.created_at}>
-                  {new Date(entry.created_at).toLocaleString('th-TH', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </time>
-              </p>
-              <p>{entry.reason}</p>
-              {entry.sale_id && (
-                <Link to={`/sales/${entry.sale_id}`}>ดูรายการขาย / Sale</Link>
-              )}{' '}
-              {entry.return_id && (
-                <Link to={`/pos/returns?return_id=${entry.return_id}`}>
-                  ดูรายการคืนสินค้า / Return
-                </Link>
-              )}
-              <details>
-                <summary>{copy.details}</summary>
-                <pre className="loyalty-snapshot">
-                  {JSON.stringify(entry.snapshot, null, 2)}
-                </pre>
-              </details>
-            </Card>
-          ))
-        : accounts.data?.items.map((account) => (
-            <Account key={account.id} account={account} />
-          ))}
-      <div className="loyalty-actions">
-        <Button disabled={page === 1} onClick={() => setPage(page - 1)}>
-          {copy.previous}
-        </Button>
-        <span>{page}</span>
-        <Button
-          disabled={(query.data?.items.length ?? 0) < 25}
-          onClick={() => setPage(page + 1)}
-        >
-          {copy.next}
-        </Button>
-      </div>
+      <Card>
+        <h2>{history ? copy.history : 'รายชื่อสมาชิก'}</h2>
+        {history ? (
+          <SupplyTable
+            className="record-table"
+            headers={[
+              'วัน / เวลา',
+              'ประเภท',
+              'แต้มเข้า / ออก',
+              'เหตุผล',
+              'รายการที่เกี่ยวข้อง',
+            ]}
+          >
+            {entries.data?.items.map((entry) => (
+              <tr key={entry.id}>
+                <td>
+                  <time dateTime={entry.created_at}>
+                    {new Date(entry.created_at).toLocaleString('th-TH', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </time>
+                </td>
+                <td>
+                  <strong>{entryLabels[entry.kind] ?? entry.kind}</strong>
+                </td>
+                <td className="record-number">
+                  <strong className="loyalty-points">
+                    {entry.points.startsWith('-') || entry.points === '0'
+                      ? ''
+                      : '+'}
+                    {pointsText(entry.points)} แต้ม
+                  </strong>
+                </td>
+                <td>{entry.reason || '—'}</td>
+                <td>
+                  <div className="record-actions">
+                    {entry.sale_id && (
+                      <Link to={`/sales/${entry.sale_id}`}>
+                        ดูรายการขาย / Sale
+                      </Link>
+                    )}{' '}
+                    {entry.return_id && (
+                      <Link to={`/pos/returns?return_id=${entry.return_id}`}>
+                        ดูรายการคืนสินค้า / Return
+                      </Link>
+                    )}
+                  </div>
+                  <details>
+                    <summary>{copy.details}</summary>
+                    <pre className="loyalty-snapshot">
+                      {JSON.stringify(entry.snapshot, null, 2)}
+                    </pre>
+                  </details>
+                </td>
+              </tr>
+            ))}
+          </SupplyTable>
+        ) : (
+          <SupplyTable
+            className="record-table"
+            headers={[
+              'รหัส / ชื่อสมาชิก',
+              'โปรแกรมสะสมแต้ม',
+              'สถานะสมาชิก',
+              'แต้มคงเหลือ',
+              'แต้มใช้ได้',
+              'รายการ',
+            ]}
+          >
+            {accounts.data?.items.map((account) => (
+              <Account key={account.id} account={account} />
+            ))}
+          </SupplyTable>
+        )}
+        <div className="loyalty-actions loyalty-pagination">
+          <Button disabled={page === 1} onClick={() => setPage(page - 1)}>
+            {copy.previous}
+          </Button>
+          <span>{page}</span>
+          <Button
+            disabled={(query.data?.items.length ?? 0) < 25}
+            onClick={() => setPage(page + 1)}
+          >
+            {copy.next}
+          </Button>
+        </div>
+      </Card>
     </div>
   );
 }
@@ -264,34 +308,52 @@ function Programs() {
     <Card>
       <h2>{copy.program}</h2>
       <Feedback error={query.error} />
-      {query.data?.items.map((program) => (
-        <div className="loyalty-actions" key={program.id}>
-          <div className="loyalty-program">
-            <strong>{program.name}</strong>
-            <MemberStatus status={program.status} />
-            <p>
+      <SupplyTable
+        className="record-table"
+        headers={[
+          'ชื่อโปรแกรม',
+          'สถานะ',
+          'อัตราสะสมแต้ม',
+          'มูลค่าต่อแต้ม',
+          'รายการ',
+        ]}
+      >
+        {query.data?.items.map((program) => (
+          <tr className="loyalty-program" key={program.id}>
+            <td>
+              <strong>{program.name}</strong>
+            </td>
+            <td>
+              <MemberStatus status={program.status} />
+            </td>
+            <td>
               ยอดซื้อทุก {moneyText(program.spend)} บาท ได้{' '}
               {program.earn_points.toLocaleString('th-TH')} แต้ม
-            </p>
-          </div>
-          {scope.tenant.can('loyalty.manage') && (
-            <Button
-              onClick={() => {
-                setEditing(program);
-                setForm({
-                  name: program.name,
-                  spend: program.spend,
-                  earn_points: program.earn_points,
-                  point_value: program.point_value,
-                  status: program.status,
-                });
-              }}
-            >
-              {copy.edit}
-            </Button>
-          )}
-        </div>
-      ))}
+            </td>
+            <td className="record-number">
+              {moneyText(program.point_value)} บาท
+            </td>
+            <td>
+              {scope.tenant.can('loyalty.manage') && (
+                <Button
+                  onClick={() => {
+                    setEditing(program);
+                    setForm({
+                      name: program.name,
+                      spend: program.spend,
+                      earn_points: program.earn_points,
+                      point_value: program.point_value,
+                      status: program.status,
+                    });
+                  }}
+                >
+                  {copy.edit}
+                </Button>
+              )}
+            </td>
+          </tr>
+        ))}
+      </SupplyTable>
       {scope.tenant.can('loyalty.manage') && (
         <form className="loyalty-form" onSubmit={submit}>
           <Field label={copy.name}>
@@ -472,93 +534,102 @@ function Account({ account }: { account: LoyaltyAccount }) {
     [points, setPoints] = useState(''),
     [reason, setReason] = useState('');
   return (
-    <Card className="loyalty-account">
-      <h2>
-        {account.customer_code} · {account.customer_name}
-      </h2>
-      <p>
-        {copy.program}: {account.program_name}
-      </p>
-      <div className="loyalty-actions">
-        <span>
-          สถานะสมาชิก: <MemberStatus status={account.status} />
+    <tr className="loyalty-account">
+      <td>
+        <strong>
+          {account.customer_code} · {account.customer_name}
+        </strong>
+      </td>
+      <td>
+        {account.program_name}
+        <span className="record-secondary">
+          <MemberStatus status={account.program_status} />
         </span>
-        <span>
-          สถานะโปรแกรม: <MemberStatus status={account.program_status} />
-        </span>
-      </div>
-      <dl className="loyalty-balances">
-        <div>
-          <dt>{copy.balance}</dt>
-          <dd>{pointsText(account.balance)}</dd>
+      </td>
+      <td>
+        <MemberStatus status={account.status} />
+      </td>
+      <td className="record-number loyalty-balance">
+        {pointsText(account.balance)}
+      </td>
+      <td className="record-number loyalty-available">
+        {pointsText(account.available)}
+      </td>
+      <td>
+        <div className="loyalty-actions loyalty-account-actions">
+          <Link to={`/loyalty/history?customer_id=${account.customer_id}`}>
+            {copy.history}
+          </Link>
+          <Link to={`/customers/${account.customer_id}`}>{copy.customer}</Link>
+          {scope.tenant.can('loyalty.manage') && (
+            <Button
+              disabled={command.isPending}
+              onClick={() =>
+                command.mutate({
+                  path: `/loyalty/accounts/${account.id}`,
+                  method: 'PUT',
+                  body: {
+                    customer_id: account.customer_id,
+                    program_id: account.program_id,
+                    status:
+                      account.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE',
+                    revision: account.revision,
+                  },
+                })
+              }
+            >
+              {account.status === 'ACTIVE' ? copy.suspend : copy.activate}
+            </Button>
+          )}
         </div>
-        <div>
-          <dt>{copy.available}</dt>
-          <dd>{pointsText(account.available)}</dd>
-        </div>
-      </dl>
-      <div className="loyalty-actions loyalty-account-actions">
-        <Link to={`/loyalty/history?customer_id=${account.customer_id}`}>
-          {copy.history}
-        </Link>
-        <Link to={`/customers/${account.customer_id}`}>{copy.customer}</Link>
-        {scope.tenant.can('loyalty.manage') && (
-          <Button
-            disabled={command.isPending}
-            onClick={() =>
-              command.mutate({
-                path: `/loyalty/accounts/${account.id}`,
-                method: 'PUT',
-                body: {
-                  customer_id: account.customer_id,
-                  program_id: account.program_id,
-                  status: account.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE',
-                  revision: account.revision,
-                },
-              })
-            }
-          >
-            {account.status === 'ACTIVE' ? copy.suspend : copy.activate}
-          </Button>
+        {scope.tenant.can('loyalty.adjust') && account.status === 'ACTIVE' && (
+          <details className="loyalty-adjustment">
+            <summary>{copy.adjust}</summary>
+            <form
+              className="loyalty-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                command.mutate({
+                  path: `/loyalty/accounts/${account.id}/adjust`,
+                  body: {
+                    points: Number(points),
+                    reason,
+                    branch_id: scope.branch,
+                  },
+                });
+              }}
+            >
+              <Field label={copy.points}>
+                <input
+                  required
+                  type="number"
+                  min={-1000000000000}
+                  max={1000000000000}
+                  step={1}
+                  value={points}
+                  onChange={(event) => setPoints(event.target.value)}
+                />
+              </Field>
+              <Field label={copy.reason}>
+                <input
+                  required
+                  maxLength={2000}
+                  value={reason}
+                  onChange={(event) => setReason(event.target.value)}
+                />
+              </Field>
+              <Button
+                type="submit"
+                disabled={command.isPending || !scope.branch}
+              >
+                {copy.adjust}
+              </Button>
+            </form>
+          </details>
         )}
-      </div>
-      {scope.tenant.can('loyalty.adjust') && account.status === 'ACTIVE' && (
-        <form
-          className="loyalty-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            command.mutate({
-              path: `/loyalty/accounts/${account.id}/adjust`,
-              body: { points: Number(points), reason, branch_id: scope.branch },
-            });
-          }}
-        >
-          <Field label={copy.points}>
-            <input
-              required
-              type="number"
-              min={-1000000000000}
-              max={1000000000000}
-              step={1}
-              value={points}
-              onChange={(event) => setPoints(event.target.value)}
-            />
-          </Field>
-          <Field label={copy.reason}>
-            <input
-              required
-              maxLength={2000}
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-            />
-          </Field>
-          <Button type="submit" disabled={command.isPending || !scope.branch}>
-            {copy.adjust}
-          </Button>
-        </form>
-      )}
-      <Feedback error={command.error} />
-      {command.isSuccess && <p role="status">{copy.success}</p>}
-    </Card>
+        <Feedback error={command.error} />
+        {command.isSuccess && <p role="status">{copy.success}</p>}
+      </td>
+    </tr>
   );
 }

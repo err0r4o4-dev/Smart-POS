@@ -15,6 +15,13 @@
 .loyalty-account-actions {
   gap: 16px 20px;
 }
+.loyalty-actions > .button {
+  flex-shrink: 0;
+  max-width: 100%;
+}
+.loyalty-page form.loyalty-form > .button {
+  margin: 0;
+}
 .loyalty-snapshot {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -23,42 +30,25 @@
 .loyalty-page .card {
   min-width: 0;
 }
-.loyalty-account h2,
-.loyalty-entry h2,
-.loyalty-entry p,
-.loyalty-program {
-  overflow-wrap: anywhere;
+.loyalty-points,
+.loyalty-balance,
+.loyalty-available {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
 }
-.loyalty-program {
-  flex: 1 1 240px;
+.loyalty-pagination {
+  justify-content: center;
+  margin: 24px 0 0;
 }
-.loyalty-program > .tag {
-  margin-inline-start: 10px;
-}
-.loyalty-program p,
-.loyalty-entry-date {
-  color: var(--text-strong);
-  font-size: var(--font-caption);
-}
-.loyalty-balances {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px 32px;
+.loyalty-adjustment {
+  min-width: 240px;
   margin-block: 16px;
 }
-.loyalty-balances dt {
-  color: var(--text-strong);
-  font-size: var(--font-caption);
-}
-.loyalty-balances dd {
-  margin: 4px 0 0;
-  font-size: var(--font-section);
-  font-weight: 650;
-  overflow-wrap: anywhere;
-}
-.loyalty-points,
-.loyalty-balances dd {
-  font-variant-numeric: tabular-nums;
+.loyalty-adjustment > summary {
+  cursor: pointer;
+  color: var(--primary-strong);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .loyalty-page .tag {
   white-space: normal;

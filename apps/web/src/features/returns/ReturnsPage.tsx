@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
@@ -43,6 +43,14 @@ function RefundStatus({ status, text }: { status: string; text: ReturnsCopy }) {
 export function ReturnsPage({ refunds = false }: { refunds?: boolean }) {
   const tenant = useOrganization(),
     { state } = useAuth();
+  const { code } = useParams();
+  const scope = [
+    state.session?.user.id,
+    tenant.context?.organization.id,
+    tenant.branchID,
+  ].join(':');
+  if (refunds && code)
+    return <RefundPage key={scope + ':' + code} code={code} />;
   return (
     <ReturnsWorkspace
       key={[
@@ -53,6 +61,61 @@ export function ReturnsPage({ refunds = false }: { refunds?: boolean }) {
       ].join(':')}
       refunds={refunds}
     />
+  );
+}
+function RefundPage({ code }: { code: string }) {
+  const tenant = useOrganization(),
+    command = useReturnsCommand();
+  const [language, setLanguage] = useState<'th' | 'en'>('th');
+  const text = copy[language];
+  const isID =
+    /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(
+      code,
+    );
+  const filters = new URLSearchParams({
+    search: code,
+    page_size: '100',
+    ...(tenant.branchID ? { branch_id: tenant.branchID } : {}),
+  });
+  const lookup = useReturnsQuery<POSPage<CustomerRefund>>(
+    isID ? '' : `/refunds?${filters}`,
+  );
+  const matches = lookup.data?.items.filter(
+    (item) => item.return_number?.toLowerCase() === code.toLowerCase(),
+  );
+  const id = isID ? code : matches?.length === 1 ? matches[0].id : '';
+  return (
+    <div className="catalog-page returns-page">
+      <div className="page-heading">
+        <div>
+          <p className="eyebrow">REFUND DETAILS</p>
+          <h1>{text.settlement}</h1>
+          <p>{code}</p>
+        </div>
+        <Field label={text.language}>
+          <select
+            value={language}
+            onChange={(event) =>
+              setLanguage(event.target.value === 'en' ? 'en' : 'th')
+            }
+          >
+            <option value="th">ไทย</option>
+            <option value="en">English</option>
+          </select>
+        </Field>
+      </div>
+      <nav className="catalog-nav">
+        <Link to="/sales/refunds">{text.refundList}</Link>
+      </nav>
+      <CatalogError error={command.error} />
+      {!isID && lookup.isPending && <Loading>{text.loading}</Loading>}
+      <CatalogError error={lookup.error} />
+      {lookup.isError && (
+        <Button onClick={() => void lookup.refetch()}>{text.retry}</Button>
+      )}
+      {!isID && lookup.isSuccess && !id && <p role="alert">{text.empty}</p>}
+      {id && <RefundPanel id={id} text={text} command={command} />}
+    </div>
   );
 }
 function ReturnsWorkspace({ refunds }: { refunds: boolean }) {
@@ -120,18 +183,30 @@ function ReturnsWorkspace({ refunds }: { refunds: boolean }) {
         )}
         {history.data && (
           <>
-            <SupplyTable headers={[text.select, text.status, text.amount]}>
+            <SupplyTable
+              className={refunds ? 'record-table' : ''}
+              headers={[text.select, text.status, text.amount]}
+            >
               {history.data.items.map((item) => (
                 <tr key={item.id}>
                   <td>
-                    <Button
-                      className="button-secondary"
-                      onClick={() => setSelected(item.id)}
-                    >
-                      {'number' in item
-                        ? item.number
-                        : (item.return_number ?? item.id)}
-                    </Button>
+                    {refunds && !('number' in item) ? (
+                      <Link
+                        className="button button-secondary"
+                        to={`/sales/refunds/${encodeURIComponent(item.return_number || item.id)}`}
+                      >
+                        {item.return_number || item.id}
+                      </Link>
+                    ) : (
+                      <Button
+                        className="button-secondary"
+                        onClick={() => setSelected(item.id)}
+                      >
+                        {'number' in item
+                          ? item.number
+                          : (item.return_number ?? item.id)}
+                      </Button>
+                    )}
                   </td>
                   <td>
                     {refunds ? (
@@ -164,12 +239,9 @@ function ReturnsWorkspace({ refunds }: { refunds: boolean }) {
           </>
         )}
       </Card>
-      {selected &&
-        (refunds ? (
-          <RefundPanel id={selected} text={text} command={command} />
-        ) : (
-          <ReturnPanel id={selected} text={text} command={command} />
-        ))}
+      {selected && !refunds && (
+        <ReturnPanel id={selected} text={text} command={command} />
+      )}
     </div>
   );
 }
@@ -556,6 +628,9 @@ function RefundPanel({
       <h2>{text.settlement}</h2>
       {query.isPending && <Loading>{text.loading}</Loading>}
       <CatalogError error={query.error} />
+      {query.isError && (
+        <Button onClick={() => void query.refetch()}>{text.retry}</Button>
+      )}
       {refund && (
         <RefundDetails
           key={refund.id + ':' + refund.revision}
@@ -603,42 +678,68 @@ function RefundDetails({
   }
   return (
     <>
-      <p className="returns-reference">{refund.id}</p>
       <RefundStatus status={refund.status} text={text} />
-      <p>
-        {text.amount}: <strong>{moneyText(refund.amount)} THB</strong>
-      </p>
+      <dl className="record-facts">
+        <div>
+          <dt>{text.amount}</dt>
+          <dd>
+            <strong>{moneyText(refund.amount)} THB</strong>
+          </dd>
+        </div>
+        <div>
+          <dt>{text.method}</dt>
+          <dd>
+            {refund.method === 'CASH_REFUND'
+              ? text.cash
+              : refund.method === 'MANUAL_BANK_REFUND'
+                ? text.bank
+                : refund.method === 'MANUAL_ORIGINAL_METHOD_REFUND'
+                  ? text.original
+                  : refund.method || text.notReported}
+          </dd>
+        </div>
+        <div>
+          <dt>{text.reference}</dt>
+          <dd>{refund.reference || text.notReported}</dd>
+        </div>
+        <div>
+          <dt>{text.note}</dt>
+          <dd>{refund.settlement_note || text.notReported}</dd>
+        </div>
+        {refund.reported_at && (
+          <div>
+            <dt>{text.reported}</dt>
+            <dd>
+              {new Date(refund.reported_at).toLocaleString(
+                text === copy.th ? 'th-TH' : 'en-GB',
+              )}
+              <span className="record-secondary">{refund.reported_by}</span>
+            </dd>
+          </div>
+        )}
+        {refund.confirmed_at && (
+          <div>
+            <dt>{text.confirmed}</dt>
+            <dd>
+              {new Date(refund.confirmed_at).toLocaleString(
+                text === copy.th ? 'th-TH' : 'en-GB',
+              )}
+              <span className="record-secondary">{refund.confirmed_by}</span>
+            </dd>
+          </div>
+        )}
+      </dl>
       <p>{text.warning}</p>
-      <p>
-        {text.method}:{' '}
-        {refund.method === 'CASH_REFUND'
-          ? text.cash
-          : refund.method === 'MANUAL_BANK_REFUND'
-            ? text.bank
-            : refund.method === 'MANUAL_ORIGINAL_METHOD_REFUND'
-              ? text.original
-              : refund.method || text.notReported}
-      </p>
-      <p>
-        {text.reference}: {refund.reference || text.notReported}
-      </p>
-      <p>{refund.settlement_note}</p>
-      <p className="returns-reference">
-        {text.returns}: {refund.return_id}
-      </p>
-      <p className="returns-reference">
-        {text.branch}: {refund.branch_id}
-      </p>
-      {refund.reported_at && (
+      <details className="refund-references">
+        <summary>{text.details}</summary>
+        <p className="returns-reference">ID: {refund.id}</p>
         <p className="returns-reference">
-          {text.reported}: {refund.reported_at} / {refund.reported_by}
+          {text.returns}: {refund.return_id}
         </p>
-      )}
-      {refund.confirmed_at && (
         <p className="returns-reference">
-          {text.confirmed}: {refund.confirmed_at} / {refund.confirmed_by}
+          {text.branch}: {refund.branch_id}
         </p>
-      )}
+      </details>
       {pending && <p>{text.pending}</p>}
       {refund.status !== 'CONFIRMED' &&
         tenant.can(
@@ -733,13 +834,22 @@ function RefundDetails({
           {text.ledger}: {refund.cash_disbursement_id}
         </p>
       )}
-      <ul>
+      <SupplyTable
+        className="record-table"
+        headers={[text.status, text.created, text.note]}
+      >
         {refund.events.map((event) => (
-          <li key={event.id}>
-            {event.action} · {event.created_at} · {event.note}
-          </li>
+          <tr key={event.id}>
+            <td>{text.refundStatuses[event.action] ?? event.action}</td>
+            <td>
+              {new Date(event.created_at).toLocaleString(
+                text === copy.th ? 'th-TH' : 'en-GB',
+              )}
+            </td>
+            <td>{event.note}</td>
+          </tr>
         ))}
-      </ul>
+      </SupplyTable>
       <Button className="button-secondary" onClick={() => window.print()}>
         {text.print}
       </Button>

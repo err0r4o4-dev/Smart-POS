@@ -97,7 +97,9 @@ test('Phase 5.4 real CRUD, groups, POS, history, archive and responsive layouts'
       page.getByRole('checkbox', { name: 'ลูกค้ายินยอมรับการตลาดอย่างชัดเจน' }),
     ).not.toBeChecked();
     await page.getByRole('button', { name: 'บันทึก', exact: true }).click();
-    await page.getByRole('link', { name: /E2E-CUSTOMER · Synthetic/ }).click();
+    await page
+      .getByRole('link', { name: /Synthetic private customer.*E2E-CUSTOMER/ })
+      .click();
     const detail = new URL(page.url()).pathname;
     const customerID = detail.split('/').at(-1)!;
     await page
@@ -140,8 +142,8 @@ test('Phase 5.4 real CRUD, groups, POS, history, archive and responsive layouts'
     await groupCard
       .getByRole('link', { name: '1 สมาชิก', exact: true })
       .click();
-    await expect(page.locator('.customer-record')).toHaveCount(1);
-    await expect(page.locator('.customer-record')).toContainText(
+    await expect(page.locator('table.record-table tbody tr')).toHaveCount(1);
+    await expect(page.locator('table.record-table tbody tr')).toContainText(
       'E2E-CUSTOMER',
     );
     await page.goto('/pos');

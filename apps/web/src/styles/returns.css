@@ -49,6 +49,13 @@
   white-space: normal;
   text-align: start;
 }
+.refund-references {
+  margin-block: 16px;
+}
+.refund-references > summary {
+  cursor: pointer;
+  color: var(--primary-strong);
+}
 .returns-ack {
   display: flex;
   align-items: flex-start;

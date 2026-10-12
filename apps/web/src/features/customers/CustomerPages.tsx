@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
 import { Button, Card, Loading, Tag } from '../../components/ui/primitives';
-import { Field } from '../purchasing/SupplyUI';
+import { Field, SupplyTable } from '../purchasing/SupplyUI';
 import { moneyText } from '../../lib/pos-api';
 import {
   customerInput,
@@ -297,39 +297,42 @@ function CustomerList({ text }: { text: Text }) {
             )}
           </p>
         )}
-        <div className="customer-cards">
+        <SupplyTable
+          className="record-table"
+          headers={[
+            text('รหัส / ชื่อลูกค้า', 'Code / Customer name'),
+            text('สถานะ', 'Status'),
+            text('โทรศัพท์', 'Phone'),
+            text('อีเมล', 'Email'),
+            text('กลุ่มลูกค้า', 'Customer groups'),
+          ]}
+        >
           {query.data?.items.map((item) => (
-            <article className="customer-record" key={item.id}>
-              <Link to={`/customers/${item.id}`}>
-                <strong>{item.code}</strong> ·{' '}
-                {item.name || text('ไม่ระบุชื่อ', 'Unnamed')}
-              </Link>
-              <Tag tone={item.status === 'ACTIVE' ? 'success' : 'neutral'}>
-                {item.status === 'ACTIVE'
-                  ? text('ใช้งานอยู่', 'Active')
-                  : item.status === 'ARCHIVED'
-                    ? text('เก็บถาวร', 'Archived')
-                    : item.status}
-              </Tag>
-              <p>
-                <span className="customer-contact-label">
-                  {text('โทรศัพท์', 'Phone')}:{' '}
-                </span>
-                {item.phone || text('ไม่ระบุ', 'Not provided')}
-              </p>
-              <p>
-                <span className="customer-contact-label">
-                  {text('อีเมล', 'Email')}:{' '}
-                </span>
-                {item.email || text('ไม่ระบุ', 'Not provided')}
-              </p>
-              <small>
+            <tr key={item.id}>
+              <td>
+                <Link to={`/customers/${item.id}`}>
+                  <strong>{item.name || text('ไม่ระบุชื่อ', 'Unnamed')}</strong>
+                  <span className="record-secondary">{item.code}</span>
+                </Link>
+              </td>
+              <td>
+                <Tag tone={item.status === 'ACTIVE' ? 'success' : 'neutral'}>
+                  {item.status === 'ACTIVE'
+                    ? text('ใช้งานอยู่', 'Active')
+                    : item.status === 'ARCHIVED'
+                      ? text('เก็บถาวร', 'Archived')
+                      : item.status}
+                </Tag>
+              </td>
+              <td>{item.phone || text('ไม่ระบุ', 'Not provided')}</td>
+              <td>{item.email || text('ไม่ระบุ', 'Not provided')}</td>
+              <td>
                 {item.groups.map((entry) => entry.name).join(', ') ||
                   text('ยังไม่มีกลุ่ม', 'No groups')}
-              </small>
-            </article>
+              </td>
+            </tr>
           ))}
-        </div>
+        </SupplyTable>
         {query.data && (
           <Pager
             page={page}
@@ -645,22 +648,24 @@ function Memberships({ value, text }: { value: Customer; text: Text }) {
           <h3>{text('เลือกกลุ่ม', 'Choose group')}</h3>
           {query.isPending && <Loading />}
           <Feedback error={query.error} text={text} />
-          {query.data?.items
-            .filter(
-              (group) =>
-                group.status === 'ACTIVE' &&
-                !value.groups.some((item) => item.id === group.id),
-            )
-            .map((group) => (
-              <Button
-                className="button-secondary"
-                key={group.id}
-                disabled={command.isPending}
-                onClick={() => change(group, true)}
-              >
-                {text('เพิ่มเข้ากลุ่ม', 'Add to')} {group.name}
-              </Button>
-            ))}
+          <div className="catalog-actions">
+            {query.data?.items
+              .filter(
+                (group) =>
+                  group.status === 'ACTIVE' &&
+                  !value.groups.some((item) => item.id === group.id),
+              )
+              .map((group) => (
+                <Button
+                  className="button-secondary"
+                  key={group.id}
+                  disabled={command.isPending}
+                  onClick={() => change(group, true)}
+                >
+                  {text('เพิ่มเข้ากลุ่ม', 'Add to')} {group.name}
+                </Button>
+              ))}
+          </div>
           {query.data && (
             <Pager
               page={page}
@@ -890,20 +895,22 @@ function Groups({ text }: { text: Text }) {
               done={() => setSelected(null)}
             />
           )}
-          <Button
-            className="button-secondary"
-            onClick={() => setSelected(null)}
-          >
-            {text('กลุ่มใหม่', 'New group')}
-          </Button>
-          {current?.status === 'ACTIVE' && (
-            <Archive
-              path={`/customers/groups/${current.id}`}
-              revision={current.revision}
-              command={command}
-              text={text}
-            />
-          )}
+          <div className="catalog-actions">
+            <Button
+              className="button-secondary"
+              onClick={() => setSelected(null)}
+            >
+              {text('กลุ่มใหม่', 'New group')}
+            </Button>
+            {current?.status === 'ACTIVE' && (
+              <Archive
+                path={`/customers/groups/${current.id}`}
+                revision={current.revision}
+                command={command}
+                text={text}
+              />
+            )}
+          </div>
           <Feedback error={command.error} text={text} />
         </Card>
       )}

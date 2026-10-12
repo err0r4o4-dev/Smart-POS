@@ -246,6 +246,10 @@ const routes: RouteObject[] = [
                     path: '/sales/refunds',
                     element: <ReturnsPage refunds />,
                   },
+                  {
+                    path: '/sales/refunds/:code',
+                    element: <ReturnsPage refunds />,
+                  },
                 ],
               },
               {

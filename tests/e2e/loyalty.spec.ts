@@ -93,13 +93,16 @@ test('Loyalty real program/enrollment/adjustment, POS redemption, history and re
     await page
       .getByRole('button', { name: 'สมัครสมาชิก / Enroll', exact: true })
       .click();
-    const account = page.locator('.card').filter({
-      has: page.getByRole('heading', {
-        name: 'LOYALTY-E2E · Synthetic loyalty browser',
+    const account = page.locator('tr.loyalty-account').filter({
+      has: page.getByText('LOYALTY-E2E · Synthetic loyalty browser', {
         exact: true,
       }),
     });
     await expect(account).toBeVisible();
+    await account
+      .getByText('ปรับแต้ม / Adjust points', { exact: true })
+      .first()
+      .click();
     await account
       .getByLabel('แต้มจำนวนเต็ม (+/−) / Integer points (+/−)', { exact: true })
       .fill('20');
@@ -109,12 +112,7 @@ test('Loyalty real program/enrollment/adjustment, POS redemption, history and re
     await account
       .getByRole('button', { name: 'ปรับแต้ม / Adjust points', exact: true })
       .click();
-    await expect(
-      account
-        .locator('.loyalty-balances > div')
-        .filter({ hasText: 'แต้มคงเหลือ / Points balance' })
-        .locator('dd'),
-    ).toHaveText('20');
+    await expect(account.locator('.loyalty-balance')).toHaveText('20');
     for (const width of [320, 375, 768, 1280, 1920]) {
       await page.setViewportSize({ width, height: 1000 });
       await page.evaluate(() => window.scrollTo(0, 0));
@@ -181,17 +179,15 @@ test('Loyalty real program/enrollment/adjustment, POS redemption, history and re
     ).toBe('11');
     await page.goto(`/loyalty/history?customer_id=${customer.id}`);
     await expect(
-      page.getByRole('heading', {
-        name: 'ได้รับแต้มจากการซื้อ · +1 แต้ม',
-        exact: true,
+      page.getByRole('row').filter({
+        has: page.getByText('ได้รับแต้มจากการซื้อ', { exact: true }),
       }),
-    ).toBeVisible();
+    ).toContainText('+1 แต้ม');
     await expect(
-      page.getByRole('heading', {
-        name: 'ใช้แต้มเป็นส่วนลด · -10 แต้ม',
-        exact: true,
-      }),
-    ).toBeVisible();
+      page
+        .getByRole('row')
+        .filter({ has: page.getByText('ใช้แต้มเป็นส่วนลด', { exact: true }) }),
+    ).toContainText('-10 แต้ม');
     await page
       .getByText('รายละเอียดกฎ / Rule snapshot', { exact: true })
       .first()

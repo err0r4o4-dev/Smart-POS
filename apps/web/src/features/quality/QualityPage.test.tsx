@@ -122,4 +122,25 @@ describe('QualityPage pagination styling and alignment', () => {
     expect(screen.queryByText('ก่อนหน้า / Previous')).not.toBeInTheDocument();
     expect(screen.queryByText('ถัดไป / Next')).not.toBeInTheDocument();
   });
+
+  it('renders supply-picker pagination container with ordered controls', async () => {
+    const { container } = renderQualityPage();
+
+    await waitFor(() => {
+      expect(screen.getAllByText('หน้า 1 / 1 • 5 รายการ')).toHaveLength(2);
+    });
+
+    const supplyPickers = container.querySelectorAll('.supply-picker .catalog-pagination');
+    expect(supplyPickers.length).toBeGreaterThanOrEqual(1);
+
+    supplyPickers.forEach((pickerPagination) => {
+      const prev = pickerPagination.querySelector('button:first-of-type');
+      const span = pickerPagination.querySelector('span');
+      const next = pickerPagination.querySelector('button:last-of-type');
+
+      expect(prev).toHaveTextContent('ก่อนหน้า');
+      expect(span).toHaveTextContent('หน้า 1 / 1 • 5 รายการ');
+      expect(next).toHaveTextContent('ถัดไป');
+    });
+  });
 });

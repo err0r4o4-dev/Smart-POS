@@ -57,9 +57,11 @@ export function SupplyFeedback({ state }: { state: SupplyScope }) {
 export function SupplyTable({
   headers,
   children,
+  className = '',
 }: {
   headers: string[];
   children: ReactNode;
+  className?: string;
 }) {
   return (
     <div
@@ -68,11 +70,13 @@ export function SupplyTable({
       role="region"
       aria-label={headers.join(' / ')}
     >
-      <table className="catalog-table">
+      <table className={`catalog-table ${className}`.trim()}>
         <thead>
           <tr>
             {headers.map((header) => (
-              <th key={header}>{header}</th>
+              <th scope="col" key={header}>
+                {header}
+              </th>
             ))}
           </tr>
         </thead>

@@ -118,6 +118,80 @@
   color: var(--text-secondary);
   margin-top: 5px;
 }
+.catalog-page .catalog-table-wrap:has(> .record-table),
+.catalog-page .table-scroll:has(> .record-table) {
+  margin-block: 16px 4px;
+}
+.catalog-page table.record-table {
+  border-collapse: separate;
+  border-spacing: 0 12px;
+  width: 100%;
+  text-align: start;
+}
+.catalog-page table.record-table th,
+.catalog-page table.record-table td {
+  padding: 16px;
+  vertical-align: middle;
+  border: 0;
+  overflow-wrap: anywhere;
+}
+.catalog-page table.record-table th {
+  background: var(--secondary);
+  color: var(--text-strong);
+  font-size: var(--font-caption);
+  white-space: nowrap;
+}
+.catalog-page table.record-table td {
+  background: var(--surface);
+}
+.catalog-page table.record-table tbody tr {
+  border-radius: var(--radius-small);
+  box-shadow: var(--shadow-card);
+}
+.catalog-page table.record-table :is(th, td):first-child {
+  border-start-start-radius: var(--radius-small);
+  border-end-start-radius: var(--radius-small);
+}
+.catalog-page table.record-table :is(th, td):last-child {
+  border-start-end-radius: var(--radius-small);
+  border-end-end-radius: var(--radius-small);
+}
+.record-table .record-number {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.record-table a:not(.button) {
+  color: var(--primary-strong);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.record-table .record-secondary {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-strong);
+  font-size: var(--font-caption);
+}
+.record-table .record-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.record-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 16px 24px;
+  margin-block: 20px;
+}
+.record-facts dt {
+  color: var(--text-strong);
+  font-size: var(--font-caption);
+}
+.record-facts dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
 .catalog-pagination {
   display: flex;
   justify-content: space-between;

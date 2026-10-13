@@ -1,4 +1,11 @@
 const en = {
+  refundStatuses: {
+    PENDING_SETTLEMENT: 'Awaiting payout',
+    SETTLEMENT_REPORTED: 'Payout reported; awaiting confirmation',
+    CONFIRMED: 'Refund confirmed',
+    RECONCILIATION_REQUIRED: 'Reconciliation required',
+  } as Record<string, string>,
+  notReported: 'Not reported',
   returns: 'Customer returns',
   refunds: 'Refund settlements',
   search: 'Search original sale number',
@@ -74,6 +81,13 @@ export type ReturnsCopy = typeof en;
 export const copy: Record<'th' | 'en', ReturnsCopy> = {
   en,
   th: {
+    refundStatuses: {
+      PENDING_SETTLEMENT: 'รอจ่ายคืน',
+      SETTLEMENT_REPORTED: 'บันทึกการจ่ายแล้ว รอยืนยัน',
+      CONFIRMED: 'ยืนยันคืนเงินแล้ว',
+      RECONCILIATION_REQUIRED: 'ต้องตรวจสอบยอดคืนเงิน',
+    },
+    notReported: 'ยังไม่ระบุ',
     returns: 'คืนสินค้าลูกค้า',
     refunds: 'ติดตามการคืนเงิน',
     search: 'ค้นหาเลขรายการขายเดิม',

@@ -33,10 +33,18 @@
 .customer-record p {
   margin: 0;
 }
+.customer-record > a {
+  line-height: 1.6;
+}
+.customer-contact-label,
+.customer-record > small {
+  color: var(--text-strong);
+}
 .customer-form {
   display: grid;
   gap: 14px;
   max-width: 760px;
+  margin-block: 20px;
 }
 .customer-form .tenant-field,
 .customer-picker label {
@@ -115,7 +123,22 @@
   margin: 12px 0;
 }
 .customer-archive {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
   margin-top: 16px;
+}
+.customer-archive > p,
+.catalog-actions > .customer-archive {
+  flex-basis: 100%;
+}
+.customer-page .button {
+  flex-shrink: 0;
+  max-width: 100%;
+}
+.customer-page form.customer-filters > .button {
+  margin: 0;
 }
 @media (max-width: 480px) {
   .customer-page .card {

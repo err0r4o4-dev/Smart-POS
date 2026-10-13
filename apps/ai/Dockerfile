@@ -1,5 +1,6 @@
 FROM python:3.13-slim AS base
-COPY --from=ghcr.io/astral-sh/uv:0.10.0 /uv /uvx /bin/
+# Use PyPI (also used by uv sync) to avoid a separate GHCR connection.
+RUN python -m pip install --no-cache-dir --only-binary=:all: uv==0.10.0
 WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy PYTHONUNBUFFERED=1
 COPY pyproject.toml uv.lock ./

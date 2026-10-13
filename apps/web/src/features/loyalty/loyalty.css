@@ -12,6 +12,16 @@
   gap: 0.75rem;
   margin-block: 0.75rem;
 }
+.loyalty-account-actions {
+  gap: 16px 20px;
+}
+.loyalty-actions > .button {
+  flex-shrink: 0;
+  max-width: 100%;
+}
+.loyalty-page form.loyalty-form > .button {
+  margin: 0;
+}
 .loyalty-snapshot {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -19,4 +29,28 @@
 }
 .loyalty-page .card {
   min-width: 0;
+}
+.loyalty-points,
+.loyalty-balance,
+.loyalty-available {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}
+.loyalty-pagination {
+  justify-content: center;
+  margin: 24px 0 0;
+}
+.loyalty-adjustment {
+  min-width: 240px;
+  margin-block: 16px;
+}
+.loyalty-adjustment > summary {
+  cursor: pointer;
+  color: var(--primary-strong);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.loyalty-page .tag {
+  white-space: normal;
+  text-align: start;
 }

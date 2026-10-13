@@ -41,8 +41,11 @@
 .sales-page .table-scroll table {
   min-width: 700px;
   width: 100%;
-  border-collapse: collapse;
   text-align: left;
+}
+.pos-workspace .table-scroll table:not(.record-table),
+.sales-page .table-scroll table:not(.record-table) {
+  border-collapse: collapse;
 }
 .pos-workspace .table-scroll th,
 .pos-workspace .table-scroll td,
@@ -54,6 +57,46 @@
 .pos-workspace .pos-grid {
   align-items: start;
   grid-template-columns: minmax(0, 1.7fr) minmax(300px, 1fr);
+}
+.sales-history-table td {
+  vertical-align: top;
+  line-height: 1.6;
+}
+.sales-history-table .sales-number {
+  min-width: 160px;
+  max-width: 240px;
+  overflow-wrap: anywhere;
+}
+.sales-history-table .sales-date,
+.sales-history-table .sales-amount {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.sales-history-table .sales-amount {
+  text-align: right;
+}
+.sales-secondary {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-strong);
+  font-size: var(--font-caption);
+}
+.sales-statuses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.sales-detail-link {
+  white-space: nowrap;
+}
+.sales-page .pos-pagination {
+  justify-content: center;
+  margin: 24px 0 0;
+  text-align: center;
+}
+.sales-page .pos-pagination > .button {
+  min-width: 104px;
 }
 .pos-search {
   display: flex;
@@ -158,6 +201,33 @@
 .pos-sale-detail p {
   overflow-wrap: anywhere;
 }
+.sale-information h2 {
+  overflow-wrap: anywhere;
+}
+.sale-receipt-controls {
+  display: grid;
+  gap: 12px;
+}
+.sale-receipt-controls h2 {
+  margin-bottom: 0;
+}
+.sale-receipt-controls > label {
+  display: grid;
+  gap: 6px;
+}
+.sale-receipt-controls > .button {
+  justify-self: start;
+  max-width: 100%;
+}
+.sale-information > .catalog-nav,
+.sale-technical-details {
+  margin-block: 20px;
+}
+.sale-technical-details > summary {
+  cursor: pointer;
+  color: var(--primary-strong);
+  margin-bottom: 16px;
+}
 .pos-receipt {
   box-sizing: border-box;
   width: 100%;
@@ -202,6 +272,20 @@
 }
 .receipt-total {
   font-size: 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.receipt-total > span:first-child {
+  grid-column: 1 / -1;
+  font-size: 12px;
+}
+.receipt-item > div > span {
+  min-width: 0;
+}
+.receipt-item > div > strong,
+.receipt-total > strong {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 @media (max-width: 768px) {
   .pos-workspace {

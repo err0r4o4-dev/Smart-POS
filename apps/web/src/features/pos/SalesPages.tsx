@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { Printer } from 'lucide-react';
+import { SupplyTable } from '../purchasing/SupplyUI';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
@@ -9,6 +11,7 @@ import {
   Card,
   ErrorState,
   Loading,
+  Tag,
 } from '../../components/ui/primitives';
 import {
   posRequest,
@@ -70,8 +73,9 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
           <p className="eyebrow">COMMITTED TRANSACTIONS</p>
           <h1>{receipts ? 'ใบเสร็จ' : 'ประวัติการขาย'}</h1>
           <p>
-            แคชเชียร์เห็นเฉพาะรายการของตนเอง
-            สาขาที่ไม่มีสิทธิ์ถูกปฏิเสธโดยเซิร์ฟเวอร์
+            {receipts
+              ? 'ค้นหาใบเสร็จและเปิดรายละเอียดเพื่อพิมพ์ซ้ำ'
+              : 'ตรวจสอบยอดขาย วิธีชำระเงิน และรายการขายที่เสร็จสมบูรณ์'}
           </p>
         </div>
         <Link to="/pos">ไปขายสินค้า</Link>
@@ -123,7 +127,7 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
             </select>
           </label>
           <label>
-            Cashier UUID
+            รหัสแคชเชียร์ (UUID)
             <input
               value={cashier}
               onChange={(event) => {
@@ -142,7 +146,7 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
               }}
             >
               <option value="">ทั้งหมด</option>
-              <option value="COMPLETED">COMPLETED</option>
+              <option value="COMPLETED">ขายสำเร็จ</option>
             </select>
           </label>
           <label>
@@ -175,15 +179,20 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
             retry={() => void query.refetch()}
           />
         )}
-        <div className="table-scroll">
-          <table>
+        <div
+          className="table-scroll sales-history-table"
+          role="region"
+          aria-label={receipts ? 'รายการใบเสร็จ' : 'รายการขาย'}
+          tabIndex={0}
+        >
+          <table className="record-table">
             <thead>
               <tr>
                 <th>{receipts ? 'ใบเสร็จ' : 'เลขรายการขาย'}</th>
                 <th>วัน / เวลา</th>
                 <th>สาขา / เครื่อง</th>
                 <th>แคชเชียร์</th>
-                <th>ยอดรวม</th>
+                <th className="sales-amount">ยอดรวม (บาท)</th>
                 <th>ชำระเงิน / สถานะ</th>
                 <th>รายการ</th>
               </tr>
@@ -191,29 +200,86 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
             <tbody>
               {query.data?.items.map((item) => (
                 <tr key={item.id}>
-                  <td>{receipts ? item.receipt_number : item.sale_number}</td>
-                  <td>{new Date(item.completed_at).toLocaleString('th-TH')}</td>
+                  <td className="sales-number">
+                    <strong>
+                      {receipts ? item.receipt_number : item.sale_number}
+                    </strong>
+                  </td>
+                  <td className="sales-date">
+                    <time dateTime={item.completed_at}>
+                      {new Date(item.completed_at).toLocaleDateString('th-TH', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                      <span className="sales-secondary">
+                        {new Date(item.completed_at).toLocaleTimeString(
+                          'th-TH',
+                          {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          },
+                        )}{' '}
+                        น.
+                      </span>
+                    </time>
+                  </td>
                   <td>
                     {item.branch_name}
-                    <br />
-                    {item.terminal_name}
+                    <span className="sales-secondary">
+                      {item.terminal_name}
+                    </span>
                   </td>
                   <td>{item.cashier_name}</td>
-                  <td>{moneyText(item.grand_total)} บาท</td>
-                  <td>
-                    {paymentLabels[item.method]}
-                    <br />
-                    {item.payment_status} · {item.status}
+                  <td className="sales-amount">
+                    <strong>{moneyText(item.grand_total)}</strong>
                   </td>
                   <td>
-                    <Link to={`/sales/${item.id}`}>ดูรายละเอียด / พิมพ์</Link>
+                    {paymentLabels[item.method]}
+                    <div className="sales-statuses">
+                      <Tag
+                        tone={
+                          item.payment_status === 'CONFIRMED'
+                            ? 'success'
+                            : 'neutral'
+                        }
+                      >
+                        {item.payment_status === 'CONFIRMED'
+                          ? 'ยืนยันชำระแล้ว'
+                          : item.payment_status}
+                      </Tag>
+                      <Tag
+                        tone={
+                          item.status === 'COMPLETED' ? 'success' : 'neutral'
+                        }
+                      >
+                        {item.status === 'COMPLETED'
+                          ? 'ขายสำเร็จ'
+                          : item.status}
+                      </Tag>
+                    </div>
+                  </td>
+                  <td>
+                    <Link
+                      to={`/sales/${item.id}`}
+                      className="button button-secondary sales-detail-link"
+                    >
+                      <Printer size={16} aria-hidden="true" />
+                      <span>ดูรายละเอียด / พิมพ์</span>
+                    </Link>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        {query.data?.total === 0 && <p>ยังไม่มีรายการขายที่ตรงเงื่อนไข</p>}
+        {query.data?.total === 0 && (
+          <p>
+            {receipts
+              ? 'ยังไม่มีใบเสร็จที่ตรงเงื่อนไข'
+              : 'ยังไม่มีรายการขายที่ตรงเงื่อนไข'}
+          </p>
+        )}
         <div className="pos-pagination">
           <Button
             disabled={page <= 1 || query.isFetching}
@@ -266,54 +332,123 @@ export function SaleDetailsPage() {
   return (
     <div className="catalog-page sales-page">
       <div className="page-heading no-print">
-        <h1>รายละเอียดการขาย</h1>
+        <div>
+          <p className="eyebrow">COMMITTED TRANSACTION DETAILS</p>
+          <h1>รายละเอียดการขาย</h1>
+          <p>ตรวจสอบสินค้า ยอดชำระ และใบเสร็จของรายการขายที่เสร็จสมบูรณ์</p>
+        </div>
         <Link to="/sales">กลับประวัติขาย</Link>
       </div>
       <div className="pos-sale-detail">
-        <Card className="no-print">
+        <Card className="no-print sale-information">
           <h2>{sale.sale_number}</h2>
           {sale.customer_id && tenant.can('loyalty.read') && (
             <Link to={`/loyalty/history?customer_id=${sale.customer_id}`}>
               ประวัติแต้มลูกค้า / Customer points history
             </Link>
           )}
-          <p>
-            {sale.status} · {sale.payment_status}
-          </p>
-          <p>
-            เครื่อง {sale.terminal_name} · แคชเชียร์ {sale.cashier_name}
-          </p>
-          <p>
-            เงินยืนยัน {paymentLabels[sale.payment.method]} · อ้างอิง{' '}
-            {sale.payment.reference || '—'}
-          </p>
-          <p>
-            ผู้ยืนยัน {sale.payment.confirmed_by} ·{' '}
-            {new Date(sale.payment.confirmed_at).toLocaleString('th-TH')}
-          </p>
-          <h3>สินค้า (snapshot)</h3>
-          {sale.items.map((item) => (
-            <p key={item.variant_id}>
-              {item.product_name} · {item.sku} · {item.quantity} ×{' '}
-              {item.unit_price} = {item.line_total} บาท
-            </p>
-          ))}
-          <h3>Inventory SALE movements</h3>
-          <p>Operation: {sale.inventory_operation_id}</p>
-          {sale.movements.map((item) => (
-            <p key={item.id}>
-              ตำแหน่ง {item.location_id} · {item.quantity_before}{' '}
-              {item.quantity_delta} → {item.quantity_after}
-            </p>
-          ))}
-          <h3>Audit trail</h3>
-          {sale.audit.map((item, index) => (
-            <p key={index}>
-              {item.event_type} ·{' '}
-              {new Date(item.created_at).toLocaleString('th-TH')} ·{' '}
-              {item.actor_id}
-            </p>
-          ))}
+          <div className="sales-statuses">
+            <Tag tone={sale.status === 'COMPLETED' ? 'success' : 'neutral'}>
+              {sale.status === 'COMPLETED' ? 'ขายสำเร็จ' : sale.status}
+            </Tag>
+            <Tag
+              tone={sale.payment_status === 'CONFIRMED' ? 'success' : 'neutral'}
+            >
+              {sale.payment_status === 'CONFIRMED'
+                ? 'ยืนยันชำระแล้ว'
+                : sale.payment_status}
+            </Tag>
+          </div>
+          <dl className="record-facts">
+            <div>
+              <dt>สาขา / เครื่องขาย</dt>
+              <dd>
+                {sale.branch_name} · {sale.terminal_name}
+              </dd>
+            </div>
+            <div>
+              <dt>แคชเชียร์</dt>
+              <dd>{sale.cashier_name}</dd>
+            </div>
+            <div>
+              <dt>วิธีชำระเงิน</dt>
+              <dd>{paymentLabels[sale.payment.method]}</dd>
+            </div>
+            <div>
+              <dt>ยอดรวมสุทธิ</dt>
+              <dd>
+                <strong>{moneyText(sale.grand_total)} บาท</strong>
+              </dd>
+            </div>
+            <div>
+              <dt>เลขอ้างอิงการชำระ</dt>
+              <dd>{sale.payment.reference || '—'}</dd>
+            </div>
+            <div>
+              <dt>ยืนยันการชำระเมื่อ</dt>
+              <dd>
+                {new Date(sale.payment.confirmed_at).toLocaleString('th-TH')}
+              </dd>
+            </div>
+          </dl>
+          <h3>สินค้าในรายการขาย</h3>
+          <SupplyTable
+            className="record-table"
+            headers={[
+              'สินค้า / SKU',
+              'จำนวน',
+              'ราคาต่อหน่วย (บาท)',
+              'รวม (บาท)',
+            ]}
+          >
+            {sale.items.map((item) => (
+              <tr key={item.variant_id}>
+                <td>
+                  <strong>{item.product_name}</strong>
+                  <span className="record-secondary">{item.sku}</span>
+                </td>
+                <td className="record-number">
+                  {item.quantity} {item.unit}
+                </td>
+                <td className="record-number">{moneyText(item.unit_price)}</td>
+                <td className="record-number">
+                  <strong>{moneyText(item.line_total)}</strong>
+                </td>
+              </tr>
+            ))}
+          </SupplyTable>
+          <details className="sale-technical-details">
+            <summary>รายการเคลื่อนไหวสต็อกและประวัติการทำรายการ</summary>
+            <p>รหัสรายการสต็อก: {sale.inventory_operation_id}</p>
+            <p>รหัสผู้ยืนยันชำระเงิน: {sale.payment.confirmed_by}</p>
+            <h3>รายการเคลื่อนไหวสต็อก</h3>
+            <SupplyTable
+              className="record-table"
+              headers={['ตำแหน่ง', 'ก่อนขาย', 'เปลี่ยนแปลง', 'หลังขาย']}
+            >
+              {sale.movements.map((item) => (
+                <tr key={item.id}>
+                  <td>{item.location_id}</td>
+                  <td className="record-number">{item.quantity_before}</td>
+                  <td className="record-number">{item.quantity_delta}</td>
+                  <td className="record-number">{item.quantity_after}</td>
+                </tr>
+              ))}
+            </SupplyTable>
+            <h3>ประวัติการทำรายการ</h3>
+            <SupplyTable
+              className="record-table"
+              headers={['เหตุการณ์', 'วัน / เวลา', 'ผู้ดำเนินการ']}
+            >
+              {sale.audit.map((item, index) => (
+                <tr key={index}>
+                  <td>{item.event_type}</td>
+                  <td>{new Date(item.created_at).toLocaleString('th-TH')}</td>
+                  <td>{item.actor_id}</td>
+                </tr>
+              ))}
+            </SupplyTable>
+          </details>
           <p>
             ประวัติขายเดิมไม่ถูกแก้ไข
             การคืน/เปลี่ยน/กลับรายการใช้เอกสารเชื่อมโยง
@@ -346,7 +481,7 @@ export function SaleDetailsPage() {
           ))}
         </Card>
         <Card>
-          <div className="no-print">
+          <div className="no-print sale-receipt-controls">
             <h2>ใบเสร็จ / พิมพ์ซ้ำ</h2>
             <label>
               กระดาษ
@@ -426,7 +561,10 @@ export function Receipt({
         </strong>
       </div>
       <p>
-        {paymentLabels[sale.payment.method]} · {sale.payment.status}
+        {paymentLabels[sale.payment.method]} ·{' '}
+        {sale.payment.status === 'CONFIRMED'
+          ? 'ยืนยันชำระแล้ว'
+          : sale.payment.status}
       </p>
       <p>
         เงินรับ {moneyText(sale.payment.received)} · ทอน{' '}

@@ -4,6 +4,7 @@ dist
 node_modules
 .local
 .tools
+.agents
 coverage
 playwright-report
 test-results

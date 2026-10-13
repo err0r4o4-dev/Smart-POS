@@ -10,7 +10,11 @@ vi.mock('../../app/OrganizationProvider', () => ({
   useOrganization: () => ({
     context: {
       organization: { id: 'org-1' },
-      permissions: ['quality.read', 'quality.batch.create', 'quality.batch.manage'],
+      permissions: [
+        'quality.read',
+        'quality.batch.create',
+        'quality.batch.manage',
+      ],
     },
     branchID: 'branch-1',
     can: () => true,
@@ -50,7 +54,9 @@ describe('QualityPage pagination styling and alignment', () => {
             {
               id: 'p1',
               name: 'Product 1',
-              variants: [{ id: 'v1', sku: 'SKU-1', name: 'Variant 1', status: 'ACTIVE' }],
+              variants: [
+                { id: 'v1', sku: 'SKU-1', name: 'Variant 1', status: 'ACTIVE' },
+              ],
             },
           ],
           total: 5,
@@ -130,7 +136,9 @@ describe('QualityPage pagination styling and alignment', () => {
       expect(screen.getAllByText('หน้า 1 / 1 • 5 รายการ')).toHaveLength(2);
     });
 
-    const supplyPickers = container.querySelectorAll('.supply-picker .catalog-pagination');
+    const supplyPickers = container.querySelectorAll(
+      '.supply-picker .catalog-pagination',
+    );
     expect(supplyPickers.length).toBeGreaterThanOrEqual(1);
 
     supplyPickers.forEach((pickerPagination) => {
@@ -148,10 +156,15 @@ describe('QualityPage pagination styling and alignment', () => {
     renderQualityPage();
 
     await waitFor(() => {
-      expect(screen.getByText('บันทึก lot จริง / Record observed lot')).toBeInTheDocument();
+      expect(
+        screen.getByText('บันทึก lot จริง / Record observed lot'),
+      ).toBeInTheDocument();
     });
 
-    const batchForm = screen.getByText('บันทึก lot จริง / Record observed lot').closest('.card')?.querySelector('form');
+    const batchForm = screen
+      .getByText('บันทึก lot จริง / Record observed lot')
+      .closest('.card')
+      ?.querySelector('form');
     expect(batchForm).toBeInTheDocument();
 
     const supplyPicker = batchForm?.querySelector('.supply-picker');
@@ -164,6 +177,13 @@ describe('QualityPage pagination styling and alignment', () => {
     expect(pagination).toBeInTheDocument();
 
     // Verify pagination is positioned AFTER the batch fields in the DOM
-    expect(Boolean(batchFields && pagination && (batchFields.compareDocumentPosition(pagination) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
+    expect(
+      Boolean(
+        batchFields &&
+        pagination &&
+        batchFields.compareDocumentPosition(pagination) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ),
+    ).toBe(true);
   });
 });

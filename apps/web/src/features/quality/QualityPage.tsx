@@ -96,13 +96,14 @@ function QualityWorkspace({ view }: { view: View }) {
       </nav>
       <div className="quality-guidance">
         <p>
-          Stock ledger เป็นข้อมูลหลัก · Aggregate = Tracked + Untracked. ไม่สร้าง
-          lot หรือวันหมดอายุให้สต็อกเดิม / No invented legacy provenance.
+          Stock ledger เป็นข้อมูลหลัก · Aggregate = Tracked + Untracked.
+          ไม่สร้าง lot หรือวันหมดอายุให้สต็อกเดิม / No invented legacy
+          provenance.
         </p>
         <p>
           FEFO เป็นลำดับแนะนำเท่านั้น ต้องตรวจฉลากและเลือก lot
-          จริงก่อนขายหรือเคลื่อนย้าย / Physically verify the selected lot. Unknown
-          dates are not expiry assurance.
+          จริงก่อนขายหรือเคลื่อนย้าย / Physically verify the selected lot.
+          Unknown dates are not expiry assurance.
         </p>
       </div>
       <Card>
@@ -150,13 +151,17 @@ function QualityWorkspace({ view }: { view: View }) {
               </div>
               <div className="quality-meta-grid">
                 <div className="quality-meta-item">
-                  <span className="quality-meta-label">วันหมดอายุ / Expiry</span>
+                  <span className="quality-meta-label">
+                    วันหมดอายุ / Expiry
+                  </span>
                   <span className="quality-meta-value">
                     {batch.expires_on ?? 'ไม่ทราบ / Unknown'}
                   </span>
                 </div>
                 <div className="quality-meta-item">
-                  <span className="quality-meta-label">วันที่ผลิต / Manufactured</span>
+                  <span className="quality-meta-label">
+                    วันที่ผลิต / Manufactured
+                  </span>
                   <span className="quality-meta-value">
                     {batch.manufactured_on ?? 'ไม่ทราบ / Unknown'}
                   </span>
@@ -173,20 +178,35 @@ function QualityWorkspace({ view }: { view: View }) {
                 <div className="quality-history-list">
                   {batch.history && batch.history.length > 0 ? (
                     batch.history.map((entry) => (
-                      <div key={entry.revision} className="quality-history-item">
+                      <div
+                        key={entry.revision}
+                        className="quality-history-item"
+                      >
                         <div className="quality-history-top">
-                          <span className="quality-history-rev">Revision {entry.revision}</span>
-                          <Tag tone={entry.status === 'ACTIVE' ? 'success' : 'error'}>
+                          <span className="quality-history-rev">
+                            Revision {entry.revision}
+                          </span>
+                          <Tag
+                            tone={
+                              entry.status === 'ACTIVE' ? 'success' : 'error'
+                            }
+                          >
                             {entry.status}
                           </Tag>
-                          <span className="quality-history-date">{entry.recorded_at}</span>
+                          <span className="quality-history-date">
+                            {entry.recorded_at}
+                          </span>
                         </div>
                         <p className="quality-history-desc">{entry.reason}</p>
-                        <small className="quality-history-actor">Actor: {entry.actor_id}</small>
+                        <small className="quality-history-actor">
+                          Actor: {entry.actor_id}
+                        </small>
                       </div>
                     ))
                   ) : (
-                    <p className="quality-history-empty">ไม่มีประวัติเพิ่มเติม / No history recorded</p>
+                    <p className="quality-history-empty">
+                      ไม่มีประวัติเพิ่มเติม / No history recorded
+                    </p>
                   )}
                 </div>
               </details>
@@ -234,13 +254,17 @@ function QualityWorkspace({ view }: { view: View }) {
                   </span>
                 </div>
                 <div className="quality-meta-item">
-                  <span className="quality-meta-label">วันหมดอายุ / Expiry</span>
+                  <span className="quality-meta-label">
+                    วันหมดอายุ / Expiry
+                  </span>
                   <span className="quality-meta-value">
                     {balance.expires_on ?? 'Unknown'}
                   </span>
                 </div>
                 <div className="quality-meta-item">
-                  <span className="quality-meta-label">สถานะ Lot / Batch status</span>
+                  <span className="quality-meta-label">
+                    สถานะ Lot / Batch status
+                  </span>
                   <span className="quality-meta-value">
                     {balance.batch_status ?? 'UNTRACKED'}
                   </span>
@@ -284,7 +308,9 @@ function QualityWorkspace({ view }: { view: View }) {
             <div className="quality-meta-grid">
               <div className="quality-meta-item">
                 <span className="quality-meta-label">Lot</span>
-                <span className="quality-meta-value">{doc.batch_id ?? 'UNTRACKED'}</span>
+                <span className="quality-meta-value">
+                  {doc.batch_id ?? 'UNTRACKED'}
+                </span>
               </div>
               <div className="quality-meta-item">
                 <span className="quality-meta-label">Location</span>
@@ -321,7 +347,9 @@ function QualityWorkspace({ view }: { view: View }) {
                 </div>
               )}
             {doc.operation_id && (
-              <p className="quality-operation-id">Inventory operation: {doc.operation_id}</p>
+              <p className="quality-operation-id">
+                Inventory operation: {doc.operation_id}
+              </p>
             )}
           </Card>
         ))}
@@ -338,32 +366,45 @@ function QualityWorkspace({ view }: { view: View }) {
             </div>
             {recall.reason && (
               <div className="quality-reason">
-                <span className="quality-meta-label">เหตุผลเรียกคืน / Recall reason</span>
+                <span className="quality-meta-label">
+                  เหตุผลเรียกคืน / Recall reason
+                </span>
                 <p>{recall.reason}</p>
               </div>
             )}
             <div className="quality-meta-grid">
               <div className="quality-meta-item">
-                <span className="quality-meta-label">วันที่บันทึก / Created at</span>
+                <span className="quality-meta-label">
+                  วันที่บันทึก / Created at
+                </span>
                 <span className="quality-meta-value">
                   {new Date(recall.created_at).toLocaleString()}
                 </span>
               </div>
             </div>
-            {recall.affected_locations && recall.affected_locations.length > 0 && (
-              <div className="quality-affected-locations">
-                <span className="quality-meta-label">พื้นที่ที่ได้รับผลกระทบ / Affected locations</span>
-                <div className="quality-location-list">
-                  {recall.affected_locations.map((place, index) => (
-                    <div key={index} className="quality-location-item">
-                      <span>Location: <strong>{place.location_id}</strong></span>
-                      <span>Lot: <strong>{place.batch_id ?? 'UNTRACKED'}</strong></span>
-                      <span>จำนวน: <strong>{place.quantity}</strong></span>
-                    </div>
-                  ))}
+            {recall.affected_locations &&
+              recall.affected_locations.length > 0 && (
+                <div className="quality-affected-locations">
+                  <span className="quality-meta-label">
+                    พื้นที่ที่ได้รับผลกระทบ / Affected locations
+                  </span>
+                  <div className="quality-location-list">
+                    {recall.affected_locations.map((place, index) => (
+                      <div key={index} className="quality-location-item">
+                        <span>
+                          Location: <strong>{place.location_id}</strong>
+                        </span>
+                        <span>
+                          Lot: <strong>{place.batch_id ?? 'UNTRACKED'}</strong>
+                        </span>
+                        <span>
+                          จำนวน: <strong>{place.quantity}</strong>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
             <p className="quality-recall-notice">
               เรียกคืนแล้วไม่ปลดอัตโนมัติ / Recall history cannot be erased or
               automatically released.
@@ -434,94 +475,94 @@ function BatchForm({
             change={(value) => setVariant(value.id)}
           >
             <div className="loyalty-form">
-          <Field label="Lot number / เลข lot">
-            <input
-              required
-              maxLength={100}
-              value={lot}
-              disabled={!!initial}
-              onChange={(event) => setLot(event.target.value)}
-            />
-          </Field>
-          <Field label="Manufactured on / วันที่ผลิต">
-            <input
-              type="date"
-              value={manufactured}
-              disabled={!!initial}
-              onChange={(event) => setManufactured(event.target.value)}
-            />
-          </Field>
-          <Field label="Expires on / วันหมดอายุ">
-            <input
-              type="date"
-              value={expiry}
-              disabled={!!initial}
-              onChange={(event) => setExpiry(event.target.value)}
-            />
-          </Field>
-          <Field label="Quality status / สถานะ">
-            <select
-              value={status}
-              onChange={(event) =>
-                setStatus(event.target.value as ProductBatch['status'])
-              }
-            >
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="QUARANTINED">QUARANTINED</option>
-            </select>
-          </Field>
-          <TextField
-            label="เหตุผล / Batch reason"
-            value={reason}
-            change={setReason}
-            required
-          />
+              <Field label="Lot number / เลข lot">
+                <input
+                  required
+                  maxLength={100}
+                  value={lot}
+                  disabled={!!initial}
+                  onChange={(event) => setLot(event.target.value)}
+                />
+              </Field>
+              <Field label="Manufactured on / วันที่ผลิต">
+                <input
+                  type="date"
+                  value={manufactured}
+                  disabled={!!initial}
+                  onChange={(event) => setManufactured(event.target.value)}
+                />
+              </Field>
+              <Field label="Expires on / วันหมดอายุ">
+                <input
+                  type="date"
+                  value={expiry}
+                  disabled={!!initial}
+                  onChange={(event) => setExpiry(event.target.value)}
+                />
+              </Field>
+              <Field label="Quality status / สถานะ">
+                <select
+                  value={status}
+                  onChange={(event) =>
+                    setStatus(event.target.value as ProductBatch['status'])
+                  }
+                >
+                  <option value="ACTIVE">ACTIVE</option>
+                  <option value="QUARANTINED">QUARANTINED</option>
+                </select>
+              </Field>
+              <TextField
+                label="เหตุผล / Batch reason"
+                value={reason}
+                change={setReason}
+                required
+              />
             </div>
           </VariantPicker>
         ) : (
           <div className="loyalty-form">
-        <Field label="Lot number / เลข lot">
-          <input
-            required
-            maxLength={100}
-            value={lot}
-            disabled={!!initial}
-            onChange={(event) => setLot(event.target.value)}
-          />
-        </Field>
-        <Field label="Manufactured on / วันที่ผลิต">
-          <input
-            type="date"
-            value={manufactured}
-            disabled={!!initial}
-            onChange={(event) => setManufactured(event.target.value)}
-          />
-        </Field>
-        <Field label="Expires on / วันหมดอายุ">
-          <input
-            type="date"
-            value={expiry}
-            disabled={!!initial}
-            onChange={(event) => setExpiry(event.target.value)}
-          />
-        </Field>
-        <Field label="Quality status / สถานะ">
-          <select
-            value={status}
-            onChange={(event) =>
-              setStatus(event.target.value as ProductBatch['status'])
-            }
-          >
-            <option value="ACTIVE">ACTIVE</option>
-            <option value="QUARANTINED">QUARANTINED</option>
-          </select>
-        </Field>
-        <TextField
-          label="เหตุผล / Batch reason"
-          value={reason}
-          change={setReason}
-          required
-        />
+            <Field label="Lot number / เลข lot">
+              <input
+                required
+                maxLength={100}
+                value={lot}
+                disabled={!!initial}
+                onChange={(event) => setLot(event.target.value)}
+              />
+            </Field>
+            <Field label="Manufactured on / วันที่ผลิต">
+              <input
+                type="date"
+                value={manufactured}
+                disabled={!!initial}
+                onChange={(event) => setManufactured(event.target.value)}
+              />
+            </Field>
+            <Field label="Expires on / วันหมดอายุ">
+              <input
+                type="date"
+                value={expiry}
+                disabled={!!initial}
+                onChange={(event) => setExpiry(event.target.value)}
+              />
+            </Field>
+            <Field label="Quality status / สถานะ">
+              <select
+                value={status}
+                onChange={(event) =>
+                  setStatus(event.target.value as ProductBatch['status'])
+                }
+              >
+                <option value="ACTIVE">ACTIVE</option>
+                <option value="QUARANTINED">QUARANTINED</option>
+              </select>
+            </Field>
+            <TextField
+              label="เหตุผล / Batch reason"
+              value={reason}
+              change={setReason}
+              required
+            />
           </div>
         )}
         <div className="quality-form-actions">
@@ -649,39 +690,39 @@ function RecallForm({ state, lots }: { state: Scope; lots: ProductBatch[] }) {
           }}
         >
           <div className="loyalty-form">
-          <Field label="Recall scope / ขอบเขต">
-            <select
-              value={batch}
-              onChange={(event) => {
-                setBatch(event.target.value);
-                setConfirmed(false);
-              }}
-            >
-              <option value="">ทุก lot รวม unknown / Entire product</option>
-              {lots
-                .filter((lot) => lot.variant_id === variant)
-                .map((lot) => (
-                  <option key={lot.id} value={lot.id}>
-                    {lot.lot_number}
-                  </option>
-                ))}
-            </select>
-          </Field>
-          <TextField
-            label="เหตุผล / Recall reason"
-            value={reason}
-            change={setReason}
-            required
-          />
-          <label>
-            <input
-              type="checkbox"
-              checked={confirmed}
-              onChange={(event) => setConfirmed(event.target.checked)}
+            <Field label="Recall scope / ขอบเขต">
+              <select
+                value={batch}
+                onChange={(event) => {
+                  setBatch(event.target.value);
+                  setConfirmed(false);
+                }}
+              >
+                <option value="">ทุก lot รวม unknown / Entire product</option>
+                {lots
+                  .filter((lot) => lot.variant_id === variant)
+                  .map((lot) => (
+                    <option key={lot.id} value={lot.id}>
+                      {lot.lot_number}
+                    </option>
+                  ))}
+              </select>
+            </Field>
+            <TextField
+              label="เหตุผล / Recall reason"
+              value={reason}
+              change={setReason}
+              required
             />
-            ยืนยันบล็อกขายทันที; Recall ไม่ปลดอัตโนมัติ / Confirm immediate sale
-            block
-          </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={confirmed}
+                onChange={(event) => setConfirmed(event.target.checked)}
+              />
+              ยืนยันบล็อกขายทันที; Recall ไม่ปลดอัตโนมัติ / Confirm immediate
+              sale block
+            </label>
           </div>
         </VariantPicker>
         <div className="quality-form-actions">

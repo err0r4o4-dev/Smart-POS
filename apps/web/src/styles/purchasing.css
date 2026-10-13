@@ -6,6 +6,39 @@
   gap: 8px;
   min-width: 0;
 }
+
+.supply-picker-inputs {
+  display: grid;
+  gap: 8px;
+  max-width: 360px;
+}
+
+.supply-picker .catalog-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.supply-picker .catalog-pagination span {
+  width: 100%;
+  order: -1;
+  text-align: center;
+  font-size: var(--font-caption);
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.supply-picker .catalog-pagination .button {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 38px;
+  padding: 8px 12px;
+  font-size: var(--font-caption);
+  white-space: nowrap;
+}
 .supply-line {
   min-width: 0;
   border: 1px solid var(--border);

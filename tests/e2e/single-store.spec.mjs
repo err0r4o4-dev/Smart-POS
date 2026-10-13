@@ -183,9 +183,9 @@ for (const mode of ['single', 'multi', null]) {
       });
     }
     expect(writes).toEqual([]);
-    await expect(
-      page.getByRole('region', { name: 'ข้อมูลร้าน' }),
-    ).toHaveCount(0);
+    await expect(page.getByRole('region', { name: 'ข้อมูลร้าน' })).toHaveCount(
+      0,
+    );
     await expect(
       page.getByRole('link', { name: 'สถานะการเปิดขาย', exact: true }),
     ).toHaveCount(0);

@@ -244,8 +244,19 @@
   .catalog-table td {
     padding: 10px 8px;
   }
+  .catalog-pagination {
+    gap: 8px;
+  }
+  .catalog-pagination span {
+    width: 100%;
+    order: -1;
+    text-align: center;
+  }
   .catalog-pagination .button {
+    flex: 1 1 0;
+    min-width: 0;
     padding: 9px 12px;
+    white-space: nowrap;
   }
 }
 @media print {

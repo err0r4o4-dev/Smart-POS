@@ -1,12 +1,12 @@
-﻿-- SmartPOS Sample Data Seed Script
+-- SmartPOS Sample Data Seed Script
 -- สำหรับสร้างสินค้าตัวอย่าง หมวดหมู่ แบรนด์ สต็อก ชั้นวาง ล็อตสินค้า และซัพพลายเออร์
 -- ครอบคลุมทุกสถานะสินค้า: ACTIVE, INACTIVE, ARCHIVED
 
 DO $$
 DECLARE
-  v_org_id uuid := '08ac3879-d23c-49a7-bd3c-8c7f0641b3b5';
-  v_branch_id uuid := 'e6250b1b-35cb-4de1-a2c3-e2a150bb17e0';
-  v_user_id uuid := '8e919a6e-8f10-4021-9552-404818dca899';
+  v_org_id uuid;
+  v_branch_id uuid;
+  v_user_id uuid;
   v_supplier_id uuid := '7f2b4034-16fc-4458-b072-9054922cf51d';
   
   -- Unit IDs
@@ -89,6 +89,28 @@ DECLARE
   -- New Supplier ID
   supp_cpall uuid := gen_random_uuid();
 BEGIN
+  -- ค้นหา organization จากฐานข้อมูล หากไม่มี ID เดิม ให้ใช้ Organization แรกที่พบ
+  SELECT id INTO v_org_id FROM organizations WHERE id = '08ac3879-d23c-49a7-bd3c-8c7f0641b3b5';
+  IF v_org_id IS NULL THEN
+    SELECT id INTO v_org_id FROM organizations ORDER BY created_at ASC LIMIT 1;
+  END IF;
+
+  -- ค้นหา branch จากฐานข้อมูล หากไม่มี ID เดิม ให้ใช้ Branch แรกของ Organization
+  SELECT id INTO v_branch_id FROM branches WHERE id = 'e6250b1b-35cb-4de1-a2c3-e2a150bb17e0' AND organization_id = v_org_id;
+  IF v_branch_id IS NULL THEN
+    SELECT id INTO v_branch_id FROM branches WHERE organization_id = v_org_id ORDER BY created_at ASC LIMIT 1;
+  END IF;
+
+  -- ค้นหา user จากฐานข้อมูล หากไม่มี ID เดิม ให้ใช้ User แรกที่พบ
+  SELECT id INTO v_user_id FROM users WHERE id = '8e919a6e-8f10-4021-9552-404818dca899';
+  IF v_user_id IS NULL THEN
+    SELECT id INTO v_user_id FROM users ORDER BY created_at ASC LIMIT 1;
+  END IF;
+
+  IF v_org_id IS NULL OR v_branch_id IS NULL OR v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Cannot seed data: organization, branch, or user not found. Please ensure at least one organization, branch, and user exist in the database.';
+  END IF;
+
   -- ตั้งค่า session variables สำหรับ RLS & Triggers
   PERFORM set_config('app.organization_id', v_org_id::text, true);
   PERFORM set_config('app.user_id', v_user_id::text, true);

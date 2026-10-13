@@ -2,10 +2,11 @@ import { useState, type FormEvent } from 'react';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
-import { Button, Card } from '../../components/ui/primitives';
+import { Button, Card, Tag } from '../../components/ui/primitives';
 import { useSupplyQuery, useSupplyScope } from '../purchasing/purchasing-hooks';
 import {
   Field,
+  Pagination,
   QueryFeedback,
   SupplyFeedback,
   TextField,
@@ -66,6 +67,14 @@ function QualityWorkspace({ view }: { view: View }) {
     allowed && view === 'recalls',
   );
   const [editing, setEditing] = useState<ProductBatch>();
+  const currentCount =
+    (view === 'write-offs'
+      ? offs.data?.length
+      : view === 'recalls'
+        ? recalls.data?.length
+        : Math.max(lots.data?.length ?? 0, stock.data?.length ?? 0)) ?? 0;
+  const hasMore = currentCount === 100;
+  const totalItems = (page - 1) * 100 + currentCount + (hasMore ? 1 : 0);
   async function action(doc: QualityWriteOff, command: string) {
     try {
       await state.run(`/quality/write-offs/${doc.id}/${command}`, {
@@ -85,32 +94,40 @@ function QualityWorkspace({ view }: { view: View }) {
           </Link>
         ))}
       </nav>
-      <p>
-        Stock ledger เป็นข้อมูลหลัก · Aggregate = Tracked + Untracked. ไม่สร้าง
-        lot หรือวันหมดอายุให้สต็อกเดิม / No invented legacy provenance.
-      </p>
-      <p>
-        FEFO เป็นลำดับแนะนำเท่านั้น ต้องตรวจฉลากและเลือก lot
-        จริงก่อนขายหรือเคลื่อนย้าย / Physically verify the selected lot. Unknown
-        dates are not expiry assurance.
-      </p>
-      <VariantPicker
-        value={variant}
-        change={(value) => {
-          setVariant(value.id);
-          setPage(1);
-        }}
-      />
-      {variant && (
-        <Button
-          onClick={() => {
-            setVariant('');
+      <div className="quality-guidance">
+        <p>
+          Stock ledger เป็นข้อมูลหลัก · Aggregate = Tracked + Untracked.
+          ไม่สร้าง lot หรือวันหมดอายุให้สต็อกเดิม / No invented legacy
+          provenance.
+        </p>
+        <p>
+          FEFO เป็นลำดับแนะนำเท่านั้น ต้องตรวจฉลากและเลือก lot
+          จริงก่อนขายหรือเคลื่อนย้าย / Physically verify the selected lot.
+          Unknown dates are not expiry assurance.
+        </p>
+      </div>
+      <Card>
+        <VariantPicker
+          value={variant}
+          change={(value) => {
+            setVariant(value.id);
             setPage(1);
           }}
-        >
-          ทั้งหมด / Clear filter
-        </Button>
-      )}
+        />
+        {variant && (
+          <div className="quality-filter-actions">
+            <Button
+              className="button-secondary"
+              onClick={() => {
+                setVariant('');
+                setPage(1);
+              }}
+            >
+              ทั้งหมด / Clear filter
+            </Button>
+          </div>
+        )}
+      </Card>
       <SupplyFeedback state={state} />
       {!state.branch && <p role="alert">เลือกสาขา / Select branch</p>}
       {view === 'batches' && state.tenant.can('quality.batch.create') && (
@@ -125,27 +142,80 @@ function QualityWorkspace({ view }: { view: View }) {
         <>
           <QueryFeedback loading={lots.isLoading} error={lots.error} />
           {lots.data?.map((batch) => (
-            <Card key={batch.id}>
-              <h2>{batch.lot_number}</h2>
-              <p>
-                {batch.status} · Expiry:{' '}
-                {batch.expires_on ?? 'ไม่ทราบ / Unknown'} · Manufactured:{' '}
-                {batch.manufactured_on ?? 'ไม่ทราบ / Unknown'}
-              </p>
-              <p>{batch.reason}</p>
-              <details>
+            <Card key={batch.id} className="quality-item-card">
+              <div className="quality-card-header">
+                <h2>{batch.lot_number}</h2>
+                <Tag tone={batch.status === 'ACTIVE' ? 'success' : 'error'}>
+                  {batch.status}
+                </Tag>
+              </div>
+              <div className="quality-meta-grid">
+                <div className="quality-meta-item">
+                  <span className="quality-meta-label">
+                    วันหมดอายุ / Expiry
+                  </span>
+                  <span className="quality-meta-value">
+                    {batch.expires_on ?? 'ไม่ทราบ / Unknown'}
+                  </span>
+                </div>
+                <div className="quality-meta-item">
+                  <span className="quality-meta-label">
+                    วันที่ผลิต / Manufactured
+                  </span>
+                  <span className="quality-meta-value">
+                    {batch.manufactured_on ?? 'ไม่ทราบ / Unknown'}
+                  </span>
+                </div>
+              </div>
+              {batch.reason && (
+                <div className="quality-reason">
+                  <span className="quality-meta-label">เหตุผล / Reason</span>
+                  <p>{batch.reason}</p>
+                </div>
+              )}
+              <details className="quality-history">
                 <summary>ประวัติคุณภาพ / Quality history</summary>
-                {batch.history?.map((entry) => (
-                  <p key={entry.revision}>
-                    Revision {entry.revision} · {entry.status} · {entry.reason}{' '}
-                    · Actor: {entry.actor_id} · {entry.recorded_at}
-                  </p>
-                ))}
+                <div className="quality-history-list">
+                  {batch.history && batch.history.length > 0 ? (
+                    batch.history.map((entry) => (
+                      <div
+                        key={entry.revision}
+                        className="quality-history-item"
+                      >
+                        <div className="quality-history-top">
+                          <span className="quality-history-rev">
+                            Revision {entry.revision}
+                          </span>
+                          <Tag
+                            tone={
+                              entry.status === 'ACTIVE' ? 'success' : 'error'
+                            }
+                          >
+                            {entry.status}
+                          </Tag>
+                          <span className="quality-history-date">
+                            {entry.recorded_at}
+                          </span>
+                        </div>
+                        <p className="quality-history-desc">{entry.reason}</p>
+                        <small className="quality-history-actor">
+                          Actor: {entry.actor_id}
+                        </small>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="quality-history-empty">
+                      ไม่มีประวัติเพิ่มเติม / No history recorded
+                    </p>
+                  )}
+                </div>
               </details>
               {state.tenant.can('quality.batch.manage') && (
-                <Button onClick={() => setEditing(batch)}>
-                  ตรวจคุณภาพ / Review status {batch.lot_number}
-                </Button>
+                <div className="quality-card-actions">
+                  <Button onClick={() => setEditing(batch)}>
+                    ตรวจคุณภาพ / Review status {batch.lot_number}
+                  </Button>
+                </div>
               )}
             </Card>
           ))}
@@ -167,38 +237,89 @@ function QualityWorkspace({ view }: { view: View }) {
           <h2>สต็อกตาม lot/location · Stock by lot/location</h2>
           {stock.data?.length === 0 && <p>ไม่พบสต็อก / No stock</p>}
           {stock.data?.map((balance) => (
-            <Card key={balance.id}>
-              <h3>{balance.lot_number ?? 'Untracked · ไม่ทราบ lot'}</h3>
-              <p>
-                จำนวน / Quantity: {balance.quantity} ·{' '}
-                {balance.sellable
-                  ? 'ขายได้ตามนโยบาย / Eligible'
-                  : 'ห้ามขาย / Not sellable'}
-              </p>
-              <p>
-                Expiry: {balance.expires_on ?? 'Unknown'} ·{' '}
-                {balance.batch_status ?? 'UNTRACKED'}
-              </p>
-              <p>
-                Location: {balance.location_id} · Variant: {balance.variant_id}
-              </p>
+            <Card key={balance.id} className="quality-item-card">
+              <div className="quality-card-header">
+                <h3>{balance.lot_number ?? 'Untracked · ไม่ทราบ lot'}</h3>
+                <Tag tone={balance.sellable ? 'success' : 'error'}>
+                  {balance.sellable
+                    ? 'ขายได้ตามนโยบาย / Eligible'
+                    : 'ห้ามขาย / Not sellable'}
+                </Tag>
+              </div>
+              <div className="quality-meta-grid">
+                <div className="quality-meta-item">
+                  <span className="quality-meta-label">จำนวน / Quantity</span>
+                  <span className="quality-meta-value quality-highlight">
+                    {balance.quantity}
+                  </span>
+                </div>
+                <div className="quality-meta-item">
+                  <span className="quality-meta-label">
+                    วันหมดอายุ / Expiry
+                  </span>
+                  <span className="quality-meta-value">
+                    {balance.expires_on ?? 'Unknown'}
+                  </span>
+                </div>
+                <div className="quality-meta-item">
+                  <span className="quality-meta-label">
+                    สถานะ Lot / Batch status
+                  </span>
+                  <span className="quality-meta-value">
+                    {balance.batch_status ?? 'UNTRACKED'}
+                  </span>
+                </div>
+                <div className="quality-meta-item">
+                  <span className="quality-meta-label">Location · Variant</span>
+                  <span className="quality-meta-value">
+                    {balance.location_id} · {balance.variant_id}
+                  </span>
+                </div>
+              </div>
             </Card>
           ))}
         </>
       )}
       {view === 'write-offs' &&
         offs.data?.map((doc) => (
-          <Card key={doc.id}>
-            <h2>
-              {doc.status} · {doc.quantity}
-            </h2>
-            <p>{doc.reason}</p>
-            <p>
-              Lot: {doc.batch_id ?? 'UNTRACKED'} · Location: {doc.location_id}
-            </p>
+          <Card key={doc.id} className="quality-item-card">
+            <div className="quality-card-header">
+              <h2>
+                {doc.status} · {doc.quantity}
+              </h2>
+              <Tag
+                tone={
+                  doc.status === 'APPROVED'
+                    ? 'success'
+                    : doc.status === 'PENDING_APPROVAL'
+                      ? 'amber'
+                      : 'neutral'
+                }
+              >
+                {doc.status}
+              </Tag>
+            </div>
+            {doc.reason && (
+              <div className="quality-reason">
+                <span className="quality-meta-label">เหตุผล / Reason</span>
+                <p>{doc.reason}</p>
+              </div>
+            )}
+            <div className="quality-meta-grid">
+              <div className="quality-meta-item">
+                <span className="quality-meta-label">Lot</span>
+                <span className="quality-meta-value">
+                  {doc.batch_id ?? 'UNTRACKED'}
+                </span>
+              </div>
+              <div className="quality-meta-item">
+                <span className="quality-meta-label">Location</span>
+                <span className="quality-meta-value">{doc.location_id}</span>
+              </div>
+            </div>
             {doc.status === 'PENDING_APPROVAL' &&
               state.tenant.can('quality.write_off.approve') && (
-                <div className="loyalty-actions">
+                <div className="quality-card-actions">
                   <Button
                     disabled={state.busy}
                     onClick={() => void action(doc, 'approve')}
@@ -206,6 +327,7 @@ function QualityWorkspace({ view }: { view: View }) {
                     อนุมัติ / Approve
                   </Button>
                   <Button
+                    className="button-secondary"
                     disabled={state.busy}
                     onClick={() => void action(doc, 'reject')}
                   >
@@ -215,57 +337,88 @@ function QualityWorkspace({ view }: { view: View }) {
               )}
             {doc.status === 'APPROVED' &&
               state.tenant.can('quality.write_off.post') && (
-                <Button
-                  disabled={state.busy}
-                  onClick={() => void action(doc, 'post')}
-                >
-                  ยืนยันตัดสต็อก / Post write-off
-                </Button>
+                <div className="quality-card-actions">
+                  <Button
+                    disabled={state.busy}
+                    onClick={() => void action(doc, 'post')}
+                  >
+                    ยืนยันตัดสต็อก / Post write-off
+                  </Button>
+                </div>
               )}
-            {doc.operation_id && <p>Inventory operation: {doc.operation_id}</p>}
+            {doc.operation_id && (
+              <p className="quality-operation-id">
+                Inventory operation: {doc.operation_id}
+              </p>
+            )}
           </Card>
         ))}
       {view === 'recalls' &&
         recalls.data?.map((recall) => (
-          <Card key={recall.id}>
-            <h2>
-              ACTIVE RECALL ·{' '}
-              {recall.batch_id ??
-                'ทุก lot รวม untracked / All lots including unknown'}
-            </h2>
-            <p>{recall.reason}</p>
-            <p>{new Date(recall.created_at).toLocaleString()}</p>
-            {recall.affected_locations.map((place, index) => (
-              <p key={index}>
-                Location: {place.location_id} · Lot:{' '}
-                {place.batch_id ?? 'UNTRACKED'} · {place.quantity}
-              </p>
-            ))}
-            <p>
+          <Card key={recall.id} className="quality-item-card">
+            <div className="quality-card-header">
+              <h2>
+                ACTIVE RECALL ·{' '}
+                {recall.batch_id ??
+                  'ทุก lot รวม untracked / All lots including unknown'}
+              </h2>
+              <Tag tone="error">RECALL</Tag>
+            </div>
+            {recall.reason && (
+              <div className="quality-reason">
+                <span className="quality-meta-label">
+                  เหตุผลเรียกคืน / Recall reason
+                </span>
+                <p>{recall.reason}</p>
+              </div>
+            )}
+            <div className="quality-meta-grid">
+              <div className="quality-meta-item">
+                <span className="quality-meta-label">
+                  วันที่บันทึก / Created at
+                </span>
+                <span className="quality-meta-value">
+                  {new Date(recall.created_at).toLocaleString()}
+                </span>
+              </div>
+            </div>
+            {recall.affected_locations &&
+              recall.affected_locations.length > 0 && (
+                <div className="quality-affected-locations">
+                  <span className="quality-meta-label">
+                    พื้นที่ที่ได้รับผลกระทบ / Affected locations
+                  </span>
+                  <div className="quality-location-list">
+                    {recall.affected_locations.map((place, index) => (
+                      <div key={index} className="quality-location-item">
+                        <span>
+                          Location: <strong>{place.location_id}</strong>
+                        </span>
+                        <span>
+                          Lot: <strong>{place.batch_id ?? 'UNTRACKED'}</strong>
+                        </span>
+                        <span>
+                          จำนวน: <strong>{place.quantity}</strong>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            <p className="quality-recall-notice">
               เรียกคืนแล้วไม่ปลดอัตโนมัติ / Recall history cannot be erased or
               automatically released.
             </p>
           </Card>
         ))}
-      <div className="loyalty-actions">
-        <Button disabled={page === 1} onClick={() => setPage(page - 1)}>
-          ก่อนหน้า / Previous
-        </Button>
-        <span>{page}</span>
-        <Button
-          disabled={
-            (view === 'write-offs'
-              ? offs.data?.length
-              : view === 'recalls'
-                ? recalls.data?.length
-                : Math.max(lots.data?.length ?? 0, stock.data?.length ?? 0)) !==
-            100
-          }
-          onClick={() => setPage(page + 1)}
-        >
-          ถัดไป / Next
-        </Button>
-      </div>
+      <Card>
+        <Pagination
+          page={page}
+          total={totalItems}
+          size={100}
+          change={setPage}
+        />
+      </Card>
     </div>
   );
 }
@@ -315,59 +468,109 @@ function BatchForm({
           ? 'เปลี่ยนสถานะคุณภาพ / Quality status'
           : 'บันทึก lot จริง / Record observed lot'}
       </h2>
-      <form className="loyalty-form" onSubmit={(event) => void submit(event)}>
-        {!initial && (
+      <form onSubmit={(event) => void submit(event)}>
+        {!initial ? (
           <VariantPicker
             value={variant}
             change={(value) => setVariant(value.id)}
-          />
-        )}
-        <Field label="Lot number / เลข lot">
-          <input
-            required
-            maxLength={100}
-            value={lot}
-            disabled={!!initial}
-            onChange={(event) => setLot(event.target.value)}
-          />
-        </Field>
-        <Field label="Manufactured on / วันที่ผลิต">
-          <input
-            type="date"
-            value={manufactured}
-            disabled={!!initial}
-            onChange={(event) => setManufactured(event.target.value)}
-          />
-        </Field>
-        <Field label="Expires on / วันหมดอายุ">
-          <input
-            type="date"
-            value={expiry}
-            disabled={!!initial}
-            onChange={(event) => setExpiry(event.target.value)}
-          />
-        </Field>
-        <Field label="Quality status / สถานะ">
-          <select
-            value={status}
-            onChange={(event) =>
-              setStatus(event.target.value as ProductBatch['status'])
-            }
           >
-            <option value="ACTIVE">ACTIVE</option>
-            <option value="QUARANTINED">QUARANTINED</option>
-          </select>
-        </Field>
-        <TextField
-          label="เหตุผล / Batch reason"
-          value={reason}
-          change={setReason}
-          required
-        />
-        <Button type="submit" disabled={state.busy || !variant}>
-          บันทึก lot / Save batch
-        </Button>
-        {initial && <Button onClick={done}>ยกเลิก / Cancel</Button>}
+            <div className="loyalty-form">
+              <Field label="Lot number / เลข lot">
+                <input
+                  required
+                  maxLength={100}
+                  value={lot}
+                  disabled={!!initial}
+                  onChange={(event) => setLot(event.target.value)}
+                />
+              </Field>
+              <Field label="Manufactured on / วันที่ผลิต">
+                <input
+                  type="date"
+                  value={manufactured}
+                  disabled={!!initial}
+                  onChange={(event) => setManufactured(event.target.value)}
+                />
+              </Field>
+              <Field label="Expires on / วันหมดอายุ">
+                <input
+                  type="date"
+                  value={expiry}
+                  disabled={!!initial}
+                  onChange={(event) => setExpiry(event.target.value)}
+                />
+              </Field>
+              <Field label="Quality status / สถานะ">
+                <select
+                  value={status}
+                  onChange={(event) =>
+                    setStatus(event.target.value as ProductBatch['status'])
+                  }
+                >
+                  <option value="ACTIVE">ACTIVE</option>
+                  <option value="QUARANTINED">QUARANTINED</option>
+                </select>
+              </Field>
+              <TextField
+                label="เหตุผล / Batch reason"
+                value={reason}
+                change={setReason}
+                required
+              />
+            </div>
+          </VariantPicker>
+        ) : (
+          <div className="loyalty-form">
+            <Field label="Lot number / เลข lot">
+              <input
+                required
+                maxLength={100}
+                value={lot}
+                disabled={!!initial}
+                onChange={(event) => setLot(event.target.value)}
+              />
+            </Field>
+            <Field label="Manufactured on / วันที่ผลิต">
+              <input
+                type="date"
+                value={manufactured}
+                disabled={!!initial}
+                onChange={(event) => setManufactured(event.target.value)}
+              />
+            </Field>
+            <Field label="Expires on / วันหมดอายุ">
+              <input
+                type="date"
+                value={expiry}
+                disabled={!!initial}
+                onChange={(event) => setExpiry(event.target.value)}
+              />
+            </Field>
+            <Field label="Quality status / สถานะ">
+              <select
+                value={status}
+                onChange={(event) =>
+                  setStatus(event.target.value as ProductBatch['status'])
+                }
+              >
+                <option value="ACTIVE">ACTIVE</option>
+                <option value="QUARANTINED">QUARANTINED</option>
+              </select>
+            </Field>
+            <TextField
+              label="เหตุผล / Batch reason"
+              value={reason}
+              change={setReason}
+              required
+            />
+          </div>
+        )}
+        <div className="quality-form-actions">
+          <Button type="submit" disabled={state.busy || !variant}>
+            บันทึก lot / Save batch
+          </Button>
+          {initial && <Button onClick={done}>ยกเลิก / Cancel</Button>}
+        </div>
       </form>
       <p>
         เว้นวันที่ว่างได้เมื่อไม่ทราบ; identity/dates เปลี่ยนย้อนหลังไม่ได้ /
@@ -477,7 +680,7 @@ function RecallForm({ state, lots }: { state: Scope; lots: ProductBatch[] }) {
   return (
     <Card>
       <h2>เปิด Recall / Activate recall</h2>
-      <form className="loyalty-form" onSubmit={(event) => void submit(event)}>
+      <form onSubmit={(event) => void submit(event)}>
         <VariantPicker
           value={variant}
           change={(value) => {
@@ -485,43 +688,48 @@ function RecallForm({ state, lots }: { state: Scope; lots: ProductBatch[] }) {
             setBatch('');
             setConfirmed(false);
           }}
-        />
-        <Field label="Recall scope / ขอบเขต">
-          <select
-            value={batch}
-            onChange={(event) => {
-              setBatch(event.target.value);
-              setConfirmed(false);
-            }}
-          >
-            <option value="">ทุก lot รวม unknown / Entire product</option>
-            {lots
-              .filter((lot) => lot.variant_id === variant)
-              .map((lot) => (
-                <option key={lot.id} value={lot.id}>
-                  {lot.lot_number}
-                </option>
-              ))}
-          </select>
-        </Field>
-        <TextField
-          label="เหตุผล / Recall reason"
-          value={reason}
-          change={setReason}
-          required
-        />
-        <label>
-          <input
-            type="checkbox"
-            checked={confirmed}
-            onChange={(event) => setConfirmed(event.target.checked)}
-          />
-          ยืนยันบล็อกขายทันที; Recall ไม่ปลดอัตโนมัติ / Confirm immediate sale
-          block
-        </label>
-        <Button type="submit" disabled={state.busy || !confirmed || !variant}>
-          เปิดเรียกคืน / Activate recall
-        </Button>
+        >
+          <div className="loyalty-form">
+            <Field label="Recall scope / ขอบเขต">
+              <select
+                value={batch}
+                onChange={(event) => {
+                  setBatch(event.target.value);
+                  setConfirmed(false);
+                }}
+              >
+                <option value="">ทุก lot รวม unknown / Entire product</option>
+                {lots
+                  .filter((lot) => lot.variant_id === variant)
+                  .map((lot) => (
+                    <option key={lot.id} value={lot.id}>
+                      {lot.lot_number}
+                    </option>
+                  ))}
+              </select>
+            </Field>
+            <TextField
+              label="เหตุผล / Recall reason"
+              value={reason}
+              change={setReason}
+              required
+            />
+            <label>
+              <input
+                type="checkbox"
+                checked={confirmed}
+                onChange={(event) => setConfirmed(event.target.checked)}
+              />
+              ยืนยันบล็อกขายทันที; Recall ไม่ปลดอัตโนมัติ / Confirm immediate
+              sale block
+            </label>
+          </div>
+        </VariantPicker>
+        <div className="quality-form-actions">
+          <Button type="submit" disabled={state.busy || !confirmed || !variant}>
+            เปิดเรียกคืน / Activate recall
+          </Button>
+        </div>
       </form>
     </Card>
   );

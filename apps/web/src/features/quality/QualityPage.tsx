@@ -427,13 +427,59 @@ function BatchForm({
           ? 'เปลี่ยนสถานะคุณภาพ / Quality status'
           : 'บันทึก lot จริง / Record observed lot'}
       </h2>
-      <form className="loyalty-form" onSubmit={(event) => void submit(event)}>
-        {!initial && (
+      <form onSubmit={(event) => void submit(event)}>
+        {!initial ? (
           <VariantPicker
             value={variant}
             change={(value) => setVariant(value.id)}
+          >
+            <div className="loyalty-form">
+          <Field label="Lot number / เลข lot">
+            <input
+              required
+              maxLength={100}
+              value={lot}
+              disabled={!!initial}
+              onChange={(event) => setLot(event.target.value)}
+            />
+          </Field>
+          <Field label="Manufactured on / วันที่ผลิต">
+            <input
+              type="date"
+              value={manufactured}
+              disabled={!!initial}
+              onChange={(event) => setManufactured(event.target.value)}
+            />
+          </Field>
+          <Field label="Expires on / วันหมดอายุ">
+            <input
+              type="date"
+              value={expiry}
+              disabled={!!initial}
+              onChange={(event) => setExpiry(event.target.value)}
+            />
+          </Field>
+          <Field label="Quality status / สถานะ">
+            <select
+              value={status}
+              onChange={(event) =>
+                setStatus(event.target.value as ProductBatch['status'])
+              }
+            >
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="QUARANTINED">QUARANTINED</option>
+            </select>
+          </Field>
+          <TextField
+            label="เหตุผล / Batch reason"
+            value={reason}
+            change={setReason}
+            required
           />
-        )}
+            </div>
+          </VariantPicker>
+        ) : (
+          <div className="loyalty-form">
         <Field label="Lot number / เลข lot">
           <input
             required
@@ -476,10 +522,14 @@ function BatchForm({
           change={setReason}
           required
         />
-        <Button type="submit" disabled={state.busy || !variant}>
-          บันทึก lot / Save batch
-        </Button>
-        {initial && <Button onClick={done}>ยกเลิก / Cancel</Button>}
+          </div>
+        )}
+        <div className="quality-form-actions">
+          <Button type="submit" disabled={state.busy || !variant}>
+            บันทึก lot / Save batch
+          </Button>
+          {initial && <Button onClick={done}>ยกเลิก / Cancel</Button>}
+        </div>
       </form>
       <p>
         เว้นวันที่ว่างได้เมื่อไม่ทราบ; identity/dates เปลี่ยนย้อนหลังไม่ได้ /
@@ -589,7 +639,7 @@ function RecallForm({ state, lots }: { state: Scope; lots: ProductBatch[] }) {
   return (
     <Card>
       <h2>เปิด Recall / Activate recall</h2>
-      <form className="loyalty-form" onSubmit={(event) => void submit(event)}>
+      <form onSubmit={(event) => void submit(event)}>
         <VariantPicker
           value={variant}
           change={(value) => {
@@ -597,43 +647,48 @@ function RecallForm({ state, lots }: { state: Scope; lots: ProductBatch[] }) {
             setBatch('');
             setConfirmed(false);
           }}
-        />
-        <Field label="Recall scope / ขอบเขต">
-          <select
-            value={batch}
-            onChange={(event) => {
-              setBatch(event.target.value);
-              setConfirmed(false);
-            }}
-          >
-            <option value="">ทุก lot รวม unknown / Entire product</option>
-            {lots
-              .filter((lot) => lot.variant_id === variant)
-              .map((lot) => (
-                <option key={lot.id} value={lot.id}>
-                  {lot.lot_number}
-                </option>
-              ))}
-          </select>
-        </Field>
-        <TextField
-          label="เหตุผล / Recall reason"
-          value={reason}
-          change={setReason}
-          required
-        />
-        <label>
-          <input
-            type="checkbox"
-            checked={confirmed}
-            onChange={(event) => setConfirmed(event.target.checked)}
+        >
+          <div className="loyalty-form">
+          <Field label="Recall scope / ขอบเขต">
+            <select
+              value={batch}
+              onChange={(event) => {
+                setBatch(event.target.value);
+                setConfirmed(false);
+              }}
+            >
+              <option value="">ทุก lot รวม unknown / Entire product</option>
+              {lots
+                .filter((lot) => lot.variant_id === variant)
+                .map((lot) => (
+                  <option key={lot.id} value={lot.id}>
+                    {lot.lot_number}
+                  </option>
+                ))}
+            </select>
+          </Field>
+          <TextField
+            label="เหตุผล / Recall reason"
+            value={reason}
+            change={setReason}
+            required
           />
-          ยืนยันบล็อกขายทันที; Recall ไม่ปลดอัตโนมัติ / Confirm immediate sale
-          block
-        </label>
-        <Button type="submit" disabled={state.busy || !confirmed || !variant}>
-          เปิดเรียกคืน / Activate recall
-        </Button>
+          <label>
+            <input
+              type="checkbox"
+              checked={confirmed}
+              onChange={(event) => setConfirmed(event.target.checked)}
+            />
+            ยืนยันบล็อกขายทันที; Recall ไม่ปลดอัตโนมัติ / Confirm immediate sale
+            block
+          </label>
+          </div>
+        </VariantPicker>
+        <div className="quality-form-actions">
+          <Button type="submit" disabled={state.busy || !confirmed || !variant}>
+            เปิดเรียกคืน / Activate recall
+          </Button>
+        </div>
       </form>
     </Card>
   );

@@ -7,6 +7,12 @@
   min-width: 0;
 }
 
+.supply-picker-inputs {
+  display: grid;
+  gap: 8px;
+  max-width: 360px;
+}
+
 .supply-picker .catalog-pagination {
   display: flex;
   flex-wrap: wrap;

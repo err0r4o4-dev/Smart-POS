@@ -268,3 +268,12 @@
   border-radius: var(--radius-small);
   margin: 0;
 }
+
+/* Quality Form Layout */
+.quality-form-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 1.25rem;
+}

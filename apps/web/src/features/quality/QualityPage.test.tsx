@@ -143,4 +143,27 @@ describe('QualityPage pagination styling and alignment', () => {
       expect(next).toHaveTextContent('ถัดไป');
     });
   });
+
+  it('places pagination below the lot fields inside variant picker', async () => {
+    renderQualityPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('บันทึก lot จริง / Record observed lot')).toBeInTheDocument();
+    });
+
+    const batchForm = screen.getByText('บันทึก lot จริง / Record observed lot').closest('.card')?.querySelector('form');
+    expect(batchForm).toBeInTheDocument();
+
+    const supplyPicker = batchForm?.querySelector('.supply-picker');
+    expect(supplyPicker).toBeInTheDocument();
+
+    const batchFields = supplyPicker?.querySelector('.loyalty-form');
+    expect(batchFields).toBeInTheDocument();
+
+    const pagination = supplyPicker?.querySelector('.catalog-pagination');
+    expect(pagination).toBeInTheDocument();
+
+    // Verify pagination is positioned AFTER the batch fields in the DOM
+    expect(Boolean(batchFields && pagination && (batchFields.compareDocumentPosition(pagination) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
+  });
 });

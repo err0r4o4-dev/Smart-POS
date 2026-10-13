@@ -200,9 +200,11 @@ export function RemoteSelect<Item extends { id: string }>({
 export function VariantPicker({
   value,
   change,
+  children,
 }: {
   value: string;
   change: (variant: Variant) => void;
+  children?: ReactNode;
 }) {
   const [search, setSearch] = useState(''),
     [page, setPage] = useState(1);
@@ -215,37 +217,40 @@ export function VariantPicker({
     ) ?? [];
   return (
     <div className="supply-picker">
-      <TextField
-        label="ค้นหาสินค้า / SKU"
-        value={search}
-        change={(value) => {
-          setSearch(value);
-          setPage(1);
-        }}
-      />
-      <Field label="Product Variant">
-        <select
-          value={value}
-          required
-          onChange={(event) => {
-            const variant = variants.find(
-              (item) => item.id === event.target.value,
-            );
-            if (variant) change(variant);
+      <div className="supply-picker-inputs">
+        <TextField
+          label="ค้นหาสินค้า / SKU"
+          value={search}
+          change={(value) => {
+            setSearch(value);
+            setPage(1);
           }}
-        >
-          <option value="">เลือก Variant</option>
-          {value && !variants.some((variant) => variant.id === value) && (
-            <option value={value}>Selected · {value}</option>
-          )}
-          {variants.map((variant) => (
-            <option key={variant.id} value={variant.id}>
-              {variant.sku} · {variant.name}
-            </option>
-          ))}
-        </select>
-      </Field>
+        />
+        <Field label="Product Variant">
+          <select
+            value={value}
+            required
+            onChange={(event) => {
+              const variant = variants.find(
+                (item) => item.id === event.target.value,
+              );
+              if (variant) change(variant);
+            }}
+          >
+            <option value="">เลือก Variant</option>
+            {value && !variants.some((variant) => variant.id === value) && (
+              <option value={value}>Selected · {value}</option>
+            )}
+            {variants.map((variant) => (
+              <option key={variant.id} value={variant.id}>
+                {variant.sku} · {variant.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </div>
       <CatalogError error={query.error} />
+      {children}
       <Pagination page={page} total={query.data?.total ?? 0} change={setPage} />
     </div>
   );

@@ -18,3 +18,6 @@
   width: 100%;
   min-width: 0;
 }
+.quality-page .quality-filter-actions {
+  margin-top: 12px;
+}

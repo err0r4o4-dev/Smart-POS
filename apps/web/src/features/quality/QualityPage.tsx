@@ -6,6 +6,7 @@ import { Button, Card } from '../../components/ui/primitives';
 import { useSupplyQuery, useSupplyScope } from '../purchasing/purchasing-hooks';
 import {
   Field,
+  Pagination,
   QueryFeedback,
   SupplyFeedback,
   TextField,
@@ -66,6 +67,14 @@ function QualityWorkspace({ view }: { view: View }) {
     allowed && view === 'recalls',
   );
   const [editing, setEditing] = useState<ProductBatch>();
+  const currentCount =
+    (view === 'write-offs'
+      ? offs.data?.length
+      : view === 'recalls'
+        ? recalls.data?.length
+        : Math.max(lots.data?.length ?? 0, stock.data?.length ?? 0)) ?? 0;
+  const hasMore = currentCount === 100;
+  const totalItems = (page - 1) * 100 + currentCount + (hasMore ? 1 : 0);
   async function action(doc: QualityWriteOff, command: string) {
     try {
       await state.run(`/quality/write-offs/${doc.id}/${command}`, {
@@ -94,23 +103,28 @@ function QualityWorkspace({ view }: { view: View }) {
         จริงก่อนขายหรือเคลื่อนย้าย / Physically verify the selected lot. Unknown
         dates are not expiry assurance.
       </p>
-      <VariantPicker
-        value={variant}
-        change={(value) => {
-          setVariant(value.id);
-          setPage(1);
-        }}
-      />
-      {variant && (
-        <Button
-          onClick={() => {
-            setVariant('');
+      <Card>
+        <VariantPicker
+          value={variant}
+          change={(value) => {
+            setVariant(value.id);
             setPage(1);
           }}
-        >
-          ทั้งหมด / Clear filter
-        </Button>
-      )}
+        />
+        {variant && (
+          <div className="quality-filter-actions">
+            <Button
+              className="button-secondary"
+              onClick={() => {
+                setVariant('');
+                setPage(1);
+              }}
+            >
+              ทั้งหมด / Clear filter
+            </Button>
+          </div>
+        )}
+      </Card>
       <SupplyFeedback state={state} />
       {!state.branch && <p role="alert">เลือกสาขา / Select branch</p>}
       {view === 'batches' && state.tenant.can('quality.batch.create') && (
@@ -247,25 +261,14 @@ function QualityWorkspace({ view }: { view: View }) {
             </p>
           </Card>
         ))}
-      <div className="loyalty-actions">
-        <Button disabled={page === 1} onClick={() => setPage(page - 1)}>
-          ก่อนหน้า / Previous
-        </Button>
-        <span>{page}</span>
-        <Button
-          disabled={
-            (view === 'write-offs'
-              ? offs.data?.length
-              : view === 'recalls'
-                ? recalls.data?.length
-                : Math.max(lots.data?.length ?? 0, stock.data?.length ?? 0)) !==
-            100
-          }
-          onClick={() => setPage(page + 1)}
-        >
-          ถัดไป / Next
-        </Button>
-      </div>
+      <Card>
+        <Pagination
+          page={page}
+          total={totalItems}
+          size={100}
+          change={setPage}
+        />
+      </Card>
     </div>
   );
 }

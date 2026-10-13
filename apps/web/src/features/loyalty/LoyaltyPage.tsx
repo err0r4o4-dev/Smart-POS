@@ -308,52 +308,6 @@ function Programs() {
     <Card>
       <h2>{copy.program}</h2>
       <Feedback error={query.error} />
-      <SupplyTable
-        className="record-table"
-        headers={[
-          'ชื่อโปรแกรม',
-          'สถานะ',
-          'อัตราสะสมแต้ม',
-          'มูลค่าต่อแต้ม',
-          'รายการ',
-        ]}
-      >
-        {query.data?.items.map((program) => (
-          <tr className="loyalty-program" key={program.id}>
-            <td>
-              <strong>{program.name}</strong>
-            </td>
-            <td>
-              <MemberStatus status={program.status} />
-            </td>
-            <td>
-              ยอดซื้อทุก {moneyText(program.spend)} บาท ได้{' '}
-              {program.earn_points.toLocaleString('th-TH')} แต้ม
-            </td>
-            <td className="record-number">
-              {moneyText(program.point_value)} บาท
-            </td>
-            <td>
-              {scope.tenant.can('loyalty.manage') && (
-                <Button
-                  onClick={() => {
-                    setEditing(program);
-                    setForm({
-                      name: program.name,
-                      spend: program.spend,
-                      earn_points: program.earn_points,
-                      point_value: program.point_value,
-                      status: program.status,
-                    });
-                  }}
-                >
-                  {copy.edit}
-                </Button>
-              )}
-            </td>
-          </tr>
-        ))}
-      </SupplyTable>
       {scope.tenant.can('loyalty.manage') && (
         <form className="loyalty-form" onSubmit={submit}>
           <Field label={copy.name}>
@@ -419,6 +373,52 @@ function Programs() {
           {command.isSuccess && <p role="status">{copy.success}</p>}
         </form>
       )}
+      <SupplyTable
+        className="record-table"
+        headers={[
+          'ชื่อโปรแกรม',
+          'สถานะ',
+          'อัตราสะสมแต้ม',
+          'มูลค่าต่อแต้ม',
+          'รายการ',
+        ]}
+      >
+        {query.data?.items.map((program) => (
+          <tr className="loyalty-program" key={program.id}>
+            <td>
+              <strong>{program.name}</strong>
+            </td>
+            <td>
+              <MemberStatus status={program.status} />
+            </td>
+            <td>
+              ยอดซื้อทุก {moneyText(program.spend)} บาท ได้{' '}
+              {program.earn_points.toLocaleString('th-TH')} แต้ม
+            </td>
+            <td className="record-number">
+              {moneyText(program.point_value)} บาท
+            </td>
+            <td>
+              {scope.tenant.can('loyalty.manage') && (
+                <Button
+                  onClick={() => {
+                    setEditing(program);
+                    setForm({
+                      name: program.name,
+                      spend: program.spend,
+                      earn_points: program.earn_points,
+                      point_value: program.point_value,
+                      status: program.status,
+                    });
+                  }}
+                >
+                  {copy.edit}
+                </Button>
+              )}
+            </td>
+          </tr>
+        ))}
+      </SupplyTable>
     </Card>
   );
 }

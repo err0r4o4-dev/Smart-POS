@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavigate';
-import { Package } from 'lucide-react';
+import { ArrowLeft, Package } from 'lucide-react';
 import { Button, Card, Tag } from '../../components/ui/primitives';
 import { QueryFeedback } from '../../components/feedback/QueryFeedback';
 import {
@@ -402,8 +402,12 @@ function ProductEditor({
   return (
     <div className="catalog-page">
       <CatalogHeader title={initial ? 'แก้ไขสินค้า' : 'เพิ่มสินค้า'}>
-        <Link to={initial ? `/products/${initial.id}` : '/products'}>
-          ยกเลิก / กลับรายการ
+        <Link
+          className="button button-secondary"
+          to={initial ? `/products/${initial.id}` : '/products'}
+        >
+          <ArrowLeft size={16} aria-hidden="true" />
+          ย้อนกลับ / กลับรายการ
         </Link>
       </CatalogHeader>
       <CatalogNav />

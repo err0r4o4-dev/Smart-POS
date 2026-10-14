@@ -269,6 +269,152 @@
 .catalog-barcode-list code {
   overflow-wrap: anywhere;
 }
+
+/* Catalog Barcode Label Controls & Presentation */
+.catalog-print-card-header {
+  margin-bottom: 20px;
+}
+.catalog-print-card-header h2 {
+  margin: 0 0 6px 0;
+}
+.catalog-print-card-subtitle {
+  color: var(--text-secondary);
+  font-size: var(--font-caption);
+  margin: 0;
+}
+.catalog-print-section {
+  padding-block: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.catalog-print-section:first-of-type {
+  padding-top: 0;
+}
+.catalog-print-section-header {
+  margin-bottom: 16px;
+}
+.catalog-print-section-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.catalog-print-section-header p {
+  font-size: var(--font-caption);
+  color: var(--text-secondary);
+  margin: 0;
+}
+.catalog-print-grid-products {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 16px;
+}
+.catalog-print-grid-settings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 16px;
+}
+.catalog-print-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--radius-control);
+  font-size: var(--font-caption);
+  margin-top: 16px;
+}
+.catalog-print-notice-info {
+  background: var(--secondary);
+  color: var(--text-strong);
+  border: 1px solid var(--border);
+}
+.catalog-print-notice-warning {
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+  border: 1px solid var(--primary-border);
+}
+.catalog-print-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  background: var(--canvas);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+.catalog-print-summary-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.catalog-print-summary-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+.catalog-print-summary-meta {
+  font-size: var(--font-caption);
+  color: var(--text-secondary);
+}
+.catalog-print-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.catalog-print-actions .button,
+.catalog-print-actions a.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.catalog-header .button,
+.catalog-header a.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.catalog-print-note {
+  font-size: var(--font-caption);
+  color: var(--text-secondary);
+  margin: 12px 0 0 0;
+}
+.catalog-print-sheet-card {
+  margin-top: 24px;
+  background: var(--canvas);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 20px;
+}
+.catalog-print-sheet-card .catalog-print-sheet {
+  border-radius: var(--radius-small);
+}
+.catalog-print-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.catalog-print-preview-header h2 {
+  font-size: 18px;
+  margin: 0;
+}
+.catalog-print-preview-meta {
+  font-size: var(--font-caption);
+  color: var(--text-secondary);
+  margin: 4px 0 0 0;
+}
+
 .catalog-print-sheet {
   display: flex;
   gap: 8px;
@@ -583,6 +729,18 @@
   .import-action-bar .button {
     width: 100%;
   }
+  .catalog-print-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .catalog-print-actions .button,
+  .catalog-print-actions a.button {
+    width: 100%;
+    justify-content: center;
+  }
+  .catalog-print-sheet-card {
+    padding: 12px;
+  }
 }
 @media print {
   @page {
@@ -599,7 +757,8 @@
   dialog,
   .catalog-header,
   .catalog-nav,
-  .catalog-print-controls {
+  .catalog-print-controls,
+  .catalog-print-preview-header {
     display: none !important;
   }
   .management-shell,
@@ -615,6 +774,12 @@
     overflow: visible;
     gap: 2mm;
     padding: 0;
+  }
+  .catalog-print-sheet-card {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
   .catalog-label {
     border: 0;

@@ -10,6 +10,7 @@ import {
 import { BarcodeScanner } from './BarcodeScanner';
 import { VariantEditor } from './ProductForm';
 import { ImportPage } from './ImportPage';
+import { LabelsPage } from './LabelsPage';
 import { TaxonomyPage } from './TaxonomyPage';
 import { ProductEditorPage, ProductsPage } from './ProductPages';
 
@@ -123,12 +124,54 @@ it('displays selected file details and allows clearing the file', () => {
   expect(screen.queryByText('products.xlsx')).toBeNull();
 });
 
-it('renders cancel / return link pointing to products list', () => {
-  mount(<ImportPage />);
-  const cancelLink = screen.getByRole('link', { name: 'ยกเลิก / กลับรายการ' });
-  expect(cancelLink).toBeVisible();
-  expect(cancelLink).toHaveAttribute('href', '/products');
+
+
+it('renders back / return link pointing to products list in LabelsPage', () => {
+  mount(<LabelsPage />);
+  const backLinks = screen.getAllByRole('link', {
+    name: /ย้อนกลับ \/ กลับรายการ/,
+  });
+  expect(backLinks.length).toBe(1);
+  expect(backLinks[0]).toBeVisible();
+  expect(backLinks[0]).toHaveAttribute('href', '/products');
 });
+
+it('renders organized sections for product selection and print settings in LabelsPage', () => {
+  mount(<LabelsPage />);
+  expect(
+    screen.getByRole('heading', { name: 'เลือกสินค้าและบาร์โค้ด' }),
+  ).toBeVisible();
+  expect(
+    screen.getByRole('heading', { name: 'ขนาดฉลากและการพิมพ์' }),
+  ).toBeVisible();
+  expect(screen.getByLabelText('ค้นหาสินค้าสำหรับฉลาก')).toBeVisible();
+  expect(screen.getByLabelText('สินค้าสำหรับฉลาก')).toBeVisible();
+  expect(screen.getByLabelText('Variant สำหรับฉลาก')).toBeVisible();
+  expect(screen.getByLabelText('บาร์โค้ดสำหรับฉลาก')).toBeVisible();
+  expect(screen.getByLabelText('ความกว้าง (mm)')).toBeVisible();
+  expect(screen.getByLabelText('ความสูง (mm)')).toBeVisible();
+  expect(screen.getByLabelText('จำนวนฉลาก')).toBeVisible();
+  expect(
+    screen.getByRole('button', { name: /เปิด Print Preview \/ พิมพ์/ }),
+  ).toBeVisible();
+});
+
+it('renders back / return link pointing to products list in ImportPage', () => {
+  mount(<ImportPage />);
+  const backLink = screen.getByRole('link', { name: /ย้อนกลับ \/ กลับรายการ/ });
+  expect(backLink).toBeVisible();
+  expect(backLink).toHaveAttribute('href', '/products');
+  expect(backLink).toHaveClass('button', 'button-secondary');
+});
+
+it('renders back / return link pointing to products list in ProductEditorPage', () => {
+  mount(<ProductEditorPage />);
+  const backLink = screen.getByRole('link', { name: /ย้อนกลับ \/ กลับรายการ/ });
+  expect(backLink).toBeVisible();
+  expect(backLink).toHaveAttribute('href', '/products');
+  expect(backLink).toHaveClass('button', 'button-secondary');
+});
+
 it('creates a saleable variant with string prices and refreshes only after success', async () => {
   mocks.request.mockResolvedValue({});
   mount(<VariantEditor productID="product-a" units={[unit]} />);

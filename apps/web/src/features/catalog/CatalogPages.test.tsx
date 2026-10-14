@@ -124,8 +124,6 @@ it('displays selected file details and allows clearing the file', () => {
   expect(screen.queryByText('products.xlsx')).toBeNull();
 });
 
-
-
 it('renders back / return link pointing to products list in LabelsPage', () => {
   mount(<LabelsPage />);
   const backLinks = screen.getAllByRole('link', {

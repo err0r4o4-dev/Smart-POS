@@ -263,8 +263,8 @@ export function LabelsPage() {
                 {product.data.name} · {variant.name}
               </span>
               <span className="catalog-print-summary-meta">
-                SKU: {variant.sku} • รหัส: {barcode.code} ({barcode.symbology}) •{' '}
-                {variant.selling_price} {variant.currency}
+                SKU: {variant.sku} • รหัส: {barcode.code} ({barcode.symbology})
+                • {variant.selling_price} {variant.currency}
               </span>
             </div>
             <Tag tone="neutral">
@@ -299,10 +299,7 @@ export function LabelsPage() {
                 ฉลากขนาด {width} × {height} mm • ทั้งหมด {copies} ฉลาก
               </p>
             </div>
-            <Button
-              className="button-secondary"
-              onClick={() => window.print()}
-            >
+            <Button className="button-secondary" onClick={() => window.print()}>
               <Printer size={16} aria-hidden="true" />
               พิมพ์ {copies} ฉลาก
             </Button>
@@ -322,7 +319,8 @@ export function LabelsPage() {
                   {product.data.name} · {variant.name}
                 </strong>
                 <small>
-                  SKU: {variant.sku} • {variant.selling_price} {variant.currency}
+                  SKU: {variant.sku} • {variant.selling_price}{' '}
+                  {variant.currency}
                 </small>
                 <BarcodeSVG barcode={barcode} />
                 <span className="catalog-label-code">{barcode.code}</span>

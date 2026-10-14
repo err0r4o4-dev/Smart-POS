@@ -1,5 +1,11 @@
 import { useState } from 'react';
-import { ArrowLeft, CheckCircle2, FileSpreadsheet, UploadCloud, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  CheckCircle2,
+  FileSpreadsheet,
+  UploadCloud,
+  X,
+} from 'lucide-react';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { Button, Card, Tag } from '../../components/ui/primitives';
 import { uploadCatalog, type ImportJob } from '../../lib/catalog-api';

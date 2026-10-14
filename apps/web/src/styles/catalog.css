@@ -396,7 +396,9 @@
   border: 2px dashed var(--border);
   border-radius: var(--radius-card);
   background: var(--surface);
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
   margin-bottom: 20px;
 }
 .import-dropzone:hover,

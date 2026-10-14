@@ -112,7 +112,8 @@ export function ImportPage() {
         <div className="import-card-header">
           <h2>1. เลือกไฟล์และตรวจข้อมูล</h2>
           <p className="import-card-subtitle">
-            อัปโหลดไฟล์ CSV หรือ XLSX เพื่อนำเข้าแค็ตตาล็อกสินค้าและบาร์โค้ดเข้าสู่ระบบ
+            อัปโหลดไฟล์ CSV หรือ XLSX
+            เพื่อนำเข้าแค็ตตาล็อกสินค้าและบาร์โค้ดเข้าสู่ระบบ
           </p>
         </div>
 
@@ -129,10 +130,12 @@ export function ImportPage() {
                 <strong>ขนาดและปริมาณ:</strong> สูงสุด 5 MB / 2,000 แถว
               </li>
               <li>
-                <strong>รูปแบบไฟล์:</strong> <code>.csv</code> หรือ <code>.xlsx</code> (เฉพาะ sheet1 แผ่นเดียว ไม่มีสูตร)
+                <strong>รูปแบบไฟล์:</strong> <code>.csv</code> หรือ{' '}
+                <code>.xlsx</code> (เฉพาะ sheet1 แผ่นเดียว ไม่มีสูตร)
               </li>
               <li>
-                <strong>ช่องบาร์โค้ด:</strong> ตั้งประเภทเป็น Text เพื่อเก็บเลขศูนย์นำหน้า
+                <strong>ช่องบาร์โค้ด:</strong> ตั้งประเภทเป็น Text
+                เพื่อเก็บเลขศูนย์นำหน้า
               </li>
             </ul>
           </div>
@@ -156,10 +159,12 @@ export function ImportPage() {
                 </div>
               </li>
               <li>
-                <strong>ข้อมูลอ้างอิง:</strong> <code>category</code>, <code>brand</code>, <code>unit</code> ต้องมีอยู่ในระบบและ ACTIVE
+                <strong>ข้อมูลอ้างอิง:</strong> <code>category</code>,{' '}
+                <code>brand</code>, <code>unit</code> ต้องมีอยู่ในระบบและ ACTIVE
               </li>
               <li>
-                <strong>โครงสร้าง:</strong> 1 แถว = 1 สินค้าใหม่พร้อม Default Variant
+                <strong>โครงสร้าง:</strong> 1 แถว = 1 สินค้าใหม่พร้อม Default
+                Variant
               </li>
             </ul>
           </div>
@@ -191,16 +196,25 @@ export function ImportPage() {
                 if (next) handleFile(next);
               }}
             />
-            <label htmlFor="catalog-file-input" className="import-dropzone-label">
+            <label
+              htmlFor="catalog-file-input"
+              className="import-dropzone-label"
+            >
               <span className="sr-only">ไฟล์สินค้า</span>
               <div className="import-dropzone-icon">
                 <UploadCloud size={28} aria-hidden="true" />
               </div>
               <div className="import-dropzone-text">
                 <strong>คลิกเลือกไฟล์ หรือลากไฟล์มาวางที่นี่</strong>
-                <p>รองรับไฟล์ .CSV และ .XLSX (ขนาดไม่เกิน 5 MB / สูงสุด 2,000 แถว)</p>
+                <p>
+                  รองรับไฟล์ .CSV และ .XLSX (ขนาดไม่เกิน 5 MB / สูงสุด 2,000
+                  แถว)
+                </p>
               </div>
-              <span className="button button-secondary import-dropzone-btn" aria-hidden="true">
+              <span
+                className="button button-secondary import-dropzone-btn"
+                aria-hidden="true"
+              >
                 เลือกไฟล์จากเครื่อง
               </span>
             </label>
@@ -215,10 +229,15 @@ export function ImportPage() {
                 <strong className="import-file-name">{file.name}</strong>
                 <Tag tone="success">พร้อมตรวจสอบ</Tag>
               </div>
-              <span className="import-file-meta">{formatFileSize(file.size)}</span>
+              <span className="import-file-meta">
+                {formatFileSize(file.size)}
+              </span>
             </div>
             <div className="import-file-actions">
-              <label htmlFor="catalog-file-input" className="button button-secondary button-compact">
+              <label
+                htmlFor="catalog-file-input"
+                className="button button-secondary button-compact"
+              >
                 เปลี่ยนไฟล์
               </label>
               <input

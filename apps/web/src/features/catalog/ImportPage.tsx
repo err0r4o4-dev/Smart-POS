@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { CheckCircle2, FileSpreadsheet, UploadCloud, X } from 'lucide-react';
+import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { Button, Card, Tag } from '../../components/ui/primitives';
 import { uploadCatalog, type ImportJob } from '../../lib/catalog-api';
 import { useCatalog } from './catalog-hooks';
@@ -103,7 +104,9 @@ export function ImportPage() {
   }
   return (
     <div className="catalog-page">
-      <CatalogHeader title="นำเข้าสินค้า CSV / XLSX" />
+      <CatalogHeader title="นำเข้าสินค้า CSV / XLSX">
+        <Link to="/products">ยกเลิก / กลับรายการ</Link>
+      </CatalogHeader>
       <CatalogNav />
       <Card>
         <div className="import-card-header">

@@ -122,6 +122,13 @@ it('displays selected file details and allows clearing the file', () => {
   fireEvent.click(screen.getByRole('button', { name: 'ยกเลิกไฟล์' }));
   expect(screen.queryByText('products.xlsx')).toBeNull();
 });
+
+it('renders cancel / return link pointing to products list', () => {
+  mount(<ImportPage />);
+  const cancelLink = screen.getByRole('link', { name: 'ยกเลิก / กลับรายการ' });
+  expect(cancelLink).toBeVisible();
+  expect(cancelLink).toHaveAttribute('href', '/products');
+});
 it('creates a saleable variant with string prices and refreshes only after success', async () => {
   mocks.request.mockResolvedValue({});
   mount(<VariantEditor productID="product-a" units={[unit]} />);

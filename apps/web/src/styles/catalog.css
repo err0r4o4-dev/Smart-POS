@@ -52,7 +52,12 @@
 .catalog-page .card {
   min-width: 0;
 }
-.catalog-page form > .button {
+.catalog-page .notice {
+  margin-top: 28px;
+  margin-bottom: 24px;
+}
+.catalog-page form > .button,
+.catalog-variants-section > .button {
   margin: 16px 8px 0 0;
 }
 .catalog-page input,
@@ -221,12 +226,20 @@
   width: 90px;
   height: 90px;
 }
+.catalog-variants-section {
+  margin-top: 36px;
+  padding-top: 28px;
+  border-top: 1px solid var(--border);
+}
 .catalog-variant-fieldset {
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 18px;
   margin: 18px 0;
   min-width: 0;
+}
+.catalog-variant-fieldset .button {
+  margin-top: 14px;
 }
 .catalog-dl {
   display: grid;

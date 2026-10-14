@@ -418,7 +418,7 @@ function ProductEditor({
             archive={!!initial && catalog.tenant.can('catalog.archive')}
           />
           {!initial && (
-            <>
+            <div className="catalog-variants-section">
               <h2>Variants · รายการขาย</h2>
               {variants.map((variant, index) => (
                 <fieldset className="catalog-variant-fieldset" key={index}>
@@ -457,7 +457,7 @@ function ProductEditor({
               >
                 เพิ่ม Variant อีกแบบ
               </Button>
-            </>
+            </div>
           )}
           <p className="notice">
             SKU ถาวรและไม่ใช้ซ้ำหลัง archive • ราคาเป็นทศนิยมแบบ exact •

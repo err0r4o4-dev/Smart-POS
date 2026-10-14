@@ -131,6 +131,11 @@ it('creates a saleable variant with string prices and refreshes only after succe
   );
   expect(mocks.refresh).toHaveBeenCalledOnce();
 });
+it('renders the variants section and notice with proper spacing containers on create-product', () => {
+  const { container } = mount(<ProductEditorPage />);
+  expect(container.querySelector('.catalog-variants-section')).toBeInTheDocument();
+  expect(container.querySelector('.notice')).toBeInTheDocument();
+});
 it('validates the default variant on the create-product page', () => {
   mount(<ProductEditorPage />);
   fireEvent.submit(

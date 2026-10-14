@@ -104,6 +104,24 @@ it('blocks zero selling price and incomplete attributes before a variant request
   expect(screen.getByRole('alert')).toHaveTextContent('key=value');
   expect(mocks.request).not.toHaveBeenCalled();
 });
+
+it('displays selected file details and allows clearing the file', () => {
+  mount(<ImportPage />);
+  const input = screen.getByLabelText('ไฟล์สินค้า');
+  fireEvent.change(input, {
+    target: {
+      files: [
+        new File(['sku\nCAN'], 'products.xlsx', {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        }),
+      ],
+    },
+  });
+  expect(screen.getByText('products.xlsx')).toBeVisible();
+  expect(screen.getByText(/พร้อมตรวจสอบ/)).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'ยกเลิกไฟล์' }));
+  expect(screen.queryByText('products.xlsx')).toBeNull();
+});
 it('creates a saleable variant with string prices and refreshes only after success', async () => {
   mocks.request.mockResolvedValue({});
   mount(<VariantEditor productID="product-a" units={[unit]} />);

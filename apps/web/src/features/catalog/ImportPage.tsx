@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Button, Card } from '../../components/ui/primitives';
+import { CheckCircle2, FileSpreadsheet, UploadCloud, X } from 'lucide-react';
+import { Button, Card, Tag } from '../../components/ui/primitives';
 import { uploadCatalog, type ImportJob } from '../../lib/catalog-api';
 import { useCatalog } from './catalog-hooks';
 import { CatalogHeader, CatalogNav, CatalogError } from './CatalogUI';
@@ -14,6 +15,13 @@ const fields = [
   'cost_price',
   'selling_price',
 ];
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
 export function ImportPage() {
   const catalog = useCatalog();
   const [file, setFile] = useState<File | null>(null);
@@ -23,6 +31,28 @@ export function ImportPage() {
   const [mode, setMode] = useState('CREATE');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
+
+  function handleFile(next: File) {
+    setJob(null);
+    setHeaders([]);
+    setMapping({});
+    setError('');
+    if (next.size > 5 * 1024 * 1024) {
+      setError('ไฟล์เกิน 5 MiB');
+      setFile(null);
+    } else {
+      setFile(next);
+    }
+  }
+
+  function clearFile() {
+    setFile(null);
+    setJob(null);
+    setHeaders([]);
+    setMapping({});
+    setError('');
+  }
   async function preview() {
     if (!file) return;
     setBusy(true);
@@ -76,34 +106,140 @@ export function ImportPage() {
       <CatalogHeader title="นำเข้าสินค้า CSV / XLSX" />
       <CatalogNav />
       <Card>
-        <h2>1. เลือกไฟล์และตรวจข้อมูล</h2>
-        <p>
-          สูงสุด 5 MiB / 2,000 แถว • XLSX ต้องมี sheet1 แผ่นเดียว ไม่มีสูตร •
-          ช่องบาร์โค้ดต้องเป็น Text เพื่อเก็บเลขศูนย์นำหน้า
-        </p>
-        <p>
-          ต้องมี product_name, sku, unit, cost_price, selling_price •
-          category/brand/unit ต้องมีอยู่และ ACTIVE • 1 แถว = 1 สินค้าใหม่พร้อม
-          Default Variant
-        </p>
-        <label className="tenant-field">
-          ไฟล์สินค้า
-          <input
-            type="file"
-            accept=".csv,.xlsx"
-            onChange={(event) => {
-              const next = event.target.files?.[0] ?? null;
-              setJob(null);
-              setHeaders([]);
-              setMapping({});
-              setError('');
-              if (next && next.size > 5 * 1024 * 1024) {
-                setError('ไฟล์เกิน 5 MiB');
-                setFile(null);
-              } else setFile(next);
+        <div className="import-card-header">
+          <h2>1. เลือกไฟล์และตรวจข้อมูล</h2>
+          <p className="import-card-subtitle">
+            อัปโหลดไฟล์ CSV หรือ XLSX เพื่อนำเข้าแค็ตตาล็อกสินค้าและบาร์โค้ดเข้าสู่ระบบ
+          </p>
+        </div>
+
+        <div className="import-guidelines-grid">
+          <div className="import-guide-card">
+            <div className="import-guide-header">
+              <span className="import-guide-icon">
+                <FileSpreadsheet size={18} aria-hidden="true" />
+              </span>
+              <h3>ข้อกำหนดของไฟล์</h3>
+            </div>
+            <ul className="import-guide-list">
+              <li>
+                <strong>ขนาดและปริมาณ:</strong> สูงสุด 5 MiB / 2,000 แถว
+              </li>
+              <li>
+                <strong>รูปแบบไฟล์:</strong> <code>.csv</code> หรือ <code>.xlsx</code> (เฉพาะ sheet1 แผ่นเดียว ไม่มีสูตร)
+              </li>
+              <li>
+                <strong>ช่องบาร์โค้ด:</strong> ตั้งประเภทเป็น Text เพื่อเก็บเลขศูนย์นำหน้า
+              </li>
+            </ul>
+          </div>
+
+          <div className="import-guide-card">
+            <div className="import-guide-header">
+              <span className="import-guide-icon">
+                <CheckCircle2 size={18} aria-hidden="true" />
+              </span>
+              <h3>ข้อกำหนดข้อมูล</h3>
+            </div>
+            <ul className="import-guide-list">
+              <li>
+                <strong>คอลัมน์ที่จำเป็น:</strong>
+                <div className="import-req-tags">
+                  <code>product_name</code>
+                  <code>sku</code>
+                  <code>unit</code>
+                  <code>cost_price</code>
+                  <code>selling_price</code>
+                </div>
+              </li>
+              <li>
+                <strong>ข้อมูลอ้างอิง:</strong> <code>category</code>, <code>brand</code>, <code>unit</code> ต้องมีอยู่ในระบบและ ACTIVE
+              </li>
+              <li>
+                <strong>โครงสร้าง:</strong> 1 แถว = 1 สินค้าใหม่พร้อม Default Variant
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        {!file ? (
+          <div
+            className={`import-dropzone ${isDragging ? 'is-dragging' : ''}`}
+            onDragOver={(event) => {
+              event.preventDefault();
+              setIsDragging(true);
             }}
-          />
-        </label>
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={(event) => {
+              event.preventDefault();
+              setIsDragging(false);
+              const dropped = event.dataTransfer.files?.[0];
+              if (dropped) handleFile(dropped);
+            }}
+          >
+            <input
+              id="catalog-file-input"
+              type="file"
+              accept=".csv,.xlsx"
+              aria-label="ไฟล์สินค้า"
+              className="import-file-input-hidden"
+              onChange={(event) => {
+                const next = event.target.files?.[0] ?? null;
+                if (next) handleFile(next);
+              }}
+            />
+            <label htmlFor="catalog-file-input" className="import-dropzone-label">
+              <span className="sr-only">ไฟล์สินค้า</span>
+              <div className="import-dropzone-icon">
+                <UploadCloud size={28} aria-hidden="true" />
+              </div>
+              <div className="import-dropzone-text">
+                <strong>คลิกเลือกไฟล์ หรือลากไฟล์มาวางที่นี่</strong>
+                <p>รองรับไฟล์ .CSV และ .XLSX (ขนาดไม่เกิน 5 MiB / สูงสุด 2,000 แถว)</p>
+              </div>
+              <span className="button button-secondary import-dropzone-btn" aria-hidden="true">
+                เลือกไฟล์จากเครื่อง
+              </span>
+            </label>
+          </div>
+        ) : (
+          <div className="import-selected-file-card">
+            <div className="import-file-badge">
+              <FileSpreadsheet size={22} aria-hidden="true" />
+            </div>
+            <div className="import-file-info">
+              <div className="import-file-name-row">
+                <strong className="import-file-name">{file.name}</strong>
+                <Tag tone="success">พร้อมตรวจสอบ</Tag>
+              </div>
+              <span className="import-file-meta">{formatFileSize(file.size)}</span>
+            </div>
+            <div className="import-file-actions">
+              <label htmlFor="catalog-file-input" className="button button-secondary button-compact">
+                เปลี่ยนไฟล์
+              </label>
+              <input
+                id="catalog-file-input"
+                type="file"
+                accept=".csv,.xlsx"
+                aria-label="ไฟล์สินค้า"
+                className="import-file-input-hidden"
+                onChange={(event) => {
+                  const next = event.target.files?.[0] ?? null;
+                  if (next) handleFile(next);
+                }}
+              />
+              <Button
+                className="button-secondary button-compact import-remove-btn"
+                onClick={clearFile}
+                aria-label="ยกเลิกไฟล์"
+              >
+                <X size={15} aria-hidden="true" />
+                <span>ยกเลิกไฟล์</span>
+              </Button>
+            </div>
+          </div>
+        )}
         {headers.length > 0 && (
           <>
             <h3>2. จับคู่คอลัมน์</h3>
@@ -137,9 +273,16 @@ export function ImportPage() {
             </div>
           </>
         )}
-        <Button disabled={!file || busy} onClick={() => void preview()}>
-          {busy ? 'กำลังตรวจ…' : 'ตรวจและแสดง Preview'}
-        </Button>
+        <div className="import-action-bar">
+          <Button disabled={!file || busy} onClick={() => void preview()}>
+            {busy ? 'กำลังตรวจ…' : 'ตรวจและแสดง Preview'}
+          </Button>
+          {file && !busy && (
+            <span className="import-action-hint">
+              พร้อมส่งข้อมูลเพื่อตรวจความถูกต้องของคอลัมน์และสร้างพรีวิว
+            </span>
+          )}
+        </div>
         <CatalogError error={error} />
       </Card>
       {job && (

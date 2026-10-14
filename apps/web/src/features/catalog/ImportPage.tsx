@@ -39,7 +39,7 @@ export function ImportPage() {
     setMapping({});
     setError('');
     if (next.size > 5 * 1024 * 1024) {
-      setError('ไฟล์เกิน 5 MiB');
+      setError('ไฟล์เกิน 5 MB');
       setFile(null);
     } else {
       setFile(next);
@@ -123,7 +123,7 @@ export function ImportPage() {
             </div>
             <ul className="import-guide-list">
               <li>
-                <strong>ขนาดและปริมาณ:</strong> สูงสุด 5 MiB / 2,000 แถว
+                <strong>ขนาดและปริมาณ:</strong> สูงสุด 5 MB / 2,000 แถว
               </li>
               <li>
                 <strong>รูปแบบไฟล์:</strong> <code>.csv</code> หรือ <code>.xlsx</code> (เฉพาะ sheet1 แผ่นเดียว ไม่มีสูตร)
@@ -195,7 +195,7 @@ export function ImportPage() {
               </div>
               <div className="import-dropzone-text">
                 <strong>คลิกเลือกไฟล์ หรือลากไฟล์มาวางที่นี่</strong>
-                <p>รองรับไฟล์ .CSV และ .XLSX (ขนาดไม่เกิน 5 MiB / สูงสุด 2,000 แถว)</p>
+                <p>รองรับไฟล์ .CSV และ .XLSX (ขนาดไม่เกิน 5 MB / สูงสุด 2,000 แถว)</p>
               </div>
               <span className="button button-secondary import-dropzone-btn" aria-hidden="true">
                 เลือกไฟล์จากเครื่อง

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useOrganization } from '../../app/OrganizationProvider';
 import type {
@@ -65,9 +65,10 @@ export function LocationEditor({
     return (
       <Button
         type="button"
-        className="button-secondary"
+        className="button-secondary button-compact location-edit-btn"
         onClick={() => setEditing(true)}
       >
+        <Pencil size={14} aria-hidden="true" />
         แก้ไข {initial?.code}
       </Button>
     );

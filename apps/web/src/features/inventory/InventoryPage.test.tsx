@@ -1,5 +1,11 @@
 import { StrictMode } from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, expect, it, vi } from 'vitest';
@@ -205,4 +211,59 @@ it('renders standard catalog pagination with item total at the bottom of balance
   await screen.findByRole('link', { name: /ดูประวัติ/ });
   expect(container.querySelector('.catalog-pagination')).toBeInTheDocument();
   expect(screen.getByText(/หน้า 1 \/ 1 • 18 รายการ/)).toBeVisible();
+});
+
+it('renders Status filter as a dropdown select with options in locations section', async () => {
+  renderLocations();
+  const select = await screen.findByRole('combobox', { name: 'Status filter' });
+  expect(select).toBeVisible();
+  const options = within(select).getAllByRole('option');
+  expect(options.map((opt) => opt.textContent)).toEqual([
+    'ทั้งหมด',
+    'ACTIVE',
+    'INACTIVE',
+  ]);
+});
+
+it('renders location status as a colored tag and action button with edit styling', async () => {
+  mocks.request.mockImplementation(async (path) => {
+    if (path.includes('/locations')) {
+      return {
+        items: [
+          {
+            id: 'loc-wh-main',
+            branch_id: 'branch',
+            code: 'LOC-WH-MAIN',
+            name: 'คลังสินค้าหลัก (หลังร้าน)',
+            type: 'WAREHOUSE',
+            status: 'ACTIVE',
+            parent_location_id: null,
+            description: '',
+            revision: 0,
+            is_system: false,
+          },
+        ],
+        total: 1,
+        page: 1,
+        page_size: 20,
+      };
+    }
+    return { items: [], total: 0, page: 1, page_size: 20 };
+  });
+
+  const { container } = renderLocations();
+  await waitFor(() => {
+    const tag = container.querySelector('.tag-success');
+    expect(tag).toBeInTheDocument();
+    expect(tag).toHaveTextContent('ACTIVE');
+  });
+
+  const editButton = screen.getByRole('button', { name: /แก้ไข LOC-WH-MAIN/ });
+  expect(editButton).toBeVisible();
+  expect(editButton).toHaveClass(
+    'button',
+    'button-secondary',
+    'button-compact',
+    'location-edit-btn',
+  );
 });

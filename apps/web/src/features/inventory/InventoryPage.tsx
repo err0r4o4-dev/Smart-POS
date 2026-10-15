@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useQuery } from '@tanstack/react-query';
+import { MapPin, History } from 'lucide-react';
 import { useInventoryCommand } from './inventory-hooks';
 import { QueryFeedback } from '../../components/feedback/QueryFeedback';
 import { useOrganization } from '../../app/OrganizationProvider';
@@ -15,8 +16,8 @@ import type {
   StockLocation,
   StockMovement,
 } from '../../lib/inventory-api';
-import { Button, Card } from '../../components/ui/primitives';
-import { CatalogError } from '../catalog/CatalogUI';
+import { Button, Card, Tag } from '../../components/ui/primitives';
+import { CatalogError, Pagination } from '../catalog/CatalogUI';
 import { Field, Table, Empty } from './InventoryUI';
 import {
   LocationEditor,
@@ -399,44 +400,66 @@ function InventoryScreen({
       )}
       {!id && branch && section !== 'overview' && (
         <div
-          className="catalog-actions"
+          className="inventory-options-toolbar"
           aria-label="Location options pagination"
         >
-          <span>Location options: หน้า {locationPage}</span>
-          <Button
-            className="button-secondary"
-            disabled={locationPage === 1}
-            onClick={() => setLocationPage(locationPage - 1)}
-          >
-            Locations ก่อนหน้า
-          </Button>
-          <Button
-            className="button-secondary"
-            disabled={locationPage * 100 >= (locations.data?.total ?? 0)}
-            onClick={() => setLocationPage(locationPage + 1)}
-          >
-            Locations ถัดไป
-          </Button>
+          <div className="inventory-options-group">
+            <div className="inventory-options-info">
+              <MapPin size={16} aria-hidden="true" />
+              <span>Location options: หน้า {locationPage}</span>
+              {locations.data?.total ? (
+                <span className="inventory-options-total">
+                  • {locations.data.total} สถานที่
+                </span>
+              ) : null}
+            </div>
+            <div className="inventory-options-actions">
+              <Button
+                className="button-secondary button-compact"
+                disabled={locationPage === 1}
+                onClick={() => setLocationPage(locationPage - 1)}
+              >
+                Locations ก่อนหน้า
+              </Button>
+              <Button
+                className="button-secondary button-compact"
+                disabled={locationPage * 100 >= (locations.data?.total ?? 0)}
+                onClick={() => setLocationPage(locationPage + 1)}
+              >
+                Locations ถัดไป
+              </Button>
+            </div>
+          </div>
           {section === 'transfers' && (
-            <>
-              <span>Destination options: หน้า {destinationPage}</span>
-              <Button
-                className="button-secondary"
-                disabled={destinationPage === 1}
-                onClick={() => setDestinationPage(destinationPage - 1)}
-              >
-                Destinations ก่อนหน้า
-              </Button>
-              <Button
-                className="button-secondary"
-                disabled={
-                  destinationPage * 100 >= (destinations.data?.total ?? 0)
-                }
-                onClick={() => setDestinationPage(destinationPage + 1)}
-              >
-                Destinations ถัดไป
-              </Button>
-            </>
+            <div className="inventory-options-group">
+              <div className="inventory-options-info">
+                <MapPin size={16} aria-hidden="true" />
+                <span>Destination options: หน้า {destinationPage}</span>
+                {destinations.data?.total ? (
+                  <span className="inventory-options-total">
+                    • {destinations.data.total} ปลายทาง
+                  </span>
+                ) : null}
+              </div>
+              <div className="inventory-options-actions">
+                <Button
+                  className="button-secondary button-compact"
+                  disabled={destinationPage === 1}
+                  onClick={() => setDestinationPage(destinationPage - 1)}
+                >
+                  Destinations ก่อนหน้า
+                </Button>
+                <Button
+                  className="button-secondary button-compact"
+                  disabled={
+                    destinationPage * 100 >= (destinations.data?.total ?? 0)
+                  }
+                  onClick={() => setDestinationPage(destinationPage + 1)}
+                >
+                  Destinations ถัดไป
+                </Button>
+              </div>
+            </div>
           )}
         </div>
       )}
@@ -549,9 +572,26 @@ function InventoryScreen({
                     {row.available} / {row.reserved}
                   </td>
                   <td>
-                    {row.availability_status}
-                    <br />
-                    <Link to="/inventory/movements">ดูประวัติ</Link>
+                    <div className="inventory-availability-cell">
+                      <Tag
+                        tone={
+                          row.availability_status === 'POS_ELIGIBLE'
+                            ? 'success'
+                            : row.availability_status === 'RESTRICTED'
+                              ? 'amber'
+                              : 'neutral'
+                        }
+                      >
+                        {row.availability_status}
+                      </Tag>
+                      <Link
+                        className="button button-secondary button-compact inventory-history-btn"
+                        to="/inventory/movements"
+                      >
+                        <History size={14} aria-hidden="true" />
+                        ดูประวัติ
+                      </Link>
+                    </div>
                   </td>
                   <td>{row.updated_at}</td>
                 </tr>
@@ -719,25 +759,12 @@ function InventoryScreen({
               ))}
             </Table>
           )}
-          <div className="catalog-actions">
-            <Button
-              className="button-secondary"
-              disabled={page === 1}
-              onClick={() => setPage(page - 1)}
-            >
-              ก่อนหน้า
-            </Button>
-            <span>
-              หน้า {page} / {Math.max(1, Math.ceil(data.total / 20))}
-            </span>
-            <Button
-              className="button-secondary"
-              disabled={page * 20 >= data.total}
-              onClick={() => setPage(page + 1)}
-            >
-              ถัดไป
-            </Button>
-          </div>
+          <Pagination
+            page={page}
+            total={data.total}
+            size={20}
+            change={setPage}
+          />
         </Card>
       )}
     </section>

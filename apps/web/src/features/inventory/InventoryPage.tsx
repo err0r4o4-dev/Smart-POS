@@ -26,6 +26,33 @@ import {
   ReorderEditor,
 } from './InventoryForms';
 
+function getStatusOptions(section: string) {
+  if (['locations', 'reorder-points'].includes(section)) {
+    return ['ACTIVE', 'INACTIVE'];
+  }
+  return [
+    'DRAFT',
+    'SUBMITTED',
+    'IN_PROGRESS',
+    'APPROVED',
+    'POSTED',
+    'RECEIVED',
+    'CANCELLED',
+    'REJECTED',
+  ];
+}
+
+function inventoryStatusTone(
+  status: string,
+): 'success' | 'amber' | 'error' | 'neutral' {
+  if (['ACTIVE', 'POSTED', 'RECEIVED', 'APPROVED'].includes(status))
+    return 'success';
+  if (['INACTIVE', 'DRAFT', 'SUBMITTED', 'IN_PROGRESS'].includes(status))
+    return 'amber';
+  if (['CANCELLED', 'REJECTED'].includes(status)) return 'error';
+  return 'neutral';
+}
+
 const sections = [
   ['overview', 'ภาพรวม'],
   ['balances', 'ยอดสต็อก'],
@@ -250,14 +277,21 @@ function InventoryScreen({
               'reorder-points',
             ].includes(section) && (
               <Field label="Status filter">
-                <input
+                <select
+                  aria-label="Status filter"
                   value={status}
-                  placeholder="ACTIVE / APPROVED"
                   onChange={(event) => {
                     setStatus(event.target.value);
                     setPage(1);
                   }}
-                />
+                >
+                  <option value="">ทั้งหมด</option>
+                  {getStatusOptions(section).map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
               </Field>
             )}
             {['locations', 'balances', 'movements'].includes(section) && (
@@ -658,7 +692,11 @@ function InventoryScreen({
                     {row.parent_location_id ?? 'Physical root'}
                   </td>
                   <td>{row.type}</td>
-                  <td>{row.status}</td>
+                  <td>
+                    <Tag tone={inventoryStatusTone(row.status)}>
+                      {row.status}
+                    </Tag>
+                  </td>
                   <td>
                     {tenant.can('inventory.location.manage') &&
                       !row.is_system && (
@@ -699,7 +737,9 @@ function InventoryScreen({
                   <td>{row.current_quantity}</td>
                   <td>{row.below_minimum ? 'ต่ำกว่าจุดสั่งซื้อ' : '—'}</td>
                   <td>
-                    {row.status}
+                    <Tag tone={inventoryStatusTone(row.status)}>
+                      {row.status}
+                    </Tag>
                     {tenant.can('inventory.reorder_point.manage') && (
                       <ReorderEditor
                         branch={branch}
@@ -734,7 +774,11 @@ function InventoryScreen({
                     <br />
                     {row.destination_location_id ?? '—'}
                   </td>
-                  <td>{row.status}</td>
+                  <td>
+                    <Tag tone={inventoryStatusTone(row.status)}>
+                      {row.status}
+                    </Tag>
+                  </td>
                   <td>
                     {row.items?.length}
                     <br />

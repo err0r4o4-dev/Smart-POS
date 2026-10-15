@@ -1,4 +1,4 @@
--- SmartPOS Sample Data Seed Script
+﻿  -- SmartPOS Sample Data Seed Script
 -- สำหรับสร้างสินค้าตัวอย่าง หมวดหมู่ แบรนด์ สต็อก ชั้นวาง ล็อตสินค้า และซัพพลายเออร์
 -- ครอบคลุมทุกสถานะสินค้า: ACTIVE, INACTIVE, ARCHIVED
 

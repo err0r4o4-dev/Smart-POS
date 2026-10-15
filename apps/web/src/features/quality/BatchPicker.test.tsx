@@ -118,3 +118,17 @@ it('shows load failure without fabricating options', async () => {
     screen.queryByRole('option', { name: /OBSERVED/ }),
   ).not.toBeInTheDocument();
 });
+
+it('renders lot pagination with aligned badge and buttons', async () => {
+  show();
+  await screen.findByRole('option', { name: /OBSERVED/ });
+  const pageBadge = screen.getByText('Page 1');
+  expect(pageBadge).toBeVisible();
+  expect(pageBadge).toHaveClass('batch-picker-page');
+  const paginationContainer = pageBadge.closest('.batch-picker-pagination');
+  expect(paginationContainer).toBeInTheDocument();
+  const prevBtn = screen.getByRole('button', { name: 'Previous lots' });
+  const nextBtn = screen.getByRole('button', { name: 'Next lots' });
+  expect(prevBtn).toHaveClass('button-secondary', 'button-compact');
+  expect(nextBtn).toHaveClass('button-secondary', 'button-compact');
+});

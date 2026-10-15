@@ -279,3 +279,31 @@
   flex-wrap: wrap;
   margin-top: 1.25rem;
 }
+
+/* Batch Picker Pagination & Aligned Page Badge */
+.batch-picker-pagination {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-block: 6px 4px;
+}
+
+.batch-picker-pagination .button {
+  min-height: 32px;
+  padding: 6px 14px;
+  font-size: var(--font-caption);
+}
+
+.batch-picker-page {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  background: transparent;
+  border: none;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1;
+}

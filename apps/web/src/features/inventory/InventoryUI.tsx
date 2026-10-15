@@ -65,7 +65,7 @@ export function VariantPicker({
   const query = useQuery({
     queryKey: [
       'tenant',
-      tenant.context?.membership.user_id,
+      tenant.context?.membership?.user_id,
       tenant.context?.organization.id,
       'catalog',
       path,
@@ -79,29 +79,32 @@ export function VariantPicker({
   );
   return (
     <div className="inventory-picker">
-      <Field label="ค้นหา Product / SKU / Barcode">
-        <input
-          value={search}
-          onChange={(event) => {
-            setSearch(event.target.value);
-            setPage(1);
-          }}
-        />
-      </Field>
-      <Field label="สถานะ Catalog">
-        <select
-          value={status}
-          onChange={(event) => {
-            setStatus(event.target.value);
-            setPage(1);
-          }}
-        >
-          <option value="">ACTIVE / INACTIVE</option>
-          {['ACTIVE', 'INACTIVE', 'ARCHIVED'].map((item) => (
-            <option key={item}>{item}</option>
-          ))}
-        </select>
-      </Field>
+      <div className="inventory-picker-filters">
+        <Field label="ค้นหา Product / SKU / Barcode">
+          <input
+            value={search}
+            placeholder="ค้นหาชื่อ, SKU หรือบาร์โค้ด..."
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setPage(1);
+            }}
+          />
+        </Field>
+        <Field label="สถานะ Catalog">
+          <select
+            value={status}
+            onChange={(event) => {
+              setStatus(event.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="">ACTIVE / INACTIVE</option>
+            {['ACTIVE', 'INACTIVE', 'ARCHIVED'].map((item) => (
+              <option key={item}>{item}</option>
+            ))}
+          </select>
+        </Field>
+      </div>
       <Field label="Product Variant">
         <select
           required
@@ -120,10 +123,10 @@ export function VariantPicker({
         </select>
       </Field>
       <CatalogError error={query.error} />
-      <div className="catalog-actions">
+      <div className="inventory-picker-pagination">
         <Button
           type="button"
-          className="button-secondary"
+          className="button-secondary button-compact"
           disabled={page === 1}
           onClick={() => setPage(page - 1)}
         >
@@ -131,7 +134,7 @@ export function VariantPicker({
         </Button>
         <Button
           type="button"
-          className="button-secondary"
+          className="button-secondary button-compact"
           disabled={!query.data || page * 20 >= query.data.total}
           onClick={() => setPage(page + 1)}
         >

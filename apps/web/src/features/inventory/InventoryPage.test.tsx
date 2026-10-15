@@ -16,6 +16,7 @@ vi.mock('../../app/OrganizationProvider', () => ({
     context: {
       organization: { id: 'org' },
       branches: [{ id: 'branch', name: 'สาขาทดสอบ' }],
+      membership: { user_id: 'user' },
     },
     branchID: 'branch',
     can: () => true,
@@ -113,4 +114,95 @@ it('retries failed location options as well as the main inventory list', async (
     expect(screen.queryByRole('alert')).not.toBeInTheDocument(),
   );
   expect(screen.getByRole('button', { name: 'บันทึก Location' })).toBeEnabled();
+});
+
+function renderBalances() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <StrictMode>
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/manage/inventory/balances']}>
+          <InventoryPage section="balances" />
+        </MemoryRouter>
+      </QueryClientProvider>
+    </StrictMode>,
+  );
+}
+
+it('renders "ดูประวัติ" as a visible button link in balances table', async () => {
+  mocks.request.mockImplementation(async (path) => {
+    if (path.includes('/balances')) {
+      return {
+        items: [
+          {
+            id: 'bal-1',
+            product_name: 'โออิชิ กรีนที',
+            variant_name: 'โออิชิ ข้าวญี่ปุ่น 380 มล.',
+            sku: 'OISHI-GEN-380',
+            barcode: '8854698005883',
+            branch_id: 'branch',
+            location_name: 'คลังสินค้าหลัก',
+            location_type: 'WAREHOUSE',
+            quantity: '30.000',
+            unit: 'BOTTLE',
+            available: '0.000',
+            reserved: '0.000',
+            availability_status: 'RESTRICTED',
+            updated_at: '2026-10-13T17:13:58Z',
+          },
+        ],
+        total: 18,
+        page: 1,
+        page_size: 20,
+      };
+    }
+    return { items: [], total: 0, page: 1, page_size: 20 };
+  });
+
+  renderBalances();
+  const historyLink = await screen.findByRole('link', { name: /ดูประวัติ/ });
+  expect(historyLink).toBeVisible();
+  expect(historyLink.getAttribute('href')).toMatch(/\/inventory\/movements/);
+  expect(historyLink).toHaveClass(
+    'button',
+    'button-secondary',
+    'button-compact',
+  );
+});
+
+it('renders standard catalog pagination with item total at the bottom of balances table', async () => {
+  mocks.request.mockImplementation(async (path) => {
+    if (path.includes('/balances')) {
+      return {
+        items: [
+          {
+            id: 'bal-1',
+            product_name: 'โออิชิ กรีนที',
+            variant_name: 'โออิชิ ข้าวญี่ปุ่น',
+            sku: 'OISHI',
+            branch_id: 'branch',
+            location_name: 'คลังสินค้าหลัก',
+            location_type: 'WAREHOUSE',
+            quantity: '30.000',
+            unit: 'BOTTLE',
+            available: '0.000',
+            reserved: '0.000',
+            availability_status: 'RESTRICTED',
+            updated_at: '2026-10-13T17:13:58Z',
+          },
+        ],
+        total: 18,
+        page: 1,
+        page_size: 20,
+      };
+    }
+    return { items: [], total: 0, page: 1, page_size: 20 };
+  });
+
+  const { container } = renderBalances();
+  await screen.findByRole('link', { name: /ดูประวัติ/ });
+  expect(container.querySelector('.catalog-pagination')).toBeInTheDocument();
+  expect(screen.getByText(/หน้า 1 \/ 1 • 18 รายการ/)).toBeVisible();
 });

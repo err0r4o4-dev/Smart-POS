@@ -52,3 +52,201 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+/* Location options toolbar */
+.inventory-options-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  box-shadow: var(--shadow-card);
+}
+.inventory-options-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+.inventory-options-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-caption);
+  font-weight: 500;
+  color: var(--text-strong);
+}
+.inventory-options-info svg {
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+.inventory-options-total {
+  color: var(--text-secondary);
+}
+.inventory-options-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Form Header & Subtitle */
+.inventory-form-header {
+  margin-bottom: 0.5rem;
+}
+.inventory-form-header h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 0.35rem 0;
+}
+.inventory-form-subtitle {
+  color: var(--text-secondary);
+  font-size: var(--font-caption);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Location Section */
+.inventory-form-location-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 1rem;
+}
+
+/* Items Container & Card */
+.inventory-items-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.inventory-item-fieldset {
+  background: var(--canvas);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.inventory-item-legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 0 0.25rem;
+}
+.inventory-item-title {
+  font-size: var(--font-caption);
+  font-weight: 700;
+  color: var(--text-primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+}
+.inventory-item-remove-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--error-strong, #b91c1c);
+}
+.inventory-item-remove-btn:hover {
+  background: #fef2f2;
+}
+
+/* Variant Picker Grid */
+.inventory-picker-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 1rem;
+}
+.inventory-picker-pagination {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+
+/* Item Details Grid: BatchPicker & Quantity */
+.inventory-item-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+/* Form Actions & Footer */
+.inventory-form-actions-bar {
+  display: flex;
+  align-items: center;
+  margin-top: 0.25rem;
+}
+.inventory-form-actions-bar .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.inventory-form-footer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 1rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+.inventory-form-submit-row {
+  display: flex;
+  align-items: center;
+  padding-top: 0.5rem;
+}
+
+/* Availability Cell & Prominent History Button */
+.inventory-availability-cell {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.inventory-history-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-caption);
+  text-decoration: none !important;
+  color: var(--text-primary);
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+.inventory-history-btn:hover {
+  border-color: var(--primary-border);
+  background: var(--primary-subtle);
+  color: var(--primary-strong);
+}
+
+@media (max-width: 640px) {
+  .inventory-options-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .inventory-options-actions {
+    width: 100%;
+  }
+  .inventory-options-actions .button {
+    flex: 1;
+    justify-content: center;
+  }
+  .inventory-item-legend {
+    flex-direction: row;
+    align-items: center;
+  }
+  .inventory-form-submit-row .button {
+    width: 100%;
+  }
+}

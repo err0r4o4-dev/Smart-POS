@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Plus, Trash2 } from 'lucide-react';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useOrganization } from '../../app/OrganizationProvider';
 import type {
@@ -198,201 +199,232 @@ export function CommandEditor({
   return (
     <Card>
       <form className="inventory-form" onSubmit={(event) => void submit(event)}>
-        <h2>
-          {resource === 'opening-balances'
-            ? 'Opening Balance'
-            : 'สร้าง ' + resource}
-        </h2>
-        <p>
-          Draft/physical count ไม่เปลี่ยน stock; CORRECTION คือ target quantity
-          แบบ snapshot-version validation
-        </p>
-        <Field label="Source / Count Location">
-          <select
-            required
-            value={location}
-            onChange={(event) => setLocation(event.target.value)}
-          >
-            <option value="">เลือก Location</option>
-            {location && !locations.some((item) => item.id === location) && (
-              <option value={location}>Selected location {location}</option>
-            )}
-            {locations.map((item) => (
-              <option value={item.id} key={item.id}>
-                {item.name} · {item.type}
-              </option>
-            ))}
-          </select>
-        </Field>
-        {resource === 'transfers' && (
-          <>
-            <Field label="Destination branch">
-              <select
-                value={destinationBranch}
-                onChange={(event) => {
-                  setDestinationBranch?.(event.target.value);
-                  setDestination('');
-                }}
-              >
-                {branchChoices.map((item) => (
-                  <option value={item.id} key={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Destination location">
-              <select
-                required
-                value={destination}
-                onChange={(event) => setDestination(event.target.value)}
-              >
-                <option value="">เลือกปลายทาง</option>
-                {destination &&
-                  !destinations.some((item) => item.id === destination) && (
-                    <option value={destination}>
-                      Selected destination {destination}
-                    </option>
-                  )}
-                {destinations
-                  .filter(
-                    (item) =>
-                      !item.is_system &&
-                      item.status === 'ACTIVE' &&
-                      item.id !== location,
-                  )
-                  .map((item) => (
+        <div className="inventory-form-header">
+          <h2>
+            {resource === 'opening-balances'
+              ? 'Opening Balance'
+              : 'สร้าง ' + resource}
+          </h2>
+          <p className="inventory-form-subtitle">
+            Draft/physical count ไม่เปลี่ยน stock; CORRECTION คือ target
+            quantity แบบ snapshot-version validation
+          </p>
+        </div>
+
+        <div className="inventory-form-location-section">
+          <Field label="Source / Count Location">
+            <select
+              required
+              value={location}
+              onChange={(event) => setLocation(event.target.value)}
+            >
+              <option value="">เลือก Location</option>
+              {location && !locations.some((item) => item.id === location) && (
+                <option value={location}>Selected location {location}</option>
+              )}
+              {locations.map((item) => (
+                <option value={item.id} key={item.id}>
+                  {item.name} · {item.type}
+                </option>
+              ))}
+            </select>
+          </Field>
+          {resource === 'transfers' && (
+            <>
+              <Field label="Destination branch">
+                <select
+                  value={destinationBranch}
+                  onChange={(event) => {
+                    setDestinationBranch?.(event.target.value);
+                    setDestination('');
+                  }}
+                >
+                  {branchChoices.map((item) => (
                     <option value={item.id} key={item.id}>
                       {item.name}
                     </option>
                   ))}
+                </select>
+              </Field>
+              <Field label="Destination location">
+                <select
+                  required
+                  value={destination}
+                  onChange={(event) => setDestination(event.target.value)}
+                >
+                  <option value="">เลือกปลายทาง</option>
+                  {destination &&
+                    !destinations.some((item) => item.id === destination) && (
+                      <option value={destination}>
+                        Selected destination {destination}
+                      </option>
+                    )}
+                  {destinations
+                    .filter(
+                      (item) =>
+                        !item.is_system &&
+                        item.status === 'ACTIVE' &&
+                        item.id !== location,
+                    )
+                    .map((item) => (
+                      <option value={item.id} key={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                </select>
+              </Field>
+            </>
+          )}
+          {resource === 'adjustments' && (
+            <Field label="Adjustment type">
+              <select
+                value={type}
+                onChange={(event) => setType(event.target.value)}
+              >
+                {['INCREASE', 'DECREASE', 'CORRECTION'].map((item) => (
+                  <option key={item}>{item}</option>
+                ))}
               </select>
             </Field>
-          </>
-        )}
-        {resource === 'adjustments' && (
-          <Field label="Adjustment type">
-            <select
-              value={type}
-              onChange={(event) => setType(event.target.value)}
-            >
-              {['INCREASE', 'DECREASE', 'CORRECTION'].map((item) => (
-                <option key={item}>{item}</option>
-              ))}
-            </select>
-          </Field>
-        )}
-        {resource === 'counts' && (
-          <Field label="Assigned counter user UUID (optional)">
-            <input
-              value={assigned}
-              onChange={(event) => setAssigned(event.target.value)}
-            />
-          </Field>
-        )}
-        {items.map((item, index) => (
-          <fieldset key={index}>
-            <legend>Item {index + 1}</legend>
-            <VariantPicker
-              value={item.variant_id}
-              change={(value) =>
-                setItems(
-                  items.map((row, position) =>
-                    position === index
-                      ? { ...row, variant_id: value, ...untrackedBatch }
-                      : row,
-                  ),
-                )
-              }
-            />
-            {resource !== 'counts' && (
-              <BatchPicker
-                key={`${item.variant_id}:${location}`}
-                variant={item.variant_id}
-                branch={
-                  locations.find((value) => value.id === location)?.branch_id
-                }
-                location={
-                  resource === 'transfers' || type === 'DECREASE'
-                    ? location
-                    : undefined
-                }
-                value={item}
-                label={`Batch/Lot ${index + 1}`}
-                change={(selection) =>
+          )}
+          {resource === 'counts' && (
+            <Field label="Assigned counter user UUID (optional)">
+              <input
+                value={assigned}
+                onChange={(event) => setAssigned(event.target.value)}
+              />
+            </Field>
+          )}
+        </div>
+
+        <div className="inventory-items-container">
+          {items.map((item, index) => (
+            <fieldset key={index} className="inventory-item-fieldset">
+              <legend className="inventory-item-legend">
+                <span className="inventory-item-title">Item {index + 1}</span>
+                {items.length > 1 && (
+                  <Button
+                    type="button"
+                    className="button-secondary button-compact inventory-item-remove-btn"
+                    onClick={() =>
+                      setItems(
+                        items.filter((_, position) => position !== index),
+                      )
+                    }
+                  >
+                    <Trash2 size={14} aria-hidden="true" />
+                    นำ Item {index + 1} ออก
+                  </Button>
+                )}
+              </legend>
+              <VariantPicker
+                value={item.variant_id}
+                change={(value) =>
                   setItems(
-                    items.map((value, position) =>
-                      position === index ? { ...value, ...selection } : value,
+                    items.map((row, position) =>
+                      position === index
+                        ? { ...row, variant_id: value, ...untrackedBatch }
+                        : row,
                     ),
                   )
                 }
               />
-            )}
-            {resource !== 'counts' && (
-              <Field label={`Quantity ${index + 1}`}>
-                <input
-                  required
-                  inputMode="decimal"
-                  pattern="[0-9]+(\.[0-9]{1,3})?"
-                  value={item.quantity}
-                  onChange={(event) =>
-                    setItems(
-                      items.map((row, position) =>
-                        position === index
-                          ? { ...row, quantity: event.target.value }
-                          : row,
-                      ),
-                    )
-                  }
-                />
-              </Field>
-            )}
-            {items.length > 1 && (
-              <Button
-                type="button"
-                className="button-secondary"
-                onClick={() =>
-                  setItems(items.filter((_, position) => position !== index))
-                }
-              >
-                นำ Item {index + 1} ออก
-              </Button>
-            )}
-          </fieldset>
-        ))}
-        <Button
-          type="button"
-          className="button-secondary"
-          disabled={items.length >= 100}
-          onClick={() =>
-            setItems([
-              ...items,
-              { variant_id: '', quantity: '', ...untrackedBatch },
-            ])
-          }
-        >
-          เพิ่ม Item
-        </Button>
-        <Field label="Reason / Reference">
-          <input
-            required
-            maxLength={100}
-            value={reason}
-            onChange={(event) => setReason(event.target.value)}
-          />
-        </Field>
-        <Field label="Notes">
-          <textarea
-            maxLength={2000}
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-          />
-        </Field>
-        <Button disabled={busy} type="submit">
-          {resource === 'opening-balances'
-            ? 'Post Opening Balance'
-            : 'สร้างเอกสาร'}
-        </Button>
+              <div className="inventory-item-details-grid">
+                {resource !== 'counts' && (
+                  <BatchPicker
+                    key={`${item.variant_id}:${location}`}
+                    variant={item.variant_id}
+                    branch={
+                      locations.find((value) => value.id === location)
+                        ?.branch_id
+                    }
+                    location={
+                      resource === 'transfers' || type === 'DECREASE'
+                        ? location
+                        : undefined
+                    }
+                    value={item}
+                    label={`Batch/Lot ${index + 1}`}
+                    change={(selection) =>
+                      setItems(
+                        items.map((value, position) =>
+                          position === index
+                            ? { ...value, ...selection }
+                            : value,
+                        ),
+                      )
+                    }
+                  />
+                )}
+                {resource !== 'counts' && (
+                  <Field label={`Quantity ${index + 1}`}>
+                    <input
+                      required
+                      inputMode="decimal"
+                      pattern="[0-9]+(\.[0-9]{1,3})?"
+                      placeholder="0.000"
+                      value={item.quantity}
+                      onChange={(event) =>
+                        setItems(
+                          items.map((row, position) =>
+                            position === index
+                              ? { ...row, quantity: event.target.value }
+                              : row,
+                          ),
+                        )
+                      }
+                    />
+                  </Field>
+                )}
+              </div>
+            </fieldset>
+          ))}
+        </div>
+
+        <div className="inventory-form-actions-bar">
+          <Button
+            type="button"
+            className="button-secondary"
+            disabled={items.length >= 100}
+            onClick={() =>
+              setItems([
+                ...items,
+                { variant_id: '', quantity: '', ...untrackedBatch },
+              ])
+            }
+          >
+            <Plus size={16} aria-hidden="true" />
+            เพิ่ม Item
+          </Button>
+        </div>
+
+        <div className="inventory-form-footer-grid">
+          <Field label="Reason / Reference">
+            <input
+              required
+              maxLength={100}
+              placeholder="ระบุเหตุผลหรือเลขอ้างอิง..."
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+            />
+          </Field>
+          <Field label="Notes">
+            <textarea
+              maxLength={2000}
+              placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)..."
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+            />
+          </Field>
+        </div>
+
+        <div className="inventory-form-submit-row">
+          <Button disabled={busy} type="submit">
+            {resource === 'opening-balances'
+              ? 'Post Opening Balance'
+              : 'สร้างเอกสาร'}
+          </Button>
+        </div>
       </form>
     </Card>
   );

@@ -267,3 +267,76 @@ it('renders location status as a colored tag and action button with edit styling
     'location-edit-btn',
   );
 });
+
+function renderMovements() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <StrictMode>
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/manage/inventory/movements']}>
+          <InventoryPage section="movements" />
+        </MemoryRouter>
+      </QueryClientProvider>
+    </StrictMode>,
+  );
+}
+
+it('renders movements history table with formatted tags and deltas', async () => {
+  mocks.request.mockImplementation(async (path) => {
+    if (path.includes('/movements')) {
+      return {
+        items: [
+          {
+            id: 'mov-1',
+            sku: 'COKE-CAN-325',
+            location_id: 'loc-wh-main',
+            movement_type: 'OPENING_BALANCE',
+            quantity_delta: '150.000',
+            quantity_before: '0.000',
+            quantity_after: '150.000',
+            document_id: null,
+            operation_id: 'op-1',
+            reason_code: 'ยอดเปิดรอบต้นงวด / Opening Stock',
+            batch_id: null,
+            performed_by: 'user-admin',
+            created_at: '2026-10-10T10:00:00Z',
+          },
+          {
+            id: 'mov-2',
+            sku: 'COKE-CAN-325',
+            location_id: 'loc-wh-main',
+            movement_type: 'TRANSFER_OUT',
+            quantity_delta: '-30.000',
+            quantity_before: '150.000',
+            quantity_after: '120.000',
+            document_id: 'doc-trans-1',
+            operation_id: 'op-2',
+            reason_code: 'เติมสต็อกหน้าร้าน',
+            batch_id: null,
+            performed_by: 'user-admin',
+            created_at: '2026-10-12T14:30:00Z',
+          },
+        ],
+        total: 2,
+        page: 1,
+        page_size: 20,
+      };
+    }
+    return { items: [], total: 0, page: 1, page_size: 20 };
+  });
+
+  renderMovements();
+  const openingTag = await screen.findByText('OPENING_BALANCE');
+  expect(openingTag).toHaveClass('tag', 'tag-success');
+
+  const transferOutTag = screen.getByText('TRANSFER_OUT');
+  expect(transferOutTag).toHaveClass('tag', 'tag-amber');
+
+  expect(screen.getAllByText('COKE-CAN-325')).toHaveLength(2);
+  expect(screen.getByText('+150.000')).toBeVisible();
+  expect(screen.getByText('-30.000')).toBeVisible();
+  expect(screen.getByText('0.000 → 150.000')).toBeVisible();
+  expect(screen.getByText('ยอดเปิดรอบต้นงวด / Opening Stock')).toBeVisible();
+});

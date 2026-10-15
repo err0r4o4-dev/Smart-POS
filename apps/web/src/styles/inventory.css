@@ -265,3 +265,19 @@
   background: var(--primary-subtle);
   color: var(--primary-strong);
 }
+
+/* Movements Table Typography & Delta Highlights */
+.inventory-delta-positive {
+  font-weight: 600;
+  color: var(--success-strong, #166534);
+  font-variant-numeric: tabular-nums;
+}
+.inventory-delta-negative {
+  font-weight: 600;
+  color: var(--error-strong, #b91c1c);
+  font-variant-numeric: tabular-nums;
+}
+.inventory-text-muted {
+  font-size: var(--font-label);
+  color: var(--text-secondary);
+}

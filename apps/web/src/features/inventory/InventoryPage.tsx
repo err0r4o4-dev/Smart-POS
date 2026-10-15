@@ -42,6 +42,29 @@ function getStatusOptions(section: string) {
   ];
 }
 
+function movementTypeTone(
+  type: string,
+): 'success' | 'amber' | 'error' | 'neutral' {
+  if (
+    [
+      'OPENING_BALANCE',
+      'TRANSFER_IN',
+      'ADJUSTMENT_IN',
+      'PURCHASE_RECEIVE',
+      'COUNT_CORRECTION',
+    ].includes(type)
+  ) {
+    return 'success';
+  }
+  if (['TRANSFER_OUT', 'TRANSFER_DISPATCH', 'ADJUSTMENT_OUT'].includes(type)) {
+    return 'amber';
+  }
+  if (['SALE', 'SUPPLIER_RETURN'].includes(type)) {
+    return 'error';
+  }
+  return 'neutral';
+}
+
 function inventoryStatusTone(
   status: string,
 ): 'success' | 'amber' | 'error' | 'neutral' {
@@ -642,32 +665,56 @@ function InventoryScreen({
                 'Actor / Time',
               ]}
             >
-              {rows.map((row) => (
-                <tr key={row.id}>
-                  <td>
-                    {row.sku}
-                    <br />
-                    {row.location_id}
-                  </td>
-                  <td>{row.movement_type}</td>
-                  <td>{row.quantity_delta}</td>
-                  <td>
-                    {row.quantity_before} → {row.quantity_after}
-                  </td>
-                  <td>
-                    {row.document_id ?? row.operation_id}
-                    <br />
-                    {row.reason_code}
-                    <br />
-                    Lot: {row.batch_id ?? 'UNTRACKED'}
-                  </td>
-                  <td>
-                    {row.performed_by}
-                    <br />
-                    {row.created_at}
-                  </td>
-                </tr>
-              ))}
+              {rows.map((row) => {
+                const deltaNum = Number(row.quantity_delta);
+                const deltaDisplay =
+                  deltaNum > 0 ? `+${row.quantity_delta}` : row.quantity_delta;
+                return (
+                  <tr key={row.id}>
+                    <td>
+                      <strong>{row.sku}</strong>
+                      <br />
+                      <span className="inventory-text-muted">
+                        {row.location_id}
+                      </span>
+                    </td>
+                    <td>
+                      <Tag tone={movementTypeTone(row.movement_type)}>
+                        {row.movement_type}
+                      </Tag>
+                    </td>
+                    <td>
+                      <span
+                        className={
+                          deltaNum > 0
+                            ? 'inventory-delta-positive'
+                            : 'inventory-delta-negative'
+                        }
+                      >
+                        {deltaDisplay}
+                      </span>
+                    </td>
+                    <td>
+                      {row.quantity_before} → {row.quantity_after}
+                    </td>
+                    <td>
+                      {row.reason_code}
+                      <br />
+                      <span className="inventory-text-muted">
+                        Ref: {row.document_id ?? row.operation_id}
+                        {row.batch_id ? ` • Lot: ${row.batch_id}` : ''}
+                      </span>
+                    </td>
+                    <td>
+                      {row.performed_by}
+                      <br />
+                      <span className="inventory-text-muted">
+                        {row.created_at}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
             </Table>
           ) : section === 'locations' ? (
             <Table

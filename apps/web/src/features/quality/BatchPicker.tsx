@@ -82,17 +82,19 @@ export function BatchPicker({
         </select>
       </Field>
       <QueryFeedback loading={query.isLoading} error={query.error} />
-      <div className="catalog-actions">
+      <div className="batch-picker-pagination">
         <Button
           type="button"
+          className="button-secondary button-compact"
           disabled={page === 1 || query.isFetching}
           onClick={() => setPage(page - 1)}
         >
           Previous lots
         </Button>
-        <span>Page {page}</span>
+        <span className="batch-picker-page">Page {page}</span>
         <Button
           type="button"
+          className="button-secondary button-compact"
           disabled={options.length < 100 || query.isFetching}
           onClick={() => setPage(page + 1)}
         >

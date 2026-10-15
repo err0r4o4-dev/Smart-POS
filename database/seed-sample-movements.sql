@@ -32,7 +32,8 @@ DECLARE
   -- Operations
   op_opening uuid := gen_random_uuid();
   op_transfer uuid := gen_random_uuid();
-  op_adjust uuid := gen_random_uuid();
+  op_adjust_in uuid := gen_random_uuid();
+  op_adjust_out uuid := gen_random_uuid();
 BEGIN
   -- 1. ค้นหาองค์กรและสาขา
   SELECT id INTO v_org_id FROM organizations ORDER BY created_at ASC LIMIT 1;
@@ -56,9 +57,9 @@ BEGIN
   SELECT id INTO var_coke_pet FROM product_variants WHERE organization_id = v_org_id AND sku = 'COKE-PET-500';
   SELECT id INTO var_lays_44 FROM product_variants WHERE organization_id = v_org_id AND sku = 'LAYS-CLA-44G';
   SELECT id INTO var_lays_73 FROM product_variants WHERE organization_id = v_org_id AND sku = 'LAYS-CLA-73G';
-  SELECT id INTO var_mama_bag FROM product_variants WHERE organization_id = v_org_id AND sku = 'MAMA-TYK-BAG';
+  SELECT id INTO var_mama_bag FROM product_variants WHERE organization_id = v_org_id AND sku IN ('MAMA-TYK-BAG', 'MAMA-TYK-55G');
   SELECT id INTO var_mama_cup FROM product_variants WHERE organization_id = v_org_id AND sku = 'MAMA-TYK-CUP';
-  SELECT id INTO var_ichi_pet FROM product_variants WHERE organization_id = v_org_id AND sku = 'ICHI-HON-420';
+  SELECT id INTO var_ichi_pet FROM product_variants WHERE organization_id = v_org_id AND sku IN ('ICHI-HON-420', 'ICHI-ORI-420');
   SELECT id INTO var_dutch_box FROM product_variants WHERE organization_id = v_org_id AND sku = 'DUTCH-4IN1-180';
   SELECT id INTO var_nescafe FROM product_variants WHERE organization_id = v_org_id AND sku = 'NES-RICHA-27P';
   SELECT id INTO var_oishi FROM product_variants WHERE organization_id = v_org_id AND sku = 'OISHI-GEN-380';
@@ -73,7 +74,8 @@ BEGIN
   VALUES
     (op_opening, v_org_id, v_user_id, 'OPENING_BALANCE', gen_random_uuid(), repeat('1', 64), '{"status":"POSTED"}'::jsonb, now() - interval '7 days'),
     (op_transfer, v_org_id, v_user_id, 'TRANSFER', gen_random_uuid(), repeat('2', 64), '{"status":"POSTED"}'::jsonb, now() - interval '4 days'),
-    (op_adjust, v_org_id, v_user_id, 'ADJUSTMENT', gen_random_uuid(), repeat('3', 64), '{"status":"POSTED"}'::jsonb, now() - interval '1 days')
+    (op_adjust_in, v_org_id, v_user_id, 'ADJUSTMENT', gen_random_uuid(), repeat('3', 64), '{"status":"POSTED"}'::jsonb, now() - interval '1 days' - interval '2 hours'),
+    (op_adjust_out, v_org_id, v_user_id, 'ADJUSTMENT', gen_random_uuid(), repeat('4', 64), '{"status":"POSTED"}'::jsonb, now() - interval '1 days')
   ON CONFLICT (organization_id, id) DO NOTHING;
 
   -- 6. ปิด Triggers บน stock_movements ชั่วคราวเพื่อนำเข้าข้อมูลประวัติ
@@ -194,8 +196,8 @@ BEGIN
   IF var_coke_can IS NOT NULL THEN
     INSERT INTO stock_movements (organization_id, branch_id, location_id, variant_id, batch_id, movement_type, quantity_delta, quantity_before, quantity_after, operation_id, reason_code, performed_by, created_at)
     VALUES
-      (v_org_id, v_branch_id, loc_wh, var_coke_can, b_coke, 'ADJUSTMENT_IN', 10.000, 120.000, 130.000, op_adjust, 'ตรวจนับพบสินค้าเกินในคลัง', v_user_id, now() - interval '1 day' - interval '2 hours'),
-      (v_org_id, v_branch_id, loc_wh, var_coke_can, b_coke, 'ADJUSTMENT_OUT', -10.000, 130.000, 120.000, op_adjust, 'ปรับยอดแก้ไขความคลาดเคลื่อน', v_user_id, now() - interval '1 day');
+      (v_org_id, v_branch_id, loc_wh, var_coke_can, b_coke, 'ADJUSTMENT_IN', 10.000, 120.000, 130.000, op_adjust_in, 'ตรวจนับพบสินค้าเกินในคลัง', v_user_id, now() - interval '1 day' - interval '2 hours'),
+      (v_org_id, v_branch_id, loc_wh, var_coke_can, b_coke, 'ADJUSTMENT_OUT', -10.000, 130.000, 120.000, op_adjust_out, 'ปรับยอดแก้ไขความคลาดเคลื่อน', v_user_id, now() - interval '1 day');
   END IF;
 
   -- 8. เปิด Triggers กลับคืนมาตามเดิม

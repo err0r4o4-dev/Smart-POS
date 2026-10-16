@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useState, type FormEvent } from 'react';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useAuth } from '../../app/AuthProvider';
@@ -22,11 +23,11 @@ import '../loyalty/loyalty.css';
 import './quality.css';
 
 const titles = {
-  batches: 'Batch/Lot · รุ่นสินค้า',
-  expiry: 'Expiry · วันหมดอายุ',
-  'write-offs': 'Write-offs · ตัดจำหน่าย',
-  recalls: 'Recalls · เรียกคืน',
-};
+  batches: 'quality.batchLot',
+  expiry: 'quality.expiry',
+  'write-offs': 'quality.writeOffs',
+  recalls: 'quality.recalls',
+} as const;
 type View = keyof typeof titles;
 export function QualityPage({ view = 'batches' }: { view?: View }) {
   const tenant = useOrganization(),
@@ -45,6 +46,8 @@ export function QualityPage({ view = 'batches' }: { view?: View }) {
   );
 }
 function QualityWorkspace({ view }: { view: View }) {
+  const { t, formatDateTime, labelCode } = useLanguage();
+
   const state = useSupplyScope(),
     [variant, setVariant] = useState(''),
     [page, setPage] = useState(1);
@@ -86,25 +89,17 @@ function QualityWorkspace({ view }: { view: View }) {
   }
   return (
     <div className="catalog-page quality-page">
-      <h1>{titles[view]}</h1>
-      <nav className="catalog-nav" aria-label="Quality navigation">
+      <h1>{t(titles[view])}</h1>
+      <nav className="catalog-nav" aria-label={t('quality.qualityNavigation')}>
         {Object.entries(titles).map(([name, label]) => (
           <Link key={name} to={`/inventory/${name}`}>
-            {label}
+            {t(label)}
           </Link>
         ))}
       </nav>
       <div className="quality-guidance">
-        <p>
-          Stock ledger เป็นข้อมูลหลัก · Aggregate = Tracked + Untracked.
-          ไม่สร้าง lot หรือวันหมดอายุให้สต็อกเดิม / No invented legacy
-          provenance.
-        </p>
-        <p>
-          FEFO เป็นลำดับแนะนำเท่านั้น ต้องตรวจฉลากและเลือก lot
-          จริงก่อนขายหรือเคลื่อนย้าย / Physically verify the selected lot.
-          Unknown dates are not expiry assurance.
-        </p>
+        <p>{t('quality.theStockLedgerIsAuthoritativeAggregateTracked')}</p>
+        <p>{t('quality.fefoIsAdvisoryPhysicallyVerifyAndSelect')}</p>
       </div>
       <Card>
         <VariantPicker
@@ -123,13 +118,13 @@ function QualityWorkspace({ view }: { view: View }) {
                 setPage(1);
               }}
             >
-              ทั้งหมด / Clear filter
+              {t('catalog.clearFilter')}
             </Button>
           </div>
         )}
       </Card>
       <SupplyFeedback state={state} />
-      {!state.branch && <p role="alert">เลือกสาขา / Select branch</p>}
+      {!state.branch && <p role="alert">{t('quality.selectBranch')}</p>}
       {view === 'batches' && state.tenant.can('quality.batch.create') && (
         <BatchForm
           key={editing?.id ?? 'new'}
@@ -146,35 +141,37 @@ function QualityWorkspace({ view }: { view: View }) {
               <div className="quality-card-header">
                 <h2>{batch.lot_number}</h2>
                 <Tag tone={batch.status === 'ACTIVE' ? 'success' : 'error'}>
-                  {batch.status}
+                  {labelCode(batch.status)}
                 </Tag>
               </div>
               <div className="quality-meta-grid">
                 <div className="quality-meta-item">
                   <span className="quality-meta-label">
-                    วันหมดอายุ / Expiry
+                    {t('quality.expiry2')}
                   </span>
                   <span className="quality-meta-value">
-                    {batch.expires_on ?? 'ไม่ทราบ / Unknown'}
+                    {batch.expires_on ?? t('quality.unknown')}
                   </span>
                 </div>
                 <div className="quality-meta-item">
                   <span className="quality-meta-label">
-                    วันที่ผลิต / Manufactured
+                    {t('quality.manufactured')}
                   </span>
                   <span className="quality-meta-value">
-                    {batch.manufactured_on ?? 'ไม่ทราบ / Unknown'}
+                    {batch.manufactured_on ?? t('quality.unknown')}
                   </span>
                 </div>
               </div>
               {batch.reason && (
                 <div className="quality-reason">
-                  <span className="quality-meta-label">เหตุผล / Reason</span>
+                  <span className="quality-meta-label">
+                    {t('pricing.reason')}
+                  </span>
                   <p>{batch.reason}</p>
                 </div>
               )}
               <details className="quality-history">
-                <summary>ประวัติคุณภาพ / Quality history</summary>
+                <summary>{t('quality.qualityHistory')}</summary>
                 <div className="quality-history-list">
                   {batch.history && batch.history.length > 0 ? (
                     batch.history.map((entry) => (
@@ -184,14 +181,14 @@ function QualityWorkspace({ view }: { view: View }) {
                       >
                         <div className="quality-history-top">
                           <span className="quality-history-rev">
-                            Revision {entry.revision}
+                            {t('quality.revision')} {entry.revision}
                           </span>
                           <Tag
                             tone={
                               entry.status === 'ACTIVE' ? 'success' : 'error'
                             }
                           >
-                            {entry.status}
+                            {labelCode(entry.status)}
                           </Tag>
                           <span className="quality-history-date">
                             {entry.recorded_at}
@@ -199,13 +196,13 @@ function QualityWorkspace({ view }: { view: View }) {
                         </div>
                         <p className="quality-history-desc">{entry.reason}</p>
                         <small className="quality-history-actor">
-                          Actor: {entry.actor_id}
+                          {t('quality.actor')} {entry.actor_id}
                         </small>
                       </div>
                     ))
                   ) : (
                     <p className="quality-history-empty">
-                      ไม่มีประวัติเพิ่มเติม / No history recorded
+                      {t('quality.noHistoryRecorded')}
                     </p>
                   )}
                 </div>
@@ -213,7 +210,7 @@ function QualityWorkspace({ view }: { view: View }) {
               {state.tenant.can('quality.batch.manage') && (
                 <div className="quality-card-actions">
                   <Button onClick={() => setEditing(batch)}>
-                    ตรวจคุณภาพ / Review status {batch.lot_number}
+                    {t('quality.reviewStatus')} {batch.lot_number}
                   </Button>
                 </div>
               )}
@@ -234,43 +231,49 @@ function QualityWorkspace({ view }: { view: View }) {
       />
       {(view === 'batches' || view === 'expiry') && (
         <>
-          <h2>สต็อกตาม lot/location · Stock by lot/location</h2>
-          {stock.data?.length === 0 && <p>ไม่พบสต็อก / No stock</p>}
+          <h2>{t('quality.stockByLotLocation')}</h2>
+          {stock.data?.length === 0 && <p>{t('quality.noStock')}</p>}
           {stock.data?.map((balance) => (
             <Card key={balance.id} className="quality-item-card">
               <div className="quality-card-header">
-                <h3>{balance.lot_number ?? 'Untracked · ไม่ทราบ lot'}</h3>
+                <h3>
+                  {balance.lot_number ?? t('quality.untrackedUnknownLot')}
+                </h3>
                 <Tag tone={balance.sellable ? 'success' : 'error'}>
                   {balance.sellable
-                    ? 'ขายได้ตามนโยบาย / Eligible'
-                    : 'ห้ามขาย / Not sellable'}
+                    ? t('quality.eligible')
+                    : t('quality.notSellable')}
                 </Tag>
               </div>
               <div className="quality-meta-grid">
                 <div className="quality-meta-item">
-                  <span className="quality-meta-label">จำนวน / Quantity</span>
+                  <span className="quality-meta-label">
+                    {t('pos.quantity')}
+                  </span>
                   <span className="quality-meta-value quality-highlight">
                     {balance.quantity}
                   </span>
                 </div>
                 <div className="quality-meta-item">
                   <span className="quality-meta-label">
-                    วันหมดอายุ / Expiry
+                    {t('quality.expiry2')}
                   </span>
                   <span className="quality-meta-value">
-                    {balance.expires_on ?? 'Unknown'}
+                    {balance.expires_on ?? t('quality.unknown')}
                   </span>
                 </div>
                 <div className="quality-meta-item">
                   <span className="quality-meta-label">
-                    สถานะ Lot / Batch status
+                    {t('quality.batchStatus')}
                   </span>
                   <span className="quality-meta-value">
                     {balance.batch_status ?? 'UNTRACKED'}
                   </span>
                 </div>
                 <div className="quality-meta-item">
-                  <span className="quality-meta-label">Location · Variant</span>
+                  <span className="quality-meta-label">
+                    {t('quality.locationVariant')}
+                  </span>
                   <span className="quality-meta-value">
                     {balance.location_id} · {balance.variant_id}
                   </span>
@@ -285,7 +288,7 @@ function QualityWorkspace({ view }: { view: View }) {
           <Card key={doc.id} className="quality-item-card">
             <div className="quality-card-header">
               <h2>
-                {doc.status} · {doc.quantity}
+                {labelCode(doc.status)} · {doc.quantity}
               </h2>
               <Tag
                 tone={
@@ -296,24 +299,28 @@ function QualityWorkspace({ view }: { view: View }) {
                       : 'neutral'
                 }
               >
-                {doc.status}
+                {labelCode(doc.status)}
               </Tag>
             </div>
             {doc.reason && (
               <div className="quality-reason">
-                <span className="quality-meta-label">เหตุผล / Reason</span>
+                <span className="quality-meta-label">
+                  {t('pricing.reason')}
+                </span>
                 <p>{doc.reason}</p>
               </div>
             )}
             <div className="quality-meta-grid">
               <div className="quality-meta-item">
-                <span className="quality-meta-label">Lot</span>
+                <span className="quality-meta-label">{t('quality.lot')}</span>
                 <span className="quality-meta-value">
                   {doc.batch_id ?? 'UNTRACKED'}
                 </span>
               </div>
               <div className="quality-meta-item">
-                <span className="quality-meta-label">Location</span>
+                <span className="quality-meta-label">
+                  {t('quality.location')}
+                </span>
                 <span className="quality-meta-value">{doc.location_id}</span>
               </div>
             </div>
@@ -324,14 +331,14 @@ function QualityWorkspace({ view }: { view: View }) {
                     disabled={state.busy}
                     onClick={() => void action(doc, 'approve')}
                   >
-                    อนุมัติ / Approve
+                    {t('quality.approve')}
                   </Button>
                   <Button
                     className="button-secondary"
                     disabled={state.busy}
                     onClick={() => void action(doc, 'reject')}
                   >
-                    ปฏิเสธ / Reject
+                    {t('quality.reject')}
                   </Button>
                 </div>
               )}
@@ -342,13 +349,13 @@ function QualityWorkspace({ view }: { view: View }) {
                     disabled={state.busy}
                     onClick={() => void action(doc, 'post')}
                   >
-                    ยืนยันตัดสต็อก / Post write-off
+                    {t('quality.postWriteOff')}
                   </Button>
                 </div>
               )}
             {doc.operation_id && (
               <p className="quality-operation-id">
-                Inventory operation: {doc.operation_id}
+                {t('quality.inventoryOperation')} {doc.operation_id}
               </p>
             )}
           </Card>
@@ -358,16 +365,15 @@ function QualityWorkspace({ view }: { view: View }) {
           <Card key={recall.id} className="quality-item-card">
             <div className="quality-card-header">
               <h2>
-                ACTIVE RECALL ·{' '}
-                {recall.batch_id ??
-                  'ทุก lot รวม untracked / All lots including unknown'}
+                {t('quality.activeRecall')}{' '}
+                {recall.batch_id ?? t('quality.allLotsIncludingUnknown')}
               </h2>
-              <Tag tone="error">RECALL</Tag>
+              <Tag tone="error">{t('quality.recall')}</Tag>
             </div>
             {recall.reason && (
               <div className="quality-reason">
                 <span className="quality-meta-label">
-                  เหตุผลเรียกคืน / Recall reason
+                  {t('quality.recallReason')}
                 </span>
                 <p>{recall.reason}</p>
               </div>
@@ -375,10 +381,10 @@ function QualityWorkspace({ view }: { view: View }) {
             <div className="quality-meta-grid">
               <div className="quality-meta-item">
                 <span className="quality-meta-label">
-                  วันที่บันทึก / Created at
+                  {t('quality.createdAt')}
                 </span>
                 <span className="quality-meta-value">
-                  {new Date(recall.created_at).toLocaleString()}
+                  {formatDateTime(recall.created_at)}
                 </span>
               </div>
             </div>
@@ -386,19 +392,22 @@ function QualityWorkspace({ view }: { view: View }) {
               recall.affected_locations.length > 0 && (
                 <div className="quality-affected-locations">
                   <span className="quality-meta-label">
-                    พื้นที่ที่ได้รับผลกระทบ / Affected locations
+                    {t('quality.affectedLocations')}
                   </span>
                   <div className="quality-location-list">
                     {recall.affected_locations.map((place, index) => (
                       <div key={index} className="quality-location-item">
                         <span>
-                          Location: <strong>{place.location_id}</strong>
+                          {t('quality.location2')}{' '}
+                          <strong>{place.location_id}</strong>
                         </span>
                         <span>
-                          Lot: <strong>{place.batch_id ?? 'UNTRACKED'}</strong>
+                          {t('quality.lot2')}{' '}
+                          <strong>{place.batch_id ?? 'UNTRACKED'}</strong>
                         </span>
                         <span>
-                          จำนวน: <strong>{place.quantity}</strong>
+                          {t('quality.quantity')}{' '}
+                          <strong>{place.quantity}</strong>
                         </span>
                       </div>
                     ))}
@@ -406,8 +415,7 @@ function QualityWorkspace({ view }: { view: View }) {
                 </div>
               )}
             <p className="quality-recall-notice">
-              เรียกคืนแล้วไม่ปลดอัตโนมัติ / Recall history cannot be erased or
-              automatically released.
+              {t('quality.recallHistoryCannotBeErasedOrAutomatically')}
             </p>
           </Card>
         ))}
@@ -432,6 +440,8 @@ function BatchForm({
   state: Scope;
   done: () => void;
 }) {
+  const { t } = useLanguage();
+
   const [variant, setVariant] = useState(initial?.variant_id ?? ''),
     [lot, setLot] = useState(initial?.lot_number ?? ''),
     [manufactured, setManufactured] = useState(initial?.manufactured_on ?? ''),
@@ -464,9 +474,7 @@ function BatchForm({
   return (
     <Card>
       <h2>
-        {initial
-          ? 'เปลี่ยนสถานะคุณภาพ / Quality status'
-          : 'บันทึก lot จริง / Record observed lot'}
+        {initial ? t('quality.qualityStatus') : t('quality.recordObservedLot')}
       </h2>
       <form onSubmit={(event) => void submit(event)}>
         {!initial ? (
@@ -475,7 +483,7 @@ function BatchForm({
             change={(value) => setVariant(value.id)}
           >
             <div className="loyalty-form">
-              <Field label="Lot number / เลข lot">
+              <Field label={t('quality.lotNumber')}>
                 <input
                   required
                   maxLength={100}
@@ -484,7 +492,7 @@ function BatchForm({
                   onChange={(event) => setLot(event.target.value)}
                 />
               </Field>
-              <Field label="Manufactured on / วันที่ผลิต">
+              <Field label={t('quality.manufacturedOn')}>
                 <input
                   type="date"
                   value={manufactured}
@@ -492,7 +500,7 @@ function BatchForm({
                   onChange={(event) => setManufactured(event.target.value)}
                 />
               </Field>
-              <Field label="Expires on / วันหมดอายุ">
+              <Field label={t('quality.expiresOn')}>
                 <input
                   type="date"
                   value={expiry}
@@ -500,19 +508,21 @@ function BatchForm({
                   onChange={(event) => setExpiry(event.target.value)}
                 />
               </Field>
-              <Field label="Quality status / สถานะ">
+              <Field label={t('quality.qualityStatus2')}>
                 <select
                   value={status}
                   onChange={(event) =>
                     setStatus(event.target.value as ProductBatch['status'])
                   }
                 >
-                  <option value="ACTIVE">ACTIVE</option>
-                  <option value="QUARANTINED">QUARANTINED</option>
+                  <option value="ACTIVE">{t('quality.active8')}</option>
+                  <option value="QUARANTINED">
+                    {t('quality.quarantined')}
+                  </option>
                 </select>
               </Field>
               <TextField
-                label="เหตุผล / Batch reason"
+                label={t('quality.batchReason')}
                 value={reason}
                 change={setReason}
                 required
@@ -521,7 +531,7 @@ function BatchForm({
           </VariantPicker>
         ) : (
           <div className="loyalty-form">
-            <Field label="Lot number / เลข lot">
+            <Field label={t('quality.lotNumber')}>
               <input
                 required
                 maxLength={100}
@@ -530,7 +540,7 @@ function BatchForm({
                 onChange={(event) => setLot(event.target.value)}
               />
             </Field>
-            <Field label="Manufactured on / วันที่ผลิต">
+            <Field label={t('quality.manufacturedOn')}>
               <input
                 type="date"
                 value={manufactured}
@@ -538,7 +548,7 @@ function BatchForm({
                 onChange={(event) => setManufactured(event.target.value)}
               />
             </Field>
-            <Field label="Expires on / วันหมดอายุ">
+            <Field label={t('quality.expiresOn')}>
               <input
                 type="date"
                 value={expiry}
@@ -546,19 +556,19 @@ function BatchForm({
                 onChange={(event) => setExpiry(event.target.value)}
               />
             </Field>
-            <Field label="Quality status / สถานะ">
+            <Field label={t('quality.qualityStatus2')}>
               <select
                 value={status}
                 onChange={(event) =>
                   setStatus(event.target.value as ProductBatch['status'])
                 }
               >
-                <option value="ACTIVE">ACTIVE</option>
-                <option value="QUARANTINED">QUARANTINED</option>
+                <option value="ACTIVE">{t('quality.active9')}</option>
+                <option value="QUARANTINED">{t('quality.quarantined2')}</option>
               </select>
             </Field>
             <TextField
-              label="เหตุผล / Batch reason"
+              label={t('quality.batchReason')}
               value={reason}
               change={setReason}
               required
@@ -567,15 +577,12 @@ function BatchForm({
         )}
         <div className="quality-form-actions">
           <Button type="submit" disabled={state.busy || !variant}>
-            บันทึก lot / Save batch
+            {t('quality.saveBatch')}
           </Button>
-          {initial && <Button onClick={done}>ยกเลิก / Cancel</Button>}
+          {initial && <Button onClick={done}>{t('customers.cancel')}</Button>}
         </div>
       </form>
-      <p>
-        เว้นวันที่ว่างได้เมื่อไม่ทราบ; identity/dates เปลี่ยนย้อนหลังไม่ได้ /
-        Dates remain immutable.
-      </p>
+      <p>{t('quality.leaveUnknownDatesBlankLotIdentityAnd')}</p>
     </Card>
   );
 }
@@ -586,6 +593,8 @@ function WriteOffForm({
   state: Scope;
   balances: QualityBalance[];
 }) {
+  const { t } = useLanguage();
+
   const [selected, setSelected] = useState(''),
     [quantity, setQuantity] = useState('1'),
     [reason, setReason] = useState(''),
@@ -610,9 +619,9 @@ function WriteOffForm({
   }
   return (
     <Card>
-      <h2>ขอตัดจำหน่าย / Request write-off</h2>
+      <h2>{t('quality.requestWriteOff')}</h2>
       <form className="loyalty-form" onSubmit={(event) => void submit(event)}>
-        <Field label="Stock / สต็อกที่ตรวจพบ">
+        <Field label={t('quality.stockFound')}>
           <select
             required
             value={selected}
@@ -621,7 +630,7 @@ function WriteOffForm({
               setVerified(false);
             }}
           >
-            <option value="">เลือกสต็อก / Select stock</option>
+            <option value="">{t('quality.selectStock')}</option>
             {balances.map((stock) => (
               <option key={stock.id} value={stock.id}>
                 {stock.lot_number ?? 'UNTRACKED'} · {stock.quantity} ·{' '}
@@ -631,13 +640,13 @@ function WriteOffForm({
           </select>
         </Field>
         <TextField
-          label="จำนวนตัดจำหน่าย / Quantity"
+          label={t('purchasing.quantity')}
           value={quantity}
           change={setQuantity}
           required
         />
         <TextField
-          label="เหตุผล / Write-off reason"
+          label={t('quality.writeOffReason')}
           value={reason}
           change={setReason}
           required
@@ -648,16 +657,18 @@ function WriteOffForm({
             checked={verified}
             onChange={(event) => setVerified(event.target.checked)}
           />
-          ตรวจสินค้า/location/lot จริงแล้ว / Physically verified
+          {t('quality.physicallyVerified')}
         </label>
         <Button type="submit" disabled={state.busy || !verified}>
-          ส่งขออนุมัติ / Request approval
+          {t('quality.requestApproval')}
         </Button>
       </form>
     </Card>
   );
 }
 function RecallForm({ state, lots }: { state: Scope; lots: ProductBatch[] }) {
+  const { t } = useLanguage();
+
   const [variant, setVariant] = useState(''),
     [batch, setBatch] = useState(''),
     [reason, setReason] = useState(''),
@@ -679,7 +690,7 @@ function RecallForm({ state, lots }: { state: Scope; lots: ProductBatch[] }) {
   }
   return (
     <Card>
-      <h2>เปิด Recall / Activate recall</h2>
+      <h2>{t('quality.activateRecall')}</h2>
       <form onSubmit={(event) => void submit(event)}>
         <VariantPicker
           value={variant}
@@ -690,7 +701,7 @@ function RecallForm({ state, lots }: { state: Scope; lots: ProductBatch[] }) {
           }}
         >
           <div className="loyalty-form">
-            <Field label="Recall scope / ขอบเขต">
+            <Field label={t('quality.recallScope')}>
               <select
                 value={batch}
                 onChange={(event) => {
@@ -698,7 +709,7 @@ function RecallForm({ state, lots }: { state: Scope; lots: ProductBatch[] }) {
                   setConfirmed(false);
                 }}
               >
-                <option value="">ทุก lot รวม unknown / Entire product</option>
+                <option value="">{t('quality.entireProduct')}</option>
                 {lots
                   .filter((lot) => lot.variant_id === variant)
                   .map((lot) => (
@@ -709,7 +720,7 @@ function RecallForm({ state, lots }: { state: Scope; lots: ProductBatch[] }) {
               </select>
             </Field>
             <TextField
-              label="เหตุผล / Recall reason"
+              label={t('loyalty.recallReason')}
               value={reason}
               change={setReason}
               required
@@ -720,14 +731,13 @@ function RecallForm({ state, lots }: { state: Scope; lots: ProductBatch[] }) {
                 checked={confirmed}
                 onChange={(event) => setConfirmed(event.target.checked)}
               />
-              ยืนยันบล็อกขายทันที; Recall ไม่ปลดอัตโนมัติ / Confirm immediate
-              sale block
+              {t('quality.confirmAnImmediateSaleBlockRecallsAre')}
             </label>
           </div>
         </VariantPicker>
         <div className="quality-form-actions">
           <Button type="submit" disabled={state.busy || !confirmed || !variant}>
-            เปิดเรียกคืน / Activate recall
+            {t('quality.activateRecall2')}
           </Button>
         </div>
       </form>

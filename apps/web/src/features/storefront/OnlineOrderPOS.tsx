@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
@@ -9,6 +10,8 @@ import { usePOS } from '../pos/POSContext';
 import { ShopError } from './StorefrontPage';
 
 export function OnlineOrderPOS() {
+  const { t } = useLanguage();
+
   const pos = usePOS();
   const navigate = useWorkspaceNavigate();
   const [params] = useSearchParams();
@@ -29,8 +32,13 @@ export function OnlineOrderPOS() {
   });
   if (!id) return null;
   if (!pos.can('online_orders.read'))
-    return <ShopError error={new Error('ไม่มีสิทธิ์เข้าถึงออเดอร์ออนไลน์')} />;
-  if (order.isPending) return <Loading>กำลังตรวจออเดอร์ออนไลน์…</Loading>;
+    return (
+      <ShopError
+        error={new Error(t('storefront.youDoNotHaveAccessToOnline'))}
+      />
+    );
+  if (order.isPending)
+    return <Loading>{t('storefront.checkingOnlineOrder')}</Loading>;
   if (order.error || !order.data)
     return <ShopError error={order.error} retry={() => void order.refetch()} />;
   const value = order.data;
@@ -38,19 +46,16 @@ export function OnlineOrderPOS() {
   const occupied = !!pos.cart?.items.length && pos.cart.id !== value.cart_id;
   return (
     <Card className="online-pos-entry">
-      <h2>รับสินค้า: {value.number}</h2>
+      <h2>
+        {t('storefront.pickup')} {value.number}
+      </h2>
       <p>
-        {value.customer_name} · ยอดประมาณการตอนสั่ง ฿
+        {value.customer_name} {t('storefront.estimatedOrderTotal')}
         {moneyText(value.estimated_total)}
       </p>
-      <p>
-        ตรวจรายการ lot สต็อก และยอดล่าสุดกับลูกค้าก่อนรับชำระ
-        การเปิดตะกร้ายังไม่สร้างยอดขาย
-      </p>
+      <p>{t('storefront.reviewItemsLotsStockAndTheLatest')}</p>
       {value.status !== 'READY' && (
-        <p role="alert">
-          ออเดอร์ยังไม่พร้อมรับหรือปิดไปแล้ว กรุณาตรวจสถานะก่อน
-        </p>
+        <p role="alert">{t('storefront.thisOrderIsNotReadyForPickup')}</p>
       )}
       {!sourceMatches && (
         <Button
@@ -63,27 +68,24 @@ export function OnlineOrderPOS() {
             value.terminal_id && pos.setTerminal(value.terminal_id)
           }
         >
-          เลือกเครื่องขายของออเดอร์
+          {t('storefront.selectTheOrderSTerminal')}
         </Button>
       )}
       {!sourceMatches &&
         !pos.terminals.some(
           (terminal) => terminal.id === value.terminal_id,
         ) && (
-          <p role="status">
-            เลือกสาขาของออเดอร์จากตัวเลือกสาขาก่อน แล้วเปิดออเดอร์นี้อีกครั้ง
-          </p>
+          <p role="status">{t('storefront.selectTheOrderSBranchUsingThe')}</p>
         )}
       {sourceMatches && !pos.shift && (
         <p>
-          ต้อง <Link to="/pos/register/open">เปิดกะของคุณ</Link>{' '}
-          แล้วกลับมาเปิดออเดอร์จากรายการ
+          {t('pos.youMust')}{' '}
+          <Link to="/pos/register/open">{t('pos.openYourRegisterShift')}</Link>{' '}
+          {t('storefront.thenReopenTheOrderFromTheList')}
         </p>
       )}
       {occupied && (
-        <p role="status">
-          พักหรือยกเลิกตะกร้าปัจจุบันก่อน เพื่อไม่ทับงานขายที่กำลังทำ
-        </p>
+        <p role="status">{t('storefront.holdOrCancelTheCurrentCartFirst')}</p>
       )}
       <div className="shop-actions">
         <Button
@@ -103,16 +105,19 @@ export function OnlineOrderPOS() {
               );
               if (!cart) return;
               pos.setCart(cart.id);
-              pos.setMessage(
-                `เปิด ${value.number} เข้า POS แล้ว — ทบทวนยอดกับลูกค้าก่อนชำระ`,
-              );
+              pos.setMessage({
+                key: 'storefront.openedValue0InPosReviewTheTotal',
+                params: { value0: value.number },
+              });
               navigate('/pos');
             })()
           }
         >
-          เปิดตะกร้าออเดอร์นี้
+          {t('storefront.openThisOrderSCart')}
         </Button>
-        <Link to={`/online-orders/${value.id}`}>กลับรายละเอียดออเดอร์</Link>
+        <Link to={`/online-orders/${value.id}`}>
+          {t('storefront.backToOrderDetails')}
+        </Link>
       </div>
     </Card>
   );

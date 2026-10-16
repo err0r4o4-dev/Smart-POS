@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useState, type FormEvent } from 'react';
 import { Button, Card, Tag } from '../../components/ui/primitives';
 import type {
@@ -22,7 +23,11 @@ import {
 } from './catalog-hooks';
 
 type Kind = 'categories' | 'brands' | 'units';
-const labels = { categories: 'หมวดหมู่', brands: 'แบรนด์', units: 'หน่วยนับ' };
+const labels = {
+  categories: 'catalog.categories',
+  brands: 'catalog.brands',
+  units: 'catalog.units',
+} as const;
 
 function statusTone(status: string): 'success' | 'amber' | 'neutral' {
   if (status === 'ACTIVE') return 'success';
@@ -70,6 +75,8 @@ function inputOf(item: Taxonomy, kind: Kind): TaxonomyInput {
   };
 }
 export function TaxonomyPage({ kind }: { kind: Kind }) {
+  const { t, labelCode } = useLanguage();
+
   const catalog = useCatalog();
   const allowed = catalog.tenant.can(permissions[kind]);
   const [page, setPage] = useState(1);
@@ -100,19 +107,21 @@ export function TaxonomyPage({ kind }: { kind: Kind }) {
       await catalog.refresh();
       setSaved(true);
     } catch (problem) {
-      setError(problem instanceof Error ? problem.message : 'บันทึกไม่ได้');
+      setError(
+        problem instanceof Error ? problem.message : t('catalog.unableToSave'),
+      );
     } finally {
       setBusy(false);
     }
   }
   return (
     <div className="catalog-page">
-      <CatalogHeader title={labels[kind]} />
+      <CatalogHeader title={t(labels[kind])} />
       <CatalogNav />
       <Card>
         <div className="catalog-filters">
           <CatalogField
-            label={`ค้นหา${labels[kind]}`}
+            label={t('catalog.searchValue0', { value0: t(labels[kind]) })}
             value={search}
             change={(next) => {
               setSearch(next);
@@ -120,7 +129,7 @@ export function TaxonomyPage({ kind }: { kind: Kind }) {
             }}
           />
           <label className="tenant-field">
-            กรองสถานะ
+            {t('catalog.filterStatus')}
             <select
               value={status}
               onChange={(event) => {
@@ -128,9 +137,11 @@ export function TaxonomyPage({ kind }: { kind: Kind }) {
                 setPage(1);
               }}
             >
-              <option value="">ACTIVE / INACTIVE</option>
+              <option value="">{t('catalog.activeInactive2')}</option>
               {['ACTIVE', 'INACTIVE', 'ARCHIVED'].map((item) => (
-                <option key={item}>{item}</option>
+                <option key={item} value={item}>
+                  {labelCode(item)}
+                </option>
               ))}
             </select>
           </label>
@@ -143,15 +154,15 @@ export function TaxonomyPage({ kind }: { kind: Kind }) {
               <table className="catalog-table">
                 <thead>
                   <tr>
-                    <th>ชื่อ</th>
+                    <th>{t('common.name')}</th>
                     {kind === 'units' && (
                       <>
-                        <th>รหัส / ประเภท</th>
-                        <th>Conversion</th>
+                        <th>{t('catalog.codeType')}</th>
+                        <th>{t('catalog.conversion')}</th>
                       </>
                     )}
-                    <th>สถานะ</th>
-                    {allowed && <th>จัดการ</th>}
+                    <th>{t('auth.status')}</th>
+                    {allowed && <th>{t('catalog.manage')}</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -162,7 +173,7 @@ export function TaxonomyPage({ kind }: { kind: Kind }) {
                         <small>{item.description}</small>
                         {kind === 'categories' && item.parent_id && (
                           <small>
-                            หมวดแม่:{' '}
+                            {t('catalog.parentCategory')}{' '}
                             {options.data?.find(
                               (parent) => parent.id === item.parent_id,
                             )?.name ?? item.parent_id}
@@ -173,18 +184,20 @@ export function TaxonomyPage({ kind }: { kind: Kind }) {
                         <>
                           <td>
                             {item.code}
-                            <small>{item.unit_type}</small>
+                            <small>{labelCode(item.unit_type)}</small>
                           </td>
                           <td>
                             {item.conversion_factor}{' '}
                             {item.base_unit_id
-                              ? `× ${options.data?.find((unit) => unit.id === item.base_unit_id)?.name ?? 'หน่วยฐาน'}`
-                              : 'หน่วยฐาน'}
+                              ? `× ${options.data?.find((unit) => unit.id === item.base_unit_id)?.name ?? t('catalog.baseUnit')}`
+                              : t('catalog.baseUnit')}
                           </td>
                         </>
                       )}
                       <td>
-                        <Tag tone={statusTone(item.status)}>{item.status}</Tag>
+                        <Tag tone={statusTone(item.status)}>
+                          {labelCode(item.status)}
+                        </Tag>
                       </td>
                       {allowed && (
                         <td>
@@ -196,7 +209,7 @@ export function TaxonomyPage({ kind }: { kind: Kind }) {
                               setSaved(false);
                             }}
                           >
-                            แก้ไข {item.name}
+                            {t('catalog.edit')} {item.name}
                           </Button>
                         </td>
                       )}
@@ -205,18 +218,27 @@ export function TaxonomyPage({ kind }: { kind: Kind }) {
                 </tbody>
               </table>
             </div>
-            {!query.data.items.length && <p>ยังไม่มี{labels[kind]}</p>}
+            {!query.data.items.length && (
+              <p>
+                {t('catalog.noneYet')}
+                {t(labels[kind])}
+              </p>
+            )}
             <Pagination page={page} total={query.data.total} change={setPage} />
           </>
         )}
       </Card>
       {allowed && (
         <Card>
-          <h2>{editing ? `แก้ไข ${editing.name}` : `เพิ่ม${labels[kind]}`}</h2>
+          <h2>
+            {editing
+              ? t('catalog.editValue02', { value0: editing.name })
+              : t('catalog.addValue0', { value0: t(labels[kind]) })}
+          </h2>
           <form onSubmit={(event) => void submit(event)}>
             <div className="tenant-form-grid">
               <CatalogField
-                label={`ชื่อ${labels[kind]}`}
+                label={t('catalog.value0Name', { value0: t(labels[kind]) })}
                 required
                 value={value.name}
                 change={(name) => setValue({ ...value, name })}
@@ -227,14 +249,16 @@ export function TaxonomyPage({ kind }: { kind: Kind }) {
                 change={(next) => setValue({ ...value, status: next })}
               />
               <CatalogField
-                label={`คำอธิบาย${labels[kind]}`}
+                label={t('catalog.value0Description', {
+                  value0: t(labels[kind]),
+                })}
                 value={value.description}
                 maxLength={2000}
                 change={(description) => setValue({ ...value, description })}
               />
               {kind === 'categories' && (
                 <TaxonomySelect
-                  label="หมวดหมู่แม่"
+                  label={t('catalog.parentCategory2')}
                   value={value.parent_id ?? null}
                   items={(options.data ?? []).filter(
                     (item) => item.id !== editing?.id,
@@ -245,14 +269,14 @@ export function TaxonomyPage({ kind }: { kind: Kind }) {
               {kind === 'units' && (
                 <>
                   <CatalogField
-                    label="รหัสหน่วยนับ"
+                    label={t('catalog.unitCode')}
                     required
                     maxLength={50}
                     value={value.code ?? ''}
                     change={(code) => setValue({ ...value, code })}
                   />
                   <label className="tenant-field">
-                    ประเภทหน่วยนับ
+                    {t('catalog.unitType')}
                     <select
                       value={value.unit_type}
                       onChange={(event) =>
@@ -261,13 +285,15 @@ export function TaxonomyPage({ kind }: { kind: Kind }) {
                     >
                       {['COUNT', 'WEIGHT', 'VOLUME', 'PACKAGING'].map(
                         (item) => (
-                          <option key={item}>{item}</option>
+                          <option key={item} value={item}>
+                            {labelCode(item)}
+                          </option>
                         ),
                       )}
                     </select>
                   </label>
                   <TaxonomySelect
-                    label="หน่วยฐาน"
+                    label={t('catalog.baseUnit')}
                     value={value.base_unit_id ?? null}
                     items={(options.data ?? []).filter(
                       (item) => !item.base_unit_id && item.id !== editing?.id,
@@ -283,7 +309,7 @@ export function TaxonomyPage({ kind }: { kind: Kind }) {
                     }
                   />
                   <CatalogField
-                    label="จำนวนหน่วยฐานต่อ 1 หน่วย"
+                    label={t('catalog.baseUnitsPer1Unit')}
                     required
                     value={value.conversion_factor ?? '1'}
                     change={(conversion_factor) =>
@@ -295,16 +321,16 @@ export function TaxonomyPage({ kind }: { kind: Kind }) {
             </div>
             {kind === 'units' && (
               <p className="notice">
-                Conversion เป็น metadata แบบ exact (6 ตำแหน่ง)
-                ไม่มีการปรับสต็อกอัตโนมัติ • หน่วยที่ถูกอ้างอิงแก้โครงสร้างหรือ
-                archive ไม่ได้
+                {t('catalog.conversionIsExactMetadata6DecimalPlaces')}
               </p>
             )}
             <CatalogError error={error} />
-            {saved && <p role="status">บันทึกแล้ว</p>}
+            {saved && <p role="status">{t('catalog.saved')}</p>}
             <div className="catalog-actions">
               <Button type="submit" disabled={busy}>
-                {busy ? 'กำลังบันทึก…' : `บันทึก${labels[kind]}`}
+                {busy
+                  ? t('catalog.saving')
+                  : t('catalog.saveValue0', { value0: t(labels[kind]) })}
               </Button>
               {editing && (
                 <Button
@@ -314,7 +340,7 @@ export function TaxonomyPage({ kind }: { kind: Kind }) {
                     setValue(blank(kind));
                   }}
                 >
-                  ยกเลิกการแก้ไข
+                  {t('catalog.cancelEditing')}
                 </Button>
               )}
             </div>

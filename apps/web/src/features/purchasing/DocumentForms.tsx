@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useState, type FormEvent } from 'react';
 import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavigate';
 import { Card, Button } from '../../components/ui/primitives';
@@ -21,6 +22,8 @@ export function OrderForm({
   state: SupplyScope;
   initial?: PurchaseDocument;
 }) {
+  const { t } = useLanguage();
+
   const navigate = useNavigate();
   const [supplier, setSupplier] = useState(initial?.supplier_id ?? ''),
     [notes, setNotes] = useState(initial?.notes ?? ''),
@@ -67,17 +70,21 @@ export function OrderForm({
   return (
     <Card>
       <form onSubmit={(event) => void submit(event)}>
-        <h2>{initial ? 'แก้ไข PO Draft' : 'สร้างใบสั่งซื้อ (Draft)'}</h2>
+        <h2>
+          {initial
+            ? t('purchasing.editPoDraft')
+            : t('purchasing.createPurchaseOrderDraft')}
+        </h2>
         <p>
-          สาขา:{' '}
+          {t('purchasing.branch')}{' '}
           {state.tenant.context?.branches.find(
             (branch) => branch.id === state.branch,
-          )?.name ?? 'เลือกสาขาจาก header'}{' '}
-          · การสร้าง Draft ไม่เพิ่มสต็อก
+          )?.name ?? t('purchasing.selectABranchFromTheHeader')}{' '}
+          {t('purchasing.creatingADraftDoesNotIncreaseStock')}
         </p>
         {!initial && (
           <RemoteSelect<Supplier>
-            label="Supplier"
+            label={t('purchasing.supplier')}
             path="/suppliers?status=ACTIVE"
             value={supplier}
             change={(value) => {
@@ -101,7 +108,9 @@ export function OrderForm({
         />
         {lines.map((line, index) => (
           <fieldset className="supply-line" key={index}>
-            <legend>รายการ {index + 1}</legend>
+            <legend>
+              {t('catalog.definitions')} {index + 1}
+            </legend>
             <div className="inventory-form">
               <Field label={`Supplier Product ${index + 1}`}>
                 <select
@@ -126,28 +135,30 @@ export function OrderForm({
                       );
                   }}
                 >
-                  <option value="">เลือกสินค้า</option>
+                  <option value="">{t('purchasing.selectProduct')}</option>
                   {line.variant_id &&
                     !links.data?.some(
                       (item) => item.variant_id === line.variant_id,
                     ) && (
                       <option value={line.variant_id}>
-                        Snapshot · {initial?.items[index]?.sku_snapshot}
+                        {t('purchasing.snapshot')}{' '}
+                        {initial?.items[index]?.sku_snapshot}
                       </option>
                     )}
                   {links.data
                     ?.filter((item) => item.status === 'ACTIVE')
                     .map((item) => (
                       <option key={item.id} value={item.variant_id}>
-                        {item.sku} · {item.name} / SKU supplier{' '}
+                        {item.sku} · {item.name} {t('purchasing.skuSupplier')}{' '}
                         {item.supplier_sku}
                       </option>
                     ))}
                 </select>
               </Field>
               <p>
-                Purchase Unit: {line.purchase_unit_id || 'เลือกสินค้า'} · MOQ /
-                multiple ตาม Supplier Product
+                {t('purchasing.purchaseUnit')}{' '}
+                {line.purchase_unit_id || t('purchasing.selectProduct')}{' '}
+                {t('purchasing.moqMultiplesFollowSupplierProductSettings')}
               </p>
               <TextField
                 label={`Quantity ${index + 1}`}
@@ -180,7 +191,7 @@ export function OrderForm({
                 setLines(lines.filter((_, position) => position !== index))
               }
             >
-              ลบรายการ {index + 1}
+              {t('purchasing.removeItem')} {index + 1}
             </Button>
           </fieldset>
         ))}
@@ -198,27 +209,31 @@ export function OrderForm({
             ])
           }
         >
-          เพิ่มรายการ PO
+          {t('purchasing.addPoItem')}
         </Button>
         <div className="inventory-form">
           <TextField
-            label="Expected delivery date"
+            label={t('purchasing.expectedDeliveryDate')}
             type="date"
             value={date}
             change={setDate}
           />
-          <TextField label="PO Notes" value={notes} change={setNotes} />
+          <TextField
+            label={t('purchasing.poNotes')}
+            value={notes}
+            change={setNotes}
+          />
         </div>
         <p>
-          รวมประมาณการ (HALF_UP ต่อรายการ):{' '}
-          {exactOrderTotal(lines) ?? 'ตรวจสอบจำนวนและราคา'} THB — ยอดจาก server
-          เป็น authoritative; ไม่คำนวณภาษีที่ไม่ได้กำหนด
+          {t('purchasing.estimatedTotalHalfUpPerLine')}{' '}
+          {exactOrderTotal(lines) ?? t('purchasing.reviewQuantitiesAndPrices')}{' '}
+          {t('purchasing.thbServerTotalsAreAuthoritativeUnspecifiedTaxes')}
         </p>
         <Button
           type="submit"
           disabled={state.busy || !state.branch || !supplier}
         >
-          บันทึก PO Draft
+          {t('purchasing.savePoDraft')}
         </Button>
       </form>
     </Card>
@@ -235,6 +250,8 @@ export function ReceivingForm({
   initial?: PurchaseDocument;
   onSave: (document: PurchaseDocument) => void;
 }) {
+  const { t } = useLanguage();
+
   const [parent, setParent] = useState(initial?.parent_id ?? '');
   const parentResource = resource === 'receipts' ? 'orders' : 'receipts';
   const query = useSupplyQuery<PurchaseDocument>(
@@ -245,17 +262,21 @@ export function ReceivingForm({
     <Card>
       <h2>
         {resource === 'receipts'
-          ? 'ตรวจรับสินค้าจาก PO'
-          : 'สร้างคำขอคืน Supplier'}
+          ? t('purchasing.receiveProductsFromPo')
+          : t('purchasing.createSupplierReturnRequest')}
       </h2>
       <p>
         {resource === 'receipts'
-          ? 'รับเฉพาะ accepted quantity; damaged เป็น subset ของ rejected และไม่เป็น owned sellable stock'
-          : 'การคืนเป็น allocation อ้างอิง receipt ไม่ใช่ batch/serial proof และไม่ใช่การคืนเงิน'}
+          ? t('purchasing.receiveAcceptedQuantitiesOnlyDamagedQuantitiesAre')
+          : t('purchasing.returnsAllocateAgainstAReceiptThisIs')}
       </p>
       {!initial && (
         <RemoteSelect<PurchaseDocument>
-          label={resource === 'receipts' ? 'Outstanding PO' : 'Posted Receipt'}
+          label={
+            resource === 'receipts'
+              ? t('purchasing.outstandingPo')
+              : t('purchasing.postedReceipt')
+          }
           path={`/purchasing/${parentResource}?branch_id=${state.branch}`}
           value={parent}
           change={setParent}
@@ -291,6 +312,8 @@ function InspectionForm({
   initial?: PurchaseDocument;
   onSave: (document: PurchaseDocument) => void;
 }) {
+  const { t, labelCode } = useLanguage();
+
   const [location, setLocation] = useState(initial?.location_id ?? ''),
     [notes, setNotes] = useState(initial?.notes ?? '');
   const [lines, setLines] = useState(
@@ -359,18 +382,16 @@ function InspectionForm({
   return (
     <form onSubmit={(event) => void submit(event)}>
       <h3>
-        {parent.number} · {parent.status}
+        {parent.number} · {labelCode(parent.status)}
       </h3>
       {!validParent && (
-        <p role="alert">
-          เอกสารต้นทางยังไม่พร้อม: ต้อง issued PO / posted receipt
-        </p>
+        <p role="alert">{t('purchasing.sourceDocumentNotReadyAnIssuedPo')}</p>
       )}
       <RemoteSelect<StockLocation>
         label={
           resource === 'receipts'
-            ? 'Destination Warehouse'
-            : 'Return Source Location'
+            ? t('purchasing.destinationWarehouse')
+            : t('purchasing.returnSourceLocation')
         }
         path={`/inventory/locations?branch_id=${state.branch}&status=ACTIVE${resource === 'receipts' ? '&type=WAREHOUSE' : ''}`}
         value={location}
@@ -384,8 +405,10 @@ function InspectionForm({
             {parent.items[index].unit_snapshot}
           </legend>
           <p>
-            Ordered / received: {parent.items[index].quantity} · outstanding:{' '}
-            {parent.items[index].outstanding_quantity} · conversion snapshot:{' '}
+            {t('purchasing.orderedReceived')}
+            {parent.items[index].quantity} {t('purchasing.outstanding')}{' '}
+            {parent.items[index].outstanding_quantity}{' '}
+            {t('purchasing.conversionSnapshot')}{' '}
             {parent.items[index].conversion_factor}
           </p>
           <BatchPicker
@@ -404,7 +427,7 @@ function InspectionForm({
           />
           {resource === 'returns' && (
             <p>
-              ต้องตรง lot ของ receipt ต้นทาง / Must match original receipt lot:{' '}
+              {t('purchasing.mustMatchOriginalReceiptLot')}{' '}
               {parent.items[index].batch_id ?? 'UNTRACKED'}
             </p>
           )}
@@ -461,14 +484,18 @@ function InspectionForm({
           </div>
         </fieldset>
       ))}
-      <p>
-        Quantity 0 หมายถึงไม่รวมรายการนี้ ต้องมี accepted / return
-        อย่างน้อยหนึ่งรายการ; หลักฐานสินค้าที่ปฏิเสธทั้งหมดโดยไม่มี accepted
-        document ยังไม่รองรับ
-      </p>
-      <TextField label="Inspection Notes" value={notes} change={setNotes} />
+      <p>{t('purchasing.quantity0ExcludesThisItemAtLeast')}</p>
+      <TextField
+        label={t('purchasing.inspectionNotes')}
+        value={notes}
+        change={setNotes}
+      />
       <Button type="submit" disabled={state.busy || !validParent || !location}>
-        บันทึก {resource === 'receipts' ? 'Receipt' : 'Supplier Return'} Draft
+        {t('customers.save')}{' '}
+        {resource === 'receipts'
+          ? t('purchasing.receipt')
+          : t('purchasing.supplierReturn')}{' '}
+        {t('purchasing.draft')}
       </Button>
     </form>
   );

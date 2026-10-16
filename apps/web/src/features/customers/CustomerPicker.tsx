@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { usePOS } from '../pos/POSContext';
@@ -10,6 +11,8 @@ import {
 import './customers.css';
 
 export function CustomerPicker() {
+  const { t } = useLanguage();
+
   const pos = usePOS();
   const [search, setSearch] = useState('');
   const [term, setTerm] = useState('');
@@ -50,8 +53,8 @@ export function CustomerPicker() {
     }
   };
   return (
-    <section className="customer-picker" aria-label="ลูกค้า / Customer">
-      <h3>ลูกค้า / Customer</h3>
+    <section className="customer-picker" aria-label={t('customers.customer2')}>
+      <h3>{t('customers.customer2')}</h3>
       {cart.customer ? (
         <div>
           <p>
@@ -59,15 +62,15 @@ export function CustomerPicker() {
           </p>
           {cart.customer.status === 'ARCHIVED' && (
             <p role="alert">
-              ลูกค้าถูกเก็บถาวร — นำออกก่อนชำระเงิน / Archived customer
+              {t('customers.archivedCustomerRemoveBeforeCheckout')}
             </p>
           )}
           <Button disabled={pos.busy} onClick={() => void select(null)}>
-            นำลูกค้าออก / Remove
+            {t('customers.remove')}
           </Button>
         </div>
       ) : (
-        <p>ลูกค้าทั่วไป / Walk-in — ไม่ต้องมีบัญชีหรือข้อมูลติดต่อ</p>
+        <p>{t('customers.walkInCustomerNoAccountOrContact')}</p>
       )}
       <form
         onSubmit={(event) => {
@@ -77,29 +80,29 @@ export function CustomerPicker() {
         }}
       >
         <label>
-          ค้นหาลูกค้า / Find customer
+          {t('customers.findCustomer')}
           <input
             value={search}
             maxLength={200}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="รหัส / ชื่อ / โทรศัพท์ / อีเมล"
+            placeholder={t('customers.codeNamePhoneEmail')}
           />
         </label>
         <Button type="submit" disabled={pos.busy || !search.trim()}>
-          ค้นหา / Search
+          {t('customers.search')}
         </Button>
       </form>
-      {results.isFetching && <Loading>กำลังค้นหา / Searching</Loading>}
+      {results.isFetching && <Loading>{t('customers.searching')}</Loading>}
       {results.error && (
         <p role="alert">
-          ค้นหาไม่สำเร็จ / Search unavailable{' '}
+          {t('customers.searchUnavailable')}{' '}
           <Button onClick={() => void results.refetch()}>
-            ลองใหม่ / Retry
+            {t('customers.retry')}
           </Button>
         </p>
       )}
       {term && results.data?.total === 0 && (
-        <p>ไม่พบลูกค้า / No customers found</p>
+        <p>{t('customers.noCustomersFound')}</p>
       )}
       {results.data?.items.map((item) => (
         <Button
@@ -108,20 +111,20 @@ export function CustomerPicker() {
           disabled={pos.busy}
           onClick={() => void select(item.id)}
         >
-          {item.code} · {item.name || 'ไม่ระบุชื่อ / Unnamed'} · {item.phone}
+          {item.code} · {item.name || t('customers.unnamed')} · {item.phone}
         </Button>
       ))}
       {results.data && results.data.total > 10 && (
         <div className="customer-pagination">
           <Button disabled={page === 1} onClick={() => setPage(page - 1)}>
-            ก่อนหน้า / Previous
+            {t('catalog.previous')}
           </Button>
           <span>{page}</span>
           <Button
             disabled={page * 10 >= results.data.total}
             onClick={() => setPage(page + 1)}
           >
-            ถัดไป / Next
+            {t('catalog.next')}
           </Button>
         </div>
       )}

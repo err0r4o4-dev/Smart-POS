@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button, Card } from '../../components/ui/primitives';
@@ -18,6 +19,8 @@ export function RegisterPage({
 }: {
   section: 'open' | 'close' | 'history' | 'shifts';
 }) {
+  const { t, localize, formatDateTime, labelCode } = useLanguage();
+
   const pos = usePOS();
   const [cash, setCash] = useState('0.00');
   const [code, setCode] = useState('');
@@ -77,21 +80,21 @@ export function RegisterPage({
       <h1>
         {
           {
-            open: 'เปิดกะขาย',
-            close: 'ปิดกะและนับเงิน',
-            history: 'ประวัติกะ',
-            shifts: 'ตรวจสอบการชำระเงิน',
+            open: t('pos.openRegisterShift'),
+            close: t('pos.closeShiftAndCountCash'),
+            history: t('pos.shiftHistory'),
+            shifts: t('pos.paymentReview'),
           }[section]
         }
       </h1>
       {section === 'open' && (
         <>
           <Card>
-            <p>หนึ่งเครื่องมีได้หนึ่งกะ และหนึ่งแคชเชียร์มีได้หนึ่งกะเปิด</p>
+            <p>{t('pos.eachTerminalCanHaveOneOpenShift')}</p>
             <label>
-              เงินเปิดกะ
+              {t('pos.openingCash')}
               <input
-                aria-label="เงินเปิดกะ"
+                aria-label={t('pos.openingCash')}
                 value={cash}
                 inputMode="decimal"
                 onChange={(event) => setCash(event.target.value)}
@@ -108,14 +111,14 @@ export function RegisterPage({
                 )
               }
             >
-              เปิดกะขาย
+              {t('pos.openRegisterShift')}
             </Button>
           </Card>
           {pos.can('pos.terminal.manage') && (
             <Card>
-              <h2>ตั้งค่าเครื่องขาย</h2>
+              <h2>{t('pos.configureTerminal')}</h2>
               <label>
-                รหัสเครื่อง
+                {t('pos.terminalCode')}
                 <input
                   value={code}
                   onChange={(event) =>
@@ -124,19 +127,19 @@ export function RegisterPage({
                 />
               </label>
               <label>
-                ชื่อเครื่อง
+                {t('pos.terminalName')}
                 <input
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                 />
               </label>
               <label>
-                ตำแหน่งสต็อกขาย
+                {t('pos.sellingStockLocation')}
                 <select
                   value={location}
                   onChange={(event) => setLocation(event.target.value)}
                 >
-                  <option value="">เลือกตำแหน่ง</option>
+                  <option value="">{t('pos.selectLocation')}</option>
                   {locations.data?.items
                     .filter((item) =>
                       ['WAREHOUSE', 'SALES_FLOOR', 'SHELF'].includes(item.type),
@@ -160,7 +163,7 @@ export function RegisterPage({
                   })
                 }
               >
-                สร้างเครื่องขาย
+                {t('pos.createTerminal')}
               </Button>
             </Card>
           )}
@@ -170,17 +173,25 @@ export function RegisterPage({
         <Card>
           {pos.shift ? (
             <>
-              <p>เงินเปิดกะ {moneyText(pos.shift.opening_cash)}</p>
-              <p>ยอดขายเงินสดสุทธิ {moneyText(pos.shift.cash_sales)}</p>
-              <p>คืนเงินสด {moneyText(pos.shift.cash_refunds ?? '0.00')}</p>
+              <p>
+                {t('pos.openingCash')} {moneyText(pos.shift.opening_cash)}
+              </p>
+              <p>
+                {t('pos.netCashSales')} {moneyText(pos.shift.cash_sales)}
+              </p>
+              <p>
+                {t('pos.cashRefunds')}{' '}
+                {moneyText(pos.shift.cash_refunds ?? '0.00')}
+              </p>
               <strong>
-                เงินควรมี {moneyText(pos.shift.expected_cash)} บาท
+                {t('pos.expectedCash')} {moneyText(pos.shift.expected_cash)}{' '}
+                {t('loyalty.thb')}
               </strong>
-              <p>QR / โอนไม่รวมในลิ้นชัก เงินค้างต้องจัดการก่อนปิดกะ</p>
+              <p>{t('pos.qrBankTransfersAreExcludedFromThe')}</p>
               <label>
-                เงินนับจริง
+                {t('pos.countedCash')}
                 <input
-                  aria-label="เงินนับจริง"
+                  aria-label={t('pos.countedCash')}
                   value={cash}
                   inputMode="decimal"
                   onChange={(event) => setCash(event.target.value)}
@@ -197,17 +208,18 @@ export function RegisterPage({
                       key.current,
                     );
                     if (result)
-                      pos.setMessage(
-                        `ปิดกะแล้ว ส่วนต่าง ${result.difference} บาท`,
-                      );
+                      pos.setMessage({
+                        key: 'pos.shiftClosedDifferenceValue0Thb',
+                        params: { value0: result.difference ?? '—' },
+                      });
                   })()
                 }
               >
-                ยืนยันปิดกะ
+                {t('pos.confirmShiftClosure')}
               </Button>
             </>
           ) : (
-            <p>ไม่มีกะเปิดของคุณในเครื่องนี้</p>
+            <p>{t('pos.youHaveNoOpenShiftAtThis')}</p>
           )}
         </Card>
       )}
@@ -216,14 +228,14 @@ export function RegisterPage({
           <table>
             <thead>
               <tr>
-                <th>เครื่อง / แคชเชียร์</th>
-                <th>เวลา</th>
-                <th>เปิดกะ</th>
-                <th>ขายเงินสด</th>
-                <th>คืนเงินสด</th>
-                <th>ควรมี</th>
-                <th>นับจริง / ส่วนต่าง</th>
-                <th>สถานะ</th>
+                <th>{t('pos.terminalCashier')}</th>
+                <th>{t('inventory.time')}</th>
+                <th>{t('pos.openShift')}</th>
+                <th>{t('pos.cashSales')}</th>
+                <th>{t('pos.cashRefunds')}</th>
+                <th>{t('pos.expected')}</th>
+                <th>{t('pos.countedDifference')}</th>
+                <th>{t('auth.status')}</th>
               </tr>
             </thead>
             <tbody>
@@ -235,10 +247,9 @@ export function RegisterPage({
                     {item.cashier_name}
                   </td>
                   <td>
-                    {new Date(item.opened_at).toLocaleString('th-TH')}
+                    {formatDateTime(item.opened_at)}
                     <br />
-                    {item.closed_at &&
-                      new Date(item.closed_at).toLocaleString('th-TH')}
+                    {item.closed_at && formatDateTime(item.closed_at)}
                   </td>
                   <td>{item.opening_cash}</td>
                   <td>{item.cash_sales}</td>
@@ -247,7 +258,7 @@ export function RegisterPage({
                   <td>
                     {item.counted_cash ?? '?'} / {item.difference ?? '?'}
                   </td>
-                  <td>{item.status}</td>
+                  <td>{labelCode(item.status)}</td>
                 </tr>
               ))}
             </tbody>
@@ -256,20 +267,17 @@ export function RegisterPage({
             loading={history.isFetching}
             error={history.error}
             empty={history.data?.total === 0}
-            emptyMessage="ยังไม่มีประวัติกะในสาขานี้"
+            emptyMessage={t('pos.noShiftHistoryInThisBranchYet')}
             retry={() => void history.refetch()}
           />
         </div>
       )}
       {section === 'shifts' && (
         <>
-          <p>
-            รายการยืนยันเงินแล้วแต่ขายไม่สำเร็จต้องตรวจสอบด้วยคน
-            ระบบไม่โอนเงินคืนอัตโนมัติ
-          </p>
+          <p>{t('pos.confirmedPaymentsWithIncompleteSalesRequireManual')}</p>
           {pos.can('pos.payment.reconcile') && (
             <label>
-              บันทึกหลักฐานการตรวจสอบ / การคืนเงินนอกระบบ
+              {t('pos.recordReviewEvidenceExternalRefund')}
               <input
                 value={note}
                 maxLength={2000}
@@ -288,11 +296,15 @@ export function RegisterPage({
             .map((item) => (
               <Card key={item.id}>
                 <p>
-                  {item.id} · {item.status} · {paymentLabels[item.method]}
+                  {item.id} · {labelCode(item.status)} ·{' '}
+                  {localize(paymentLabels[item.method])}
                 </p>
-                <strong>{item.total} บาท</strong>
+                <strong>
+                  {item.total} {t('loyalty.thb')}
+                </strong>
                 <p>
-                  อ้างอิง: {item.reference || '—'} · {item.failure_code}
+                  {t('pos.reference')} {item.reference || '—'} ·{' '}
+                  {item.failure_code}
                 </p>
                 {item.status === 'AWAITING_PAYMENT' ? (
                   <Button
@@ -301,7 +313,7 @@ export function RegisterPage({
                       void pos.mutate(`/pos/checkouts/${item.id}/cancel`, {})
                     }
                   >
-                    ยกเลิกก่อนรับเงิน
+                    {t('pos.cancelBeforeReceivingFunds')}
                   </Button>
                 ) : (
                   <>
@@ -316,13 +328,16 @@ export function RegisterPage({
                           if (result)
                             pos.setMessage(
                               result.status === 'COMPLETED'
-                                ? 'ขายสำเร็จ'
-                                : `ยังต้องตรวจสอบ: ${result.failure_code}`,
+                                ? t('pos.saleCompleted')
+                                : {
+                                    key: 'pos.reviewStillRequiredValue0',
+                                    params: { value0: result.failure_code },
+                                  },
                             );
                         })()
                       }
                     >
-                      ลองบันทึกขายเดิม
+                      {t('pos.retryTheSameSale')}
                     </Button>
                     {pos.can('pos.payment.reconcile') && (
                       <Button
@@ -334,7 +349,7 @@ export function RegisterPage({
                           })
                         }
                       >
-                        ยืนยันตรวจสอบเงินเสร็จแล้ว
+                        {t('pos.confirmPaymentReviewCompleted')}
                       </Button>
                     )}
                   </>
@@ -345,7 +360,7 @@ export function RegisterPage({
             loading={payments.isFetching}
             error={payments.error}
             empty={payments.data?.total === 0}
-            emptyMessage="ยังไม่มีรายการชำระเงินในสาขานี้"
+            emptyMessage={t('pos.noPaymentRecordsInThisBranchYet')}
             retry={() => void payments.refetch()}
           />
         </>

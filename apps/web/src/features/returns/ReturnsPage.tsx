@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useState, type FormEvent } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
@@ -66,7 +67,7 @@ export function ReturnsPage({ refunds = false }: { refunds?: boolean }) {
 function RefundPage({ code }: { code: string }) {
   const tenant = useOrganization(),
     command = useReturnsCommand();
-  const [language, setLanguage] = useState<'th' | 'en'>('th');
+  const { language, t } = useLanguage();
   const text = copy[language];
   const isID =
     /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(
@@ -88,21 +89,10 @@ function RefundPage({ code }: { code: string }) {
     <div className="catalog-page returns-page">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">REFUND DETAILS</p>
+          <p className="eyebrow">{t('returns.refundDetails')}</p>
           <h1>{text.settlement}</h1>
           <p>{code}</p>
         </div>
-        <Field label={text.language}>
-          <select
-            value={language}
-            onChange={(event) =>
-              setLanguage(event.target.value === 'en' ? 'en' : 'th')
-            }
-          >
-            <option value="th">ไทย</option>
-            <option value="en">English</option>
-          </select>
-        </Field>
       </div>
       <nav className="catalog-nav">
         <Link to="/sales/refunds">{text.refundList}</Link>
@@ -122,8 +112,8 @@ function ReturnsWorkspace({ refunds }: { refunds: boolean }) {
   const [params] = useSearchParams();
   const tenant = useOrganization(),
     command = useReturnsCommand();
-  const [language, setLanguage] = useState<'th' | 'en'>('th'),
-    [search, setSearch] = useState(''),
+  const { language, t, labelCode } = useLanguage();
+  const [search, setSearch] = useState(''),
     [page, setPage] = useState(1),
     [selected, setSelected] = useState(params.get('return_id') ?? '');
   const text = copy[language],
@@ -141,19 +131,10 @@ function ReturnsWorkspace({ refunds }: { refunds: boolean }) {
     <div className="catalog-page returns-page">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">BUSINESS OPERATIONS</p>
+          <p className="eyebrow">{t('returns.businessOperations')}</p>
           <h1>{refunds ? text.refunds : text.returns}</h1>
           <p>{text.privacy}</p>
         </div>
-        <Field label={text.language}>
-          <select
-            value={language}
-            onChange={(event) => setLanguage(event.target.value as 'th' | 'en')}
-          >
-            <option value="th">ไทย</option>
-            <option value="en">English</option>
-          </select>
-        </Field>
       </div>
       <nav className="catalog-nav">
         <Link to="/sales">{text.back}</Link>
@@ -212,7 +193,7 @@ function ReturnsWorkspace({ refunds }: { refunds: boolean }) {
                     {refunds ? (
                       <RefundStatus status={item.status} text={text} />
                     ) : (
-                      <Tag>{item.status}</Tag>
+                      <Tag>{labelCode(item.status)}</Tag>
                     )}
                   </td>
                   <td className="returns-amount">
@@ -314,6 +295,8 @@ function ReturnLines({
   command: Command;
   created: (id: string) => void;
 }) {
+  const { t } = useLanguage();
+
   const [reason, setReason] = useState(''),
     [batches, setBatches] = useState<Record<string, BatchSelection>>({}),
     [quantities, setQuantities] = useState<Record<string, string>>({}),
@@ -384,9 +367,8 @@ function ReturnLines({
             {disposition !== 'NO_STOCK_RETURN' && (
               <>
                 <p>
-                  Original lot: {item.batch_id ?? 'UNTRACKED'} · lot
-                  ต้องตรงต้นทาง; ไม่ทราบให้เข้ากักกัน / Unknown returns must be
-                  quarantined.
+                  {t('returns.originalLot')} {item.batch_id ?? 'UNTRACKED'}{' '}
+                  {t('returns.lotsMustMatchTheSourceUnknownReturns')}
                 </p>
                 <BatchPicker
                   variant={item.variant_id}
@@ -489,6 +471,8 @@ function ReturnPanel({
   text: ReturnsCopy;
   command: Command;
 }) {
+  const { labelCode } = useLanguage();
+
   const tenant = useOrganization(),
     query = useReturnsQuery<CustomerReturn>(`/returns/${id}`);
   const doc = query.data;
@@ -500,7 +484,7 @@ function ReturnPanel({
       {doc && (
         <>
           <p className="returns-reference">{doc.number}</p>
-          <Tag>{doc.status}</Tag>
+          <Tag>{labelCode(doc.status)}</Tag>
           <p>
             {text.amount}: {doc.amount} THB
           </p>
@@ -545,7 +529,7 @@ function ReturnPanel({
                   {item.product_name} / {item.sku}
                 </td>
                 <td>{item.quantity}</td>
-                <td>{item.disposition}</td>
+                <td>{labelCode(item.disposition)}</td>
                 <td>{item.refund_amount}</td>
                 <td className="returns-reference">{item.movement_id ?? '—'}</td>
               </tr>
@@ -651,6 +635,8 @@ function RefundDetails({
   text: ReturnsCopy;
   command: Command;
 }) {
+  const { formatDateTime } = useLanguage();
+
   const tenant = useOrganization(),
     { state } = useAuth();
   const [method, setMethod] = useState('MANUAL_BANK_REFUND'),
@@ -710,9 +696,7 @@ function RefundDetails({
           <div>
             <dt>{text.reported}</dt>
             <dd>
-              {new Date(refund.reported_at).toLocaleString(
-                text === copy.th ? 'th-TH' : 'en-GB',
-              )}
+              {formatDateTime(refund.reported_at)}
               <span className="record-secondary">{refund.reported_by}</span>
             </dd>
           </div>
@@ -721,9 +705,7 @@ function RefundDetails({
           <div>
             <dt>{text.confirmed}</dt>
             <dd>
-              {new Date(refund.confirmed_at).toLocaleString(
-                text === copy.th ? 'th-TH' : 'en-GB',
-              )}
+              {formatDateTime(refund.confirmed_at)}
               <span className="record-secondary">{refund.confirmed_by}</span>
             </dd>
           </div>
@@ -841,11 +823,7 @@ function RefundDetails({
         {refund.events.map((event) => (
           <tr key={event.id}>
             <td>{text.refundStatuses[event.action] ?? event.action}</td>
-            <td>
-              {new Date(event.created_at).toLocaleString(
-                text === copy.th ? 'th-TH' : 'en-GB',
-              )}
-            </td>
+            <td>{formatDateTime(event.created_at)}</td>
             <td>{event.note}</td>
           </tr>
         ))}

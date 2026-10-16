@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useRef, useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
@@ -42,9 +43,11 @@ const roleNames: Role[] = [
   'PURCHASING_STAFF',
 ];
 function ErrorMessage({ message }: { message: string }) {
+  const { localize } = useLanguage();
+
   return message ? (
     <p className="tenant-error" role="alert">
-      {message}
+      {localize(message ?? '')}
     </p>
   ) : null;
 }
@@ -83,43 +86,45 @@ function OrganizationFields({
   value: OrganizationInput;
   change: (value: OrganizationInput) => void;
 }) {
+  const { t } = useLanguage();
+
   return (
     <div className="tenant-form-grid">
       <Field
-        label="ชื่อองค์กร"
+        label={t('organization.organizationName')}
         value={value.name}
         required
         onChange={(name) => change({ ...value, name })}
       />
       <Field
-        label="รหัสองค์กร"
+        label={t('organization.organizationCode')}
         value={value.code}
         maxLength={50}
         required
         onChange={(code) => change({ ...value, code })}
       />
       <Field
-        label="ประเภทธุรกิจ"
+        label={t('organization.businessType')}
         value={value.business_type}
         maxLength={80}
         required
         onChange={(business_type) => change({ ...value, business_type })}
       />
       <Field
-        label="อีเมลติดต่อ"
+        label={t('organization.contactEmail')}
         value={value.contact_email}
         type="email"
         maxLength={254}
         onChange={(contact_email) => change({ ...value, contact_email })}
       />
       <Field
-        label="โทรศัพท์ติดต่อ"
+        label={t('organization.contactPhone')}
         value={value.contact_phone}
         maxLength={30}
         onChange={(contact_phone) => change({ ...value, contact_phone })}
       />
       <Field
-        label="ที่อยู่องค์กร"
+        label={t('organization.organizationAddress')}
         value={value.address}
         maxLength={1000}
         onChange={(address) => change({ ...value, address })}
@@ -136,35 +141,37 @@ function BranchFields({
   change: (value: BranchInput) => void;
   owner?: boolean;
 }) {
+  const { t } = useLanguage();
+
   return (
     <div className="tenant-form-grid">
       <Field
-        label="ชื่อสาขา"
+        label={t('organization.branchName')}
         value={value.name}
         required
         onChange={(name) => change({ ...value, name })}
       />
       <Field
-        label="รหัสสาขา"
+        label={t('organization.branchCode')}
         value={value.code}
         maxLength={50}
         required
         onChange={(code) => change({ ...value, code })}
       />
       <Field
-        label="ที่อยู่สาขา"
+        label={t('organization.branchAddress')}
         value={value.address}
         maxLength={1000}
         onChange={(address) => change({ ...value, address })}
       />
       <Field
-        label="โทรศัพท์สาขา"
+        label={t('organization.branchPhone')}
         value={value.phone}
         maxLength={30}
         onChange={(phone) => change({ ...value, phone })}
       />
       <Field
-        label="อีเมลสาขา"
+        label={t('organization.branchEmail')}
         value={value.email}
         type="email"
         maxLength={254}
@@ -172,16 +179,16 @@ function BranchFields({
       />
       {owner && (
         <label className="tenant-field">
-          สถานะสาขา
+          {t('organization.branchStatus')}
           <select
-            aria-label="สถานะสาขา"
+            aria-label={t('organization.branchStatus')}
             value={value.status}
             onChange={(event) =>
               change({ ...value, status: event.target.value })
             }
           >
-            <option value="ACTIVE">ACTIVE</option>
-            <option value="INACTIVE">INACTIVE</option>
+            <option value="ACTIVE">{t('organization.active4')}</option>
+            <option value="INACTIVE">{t('organization.inactive4')}</option>
           </select>
         </label>
       )}
@@ -223,6 +230,8 @@ function useWrite() {
   };
 }
 export function SetupPage() {
+  const { t, localize } = useLanguage();
+
   const { state } = useAuth();
   const tenant = useOrganization();
   const navigate = useNavigate();
@@ -236,30 +245,30 @@ export function SetupPage() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const retry = useRef({ key: '', payload: '' });
-  if (state.status === 'loading') return <Loading>กำลังตรวจสอบบัญชี…</Loading>;
+  if (state.status === 'loading')
+    return <Loading>{t('organization.checkingAccount')}</Loading>;
   if (state.status !== 'authenticated')
     return (
       <Card className="tenant-page">
-        <h1>ตั้งค่าร้าน</h1>
-        <p>
-          เข้าสู่ระบบด้วยอีเมลผู้รับก่อนสร้างร้านหรือรับคำเชิญ
-          หากยังไม่มีบัญชีให้สมัครแล้วกลับมาเปิดคำเชิญ
-        </p>
+        <h1>{t('organization.setUpStore')}</h1>
+        <p>{t('organization.signInWithTheRecipientSEmail')}</p>
         <Link className="button" to="/login?returnTo=%2Fsetup">
-          เข้าสู่ระบบ
+          {t('auth.signIn')}
         </Link>
         <Link className="button button-secondary" to="/register">
-          สมัครบัญชี
+          {t('organization.registerAccount')}
         </Link>
       </Card>
     );
   if (tenant.loading)
-    return <Loading>กำลังตรวจสอบโหมดร้านและสิทธิ์เข้าใช้งาน…</Loading>;
+    return <Loading>{t('organization.checkingStoreModeAndAccess')}</Loading>;
   if (tenant.error)
     return (
       <div className="tenant-page">
-        <ErrorMessage message={tenant.error} />
-        <Button onClick={() => void tenant.refresh()}>ตรวจสิทธิ์ใหม่</Button>
+        <ErrorMessage message={localize(tenant.error ?? '')} />
+        <Button onClick={() => void tenant.refresh()}>
+          {t('organization.refreshPermissions')}
+        </Button>
       </div>
     );
   const accept = async () => {
@@ -280,7 +289,9 @@ export function SetupPage() {
       navigate('/manage/settings/store');
     } catch (failure) {
       setError(
-        failure instanceof Error ? failure.message : 'รับคำเชิญไม่สำเร็จ',
+        failure instanceof Error
+          ? failure.message
+          : t('organization.unableToAcceptInvitation'),
       );
     } finally {
       setPending(false);
@@ -289,7 +300,7 @@ export function SetupPage() {
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (tenant.storeMode === 'single') {
-      setError('ระบบร้านเดียวไม่อนุญาตให้สร้างองค์กรเพิ่ม');
+      setError(t('organization.singleStoreModeDoesNotAllowAdditional'));
       return;
     }
     setError('');
@@ -320,7 +331,9 @@ export function SetupPage() {
       navigate('/manage/settings/store');
     } catch (failure) {
       setError(
-        failure instanceof Error ? failure.message : 'สร้างองค์กรไม่สำเร็จ',
+        failure instanceof Error
+          ? failure.message
+          : t('organization.unableToCreateOrganization'),
       );
     } finally {
       setPending(false);
@@ -329,27 +342,32 @@ export function SetupPage() {
   return (
     <div className="tenant-page">
       <header>
-        <Tag tone="amber">STORE ONBOARDING</Tag>
-        <h1>ตั้งค่าร้าน</h1>
+        <Tag tone="amber">{t('organization.storeOnboarding')}</Tag>
+        <h1>{t('organization.setUpStore')}</h1>
         <p>
           {tenant.storeMode === 'single'
-            ? 'ระบบร้านเดียว ใช้สิทธิ์สมาชิกของร้านที่กำหนดเท่านั้น'
-            : 'สร้างองค์กรพร้อม Owner และสาขาหลักในธุรกรรมเดียว'}
+            ? t('organization.singleStoreModeUsesMembershipsOfThe')
+            : t('organization.createOrganizationOwnerMembershipAndMainBranch')}
         </p>
       </header>
       {tenant.invitationToken && (
         <Card>
-          <h2>คำเชิญเข้าร่วมองค์กร</h2>
-          <p>บัญชีที่ใช้รับคำเชิญ: {state.session.user.email}</p>
+          <h2>{t('organization.organizationInvitation')}</h2>
+          <p>
+            {t('organization.accountAcceptingThisInvitation')}{' '}
+            {state.session.user.email}
+          </p>
           <Button disabled={pending} onClick={() => void accept()}>
-            รับคำเชิญ
+            {t('organization.acceptInvitation')}
           </Button>
         </Card>
       )}
       {tenant.organizations.length > 0 && (
         <Card>
           <h2>
-            {tenant.storeMode === 'single' ? 'ร้านของคุณ' : 'องค์กรของคุณ'}
+            {tenant.storeMode === 'single'
+              ? t('organization.yourStore')
+              : t('organization.yourOrganization')}
           </h2>
           <div className="tenant-actions">
             {tenant.organizations.map((item) => (
@@ -369,19 +387,24 @@ export function SetupPage() {
       )}
       {tenant.storeMode === 'single' && tenant.organizations.length === 0 && (
         <Card>
-          <h2>ยังไม่มีสิทธิ์เข้าร้านนี้</h2>
-          <p>
-            ขอคำเชิญจากเจ้าของร้าน แล้วเข้าสู่ระบบด้วยบัญชีที่ได้รับคำเชิญ
-            การสมัครบัญชีไม่เพิ่มสิทธิ์เข้าร้านให้อัตโนมัติ
-          </p>
+          <h2>{t('organization.youDoNotHaveAccessToThis')}</h2>
+          <p>{t('organization.requestAnInvitationFromTheStoreOwner')}</p>
         </Card>
       )}
-      {tenant.storeMode === 'single' && <ErrorMessage message={error} />}
+      {tenant.storeMode === 'single' && (
+        <ErrorMessage message={localize(error ?? '')} />
+      )}
       {tenant.storeMode !== 'single' && (
         <Card>
           <p className="tenant-step" role="status">
-            ขั้นตอน {step + 1} / 3 ·{' '}
-            {['ข้อมูลธุรกิจ', 'สาขาหลัก', 'ตรวจสอบข้อมูล'][step]}
+            {t('organization.step')} {step + 1} / 3 ·{' '}
+            {
+              [
+                t('organization.businessInformation'),
+                t('organization.mainBranch'),
+                t('organization.reviewDetails'),
+              ][step]
+            }
           </p>
           <form onSubmit={(event) => void submit(event)}>
             <fieldset disabled={pending}>
@@ -396,44 +419,44 @@ export function SetupPage() {
               )}
               {step === 2 && (
                 <dl>
-                  <dt>องค์กร</dt>
+                  <dt>{t('organization.organization')}</dt>
                   <dd>
                     {organization.name} ({organization.code})
                   </dd>
-                  <dt>ประเภทธุรกิจ / ติดต่อ</dt>
+                  <dt>{t('organization.businessTypeContact')}</dt>
                   <dd>
                     {organization.business_type} ·{' '}
-                    {organization.contact_email || 'ไม่ระบุ'} ·{' '}
-                    {organization.contact_phone || 'ไม่ระบุ'}
+                    {organization.contact_email || t('catalog.notProvided')} ·{' '}
+                    {organization.contact_phone || t('catalog.notProvided')}
                   </dd>
-                  <dt>สาขาหลัก</dt>
+                  <dt>{t('organization.mainBranch')}</dt>
                   <dd>
                     {branch.name} ({branch.code}) ·{' '}
-                    {branch.address || 'ไม่ระบุที่อยู่'}
+                    {branch.address || t('organization.noAddressProvided')}
                   </dd>
-                  <dt>Owner</dt>
+                  <dt>{t('organization.owner')}</dt>
                   <dd>
                     {state.session.user.display_name} ·{' '}
                     {state.session.user.email}
                   </dd>
                 </dl>
               )}
-              <ErrorMessage message={error} />
+              <ErrorMessage message={localize(error ?? '')} />
               <div className="tenant-actions">
                 {step > 0 && (
                   <Button
                     className="button-secondary"
                     onClick={() => setStep(step - 1)}
                   >
-                    ย้อนกลับ
+                    {t('organization.back')}
                   </Button>
                 )}
                 <Button type="submit">
                   {pending
-                    ? 'กำลังบันทึก…'
+                    ? t('catalog.saving')
                     : step === 2
-                      ? 'สร้างร้าน'
-                      : 'ถัดไป'}
+                      ? t('organization.createStore')
+                      : t('catalog.next')}
                 </Button>
               </div>
             </fieldset>
@@ -444,6 +467,8 @@ export function SetupPage() {
   );
 }
 export function StorePage() {
+  const { t, localize } = useLanguage();
+
   const tenant = useOrganization();
   const write = useWrite();
   const [value, setValue] = useState<OrganizationInput>(
@@ -474,9 +499,13 @@ export function StorePage() {
         contact_phone,
         address,
       });
-      setMessage('บันทึกข้อมูลองค์กรแล้ว');
+      setMessage(t('organization.organizationSaved'));
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : 'บันทึกไม่สำเร็จ');
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : t('organization.unableToSave'),
+      );
     } finally {
       setPending(false);
     }
@@ -484,8 +513,8 @@ export function StorePage() {
   return (
     <div className="tenant-page">
       <header>
-        <Tag tone="amber">ORGANIZATION</Tag>
-        <h1>ข้อมูลองค์กร</h1>
+        <Tag tone="amber">{t('organization.organization2')}</Tag>
+        <h1>{t('organization.organizationDetails')}</h1>
         <p>{tenant.context?.membership.role} · THB · Asia/Bangkok</p>
       </header>
       <Card>
@@ -494,21 +523,25 @@ export function StorePage() {
             <OrganizationFields value={value} change={setValue} />
             {tenant.can('organization.update') && (
               <Button type="submit">
-                {pending ? 'กำลังบันทึก…' : 'บันทึกองค์กร'}
+                {pending
+                  ? t('catalog.saving')
+                  : t('organization.saveOrganization')}
               </Button>
             )}
           </fieldset>
         </form>
         {!tenant.can('organization.update') && (
-          <p>ข้อมูลตามสิทธิ์ปัจจุบัน · เฉพาะ Owner เปลี่ยนข้อมูลองค์กรได้</p>
+          <p>{t('organization.dataFollowsCurrentPermissionsOnlyTheOwner')}</p>
         )}
-        <p role="status">{message}</p>
-        <ErrorMessage message={error} />
+        <p role="status">{localize(message)}</p>
+        <ErrorMessage message={localize(error ?? '')} />
       </Card>
     </div>
   );
 }
 export function BranchesPage() {
+  const { t, localize, labelCode } = useLanguage();
+
   const tenant = useOrganization();
   const query = useTenantData<Branch[]>('branches');
   const write = useWrite();
@@ -529,7 +562,11 @@ export function BranchesPage() {
       );
       setEditing(null);
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : 'บันทึกไม่สำเร็จ');
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : t('organization.unableToSave'),
+      );
     } finally {
       setPending(false);
     }
@@ -537,12 +574,16 @@ export function BranchesPage() {
   return (
     <div className="tenant-page">
       <header>
-        <h1>สาขา</h1>
-        <p>แสดงเฉพาะสาขาที่องค์กรและสิทธิ์ของคุณอนุญาต</p>
+        <h1>{t('organization.branch')}</h1>
+        <p>{t('organization.onlyBranchesAllowedByYourOrganizationAnd')}</p>
       </header>
       <Card>
         <div className="tenant-actions">
-          <Field label="ค้นหาสาขา" value={search} onChange={setSearch} />
+          <Field
+            label={t('organization.findBranch')}
+            value={search}
+            onChange={setSearch}
+          />
           {tenant.can('branch.create') && (
             <Button
               onClick={() => {
@@ -551,7 +592,7 @@ export function BranchesPage() {
                 setError('');
               }}
             >
-              เพิ่มสาขา
+              {t('organization.addBranch')}
             </Button>
           )}
         </div>
@@ -569,10 +610,11 @@ export function BranchesPage() {
                 <div>
                   <h3>{item.name}</h3>
                   <p>
-                    {item.code} · {item.address || 'ไม่ระบุที่อยู่'}
+                    {item.code} ·{' '}
+                    {item.address || t('organization.noAddressProvided')}
                   </p>
                   <Tag tone={item.status === 'ACTIVE' ? 'success' : 'neutral'}>
-                    {item.status}
+                    {labelCode(item.status)}
                     {item.is_main ? ' · MAIN' : ''}
                   </Tag>
                 </div>
@@ -587,17 +629,23 @@ export function BranchesPage() {
                       setError('');
                     }}
                   >
-                    แก้ไข {item.name}
+                    {t('catalog.edit')} {item.name}
                   </Button>
                 )}
               </article>
             ))}
         </div>
-        {query.data?.length === 0 && <p>ยังไม่มีสาขาที่เข้าถึงได้</p>}
+        {query.data?.length === 0 && (
+          <p>{t('organization.noAccessibleBranchesYet')}</p>
+        )}
       </Card>
       {editing !== null && (
         <Card>
-          <h2>{editing ? 'แก้ไขสาขา' : 'สร้างสาขา'}</h2>
+          <h2>
+            {editing
+              ? t('organization.editBranch')
+              : t('organization.createBranch')}
+          </h2>
           <form onSubmit={(event) => void submit(event)}>
             <fieldset disabled={pending}>
               <BranchFields
@@ -605,14 +653,14 @@ export function BranchesPage() {
                 change={setValue}
                 owner={tenant.can('branch.deactivate')}
               />
-              <ErrorMessage message={error} />
+              <ErrorMessage message={localize(error ?? '')} />
               <div className="tenant-actions">
-                <Button type="submit">บันทึกสาขา</Button>
+                <Button type="submit">{t('organization.saveBranch')}</Button>
                 <Button
                   className="button-secondary"
                   onClick={() => setEditing(null)}
                 >
-                  ยกเลิก
+                  {t('customers.cancel')}
                 </Button>
               </div>
             </fieldset>
@@ -629,10 +677,12 @@ function BranchAssignments({
   value: string[];
   change: (value: string[]) => void;
 }) {
+  const { t } = useLanguage();
+
   const tenant = useOrganization();
   return (
     <fieldset className="tenant-assignments">
-      <legend>สาขาที่ได้รับมอบหมาย</legend>
+      <legend>{t('organization.assignedBranches')}</legend>
       {tenant.context?.branches.map((branch) => (
         <label key={branch.id}>
           <input
@@ -661,6 +711,8 @@ function RoleSelect({
   change: (role: Role) => void;
   invite?: boolean;
 }) {
+  const { t } = useLanguage();
+
   const tenant = useOrganization();
   const allowed = roleNames.filter((role) =>
     tenant.context?.membership.role === 'OWNER'
@@ -669,9 +721,9 @@ function RoleSelect({
   );
   return (
     <label className="tenant-field">
-      บทบาท
+      {t('organization.role')}
       <select
-        aria-label="บทบาท"
+        aria-label={t('organization.role')}
         value={value}
         onChange={(event) => change(event.target.value as Role)}
       >
@@ -685,8 +737,10 @@ function RoleSelect({
   );
 }
 export function EmployeesPage() {
+  const { t, labelCode, localize } = useLanguage();
+
   const tenant = useOrganization();
-  const query = useTenantData<Member[]>('members');
+  const query = useTenantData<Member[]>(t('customers.members'));
   const invitations = useTenantData<Invitation[]>('invitations');
   const write = useWrite();
   const [email, setEmail] = useState('');
@@ -700,7 +754,7 @@ export function EmployeesPage() {
     setError('');
     setMessage('');
     if (!branchIDs.length) {
-      setError('เลือกอย่างน้อยหนึ่งสาขา');
+      setError(t('organization.selectAtLeastOneBranch'));
       return;
     }
     setPending(true);
@@ -710,10 +764,14 @@ export function EmployeesPage() {
         role,
         branch_ids: branchIDs,
       });
-      setMessage('ส่งคำเชิญแล้ว · อายุ 48 ชั่วโมง');
+      setMessage(t('organization.invitationSentExpiresIn48Hours'));
       setEmail('');
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : 'เชิญไม่สำเร็จ');
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : t('organization.unableToInvite'),
+      );
     } finally {
       setPending(false);
     }
@@ -723,9 +781,13 @@ export function EmployeesPage() {
     setError('');
     try {
       await write(`invitations/${id}`, 'DELETE');
-      setMessage('ยกเลิกคำเชิญแล้ว');
+      setMessage(t('organization.invitationCancelled'));
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : 'ยกเลิกไม่สำเร็จ');
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : t('organization.unableToCancel'),
+      );
     } finally {
       setPending(false);
     }
@@ -733,8 +795,10 @@ export function EmployeesPage() {
   return (
     <div className="tenant-page">
       <header>
-        <h1>พนักงาน</h1>
-        <p>บัญชีเดียวเข้าร่วมได้หลายองค์กร โดยสิทธิ์ไม่ข้ามองค์กร</p>
+        <h1>{t('organization.employees')}</h1>
+        <p>
+          {t('organization.oneAccountCanJoinMultipleOrganizationsPermissions')}
+        </p>
       </header>
       <Card>
         {query.isPending && <Loading />}
@@ -752,36 +816,38 @@ export function EmployeesPage() {
                 <p>
                   {member.role} ·{' '}
                   {member.role === 'OWNER'
-                    ? 'ทุกสาขา'
+                    ? t('organization.allBranches')
                     : member.branch_ids
                         .map(
                           (id) =>
                             tenant.context?.branches.find(
                               (item) => item.id === id,
-                            )?.name ?? 'สาขาที่ปิดใช้งาน',
+                            )?.name ?? t('organization.inactiveBranch'),
                         )
                         .join(', ')}
                 </p>
-                <Tag>{member.status}</Tag>
+                <Tag>{labelCode(member.status)}</Tag>
               </div>
               <Link
                 className="button button-secondary"
                 to={`/employees/${member.id}`}
               >
-                รายละเอียด
+                {t('inventory.details')}
               </Link>
             </article>
           ))}
         </div>
-        {query.data?.length === 0 && <p>ยังไม่มีพนักงานในขอบเขตสิทธิ์</p>}
+        {query.data?.length === 0 && (
+          <p>{t('organization.noEmployeesWithinYourAccessScope')}</p>
+        )}
       </Card>
       {tenant.can('employee.invite') && (
         <Card>
-          <h2>เชิญพนักงาน</h2>
+          <h2>{t('organization.inviteEmployee')}</h2>
           <form onSubmit={(event) => void submit(event)}>
             <fieldset disabled={pending}>
               <Field
-                label="อีเมลพนักงาน"
+                label={t('organization.employeeEmail')}
                 value={email}
                 onChange={setEmail}
                 type="email"
@@ -790,14 +856,14 @@ export function EmployeesPage() {
               />
               <RoleSelect value={role} change={setRole} invite />
               <BranchAssignments value={branchIDs} change={setBranchIDs} />
-              <Button type="submit">ส่งคำเชิญ</Button>
+              <Button type="submit">{t('organization.sendInvitation')}</Button>
             </fieldset>
           </form>
           <div className="tenant-list">
             {invitations.data?.map((item) => (
               <article className="tenant-row" key={item.id}>
                 <p>
-                  {item.email} · {item.role} · {item.status}
+                  {item.email} · {item.role} · {labelCode(item.status)}
                 </p>
                 {item.status === 'PENDING' && (
                   <Button
@@ -805,13 +871,13 @@ export function EmployeesPage() {
                     disabled={pending}
                     onClick={() => void revoke(item.id)}
                   >
-                    ยกเลิกคำเชิญ
+                    {t('organization.cancelInvitation')}
                   </Button>
                 )}
               </article>
             ))}
           </div>
-          <p role="status">{message}</p>
+          <p role="status">{localize(message)}</p>
           <ErrorMessage message={error || invitations.error?.message || ''} />
         </Card>
       )}
@@ -819,6 +885,8 @@ export function EmployeesPage() {
   );
 }
 function MemberEditor({ member }: { member: Member }) {
+  const { t, localize, labelCode } = useLanguage();
+
   const tenant = useOrganization();
   const write = useWrite();
   const [role, setRole] = useState(member.role);
@@ -848,9 +916,13 @@ function MemberEditor({ member }: { member: Member }) {
         status,
         branch_ids: branchIDs,
       });
-      setMessage('บันทึกสิทธิ์แล้ว');
+      setMessage(t('organization.permissionsSaved'));
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : 'บันทึกไม่สำเร็จ');
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : t('organization.unableToSave'),
+      );
     } finally {
       setPending(false);
     }
@@ -860,38 +932,46 @@ function MemberEditor({ member }: { member: Member }) {
     setError('');
     try {
       await write(`members/${member.id}`, 'DELETE');
-      setMessage('ถอนสิทธิ์องค์กรแล้ว');
+      setMessage(t('organization.organizationAccessRevoked'));
       setConfirm(false);
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : 'ถอนไม่สำเร็จ');
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : t('organization.unableToRevokeAccess'),
+      );
     } finally {
       setPending(false);
     }
   };
   return (
     <Card>
-      <h2>การมอบหมายสิทธิ์</h2>
+      <h2>{t('organization.accessAssignments')}</h2>
       <form onSubmit={(event) => void submit(event)}>
         <fieldset
           disabled={pending || !allowed || !tenant.can('employee.update')}
         >
           <RoleSelect value={role} change={setRole} />
           <label className="tenant-field">
-            สถานะสมาชิก
+            {t('loyalty.membershipStatus')}
             <select
-              aria-label="สถานะสมาชิก"
+              aria-label={t('loyalty.membershipStatus')}
               value={status}
               onChange={(event) => setStatus(event.target.value)}
             >
               {['ACTIVE', 'SUSPENDED', 'REMOVED'].map((value) => (
-                <option key={value}>{value}</option>
+                <option key={value} value={value}>
+                  {labelCode(value)}
+                </option>
               ))}
             </select>
           </label>
           {role !== 'OWNER' && (
             <BranchAssignments value={branchIDs} change={setBranchIDs} />
           )}
-          {allowed && <Button type="submit">บันทึกสมาชิก</Button>}
+          {allowed && (
+            <Button type="submit">{t('organization.saveMembership')}</Button>
+          )}
         </fieldset>
       </form>
       {allowed && tenant.can('employee.remove') && (
@@ -899,17 +979,17 @@ function MemberEditor({ member }: { member: Member }) {
           {confirm ? (
             <>
               <p>
-                ถอนสิทธิ์ {member.display_name} จากองค์กรนี้?
-                บัญชีผู้ใช้ยังคงอยู่
+                {t('organization.revokeAccessFor')} {member.display_name}{' '}
+                {t('organization.fromThisOrganizationTheUserAccountWill')}
               </p>
               <Button disabled={pending} onClick={() => void remove()}>
-                ยืนยันถอนสมาชิก
+                {t('organization.confirmMembershipRevocation')}
               </Button>
               <Button
                 className="button-secondary"
                 onClick={() => setConfirm(false)}
               >
-                ยกเลิก
+                {t('customers.cancel')}
               </Button>
             </>
           ) : (
@@ -918,25 +998,27 @@ function MemberEditor({ member }: { member: Member }) {
               disabled={pending || member.status === 'REMOVED'}
               onClick={() => setConfirm(true)}
             >
-              ถอนสมาชิก
+              {t('organization.revokeMembership')}
             </Button>
           )}
         </div>
       )}
-      <p role="status">{message}</p>
-      <ErrorMessage message={error} />
+      <p role="status">{localize(message)}</p>
+      <ErrorMessage message={localize(error ?? '')} />
     </Card>
   );
 }
 export function EmployeePage() {
+  const { t, formatDateTime, labelCode } = useLanguage();
+
   const { id } = useParams();
   const query = useTenantData<Member>(`members/${id}`);
   const history = useTenantData<AuditEvent[]>(`audit?member_id=${id}`);
   return (
     <div className="tenant-page">
       <header>
-        <h1>รายละเอียดพนักงาน</h1>
-        <Link to="/employees">กลับรายการพนักงาน</Link>
+        <h1>{t('organization.employeeDetails')}</h1>
+        <Link to="/employees">{t('organization.backToEmployees')}</Link>
       </header>
       {query.isPending && <Loading />}
       {query.error && <ErrorMessage message={query.error.message} />}
@@ -945,10 +1027,11 @@ export function EmployeePage() {
           <Card>
             <h2>{query.data.display_name}</h2>
             <p>{query.data.email}</p>
-            <Tag>{query.data.status}</Tag>
+            <Tag>{labelCode(query.data.status)}</Tag>
             <p>
               {query.data.role} ·{' '}
-              {query.data.permissions.join(', ') || 'ไม่มีสิทธิ์ใช้งาน'}
+              {query.data.permissions.join(', ') ||
+                t('organization.accessUnavailable')}
             </p>
           </Card>
           <MemberEditor
@@ -958,49 +1041,50 @@ export function EmployeePage() {
         </>
       )}
       <Card>
-        <h2>ประวัติการเปลี่ยนสิทธิ์</h2>
+        <h2>{t('organization.permissionChangeHistory')}</h2>
         {history.error && <ErrorMessage message={history.error.message} />}
         {history.data?.map((event) => (
           <p key={event.id}>
-            {new Date(event.created_at).toLocaleString('th-TH')} ·{' '}
-            {event.event_type} · {event.request_id}
+            {formatDateTime(event.created_at)} · {event.event_type} ·{' '}
+            {event.request_id}
           </p>
         ))}
-        {history.data?.length === 0 && <p>ยังไม่มีรายการในขอบเขตสิทธิ์</p>}
+        {history.data?.length === 0 && (
+          <p>{t('organization.noEntriesWithinYourAccessScope')}</p>
+        )}
       </Card>
     </div>
   );
 }
 export function RolesPage() {
+  const { t } = useLanguage();
+
   const tenant = useOrganization();
   const query = useTenantData<Record<Role, string[]>>('roles');
   const permissions = [...new Set(Object.values(query.data ?? {}).flat())];
   return (
     <div className="tenant-page">
       <header>
-        <h1>บทบาทและสิทธิ์</h1>
+        <h1>{t('organization.rolesAndPermissions')}</h1>
         <p>
-          สิทธิ์ปัจจุบัน: {tenant.context?.membership.role} · ใช้เฉพาะองค์กรนี้
+          {t('organization.currentPermissions')}{' '}
+          {tenant.context?.membership.role}{' '}
+          {t('organization.applyToThisOrganizationOnly')}
         </p>
       </header>
       <Card>
-        <p>
-          Owner จัดการองค์กรและทุกสาขา; Manager
-          จัดการเฉพาะพนักงานระดับปฏิบัติการที่ทุกสาขาอยู่ในขอบเขตตนเอง
-          ห้ามเปลี่ยน Owner/Manager หรือตัวเอง สิทธิ์ของ
-          Cashier/Inventory/Purchasing ในเฟสนี้เป็นอ่านบริบทและสาขาเท่านั้น
-        </p>
+        <p>{t('organization.ownersManageTheOrganizationAndAllBranches')}</p>
         {query.isPending && <Loading />}
         {query.error && <ErrorMessage message={query.error.message} />}
         <div
           className="tenant-table-wrap"
           tabIndex={0}
-          aria-label="ตารางสิทธิ์"
+          aria-label={t('organization.permissionMatrix')}
         >
           <table className="tenant-table">
             <thead>
               <tr>
-                <th>Permission</th>
+                <th>{t('organization.permission')}</th>
                 {roleNames.map((role) => (
                   <th key={role}>{role}</th>
                 ))}

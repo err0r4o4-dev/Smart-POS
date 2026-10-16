@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Printer } from 'lucide-react';
@@ -24,6 +25,8 @@ import {
 } from '../../lib/pos-api';
 
 export function SalesPage({ receipts = false }: { receipts?: boolean }) {
+  const { t, localize, formatDateTime } = useLanguage();
+
   const tenant = useOrganization();
   const { state } = useAuth();
   const org = tenant.context?.organization.id ?? '';
@@ -70,20 +73,20 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
     <div className="catalog-page sales-page">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">COMMITTED TRANSACTIONS</p>
-          <h1>{receipts ? 'ใบเสร็จ' : 'ประวัติการขาย'}</h1>
+          <p className="eyebrow">{t('pos.committedTransactions')}</p>
+          <h1>{receipts ? t('pos.receipts') : t('pos.salesHistory2')}</h1>
           <p>
             {receipts
-              ? 'ค้นหาใบเสร็จและเปิดรายละเอียดเพื่อพิมพ์ซ้ำ'
-              : 'ตรวจสอบยอดขาย วิธีชำระเงิน และรายการขายที่เสร็จสมบูรณ์'}
+              ? t('pos.findReceiptsAndOpenDetailsToReprint')
+              : t('pos.reviewTotalsPaymentMethodsAndCompletedSales')}
           </p>
         </div>
-        <Link to="/pos">ไปขายสินค้า</Link>
+        <Link to="/pos">{t('customers.openPos')}</Link>
       </div>
       <Card>
         <div className="pos-history-filters">
           <label>
-            ค้นหาเลขรายการ
+            {t('pos.searchTransactionNumber')}
             <input
               value={search}
               onChange={(event) => {
@@ -93,7 +96,7 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
             />
           </label>
           <label>
-            วิธีชำระเงิน
+            {t('pos.paymentMethod')}
             <select
               value={method}
               onChange={(event) => {
@@ -101,16 +104,16 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
                 setPage(1);
               }}
             >
-              <option value="">ทั้งหมด</option>
+              <option value="">{t('common.all')}</option>
               {Object.entries(paymentLabels).map(([value, label]) => (
                 <option value={value} key={value}>
-                  {label}
+                  {localize(label ?? '')}
                 </option>
               ))}
             </select>
           </label>
           <label>
-            เครื่องขาย
+            {t('pos.terminal')}
             <select
               value={terminal}
               onChange={(event) => {
@@ -118,7 +121,7 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
                 setPage(1);
               }}
             >
-              <option value="">ทั้งหมด</option>
+              <option value="">{t('common.all')}</option>
               {terminals.data?.items.map((item) => (
                 <option value={item.id} key={item.id}>
                   {item.name}
@@ -127,7 +130,7 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
             </select>
           </label>
           <label>
-            รหัสแคชเชียร์ (UUID)
+            {t('pos.cashierIdUuid')}
             <input
               value={cashier}
               onChange={(event) => {
@@ -137,7 +140,7 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
             />
           </label>
           <label>
-            สถานะ
+            {t('auth.status')}
             <select
               value={status}
               onChange={(event) => {
@@ -145,12 +148,12 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
                 setPage(1);
               }}
             >
-              <option value="">ทั้งหมด</option>
-              <option value="COMPLETED">ขายสำเร็จ</option>
+              <option value="">{t('common.all')}</option>
+              <option value="COMPLETED">{t('pos.saleCompleted')}</option>
             </select>
           </label>
           <label>
-            ตั้งแต่
+            {t('customers.from')}
             <input
               type="date"
               value={from}
@@ -161,7 +164,7 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
             />
           </label>
           <label>
-            ถึง
+            {t('customers.to')}
             <input
               type="date"
               value={to}
@@ -172,7 +175,7 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
             />
           </label>
         </div>
-        {query.isPending && <Loading>กำลังโหลดประวัติ…</Loading>}
+        {query.isPending && <Loading>{t('pos.loadingHistory')}</Loading>}
         {query.error && (
           <ErrorState
             message={query.error.message}
@@ -182,19 +185,19 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
         <div
           className="table-scroll sales-history-table"
           role="region"
-          aria-label={receipts ? 'รายการใบเสร็จ' : 'รายการขาย'}
+          aria-label={receipts ? t('pos.receiptList') : t('landing.saleItems')}
           tabIndex={0}
         >
           <table className="record-table">
             <thead>
               <tr>
-                <th>{receipts ? 'ใบเสร็จ' : 'เลขรายการขาย'}</th>
-                <th>วัน / เวลา</th>
-                <th>สาขา / เครื่อง</th>
-                <th>แคชเชียร์</th>
-                <th className="sales-amount">ยอดรวม (บาท)</th>
-                <th>ชำระเงิน / สถานะ</th>
-                <th>รายการ</th>
+                <th>{receipts ? t('pos.receipts') : t('pos.saleNumber')}</th>
+                <th>{t('loyalty.dateTime')}</th>
+                <th>{t('pos.branchTerminal')}</th>
+                <th>{t('pos.cashier2')}</th>
+                <th className="sales-amount">{t('pos.totalThb')}</th>
+                <th>{t('pos.paymentStatus')}</th>
+                <th>{t('catalog.definitions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -207,20 +210,10 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
                   </td>
                   <td className="sales-date">
                     <time dateTime={item.completed_at}>
-                      {new Date(item.completed_at).toLocaleDateString('th-TH', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
+                      {formatDateTime(item.completed_at, 'date')}
                       <span className="sales-secondary">
-                        {new Date(item.completed_at).toLocaleTimeString(
-                          'th-TH',
-                          {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          },
-                        )}{' '}
-                        น.
+                        {formatDateTime(item.completed_at, 'time')}{' '}
+                        {t('pos.label')}
                       </span>
                     </time>
                   </td>
@@ -235,7 +228,7 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
                     <strong>{moneyText(item.grand_total)}</strong>
                   </td>
                   <td>
-                    {paymentLabels[item.method]}
+                    {localize(paymentLabels[item.method])}
                     <div className="sales-statuses">
                       <Tag
                         tone={
@@ -245,7 +238,7 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
                         }
                       >
                         {item.payment_status === 'CONFIRMED'
-                          ? 'ยืนยันชำระแล้ว'
+                          ? t('pos.paymentConfirmed')
                           : item.payment_status}
                       </Tag>
                       <Tag
@@ -254,7 +247,7 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
                         }
                       >
                         {item.status === 'COMPLETED'
-                          ? 'ขายสำเร็จ'
+                          ? t('pos.saleCompleted')
                           : item.status}
                       </Tag>
                     </div>
@@ -265,7 +258,7 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
                       className="button button-secondary sales-detail-link"
                     >
                       <Printer size={16} aria-hidden="true" />
-                      <span>ดูรายละเอียด / พิมพ์</span>
+                      <span>{t('pos.viewDetailsPrint')}</span>
                     </Link>
                   </td>
                 </tr>
@@ -276,8 +269,8 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
         {query.data?.total === 0 && (
           <p>
             {receipts
-              ? 'ยังไม่มีใบเสร็จที่ตรงเงื่อนไข'
-              : 'ยังไม่มีรายการขายที่ตรงเงื่อนไข'}
+              ? t('pos.noReceiptsMatchTheFilters')
+              : t('pos.noSalesMatchTheFilters')}
           </p>
         )}
         <div className="pos-pagination">
@@ -285,10 +278,11 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
             disabled={page <= 1 || query.isFetching}
             onClick={() => setPage(page - 1)}
           >
-            ก่อนหน้า
+            {t('catalog.previous')}
           </Button>
           <span>
-            หน้า {page} · ทั้งหมด {query.data?.total ?? 0} รายการ
+            {t('catalog.page')} {page} {t('pos.total2')}{' '}
+            {query.data?.total ?? 0} {t('catalog.definitions')}
           </span>
           <Button
             disabled={
@@ -298,7 +292,7 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
             }
             onClick={() => setPage(page + 1)}
           >
-            ถัดไป
+            {t('catalog.next')}
           </Button>
         </div>
       </Card>
@@ -307,6 +301,8 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
 }
 
 export function SaleDetailsPage() {
+  const { t, localize, formatDateTime, labelCode } = useLanguage();
+
   const { id } = useParams();
   const tenant = useOrganization();
   const { state } = useAuth();
@@ -320,11 +316,11 @@ export function SaleDetailsPage() {
     enabled: !!org && !!id,
   });
   const sale = query.data;
-  if (query.isPending) return <Loading>กำลังโหลดรายการขาย…</Loading>;
+  if (query.isPending) return <Loading>{t('pos.loadingSale')}</Loading>;
   if (query.error)
     return (
       <ErrorState
-        message={query.error.message}
+        message={localize(query.error.message ?? '')}
         retry={() => void query.refetch()}
       />
     );
@@ -333,72 +329,74 @@ export function SaleDetailsPage() {
     <div className="catalog-page sales-page">
       <div className="page-heading no-print">
         <div>
-          <p className="eyebrow">COMMITTED TRANSACTION DETAILS</p>
-          <h1>รายละเอียดการขาย</h1>
-          <p>ตรวจสอบสินค้า ยอดชำระ และใบเสร็จของรายการขายที่เสร็จสมบูรณ์</p>
+          <p className="eyebrow">{t('pos.committedTransactionDetails')}</p>
+          <h1>{t('pos.saleDetails')}</h1>
+          <p>{t('pos.reviewItemsPaymentAndReceiptForA')}</p>
         </div>
-        <Link to="/sales">กลับประวัติขาย</Link>
+        <Link to="/sales">{t('pos.backToSalesHistory')}</Link>
       </div>
       <div className="pos-sale-detail">
         <Card className="no-print sale-information">
           <h2>{sale.sale_number}</h2>
           {sale.customer_id && tenant.can('loyalty.read') && (
             <Link to={`/loyalty/history?customer_id=${sale.customer_id}`}>
-              ประวัติแต้มลูกค้า / Customer points history
+              {t('pos.customerPointsHistory')}
             </Link>
           )}
           <div className="sales-statuses">
             <Tag tone={sale.status === 'COMPLETED' ? 'success' : 'neutral'}>
-              {sale.status === 'COMPLETED' ? 'ขายสำเร็จ' : sale.status}
+              {sale.status === 'COMPLETED'
+                ? t('pos.saleCompleted')
+                : sale.status}
             </Tag>
             <Tag
               tone={sale.payment_status === 'CONFIRMED' ? 'success' : 'neutral'}
             >
               {sale.payment_status === 'CONFIRMED'
-                ? 'ยืนยันชำระแล้ว'
+                ? t('pos.paymentConfirmed')
                 : sale.payment_status}
             </Tag>
           </div>
           <dl className="record-facts">
             <div>
-              <dt>สาขา / เครื่องขาย</dt>
+              <dt>{t('pos.branchTerminal2')}</dt>
               <dd>
                 {sale.branch_name} · {sale.terminal_name}
               </dd>
             </div>
             <div>
-              <dt>แคชเชียร์</dt>
+              <dt>{t('pos.cashier2')}</dt>
               <dd>{sale.cashier_name}</dd>
             </div>
             <div>
-              <dt>วิธีชำระเงิน</dt>
-              <dd>{paymentLabels[sale.payment.method]}</dd>
+              <dt>{t('pos.paymentMethod')}</dt>
+              <dd>{localize(paymentLabels[sale.payment.method])}</dd>
             </div>
             <div>
-              <dt>ยอดรวมสุทธิ</dt>
+              <dt>{t('pos.netTotal')}</dt>
               <dd>
-                <strong>{moneyText(sale.grand_total)} บาท</strong>
+                <strong>
+                  {moneyText(sale.grand_total)} {t('loyalty.thb')}
+                </strong>
               </dd>
             </div>
             <div>
-              <dt>เลขอ้างอิงการชำระ</dt>
+              <dt>{t('pos.paymentReference2')}</dt>
               <dd>{sale.payment.reference || '—'}</dd>
             </div>
             <div>
-              <dt>ยืนยันการชำระเมื่อ</dt>
-              <dd>
-                {new Date(sale.payment.confirmed_at).toLocaleString('th-TH')}
-              </dd>
+              <dt>{t('pos.paymentConfirmedAt')}</dt>
+              <dd>{formatDateTime(sale.payment.confirmed_at)}</dd>
             </div>
           </dl>
-          <h3>สินค้าในรายการขาย</h3>
+          <h3>{t('pos.saleItems')}</h3>
           <SupplyTable
             className="record-table"
             headers={[
-              'สินค้า / SKU',
-              'จำนวน',
-              'ราคาต่อหน่วย (บาท)',
-              'รวม (บาท)',
+              t('common.productSku'),
+              t('pos.quantity'),
+              t('pos.unitPriceThb'),
+              t('pos.totalThb2'),
             ]}
           >
             {sale.items.map((item) => (
@@ -418,13 +416,22 @@ export function SaleDetailsPage() {
             ))}
           </SupplyTable>
           <details className="sale-technical-details">
-            <summary>รายการเคลื่อนไหวสต็อกและประวัติการทำรายการ</summary>
-            <p>รหัสรายการสต็อก: {sale.inventory_operation_id}</p>
-            <p>รหัสผู้ยืนยันชำระเงิน: {sale.payment.confirmed_by}</p>
-            <h3>รายการเคลื่อนไหวสต็อก</h3>
+            <summary>{t('pos.stockMovementsAndTransactionHistory')}</summary>
+            <p>
+              {t('pos.stockMovementId')} {sale.inventory_operation_id}
+            </p>
+            <p>
+              {t('pos.paymentConfirmerId')} {sale.payment.confirmed_by}
+            </p>
+            <h3>{t('pos.stockMovements')}</h3>
             <SupplyTable
               className="record-table"
-              headers={['ตำแหน่ง', 'ก่อนขาย', 'เปลี่ยนแปลง', 'หลังขาย']}
+              headers={[
+                t('pos.location'),
+                t('pos.beforeSale'),
+                t('pos.change3'),
+                t('pos.afterSale'),
+              ]}
             >
               {sale.movements.map((item) => (
                 <tr key={item.id}>
@@ -435,30 +442,27 @@ export function SaleDetailsPage() {
                 </tr>
               ))}
             </SupplyTable>
-            <h3>ประวัติการทำรายการ</h3>
+            <h3>{t('pos.transactionHistory')}</h3>
             <SupplyTable
               className="record-table"
-              headers={['เหตุการณ์', 'วัน / เวลา', 'ผู้ดำเนินการ']}
+              headers={[t('pos.event'), t('loyalty.dateTime'), t('pos.actor')]}
             >
               {sale.audit.map((item, index) => (
                 <tr key={index}>
                   <td>{item.event_type}</td>
-                  <td>{new Date(item.created_at).toLocaleString('th-TH')}</td>
+                  <td>{formatDateTime(item.created_at)}</td>
                   <td>{item.actor_id}</td>
                 </tr>
               ))}
             </SupplyTable>
           </details>
-          <p>
-            ประวัติขายเดิมไม่ถูกแก้ไข
-            การคืน/เปลี่ยน/กลับรายการใช้เอกสารเชื่อมโยง
-          </p>
+          <p>{t('pos.originalSalesRemainUnchangedReturnsExchangesAnd')}</p>
           <nav className="catalog-nav">
             <Link to={`/pos/exchanges?sale_id=${sale.id}`}>
-              เปลี่ยนสินค้า / Exchanges
+              {t('pos.exchanges')}
             </Link>
             <Link to={`/sales/voids?sale_id=${sale.id}`}>
-              กลับรายการ / Reversal
+              {t('pos.reversal')}
             </Link>
           </nav>
           {sale.adjustments?.map((item) => (
@@ -468,7 +472,7 @@ export function SaleDetailsPage() {
               >
                 {item.number}
               </Link>{' '}
-              · {item.status} · {item.net_difference} THB
+              · {labelCode(item.status)} · {item.net_difference} THB
             </p>
           ))}
           {sale.returns?.map((item) => (
@@ -476,15 +480,15 @@ export function SaleDetailsPage() {
               <Link to={`/pos/returns?return_id=${item.id}`}>
                 {item.number}
               </Link>{' '}
-              · {item.status}
+              · {labelCode(item.status)}
             </p>
           ))}
         </Card>
         <Card>
           <div className="no-print sale-receipt-controls">
-            <h2>ใบเสร็จ / พิมพ์ซ้ำ</h2>
+            <h2>{t('pos.receiptReprint')}</h2>
             <label>
-              กระดาษ
+              {t('pos.paper')}
               <select
                 value={paper}
                 onChange={(event) => setPaper(event.target.value)}
@@ -500,16 +504,14 @@ export function SaleDetailsPage() {
                 try {
                   window.print();
                 } catch {
-                  setPrintError(
-                    'พิมพ์ไม่ได้ — รายการขายยังสำเร็จ กรุณาลองพิมพ์ซ้ำ',
-                  );
+                  setPrintError(t('pos.unableToPrintTheSaleIsCompleted'));
                 }
               }}
             >
-              พิมพ์ใบเสร็จ
+              {t('pos.printReceipt')}
             </Button>
-            <p>พิมพ์ซ้ำไม่มีผลต่อสต็อก ถ้าพิมพ์ไม่ได้ รายการขายยังสำเร็จ</p>
-            {printError && <p role="alert">{printError}</p>}
+            <p>{t('pos.reprintingDoesNotAffectStockTheSale')}</p>
+            {printError && <p role="alert">{localize(printError)}</p>}
           </div>
           <Receipt sale={sale} paper={paper} />
         </Card>
@@ -524,16 +526,30 @@ export function Receipt({
   sale: POSSale;
   paper?: string;
 }) {
+  const { t, localize, formatDateTime } = useLanguage();
+
   return (
-    <article className={`pos-receipt paper-${paper}`} aria-label="ใบเสร็จขาย">
+    <article
+      className={`pos-receipt paper-${paper}`}
+      aria-label={t('pos.salesReceipt')}
+    >
       <h2>{sale.store_name}</h2>
       <p>{sale.branch_name}</p>
       <p>{sale.store_address}</p>
-      <p>ใบเสร็จ: {sale.receipt.receipt_number}</p>
-      <p>ขาย: {sale.sale_number}</p>
-      <p>{new Date(sale.completed_at).toLocaleString('th-TH')}</p>
-      <p>แคชเชียร์: {sale.cashier_name}</p>
-      <p>ลูกค้า / Customer: {sale.customer_code_snapshot || 'Walk-in'}</p>
+      <p>
+        {t('pos.receipt')} {sale.receipt.receipt_number}
+      </p>
+      <p>
+        {t('pos.sale')} {sale.sale_number}
+      </p>
+      <p>{formatDateTime(sale.completed_at)}</p>
+      <p>
+        {t('pos.cashier')} {sale.cashier_name}
+      </p>
+      <p>
+        {t('customers.customer')}{' '}
+        {sale.customer_code_snapshot || t('pos.walkIn')}
+      </p>
       <hr />
       {sale.items.map((item) => (
         <div className="receipt-item" key={item.variant_id}>
@@ -552,32 +568,32 @@ export function Receipt({
       <hr />
       <div className="receipt-total">
         <span>
-          ก่อนลด {moneyText(sale.subtotal)} · ส่วนลด{' '}
-          {moneyText(sale.discount_total)}
+          {t('pos.beforeDiscount')} {moneyText(sale.subtotal)}{' '}
+          {t('pos.discount')} {moneyText(sale.discount_total)}
         </span>
-        <span>รวมสุทธิ</span>
+        <span>{t('pos.netTotal2')}</span>
         <strong>
           {moneyText(sale.grand_total)} {sale.currency}
         </strong>
       </div>
       <p>
-        {paymentLabels[sale.payment.method]} ·{' '}
+        {localize(paymentLabels[sale.payment.method])} ·{' '}
         {sale.payment.status === 'CONFIRMED'
-          ? 'ยืนยันชำระแล้ว'
+          ? t('pos.paymentConfirmed')
           : sale.payment.status}
       </p>
       <p>
-        เงินรับ {moneyText(sale.payment.received)} · ทอน{' '}
-        {moneyText(sale.payment.change)}
+        {t('pos.amountReceived')} {moneyText(sale.payment.received)}{' '}
+        {t('pos.change4')} {moneyText(sale.payment.change)}
       </p>
       {sale.payment.credit_amount && sale.payment.credit_amount !== '0.00' && (
         <p>
-          เครดิตเปลี่ยนสินค้า {moneyText(sale.payment.credit_amount)} · เงินใหม่{' '}
-          {moneyText(sale.payment.amount)}
+          {t('pos.exchangeCredit')} {moneyText(sale.payment.credit_amount)}{' '}
+          {t('pos.newFunds')} {moneyText(sale.payment.amount)}
         </p>
       )}
-      <p>ขอบคุณที่ใช้บริการ</p>
-      <small>ใบเสร็จรับเงินทั่วไป ไม่ใช่ใบกำกับภาษี</small>
+      <p>{t('pos.thankYouForShoppingWithUs')}</p>
+      <small>{t('pos.generalReceiptNotATaxInvoice')}</small>
     </article>
   );
 }

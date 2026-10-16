@@ -1,8 +1,11 @@
+import { useLanguage } from '../../app/language';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, ShieldX, Unplug } from 'lucide-react';
 import { Tag } from '../../components/ui/primitives';
 
 export function SystemPage({ forbidden = false }: { forbidden?: boolean }) {
+  const { t } = useLanguage();
+
   const Icon = forbidden ? ShieldX : Unplug;
   return (
     <main id="main-content" className="standalone">
@@ -11,16 +14,18 @@ export function SystemPage({ forbidden = false }: { forbidden?: boolean }) {
         {forbidden ? '403 · ACCESS DENIED' : '404 · NOT FOUND'}
       </Tag>
       <h1 tabIndex={-1}>
-        {forbidden ? 'This space is restricted.' : 'Nothing on this shelf.'}
+        {forbidden
+          ? t('system.thisSpaceIsRestricted')
+          : t('system.nothingOnThisShelf')}
       </h1>
       <p>
         {forbidden
-          ? 'บัญชีหรือบทบาทปัจจุบันไม่มีสิทธิ์เข้าถึงหน้านี้ กรุณากลับพื้นที่ทำงานหรือติดต่อเจ้าของร้าน'
-          : 'This page does not exist or is a planned feature that is not yet available.'}
+          ? t('system.yourAccountOrRoleCannotAccessThis')
+          : t('system.thisPageDoesNotExistOrIs')}
       </p>
       <Link to="/workspace" className="button">
         <ArrowLeft size={18} aria-hidden="true" />
-        กลับพื้นที่ทำงาน
+        {t('pos.backToWorkspace')}
       </Link>
     </main>
   );

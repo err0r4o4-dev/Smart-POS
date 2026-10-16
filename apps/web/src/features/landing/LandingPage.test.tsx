@@ -1,4 +1,5 @@
-import { render, screen, within } from '@testing-library/react';
+import { render } from '../../test/render';
+import { screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { LandingPage } from './LandingPage';

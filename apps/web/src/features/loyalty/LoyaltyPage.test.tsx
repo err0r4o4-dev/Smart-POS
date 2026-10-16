@@ -1,4 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render } from '../../test/render';
+import { screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, expect, it, vi } from 'vitest';
@@ -44,12 +45,12 @@ beforeEach(() => {
 });
 it('shows empty real-data state without management controls', async () => {
   show();
-  expect(await screen.findByText('ไม่มีรายการ / No entries')).toBeVisible();
+  expect(await screen.findByText('ไม่มีรายการ')).toBeVisible();
   expect(
-    screen.queryByRole('button', { name: 'บันทึก / Save' }),
+    screen.queryByRole('button', { name: 'บันทึก' }),
   ).not.toBeInTheDocument();
   expect(
-    screen.queryByRole('button', { name: 'ปรับแต้ม / Adjust points' }),
+    screen.queryByRole('button', { name: 'ปรับแต้ม' }),
   ).not.toBeInTheDocument();
 });
 it('shows balance derived by backend and transaction detail links', async () => {
@@ -75,17 +76,18 @@ it('shows balance derived by backend and transaction detail links', async () => 
   show();
   expect(await screen.findByText('MEMBER · Member')).toBeVisible();
   expect(screen.getByText('-3')).toBeVisible();
-  expect(
-    screen.getByRole('link', { name: 'ลูกค้า / Customer' }),
-  ).toHaveAttribute('href', '/customers/customer');
+  expect(screen.getByRole('link', { name: 'ลูกค้า' })).toHaveAttribute(
+    'href',
+    '/customers/customer',
+  );
 });
 it('offers a retry for API failure', async () => {
   mocks.request.mockRejectedValue(new Error('Loyalty unavailable'));
   show(true);
   expect(await screen.findByRole('alert')).toHaveTextContent(
-    'Loyalty unavailable',
+    'ระบบสมาชิกไม่พร้อมใช้งาน',
   );
   mocks.request.mockResolvedValue({ items: [] });
-  fireEvent.click(screen.getByRole('button', { name: 'ลองใหม่ / Retry' }));
-  expect(await screen.findByText('ไม่มีรายการ / No entries')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'ลองใหม่' }));
+  expect(await screen.findByText('ไม่มีรายการ')).toBeVisible();
 });

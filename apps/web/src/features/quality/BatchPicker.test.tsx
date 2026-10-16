@@ -1,4 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render } from '../../test/render';
+import { screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { useState } from 'react';
@@ -100,9 +101,9 @@ it('requires physical confirmation before applying tracked lot to cart', async (
   fireEvent.change(screen.getByLabelText('Batch/Lot'), {
     target: { value: 'lot' },
   });
-  expect(screen.getByRole('button', { name: /Apply lot/ })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'ใช้ lot นี้' })).toBeDisabled();
   fireEvent.click(screen.getByRole('checkbox'));
-  fireEvent.click(screen.getByRole('button', { name: /Apply lot/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'ใช้ lot นี้' }));
   expect(mocks.save).toHaveBeenCalledWith({
     batch_id: 'lot',
     batch_verified: true,
@@ -122,13 +123,13 @@ it('shows load failure without fabricating options', async () => {
 it('renders lot pagination with aligned badge and buttons', async () => {
   show();
   await screen.findByRole('option', { name: /OBSERVED/ });
-  const pageBadge = screen.getByText('Page 1');
+  const pageBadge = screen.getByText('หน้า 1');
   expect(pageBadge).toBeVisible();
   expect(pageBadge).toHaveClass('batch-picker-page');
   const paginationContainer = pageBadge.closest('.batch-picker-pagination');
   expect(paginationContainer).toBeInTheDocument();
-  const prevBtn = screen.getByRole('button', { name: 'Previous lots' });
-  const nextBtn = screen.getByRole('button', { name: 'Next lots' });
+  const prevBtn = screen.getByRole('button', { name: 'ล็อตก่อนหน้า' });
+  const nextBtn = screen.getByRole('button', { name: 'ล็อตถัดไป' });
   expect(prevBtn).toHaveClass('button-secondary', 'button-compact');
   expect(nextBtn).toHaveClass('button-secondary', 'button-compact');
 });

@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useRef, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
@@ -22,56 +23,56 @@ import {
 import './loyalty.css';
 
 const copy = {
-  title: 'สมาชิกและรางวัล / Loyalty & Rewards',
-  history: 'ประวัติแต้ม / Points history',
-  program: 'โปรแกรมสะสมแต้ม / Loyalty program',
-  name: 'ชื่อโปรแกรม / Program name',
-  spend: 'ยอดซื้อสุทธิต่อหน่วยแต้ม (THB) / Net spend per earning unit',
-  rate: 'แต้มต่อหน่วย / Points per unit',
-  value: 'มูลค่าต่อแต้ม (THB) / Redemption value per point',
-  active: 'เปิดใช้งาน / Active',
-  suspended: 'ระงับ / Suspended',
-  save: 'บันทึก / Save',
-  edit: 'แก้ไข / Edit',
-  enroll: 'สมัครสมาชิก / Enroll',
-  customer: 'ลูกค้า / Customer',
-  choose: 'เลือกลูกค้า / Choose customer',
-  search: 'ค้นหารหัสหรือชื่อ / Search code or name',
-  balance: 'แต้มคงเหลือ / Points balance',
-  available: 'แต้มใช้ได้ / Available points',
-  reason: 'เหตุผล (จำเป็น) / Reason (required)',
-  adjust: 'ปรับแต้ม / Adjust points',
-  points: 'แต้มจำนวนเต็ม (+/−) / Integer points (+/−)',
-  empty: 'ไม่มีรายการ / No entries',
-  retry: 'ลองใหม่ / Retry',
-  success: 'บันทึกสำเร็จ / Saved',
-  policy:
-    'แลกแต้มเป็นส่วนลด ไม่ใช่การชำระเงิน และไม่ซ้อนโปรโมชั่น / Rewards are discounts, not payments; no promotion stacking.',
-  debt: 'แต้มที่ใช้ไปแล้วอาจเกิดหนี้เมื่อคืนสินค้า แต้มใหม่จะชดเชยก่อนใช้ได้ / Spent earnings reversed by returns become debt, offset by future earnings.',
-  previous: 'ก่อนหน้า / Previous',
-  next: 'ถัดไป / Next',
-  details: 'รายละเอียดกฎ / Rule snapshot',
-  loading: 'กำลังโหลด / Loading',
-  suspend: 'ระงับบัญชี / Suspend account',
-  activate: 'เปิดบัญชี / Activate account',
+  title: 'loyalty.loyaltyRewards',
+  history: 'customers.pointsHistory',
+  program: 'loyalty.loyaltyProgram',
+  name: 'loyalty.programName',
+  spend: 'loyalty.netSpendPerEarningUnit',
+  rate: 'loyalty.pointsPerUnit',
+  value: 'loyalty.redemptionValuePerPoint',
+  active: 'customers.active2',
+  suspended: 'loyalty.suspended',
+  save: 'customers.save',
+  edit: 'catalog.edit',
+  enroll: 'loyalty.enroll',
+  customer: 'customers.customer2',
+  choose: 'loyalty.chooseCustomer',
+  search: 'loyalty.searchCodeOrName',
+  balance: 'loyalty.pointsBalance',
+  available: 'loyalty.availablePoints',
+  reason: 'loyalty.reasonRequired',
+  adjust: 'loyalty.adjustPoints',
+  points: 'loyalty.integerPoints2',
+  empty: 'loyalty.noEntries',
+  retry: 'customers.retry',
+  success: 'customers.saved',
+  policy: 'loyalty.rewardsAreDiscountsNotPaymentsNoPromotion',
+  debt: 'loyalty.spentEarningsReversedByReturnsBecomeDebt',
+  previous: 'catalog.previous',
+  next: 'catalog.next',
+  details: 'loyalty.ruleSnapshot',
+  loading: 'loyalty.loading',
+  suspend: 'loyalty.suspendAccount',
+  activate: 'loyalty.activateAccount',
 } as const;
-const entryLabels: Record<string, string> = {
-  ADJUST: 'ปรับแต้ม',
-  EARN: 'ได้รับแต้มจากการซื้อ',
-  REDEEM: 'ใช้แต้มเป็นส่วนลด',
-  EARN_REVERSAL: 'หักแต้มที่เคยได้รับ',
-  REDEEM_REVERSAL: 'คืนแต้มที่ใช้เป็นส่วนลด',
-};
+const entryLabels = {
+  ADJUST: 'loyalty.adjustPoints',
+  EARN: 'loyalty.pointsEarnedFromPurchases',
+  REDEEM: 'loyalty.pointsRedeemedAsDiscount',
+  EARN_REVERSAL: 'loyalty.previouslyEarnedPointsReversed',
+  REDEEM_REVERSAL: 'loyalty.redeemedPointsRestored',
+} as const;
 function pointsText(value: string) {
   return value.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 function MemberStatus({ status }: { status: string }) {
+  const { t } = useLanguage();
   return (
     <Tag tone={status === 'ACTIVE' ? 'success' : 'neutral'}>
       {status === 'ACTIVE'
-        ? copy.active
+        ? t(copy.active)
         : status === 'SUSPENDED'
-          ? copy.suspended
+          ? t(copy.suspended)
           : status}
     </Tag>
   );
@@ -138,10 +139,14 @@ function useCommand() {
   });
 }
 function Feedback({ error }: { error: Error | null }) {
-  return error ? <p role="alert">{error.message}</p> : null;
+  const { localize } = useLanguage();
+
+  return error ? <p role="alert">{localize(error.message ?? '')}</p> : null;
 }
 
 export function LoyaltyPage({ history = false }: { history?: boolean }) {
+  const { t, formatDateTime } = useLanguage();
+
   const [params] = useSearchParams(),
     customer = params.get('customer_id') ?? '',
     [page, setPage] = useState(1);
@@ -156,25 +161,25 @@ export function LoyaltyPage({ history = false }: { history?: boolean }) {
     <div className="catalog-page loyalty-page">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">LOYALTY & REWARDS</p>
-          <h1>{history ? copy.history : copy.title}</h1>
+          <p className="eyebrow">{t('loyalty.loyaltyRewards2')}</p>
+          <h1>{history ? t(copy.history) : t(copy.title)}</h1>
           <p>
             {history
-              ? 'ตรวจสอบแต้มเข้า แต้มออก และรายการที่เกี่ยวข้อง'
-              : 'ตรวจสอบสถานะสมาชิก โปรแกรมสะสมแต้ม และแต้มที่ใช้ได้'}
+              ? t('loyalty.reviewPointsEarnedSpentAndRelatedTransactions')
+              : t('loyalty.reviewMembershipLoyaltyProgramsAndAvailablePoints')}
           </p>
         </div>
       </div>
       <nav className="catalog-nav">
-        <Link to="/loyalty">{copy.title}</Link>
+        <Link to="/loyalty">{t(copy.title)}</Link>
         <Link
           to={`/loyalty/history${customer ? `?customer_id=${customer}` : ''}`}
         >
-          {copy.history}
+          {t(copy.history)}
         </Link>
       </nav>
-      <p>{copy.policy}</p>
-      <p>{copy.debt}</p>
+      <p>{t(copy.policy)}</p>
+      <p>{t(copy.debt)}</p>
       {!history && (
         <>
           <Programs />
@@ -183,45 +188,43 @@ export function LoyaltyPage({ history = false }: { history?: boolean }) {
       )}
       <Feedback error={query.error} />
       {query.error && (
-        <Button onClick={() => void query.refetch()}>{copy.retry}</Button>
+        <Button onClick={() => void query.refetch()}>{t(copy.retry)}</Button>
       )}
-      {query.isPending && <Loading>{copy.loading}</Loading>}
-      {query.data?.items.length === 0 && <p>{copy.empty}</p>}
+      {query.isPending && <Loading>{t(copy.loading)}</Loading>}
+      {query.data?.items.length === 0 && <p>{t(copy.empty)}</p>}
       <Card>
-        <h2>{history ? copy.history : 'รายชื่อสมาชิก'}</h2>
+        <h2>{history ? t(copy.history) : t('loyalty.members')}</h2>
         {history ? (
           <SupplyTable
             className="record-table"
             headers={[
-              'วัน / เวลา',
-              'ประเภท',
-              'แต้มเข้า / ออก',
-              'เหตุผล',
-              'รายการที่เกี่ยวข้อง',
+              t('loyalty.dateTime'),
+              t('common.type'),
+              t('loyalty.pointsInOut'),
+              t('loyalty.reason'),
+              t('loyalty.relatedTransaction'),
             ]}
           >
             {entries.data?.items.map((entry) => (
               <tr key={entry.id}>
                 <td>
                   <time dateTime={entry.created_at}>
-                    {new Date(entry.created_at).toLocaleString('th-TH', {
-                      day: 'numeric',
-                      month: 'short',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                    {formatDateTime(entry.created_at)}
                   </time>
                 </td>
                 <td>
-                  <strong>{entryLabels[entry.kind] ?? entry.kind}</strong>
+                  <strong>
+                    {Object.hasOwn(entryLabels, entry.kind)
+                      ? t(entryLabels[entry.kind as keyof typeof entryLabels])
+                      : entry.kind}
+                  </strong>
                 </td>
                 <td className="record-number">
                   <strong className="loyalty-points">
                     {entry.points.startsWith('-') || entry.points === '0'
                       ? ''
                       : '+'}
-                    {pointsText(entry.points)} แต้ม
+                    {pointsText(entry.points)} {t('loyalty.points')}
                   </strong>
                 </td>
                 <td>{entry.reason || '—'}</td>
@@ -229,17 +232,17 @@ export function LoyaltyPage({ history = false }: { history?: boolean }) {
                   <div className="record-actions">
                     {entry.sale_id && (
                       <Link to={`/sales/${entry.sale_id}`}>
-                        ดูรายการขาย / Sale
+                        {t('loyalty.sale')}
                       </Link>
                     )}{' '}
                     {entry.return_id && (
                       <Link to={`/pos/returns?return_id=${entry.return_id}`}>
-                        ดูรายการคืนสินค้า / Return
+                        {t('loyalty.return')}
                       </Link>
                     )}
                   </div>
                   <details>
-                    <summary>{copy.details}</summary>
+                    <summary>{t(copy.details)}</summary>
                     <pre className="loyalty-snapshot">
                       {JSON.stringify(entry.snapshot, null, 2)}
                     </pre>
@@ -252,12 +255,12 @@ export function LoyaltyPage({ history = false }: { history?: boolean }) {
           <SupplyTable
             className="record-table"
             headers={[
-              'รหัส / ชื่อสมาชิก',
-              'โปรแกรมสะสมแต้ม',
-              'สถานะสมาชิก',
-              'แต้มคงเหลือ',
-              'แต้มใช้ได้',
-              'รายการ',
+              t('loyalty.memberCodeName'),
+              t('loyalty.loyaltyProgram'),
+              t('loyalty.membershipStatus'),
+              t('loyalty.pointsBalance'),
+              t('loyalty.availablePoints'),
+              t('catalog.definitions'),
             ]}
           >
             {accounts.data?.items.map((account) => (
@@ -267,14 +270,14 @@ export function LoyaltyPage({ history = false }: { history?: boolean }) {
         )}
         <div className="loyalty-actions loyalty-pagination">
           <Button disabled={page === 1} onClick={() => setPage(page - 1)}>
-            {copy.previous}
+            {t(copy.previous)}
           </Button>
           <span>{page}</span>
           <Button
             disabled={(query.data?.items.length ?? 0) < 25}
             onClick={() => setPage(page + 1)}
           >
-            {copy.next}
+            {t(copy.next)}
           </Button>
         </div>
       </Card>
@@ -282,6 +285,8 @@ export function LoyaltyPage({ history = false }: { history?: boolean }) {
   );
 }
 function Programs() {
+  const { t } = useLanguage();
+
   const scope = useScope(),
     query = useRead<LoyaltyProgram>('/loyalty/programs'),
     command = useCommand();
@@ -306,11 +311,11 @@ function Programs() {
   };
   return (
     <Card>
-      <h2>{copy.program}</h2>
+      <h2>{t(copy.program)}</h2>
       <Feedback error={query.error} />
       {scope.tenant.can('loyalty.manage') && (
         <form className="loyalty-form" onSubmit={submit}>
-          <Field label={copy.name}>
+          <Field label={t(copy.name)}>
             <input
               required
               maxLength={200}
@@ -320,7 +325,7 @@ function Programs() {
               }
             />
           </Field>
-          <Field label={copy.spend}>
+          <Field label={t(copy.spend)}>
             <input
               required
               inputMode="decimal"
@@ -331,7 +336,7 @@ function Programs() {
               }
             />
           </Field>
-          <Field label={copy.rate}>
+          <Field label={t(copy.rate)}>
             <input
               required
               type="number"
@@ -344,7 +349,7 @@ function Programs() {
               }
             />
           </Field>
-          <Field label={copy.value}>
+          <Field label={t(copy.value)}>
             <input
               required
               inputMode="decimal"
@@ -355,32 +360,32 @@ function Programs() {
               }
             />
           </Field>
-          <Field label="Status">
+          <Field label={t('auth.status')}>
             <select
               value={form.status}
               onChange={(event) =>
                 setForm({ ...form, status: event.target.value })
               }
             >
-              <option value="ACTIVE">{copy.active}</option>
-              <option value="SUSPENDED">{copy.suspended}</option>
+              <option value="ACTIVE">{t(copy.active)}</option>
+              <option value="SUSPENDED">{t(copy.suspended)}</option>
             </select>
           </Field>
           <Button type="submit" disabled={command.isPending}>
-            {copy.save}
+            {t(copy.save)}
           </Button>
           <Feedback error={command.error} />
-          {command.isSuccess && <p role="status">{copy.success}</p>}
+          {command.isSuccess && <p role="status">{t(copy.success)}</p>}
         </form>
       )}
       <SupplyTable
         className="record-table"
         headers={[
-          'ชื่อโปรแกรม',
-          'สถานะ',
-          'อัตราสะสมแต้ม',
-          'มูลค่าต่อแต้ม',
-          'รายการ',
+          t('loyalty.programName'),
+          t('auth.status'),
+          t('loyalty.earningRate'),
+          t('loyalty.valuePerPoint'),
+          t('catalog.definitions'),
         ]}
       >
         {query.data?.items.map((program) => (
@@ -392,11 +397,13 @@ function Programs() {
               <MemberStatus status={program.status} />
             </td>
             <td>
-              ยอดซื้อทุก {moneyText(program.spend)} บาท ได้{' '}
-              {program.earn_points.toLocaleString('th-TH')} แต้ม
+              {t('loyalty.every')} {moneyText(program.spend)}{' '}
+              {t('loyalty.thbEarns')}{' '}
+              {program.earn_points.toLocaleString('th-TH')}{' '}
+              {t('loyalty.points')}
             </td>
             <td className="record-number">
-              {moneyText(program.point_value)} บาท
+              {moneyText(program.point_value)} {t('loyalty.thb')}
             </td>
             <td>
               {scope.tenant.can('loyalty.manage') && (
@@ -412,7 +419,7 @@ function Programs() {
                     });
                   }}
                 >
-                  {copy.edit}
+                  {t(copy.edit)}
                 </Button>
               )}
             </td>
@@ -423,6 +430,8 @@ function Programs() {
   );
 }
 function Enrollment({ customerID }: { customerID: string }) {
+  const { t } = useLanguage();
+
   const scope = useScope(),
     programs = useRead<LoyaltyProgram>('/loyalty/programs'),
     command = useCommand();
@@ -455,7 +464,7 @@ function Enrollment({ customerID }: { customerID: string }) {
   if (!scope.tenant.can('loyalty.enroll')) return null;
   return (
     <Card>
-      <h2>{copy.enroll}</h2>
+      <h2>{t(copy.enroll)}</h2>
       <form
         className="loyalty-form"
         onSubmit={(event) => {
@@ -463,13 +472,13 @@ function Enrollment({ customerID }: { customerID: string }) {
           setTerm(search.trim());
         }}
       >
-        <Field label={copy.search}>
+        <Field label={t(copy.search)}>
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
         </Field>
-        <Button type="submit">{copy.search}</Button>
+        <Button type="submit">{t(copy.search)}</Button>
       </form>
       <form
         className="loyalty-form"
@@ -485,13 +494,13 @@ function Enrollment({ customerID }: { customerID: string }) {
           });
         }}
       >
-        <Field label={copy.customer}>
+        <Field label={t(copy.customer)}>
           <select
             required
             value={selected}
             onChange={(event) => setSelected(event.target.value)}
           >
-            <option value="">{copy.choose}</option>
+            <option value="">{t(copy.choose)}</option>
             {customerID &&
               !customers.data?.items.some((item) => item.id === customerID) && (
                 <option value={customerID}>{customerID}</option>
@@ -503,7 +512,7 @@ function Enrollment({ customerID }: { customerID: string }) {
             ))}
           </select>
         </Field>
-        <Field label={copy.program}>
+        <Field label={t(copy.program)}>
           <select
             required
             value={program}
@@ -520,15 +529,17 @@ function Enrollment({ customerID }: { customerID: string }) {
           </select>
         </Field>
         <Button type="submit" disabled={command.isPending}>
-          {copy.enroll}
+          {t(copy.enroll)}
         </Button>
         <Feedback error={command.error ?? customers.error} />
-        {command.isSuccess && <p role="status">{copy.success}</p>}
+        {command.isSuccess && <p role="status">{t(copy.success)}</p>}
       </form>
     </Card>
   );
 }
 function Account({ account }: { account: LoyaltyAccount }) {
+  const { t } = useLanguage();
+
   const scope = useScope(),
     command = useCommand(),
     [points, setPoints] = useState(''),
@@ -558,9 +569,11 @@ function Account({ account }: { account: LoyaltyAccount }) {
       <td>
         <div className="loyalty-actions loyalty-account-actions">
           <Link to={`/loyalty/history?customer_id=${account.customer_id}`}>
-            {copy.history}
+            {t(copy.history)}
           </Link>
-          <Link to={`/customers/${account.customer_id}`}>{copy.customer}</Link>
+          <Link to={`/customers/${account.customer_id}`}>
+            {t(copy.customer)}
+          </Link>
           {scope.tenant.can('loyalty.manage') && (
             <Button
               disabled={command.isPending}
@@ -578,13 +591,13 @@ function Account({ account }: { account: LoyaltyAccount }) {
                 })
               }
             >
-              {account.status === 'ACTIVE' ? copy.suspend : copy.activate}
+              {account.status === 'ACTIVE' ? t(copy.suspend) : t(copy.activate)}
             </Button>
           )}
         </div>
         {scope.tenant.can('loyalty.adjust') && account.status === 'ACTIVE' && (
           <details className="loyalty-adjustment">
-            <summary>{copy.adjust}</summary>
+            <summary>{t(copy.adjust)}</summary>
             <form
               className="loyalty-form"
               onSubmit={(event) => {
@@ -599,7 +612,7 @@ function Account({ account }: { account: LoyaltyAccount }) {
                 });
               }}
             >
-              <Field label={copy.points}>
+              <Field label={t(copy.points)}>
                 <input
                   required
                   type="number"
@@ -610,7 +623,7 @@ function Account({ account }: { account: LoyaltyAccount }) {
                   onChange={(event) => setPoints(event.target.value)}
                 />
               </Field>
-              <Field label={copy.reason}>
+              <Field label={t(copy.reason)}>
                 <input
                   required
                   maxLength={2000}
@@ -622,13 +635,13 @@ function Account({ account }: { account: LoyaltyAccount }) {
                 type="submit"
                 disabled={command.isPending || !scope.branch}
               >
-                {copy.adjust}
+                {t(copy.adjust)}
               </Button>
             </form>
           </details>
         )}
         <Feedback error={command.error} />
-        {command.isSuccess && <p role="status">{copy.success}</p>}
+        {command.isSuccess && <p role="status">{t(copy.success)}</p>}
       </td>
     </tr>
   );

@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -96,6 +97,8 @@ type SettingsInput = Pick<
 > & { terminal_id: string; online_terminal_id: string };
 
 export function StorefrontSettingsPage() {
+  const { t } = useLanguage();
+
   const scope = useScope();
   const settings = useShopQuery<ShopSettings>('/storefront', true, true);
   const terminals = useShopQuery<POSPage<POSTerminal>>(
@@ -114,19 +117,19 @@ export function StorefrontSettingsPage() {
     <div className="catalog-page online-admin">
       <div className="shop-heading">
         <div>
-          <p className="eyebrow">รับออเดอร์ออนไลน์</p>
-          <h1>ตั้งค่าหน้าร้านออนไลน์</h1>
+          <p className="eyebrow">{t('storefront.receiveOnlineOrders')}</p>
+          <h1>{t('storefront.onlineStorefrontSettings')}</h1>
         </div>
-        <Link to="/settings/storefront/payments">ทดสอบ Stripe sandbox</Link>
-        <Link to="/online-orders">จัดการออเดอร์</Link>
+        <Link to="/settings/storefront/payments">
+          {t('storefront.testStripeSandbox')}
+        </Link>
+        <Link to="/online-orders">{t('storefront.manageOrders')}</Link>
       </div>
       <p className="notice">
-        เผยแพร่เฉพาะสินค้าที่เลือก รับสินค้าที่ร้านและชำระผ่าน POS
-        ออเดอร์ใหม่กันจำนวนสินค้าจนหมดอายุ แต่ยังต้องตรวจ lot และราคาสุดท้าย
-        ไม่รับโอน/จัดส่งออนไลน์ ออเดอร์ที่ยังไม่เข้า POS หมดอายุใน 48 ชั่วโมง
+        {t('storefront.publishSelectedProductsForPickupAndPos')}
       </p>
       {settings.isPending || terminals.isPending ? (
-        <Loading>กำลังโหลดการตั้งค่า…</Loading>
+        <Loading>{t('storefront.loadingSettings')}</Loading>
       ) : null}
       {(settings.error || terminals.error) && (
         <ShopError
@@ -150,13 +153,13 @@ export function StorefrontSettingsPage() {
       {settings.data && (
         <>
           <div className="shop-heading">
-            <h2>สินค้าที่เผยแพร่</h2>
+            <h2>{t('storefront.publishedProducts')}</h2>
             <a
               href={`/shop/${settings.data.slug}`}
               target="_blank"
               rel="noreferrer"
             >
-              ดูตัวอย่างหน้าร้าน
+              {t('storefront.previewStorefront')}
             </a>
           </div>
           <form
@@ -167,7 +170,9 @@ export function StorefrontSettingsPage() {
               setPage(1);
             }}
           >
-            <label htmlFor="listing-search">ค้นหาสินค้าเพื่อเผยแพร่</label>
+            <label htmlFor="listing-search">
+              {t('storefront.findProductsToPublish')}
+            </label>
             <div className="shop-actions">
               <input
                 id="listing-search"
@@ -175,10 +180,12 @@ export function StorefrontSettingsPage() {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
-              <Button type="submit">ค้นหา</Button>
+              <Button type="submit">{t('customers.search')}</Button>
             </div>
           </form>
-          {listings.isPending && <Loading>กำลังโหลดสินค้า…</Loading>}
+          {listings.isPending && (
+            <Loading>{t('storefront.loadingProducts')}</Loading>
+          )}
           {listings.error && (
             <ShopError
               error={listings.error}
@@ -186,7 +193,7 @@ export function StorefrontSettingsPage() {
             />
           )}
           {listings.data?.total === 0 && (
-            <p>ยังไม่มีสินค้าในรายการนี้ เพิ่มสินค้าในระบบ Catalog ก่อน</p>
+            <p>{t('storefront.noProductsListedAddProductsToThe')}</p>
           )}
           <div className="online-listings">
             {listings.data?.items.map((item) => (
@@ -197,12 +204,14 @@ export function StorefrontSettingsPage() {
                     {item.variant_name} · {item.sku}
                   </p>
                   <small>
-                    ฿{moneyText(item.unit_price)} / {item.unit} · สต็อก{' '}
-                    {item.available}
+                    ฿{moneyText(item.unit_price)} / {item.unit}{' '}
+                    {t('storefront.stock')} {item.available}
                   </small>
                 </div>
                 <Tag tone={item.published ? 'success' : 'neutral'}>
-                  {item.published ? 'เผยแพร่แล้ว' : 'ยังไม่เผยแพร่'}
+                  {item.published
+                    ? t('storefront.published')
+                    : t('storefront.unpublished')}
                 </Tag>
                 <Button
                   className="button-secondary"
@@ -220,7 +229,9 @@ export function StorefrontSettingsPage() {
                     })
                   }
                 >
-                  {item.published ? 'หยุดเผยแพร่' : 'เผยแพร่สินค้า'}
+                  {item.published
+                    ? t('storefront.unpublish')
+                    : t('storefront.publishProduct')}
                 </Button>
               </Card>
             ))}
@@ -249,6 +260,8 @@ function SettingsForm({
   terminals: POSTerminal[];
   command: Command;
 }) {
+  const { t } = useLanguage();
+
   const [form, setForm] = useState<SettingsInput>(() => ({
     slug: initial?.slug ?? '',
     name: initial?.name ?? organizationName,
@@ -279,7 +292,7 @@ function SettingsForm({
     <Card>
       <form className="online-settings-form" onSubmit={submit}>
         <label>
-          ชื่อร้านที่แสดง
+          {t('storefront.storeDisplayName')}
           <input
             required
             maxLength={200}
@@ -288,7 +301,7 @@ function SettingsForm({
           />
         </label>
         <label>
-          ชื่อใน URL (slug)
+          {t('storefront.urlNameSlug')}
           <input
             required
             pattern="[a-z][a-z0-9\-]{2,49}"
@@ -301,7 +314,7 @@ function SettingsForm({
           <small>/shop/{form.slug || 'my-shop'}</small>
         </label>
         <label>
-          เครื่องขาย / สาขา / แหล่งสต็อก
+          {t('storefront.terminalBranchStockSource')}
           <select
             required
             value={form.terminal_id}
@@ -313,39 +326,35 @@ function SettingsForm({
               })
             }
           >
-            <option value="">เลือกเครื่องขายของสาขาปัจจุบัน</option>
+            <option value="">
+              {t('storefront.selectATerminalInTheCurrentBranch')}
+            </option>
             {terminals.map((terminal) => (
               <option value={terminal.id} key={terminal.id}>
                 {terminal.name} · {terminal.code}
               </option>
             ))}
           </select>
-          <small>
-            แหล่งสต็อกหน้าร้านและค่าเริ่มต้นสำหรับออนไลน์ ไม่รวมสต็อกข้ามสาขา
-          </small>
+          <small>{t('storefront.inStoreStockSourceAndDefaultOnline')}</small>
         </label>
         <label>
-          เครื่องขายออนไลน์จากคลังหลังร้าน (ไม่บังคับ)
+          {t('storefront.backOfficeWarehouseTerminalForOnlineOrders')}
           <select
             value={form.online_terminal_id}
             disabled={!frontTerminal}
             onChange={(event) => set('online_terminal_id', event.target.value)}
           >
-            <option value="">ใช้แหล่งสต็อกร่วมกับหน้าร้าน</option>
+            <option value="">{t('storefront.useTheInStoreStockSource')}</option>
             {onlineTerminals.map((terminal) => (
               <option value={terminal.id} key={terminal.id}>
                 {terminal.name} · {terminal.code}
               </option>
             ))}
           </select>
-          <small>
-            เลือกเครื่องขายที่ผูกคลัง WAREHOUSE คนละจุดกับหน้าร้านในสาขาเดียวกัน
-            ออนไลน์จะกันและตัดจากคลังนี้เท่านั้น ไม่มีการดึงสต็อกหน้าร้านมาชดเชย
-            พนักงานต้องเปิดกะเครื่องขายนี้เพื่อรับชำระออเดอร์ผ่าน POS
-          </small>
+          <small>{t('storefront.selectATerminalLinkedToADifferent')}</small>
         </label>
         <label>
-          เบอร์ติดต่อร้าน
+          {t('storefront.storePhone')}
           <input
             type="tel"
             maxLength={30}
@@ -354,7 +363,7 @@ function SettingsForm({
           />
         </label>
         <label className="online-wide">
-          แนะนำร้าน
+          {t('storefront.aboutTheStore')}
           <input
             maxLength={1000}
             value={form.description}
@@ -362,12 +371,12 @@ function SettingsForm({
           />
         </label>
         <label className="online-wide">
-          สถานที่ เวลา และวิธีรับสินค้า
+          {t('storefront.pickupLocationHoursAndInstructions')}
           <input
             maxLength={1000}
             value={form.pickup_instructions}
             onChange={(event) => set('pickup_instructions', event.target.value)}
-            placeholder="ที่อยู่ จุดรับสินค้า และเวลาที่ติดต่อร้านได้"
+            placeholder={t('storefront.addressPickupPointAndContactHours')}
           />
         </label>
         <label className="shop-consent">
@@ -382,7 +391,7 @@ function SettingsForm({
               })
             }
           />
-          เผยแพร่หน้าร้าน
+          {t('storefront.publishStorefront')}
         </label>
         <label className="shop-consent">
           <input
@@ -391,25 +400,28 @@ function SettingsForm({
             disabled={!form.published}
             onChange={(event) => set('accepting_orders', event.target.checked)}
           />
-          เปิดรับออเดอร์
+          {t('storefront.acceptOrders')}
         </label>
         <p className="online-wide">
-          หากมีออเดอร์ค้างอยู่ ให้ปิดรับออเดอร์ชั่วคราวแทนการซ่อนร้านหรือเปลี่ยน
-          URL/เครื่องขาย/แหล่งสต็อก เพื่อให้ลูกค้าติดตามต่อได้
+          {t('storefront.ifOrdersArePendingPauseNewOrders')}
         </p>
         {!terminals.length && (
           <p role="status">
-            ยังไม่มีเครื่องขายที่ใช้งานได้ในสาขานี้ กรุณาตั้งค่า POS ก่อน
+            {t('storefront.noActiveTerminalsInThisBranchConfigure')}
           </p>
         )}
         <Button type="submit" disabled={command.isPending || !terminals.length}>
-          {command.isPending ? 'กำลังบันทึก…' : 'บันทึกการตั้งค่า'}
+          {command.isPending
+            ? t('catalog.saving')
+            : t('storefront.saveSettings')}
         </Button>
       </form>
     </Card>
   );
 }
 export function OnlineOrdersPage() {
+  const { t, localize, formatDateTime } = useLanguage();
+
   const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
   const scope = useScope();
@@ -421,16 +433,18 @@ export function OnlineOrdersPage() {
     <div className="catalog-page online-admin">
       <div className="shop-heading">
         <div>
-          <p className="eyebrow">รับที่ร้าน · ชำระผ่าน POS</p>
-          <h1>ออเดอร์ออนไลน์</h1>
+          <p className="eyebrow">{t('storefront.storePickupPayThroughPos')}</p>
+          <h1>{t('pos.onlineOrders')}</h1>
         </div>
         {scope.tenant.can('storefront.manage') && (
-          <Link to="/settings/storefront">ตั้งค่าหน้าร้าน</Link>
+          <Link to="/settings/storefront">
+            {t('storefront.storefrontSettings')}
+          </Link>
         )}
       </div>
       <div className="shop-actions">
         <label>
-          กรองสถานะ
+          {t('catalog.filterStatus')}
           <select
             value={status}
             onChange={(event) => {
@@ -438,7 +452,7 @@ export function OnlineOrdersPage() {
               setPage(1);
             }}
           >
-            <option value="">ทุกสถานะ</option>
+            <option value="">{t('purchasing.allStatuses')}</option>
             {Object.entries(orderStatusLabels).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
@@ -450,18 +464,20 @@ export function OnlineOrdersPage() {
           className="button-secondary"
           onClick={() => void orders.refetch()}
         >
-          อัปเดตรายการ
+          {t('storefront.refreshList')}
         </Button>
       </div>
-      {!scope.branch && <p role="status">เลือกสาขาก่อนดูออเดอร์</p>}
-      {orders.isFetching && <Loading>กำลังโหลดออเดอร์…</Loading>}
+      {!scope.branch && (
+        <p role="status">{t('storefront.selectABranchToViewOrders')}</p>
+      )}
+      {orders.isFetching && <Loading>{t('storefront.loadingOrders')}</Loading>}
       {orders.error && (
         <ShopError error={orders.error} retry={() => void orders.refetch()} />
       )}
       {orders.data?.total === 0 && (
         <Card>
-          <h2>ยังไม่มีออเดอร์ในรายการนี้</h2>
-          <p>ออเดอร์จริงจากหน้าร้านจะแสดงที่นี่ ไม่มีข้อมูลจำลอง</p>
+          <h2>{t('storefront.noOrdersListedYet')}</h2>
+          <p>{t('storefront.actualStorefrontOrdersAppearHereNoSimulated')}</p>
         </Card>
       )}
       <div className="online-listings">
@@ -474,12 +490,10 @@ export function OnlineOrdersPage() {
               <p>
                 {order.customer_name} · {order.contact_phone}
               </p>
-              <small>
-                {new Date(order.created_at).toLocaleString('th-TH')}
-              </small>
+              <small>{formatDateTime(order.created_at)}</small>
             </div>
             <Tag tone={order.status === 'COMPLETED' ? 'success' : 'amber'}>
-              {orderStatusLabels[order.status]}
+              {localize(orderStatusLabels[order.status])}
             </Tag>
             <div>
               <strong>
@@ -487,8 +501,8 @@ export function OnlineOrdersPage() {
               </strong>
               <p>
                 {order.payment_status === 'UNPAID'
-                  ? 'ยังไม่ชำระเงิน'
-                  : 'ชำระที่ร้านแล้ว'}
+                  ? t('storefront.unpaid')
+                  : t('storefront.paidInStore')}
               </p>
             </div>
           </Card>
@@ -506,6 +520,8 @@ export function OnlineOrdersPage() {
   );
 }
 export function OnlineOrderPage() {
+  const { t } = useLanguage();
+
   const { orderId = '' } = useParams();
   const scope = useScope();
   const order = useShopQuery<OnlineOrder>(
@@ -516,10 +532,10 @@ export function OnlineOrderPage() {
   return (
     <div className="catalog-page online-admin">
       <div className="shop-heading">
-        <h1>รายละเอียดออเดอร์ออนไลน์</h1>
-        <Link to="/online-orders">กลับรายการออเดอร์</Link>
+        <h1>{t('storefront.onlineOrderDetails')}</h1>
+        <Link to="/online-orders">{t('storefront.backToOrders')}</Link>
       </div>
-      {order.isPending && <Loading>กำลังโหลดออเดอร์…</Loading>}
+      {order.isPending && <Loading>{t('storefront.loadingOrders')}</Loading>}
       {order.error && (
         <ShopError error={order.error} retry={() => void order.refetch()} />
       )}
@@ -536,7 +552,7 @@ export function OnlineOrderPage() {
           )}
           {order.data.sale_id && (
             <Link to={`/sales/${order.data.sale_id}`}>
-              ดูรายการขายและใบเสร็จ
+              {t('storefront.viewSaleAndReceipt')}
             </Link>
           )}
         </Card>
@@ -551,35 +567,42 @@ function OrderActions({
   order: OnlineOrder;
   command: Command;
 }) {
+  const { t } = useLanguage();
+
   const [message, setMessage] = useState('');
   const scope = useScope();
   const transitions: { status: OrderStatus; label: string }[] =
     order.status === 'PENDING'
       ? [
-          { status: 'PREPARING', label: 'เริ่มเตรียมสินค้า' },
-          { status: 'REJECTED', label: 'ปฏิเสธออเดอร์' },
-          { status: 'CANCELLED', label: 'ยกเลิกออเดอร์' },
+          { status: 'PREPARING', label: t('storefront.startPreparing') },
+          { status: 'REJECTED', label: t('storefront.rejectOrder') },
+          { status: 'CANCELLED', label: t('storefront.cancelOrder') },
         ]
       : order.status === 'PREPARING'
         ? [
-            { status: 'READY', label: 'แจ้งพร้อมรับสินค้า' },
-            { status: 'REJECTED', label: 'ปฏิเสธออเดอร์' },
-            { status: 'CANCELLED', label: 'ยกเลิกออเดอร์' },
+            { status: 'READY', label: t('storefront.markReadyForPickup') },
+            { status: 'REJECTED', label: t('storefront.rejectOrder') },
+            { status: 'CANCELLED', label: t('storefront.cancelOrder') },
           ]
         : order.status === 'READY'
-          ? [{ status: 'CANCELLED', label: 'ยกเลิกออเดอร์' }]
+          ? [{ status: 'CANCELLED', label: t('storefront.cancelOrder') }]
           : [];
   return (
-    <section className="online-order-actions" aria-label="จัดการออเดอร์">
+    <section
+      className="online-order-actions"
+      aria-label={t('storefront.manageOrders')}
+    >
       {!!transitions.length && !order.cart_id && (
         <>
           <label>
-            ข้อความถึงลูกค้า (ลูกค้ามองเห็น)
+            {t('storefront.messageToCustomerVisibleToCustomer')}
             <input
               maxLength={1000}
               value={message}
               onChange={(event) => setMessage(event.target.value)}
-              placeholder="ระบุเหตุผลก่อนปฏิเสธหรือยกเลิก"
+              placeholder={t(
+                'storefront.provideAReasonBeforeRejectingOrCancelling',
+              )}
             />
           </label>
           <div className="shop-actions">
@@ -617,18 +640,13 @@ function OrderActions({
         <>
           <Link className="button" to={`/pos?online_order=${order.id}`}>
             {order.cart_id
-              ? 'กลับไปยังตะกร้า POS ของออเดอร์'
-              : 'ลูกค้ามารับ · เปิดเข้า POS'}
+              ? t('storefront.returnToThisOrderSPosCart')
+              : t('storefront.customerPickupOpenInPos')}
           </Link>
-          <p>
-            พนักงานต้องเปิดกะในเครื่องขายที่กำหนด ตรวจ lot/สต็อก
-            และยืนยันยอดกับลูกค้าก่อนรับชำระ
-            ออเดอร์สำเร็จเมื่อบันทึกขายสำเร็จเท่านั้น
-          </p>
+          <p>{t('storefront.staffMustOpenAShiftAtThe')}</p>
           {order.cart_id && (
             <p className="notice">
-              ออเดอร์อยู่ใน POS แล้ว หากต้องยกเลิก
-              ต้องจัดการการชำระที่ค้างและยกเลิกตะกร้าโดยเจ้าของตะกร้าก่อน
+              {t('storefront.thisOrderIsAlreadyInPosTo')}
             </p>
           )}
         </>

@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useOrganization } from '../../app/OrganizationProvider';
@@ -48,7 +49,9 @@ export function Table({
   );
 }
 export function Empty() {
-  return <p role="status">ไม่พบข้อมูล ลองปรับเงื่อนไขค้นหาหรือเลือกสาขาอื่น</p>;
+  const { t } = useLanguage();
+
+  return <p role="status">{t('shell.noResultsAdjustYourSearchOrSelect')}</p>;
 }
 export function VariantPicker({
   value,
@@ -57,6 +60,8 @@ export function VariantPicker({
   value: string;
   change: (value: string) => void;
 }) {
+  const { t, labelCode } = useLanguage();
+
   const tenant = useOrganization();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -80,17 +85,17 @@ export function VariantPicker({
   return (
     <div className="inventory-picker">
       <div className="inventory-picker-filters">
-        <Field label="ค้นหา Product / SKU / Barcode">
+        <Field label={t('inventory.searchProductSkuBarcode')}>
           <input
             value={search}
-            placeholder="ค้นหาชื่อ, SKU หรือบาร์โค้ด..."
+            placeholder={t('inventory.searchNameSkuOrBarcode')}
             onChange={(event) => {
               setSearch(event.target.value);
               setPage(1);
             }}
           />
         </Field>
-        <Field label="สถานะ Catalog">
+        <Field label={t('inventory.catalogStatus')}>
           <select
             value={status}
             onChange={(event) => {
@@ -98,22 +103,26 @@ export function VariantPicker({
               setPage(1);
             }}
           >
-            <option value="">ACTIVE / INACTIVE</option>
+            <option value="">{t('inventory.activeInactive3')}</option>
             {['ACTIVE', 'INACTIVE', 'ARCHIVED'].map((item) => (
-              <option key={item}>{item}</option>
+              <option key={item} value={item}>
+                {labelCode(item)}
+              </option>
             ))}
           </select>
         </Field>
       </div>
-      <Field label="Product Variant">
+      <Field label={t('inventory.productVariant')}>
         <select
           required
           value={value}
           onChange={(event) => change(event.target.value)}
         >
-          <option value="">เลือก Variant</option>
+          <option value="">{t('catalog.selectVariant')}</option>
           {value && !variants.some((variant) => variant.id === value) && (
-            <option value={value}>Selected Variant {value}</option>
+            <option value={value}>
+              {t('inventory.selectedVariant')} {labelCode(value)}
+            </option>
           )}
           {variants.map((variant) => (
             <option key={variant.id} value={variant.id}>
@@ -130,7 +139,7 @@ export function VariantPicker({
           disabled={page === 1}
           onClick={() => setPage(page - 1)}
         >
-          Catalog ก่อนหน้า
+          {t('inventory.previousCatalogPage')}
         </Button>
         <Button
           type="button"
@@ -138,7 +147,7 @@ export function VariantPicker({
           disabled={!query.data || page * 20 >= query.data.total}
           onClick={() => setPage(page + 1)}
         >
-          Catalog ถัดไป
+          {t('inventory.nextCatalogPage')}
         </Button>
       </div>
     </div>

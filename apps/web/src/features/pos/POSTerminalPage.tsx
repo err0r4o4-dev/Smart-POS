@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useEffect, useRef, useState } from 'react';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavigate';
@@ -18,6 +19,8 @@ import { CustomerPicker } from '../customers/CustomerPicker';
 import { CartBatchPicker, type BatchSelection } from '../quality/BatchPicker';
 
 export function POSTerminalPage() {
+  const { t } = useLanguage();
+
   const pos = usePOS();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
@@ -109,22 +112,24 @@ export function POSTerminalPage() {
       );
       const item = result.items[0];
       if (!item?.saleable) {
-        pos.setMessage('สินค้านี้ไม่พร้อมขาย');
+        pos.setMessage(t('pos.thisProductIsUnavailableForSale'));
         return;
       }
       await add(item);
       setBarcode('');
     } catch {
-      pos.setMessage('ไม่พบบาร์โค้ดนี้ใน Catalog — ไม่สร้างสินค้าอัตโนมัติ');
+      pos.setMessage(t('pos.barcodeNotFoundInCatalogProductsAre'));
     }
   };
   return (
     <>
-      <h1>ขายสินค้า</h1>
-      <p>สต็อกแสดงยอดที่บันทึก ณ ตำแหน่งขาย ไม่ใช่การยืนยันจำนวนจริงบนชั้น</p>
+      <h1>{t('pos.sellProducts')}</h1>
+      <p>{t('pos.stockShowsRecordedBalancesAtTheSelling')}</p>
       {!pos.shift && (
         <p className="notice">
-          ต้อง <Link to="/pos/register/open">เปิดกะของคุณ</Link> ก่อนเริ่มขาย
+          {t('pos.youMust')}{' '}
+          <Link to="/pos/register/open">{t('pos.openYourRegisterShift')}</Link>{' '}
+          {t('pos.beforeSelling')}
         </p>
       )}
       <div className="pos-grid">
@@ -137,22 +142,25 @@ export function POSTerminalPage() {
             }}
           >
             <label>
-              สแกนบาร์โค้ด
-              <span className="shortcut-badge" title="กด F2 เพื่อสลับมาช่องนี้">
+              {t('pos.scanBarcode')}
+              <span
+                className="shortcut-badge"
+                title={t('pos.pressF2ToFocusThisField')}
+              >
                 F2
               </span>
               <input
                 ref={scanner}
-                aria-label="สแกนบาร์โค้ด"
+                aria-label={t('pos.scanBarcode')}
                 value={barcode}
                 onChange={(event) => setBarcode(event.target.value)}
-                placeholder="สแกนแล้วกด Enter"
+                placeholder={t('pos.scanAndPressEnter')}
                 autoComplete="off"
                 disabled={pos.busy}
               />
             </label>
             <Button type="submit" disabled={pos.busy || !pos.shift}>
-              เพิ่มจากบาร์โค้ด
+              {t('pos.addByBarcode')}
             </Button>
           </form>
           <form
@@ -163,23 +171,23 @@ export function POSTerminalPage() {
             }}
           >
             <label>
-              ค้นหาสินค้า
+              {t('common.searchProducts')}
               <input
-                aria-label="ค้นหาสินค้า"
+                aria-label={t('common.searchProducts')}
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="ชื่อ / SKU"
+                placeholder={t('pos.nameSku')}
               />
             </label>
-            <Button type="submit">ค้นหา</Button>
+            <Button type="submit">{t('customers.search')}</Button>
           </form>
           <label>
-            หมวดหมู่
+            {t('catalog.categories')}
             <select
               value={category}
               onChange={(event) => setCategory(event.target.value)}
             >
-              <option value="">ทุกหมวดหมู่</option>
+              <option value="">{t('pos.allCategories')}</option>
               {categories.data?.items.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
@@ -203,10 +211,10 @@ export function POSTerminalPage() {
                   {item.variant_name} · {item.sku}
                 </p>
                 <strong>
-                  {moneyText(item.unit_price)} บาท / {item.unit}
+                  {moneyText(item.unit_price)} {t('pos.thb')} {item.unit}
                 </strong>
                 <small>
-                  คงเหลือ {item.available} · {item.product_status}/
+                  {t('pos.available')} {item.available} · {item.product_status}/
                   {item.variant_status}
                 </small>
                 <Button
@@ -218,15 +226,15 @@ export function POSTerminalPage() {
                   }
                   onClick={() => void add(item)}
                 >
-                  เพิ่ม {item.sku}
+                  {t('pos.add')} {item.sku}
                 </Button>
               </article>
             ))}
           </div>
-          {products.data?.total === 0 && <p>ไม่พบสินค้า</p>}
+          {products.data?.total === 0 && <p>{t('pos.noProductsFound')}</p>}
           <p>
-            แสดง {products.data?.items.length ?? 0} จาก{' '}
-            {products.data?.total ?? 0} รายการ — ใช้คำค้นเพื่อจำกัดผลลัพธ์
+            {t('pos.showing')} {products.data?.items.length ?? 0} {t('pos.of')}{' '}
+            {products.data?.total ?? 0} {t('pos.itemsUseSearchToNarrowResults')}
           </p>
         </Card>
         <Card className="cart-panel">
@@ -235,7 +243,7 @@ export function POSTerminalPage() {
             disabled={!pos.cart?.items.length || !pos.shift || pos.busy}
             onClick={() => navigate('/pos/checkout')}
           >
-            ไปชำระเงิน
+            {t('pos.goToCheckout')}
           </Button>
         </Card>
       </div>
@@ -244,6 +252,8 @@ export function POSTerminalPage() {
 }
 
 function CartPanel() {
+  const { t } = useLanguage();
+
   const pos = usePOS();
   const cart = pos.cart;
   const update = async (
@@ -254,7 +264,7 @@ function CartPanel() {
     if (!cart) return;
     const amount = exactDecimal(quantity, 3);
     if (amount === null || amount <= 0n) {
-      pos.setMessage('จำนวนต้องมากกว่า 0 และมีทศนิยมไม่เกิน 3 ตำแหน่ง');
+      pos.setMessage(t('pos.quantityMustBeGreaterThan0With'));
       return;
     }
     await pos.mutate(
@@ -297,9 +307,9 @@ function CartPanel() {
   };
   return (
     <>
-      <h2>ตะกร้าสินค้า</h2>
+      <h2>{t('pos.shoppingCart')}</h2>
       <CustomerPicker />
-      {!cart?.items.length && <p>ยังไม่มีสินค้าในตะกร้า</p>}
+      {!cart?.items.length && <p>{t('pos.yourCartIsEmpty')}</p>}
       {cart?.items.map((item) => (
         <div className="pos-cart-item" key={item.variant_id}>
           <h3>{item.product_name}</h3>
@@ -317,11 +327,12 @@ function CartPanel() {
             save={(batch) => update(item.variant_id, item.quantity, batch)}
           />
           <small>
-            {item.sku} · {item.unit} · {moneyText(item.unit_price)} บาท
+            {item.sku} · {item.unit} · {moneyText(item.unit_price)}{' '}
+            {t('loyalty.thb')}
           </small>
           <div className="pos-quantity">
             <Button
-              aria-label={`ลด ${item.sku}`}
+              aria-label={t('pos.decreaseValue0', { value0: item.sku })}
               disabled={pos.busy}
               onClick={() =>
                 void update(
@@ -339,7 +350,9 @@ function CartPanel() {
               update={(quantity) => void update(item.variant_id, quantity)}
             />
             <Button
-              aria-label={`เพิ่มจำนวน ${item.sku}`}
+              aria-label={t('pos.increaseQuantityForValue0', {
+                value0: item.sku,
+              })}
               disabled={pos.busy}
               onClick={() =>
                 void update(
@@ -351,29 +364,38 @@ function CartPanel() {
               +
             </Button>
             <Button
-              aria-label={`ลบ ${item.sku}`}
+              aria-label={t('pos.deleteValue0', { value0: item.sku })}
               disabled={pos.busy}
               onClick={() => void remove(item.variant_id)}
             >
-              ลบ
+              {t('pos.delete')}
             </Button>
           </div>
-          <strong>{moneyText(item.line_total)} บาท</strong>
+          <strong>
+            {moneyText(item.line_total)} {t('loyalty.thb')}
+          </strong>
           {item.price_changed && (
             <p role="status">
-              ราคาเปลี่ยนจาก {item.previous_price} — ตรวจสอบและอัปเดตตะกร้า
+              {t('pos.priceChangedFrom')} {item.previous_price}{' '}
+              {t('pos.reviewAndUpdateTheCart')}
             </p>
           )}
-          {!item.saleable && <p>สินค้าไม่พร้อมขาย — นำออกจากตะกร้า</p>}
+          {!item.saleable && (
+            <p>{t('pos.productUnavailableRemoveItFromTheCart')}</p>
+          )}
           {(exactDecimal(item.available, 3) ?? 0n) <
             (exactDecimal(item.quantity, 3) ?? 0n) && (
-            <p>สต็อกไม่พอ: มี {item.available}</p>
+            <p>
+              {t('pos.insufficientStockAvailable')} {item.available}
+            </p>
           )}
         </div>
       ))}
       <div className="checkout-summary">
-        <span>ยอดรวม (ไม่มีส่วนลด / ไม่คำนวณภาษีแยก)</span>
-        <strong>{moneyText(cart?.total ?? '0.00')} บาท</strong>
+        <span>{t('pos.totalNoDiscountNoSeparateTaxCalculation')}</span>
+        <strong>
+          {moneyText(cart?.total ?? '0.00')} {t('loyalty.thb')}
+        </strong>
         <Button
           disabled={!cart?.items.length || pos.busy}
           onClick={() =>
@@ -385,12 +407,12 @@ function CartPanel() {
               );
               if (result) {
                 pos.setCart('');
-                pos.setMessage('พักตะกร้าแล้ว — ไม่สำรองสต็อก');
+                pos.setMessage(t('pos.cartHeldStockNotReserved'));
               }
             })()
           }
         >
-          พักตะกร้า
+          {t('pos.holdCart')}
         </Button>
         <Button
           disabled={!cart?.items.length || pos.busy}
@@ -403,7 +425,7 @@ function CartPanel() {
             )
           }
         >
-          ล้างตะกร้า
+          {t('pos.clearCart')}
         </Button>
         {cart?.review_required && (
           <Button
@@ -424,7 +446,7 @@ function CartPanel() {
               )
             }
           >
-            ยอมรับราคาปัจจุบันและตรวจสอบใหม่
+            {t('pos.acceptCurrentPricesAndRecheck')}
           </Button>
         )}
       </div>
@@ -440,10 +462,12 @@ function QuantityInput({
   disabled: boolean;
   update: (value: string) => void;
 }) {
+  const { t } = useLanguage();
+
   const [value, setValue] = useState(item.quantity);
   return (
     <input
-      aria-label={`จำนวน ${item.sku}`}
+      aria-label={t('pos.quantityForValue0', { value0: item.sku })}
       inputMode="decimal"
       value={value}
       disabled={disabled}

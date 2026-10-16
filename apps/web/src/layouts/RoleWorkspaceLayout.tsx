@@ -1,3 +1,4 @@
+import { useLanguage } from '../app/language';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../app/AuthProvider';
 import { useOrganization } from '../app/OrganizationProvider';
@@ -8,13 +9,15 @@ import { ManagementLayout, WorkspaceShell } from './ManagementLayout';
 import { StaffLayout } from './StaffLayout';
 
 export function RoleWorkspaceLayout() {
+  const { t } = useLanguage();
+
   const { state } = useAuth();
   const tenant = useOrganization();
   const { pathname } = useLocation();
   if (state.status === 'loading' || tenant.loading)
     return (
       <main className="standalone">
-        <Loading>กำลังเลือกพื้นที่ตามสิทธิ์ของคุณ…</Loading>
+        <Loading>{t('shell.selectingAWorkspaceBasedOnYourAccess')}</Loading>
       </main>
     );
   const role =

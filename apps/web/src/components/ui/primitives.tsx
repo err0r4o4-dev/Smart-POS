@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react';
 import { AlertCircle, LoaderCircle } from 'lucide-react';
 import logoMark from '../../assets/logo-mark.png';
@@ -46,15 +47,12 @@ export function Brand({
     </span>
   );
 }
-export function Loading({
-  children = 'Checking service readiness…',
-}: {
-  children?: ReactNode;
-}) {
+export function Loading({ children }: { children?: ReactNode }) {
+  const { t } = useLanguage();
   return (
     <p role="status" className="feedback">
       <LoaderCircle className="spin" size={18} aria-hidden="true" />
-      {children}
+      {children ?? t('shell.checkingServiceReadiness')}
     </p>
   );
 }
@@ -65,15 +63,17 @@ export function ErrorState({
   message: string;
   retry?: () => void;
 }) {
+  const { t, localize } = useLanguage();
+
   return (
     <div role="alert" className="error-state">
       <AlertCircle size={20} aria-hidden="true" />
       <div>
-        <strong>Service not ready</strong>
-        <p>{message}</p>
+        <strong>{t('shell.serviceNotReady')}</strong>
+        <p>{localize(message ?? '')}</p>
         {retry && (
           <Button className="button-secondary" onClick={retry}>
-            Try again
+            {t('shell.tryAgain')}
           </Button>
         )}
       </div>

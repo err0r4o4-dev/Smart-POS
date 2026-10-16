@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { Tag } from '../../components/ui/primitives';
 import { moneyText } from '../../lib/pos-api';
 import { orderStatusLabels, type OnlineOrder } from '../../lib/storefront-api';
@@ -9,24 +10,27 @@ export function OrderDetails({
   order: OnlineOrder;
   staff?: boolean;
 }) {
+  const { t, localize, formatDateTime } = useLanguage();
+
   return (
     <div className="online-order-detail">
       <div className="shop-actions">
         <h2>{order.number}</h2>
         <Tag tone={order.status === 'COMPLETED' ? 'success' : 'amber'}>
-          {orderStatusLabels[order.status]}
+          {localize(orderStatusLabels[order.status])}
         </Tag>
       </div>
       <p>
         {order.payment_status === 'PAID_AT_STORE'
-          ? 'ชำระและบันทึกขายที่ร้านแล้ว'
-          : 'ยังไม่ชำระเงิน · รับและจ่ายที่ร้าน'}
+          ? t('storefront.paidAndSaleSavedInStore')
+          : t('storefront.unpaidPickUpAndPayInStore')}
       </p>
       {staff && (
         <p>
-          ผู้รับ: {order.customer_name} · {order.contact_phone}
+          {t('storefront.recipient')} {order.customer_name} ·{' '}
+          {order.contact_phone}
           <br />
-          หมายเหตุลูกค้า: {order.customer_note || '—'}
+          {t('storefront.customerNote')} {order.customer_note || '—'}
         </p>
       )}
       <ul className="shop-order-lines">
@@ -43,35 +47,37 @@ export function OrderDetails({
         ))}
       </ul>
       <p>
-        ยอดประมาณการเมื่อสั่ง{' '}
+        {t('storefront.estimatedTotalAtOrderTime')}{' '}
         <strong>฿{moneyText(order.estimated_total)}</strong>
       </p>
       {order.final_total && (
         <p>
-          ยอดขายจริง <strong>฿{moneyText(order.final_total)}</strong> · ใบเสร็จ{' '}
-          {order.receipt_number}
+          {t('storefront.actualSaleTotal')}{' '}
+          <strong>฿{moneyText(order.final_total)}</strong>{' '}
+          {t('storefront.receipt')} {order.receipt_number}
         </p>
       )}
       <p>
-        รับที่: {order.store_name}
+        {t('storefront.pickupAt')} {order.store_name}
         <br />
         {order.pickup_instructions}
         <br />
-        ติดต่อร้าน: {order.store_phone || 'ดูช่องทางติดต่อหน้าร้าน'}
+        {t('storefront.contactStore')}{' '}
+        {order.store_phone || t('storefront.viewStoreContactDetails')}
       </p>
       {['PENDING', 'PREPARING', 'READY'].includes(order.status) && (
         <p className="notice">
-          กรุณารอร้านยืนยันพร้อมรับก่อนเดินทาง ออเดอร์ที่ยังไม่เข้า POS หมดอายุ{' '}
-          {new Date(order.expires_at).toLocaleString('th-TH')}
+          {t('storefront.waitForTheStoreToConfirmPickup')}{' '}
+          {formatDateTime(order.expires_at)}
         </p>
       )}
-      <h3>ความคืบหน้า</h3>
+      <h3>{t('storefront.progress')}</h3>
       <ol className="shop-timeline">
         {order.events.map((event, index) => (
           <li key={`${event.created_at}:${index}`}>
-            <strong>{orderStatusLabels[event.status]}</strong>
+            <strong>{localize(orderStatusLabels[event.status])}</strong>
             <p>{event.message}</p>
-            <small>{new Date(event.created_at).toLocaleString('th-TH')}</small>
+            <small>{formatDateTime(event.created_at)}</small>
           </li>
         ))}
       </ol>

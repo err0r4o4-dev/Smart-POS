@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useState, type ReactNode } from 'react';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { Button, Loading } from '../../components/ui/primitives';
@@ -46,11 +47,13 @@ export function TextField({
   );
 }
 export function SupplyFeedback({ state }: { state: SupplyScope }) {
+  const { t, localize } = useLanguage();
+
   return (
     <>
       <CatalogError error={state.error} />
-      {state.success && <p role="status">{state.success}</p>}
-      {state.busy && <Loading>กำลังบันทึก กรุณารอ</Loading>}
+      {state.success && <p role="status">{localize(state.success)}</p>}
+      {state.busy && <Loading>{t('purchasing.savingPleaseWait')}</Loading>}
     </>
   );
 }
@@ -96,6 +99,8 @@ export function Pagination({
   size?: number;
   change: (page: number) => void;
 }) {
+  const { t } = useLanguage();
+
   const pages = Math.max(1, Math.ceil(total / size));
   return (
     <div className="catalog-pagination">
@@ -104,41 +109,48 @@ export function Pagination({
         disabled={page <= 1}
         onClick={() => change(page - 1)}
       >
-        ก่อนหน้า
+        {t('catalog.previous')}
       </Button>
       <span>
-        หน้า {page} / {pages} • {total} รายการ
+        {t('catalog.page')} {page} / {pages} • {total}{' '}
+        {t('catalog.definitions')}
       </span>
       <Button
         className="button-secondary"
         disabled={page >= pages}
         onClick={() => change(page + 1)}
       >
-        ถัดไป
+        {t('catalog.next')}
       </Button>
     </div>
   );
 }
 export function SupplyNav({ shelves = false }: { shelves?: boolean }) {
+  const { t } = useLanguage();
+
   const links = shelves
     ? [
-        ['/shelves', 'ชั้นวาง'],
-        ['/shelves/layout', 'ผังชั้นวาง'],
-        ['/shelves/replenishments', 'เติมสินค้า'],
-        ['/shelves/counts', 'ตรวจนับ'],
-        ['/shelves/discrepancies', 'ผลต่างตรวจนับ'],
+        ['/shelves', t('purchasing.shelf')],
+        ['/shelves/layout', t('purchasing.shelfLayout')],
+        ['/shelves/replenishments', t('purchasing.replenishStock')],
+        ['/shelves/counts', t('inventory.stockCounts')],
+        ['/shelves/discrepancies', t('purchasing.countDifferences')],
       ]
     : [
-        ['/suppliers', 'Supplier'],
-        ['/purchasing/orders', 'ใบสั่งซื้อ'],
-        ['/purchasing/receipts', 'รับสินค้า'],
-        ['/purchasing/returns', 'คืน Supplier'],
-        ['/purchasing/suggestions', 'คำแนะนำสั่งซื้อ'],
+        ['/suppliers', t('purchasing.supplier')],
+        ['/purchasing/orders', t('purchasing.purchaseOrders')],
+        ['/purchasing/receipts', t('purchasing.receiveProducts')],
+        ['/purchasing/returns', t('purchasing.returnToSupplier')],
+        ['/purchasing/suggestions', t('purchasing.reorderSuggestions')],
       ];
   return (
     <nav
       className="catalog-nav"
-      aria-label={shelves ? 'Shelf workflows' : 'Purchasing workflows'}
+      aria-label={
+        shelves
+          ? t('purchasing.shelfWorkflows')
+          : t('purchasing.purchasingWorkflows')
+      }
     >
       {links.map(([path, label]) => (
         <Link key={path} to={path}>
@@ -163,6 +175,8 @@ export function RemoteSelect<Item extends { id: string }>({
   display: (item: Item) => string;
   required?: boolean;
 }) {
+  const { t, labelCode } = useLanguage();
+
   const [search, setSearch] = useState(''),
     [page, setPage] = useState(1);
   const query = useSupplyQuery<SupplyPage<Item>>(
@@ -171,7 +185,7 @@ export function RemoteSelect<Item extends { id: string }>({
   return (
     <div className="supply-picker">
       <TextField
-        label={`ค้นหา ${label}`}
+        label={t('purchasing.searchValue02', { value0: label })}
         value={search}
         change={(value) => {
           setSearch(value);
@@ -184,9 +198,13 @@ export function RemoteSelect<Item extends { id: string }>({
           value={value}
           onChange={(event) => change(event.target.value)}
         >
-          <option value="">เลือก {label}</option>
+          <option value="">
+            {t('purchasing.select')} {label}
+          </option>
           {value && !query.data?.items.some((item) => item.id === value) && (
-            <option value={value}>Selected · {value}</option>
+            <option value={value}>
+              {t('purchasing.selected')} {labelCode(value)}
+            </option>
           )}
           {query.data?.items.map((item) => (
             <option key={item.id} value={item.id}>
@@ -210,6 +228,8 @@ export function VariantPicker({
   change: (variant: Variant) => void;
   children?: ReactNode;
 }) {
+  const { t, labelCode } = useLanguage();
+
   const [search, setSearch] = useState(''),
     [page, setPage] = useState(1);
   const query = useSupplyQuery<SupplyPage<Product>>(
@@ -223,14 +243,14 @@ export function VariantPicker({
     <div className="supply-picker">
       <div className="supply-picker-inputs">
         <TextField
-          label="ค้นหาสินค้า / SKU"
+          label={t('purchasing.searchProductSku')}
           value={search}
           change={(value) => {
             setSearch(value);
             setPage(1);
           }}
         />
-        <Field label="Product Variant">
+        <Field label={t('inventory.productVariant')}>
           <select
             value={value}
             required
@@ -241,9 +261,11 @@ export function VariantPicker({
               if (variant) change(variant);
             }}
           >
-            <option value="">เลือก Variant</option>
+            <option value="">{t('catalog.selectVariant')}</option>
             {value && !variants.some((variant) => variant.id === value) && (
-              <option value={value}>Selected · {value}</option>
+              <option value={value}>
+                {t('purchasing.selected')} {labelCode(value)}
+              </option>
             )}
             {variants.map((variant) => (
               <option key={variant.id} value={variant.id}>

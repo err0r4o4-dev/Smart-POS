@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
@@ -27,16 +28,16 @@ import {
 import { SupplierForm, SupplierProducts } from './SupplierPanel';
 import { OrderForm, ReceivingForm } from './DocumentForms';
 
-const titles: Record<string, string> = {
-  suppliers: 'Supplier',
-  supplier: 'รายละเอียด Supplier',
-  orders: 'ใบสั่งซื้อ',
-  new: 'สร้างใบสั่งซื้อ',
-  order: 'รายละเอียดใบสั่งซื้อ',
-  receipts: 'รับสินค้า',
-  returns: 'คืน Supplier',
-  suggestions: 'คำแนะนำสั่งซื้อ',
-};
+const titles = {
+  suppliers: 'purchasing.supplier',
+  supplier: 'purchasing.supplierDetails',
+  orders: 'purchasing.purchaseOrders',
+  new: 'purchasing.createPurchaseOrder',
+  order: 'purchasing.purchaseOrderDetails',
+  receipts: 'purchasing.receiveProducts',
+  returns: 'purchasing.returnToSupplier',
+  suggestions: 'purchasing.reorderSuggestions',
+} as const;
 export function PurchasingPage({ view }: { view: string }) {
   const tenant = useOrganization(),
     auth = useAuth(),
@@ -50,6 +51,8 @@ export function PurchasingPage({ view }: { view: string }) {
   );
 }
 function PurchasingScreen({ view, id }: { view: string; id?: string }) {
+  const { t, labelCode } = useLanguage();
+
   const state = useSupplyScope(),
     [search, setSearch] = useState(''),
     [status, setStatus] = useState(''),
@@ -75,33 +78,35 @@ function PurchasingScreen({ view, id }: { view: string; id?: string }) {
     <section className="catalog-page supply-page">
       <header className="catalog-header">
         <div>
-          <p className="eyebrow">จัดซื้อและรับสินค้า</p>
-          <h1>{titles[view]}</h1>
-          <p>จัดการผู้จำหน่าย ใบสั่งซื้อ และการรับสินค้าของสาขา</p>
+          <p className="eyebrow">{t('purchasing.purchasingAndReceiving')}</p>
+          <h1>{t(titles[view as keyof typeof titles])}</h1>
+          <p>
+            {t('purchasing.manageSuppliersPurchaseOrdersAndBranchReceiving')}
+          </p>
         </div>
         {view === 'orders' && state.tenant.can('purchasing.order.create') && (
           <Link className="button" to="/purchasing/orders/new">
-            สร้าง PO
+            {t('purchasing.createPo')}
           </Link>
         )}
       </header>
       <SupplyNav />
       <SupplyFeedback state={state} />
       {view !== 'suppliers' && view !== 'supplier' && !state.branch && (
-        <p role="alert">เลือกสาขาจาก header ก่อนทำรายการ</p>
+        <p role="alert">{t('purchasing.selectABranchFromTheHeaderBefore')}</p>
       )}
       {!['new', 'supplier', 'order'].includes(view) && (
         <>
           <div className="catalog-actions">
             <TextField
-              label="ค้นหา"
+              label={t('customers.search')}
               value={search}
               change={(value) => {
                 setSearch(value);
                 setPage(1);
               }}
             />
-            <Field label="สถานะ">
+            <Field label={t('auth.status')}>
               <select
                 value={status}
                 onChange={(event) => {
@@ -109,10 +114,10 @@ function PurchasingScreen({ view, id }: { view: string; id?: string }) {
                   setPage(1);
                 }}
               >
-                <option value="">ทั้งหมด</option>
-                <option value="ACTIVE">ACTIVE</option>
-                <option value="ORDERED">ORDERED</option>
-                <option value="POSTED">POSTED</option>
+                <option value="">{t('common.all')}</option>
+                <option value="ACTIVE">{t('purchasing.active5')}</option>
+                <option value="ORDERED">{t('purchasing.ordered')}</option>
+                <option value="POSTED">{t('purchasing.posted2')}</option>
               </select>
             </Field>
           </div>
@@ -131,7 +136,13 @@ function PurchasingScreen({ view, id }: { view: string; id?: string }) {
           )}
           <Card>
             <SupplyTable
-              headers={['Code', 'Supplier', 'Contact', 'Status', 'รายละเอียด']}
+              headers={[
+                t('purchasing.code'),
+                t('purchasing.supplier'),
+                t('purchasing.contact'),
+                t('auth.status'),
+                t('inventory.details'),
+              ]}
             >
               {query.data?.items.map((item) => (
                 <tr key={item.id}>
@@ -145,10 +156,12 @@ function PurchasingScreen({ view, id }: { view: string; id?: string }) {
                     {item.phone}
                   </td>
                   <td>
-                    <Tag>{item.status}</Tag>
+                    <Tag>{labelCode(item.status)}</Tag>
                   </td>
                   <td>
-                    <Link to={'/suppliers/' + item.id}>เปิด Supplier</Link>
+                    <Link to={'/suppliers/' + item.id}>
+                      {t('purchasing.openSupplier')}
+                    </Link>
                   </td>
                 </tr>
               ))}
@@ -175,13 +188,13 @@ function PurchasingScreen({ view, id }: { view: string; id?: string }) {
               <Card>
                 <h2>{supplier.data.name}</h2>
                 <p>
-                  {supplier.data.code} · {supplier.data.status} ·{' '}
+                  {supplier.data.code} · {labelCode(supplier.data.status)} ·{' '}
                   {supplier.data.contact_person} · {supplier.data.email} ·{' '}
                   {supplier.data.phone}
                 </p>
                 <p>
-                  {supplier.data.address} · Tax identifier:{' '}
-                  {supplier.data.tax_identifier || 'ไม่ได้ระบุ'}
+                  {supplier.data.address} {t('purchasing.taxIdentifier')}{' '}
+                  {supplier.data.tax_identifier || t('purchasing.notSpecified')}
                 </p>
               </Card>
               {state.tenant.can('supplier.update') && (
@@ -193,7 +206,7 @@ function PurchasingScreen({ view, id }: { view: string; id?: string }) {
               )}
               <SupplierProducts state={state} supplierID={supplier.data.id} />
               <Card>
-                <h2>ประวัติ PO ในสาขาที่เลือก · ล่าสุด 20 รายการ</h2>
+                <h2>{t('purchasing.poHistoryForSelectedBranchLatest20')}</h2>
                 <QueryFeedback
                   retry={() => void history.refetch()}
                   loading={history.isFetching}
@@ -204,7 +217,7 @@ function PurchasingScreen({ view, id }: { view: string; id?: string }) {
                     <Link to={'/purchasing/orders/' + doc.id}>
                       {doc.number}
                     </Link>{' '}
-                    · {doc.status} · {doc.total} THB
+                    · {labelCode(doc.status)} · {doc.total} THB
                   </p>
                 ))}
               </Card>
@@ -220,12 +233,12 @@ function PurchasingScreen({ view, id }: { view: string; id?: string }) {
         <Card>
           <SupplyTable
             headers={[
-              'Reference',
-              'Supplier',
-              'Status',
-              'Total',
-              'Expected date',
-              'รายละเอียด',
+              t('inventory.reference'),
+              t('purchasing.supplier'),
+              t('auth.status'),
+              t('pos.total'),
+              t('purchasing.expectedDate'),
+              t('inventory.details'),
             ]}
           >
             {query.data?.items.map((doc) => (
@@ -233,7 +246,7 @@ function PurchasingScreen({ view, id }: { view: string; id?: string }) {
                 <td>{doc.number.slice(0, 8)}</td>
                 <td>{doc.supplier_snapshot.name}</td>
                 <td>
-                  <Tag>{doc.status}</Tag>
+                  <Tag>{labelCode(doc.status)}</Tag>
                 </td>
                 <td>
                   {doc.total} {doc.currency}
@@ -241,10 +254,15 @@ function PurchasingScreen({ view, id }: { view: string; id?: string }) {
                 <td>{doc.expected_delivery_date ?? '—'}</td>
                 <td>
                   {view === 'orders' ? (
-                    <Link to={'/purchasing/orders/' + doc.id}>เปิด PO</Link>
+                    <Link to={'/purchasing/orders/' + doc.id}>
+                      {t('purchasing.openPo')}
+                    </Link>
                   ) : (
                     <Button onClick={() => setSelected(doc.id)}>
-                      เปิด {view === 'receipts' ? 'Receipt' : 'Return'}
+                      {t('purchasing.open')}{' '}
+                      {view === 'receipts'
+                        ? t('purchasing.receipt')
+                        : t('loyalty.return')}
                     </Button>
                   )}
                 </td>
@@ -273,7 +291,7 @@ function PurchasingScreen({ view, id }: { view: string; id?: string }) {
                 />
               )}
             <Card>
-              <h2>Receiving discrepancies · text evidence</h2>
+              <h2>{t('purchasing.receivingDiscrepanciesTextEvidence')}</h2>
               {resource === 'receipts' && (
                 <Discrepancies state={state} select={setSelected} />
               )}
@@ -287,13 +305,13 @@ function PurchasingScreen({ view, id }: { view: string; id?: string }) {
         <Card>
           <SupplyTable
             headers={[
-              'SKU',
-              'Stock',
+              t('common.sku'),
+              t('purchasing.stock'),
               'Min / Target',
-              'Incoming',
+              t('purchasing.incoming'),
               'Supplier / Lead time',
-              'Suggested purchase quantity',
-              'Review',
+              t('purchasing.suggestedPurchaseQuantity'),
+              t('purchasing.review'),
             ]}
           >
             {query.data?.items.map((item) => (
@@ -311,7 +329,7 @@ function PurchasingScreen({ view, id }: { view: string; id?: string }) {
                 <td>
                   {item.supplier_name}
                   <br />
-                  {item.lead_time_days} วัน
+                  {item.lead_time_days} {t('purchasing.days')}
                 </td>
                 <td>
                   {item.suggested_quantity} {item.purchase_unit}
@@ -343,7 +361,7 @@ function PurchasingScreen({ view, id }: { view: string; id?: string }) {
                           .catch(() => {})
                       }
                     >
-                      สร้าง PO Draft
+                      {t('purchasing.createPoDraft')}
                     </Button>
                   )}
                 </td>
@@ -355,7 +373,7 @@ function PurchasingScreen({ view, id }: { view: string; id?: string }) {
           )}
           {selected && (
             <Link to={'/purchasing/orders/' + selected}>
-              เปิด Draft ที่สร้าง
+              {t('purchasing.openCreatedDraft')}
             </Link>
           )}
         </Card>
@@ -370,6 +388,8 @@ function Discrepancies({
   state: SupplyScope;
   select: (id: string) => void;
 }) {
+  const { labelCode } = useLanguage();
+
   const query = useSupplyQuery<SupplyPage<PurchaseDocument>>(
     `/purchasing/discrepancies?branch_id=${state.branch}`,
     !!state.branch,
@@ -385,7 +405,7 @@ function Discrepancies({
       {query.data?.items.map((doc) => (
         <p key={doc.id}>
           <Button onClick={() => select(doc.id)}>
-            {doc.number.slice(0, 8)} · {doc.status}
+            {doc.number.slice(0, 8)} · {labelCode(doc.status)}
           </Button>
         </p>
       ))}
@@ -443,6 +463,8 @@ export function DocumentDetail({
   resource: 'orders' | 'receipts' | 'returns';
   id: string;
 }) {
+  const { t, labelCode } = useLanguage();
+
   const query = useSupplyQuery<PurchaseDocument>(
     `/purchasing/${resource}/${id}`,
   );
@@ -458,25 +480,29 @@ export function DocumentDetail({
       {doc && (
         <>
           <h2>
-            {doc.number} · {doc.status}
+            {doc.number} · {labelCode(doc.status)}
           </h2>
           <p>
-            Supplier snapshot: {doc.supplier_snapshot.name} /{' '}
-            {doc.supplier_snapshot.code} · revision {doc.revision} · {doc.total}{' '}
-            {doc.currency}
+            {t('purchasing.supplierSnapshot')} {doc.supplier_snapshot.name} /{' '}
+            {doc.supplier_snapshot.code} {t('purchasing.revision3')}
+            {doc.revision} · {doc.total} {doc.currency}
           </p>
           <p>{doc.notes}</p>
-          {doc.parent_id && <p>ต้นทาง: {doc.parent_id}</p>}
+          {doc.parent_id && (
+            <p>
+              {t('inventory.source')} {doc.parent_id}
+            </p>
+          )}
           <SupplyTable
             headers={[
-              'SKU snapshot',
+              t('purchasing.skuSnapshot'),
               'Purchase unit / Factor',
-              'Quantity',
-              'Base Qty',
+              t('purchasing.quantity2'),
+              t('purchasing.baseQty'),
               'Accepted / Outstanding',
               'Delivered / Rejected / Damaged',
               'Cost / Total',
-              'Evidence',
+              t('purchasing.evidence'),
             ]}
           >
             {doc.items.map((item) => (
@@ -533,14 +559,11 @@ export function DocumentDetail({
                       .catch(() => {})
                   }
                 >
-                  {action}
+                  {labelCode(action)}
                 </Button>
               ))}
           </div>
-          <p>
-            Owner self-approval อนุญาตพร้อม audit; Manager ต้องไม่ใช่ผู้สร้าง ·
-            issue เป็น operator-recorded ไม่ยืนยัน email delivery
-          </p>
+          <p>{t('purchasing.ownersMaySelfApproveWithAuditManagers')}</p>
           {doc.status === 'DRAFT' &&
             state.tenant.can(
               permission(doc.kind, doc.kind === 'ORDER' ? 'submit' : 'cancel'),
@@ -556,24 +579,24 @@ export function DocumentDetail({
                 onSave={() => {}}
               />
             ))}
-          <h3>Timeline / Audit evidence</h3>
+          <h3>{t('purchasing.timelineAuditEvidence')}</h3>
           {doc.events.map((event) => (
             <p key={event.id}>
-              {event.created_at} · {event.action} · revision {event.revision} ·{' '}
-              {event.actor_id}
+              {event.created_at} · {event.action} {t('purchasing.revision4')}
+              {event.revision} · {event.actor_id}
               <br />
               {event.reason}
             </p>
           ))}
-          <h3>เอกสารต่อเนื่อง</h3>
+          <h3>{t('purchasing.relatedDocuments')}</h3>
           {doc.children.map((child) => (
             <p key={child.id}>
-              {child.kind} · {child.number} · {child.status}
+              {child.kind} · {child.number} · {labelCode(child.status)}
             </p>
           ))}
           {['POSTED', 'DISPATCHED'].includes(doc.status) && (
             <Link to="/inventory/movements">
-              ดู Inventory Ledger / posting references
+              {t('purchasing.viewInventoryLedgerPostingReferences')}
             </Link>
           )}
         </>

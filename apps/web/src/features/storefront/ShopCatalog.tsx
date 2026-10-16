@@ -1,3 +1,5 @@
+import { useLanguage } from '../../app/language';
+import type { UiMessage } from '../../i18n';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -39,6 +41,8 @@ function quantityText(value: bigint) {
 }
 
 export function ShopCatalog({ slug }: { slug: string }) {
+  const { t, messageText, localize } = useLanguage();
+
   const cart = useShopCart(slug);
   const [search, setSearch] = useState('');
   const [submitted, setSubmitted] = useState('');
@@ -48,7 +52,7 @@ export function ShopCatalog({ slug }: { slug: string }) {
   const [priceError, setPriceError] = useState('');
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [categoriesOpen, setCategoriesOpen] = useState(false);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState<UiMessage>('');
   const shop = useQuery({
     queryKey: ['storefront', slug, 'settings'],
     queryFn: ({ signal }) =>
@@ -86,7 +90,7 @@ export function ShopCatalog({ slug }: { slug: string }) {
     setSubmitted('');
     setPage(1);
   };
-  if (shop.isPending) return <Loading>กำลังโหลดร้าน…</Loading>;
+  if (shop.isPending) return <Loading>{t('storefront.loadingStore')}</Loading>;
   if (shop.error || !shop.data)
     return <ShopError error={shop.error} retry={() => void shop.refetch()} />;
   const store = shop.data;
@@ -105,9 +109,13 @@ export function ShopCatalog({ slug }: { slug: string }) {
   return (
     <div className="shop-catalog">
       <div className="catalog-layout">
-        <aside className="catalog-sidebar" aria-label="หมวดหมู่สินค้า">
+        <aside
+          className="catalog-sidebar"
+          aria-label={t('catalog.productCategory')}
+        >
           <h2>
-            <Grid2X2 size={19} aria-hidden="true" /> หมวดหมู่สินค้า
+            <Grid2X2 size={19} aria-hidden="true" />{' '}
+            {t('catalog.productCategory')}
           </h2>
           <Button
             className="button-secondary catalog-category-toggle"
@@ -115,7 +123,8 @@ export function ShopCatalog({ slug }: { slug: string }) {
             aria-controls="catalog-category-list"
             onClick={() => setCategoriesOpen(!categoriesOpen)}
           >
-            <SlidersHorizontal size={18} aria-hidden="true" /> หมวดหมู่{' '}
+            <SlidersHorizontal size={18} aria-hidden="true" />{' '}
+            {t('catalog.categories')}{' '}
             <ChevronDown size={16} aria-hidden="true" />
           </Button>
           <div
@@ -125,12 +134,12 @@ export function ShopCatalog({ slug }: { slug: string }) {
           >
             <Button
               className="catalog-category"
-              aria-label={`ทั้งหมด ${allCount}`}
+              aria-label={t('storefront.allValue0', { value0: allCount })}
               aria-pressed={!filters.category}
               onClick={() => changeFilters({ category: '' })}
             >
               <LayoutGrid size={19} aria-hidden="true" />
-              <span>ทั้งหมด</span>
+              <span>{t('common.all')}</span>
               <span className="catalog-category-count">{allCount}</span>
             </Button>
             {categories.map((category) => (
@@ -151,7 +160,10 @@ export function ShopCatalog({ slug }: { slug: string }) {
             ))}
           </div>
         </aside>
-        <section className="catalog-main" aria-label="สินค้าของร้าน">
+        <section
+          className="catalog-main"
+          aria-label={t('landing.yourProducts')}
+        >
           <form
             className="catalog-search"
             onSubmit={(event) => {
@@ -163,26 +175,29 @@ export function ShopCatalog({ slug }: { slug: string }) {
           >
             <label htmlFor="shop-search" className="catalog-search-field">
               <Search size={20} aria-hidden="true" />
-              <span className="catalog-visually-hidden">ค้นหาสินค้า</span>
+              <span className="catalog-visually-hidden">
+                {t('common.searchProducts')}
+              </span>
               <input
                 id="shop-search"
                 type="search"
                 value={search}
                 maxLength={100}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="ชื่อสินค้า ตัวเลือก หรือ SKU"
+                placeholder={t('storefront.productNameVariantOrSku')}
               />
             </label>
-            <Button type="submit">ค้นหา</Button>
+            <Button type="submit">{t('customers.search')}</Button>
           </form>
           <div
             className="catalog-toolbar"
             role="group"
-            aria-label="ตัวกรองและการแสดงสินค้า"
+            aria-label={t('storefront.productFiltersAndDisplay')}
           >
             <details className="catalog-price-filter">
               <summary>
-                <SlidersHorizontal size={16} aria-hidden="true" /> ช่วงราคา{' '}
+                <SlidersHorizontal size={16} aria-hidden="true" />{' '}
+                {t('storefront.priceRange')}{' '}
                 <ChevronDown size={16} aria-hidden="true" />
               </summary>
               <form
@@ -206,7 +221,7 @@ export function ShopCatalog({ slug }: { slug: string }) {
                     (minimum !== null && maximum !== null && minimum > maximum)
                   ) {
                     setPriceError(
-                      'กรุณาระบุช่วงราคาให้ถูกต้อง ราคาต่ำสุดต้องไม่เกินราคาสูงสุด',
+                      t('storefront.enterAValidPriceRangeTheMinimum'),
                     );
                     return;
                   }
@@ -218,7 +233,7 @@ export function ShopCatalog({ slug }: { slug: string }) {
                 }}
               >
                 <label>
-                  ราคาต่ำสุด
+                  {t('storefront.minimumPrice')}
                   <input
                     inputMode="decimal"
                     value={priceDraft.minimum}
@@ -233,7 +248,7 @@ export function ShopCatalog({ slug }: { slug: string }) {
                   />
                 </label>
                 <label>
-                  ราคาสูงสุด
+                  {t('storefront.maximumPrice')}
                   <input
                     inputMode="decimal"
                     value={priceDraft.maximum}
@@ -244,47 +259,51 @@ export function ShopCatalog({ slug }: { slug: string }) {
                         maximum: event.target.value,
                       })
                     }
-                    placeholder="ไม่จำกัด"
+                    placeholder={t('storefront.noLimit')}
                   />
                 </label>
-                {priceError && <p role="alert">{priceError}</p>}
+                {priceError && <p role="alert">{localize(priceError)}</p>}
                 <Button type="submit" disabled={!supportsFilters}>
-                  ใช้ช่วงราคา
+                  {t('storefront.applyPriceRange')}
                 </Button>
               </form>
             </details>
             {filtered && (
               <Button className="catalog-clear" onClick={clear}>
-                ล้างตัวกรอง
+                {t('storefront.clearFilters')}
               </Button>
             )}
             <div className="catalog-view-controls">
               <select
-                aria-label="เรียงสินค้า"
+                aria-label={t('storefront.sortProducts')}
                 value={filters.sort}
                 disabled={!supportsFilters}
                 onChange={(event) =>
                   changeFilters({ sort: event.target.value })
                 }
               >
-                <option value="name">เรียง: ชื่อสินค้า</option>
-                <option value="price_asc">ราคา: ต่ำไปสูง</option>
-                <option value="price_desc">ราคา: สูงไปต่ำ</option>
+                <option value="name">{t('storefront.sortProductName')}</option>
+                <option value="price_asc">
+                  {t('storefront.priceLowToHigh')}
+                </option>
+                <option value="price_desc">
+                  {t('storefront.priceHighToLow')}
+                </option>
               </select>
               <div
                 className="catalog-view-toggle"
                 role="group"
-                aria-label="รูปแบบรายการสินค้า"
+                aria-label={t('storefront.productDisplayMode')}
               >
                 <Button
-                  aria-label="แสดงแบบตาราง"
+                  aria-label={t('storefront.gridView')}
                   aria-pressed={view === 'grid'}
                   onClick={() => setView('grid')}
                 >
                   <Grid2X2 size={19} aria-hidden="true" />
                 </Button>
                 <Button
-                  aria-label="แสดงแบบรายการ"
+                  aria-label={t('storefront.listView')}
                   aria-pressed={view === 'list'}
                   onClick={() => setView('list')}
                 >
@@ -295,17 +314,19 @@ export function ShopCatalog({ slug }: { slug: string }) {
           </div>
           {products.data && !supportsFilters && (
             <p className="catalog-compatibility">
-              ตัวกรองหมวดหมู่ ราคา และการเรียงต้องใช้ API รุ่นที่รองรับ
+              {t('storefront.categoryPriceAndSortingFiltersRequireA')}
             </p>
           )}
           <p
             role="status"
-            aria-label="ผลการเพิ่มสินค้า"
+            aria-label={t('storefront.addProductResult')}
             className="catalog-feedback"
           >
-            {message}
+            {messageText(message)}
           </p>
-          {products.isPending && <Loading>กำลังโหลดสินค้า…</Loading>}
+          {products.isPending && (
+            <Loading>{t('storefront.loadingProducts')}</Loading>
+          )}
           {products.error && (
             <ShopError
               error={products.error}
@@ -315,11 +336,11 @@ export function ShopCatalog({ slug }: { slug: string }) {
           {products.data?.total === 0 && (
             <Card className="catalog-empty">
               <PackageOpen size={40} aria-hidden="true" />
-              <h2>ไม่พบสินค้า</h2>
-              <p>ลองเปลี่ยนคำค้น หรือรอร้านเผยแพร่สินค้า</p>
+              <h2>{t('pos.noProductsFound')}</h2>
+              <p>{t('storefront.tryAnotherSearchOrWaitForThe')}</p>
               {filtered && (
                 <Button className="button-secondary" onClick={clear}>
-                  แสดงสินค้าทั้งหมด
+                  {t('storefront.showAllProducts')}
                 </Button>
               )}
             </Card>
@@ -343,10 +364,13 @@ export function ShopCatalog({ slug }: { slug: string }) {
                 }
                 add={(quantity) => {
                   if (cart.add(product, quantity))
-                    setMessage(`เพิ่ม ${product.product_name} ลงตะกร้าแล้ว`);
+                    setMessage({
+                      key: 'storefront.addedValue0ToCart',
+                      params: { value0: product.product_name },
+                    });
                   else
                     setMessage(
-                      'เพิ่มสินค้าไม่ได้ กรุณาตรวจจำนวนและสต็อกล่าสุด',
+                      t('storefront.unableToAddProductCheckQuantityAnd'),
                     );
                 }}
               />
@@ -380,6 +404,8 @@ function CatalogProductCard({
   disabled: boolean;
   add: (quantity: string) => void;
 }) {
+  const { t } = useLanguage();
+
   const stock = exactDecimal(product.available, 3) ?? 0n;
   const remaining = stock - (exactDecimal(cartQuantity, 3) ?? 0n);
   const whole = ['COUNT', 'PACKAGING'].includes(product.unit_type);
@@ -416,18 +442,18 @@ function CatalogProductCard({
         ) : (
           <div className="catalog-product-placeholder">
             <PackageOpen size={62} strokeWidth={1.2} aria-hidden="true" />
-            <span>ยังไม่มีรูปสินค้า</span>
+            <span>{t('catalog.noProductImageYet')}</span>
           </div>
         )}
       </div>
       <div className="catalog-product-body">
         <span className="catalog-product-category">
-          {product.category_name || 'สินค้า'}
+          {product.category_name || t('common.products')}
         </span>
         <h2 id={`product-${product.variant_id}`}>{product.product_name}</h2>
         <p className="catalog-variant">{product.variant_name}</p>
         <small className="catalog-product-sku">
-          SKU {product.sku} · หน่วย {product.unit}
+          {t('common.sku')} {product.sku} {t('storefront.unit')} {product.unit}
         </small>
         <strong className="catalog-product-price">
           ฿{moneyText(product.unit_price)}
@@ -435,13 +461,18 @@ function CatalogProductCard({
         <p className="catalog-product-stock" data-ready={ready}>
           <span aria-hidden="true" />
           {ready
-            ? `พร้อมขาย ${quantityText(stock)} ${product.unit}`
-            : 'สินค้ายังไม่พร้อมขาย'}
+            ? t('storefront.availableValue0Value1', {
+                value0: quantityText(stock),
+                value1: product.unit,
+              })
+            : t('storefront.productUnavailableForSale')}
         </p>
         <div className="catalog-product-actions">
           <div className="catalog-quantity">
             <Button
-              aria-label={`ลดจำนวน ${product.product_name}`}
+              aria-label={t('storefront.decreaseQuantityForValue0', {
+                value0: product.product_name,
+              })}
               disabled={disabled || !ready || units === null || units <= step}
               onClick={() => {
                 if (units !== null) setQuantity(quantityText(units - step));
@@ -450,7 +481,7 @@ function CatalogProductCard({
               <Minus size={16} aria-hidden="true" />
             </Button>
             <label className="catalog-visually-hidden" htmlFor={inputID}>
-              จำนวน {product.product_name}
+              {t('pos.quantity')} {product.product_name}
             </label>
             <input
               id={inputID}
@@ -468,7 +499,9 @@ function CatalogProductCard({
               onChange={(event) => setQuantity(event.target.value)}
             />
             <Button
-              aria-label={`เพิ่มจำนวน ${product.product_name}`}
+              aria-label={t('storefront.increaseQuantityForValue02', {
+                value0: product.product_name,
+              })}
               disabled={
                 disabled || !ready || units === null || units + step > remaining
               }
@@ -485,18 +518,20 @@ function CatalogProductCard({
             onClick={() => add(quantity)}
           >
             <ShoppingCart size={18} aria-hidden="true" />
-            เพิ่มลงตะกร้า
+            {t('storefront.addToCart')}
           </Button>
         </div>
         {!valid && ready && remaining >= step && (
           <small id={errorID} className="catalog-quantity-error">
-            ระบุจำนวน{whole ? 'เต็ม' : ''}มากกว่า 0 และไม่เกิน{' '}
+            {t('storefront.enterQuantity')}
+            {whole ? t('storefront.whole') : ''}
+            {t('storefront.greaterThan0AndNoMoreThan')}{' '}
             {quantityText(remaining)} {product.unit}
           </small>
         )}
         {ready && remaining < step && (
           <small className="catalog-cart-limit">
-            จำนวนพร้อมขายอยู่ในตะกร้าแล้ว
+            {t('storefront.allAvailableQuantityIsAlreadyInYour')}
           </small>
         )}
       </div>

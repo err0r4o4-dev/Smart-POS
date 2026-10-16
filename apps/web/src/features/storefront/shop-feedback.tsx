@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { Button } from '../../components/ui/primitives';
 
 export function ShopError({
@@ -7,14 +8,20 @@ export function ShopError({
   error: unknown;
   retry?: () => void;
 }) {
+  const { t, localize } = useLanguage();
+
   return (
     <div className="error-state" role="alert">
       <p>
-        {error instanceof Error ? error.message : 'ไม่พบข้อมูลที่เข้าถึงได้'}
+        {localize(
+          (error instanceof Error
+            ? error.message
+            : t('storefront.noAccessibleDataFound')) ?? '',
+        )}
       </p>
       {retry && (
         <Button className="button-secondary" onClick={retry}>
-          ลองอีกครั้ง
+          {t('shell.tryAgain')}
         </Button>
       )}
     </div>
@@ -31,24 +38,29 @@ export function ShopPagination({
   pageSize: number;
   change: (page: number) => void;
 }) {
+  const { t } = useLanguage();
+
   return (
-    <nav className="shop-actions shop-pagination" aria-label="หน้ารายการ">
+    <nav
+      className="shop-actions shop-pagination"
+      aria-label={t('storefront.listing')}
+    >
       <Button
         className="button-secondary"
         disabled={page <= 1}
         onClick={() => change(page - 1)}
       >
-        ก่อนหน้า
+        {t('catalog.previous')}
       </Button>
       <span>
-        หน้า {page} · {total} รายการ
+        {t('catalog.page')} {page} · {total} {t('catalog.definitions')}
       </span>
       <Button
         className="button-secondary"
         disabled={page * pageSize >= total}
         onClick={() => change(page + 1)}
       >
-        ถัดไป
+        {t('catalog.next')}
       </Button>
     </nav>
   );

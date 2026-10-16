@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { renderInEnglish as render } from '../test/render';
+import { screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { expect, it } from 'vitest';
 import { HelpPage } from '../features/help/HelpPage';

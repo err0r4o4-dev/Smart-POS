@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
@@ -32,11 +33,13 @@ export function AdjustmentsPage({ reversal = false }: { reversal?: boolean }) {
   );
 }
 function Workspace({ reversal }: { reversal: boolean }) {
+  const { t, labelCode } = useLanguage();
+
   const tenant = useOrganization(),
     command = useReturnsCommand(),
     [params] = useSearchParams();
-  const [language, setLanguage] = useState<'th' | 'en'>('th'),
-    [search, setSearch] = useState(''),
+  const { language } = useLanguage();
+  const [search, setSearch] = useState(''),
     [saleID, setSaleID] = useState(params.get('sale_id') ?? ''),
     [selected, setSelected] = useState(params.get('document_id') ?? ''),
     [page, setPage] = useState(1),
@@ -74,22 +77,13 @@ function Workspace({ reversal }: { reversal: boolean }) {
           <h1>{reversal ? text.voids : text.exchanges}</h1>
           <p>{text.notice}</p>
         </div>
-        <Field label={text.language}>
-          <select
-            value={language}
-            onChange={(event) => setLanguage(event.target.value as 'th' | 'en')}
-          >
-            <option value="th">ไทย</option>
-            <option value="en">English</option>
-          </select>
-        </Field>
       </div>
       <nav className="catalog-nav">
         <Link to="/pos/exchanges">{text.exchanges}</Link>
         <Link to="/sales/voids">{text.voids}</Link>
-        <Link to="/pos/returns">Returns</Link>
-        <Link to="/sales/refunds">Refunds</Link>
-        <Link to="/pos/checkout">POS checkout</Link>
+        <Link to="/pos/returns">{t('returns.returns')}</Link>
+        <Link to="/sales/refunds">{t('returns.refunds')}</Link>
+        <Link to="/pos/checkout">{t('returns.posCheckout')}</Link>
       </nav>
       {reversal && (
         <p>
@@ -171,7 +165,9 @@ function Workspace({ reversal }: { reversal: boolean }) {
                 'REJECTED',
                 'CANCELLED',
               ].map((value) => (
-                <option key={value}>{value}</option>
+                <option key={value} value={value}>
+                  {labelCode(value)}
+                </option>
               ))}
             </select>
           </Field>
@@ -189,7 +185,7 @@ function Workspace({ reversal }: { reversal: boolean }) {
             >
               {item.number}
             </Button>
-            <Tag>{item.status}</Tag>
+            <Tag>{labelCode(item.status)}</Tag>
             <p>
               {item.return_credit} / {item.replacement_total} /{' '}
               {item.net_difference} THB
@@ -246,6 +242,8 @@ function AdjustmentDetails({
   command: ReturnType<typeof useReturnsCommand>;
   edit: () => void;
 }) {
+  const { t, labelCode } = useLanguage();
+
   const tenant = useOrganization(),
     reversal = doc.kind === 'REVERSAL';
   const [method, setMethod] = useState(
@@ -284,7 +282,9 @@ function AdjustmentDetails({
     <Card>
       <h2>{text.details}</h2>
       <p className="returns-reference">
-        {doc.number} · <Tag>{doc.status}</Tag> · revision {doc.revision}
+        {doc.number} · <Tag>{labelCode(doc.status)}</Tag>{' '}
+        {t('returns.revision5')}
+        {doc.revision}
       </p>
       <p>{doc.reason}</p>
       <nav className="catalog-nav">
@@ -372,7 +372,9 @@ function AdjustmentDetails({
               onChange={(event) => setMethod(event.target.value)}
             >
               {settlementMethods(doc.net_difference).map((value) => (
-                <option key={value}>{value}</option>
+                <option key={value} value={value}>
+                  {labelCode(value)}
+                </option>
               ))}
             </select>
           </Field>
@@ -446,7 +448,8 @@ function AdjustmentDetails({
         {doc.return_document.items.map((item) => (
           <p key={item.id}>
             {item.product_name} · {item.sku} · {item.quantity} ·{' '}
-            {item.refund_amount} THB · {item.disposition} · {item.movement_id}
+            {item.refund_amount} THB · {labelCode(item.disposition)} ·{' '}
+            {item.movement_id}
           </p>
         ))}
         <h3>{text.replacements}</h3>
@@ -471,7 +474,7 @@ function AdjustmentDetails({
               : text.collect}
         </p>
         <p>
-          {doc.method} · {doc.status} · {doc.reference}
+          {doc.method} · {labelCode(doc.status)} · {doc.reference}
         </p>
         <p>{text.printNotice}</p>
       </article>

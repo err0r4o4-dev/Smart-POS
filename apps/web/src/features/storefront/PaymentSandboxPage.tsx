@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -11,20 +12,19 @@ import {
   sandboxCheckout,
   sandboxSessionPattern,
   sandboxStatus,
-  type SandboxRefund,
 } from '../../lib/payment-sandbox-api';
 
 interface Draft {
   key: string;
   session: string;
 }
-const refundLabels: Record<SandboxRefund['status'], string> = {
-  pending: 'รอดำเนินการ',
-  requires_action: 'ต้องดำเนินการเพิ่มเติมใน Stripe',
-  succeeded: 'สำเร็จ',
-  failed: 'ไม่สำเร็จ ต้องตรวจสอบ',
-  canceled: 'ยกเลิก',
-};
+const refundLabels = {
+  pending: 'storefront.pending',
+  requires_action: 'storefront.furtherActionRequiredInStripe',
+  succeeded: 'storefront.succeeded',
+  failed: 'storefront.failedReviewRequired',
+  canceled: 'customers.cancel',
+} as const;
 function readDraft(storageKey: string): Draft {
   try {
     const value = JSON.parse(
@@ -55,12 +55,14 @@ const message = (error: unknown) =>
   error instanceof Error ? error.message : 'เชื่อมต่อ Stripe sandbox ไม่ได้';
 
 export function PaymentSandboxPage() {
+  const { t } = useLanguage();
+
   const tenant = useOrganization();
   const { state } = useAuth();
   const org = tenant.context?.organization.id;
   const user = state.session?.user.id;
   if (!org || !user || !tenant.can('storefront.manage'))
-    return <p role="alert">ไม่มีสิทธิ์ทดสอบการชำระเงินของร้านนี้</p>;
+    return <p role="alert">{t('storefront.youDoNotHavePermissionToTest')}</p>;
   return (
     <SandboxPanel
       key={`${user}:${org}`}
@@ -79,6 +81,8 @@ function SandboxPanel({
   user: string;
   csrf: string;
 }) {
+  const { t } = useLanguage();
+
   const [params, setParams] = useSearchParams();
   const storageKey = `smartpos-stripe-sandbox:${user}:${org}`;
   const [draft, setDraft] = useState(() => readDraft(storageKey));
@@ -122,20 +126,21 @@ function SandboxPanel({
     <div className="catalog-page online-admin">
       <div className="shop-heading">
         <div>
-          <p className="eyebrow">การชำระเงินออนไลน์ · Sandbox</p>
-          <h1>ทดสอบการเชื่อมต่อ Stripe</h1>
+          <p className="eyebrow">{t('storefront.onlinePaymentsSandbox')}</p>
+          <h1>{t('storefront.testStripeConnection')}</h1>
         </div>
-        <Link to="/settings/storefront">กลับตั้งค่าหน้าร้าน</Link>
+        <Link to="/settings/storefront">
+          {t('storefront.backToStorefrontSettings')}
+        </Link>
       </div>
-      <p className="notice">
-        โหมดทดสอบเท่านั้น ไม่รับเงินจริง ไม่สร้างยอดขาย ไม่ตัดหรือกันสต็อก
-        และไม่เปลี่ยนออเดอร์ลูกค้า การชำระออนไลน์สำหรับลูกค้ายังไม่เปิดใช้งาน
-      </p>
-      {status.isPending && <Loading>กำลังตรวจการตั้งค่า sandbox…</Loading>}
+      <p className="notice">{t('storefront.testModeOnlyNoRealFundsSales')}</p>
+      {status.isPending && (
+        <Loading>{t('storefront.checkingSandboxSettings')}</Loading>
+      )}
       {error && <p role="alert">{message(error)}</p>}
       {invalidSession && (
         <p role="alert">
-          รูปแบบรายการทดสอบไม่ถูกต้อง{' '}
+          {t('storefront.invalidTestSessionFormat')}{' '}
           <Button
             onClick={() => {
               const next = { key: crypto.randomUUID(), session: '' };
@@ -144,33 +149,27 @@ function SandboxPanel({
               setParams({}, { replace: true });
             }}
           >
-            เริ่มใหม่โดยไม่ใช้เลขรายการนี้
+            {t('storefront.restartWithoutThisSessionId')}
           </Button>
         </p>
       )}
       <Card>
-        <h2>การเชื่อมต่อ</h2>
+        <h2>{t('storefront.connection')}</h2>
         <Tag tone={status.data?.configured ? 'success' : 'amber'}>
           {status.data?.configured
-            ? 'ตั้งค่า test key แล้ว'
-            : 'ยังไม่พร้อมทดสอบ'}
+            ? t('storefront.testKeyConfigured')
+            : t('storefront.notReadyToTest')}
         </Tag>
         {status.data?.configured === false && (
-          <p>
-            ตั้งค่า STRIPE_TEST_SECRET_KEY ที่ API ด้วย secret key ของ Stripe
-            sandbox เท่านั้น ห้ามใส่ key ในหน้าเว็บหรือส่งผ่านแชต
-          </p>
+          <p>{t('storefront.setStripeTestSecretKeyAtThe')}</p>
         )}
-        <p>
-          รายการทดสอบคงที่ 20.00 บาท · บัตร / PromptPay ตามที่บัญชีทดสอบรองรับ
-          ใช้เฉพาะข้อมูลทดสอบที่ Stripe กำหนด
-        </p>
+        <p>{t('storefront.fixedTestAmountThb2000Cards')}</p>
         {!session && (
           <Button
             disabled={!status.data?.configured || !csrf || create.isPending}
             onClick={() => create.mutate()}
           >
-            สร้าง Checkout ทดสอบ 20.00 บาท
+            {t('storefront.createThb2000TestCheckout')}
           </Button>
         )}
         <Button
@@ -178,14 +177,16 @@ function SandboxPanel({
           disabled={status.isFetching}
           onClick={() => void status.refetch()}
         >
-          ตรวจการตั้งค่าใหม่
+          {t('storefront.recheckSettings')}
         </Button>
       </Card>
       {session && !invalidSession && (
         <Card>
-          <h2>รายการทดสอบ</h2>
+          <h2>{t('storefront.testSession')}</h2>
           <p>{session}</p>
-          {checkout.isFetching && <Loading>กำลังตรวจสถานะจาก Stripe…</Loading>}
+          {checkout.isFetching && (
+            <Loading>{t('storefront.checkingStatusWithStripe')}</Loading>
+          )}
           {current && (
             <>
               <p>
@@ -193,23 +194,22 @@ function SandboxPanel({
                   tone={current.payment_status === 'paid' ? 'success' : 'amber'}
                 >
                   {current.payment_status === 'paid'
-                    ? 'ชำระเงินทดสอบแล้ว'
+                    ? t('storefront.testPaymentCompleted')
                     : current.status === 'expired'
-                      ? 'รายการหมดอายุ'
-                      : 'ยังไม่ชำระ'}
+                      ? t('storefront.sessionExpired')
+                      : t('storefront.notPaidYet')}
                 </Tag>
               </p>
-              <p>
-                ยอดทดสอบ 20.00 บาท สถานะนี้อ่านจาก Stripe ไม่ใช่จากข้อความใน URL
-              </p>
+              <p>{t('storefront.thb2000TestAmountThisStatus')}</p>
               {current.status === 'open' && current.url && (
                 <a className="button" href={current.url} rel="noreferrer">
-                  เปิดหน้าชำระเงินทดสอบของ Stripe
+                  {t('storefront.openStripeTestCheckout')}
                 </a>
               )}
               {currentRefund && (
                 <p role="status">
-                  คืนเงิน: {refundLabels[currentRefund.status]}
+                  {t('storefront.refund')}{' '}
+                  {t(refundLabels[currentRefund.status])}
                 </p>
               )}
               {current.payment_status === 'paid' && !currentRefund && (
@@ -222,13 +222,13 @@ function SandboxPanel({
                         setConfirmRefund(event.target.checked)
                       }
                     />{' '}
-                    ยืนยันคืนเงินทดสอบ 20.00 บาท
+                    {t('storefront.confirmThb2000TestRefund')}
                   </label>
                   <Button
                     disabled={!confirmRefund || refund.isPending || !csrf}
                     onClick={() => refund.mutate()}
                   >
-                    ขอคืนเงินทดสอบเต็มจำนวน
+                    {t('storefront.requestFullTestRefund')}
                   </Button>
                 </div>
               )}
@@ -243,7 +243,7 @@ function SandboxPanel({
             }
             onClick={() => void checkout.refetch()}
           >
-            ตรวจสถานะรายการใหม่
+            {t('storefront.refreshSessionStatus')}
           </Button>
           {(current?.status === 'complete' ||
             current?.status === 'expired') && (
@@ -260,7 +260,7 @@ function SandboxPanel({
                 setParams({}, { replace: true });
               }}
             >
-              เริ่มรายการทดสอบใหม่
+              {t('storefront.startNewTestSession')}
             </Button>
           )}
         </Card>

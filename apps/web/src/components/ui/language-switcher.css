@@ -1,0 +1,75 @@
+.language-switcher {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  background: var(--canvas);
+}
+.language-switcher button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 48px;
+  min-height: 38px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: calc(var(--radius-small) - 4px);
+  background: transparent;
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.language-switcher button svg {
+  visibility: hidden;
+}
+.language-switcher button[aria-pressed='true'] {
+  border-color: var(--primary-border);
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+}
+.language-switcher button[aria-pressed='true'] svg {
+  visibility: visible;
+}
+.language-switcher button:hover {
+  background: var(--primary-subtle);
+}
+.language-switcher button:focus-visible {
+  outline: 2px solid var(--primary-strong);
+  outline-offset: 2px;
+}
+.auth-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.auth-toolbar .back-link {
+  margin-bottom: 0;
+}
+.landing-navigation > .button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+@media (max-width: 480px) {
+  .landing-header-inner {
+    flex-wrap: wrap;
+    padding-block: 12px;
+  }
+  .landing-header .landing-navigation {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+@media (pointer: coarse) {
+  .language-switcher button {
+    min-height: 44px;
+  }
+}

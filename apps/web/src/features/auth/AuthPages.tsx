@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Loading, Tag } from '../../components/ui/primitives';
@@ -9,9 +10,11 @@ import { isManagementRole } from '../../app/access';
 import { paths } from '../../app/routes';
 
 function ErrorMessage({ message }: { message: string }) {
+  const { localize } = useLanguage();
+
   return message ? (
     <p role="alert" className="auth-error">
-      {message}
+      {localize(message ?? '')}
     </p>
   ) : null;
 }
@@ -25,10 +28,12 @@ function PasswordField({
   onChange: (value: string) => void;
   autoComplete?: string;
 }) {
+  const { t } = useLanguage();
+
   const [visible, setVisible] = useState(false);
   return (
     <>
-      <label htmlFor="password">Password</label>
+      <label htmlFor="password">{t('auth.password')}</label>
       <div className="password-control">
         <input
           id="password"
@@ -43,9 +48,9 @@ function PasswordField({
         <button
           type="button"
           onClick={() => setVisible(!visible)}
-          aria-label={visible ? 'Hide password' : 'Show password'}
+          aria-label={visible ? t('auth.hidePassword') : t('auth.showPassword')}
         >
-          {visible ? 'Hide' : 'Show'}
+          {visible ? t('auth.hide') : t('auth.show')}
         </button>
       </div>
     </>
@@ -57,6 +62,8 @@ export function safeReturnTo(value: string | null) {
 }
 
 export function LoginPage() {
+  const { t, localize } = useLanguage();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -73,7 +80,9 @@ export function LoginPage() {
       navigate(safeReturnTo(params.get('returnTo')), { replace: true });
     } catch (failure) {
       setError(
-        failure instanceof Error ? failure.message : 'Sign in unavailable',
+        failure instanceof Error
+          ? failure.message
+          : t('auth.signInUnavailable'),
       );
     } finally {
       setPending(false);
@@ -81,18 +90,15 @@ export function LoginPage() {
   };
   return (
     <AuthLayout>
-      <Tag tone="amber">ACCOUNT ACCESS</Tag>
-      <h2>Welcome back.</h2>
-      <p>
-        เข้าสู่ระบบสำหรับเจ้าของร้าน ผู้จัดการ และพนักงาน
-        ไม่ใช่บัญชีผู้ซื้อออนไลน์
-      </p>
+      <Tag tone="amber">{t('auth.accountAccess')}</Tag>
+      <h2>{t('auth.welcomeBack')}</h2>
+      <p>{t('auth.signInForStoreOwnersManagersAnd')}</p>
       {params.has('registered') && (
-        <p role="status">Account created. Sign in to continue.</p>
+        <p role="status">{t('auth.accountCreatedSignInToContinue')}</p>
       )}
       <form onSubmit={submit}>
         <fieldset disabled={pending}>
-          <label htmlFor="email">Email address</label>
+          <label htmlFor="email">{t('auth.emailAddress')}</label>
           <input
             id="email"
             type="email"
@@ -103,19 +109,23 @@ export function LoginPage() {
             maxLength={254}
           />
           <PasswordField value={password} onChange={setPassword} />
-          <ErrorMessage message={error} />
-          <Button type="submit">{pending ? 'Signing in…' : 'Sign in'}</Button>
+          <ErrorMessage message={localize(error ?? '')} />
+          <Button type="submit">
+            {pending ? t('auth.signingIn') : t('auth.signIn')}
+          </Button>
         </fieldset>
       </form>
       <p className="auth-links">
-        <Link to="/forgot-password">Forgot password?</Link>
-        <Link to="/register">Create account</Link>
+        <Link to="/forgot-password">{t('auth.forgotPassword')}</Link>
+        <Link to="/register">{t('auth.createAccount')}</Link>
       </p>
     </AuthLayout>
   );
 }
 
 export function RegisterPage() {
+  const { t, localize } = useLanguage();
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -126,7 +136,7 @@ export function RegisterPage() {
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (password !== confirm) {
-      setError('Passwords do not match');
+      setError(t('auth.passwordsDoNotMatch'));
       return;
     }
     setError('');
@@ -136,7 +146,9 @@ export function RegisterPage() {
       navigate('/login?registered=1', { replace: true });
     } catch (failure) {
       setError(
-        failure instanceof Error ? failure.message : 'Registration unavailable',
+        failure instanceof Error
+          ? failure.message
+          : t('auth.registrationUnavailable'),
       );
     } finally {
       setPending(false);
@@ -144,15 +156,12 @@ export function RegisterPage() {
   };
   return (
     <AuthLayout>
-      <Tag tone="amber">CREATE ACCOUNT</Tag>
-      <h2>Get started.</h2>
-      <p>
-        Organization setup follows in a future phase. No store access is granted
-        yet.
-      </p>
+      <Tag tone="amber">{t('auth.createAccount2')}</Tag>
+      <h2>{t('auth.getStarted')}</h2>
+      <p>{t('auth.organizationSetupFollowsInAFuturePhase')}</p>
       <form onSubmit={submit}>
         <fieldset disabled={pending}>
-          <label htmlFor="display-name">Display name</label>
+          <label htmlFor="display-name">{t('auth.displayName')}</label>
           <input
             id="display-name"
             value={name}
@@ -161,7 +170,7 @@ export function RegisterPage() {
             required
             maxLength={100}
           />
-          <label htmlFor="email">Email address</label>
+          <label htmlFor="email">{t('auth.emailAddress')}</label>
           <input
             id="email"
             type="email"
@@ -176,8 +185,8 @@ export function RegisterPage() {
             onChange={setPassword}
             autoComplete="new-password"
           />
-          <small>Use at least 12 characters; maximum 128 bytes.</small>
-          <label htmlFor="confirm-password">Confirm password</label>
+          <small>{t('auth.useAtLeast12CharactersMaximum128')}</small>
+          <label htmlFor="confirm-password">{t('auth.confirmPassword')}</label>
           <input
             id="confirm-password"
             type="password"
@@ -186,20 +195,22 @@ export function RegisterPage() {
             autoComplete="new-password"
             required
           />
-          <ErrorMessage message={error} />
+          <ErrorMessage message={localize(error ?? '')} />
           <Button type="submit">
-            {pending ? 'Creating account…' : 'Create account'}
+            {pending ? t('auth.creatingAccount') : t('auth.createAccount')}
           </Button>
         </fieldset>
       </form>
       <p className="auth-links">
-        <Link to="/login">Already have an account? Sign in</Link>
+        <Link to="/login">{t('auth.alreadyHaveAnAccountSignIn')}</Link>
       </p>
     </AuthLayout>
   );
 }
 
 export function ForgotPasswordPage() {
+  const { t, localize } = useLanguage();
+
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -214,7 +225,7 @@ export function ForgotPasswordPage() {
       setError(
         failure instanceof Error
           ? failure.message
-          : 'Reset request unavailable',
+          : t('auth.resetRequestUnavailable'),
       );
     } finally {
       setPending(false);
@@ -222,15 +233,12 @@ export function ForgotPasswordPage() {
   };
   return (
     <AuthLayout>
-      <Tag tone="amber">ACCOUNT RECOVERY</Tag>
-      <h2>Reset your password.</h2>
-      <p>
-        Enter your email. If an eligible account exists, we will send a reset
-        link.
-      </p>
+      <Tag tone="amber">{t('auth.accountRecovery')}</Tag>
+      <h2>{t('auth.resetYourPassword')}</h2>
+      <p>{t('auth.enterYourEmailIfAnEligibleAccount')}</p>
       <form onSubmit={submit}>
         <fieldset disabled={pending}>
-          <label htmlFor="email">Email address</label>
+          <label htmlFor="email">{t('auth.emailAddress')}</label>
           <input
             id="email"
             type="email"
@@ -240,21 +248,23 @@ export function ForgotPasswordPage() {
             required
             maxLength={254}
           />
-          <ErrorMessage message={error} />
+          <ErrorMessage message={localize(error ?? '')} />
           <Button type="submit">
-            {pending ? 'Sending…' : 'Request reset link'}
+            {pending ? t('auth.sending') : t('auth.requestResetLink')}
           </Button>
         </fieldset>
       </form>
-      {message && <p role="status">{message}</p>}
+      {message && <p role="status">{localize(message)}</p>}
       <p className="auth-links">
-        <Link to="/login">Back to sign in</Link>
+        <Link to="/login">{t('auth.backToSignIn')}</Link>
       </p>
     </AuthLayout>
   );
 }
 
 export function ResetPasswordPage() {
+  const { t, localize } = useLanguage();
+
   const [params] = useSearchParams();
   const [token] = useState(() => params.get('token') || '');
   const [password, setPassword] = useState('');
@@ -270,7 +280,7 @@ export function ResetPasswordPage() {
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (password !== confirm) {
-      setError('Passwords do not match');
+      setError(t('auth.passwordsDoNotMatch'));
       return;
     }
     setError('');
@@ -283,7 +293,7 @@ export function ResetPasswordPage() {
       setError(
         failure instanceof Error
           ? failure.message
-          : 'Password reset unavailable',
+          : t('auth.passwordResetUnavailable'),
       );
     } finally {
       setPending(false);
@@ -291,16 +301,18 @@ export function ResetPasswordPage() {
   };
   return (
     <AuthLayout>
-      <Tag tone="amber">SECURE RESET</Tag>
-      <h2>Choose a new password.</h2>
+      <Tag tone="amber">{t('auth.secureReset')}</Tag>
+      <h2>{t('auth.chooseANewPassword')}</h2>
       {done ? (
         <p role="status">
-          Password changed. Existing sessions were revoked.{' '}
-          <Link to="/login">Sign in again</Link>.
+          {t('auth.passwordChangedExistingSessionsWereRevoked')}{' '}
+          <Link to="/login">{t('auth.signInAgain')}</Link>.
         </p>
       ) : (
         <>
-          {!token && <p role="alert">This reset link is missing a token.</p>}
+          {!token && (
+            <p role="alert">{t('auth.thisResetLinkIsMissingAToken')}</p>
+          )}
           <form onSubmit={submit}>
             <fieldset disabled={pending || !token}>
               <PasswordField
@@ -308,8 +320,10 @@ export function ResetPasswordPage() {
                 onChange={setPassword}
                 autoComplete="new-password"
               />
-              <small>Use at least 12 characters; maximum 128 bytes.</small>
-              <label htmlFor="confirm-password">Confirm password</label>
+              <small>{t('auth.useAtLeast12CharactersMaximum128')}</small>
+              <label htmlFor="confirm-password">
+                {t('auth.confirmPassword')}
+              </label>
               <input
                 id="confirm-password"
                 type="password"
@@ -318,22 +332,24 @@ export function ResetPasswordPage() {
                 autoComplete="new-password"
                 required
               />
-              <ErrorMessage message={error} />
+              <ErrorMessage message={localize(error ?? '')} />
               <Button type="submit">
-                {pending ? 'Resetting…' : 'Change password'}
+                {pending ? t('auth.resetting') : t('auth.changePassword')}
               </Button>
             </fieldset>
           </form>
         </>
       )}
       <p className="auth-links">
-        <Link to="/login">Back to sign in</Link>
+        <Link to="/login">{t('auth.backToSignIn')}</Link>
       </p>
     </AuthLayout>
   );
 }
 
 export function AccountPage() {
+  const { t, localize, labelCode } = useLanguage();
+
   const tenant = useOrganization();
   const { state, signOut } = useAuth();
   const [error, setError] = useState('');
@@ -348,7 +364,9 @@ export function AccountPage() {
       navigate('/login', { replace: true });
     } catch (failure) {
       setError(
-        failure instanceof Error ? failure.message : 'Logout unavailable',
+        failure instanceof Error
+          ? failure.message
+          : t('auth.logoutUnavailable'),
       );
     } finally {
       setPending(false);
@@ -357,30 +375,38 @@ export function AccountPage() {
   return (
     <div>
       <section className="card account-card">
-        <Tag tone="amber">ACCOUNT</Tag>
-        <h1>Your account</h1>
+        <Tag tone="amber">{t('auth.account')}</Tag>
+        <h1>{t('auth.yourAccount')}</h1>
         <dl>
-          <dt>Display name</dt>
+          <dt>{t('auth.displayName')}</dt>
           <dd>{state.session.user.display_name}</dd>
-          <dt>Email</dt>
+          <dt>{t('auth.email')}</dt>
           <dd>{state.session.user.email}</dd>
-          <dt>Status</dt>
-          <dd>{state.session.user.status}</dd>
+          <dt>{t('auth.status')}</dt>
+          <dd>{labelCode(state.session.user.status)}</dd>
         </dl>
         <p>
-          <Link to={paths.workspace}>เข้าสู่พื้นที่ทำงานตามบทบาท</Link> ·{' '}
-          <Link to="/setup">เลือกองค์กร / ตั้งค่าร้าน / รับคำเชิญ</Link>
+          <Link to={paths.workspace}>
+            {t('auth.openYourRoleBasedWorkspace')}
+          </Link>{' '}
+          ·{' '}
+          <Link to="/setup">
+            {t('auth.selectOrganizationSetUpStoreAcceptInvitation')}
+          </Link>
           {tenant.context &&
             isManagementRole(tenant.context.membership.role) && (
               <>
                 {' '}
-                · <Link to="/manage/settings/store">จัดการองค์กรและสาขา</Link>
+                ·{' '}
+                <Link to="/manage/settings/store">
+                  {t('auth.manageOrganizationAndBranches')}
+                </Link>
               </>
             )}
         </p>
-        <ErrorMessage message={error} />
+        <ErrorMessage message={localize(error ?? '')} />
         <Button onClick={() => void logout()} disabled={pending}>
-          {pending ? 'Signing out…' : 'Sign out'}
+          {pending ? t('auth.signingOut') : t('auth.signOut')}
         </Button>
       </section>
     </div>

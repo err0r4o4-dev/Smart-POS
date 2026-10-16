@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useState, type FormEvent } from 'react';
 import { Card, Button } from '../../components/ui/primitives';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
@@ -34,6 +35,8 @@ export function SupplierForm({
   initial?: Supplier;
   onSave?: (supplier: Supplier) => void;
 }) {
+  const { t, labelCode } = useLanguage();
+
   const [input, setInput] = useState(
     initial
       ? (Object.fromEntries(
@@ -60,7 +63,9 @@ export function SupplierForm({
   return (
     <Card>
       <form onSubmit={(event) => void submit(event)} className="inventory-form">
-        <h2>{initial ? 'แก้ไข Supplier' : 'เพิ่ม Supplier'}</h2>
+        <h2>
+          {initial ? t('purchasing.editSupplier') : t('purchasing.addSupplier')}
+        </h2>
         {(
           [
             'code',
@@ -82,7 +87,7 @@ export function SupplierForm({
             change={(value) => setInput({ ...input, [key]: value })}
           />
         ))}
-        <Field label="Supplier status">
+        <Field label={t('purchasing.supplierStatus')}>
           <select
             value={input.status}
             onChange={(event) =>
@@ -90,12 +95,14 @@ export function SupplierForm({
             }
           >
             {['ACTIVE', 'INACTIVE', 'ARCHIVED'].map((status) => (
-              <option key={status}>{status}</option>
+              <option key={status} value={status}>
+                {labelCode(status)}
+              </option>
             ))}
           </select>
         </Field>
         <Button type="submit" disabled={state.busy}>
-          บันทึก Supplier
+          {t('purchasing.saveSupplier')}
         </Button>
       </form>
     </Card>
@@ -108,6 +115,8 @@ export function SupplierProducts({
   state: SupplyScope;
   supplierID: string;
 }) {
+  const { t, labelCode } = useLanguage();
+
   const query = useSupplyQuery<SupplierProduct[]>(
     `/suppliers/${supplierID}/products`,
   );
@@ -115,7 +124,7 @@ export function SupplierProducts({
   return (
     <>
       <Card>
-        <h2>สินค้าจาก Supplier · สูงสุด 100 รายการ</h2>
+        <h2>{t('purchasing.supplierProductsUpTo100Entries')}</h2>
         <QueryFeedback
           loading={query.isLoading}
           error={query.error}
@@ -124,13 +133,13 @@ export function SupplierProducts({
         {query.data && (
           <SupplyTable
             headers={[
-              'SKU',
-              'Supplier SKU',
-              'ต้นทุน/หน่วยซื้อ',
-              'Lead time',
-              'Preferred',
-              'สถานะ',
-              'แก้ไข',
+              t('common.sku'),
+              t('purchasing.supplierSku'),
+              t('purchasing.costPurchaseUnit'),
+              t('purchasing.leadTime'),
+              t('purchasing.preferred'),
+              t('auth.status'),
+              t('catalog.edit'),
             ]}
           >
             {query.data.map((item) => (
@@ -138,13 +147,15 @@ export function SupplierProducts({
                 <td>{item.sku}</td>
                 <td>{item.supplier_sku}</td>
                 <td>{item.unit_cost}</td>
-                <td>{item.lead_time_days} วัน</td>
-                <td>{item.is_preferred ? 'Preferred' : '—'}</td>
-                <td>{item.status}</td>
+                <td>
+                  {item.lead_time_days} {t('purchasing.days')}
+                </td>
+                <td>{item.is_preferred ? t('purchasing.preferred') : '—'}</td>
+                <td>{labelCode(item.status)}</td>
                 <td>
                   {state.tenant.can('supplier.update') && (
                     <Button onClick={() => setEditing(item)}>
-                      แก้ไขราคา/เงื่อนไข
+                      {t('purchasing.editPriceTerms')}
                     </Button>
                   )}
                 </td>
@@ -176,6 +187,8 @@ function SupplierProductForm({
   initial?: SupplierProduct;
   onSave: () => void;
 }) {
+  const { t } = useLanguage();
+
   const [input, setInput] = useState({
     variant_id: initial?.variant_id ?? '',
     purchase_unit_id: initial?.purchase_unit_id ?? '',
@@ -205,7 +218,9 @@ function SupplierProductForm({
     <Card>
       <form className="inventory-form" onSubmit={(event) => void submit(event)}>
         <h2>
-          {initial ? 'แก้ไข Supplier Product' : 'เชื่อม Supplier Product'}
+          {initial
+            ? t('purchasing.editSupplierProduct')
+            : t('purchasing.linkSupplierProduct')}
         </h2>
         {!initial && (
           <VariantPicker
@@ -220,7 +235,7 @@ function SupplierProductForm({
           />
         )}
         <RemoteSelect<Taxonomy>
-          label="Purchase Unit"
+          label={t('purchasing.purchaseUnit2')}
           path="/units?status=ACTIVE"
           value={input.purchase_unit_id}
           change={(value) => setInput({ ...input, purchase_unit_id: value })}
@@ -242,7 +257,7 @@ function SupplierProductForm({
             required={key !== 'supplier_sku'}
           />
         ))}
-        <Field label="Lead time (days)">
+        <Field label={t('purchasing.leadTimeDays')}>
           <input
             required
             type="number"
@@ -254,7 +269,7 @@ function SupplierProductForm({
             }
           />
         </Field>
-        <Field label="Preferred Supplier">
+        <Field label={t('purchasing.preferredSupplier')}>
           <select
             value={String(input.is_preferred)}
             onChange={(event) =>
@@ -264,30 +279,29 @@ function SupplierProductForm({
               })
             }
           >
-            <option value="false">ไม่ใช่ Preferred</option>
-            <option value="true">Preferred (หนึ่งรายต่อ Variant)</option>
+            <option value="false">{t('purchasing.notPreferred')}</option>
+            <option value="true">
+              {t('purchasing.preferredOnePerVariant')}
+            </option>
           </select>
         </Field>
-        <Field label="Product link status">
+        <Field label={t('purchasing.productLinkStatus')}>
           <select
             value={input.status}
             onChange={(event) =>
               setInput({ ...input, status: event.target.value })
             }
           >
-            <option>ACTIVE</option>
-            <option>INACTIVE</option>
+            <option>{t('purchasing.active7')}</option>
+            <option>{t('purchasing.inactive6')}</option>
           </select>
         </Field>
         <Button type="submit" disabled={state.busy}>
-          บันทึก Supplier Product
+          {t('purchasing.saveSupplierProduct')}
         </Button>
       </form>
-      <p>
-        Purchase Unit ต้องตรงหน่วย Inventory หรือมี direct conversion
-        ไปยังหน่วยนั้น ต้นทุนย้อนหลังไม่เปลี่ยนตามราคาปัจจุบัน
-      </p>
-      <Link to="/units">จัดการหน่วยและ conversion</Link>
+      <p>{t('purchasing.purchaseUnitsMustMatchInventoryUnitsOr')}</p>
+      <Link to="/units">{t('purchasing.manageUnitsAndConversions')}</Link>
     </Card>
   );
 }

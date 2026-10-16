@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useState } from 'react';
 import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavigate';
 import { useQuery } from '@tanstack/react-query';
@@ -13,6 +14,8 @@ import { usePOS } from './POSContext';
 import { POSPagination } from './POSPagination';
 
 export function HeldCartsPage() {
+  const { t, formatDateTime } = useLanguage();
+
   const pos = usePOS();
   const [page, setPage] = useState(1);
   const navigate = useNavigate();
@@ -37,11 +40,8 @@ export function HeldCartsPage() {
   });
   return (
     <>
-      <h1>ตะกร้าพัก</h1>
-      <p>
-        เฉพาะตะกร้าของคุณในเครื่องนี้ ไม่สำรองสต็อก
-        ราคาจะตรวจสอบใหม่เมื่อกลับมาขาย
-      </p>
+      <h1>{t('pos.heldCarts')}</h1>
+      <p>{t('pos.yourCartsOnThisDeviceOnlyStock')}</p>
       <QueryFeedback
         loading={query.isFetching}
         error={query.error}
@@ -50,8 +50,8 @@ export function HeldCartsPage() {
       {query.data?.items.map((item) => (
         <Card key={item.id}>
           <p>
-            ตะกร้า {item.id.slice(0, 8)} ·{' '}
-            {new Date(item.updated_at).toLocaleString('th-TH')}
+            {t('pos.cart')} {item.id.slice(0, 8)} ·{' '}
+            {formatDateTime(item.updated_at)}
           </p>
           <Button
             disabled={pos.busy || !pos.shift}
@@ -65,16 +65,18 @@ export function HeldCartsPage() {
                   pos.setCart(result.id);
                   if (result.customer_cleared)
                     pos.setMessage(
-                      'ลูกค้าที่ถูกเก็บถาวรถูกนำออกแล้ว — Walk-in กรุณาตรวจสอบก่อนชำระเงิน',
+                      t('pos.archivedCustomerRemovedWalkInSaleReview'),
                     );
                   if (result.review_required)
-                    pos.setMessage('ราคา / สถานะ / สต็อกเปลี่ยน กรุณาตรวจสอบ');
+                    pos.setMessage(
+                      t('pos.priceStatusStockChangedPleaseReview'),
+                    );
                   navigate('/pos');
                 }
               })()
             }
           >
-            กลับมาขาย
+            {t('pos.resumeSale')}
           </Button>
           <Button
             disabled={pos.busy}
@@ -84,11 +86,11 @@ export function HeldCartsPage() {
               })
             }
           >
-            ยกเลิกตะกร้า
+            {t('pos.cancelCart')}
           </Button>
         </Card>
       ))}
-      {query.data?.total === 0 && <p>ไม่มีตะกร้าพัก</p>}
+      {query.data?.total === 0 && <p>{t('pos.noHeldCarts')}</p>}
       <POSPagination
         page={page}
         total={query.data?.total ?? 0}

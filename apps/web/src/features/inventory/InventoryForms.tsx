@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useState, type FormEvent } from 'react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
@@ -28,6 +29,8 @@ export function LocationEditor({
   busy: boolean;
   initial?: StockLocation;
 }) {
+  const { t, labelCode } = useLanguage();
+
   const [editing, setEditing] = useState(!initial);
   const [code, setCode] = useState(initial?.code ?? '');
   const [name, setName] = useState(initial?.name ?? '');
@@ -69,13 +72,15 @@ export function LocationEditor({
         onClick={() => setEditing(true)}
       >
         <Pencil size={14} aria-hidden="true" />
-        แก้ไข {initial?.code}
+        {t('catalog.edit')} {initial?.code}
       </Button>
     );
   return (
     <form onSubmit={(event) => void submit(event)} className="inventory-form">
-      <h3>{initial ? 'แก้ไข Location' : 'สร้าง Location'}</h3>
-      <Field label="Location code">
+      <h3>
+        {initial ? t('inventory.editLocation') : t('inventory.createLocation')}
+      </h3>
+      <Field label={t('inventory.locationCode')}>
         <input
           required
           maxLength={80}
@@ -83,7 +88,7 @@ export function LocationEditor({
           onChange={(event) => setCode(event.target.value)}
         />
       </Field>
-      <Field label="Location name">
+      <Field label={t('inventory.locationName')}>
         <input
           required
           maxLength={200}
@@ -91,23 +96,27 @@ export function LocationEditor({
           onChange={(event) => setName(event.target.value)}
         />
       </Field>
-      <Field label="Location type">
+      <Field label={t('inventory.locationType')}>
         <select value={type} onChange={(event) => setType(event.target.value)}>
           {['WAREHOUSE', 'SALES_FLOOR', 'SHELF', 'QUARANTINE', 'DAMAGED'].map(
             (item) => (
-              <option key={item}>{item}</option>
+              <option key={item} value={item}>
+                {labelCode(item)}
+              </option>
             ),
           )}
         </select>
       </Field>
-      <Field label="Parent location (navigation only)">
+      <Field label={t('inventory.parentLocationNavigationOnly')}>
         <select
           value={parent}
           onChange={(event) => setParent(event.target.value)}
         >
-          <option value="">ไม่มี parent</option>
+          <option value="">{t('inventory.noParent')}</option>
           {parent && !locations.some((item) => item.id === parent) && (
-            <option value={parent}>Selected parent {parent}</option>
+            <option value={parent}>
+              {t('inventory.selectedParent')} {parent}
+            </option>
           )}
           {locations.map((item) => (
             <option key={item.id} value={item.id}>
@@ -116,16 +125,16 @@ export function LocationEditor({
           ))}
         </select>
       </Field>
-      <Field label="Location status">
+      <Field label={t('inventory.locationStatus')}>
         <select
           value={status}
           onChange={(event) => setStatus(event.target.value)}
         >
-          <option>ACTIVE</option>
-          <option>INACTIVE</option>
+          <option>{t('inventory.active2')}</option>
+          <option>{t('inventory.inactive2')}</option>
         </select>
       </Field>
-      <Field label="Location description">
+      <Field label={t('inventory.locationDescription')}>
         <textarea
           maxLength={2000}
           value={description}
@@ -133,7 +142,7 @@ export function LocationEditor({
         />
       </Field>
       <Button disabled={busy || !branch} type="submit">
-        บันทึก Location
+        {t('inventory.saveLocation')}
       </Button>
     </form>
   );
@@ -159,6 +168,8 @@ export function CommandEditor({
   busy: boolean;
   created?: (doc: InventoryDocument) => void;
 }) {
+  const { t, labelCode } = useLanguage();
+
   const [location, setLocation] = useState('');
   const [destination, setDestination] = useState('');
   const [type, setType] = useState('INCREASE');
@@ -172,7 +183,7 @@ export function CommandEditor({
     event.preventDefault();
     if (
       resource === 'opening-balances' &&
-      !window.confirm('ยืนยัน Opening Balance ครั้งเดียวต่อ stock identity?')
+      !window.confirm(t('inventory.postOpeningBalanceOnceForThisStock'))
     )
       return;
     try {
@@ -203,12 +214,11 @@ export function CommandEditor({
         <div className="inventory-form-header">
           <h2>
             {resource === 'opening-balances'
-              ? 'Opening Balance'
-              : 'สร้าง ' + resource}
+              ? t('inventory.openingBalance')
+              : t('inventory.create') + resource}
           </h2>
           <p className="inventory-form-subtitle">
-            Draft/physical count ไม่เปลี่ยน stock; CORRECTION คือ target
-            quantity แบบ snapshot-version validation
+            {t('inventory.draftsAndPhysicalCountsDoNotChange')}
           </p>
         </div>
 
@@ -219,9 +229,11 @@ export function CommandEditor({
               value={location}
               onChange={(event) => setLocation(event.target.value)}
             >
-              <option value="">เลือก Location</option>
+              <option value="">{t('inventory.selectLocation')}</option>
               {location && !locations.some((item) => item.id === location) && (
-                <option value={location}>Selected location {location}</option>
+                <option value={location}>
+                  {t('inventory.selectedLocation')} {location}
+                </option>
               )}
               {locations.map((item) => (
                 <option value={item.id} key={item.id}>
@@ -232,7 +244,7 @@ export function CommandEditor({
           </Field>
           {resource === 'transfers' && (
             <>
-              <Field label="Destination branch">
+              <Field label={t('inventory.destinationBranch')}>
                 <select
                   value={destinationBranch}
                   onChange={(event) => {
@@ -247,17 +259,17 @@ export function CommandEditor({
                   ))}
                 </select>
               </Field>
-              <Field label="Destination location">
+              <Field label={t('inventory.destinationLocation')}>
                 <select
                   required
                   value={destination}
                   onChange={(event) => setDestination(event.target.value)}
                 >
-                  <option value="">เลือกปลายทาง</option>
+                  <option value="">{t('inventory.selectDestination')}</option>
                   {destination &&
                     !destinations.some((item) => item.id === destination) && (
                       <option value={destination}>
-                        Selected destination {destination}
+                        {t('inventory.selectedDestination')} {destination}
                       </option>
                     )}
                   {destinations
@@ -277,19 +289,21 @@ export function CommandEditor({
             </>
           )}
           {resource === 'adjustments' && (
-            <Field label="Adjustment type">
+            <Field label={t('inventory.adjustmentType')}>
               <select
                 value={type}
                 onChange={(event) => setType(event.target.value)}
               >
                 {['INCREASE', 'DECREASE', 'CORRECTION'].map((item) => (
-                  <option key={item}>{item}</option>
+                  <option key={item} value={item}>
+                    {labelCode(item)}
+                  </option>
                 ))}
               </select>
             </Field>
           )}
           {resource === 'counts' && (
-            <Field label="Assigned counter user UUID (optional)">
+            <Field label={t('inventory.assignedCounterUserUuidOptional')}>
               <input
                 value={assigned}
                 onChange={(event) => setAssigned(event.target.value)}
@@ -302,7 +316,9 @@ export function CommandEditor({
           {items.map((item, index) => (
             <fieldset key={index} className="inventory-item-fieldset">
               <legend className="inventory-item-legend">
-                <span className="inventory-item-title">Item {index + 1}</span>
+                <span className="inventory-item-title">
+                  {t('inventory.item')} {index + 1}
+                </span>
                 {items.length > 1 && (
                   <Button
                     type="button"
@@ -314,7 +330,8 @@ export function CommandEditor({
                     }
                   >
                     <Trash2 size={14} aria-hidden="true" />
-                    นำ Item {index + 1} ออก
+                    {t('inventory.removeItem')} {index + 1}{' '}
+                    {t('catalog.remove2')}
                   </Button>
                 )}
               </legend>
@@ -395,7 +412,7 @@ export function CommandEditor({
             }
           >
             <Plus size={16} aria-hidden="true" />
-            เพิ่ม Item
+            {t('inventory.addItem')}
           </Button>
         </div>
 
@@ -404,15 +421,15 @@ export function CommandEditor({
             <input
               required
               maxLength={100}
-              placeholder="ระบุเหตุผลหรือเลขอ้างอิง..."
+              placeholder={t('inventory.enterAReasonOrReference')}
               value={reason}
               onChange={(event) => setReason(event.target.value)}
             />
           </Field>
-          <Field label="Notes">
+          <Field label={t('inventory.notes')}>
             <textarea
               maxLength={2000}
-              placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)..."
+              placeholder={t('inventory.additionalNotesOptional')}
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
             />
@@ -422,8 +439,8 @@ export function CommandEditor({
         <div className="inventory-form-submit-row">
           <Button disabled={busy} type="submit">
             {resource === 'opening-balances'
-              ? 'Post Opening Balance'
-              : 'สร้างเอกสาร'}
+              ? t('inventory.postOpeningBalance')
+              : t('inventory.createDocument')}
           </Button>
         </div>
       </form>
@@ -443,6 +460,8 @@ export function DocumentDetails({
   busy: boolean;
   updated?: (doc: InventoryDocument) => void;
 }) {
+  const { t, labelCode } = useLanguage();
+
   const tenant = useOrganization();
   const [observed, setObserved] = useState<Record<string, string>>(() =>
     Object.fromEntries(
@@ -462,7 +481,9 @@ export function DocumentDetails({
     if (
       ['post', 'dispatch', 'receive'].includes(action) &&
       !window.confirm(
-        `ยืนยัน ${action}? การเปลี่ยน stock ต้องใช้ compensating operation เพื่อแก้ไข`,
+        t('inventory.confirmValue0StockChangesRequireACompensating', {
+          value0: action,
+        }),
       )
     )
       return;
@@ -543,30 +564,35 @@ export function DocumentDetails({
         {doc.kind} · {doc.id}
       </h2>
       <p>
-        Status: <strong>{doc.status}</strong> · Revision: {doc.revision}
+        {t('inventory.status')} <strong>{labelCode(doc.status)}</strong>{' '}
+        {t('inventory.revision2')}
+        {doc.revision}
       </p>
       <p>
-        Reason: {doc.reason_code} · {doc.notes}
+        {t('inventory.reason')} {doc.reason_code} · {doc.notes}
       </p>
       <p>
-        Source: {doc.location_id} · Destination:{' '}
-        {doc.destination_location_id ?? '—'} · Transit:{' '}
+        {t('inventory.source')} {doc.location_id} {t('inventory.destination')}{' '}
+        {doc.destination_location_id ?? '—'} {t('inventory.transit')}{' '}
         {doc.transit_location_id ?? '—'}
       </p>
       <p>
-        Creator: {doc.created_by} · Assigned: {doc.assigned_to ?? '—'} ·
-        Approver: {doc.approved_by ?? '—'}
+        {t('inventory.creator')} {doc.created_by} {t('inventory.assigned')}
+        {doc.assigned_to ?? '—'} {t('inventory.approver')}
+        {doc.approved_by ?? '—'}
       </p>
       <p>
-        Dispatched: {doc.dispatched_by ?? '—'} · Received:{' '}
-        {doc.received_by ?? '—'} · Posted: {doc.posted_by ?? '—'}
+        {t('inventory.dispatched')} {doc.dispatched_by ?? '—'}{' '}
+        {t('inventory.received')} {doc.received_by ?? '—'}{' '}
+        {t('inventory.posted')}
+        {doc.posted_by ?? '—'}
       </p>
       <form onSubmit={(event) => void save(event)}>
         <Table
           headers={[
             'SKU / Unit',
             'Quantity / Expected',
-            'Counted',
+            t('inventory.counted'),
             'Variance / %',
             'Counter / Time',
           ]}
@@ -628,7 +654,7 @@ export function DocumentDetails({
         </Table>
         {canSave && (
           <Button disabled={busy} type="submit">
-            Save Physical Count
+            {t('inventory.savePhysicalCount')}
           </Button>
         )}
       </form>
@@ -649,14 +675,14 @@ export function DocumentDetails({
               disabled={busy}
               onClick={() => void act(action)}
             >
-              {action}
+              {labelCode(action)}
             </Button>
           ))}
       </div>
       <Link to="/inventory/movements">
-        Related immutable ledger — filter by Variant / location
+        {t('inventory.relatedImmutableLedgerFilterByVariantLocation')}
       </Link>
-      <h3>Audit history</h3>
+      <h3>{t('inventory.auditHistory')}</h3>
       {doc.history?.length ? (
         <ul>
           {doc.history.map((event, index) => (
@@ -666,9 +692,7 @@ export function DocumentDetails({
           ))}
         </ul>
       ) : (
-        <p>
-          ประวัติจะโหลดใหม่หลังบันทึก; ไม่ใช่ comprehensive denied-request audit
-        </p>
+        <p>{t('inventory.historyReloadsAfterSavingThisIsNot')}</p>
       )}
     </Card>
   );
@@ -684,6 +708,8 @@ export function ReorderEditor({
   busy: boolean;
   initial?: ReorderPoint;
 }) {
+  const { t } = useLanguage();
+
   const [variant, setVariant] = useState(initial?.variant_id ?? '');
   const [minimum, setMinimum] = useState(initial?.minimum_quantity ?? '');
   const [target, setTarget] = useState(initial?.target_quantity ?? '');
@@ -704,13 +730,13 @@ export function ReorderEditor({
   }
   return (
     <form className="inventory-form" onSubmit={(event) => void submit(event)}>
-      <h3>{initial ? 'แก้ไข' : 'ตั้งค่า'} Reorder Point</h3>
-      <p>
-        ประเมิน active WAREHOUSE + SALES_FLOOR + SHELF; ไม่รวม
-        quarantine/damaged/transit
-      </p>
+      <h3>
+        {initial ? t('catalog.edit') : t('inventory.configure')}{' '}
+        {t('inventory.reorderPoint')}
+      </h3>
+      <p>{t('inventory.evaluatesActiveWarehouseSalesFloorShelfExcludes')}</p>
       <VariantPicker value={variant} change={setVariant} />
-      <Field label="Minimum Quantity">
+      <Field label={t('inventory.minimumQuantity')}>
         <input
           required
           inputMode="decimal"
@@ -718,7 +744,7 @@ export function ReorderEditor({
           onChange={(event) => setMinimum(event.target.value)}
         />
       </Field>
-      <Field label="Target Quantity">
+      <Field label={t('inventory.targetQuantity')}>
         <input
           required
           inputMode="decimal"
@@ -726,17 +752,17 @@ export function ReorderEditor({
           onChange={(event) => setTarget(event.target.value)}
         />
       </Field>
-      <Field label="Reorder status">
+      <Field label={t('inventory.reorderStatus')}>
         <select
           value={status}
           onChange={(event) => setStatus(event.target.value)}
         >
-          <option>ACTIVE</option>
-          <option>INACTIVE</option>
+          <option>{t('inventory.active3')}</option>
+          <option>{t('inventory.inactive3')}</option>
         </select>
       </Field>
       <Button disabled={busy} type="submit">
-        Save Reorder Point
+        {t('inventory.saveReorderPoint')}
       </Button>
     </form>
   );

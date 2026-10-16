@@ -1,4 +1,3 @@
-import { Check } from 'lucide-react';
 import { useLanguage } from '../../app/language';
 import './language-switcher.css';
 
@@ -19,7 +18,6 @@ export function LanguageSwitcher() {
           aria-pressed={language === value}
           onClick={() => setLanguage(value)}
         >
-          <Check size={13} aria-hidden="true" />
           {value === 'th' ? 'ไทย' : 'EN'}
         </button>
       ))}

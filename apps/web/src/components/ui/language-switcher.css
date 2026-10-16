@@ -25,16 +25,10 @@
   font-weight: 600;
   cursor: pointer;
 }
-.language-switcher button svg {
-  visibility: hidden;
-}
 .language-switcher button[aria-pressed='true'] {
   border-color: var(--primary-border);
   background: var(--primary-soft);
   color: var(--primary-strong);
-}
-.language-switcher button[aria-pressed='true'] svg {
-  visibility: visible;
 }
 .language-switcher button:hover {
   background: var(--primary-subtle);

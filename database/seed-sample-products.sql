@@ -94,6 +94,9 @@ DECLARE
 
   -- New Supplier ID
   supp_cpall uuid := gen_random_uuid();
+
+  -- POS Terminal ID
+  term_main uuid := gen_random_uuid();
 BEGIN
   -- ค้นหา organization จากฐานข้อมูล หากไม่มี ID เดิม ให้ใช้ Organization แรกที่พบ
   SELECT id INTO v_org_id FROM organizations WHERE id = '08ac3879-d23c-49a7-bd3c-8c7f0641b3b5';
@@ -338,6 +341,15 @@ BEGIN
   SELECT id INTO loc_floor FROM stock_locations WHERE organization_id = v_org_id AND branch_id = v_branch_id AND code = 'LOC-SALES-FLOOR';
   SELECT id INTO loc_shelf_drink FROM stock_locations WHERE organization_id = v_org_id AND branch_id = v_branch_id AND code = 'LOC-SHELF-DRINK';
   SELECT id INTO loc_shelf_snack FROM stock_locations WHERE organization_id = v_org_id AND branch_id = v_branch_id AND code = 'LOC-SHELF-SNACK';
+
+  -------------------------------------------------------------
+  -- 7.1 สร้างเครื่องคิดเงินและจุดขาย (POS Terminal)
+  -------------------------------------------------------------
+  INSERT INTO pos_terminals (id, organization_id, branch_id, code, name, stock_location_id, status, revision)
+  VALUES (term_main, v_org_id, v_branch_id, 'TERM-01', 'เคาน์เตอร์แคชเชียร์ 1 (หน้าร้าน)', loc_floor, 'ACTIVE', 1)
+  ON CONFLICT (organization_id, branch_id, code) DO NOTHING;
+
+  SELECT id INTO term_main FROM pos_terminals WHERE organization_id = v_org_id AND branch_id = v_branch_id AND code = 'TERM-01';
 
   -------------------------------------------------------------
   -- 8. ยอดสต็อกคงเหลือ (Stock Balances & Quality Balances)
@@ -652,6 +664,50 @@ BEGIN
 
   -- 8. เปิด Triggers กลับคืนมาตามเดิม
   ALTER TABLE stock_movements ENABLE TRIGGER ALL;
+
+  -------------------------------------------------------------
+  -- 14. ตั้งค่าหน้าร้านออนไลน์และเผยแพร่สินค้า (Storefront & Published Products)
+  -------------------------------------------------------------
+  INSERT INTO storefronts (
+    organization_id, slug, name, description, contact_phone,
+    pickup_instructions, terminal_id, published, accepting_orders, revision
+  )
+  VALUES (
+    v_org_id,
+    'main-store',
+    'ร้านค้าสาขาหลัก (SmartPOS Demo Store)',
+    'สั่งซื้อสินค้าล่วงหน้าผ่านออนไลน์และรับสินค้าได้ที่เคาน์เตอร์สาขาหลัก',
+    '02-123-4567',
+    'กรุณาแจ้งเลขออเดอร์หรือยื่นหน้าจอที่เคาน์เตอร์แคชเชียร์ 1',
+    term_main,
+    true,
+    true,
+    1
+  )
+  ON CONFLICT (organization_id) DO UPDATE SET
+    slug = EXCLUDED.slug,
+    name = EXCLUDED.name,
+    description = EXCLUDED.description,
+    contact_phone = EXCLUDED.contact_phone,
+    pickup_instructions = EXCLUDED.pickup_instructions,
+    terminal_id = EXCLUDED.terminal_id,
+    published = true,
+    accepting_orders = true,
+    revision = storefronts.revision + 1,
+    updated_at = now();
+
+  -- เผยแพร่สินค้าตัวอย่าง 5 รายการขึ้นหน้าร้านออนไลน์ /shop
+  INSERT INTO storefront_products (organization_id, variant_id, published)
+  VALUES
+    (v_org_id, var_coke_can, true),
+    (v_org_id, var_coke_pet, true),
+    (v_org_id, var_lays_44, true),
+    (v_org_id, var_lays_73, true),
+    (v_org_id, var_mama_bag, true),
+    (v_org_id, var_mama_cup, true),
+    (v_org_id, var_ichi_pet, true),
+    (v_org_id, var_dutch_box, true)
+  ON CONFLICT (organization_id, variant_id) DO UPDATE SET published = EXCLUDED.published;
 
   RAISE NOTICE 'Sample data with all statuses successfully created for organization %', v_org_id;
 END $$;

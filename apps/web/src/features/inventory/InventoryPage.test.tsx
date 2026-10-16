@@ -1,15 +1,11 @@
+import { render } from '../../test/render';
 import { StrictMode } from 'react';
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { InventoryPage } from './InventoryPage';
+import { LanguageSwitcher } from '../../components/ui/LanguageSwitcher';
 
 const mocks = vi.hoisted(() => ({ request: vi.fn() }));
 vi.mock('../../app/AuthProvider', () => ({
@@ -51,6 +47,7 @@ function renderLocations() {
     <StrictMode>
       <QueryClientProvider client={client}>
         <MemoryRouter initialEntries={['/manage/inventory/locations']}>
+          <LanguageSwitcher />
           <InventoryPage section="locations" />
         </MemoryRouter>
       </QueryClientProvider>
@@ -58,17 +55,40 @@ function renderLocations() {
   );
 }
 
+it('translates status labels while preserving filter codes and draft input', async () => {
+  renderLocations();
+  const filter = await screen.findByRole('combobox', { name: 'กรองสถานะ' });
+  expect(within(filter).getByRole('option', { name: 'ใช้งาน' })).toHaveValue(
+    'ACTIVE',
+  );
+  fireEvent.change(screen.getByLabelText('รหัสสถานที่เก็บ'), {
+    target: { value: 'DRAFT-LOCATION' },
+  });
+  fireEvent.change(filter, { target: { value: 'ACTIVE' } });
+  await waitFor(() =>
+    expect(mocks.request).toHaveBeenCalledWith(
+      expect.stringContaining('status=ACTIVE'),
+      expect.anything(),
+    ),
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'English' }));
+  expect(screen.getByRole('combobox', { name: 'Status filter' })).toHaveValue(
+    'ACTIVE',
+  );
+  expect(screen.getByLabelText('Location code')).toHaveValue('DRAFT-LOCATION');
+});
+
 it('saves a location under StrictMode using a live signal and the existing payload', async () => {
   renderLocations();
-  fireEvent.change(await screen.findByLabelText('Location code'), {
+  fireEvent.change(await screen.findByLabelText('รหัสสถานที่เก็บ'), {
     target: { value: 'test' },
   });
-  fireEvent.change(screen.getByLabelText('Location name'), {
+  fireEvent.change(screen.getByLabelText('ชื่อสถานที่เก็บ'), {
     target: { value: 'คลังทดสอบ' },
   });
   fireEvent.click(screen.getByRole('button', { name: 'บันทึก Location' }));
   await waitFor(() =>
-    expect(screen.getByLabelText('Location code')).toHaveValue(''),
+    expect(screen.getByLabelText('รหัสสถานที่เก็บ')).toHaveValue(''),
   );
   const call = mocks.request.mock.calls.find(
     ([, options]) => options?.method === 'POST',
@@ -87,18 +107,18 @@ it('preserves location input on a failed save so it can be retried', async () =>
     return { items: [], total: 0, page: 1, page_size: 20 };
   });
   renderLocations();
-  fireEvent.change(await screen.findByLabelText('Location code'), {
+  fireEvent.change(await screen.findByLabelText('รหัสสถานที่เก็บ'), {
     target: { value: 'test' },
   });
-  fireEvent.change(screen.getByLabelText('Location name'), {
+  fireEvent.change(screen.getByLabelText('ชื่อสถานที่เก็บ'), {
     target: { value: 'คลังทดสอบ' },
   });
   fireEvent.click(screen.getByRole('button', { name: 'บันทึก Location' }));
   expect(await screen.findByRole('alert')).toHaveTextContent(
     'การเชื่อมต่อขัดข้อง',
   );
-  expect(screen.getByLabelText('Location code')).toHaveValue('test');
-  expect(screen.getByLabelText('Location name')).toHaveValue('คลังทดสอบ');
+  expect(screen.getByLabelText('รหัสสถานที่เก็บ')).toHaveValue('test');
+  expect(screen.getByLabelText('ชื่อสถานที่เก็บ')).toHaveValue('คลังทดสอบ');
 });
 
 it('retries failed location options as well as the main inventory list', async () => {
@@ -215,13 +235,13 @@ it('renders standard catalog pagination with item total at the bottom of balance
 
 it('renders Status filter as a dropdown select with options in locations section', async () => {
   renderLocations();
-  const select = await screen.findByRole('combobox', { name: 'Status filter' });
+  const select = await screen.findByRole('combobox', { name: 'กรองสถานะ' });
   expect(select).toBeVisible();
   const options = within(select).getAllByRole('option');
   expect(options.map((opt) => opt.textContent)).toEqual([
     'ทั้งหมด',
-    'ACTIVE',
-    'INACTIVE',
+    'ใช้งาน',
+    'ปิดใช้งาน',
   ]);
 });
 
@@ -255,7 +275,7 @@ it('renders location status as a colored tag and action button with edit styling
   await waitFor(() => {
     const tag = container.querySelector('.tag-success');
     expect(tag).toBeInTheDocument();
-    expect(tag).toHaveTextContent('ACTIVE');
+    expect(tag).toHaveTextContent('ใช้งาน');
   });
 
   const editButton = screen.getByRole('button', { name: /แก้ไข LOC-WH-MAIN/ });
@@ -328,10 +348,10 @@ it('renders movements history table with formatted tags and deltas', async () =>
   });
 
   renderMovements();
-  const openingTag = await screen.findByText('OPENING_BALANCE');
+  const openingTag = await screen.findByText('ยอดยกมา');
   expect(openingTag).toHaveClass('tag', 'tag-success');
 
-  const transferOutTag = screen.getByText('TRANSFER_OUT');
+  const transferOutTag = screen.getByText('โอนออก');
   expect(transferOutTag).toHaveClass('tag', 'tag-amber');
 
   expect(screen.getAllByText('COKE-CAN-325')).toHaveLength(2);

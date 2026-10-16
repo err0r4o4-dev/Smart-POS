@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useState, type FormEvent } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
@@ -39,6 +40,8 @@ function statusTone(status: string): 'success' | 'amber' | 'neutral' {
 }
 
 export function ProductsPage() {
+  const { t, labelCode } = useLanguage();
+
   const catalog = useCatalog();
   const [params, setParams] = useSearchParams();
   const [search, setSearch] = useState(params.get('search') ?? '');
@@ -63,21 +66,21 @@ export function ProductsPage() {
   const brands = useTaxonomyOptions('brands');
   return (
     <div className="catalog-page">
-      <CatalogHeader title="สินค้า">
+      <CatalogHeader title={t('common.products')}>
         <>
           {catalog.tenant.can('catalog.create') && (
             <Link className="button" to="/products/new">
-              เพิ่มสินค้า
+              {t('catalog.addProduct')}
             </Link>
           )}
           {catalog.tenant.can('catalog.import') && (
             <Link className="button button-secondary" to="/products/import">
-              นำเข้าสินค้า
+              {t('catalog.importProducts')}
             </Link>
           )}
           {catalog.tenant.can('catalog.labels.print') && (
             <Link className="button button-secondary" to="/products/labels">
-              พิมพ์ฉลาก
+              {t('catalog.printLabels')}
             </Link>
           )}
         </>
@@ -94,7 +97,7 @@ export function ProductsPage() {
           }}
         >
           <label className="tenant-field">
-            ค้นหาชื่อ / SKU / บาร์โค้ด
+            {t('catalog.searchNameSkuBarcode')}
             <input
               maxLength={200}
               value={search}
@@ -102,7 +105,7 @@ export function ProductsPage() {
             />
           </label>
           <label className="tenant-field">
-            กรองสถานะ
+            {t('catalog.filterStatus')}
             <select
               value={status}
               onChange={(event) => {
@@ -110,14 +113,16 @@ export function ProductsPage() {
                 setPage(1);
               }}
             >
-              <option value="">ACTIVE / INACTIVE</option>
+              <option value="">{t('catalog.activeInactive')}</option>
               {['ACTIVE', 'INACTIVE', 'ARCHIVED'].map((item) => (
-                <option key={item}>{item}</option>
+                <option key={item} value={item}>
+                  {labelCode(item)}
+                </option>
               ))}
             </select>
           </label>
           <TaxonomySelect
-            label="กรองหมวดหมู่"
+            label={t('catalog.filterCategory')}
             value={category}
             items={categories.data ?? []}
             change={(value) => {
@@ -126,7 +131,7 @@ export function ProductsPage() {
             }}
           />
           <TaxonomySelect
-            label="กรองแบรนด์"
+            label={t('catalog.filterBrand')}
             value={brand}
             items={brands.data ?? []}
             change={(value) => {
@@ -135,7 +140,7 @@ export function ProductsPage() {
             }}
           />
           <label className="tenant-field">
-            เรียงตาม
+            {t('catalog.sortBy')}
             <select
               value={sort}
               onChange={(event) => {
@@ -143,13 +148,13 @@ export function ProductsPage() {
                 setPage(1);
               }}
             >
-              <option value="name">ชื่อ A–Z</option>
-              <option value="-name">ชื่อ Z–A</option>
-              <option value="-updated">แก้ไขล่าสุด</option>
-              <option value="updated">แก้ไขเก่าสุด</option>
+              <option value="name">{t('catalog.nameAZ')}</option>
+              <option value="-name">{t('catalog.nameZA')}</option>
+              <option value="-updated">{t('catalog.updated2')}</option>
+              <option value="updated">{t('catalog.oldestUpdated')}</option>
             </select>
           </label>
-          <Button type="submit">ค้นหาสินค้า</Button>
+          <Button type="submit">{t('common.searchProducts')}</Button>
         </form>
         <QueryFeedback
           loading={
@@ -168,16 +173,16 @@ export function ProductsPage() {
               className="catalog-table-wrap"
               tabIndex={0}
               role="region"
-              aria-label="รายการสินค้า"
+              aria-label={t('catalog.productList')}
             >
               <table className="catalog-table">
                 <thead>
                   <tr>
-                    <th>สินค้า</th>
-                    <th>SKU / บาร์โค้ด</th>
-                    <th>หมวดหมู่ / แบรนด์</th>
-                    <th>ราคาขาย</th>
-                    <th>สถานะ</th>
+                    <th>{t('common.products')}</th>
+                    <th>{t('catalog.skuBarcode')}</th>
+                    <th>{t('catalog.categoryBrand')}</th>
+                    <th>{t('catalog.sellingPrice')}</th>
+                    <th>{t('auth.status')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -187,7 +192,7 @@ export function ProductsPage() {
                         <div className="catalog-product-cell">
                           <span
                             className="catalog-image"
-                            aria-label="ยังไม่มีรูปสินค้า"
+                            aria-label={t('catalog.noProductImageYet')}
                           >
                             <Package aria-hidden="true" />
                           </span>
@@ -202,7 +207,7 @@ export function ProductsPage() {
                             <code>{variant.sku}</code>
                             <small>
                               {variant.barcodes.find((item) => item.is_primary)
-                                ?.code ?? 'ยังไม่มีบาร์โค้ด'}
+                                ?.code ?? t('catalog.noBarcodesYet')}
                             </small>
                           </div>
                         ))}
@@ -220,7 +225,7 @@ export function ProductsPage() {
                       </td>
                       <td>
                         <Tag tone={statusTone(product.status)}>
-                          {product.status}
+                          {labelCode(product.status)}
                         </Tag>
                       </td>
                     </tr>
@@ -230,7 +235,7 @@ export function ProductsPage() {
             </div>
             {!query.data.items.length && (
               <p className="empty-state">
-                ไม่พบสินค้า เริ่มด้วยการสร้างหน่วยนับและเพิ่มสินค้า
+                {t('catalog.noProductsFoundStartByCreatingUnits')}
               </p>
             )}
             <Pagination page={page} total={query.data.total} change={setPage} />
@@ -241,18 +246,20 @@ export function ProductsPage() {
   );
 }
 export function ProductDetailsPage() {
+  const { t, labelCode } = useLanguage();
+
   const { id = '' } = useParams();
   const catalog = useCatalog();
   const query = useCatalogQuery<Product>(`/products/${id}`);
   return (
     <div className="catalog-page">
-      <CatalogHeader title="รายละเอียดสินค้า">
+      <CatalogHeader title={t('catalog.productDetails')}>
         {catalog.tenant.can('catalog.update') && (
           <Link className="button" to={`/products/${id}/edit`}>
-            แก้ไขสินค้า
+            {t('catalog.editProduct')}
           </Link>
         )}
-        <Link to="/products">กลับรายการสินค้า</Link>
+        <Link to="/products">{t('catalog.backToProducts')}</Link>
       </CatalogHeader>
       <CatalogNav />
       <CatalogLoading pending={query.isPending} />
@@ -267,18 +274,18 @@ export function ProductDetailsPage() {
               <div>
                 <h2>{query.data.name}</h2>
                 <Tag tone={statusTone(query.data.status)}>
-                  {query.data.status}
+                  {labelCode(query.data.status)}
                 </Tag>
-                <p>{query.data.description || 'ไม่มีคำอธิบาย'}</p>
+                <p>{query.data.description || t('catalog.noDescription')}</p>
                 <p>
-                  หมวดหมู่: {query.data.category_name || '—'} • แบรนด์:{' '}
-                  {query.data.brand_name || '—'}
+                  {t('catalog.category')} {query.data.category_name || '—'}{' '}
+                  {t('catalog.brand')} {query.data.brand_name || '—'}
                 </p>
               </div>
             </div>
             <p className="notice">
-              ดูยอดสต็อกตามสาขาได้ที่{' '}
-              <Link to="/inventory/balances">ยอดสต็อก</Link>
+              {t('catalog.viewBranchStockAt')}{' '}
+              <Link to="/inventory/balances">{t('catalog.stockBalances')}</Link>
             </p>
           </Card>
           {query.data.variants.map((variant) => (
@@ -286,17 +293,17 @@ export function ProductDetailsPage() {
               <Card>
                 <h2>{variant.name}</h2>
                 <dl className="catalog-dl">
-                  <dt>SKU</dt>
+                  <dt>{t('common.sku')}</dt>
                   <dd>{variant.sku}</dd>
-                  <dt>ราคาทุน / ราคาขาย</dt>
+                  <dt>{t('catalog.costSellingPrice')}</dt>
                   <dd>
                     {variant.cost_price} / {variant.selling_price}{' '}
                     {variant.currency}
                   </dd>
-                  <dt>สถานะ</dt>
+                  <dt>{t('auth.status')}</dt>
                   <dd>
                     <Tag tone={statusTone(variant.status)}>
-                      {variant.status}
+                      {labelCode(variant.status)}
                     </Tag>
                   </dd>
                   {Object.entries(variant.attributes).map(([key, value]) => (
@@ -355,6 +362,8 @@ function ProductEditor({
   brands: Parameters<typeof ProductFields>[0]['brands'];
   units: Parameters<typeof VariantFields>[0]['units'];
 }) {
+  const { t } = useLanguage();
+
   const catalog = useCatalog();
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -394,26 +403,30 @@ function ProductEditor({
           `/products/${product.id}${params.get('barcode') ? `?barcode=${encodeURIComponent(params.get('barcode')!)}` : ''}`,
         );
     } catch (problem) {
-      setError(problem instanceof Error ? problem.message : 'บันทึกไม่ได้');
+      setError(
+        problem instanceof Error ? problem.message : t('catalog.unableToSave'),
+      );
     } finally {
       setBusy(false);
     }
   }
   return (
     <div className="catalog-page">
-      <CatalogHeader title={initial ? 'แก้ไขสินค้า' : 'เพิ่มสินค้า'}>
+      <CatalogHeader
+        title={initial ? t('catalog.editProduct') : t('catalog.addProduct')}
+      >
         <Link
           className="button button-secondary"
           to={initial ? `/products/${initial.id}` : '/products'}
         >
           <ArrowLeft size={16} aria-hidden="true" />
-          ย้อนกลับ / กลับรายการ
+          {t('catalog.backReturnToList')}
         </Link>
       </CatalogHeader>
       <CatalogNav />
       <Card>
         <form onSubmit={(event) => void submit(event)}>
-          <h2>ข้อมูลสินค้า</h2>
+          <h2>{t('catalog.productInformation')}</h2>
           <ProductFields
             value={value}
             change={setValue}
@@ -423,10 +436,12 @@ function ProductEditor({
           />
           {!initial && (
             <div className="catalog-variants-section">
-              <h2>Variants · รายการขาย</h2>
+              <h2>{t('catalog.variantsSaleItems')}</h2>
               {variants.map((variant, index) => (
                 <fieldset className="catalog-variant-fieldset" key={index}>
-                  <legend>Variant {index + 1}</legend>
+                  <legend>
+                    {t('catalog.variant')} {index + 1}
+                  </legend>
                   <VariantFields
                     value={variant}
                     change={(next) =>
@@ -447,7 +462,8 @@ function ProductEditor({
                         )
                       }
                     >
-                      นำ Variant {index + 1} ออก
+                      {t('catalog.removeVariant')} {index + 1}{' '}
+                      {t('catalog.remove2')}
                     </Button>
                   )}
                 </fieldset>
@@ -459,23 +475,23 @@ function ProductEditor({
                   setVariants((current) => [...current, { ...blankVariant }])
                 }
               >
-                เพิ่ม Variant อีกแบบ
+                {t('catalog.addAnotherVariant')}
               </Button>
             </div>
           )}
           <p className="notice">
-            SKU ถาวรและไม่ใช้ซ้ำหลัง archive • ราคาเป็นทศนิยมแบบ exact •
-            บาร์โค้ดผูกหลังบันทึกสินค้า • รูปสินค้าใช้ placeholder
-            จนกว่าจะตั้งค่า storage
+            {t('catalog.skusArePermanentAndCannotBeReused')}
           </p>
           <CatalogError error={error} />
-          {saved && <p role="status">บันทึกสินค้าแล้ว</p>}
+          {saved && <p role="status">{t('catalog.productSaved')}</p>}
           <Button type="submit" disabled={busy || !units.length}>
-            {busy ? 'กำลังบันทึก…' : 'บันทึกสินค้า'}
+            {busy ? t('catalog.saving') : t('catalog.saveProduct')}
           </Button>
           {!units.length && (
             <p role="alert">
-              ต้องสร้าง <Link to="/units">หน่วยนับ</Link> ก่อนเพิ่มสินค้า
+              {t('catalog.create')}{' '}
+              <Link to="/units">{t('catalog.units')}</Link>{' '}
+              {t('catalog.beforeAddingProducts')}
             </p>
           )}
         </form>

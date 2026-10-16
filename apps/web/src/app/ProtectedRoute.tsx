@@ -1,3 +1,4 @@
+import { useLanguage } from './language';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import type { Role, Session } from './access';
 import { canAccess } from './access';
@@ -21,14 +22,16 @@ export function ProtectedRoute({
 }
 
 export function RequireSession() {
+  const { t } = useLanguage();
+
   const { state, refresh } = useAuth();
   const location = useLocation();
   if (state.status === 'loading')
-    return <Loading>Checking your session…</Loading>;
+    return <Loading>{t('shell.checkingYourSession')}</Loading>;
   if (state.status === 'error')
     return (
       <ErrorState
-        message="Could not verify your session."
+        message={t('shell.couldNotVerifyYourSession')}
         retry={() => void refresh()}
       />
     );

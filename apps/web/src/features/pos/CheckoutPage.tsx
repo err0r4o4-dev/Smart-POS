@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useRef, useState } from 'react';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useQuery } from '@tanstack/react-query';
@@ -20,6 +21,8 @@ import { QueryFeedback } from '../../components/feedback/QueryFeedback';
 import { LoyaltyCheckoutControls } from '../loyalty/LoyaltyCheckoutControls';
 
 export function CheckoutPage() {
+  const { t, localize, labelCode } = useLanguage();
+
   const pos = usePOS();
   const [pricingSelection, setPricingSelection] = useState<PricingSelection>();
   const currentSelection =
@@ -152,13 +155,13 @@ export function CheckoutPage() {
       setSelected(result);
       if (result.status === 'COMPLETED') {
         pos.setCart('');
-        pos.setMessage('ขายสำเร็จและตัดสต็อกแล้ว การพิมพ์ไม่มีผลต่อรายการขาย');
+        pos.setMessage(t('pos.saleCompletedAndStockPostedPrintingDoes'));
       }
     }
   };
   return (
     <>
-      <h1>ชำระเงิน</h1>
+      <h1>{t('pos.checkout')}</h1>
       <QueryFeedback
         loading={pending.isFetching}
         error={pending.error}
@@ -166,19 +169,16 @@ export function CheckoutPage() {
       />
       <Card className="pos-checkout">
         <p>
-          ลูกค้า / Customer:{' '}
+          {t('customers.customer')}{' '}
           {checkout?.customer_code_snapshot ||
             pos.cart?.customer?.code ||
-            'Walk-in'}
+            t('pos.walkIn')}
         </p>
-        <p>
-          ราคาสุดท้ายคำนวณจาก Pricing quote บนเซิร์ฟเวอร์ การเลือก QR /
-          โอนยังไม่ใช่การรับเงิน
-        </p>
+        <p>{t('pos.finalPricesComeFromTheServerPricing')}</p>
         {!checkout ? (
           <>
             <strong className="pos-total">
-              ยอดรวม {moneyText(payable)} บาท
+              {t('pos.total')} {moneyText(payable)} {t('loyalty.thb')}
             </strong>
             <LoyaltyCheckoutControls
               locked={requestLocked || !!checkout}
@@ -194,7 +194,7 @@ export function CheckoutPage() {
               onSelection={setPricingSelection}
             />
             <label>
-              วิธีชำระเงิน
+              {t('pos.paymentMethod')}
               <select
                 value={method}
                 disabled={pos.busy || requestLocked}
@@ -209,7 +209,7 @@ export function CheckoutPage() {
                   )
                   .map(([value, label]) => (
                     <option value={value} key={value}>
-                      {label}
+                      {localize(label ?? '')}
                     </option>
                   ))}
               </select>
@@ -217,9 +217,9 @@ export function CheckoutPage() {
             {method === 'CASH' && (
               <div className="pos-cash-field">
                 <label>
-                  เงินรับ
+                  {t('pos.amountReceived')}
                   <input
-                    aria-label="เงินรับ"
+                    aria-label={t('pos.amountReceived')}
                     inputMode="decimal"
                     value={received}
                     disabled={pos.busy || requestLocked}
@@ -229,7 +229,7 @@ export function CheckoutPage() {
                 <div
                   className="quick-cash-buttons"
                   role="group"
-                  aria-label="ปุ่มเงินสดด่วน"
+                  aria-label={t('pos.quickCashAmounts')}
                 >
                   <button
                     type="button"
@@ -237,7 +237,8 @@ export function CheckoutPage() {
                     disabled={pos.busy || requestLocked}
                     onClick={() => setReceived(payable)}
                   >
-                    พอดี ({moneyText(payable)})
+                    {t('pos.exactAmount')}
+                    {moneyText(payable)})
                   </button>
                   {quickPresets.map((amt) => (
                     <button
@@ -258,16 +259,18 @@ export function CheckoutPage() {
                   >
                     {changeCalculation.valid ? (
                       <span>
-                        เงินทอน:{' '}
+                        {t('pos.change')}{' '}
                         <strong>
-                          {moneyText(changeCalculation.amount)} บาท
+                          {moneyText(changeCalculation.amount)}{' '}
+                          {t('loyalty.thb')}
                         </strong>
                       </span>
                     ) : (
                       <span>
-                        ยังขาดอีก:{' '}
+                        {t('pos.stillDue')}{' '}
                         <strong>
-                          {moneyText(changeCalculation.amount)} บาท
+                          {moneyText(changeCalculation.amount)}{' '}
+                          {t('loyalty.thb')}
                         </strong>
                       </span>
                     )}
@@ -285,7 +288,7 @@ export function CheckoutPage() {
               }
               onClick={() => void prepare()}
             >
-              ตรวจสอบยอดและเตรียมชำระเงิน
+              {t('pos.reviewTotalAndPreparePayment')}
             </Button>
             {requestLocked && (
               <Button
@@ -293,39 +296,37 @@ export function CheckoutPage() {
                 onClick={() => {
                   request.current = null;
                   setRequestLocked(false);
-                  pos.setMessage(
-                    'เปลี่ยนข้อมูลได้แล้ว หากมีรายการค้างเซิร์ฟเวอร์จะป้องกันการชำระซ้ำ',
-                  );
+                  pos.setMessage(t('pos.youCanEditAgainTheServerPrevents'));
                 }}
               >
-                แก้ไขข้อมูลหลังตรวจสถานะ
+                {t('pos.editAfterCheckingStatus')}
               </Button>
             )}
           </>
         ) : (
           <>
             <p>
-              รายการ {checkout.id} · สถานะ <strong>{checkout.status}</strong>
+              {t('catalog.definitions')} {checkout.id} {t('pos.status')}{' '}
+              <strong>{labelCode(checkout.status)}</strong>
             </p>
-            <p>{paymentLabels[checkout.method]}</p>
+            <p>{localize(paymentLabels[checkout.method])}</p>
             <strong className="pos-total">
-              {moneyText(checkout.total)} บาท
+              {moneyText(checkout.total)} {t('loyalty.thb')}
             </strong>
             <p>
-              เงินรับ {moneyText(checkout.received)} · เงินทอน{' '}
-              {moneyText(checkout.change)}
+              {t('pos.amountReceived')} {moneyText(checkout.received)}{' '}
+              {t('pos.change2')} {moneyText(checkout.change)}
             </p>
             {checkout.status === 'AWAITING_PAYMENT' && (
               <>
                 <p className="notice">
-                  ตรวจสอบเงินจริงก่อนยืนยัน
-                  ไม่เชื่อมธนาคารและไม่ตรวจสลิปอัตโนมัติ
+                  {t('pos.verifyActualFundsBeforeConfirmingNoBank')}
                 </p>
                 {checkout.method !== 'CASH' && (
                   <label>
-                    อ้างอิงการชำระเงิน
+                    {t('pos.paymentReference')}
                     <input
-                      aria-label="อ้างอิงการชำระเงิน"
+                      aria-label={t('pos.paymentReference')}
                       value={reference}
                       maxLength={200}
                       onChange={(event) => setReference(event.target.value)}
@@ -338,7 +339,7 @@ export function CheckoutPage() {
                     checked={acknowledged}
                     onChange={(event) => setAcknowledged(event.target.checked)}
                   />
-                  ฉันตรวจสอบแล้วว่าได้รับเงินจริง
+                  {t('pos.iVerifiedThatActualFundsWereReceived')}
                 </label>
                 <Button
                   disabled={
@@ -348,7 +349,7 @@ export function CheckoutPage() {
                   }
                   onClick={() => void confirm()}
                 >
-                  ยืนยันรับเงินจริง
+                  {t('pos.confirmActualFundsReceived')}
                 </Button>
                 <Button
                   disabled={pos.busy}
@@ -367,7 +368,7 @@ export function CheckoutPage() {
                     })()
                   }
                 >
-                  ยกเลิกก่อนรับเงิน
+                  {t('pos.cancelBeforeReceivingFunds')}
                 </Button>
               </>
             )}
@@ -377,28 +378,28 @@ export function CheckoutPage() {
               <>
                 <p role="status">
                   {checkout.method === 'NONE'
-                    ? 'ยอดสุทธิศูนย์ ไม่มีการรับเงิน กรุณาบันทึกขายและตัดสต็อก'
-                    : 'ยืนยันเงินแล้ว แต่ยังไม่ใช่การขายสำเร็จ'}
+                    ? t('pos.zeroNetTotalNoFundsAreCollected')
+                    : t('pos.fundsConfirmedTheSaleIsNotCompleted')}
                 </p>
                 {checkout.failure_code && (
                   <p role="alert">
-                    {checkout.failure_code} — หลักฐานเงินยังอยู่ ต้องตรวจสอบ
-                    ห้ามเรียกเก็บเงินซ้ำ
+                    {checkout.failure_code}{' '}
+                    {t('pos.paymentEvidenceRemainsReviewItAndDo')}
                   </p>
                 )}
                 <Button disabled={pos.busy} onClick={() => void complete()}>
                   {checkout.status === 'CONFIRMED'
-                    ? 'บันทึกขายและตัดสต็อก'
-                    : 'ลองบันทึกขายเดิมอีกครั้ง'}
+                    ? t('pos.saveSaleAndPostStock')
+                    : t('pos.retrySavingTheSameSale')}
                 </Button>
-                <Link to="/pos/shifts">ตรวจสอบรายการเงินค้าง</Link>
+                <Link to="/pos/shifts">{t('pos.reviewPendingPayments')}</Link>
               </>
             )}
             {checkout.status === 'COMPLETED' && (
               <>
-                <p role="status">ขายสำเร็จ</p>
+                <p role="status">{t('pos.saleCompleted')}</p>
                 <Link to={`/sales/${checkout.sale_id}`}>
-                  ดูรายการขายและพิมพ์ใบเสร็จ
+                  {t('pos.viewSaleAndPrintReceipt')}
                 </Link>
                 <Button
                   onClick={() => {
@@ -411,7 +412,7 @@ export function CheckoutPage() {
                     setAcknowledged(false);
                   }}
                 >
-                  เริ่มรายการใหม่
+                  {t('pos.startNewSale')}
                 </Button>
               </>
             )}

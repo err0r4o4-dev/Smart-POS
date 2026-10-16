@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useState } from 'react';
 import { useOrganization } from '../../app/OrganizationProvider';
 import { Button } from '../../components/ui/primitives';
@@ -30,6 +31,8 @@ export function BatchPicker({
   label?: string;
   sellableOnly?: boolean;
 }) {
+  const { t } = useLanguage();
+
   const tenant = useOrganization();
   const [page, setPage] = useState(1);
   const selectedBranch = branch ?? tenant.branchID;
@@ -51,7 +54,7 @@ export function BatchPicker({
             })
           }
         >
-          <option value="">Untracked · ไม่ทราบ lot (ตามนโยบาย)</option>
+          <option value="">{t('quality.untrackedUnknownLotPerPolicy')}</option>
           {value.batch_id &&
             !options.some(
               (item) =>
@@ -59,7 +62,7 @@ export function BatchPicker({
                 value.batch_id,
             ) && (
               <option value={value.batch_id}>
-                Selected lot · {value.batch_id}
+                {t('quality.selectedLot')} {value.batch_id}
               </option>
             )}
           {options
@@ -72,9 +75,10 @@ export function BatchPicker({
                   value={stock ? stock.batch_id! : item.id}
                   disabled={sellableOnly && stock !== null && !stock.sellable}
                 >
-                  {item.lot_number} · Expiry {item.expires_on ?? 'Unknown'}
+                  {item.lot_number} {t('quality.expiry3')}
+                  {item.expires_on ?? t('quality.unknown')}
                   {stock
-                    ? ` · ${stock.quantity} · ${stock.sellable ? 'Eligible' : 'BLOCKED'}`
+                    ? ` · ${stock.quantity} · ${stock.sellable ? t('quality.eligible') : 'BLOCKED'}`
                     : ` · ${(item as ProductBatch).status}`}
                 </option>
               );
@@ -89,16 +93,18 @@ export function BatchPicker({
           disabled={page === 1 || query.isFetching}
           onClick={() => setPage(page - 1)}
         >
-          Previous lots
+          {t('quality.previousLots')}
         </Button>
-        <span className="batch-picker-page">Page {page}</span>
+        <span className="batch-picker-page">
+          {t('catalog.page')} {page}
+        </span>
         <Button
           type="button"
           className="button-secondary button-compact"
           disabled={options.length < 100 || query.isFetching}
           onClick={() => setPage(page + 1)}
         >
-          Next lots
+          {t('quality.nextLots')}
         </Button>
       </div>
       {value.batch_id && (
@@ -110,13 +116,10 @@ export function BatchPicker({
               change({ ...value, batch_verified: event.target.checked })
             }
           />
-          ตรวจฉลาก lot จริงแล้ว / Physically verified selected lot
+          {t('quality.physicallyVerifiedSelectedLot')}
         </label>
       )}
-      <small>
-        FEFO เป็นคำแนะนำ ไม่ยืนยัน lot แทนผู้ปฏิบัติงาน / Never auto-attested.
-        Unknown dates are not expiry assurance.
-      </small>
+      <small>{t('quality.fefoIsAdvisoryOperatorsMustVerifyLots')}</small>
     </fieldset>
   );
 }
@@ -125,7 +128,7 @@ export function CartBatchPicker({
   initial,
   save,
   busy,
-  actionLabel = 'ใช้ lot นี้ / Apply lot',
+  actionLabel,
   ...props
 }: Omit<Parameters<typeof BatchPicker>[0], 'value' | 'change' | 'disabled'> & {
   initial: BatchSelection;
@@ -133,6 +136,8 @@ export function CartBatchPicker({
   busy: boolean;
   actionLabel?: string;
 }) {
+  const { t } = useLanguage();
+
   const [value, setValue] = useState(initial);
   return (
     <div>
@@ -142,7 +147,7 @@ export function CartBatchPicker({
         disabled={busy || (!!value.batch_id && !value.batch_verified)}
         onClick={() => void save(value)}
       >
-        {actionLabel}
+        {actionLabel ?? t('quality.applyThisLot')}
       </Button>
     </div>
   );

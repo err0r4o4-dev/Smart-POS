@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useState } from 'react';
 import {
   ArrowLeft,
@@ -30,6 +31,8 @@ function formatFileSize(bytes: number): string {
 }
 
 export function ImportPage() {
+  const { t } = useLanguage();
+
   const catalog = useCatalog();
   const [file, setFile] = useState<File | null>(null);
   const [job, setJob] = useState<ImportJob | null>(null);
@@ -46,7 +49,7 @@ export function ImportPage() {
     setMapping({});
     setError('');
     if (next.size > 5 * 1024 * 1024) {
-      setError('ไฟล์เกิน 5 MB');
+      setError(t('catalog.fileExceeds5Mb'));
       setFile(null);
     } else {
       setFile(next);
@@ -75,7 +78,11 @@ export function ImportPage() {
       setJob(result);
       setHeaders(result.headers);
     } catch (problem) {
-      setError(problem instanceof Error ? problem.message : 'อ่านไฟล์ไม่ได้');
+      setError(
+        problem instanceof Error
+          ? problem.message
+          : t('catalog.unableToReadFile'),
+      );
     } finally {
       setBusy(false);
     }
@@ -84,7 +91,10 @@ export function ImportPage() {
     if (
       !job ||
       !window.confirm(
-        `นำเข้า ${job.total} แถว แบบ ${mode} หรือไม่? ระบบจะตรวจซ้ำและบันทึกทั้งชุดใน transaction เดียว`,
+        t('catalog.importValue0RowsUsingValue1TheSystem', {
+          value0: job.total,
+          value1: mode,
+        }),
       )
     )
       return;
@@ -102,7 +112,7 @@ export function ImportPage() {
       setError(
         problem instanceof Error
           ? problem.message
-          : 'นำเข้าไม่ได้ กรุณาดู preview ใหม่',
+          : t('catalog.importUnavailableGenerateANewPreview'),
       );
     } finally {
       setBusy(false);
@@ -110,19 +120,18 @@ export function ImportPage() {
   }
   return (
     <div className="catalog-page">
-      <CatalogHeader title="นำเข้าสินค้า CSV / XLSX">
+      <CatalogHeader title={t('catalog.importProductsCsvXlsx')}>
         <Link className="button button-secondary" to="/products">
           <ArrowLeft size={16} aria-hidden="true" />
-          ย้อนกลับ / กลับรายการ
+          {t('catalog.backReturnToList')}
         </Link>
       </CatalogHeader>
       <CatalogNav />
       <Card>
         <div className="import-card-header">
-          <h2>1. เลือกไฟล์และตรวจข้อมูล</h2>
+          <h2>{t('catalog.step1SelectFileAndValidate')}</h2>
           <p className="import-card-subtitle">
-            อัปโหลดไฟล์ CSV หรือ XLSX
-            เพื่อนำเข้าแค็ตตาล็อกสินค้าและบาร์โค้ดเข้าสู่ระบบ
+            {t('catalog.uploadACsvOrXlsxFileTo')}
           </p>
         </div>
 
@@ -132,19 +141,21 @@ export function ImportPage() {
               <span className="import-guide-icon">
                 <FileSpreadsheet size={18} aria-hidden="true" />
               </span>
-              <h3>ข้อกำหนดของไฟล์</h3>
+              <h3>{t('catalog.fileRequirements')}</h3>
             </div>
             <ul className="import-guide-list">
               <li>
-                <strong>ขนาดและปริมาณ:</strong> สูงสุด 5 MB / 2,000 แถว
+                <strong>{t('catalog.sizeAndRows')}</strong>{' '}
+                {t('catalog.upTo5Mb2000Rows')}
               </li>
               <li>
-                <strong>รูปแบบไฟล์:</strong> <code>.csv</code> หรือ{' '}
-                <code>.xlsx</code> (เฉพาะ sheet1 แผ่นเดียว ไม่มีสูตร)
+                <strong>{t('catalog.fileFormat')}</strong> <code>.csv</code>{' '}
+                {t('catalog.or')} <code>.xlsx</code>{' '}
+                {t('catalog.sheet1OnlyNoFormulas')}
               </li>
               <li>
-                <strong>ช่องบาร์โค้ด:</strong> ตั้งประเภทเป็น Text
-                เพื่อเก็บเลขศูนย์นำหน้า
+                <strong>{t('catalog.barcodeColumn')}</strong>{' '}
+                {t('catalog.useTextFormatToPreserveLeadingZeros')}
               </li>
             </ul>
           </div>
@@ -154,11 +165,11 @@ export function ImportPage() {
               <span className="import-guide-icon">
                 <CheckCircle2 size={18} aria-hidden="true" />
               </span>
-              <h3>ข้อกำหนดข้อมูล</h3>
+              <h3>{t('catalog.dataRequirements')}</h3>
             </div>
             <ul className="import-guide-list">
               <li>
-                <strong>คอลัมน์ที่จำเป็น:</strong>
+                <strong>{t('catalog.requiredColumns')}</strong>
                 <div className="import-req-tags">
                   <code>product_name</code>
                   <code>sku</code>
@@ -168,12 +179,13 @@ export function ImportPage() {
                 </div>
               </li>
               <li>
-                <strong>ข้อมูลอ้างอิง:</strong> <code>category</code>,{' '}
-                <code>brand</code>, <code>unit</code> ต้องมีอยู่ในระบบและ ACTIVE
+                <strong>{t('catalog.referencedData')}</strong>{' '}
+                <code>category</code>, <code>brand</code>, <code>unit</code>{' '}
+                {t('catalog.mustExistInTheSystemAndBe')}
               </li>
               <li>
-                <strong>โครงสร้าง:</strong> 1 แถว = 1 สินค้าใหม่พร้อม Default
-                Variant
+                <strong>{t('catalog.structure')}</strong>{' '}
+                {t('catalog.step1Row1NewProductWithA')}
               </li>
             </ul>
           </div>
@@ -198,7 +210,7 @@ export function ImportPage() {
               id="catalog-file-input"
               type="file"
               accept=".csv,.xlsx"
-              aria-label="ไฟล์สินค้า"
+              aria-label={t('catalog.productFile')}
               className="import-file-input-hidden"
               onChange={(event) => {
                 const next = event.target.files?.[0] ?? null;
@@ -209,22 +221,19 @@ export function ImportPage() {
               htmlFor="catalog-file-input"
               className="import-dropzone-label"
             >
-              <span className="sr-only">ไฟล์สินค้า</span>
+              <span className="sr-only">{t('catalog.productFile')}</span>
               <div className="import-dropzone-icon">
                 <UploadCloud size={28} aria-hidden="true" />
               </div>
               <div className="import-dropzone-text">
-                <strong>คลิกเลือกไฟล์ หรือลากไฟล์มาวางที่นี่</strong>
-                <p>
-                  รองรับไฟล์ .CSV และ .XLSX (ขนาดไม่เกิน 5 MB / สูงสุด 2,000
-                  แถว)
-                </p>
+                <strong>{t('catalog.chooseAFileOrDragItHere')}</strong>
+                <p>{t('catalog.csvAndXlsxSupportedUpTo5')}</p>
               </div>
               <span
                 className="button button-secondary import-dropzone-btn"
                 aria-hidden="true"
               >
-                เลือกไฟล์จากเครื่อง
+                {t('catalog.chooseLocalFile')}
               </span>
             </label>
           </div>
@@ -236,7 +245,7 @@ export function ImportPage() {
             <div className="import-file-info">
               <div className="import-file-name-row">
                 <strong className="import-file-name">{file.name}</strong>
-                <Tag tone="success">พร้อมตรวจสอบ</Tag>
+                <Tag tone="success">{t('catalog.readyToValidate')}</Tag>
               </div>
               <span className="import-file-meta">
                 {formatFileSize(file.size)}
@@ -247,13 +256,13 @@ export function ImportPage() {
                 htmlFor="catalog-file-input"
                 className="button button-secondary button-compact"
               >
-                เปลี่ยนไฟล์
+                {t('catalog.changeFile')}
               </label>
               <input
                 id="catalog-file-input"
                 type="file"
                 accept=".csv,.xlsx"
-                aria-label="ไฟล์สินค้า"
+                aria-label={t('catalog.productFile')}
                 className="import-file-input-hidden"
                 onChange={(event) => {
                   const next = event.target.files?.[0] ?? null;
@@ -263,17 +272,17 @@ export function ImportPage() {
               <Button
                 className="button-secondary button-compact import-remove-btn"
                 onClick={clearFile}
-                aria-label="ยกเลิกไฟล์"
+                aria-label={t('catalog.clearFile')}
               >
                 <X size={15} aria-hidden="true" />
-                <span>ยกเลิกไฟล์</span>
+                <span>{t('catalog.clearFile')}</span>
               </Button>
             </div>
           </div>
         )}
         {headers.length > 0 && (
           <>
-            <h3>2. จับคู่คอลัมน์</h3>
+            <h3>{t('catalog.step2MapColumns')}</h3>
             <div className="tenant-form-grid">
               {fields.map((field) => (
                 <label className="tenant-field" key={field}>
@@ -292,7 +301,7 @@ export function ImportPage() {
                       setJob(null);
                     }}
                   >
-                    <option value="">ไม่ระบุ</option>
+                    <option value="">{t('catalog.notProvided')}</option>
                     {headers.map((header) => (
                       <option key={header} value={header}>
                         {header}
@@ -306,11 +315,11 @@ export function ImportPage() {
         )}
         <div className="import-action-bar">
           <Button disabled={!file || busy} onClick={() => void preview()}>
-            {busy ? 'กำลังตรวจ…' : 'ตรวจและแสดง Preview'}
+            {busy ? t('catalog.validating') : t('catalog.validateAndPreview')}
           </Button>
           {file && !busy && (
             <span className="import-action-hint">
-              พร้อมส่งข้อมูลเพื่อตรวจความถูกต้องของคอลัมน์และสร้างพรีวิว
+              {t('catalog.readyToValidateColumnMappingsAndGenerate')}
             </span>
           )}
         </div>
@@ -318,19 +327,20 @@ export function ImportPage() {
       </Card>
       {job && (
         <Card>
-          <h2>3. ผลตรวจและยืนยัน</h2>
+          <h2>{t('catalog.step3ValidationAndConfirmation')}</h2>
           <p role="status">
-            ทั้งหมด {job.total} • ถูกต้อง {job.valid} • ผิดพลาด {job.invalid} •
-            SKU เดิม {job.duplicates} • ใหม่ {job.new_products}
+            {t('common.all')} {job.total} {t('catalog.valid')} {job.valid}{' '}
+            {t('catalog.errors')} {job.invalid} {t('catalog.existingSku')}{' '}
+            {job.duplicates} {t('catalog.new')} {job.new_products}
           </p>
           <div className="catalog-table-wrap">
             <table className="catalog-table">
               <thead>
                 <tr>
-                  <th>แถว</th>
-                  <th>สินค้า / SKU</th>
-                  <th>บาร์โค้ด</th>
-                  <th>ผลตรวจ</th>
+                  <th>{t('catalog.rows')}</th>
+                  <th>{t('common.productSku')}</th>
+                  <th>{t('catalog.barcode2')}</th>
+                  <th>{t('catalog.validationResult')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -346,8 +356,8 @@ export function ImportPage() {
                       {row.errors.length
                         ? row.errors.join(' • ')
                         : row.existing_id
-                          ? 'SKU เดิม'
-                          : 'พร้อมสร้างใหม่'}
+                          ? t('catalog.existingSku2')
+                          : t('catalog.readyToCreate')}
                     </td>
                   </tr>
                 ))}
@@ -355,23 +365,26 @@ export function ImportPage() {
             </table>
           </div>
           <label className="tenant-field">
-            จัดการ SKU เดิม
+            {t('catalog.handleExistingSkus')}
             <select
-              aria-label="จัดการ SKU เดิม"
+              aria-label={t('catalog.handleExistingSkus')}
               value={mode}
               disabled={busy || job.status === 'COMPLETED'}
               onChange={(event) => setMode(event.target.value)}
             >
-              <option value="CREATE">Create New — ปฏิเสธ SKU เดิม</option>
-              <option value="SKIP">Skip Existing — ข้าม SKU เดิม</option>
+              <option value="CREATE">
+                {t('catalog.createNewRejectExistingSkus')}
+              </option>
+              <option value="SKIP">
+                {t('catalog.skipExistingSkipExistingSkus')}
+              </option>
               <option value="UPDATE">
-                Update Existing — แก้ชื่อ, หน่วย, ราคา และข้อมูลที่ระบุ
+                {t('catalog.updateExistingUpdateNameUnitPriceAnd')}
               </option>
             </select>
           </label>
           <p className="notice">
-            บาร์โค้ดที่เป็นของ SKU อื่นต้องแก้ก่อน • ไม่มี partial success •
-            Preview หมดอายุ 1 ชั่วโมง • Confirm ซ้ำ job/mode เดิมไม่สร้างซ้ำ
+            {t('catalog.resolveBarcodesOwnedByAnotherSkuFirst')}
           </p>
           {job.status !== 'COMPLETED' && (
             <Button
@@ -382,14 +395,14 @@ export function ImportPage() {
               }
               onClick={() => void confirm()}
             >
-              ยืนยันนำเข้า
+              {t('catalog.confirmImport')}
             </Button>
           )}
           {job.result && (
             <p role="status">
-              นำเข้าเสร็จ: สร้าง {job.result.imported} • แก้ไข{' '}
-              {job.result.updated} • ข้าม {job.result.skipped} • ล้มเหลว{' '}
-              {job.result.failed}
+              {t('catalog.importCompletedCreated')} {job.result.imported}{' '}
+              {t('catalog.updated')} {job.result.updated} {t('catalog.skipped')}{' '}
+              {job.result.skipped} {t('catalog.failed')} {job.result.failed}
             </p>
           )}
         </Card>

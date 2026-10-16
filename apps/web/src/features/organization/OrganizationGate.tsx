@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useOrganization } from '../../app/OrganizationProvider';
 import { ErrorState, Loading } from '../../components/ui/primitives';
@@ -9,11 +10,19 @@ export function OrganizationGate({
   permission?: string;
   roles?: Role[];
 }) {
+  const { t, localize } = useLanguage();
+
   const tenant = useOrganization();
-  if (tenant.loading) return <Loading>กำลังตรวจสอบสิทธิ์องค์กร…</Loading>;
+  if (tenant.loading)
+    return (
+      <Loading>{t('organization.checkingOrganizationPermissions')}</Loading>
+    );
   if (tenant.error)
     return (
-      <ErrorState message={tenant.error} retry={() => void tenant.refresh()} />
+      <ErrorState
+        message={localize(tenant.error ?? '')}
+        retry={() => void tenant.refresh()}
+      />
     );
   if (!tenant.context) return <Navigate to="/setup" replace />;
   if (roles && !roles.includes(tenant.context.membership.role))
@@ -27,21 +36,23 @@ export function OrganizationGate({
   );
 }
 export function ContextSwitchers() {
+  const { t } = useLanguage();
+
   const tenant = useOrganization();
   if (!tenant.organizations.length) return null;
   return (
     <div className="tenant-switchers">
       {tenant.storeMode !== 'single' && (
         <label>
-          องค์กร
+          {t('organization.organization')}
           <select
-            aria-label="องค์กรที่ใช้งาน"
+            aria-label={t('organization.activeOrganization')}
             value={tenant.context?.organization.id ?? ''}
             disabled={tenant.loading}
             onChange={(event) => tenant.select(event.target.value)}
           >
             <option value="" disabled>
-              เลือกองค์กร
+              {t('organization.selectOrganization')}
             </option>
             {tenant.organizations.map((item) => (
               <option key={item.id} value={item.id}>
@@ -52,9 +63,9 @@ export function ContextSwitchers() {
         </label>
       )}
       <label>
-        สาขา
+        {t('organization.branch')}
         <select
-          aria-label="สาขาที่ใช้งาน"
+          aria-label={t('organization.activeBranch')}
           value={tenant.branchID}
           disabled={tenant.loading || !tenant.context}
           onChange={(event) =>
@@ -63,7 +74,7 @@ export function ContextSwitchers() {
           }
         >
           <option value="" disabled>
-            ไม่มีสาขาที่เข้าถึงได้
+            {t('organization.noAccessibleBranches')}
           </option>
           {tenant.context?.branches.map((item) => (
             <option key={item.id} value={item.id}>

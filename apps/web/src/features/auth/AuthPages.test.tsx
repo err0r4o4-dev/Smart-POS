@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { renderInEnglish as render } from '../../test/render';
+import { fireEvent, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { ResetPasswordPage } from './AuthPages';

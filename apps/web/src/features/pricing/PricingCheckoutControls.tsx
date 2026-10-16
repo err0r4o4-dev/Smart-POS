@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
@@ -22,6 +23,8 @@ export function PricingCheckoutControls({
   onSelection: (value: PricingSelection) => void;
   locked: boolean;
 }) {
+  const { t, localize } = useLanguage();
+
   const pos = usePOS(),
     [amount, setAmount] = useState(''),
     [reason, setReason] = useState(''),
@@ -62,7 +65,9 @@ export function PricingCheckoutControls({
       }
     } catch (problem) {
       setError(
-        problem instanceof Error ? problem.message : 'Pricing unavailable',
+        problem instanceof Error
+          ? problem.message
+          : t('pricing.pricingUnavailable'),
       );
     }
   };
@@ -77,14 +82,15 @@ export function PricingCheckoutControls({
     });
     if (result) {
       await approvals.refetch();
-      pos.setMessage('ส่งคำขอแล้ว / Discount requested');
+      pos.setMessage(t('pricing.discountRequested'));
     }
   };
   return (
     <section>
-      <h3>ส่วนลด / Pricing quote</h3>
+      <h3>{t('pricing.pricingQuote')}</h3>
       <p>
-        ก่อนลด {pos.cart?.pricing?.subtotal ?? pos.cart?.total} · ส่วนลด{' '}
+        {t('pos.beforeDiscount')}{' '}
+        {pos.cart?.pricing?.subtotal ?? pos.cart?.total} {t('pos.discount')}{' '}
         {pos.cart?.pricing?.discount ?? '0.00'} THB
       </p>
       {pos.cart?.pricing?.promotions.map((item) => (
@@ -92,15 +98,15 @@ export function PricingCheckoutControls({
           {item.name} −{item.discount} THB
         </p>
       ))}
-      <Link to="/discount-approvals">รายการอนุมัติ / Approval queue</Link>
+      <Link to="/discount-approvals">{t('pricing.approvalQueue')}</Link>
       <label>
-        ส่วนลดที่อนุมัติ / Approved discount
+        {t('pricing.approvedDiscount')}
         <select
           value={approval}
           disabled={locked || pos.busy}
           onChange={(event) => void select(event.target.value)}
         >
-          <option value="">ไม่ใช้ส่วนลดพิเศษ / None</option>
+          <option value="">{t('pricing.none')}</option>
           {approvals.data
             ?.filter(
               (item) =>
@@ -118,7 +124,7 @@ export function PricingCheckoutControls({
       {pos.can('discount.request') && (
         <div>
           <label>
-            ส่วนลดที่ขอ (THB)
+            {t('pricing.requestedDiscountThb')}
             <input
               inputMode="decimal"
               value={amount}
@@ -127,7 +133,7 @@ export function PricingCheckoutControls({
             />
           </label>
           <label>
-            เหตุผล / Reason
+            {t('pricing.reason')}
             <input
               value={reason}
               maxLength={2000}
@@ -139,12 +145,14 @@ export function PricingCheckoutControls({
             disabled={locked || pos.busy || !amount || !reason.trim()}
             onClick={() => void request()}
           >
-            ขอส่วนลด / Request discount
+            {t('pricing.requestDiscount')}
           </Button>
         </div>
       )}
       {(error || approvals.error) && (
-        <p role="alert">{error || approvals.error?.message}</p>
+        <p role="alert">
+          {localize((error || approvals.error?.message) ?? '')}
+        </p>
       )}
     </section>
   );

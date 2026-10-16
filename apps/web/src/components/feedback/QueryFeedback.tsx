@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { Button, Loading } from '../ui/primitives';
 
 export function QueryFeedback({
@@ -13,21 +14,29 @@ export function QueryFeedback({
   retry?: () => void;
   emptyMessage?: string;
 }) {
+  const { t, localize } = useLanguage();
+
   if (error)
     return (
       <div role="alert" className="tenant-error">
-        <p>{error instanceof Error ? error.message : 'โหลดข้อมูลไม่สำเร็จ'}</p>
+        <p>
+          {localize(
+            (error instanceof Error
+              ? error.message
+              : t('shell.unableToLoadData')) ?? '',
+          )}
+        </p>
         {retry && (
           <Button
             className="button-secondary"
             onClick={retry}
             disabled={loading}
           >
-            ลองโหลดข้อมูลอีกครั้ง
+            {t('shell.tryLoadingAgain')}
           </Button>
         )}
       </div>
     );
-  if (loading) return <Loading>กำลังโหลดข้อมูล…</Loading>;
-  return empty ? <p role="status">{emptyMessage}</p> : null;
+  if (loading) return <Loading>{t('shell.loadingData')}</Loading>;
+  return empty ? <p role="status">{localize(emptyMessage)}</p> : null;
 }

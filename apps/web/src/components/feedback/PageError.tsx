@@ -1,14 +1,25 @@
-import { Button } from '../ui/primitives';
+import { useLanguage } from '../../app/language';
+import { Button, Loading } from '../ui/primitives';
+
+export function RouteLoading() {
+  const { t } = useLanguage();
+  return (
+    <main className="standalone">
+      <Loading>{t('shell.openingPage')}</Loading>
+    </main>
+  );
+}
 
 export function PageError() {
+  const { t } = useLanguage();
+
   return (
     <main className="standalone" role="alert">
-      <h1>ไม่สามารถแสดงหน้านี้ได้</h1>
-      <p>
-        ลองโหลดหน้าอีกครั้ง หากกำลังบันทึกหรือชำระเงิน
-        ให้ตรวจสอบสถานะรายการก่อนทำซ้ำ
-      </p>
-      <Button onClick={() => window.location.reload()}>โหลดหน้าอีกครั้ง</Button>
+      <h1>{t('shell.unableToDisplayThisPage')}</h1>
+      <p>{t('shell.reloadThePageIfYouWereSaving')}</p>
+      <Button onClick={() => window.location.reload()}>
+        {t('shell.reloadPage')}
+      </Button>
     </main>
   );
 }

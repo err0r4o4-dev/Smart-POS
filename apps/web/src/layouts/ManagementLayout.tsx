@@ -1,3 +1,5 @@
+import { LanguageSwitcher } from '../components/ui/LanguageSwitcher';
+import { useLanguage } from '../app/language';
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { Menu, Store, X } from 'lucide-react';
@@ -26,6 +28,8 @@ export function ManagementLayout() {
 }
 
 export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
+  const { t, localize } = useLanguage();
+
   const { state } = useAuth();
   const tenant = useOrganization();
   const access =
@@ -41,9 +45,9 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
       : anonymousSession;
   const role = access.authenticated ? access.role : undefined;
   const areaTitle = {
-    management: 'จัดการร้าน',
-    staff: 'พื้นที่พนักงาน',
-    account: 'บัญชีและการเข้าใช้งาน',
+    management: t('shell.storeManagement'),
+    staff: t('workspace.staffWorkspace'),
+    account: t('shell.accountAndAccess'),
   }[area];
   const rawItems =
     area === 'management'
@@ -55,32 +59,38 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
           : [
               {
                 to: '/',
-                label: 'หน้าหลักและทางเข้า',
+                label: t('shell.homeAndEntrances'),
                 icon: 'dashboard' as const,
               },
               {
                 to: paths.help,
-                label: 'คู่มือการใช้งาน',
+                label: t('landing.help'),
                 icon: 'help' as const,
               },
-              { to: paths.system, label: 'สถานะระบบ', icon: 'help' as const },
+              {
+                to: paths.system,
+                label: t('shell.systemStatus'),
+                icon: 'help' as const,
+              },
               {
                 to: paths.login,
-                label: 'เข้าสู่ระบบทีมร้าน',
+                label: t('shell.storeTeamSignIn'),
                 icon: 'auth' as const,
               },
             ];
-  const items = rawItems.map((item) =>
-    tenant.storeMode === 'single' && item.to === paths.setup
-      ? {
-          ...item,
-          label:
-            area === 'management'
-              ? 'เข้าร้าน / รับคำเชิญ'
-              : 'รับคำเชิญเข้าร้าน',
-        }
-      : item,
-  );
+  const items = rawItems
+    .map((item) => ({ ...item, label: localize(item.label) }))
+    .map((item) =>
+      tenant.storeMode === 'single' && item.to === paths.setup
+        ? {
+            ...item,
+            label:
+              area === 'management'
+                ? t('shell.enterStoreAcceptInvitation')
+                : t('shell.acceptStoreInvitation'),
+          }
+        : item,
+    );
   const groups =
     area === 'management'
       ? navigationGroups
@@ -107,7 +117,7 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
           location.pathname.startsWith(item.to + '/'),
       )
       .sort((left, right) => right.to.length - left.to.length)[0]?.label ??
-    (location.pathname === paths.system ? 'สถานะระบบ' : areaTitle);
+    (location.pathname === paths.system ? t('shell.systemStatus') : areaTitle);
   useEffect(() => {
     if (open) dialog.current?.showModal();
     else dialog.current?.close();
@@ -119,7 +129,7 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
   return (
     <div className="management-shell" data-workspace={area}>
       <a className="skip-link" href="#main-content">
-        Skip to content
+        {t('landing.skipToContent')}
       </a>
       <aside className="sidebar">
         <NavLink to={homePath} aria-label={`VELO SmartPOS · ${areaTitle}`}>
@@ -134,17 +144,22 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
             <small>
               {tenant.context?.branches.find(
                 (item) => item.id === tenant.branchID,
-              )?.name ?? 'ยังไม่ได้เลือกสาขา'}
+              )?.name ?? t('inventory.noBranchSelected')}
             </small>
           </div>
         </div>
         <div className="workspace-area-label">
           <strong>{areaTitle}</strong>
           <small>
-            {role ? `บทบาท: ${roleLabels[role]}` : 'ยังไม่ได้เลือกพื้นที่ร้าน'}
+            {role
+              ? t('shell.roleValue0', { value0: localize(roleLabels[role]) })
+              : t('shell.noStoreWorkspaceSelected')}
           </small>
         </div>
-        <nav className="sidebar-navigation" aria-label="Main navigation">
+        <nav
+          className="sidebar-navigation"
+          aria-label={t('shell.mainNavigation')}
+        >
           <NavigationMenu
             items={items}
             access={access}
@@ -156,12 +171,12 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
           <strong>{areaTitle}</strong>
           <p>
             {area === 'management'
-              ? 'จัดการข้อมูลและการตั้งค่าของร้านตามสิทธิ์ของคุณ'
+              ? t('shell.manageStoreDataAndSettingsWithinYour')
               : area === 'staff'
-                ? 'แสดงเฉพาะงานที่บทบาทของคุณได้รับอนุญาต'
-                : 'บัญชีทีมร้านไม่ใช่บัญชีผู้ซื้อออนไลน์'}
+                ? t('shell.onlyTasksAllowedByYourRoleAre')
+                : t('shell.storeTeamAccountsAreNotOnlineShopper')}
           </p>
-          <NavLink to="/">หน้าหลักและทางเข้า</NavLink>
+          <NavLink to="/">{t('shell.homeAndEntrances')}</NavLink>
         </div>
       </aside>
       <div className="workspace-main">
@@ -171,23 +186,30 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
             <strong>{pageTitle}</strong>
           </div>
           <div className="topbar-right">
-            <Tag tone="amber">{role ? roleLabels[role] : 'ทีมร้าน'}</Tag>
+            <LanguageSwitcher />
+            <Tag tone="amber">
+              {role ? localize(roleLabels[role]) : t('shell.storeTeam')}
+            </Tag>
             <NavLink to={paths.shop} className="workspace-area-link">
-              ดูหน้าร้าน
+              {t('shell.viewStorefront')}
             </NavLink>
             {role && isManagementRole(role) && (
               <NavLink
                 to={area === 'staff' ? paths.dashboard : paths.staff}
                 className="workspace-area-link"
               >
-                {area === 'staff' ? 'จัดการร้าน' : 'พื้นที่พนักงาน'}
+                {area === 'staff'
+                  ? t('shell.storeManagement')
+                  : t('workspace.staffWorkspace')}
               </NavLink>
             )}
             <NavLink
               to={state.status === 'authenticated' ? '/account' : '/login'}
               className="avatar"
               aria-label={
-                state.status === 'authenticated' ? 'Your account' : 'Sign in'
+                state.status === 'authenticated'
+                  ? t('auth.yourAccount')
+                  : t('auth.signIn')
               }
             >
               {state.status === 'authenticated'
@@ -199,7 +221,7 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
             ref={menuButton}
             type="button"
             className="icon-button mobile-menu"
-            aria-label="Open navigation"
+            aria-label={t('shell.openNavigation')}
             aria-expanded={open}
             aria-controls="mobile-navigation"
             onClick={() => setOpen(true)}
@@ -213,14 +235,14 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
         </main>
         <footer className="footer">
           SmartPOS · {areaTitle}
-          <span>หน้าร้านลูกค้าแยกจากพื้นที่ทีมร้าน</span>
+          <span>{t('shell.theCustomerStorefrontIsSeparateFromThe')}</span>
         </footer>
       </div>
       {
         <dialog
           ref={dialog}
           className="mobile-dialog"
-          aria-label="Navigation"
+          aria-label={t('shell.navigation')}
           onCancel={(event) => {
             event.preventDefault();
             close();
@@ -253,14 +275,14 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
               <Brand />
               <p>
                 {areaTitle}
-                {role ? ` · ${roleLabels[role]}` : ''}
+                {role ? ` · ${localize(roleLabels[role])}` : ''}
               </p>
             </div>
             <button
               autoFocus
               className="icon-button"
               type="button"
-              aria-label="Close navigation"
+              aria-label={t('shell.closeNavigation')}
               onClick={close}
             >
               <X />
@@ -268,21 +290,23 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
           </div>
           <div className="mobile-workspace-links">
             <NavLink to="/" onClick={close}>
-              หน้าหลักและทางเข้า
+              {t('shell.homeAndEntrances')}
             </NavLink>
             <NavLink to={paths.shop} onClick={close}>
-              หน้าร้านลูกค้า
+              {t('shell.customerStorefront')}
             </NavLink>
             {role && isManagementRole(role) && (
               <NavLink
                 to={area === 'staff' ? paths.dashboard : paths.staff}
                 onClick={close}
               >
-                {area === 'staff' ? 'จัดการร้าน' : 'พื้นที่พนักงาน'}
+                {area === 'staff'
+                  ? t('shell.storeManagement')
+                  : t('workspace.staffWorkspace')}
               </NavLink>
             )}
           </div>
-          <nav id="mobile-navigation" aria-label="Mobile navigation">
+          <nav id="mobile-navigation" aria-label={t('shell.mobileNavigation')}>
             <NavigationMenu
               items={items}
               access={access}

@@ -1,3 +1,5 @@
+import { LanguageSwitcher } from '../../components/ui/LanguageSwitcher';
+import { useLanguage } from '../../app/language';
 import { Link } from 'react-router-dom';
 import {
   ArrowDown,
@@ -21,46 +23,43 @@ const steps = [
   {
     number: '01',
     icon: Store,
-    title: 'ตั้งค่าร้านและสาขา',
-    description: 'เพิ่มข้อมูลร้าน สาขา และพนักงานให้พร้อมสำหรับการทำงานร่วมกัน',
+    title: 'landing.setUpYourStoreAndBranches',
+    description: 'landing.addStoreBranchAndStaffDetailsTo',
   },
   {
     number: '02',
     icon: Boxes,
-    title: 'เพิ่มสินค้าและจัดการสต็อก',
-    description:
-      'จัดหมวดหมู่สินค้า กำหนดราคาและบาร์โค้ด พร้อมดูแลสินค้าคงคลังในที่เดียว',
+    title: 'landing.addProductsAndManageStock',
+    description: 'landing.organizeProductsSetPricesAndBarcodesAnd',
   },
   {
     number: '03',
     icon: ReceiptText,
-    title: 'เริ่มขายและติดตามรายการขาย',
-    description:
-      'ขายผ่านหน้าจอ POS ออกใบเสร็จ และย้อนดูรายการขายได้อย่างเป็นระบบ',
+    title: 'landing.startSellingAndTrackSales',
+    description: 'landing.sellWithPosIssueReceiptsAndReview',
   },
-];
+] as const;
 const features = [
   {
     icon: Layers3,
-    title: 'สินค้าและสต็อก เชื่อมถึงกัน',
-    description:
-      'จัดการข้อมูลสินค้าและความเคลื่อนไหวของสต็อกในระบบเดียว ลดการสลับเครื่องมือระหว่างทำงาน',
+    title: 'landing.productsAndStockConnected',
+    description: 'landing.manageProductDetailsAndStockMovementsIn',
   },
   {
     icon: Store,
-    title: 'ดูแลร้านและสาขาได้เป็นระบบ',
-    description:
-      'แยกบริบทการทำงานของแต่ละสาขา พร้อมจัดการข้อมูลร้านและทีมงานจากพื้นที่ทำงานของคุณ',
+    title: 'landing.keepStoresAndBranchesOrganized',
+    description: 'landing.workInEachBranchSContextAnd',
   },
   {
     icon: ShieldCheck,
-    title: 'กำหนดสิทธิ์ให้เหมาะกับทีม',
-    description:
-      'จัดการบทบาทและสิทธิ์ของพนักงาน ให้แต่ละคนเข้าถึงเครื่องมือที่เหมาะกับหน้าที่ของตนเอง',
+    title: 'landing.giveYourTeamTheRightAccess',
+    description: 'landing.manageStaffRolesAndPermissionsSoEach',
   },
-];
+] as const;
 
 export function LandingPage() {
+  const { t } = useLanguage();
+
   const landingRef = useLandingReveal();
   const { state } = useAuth();
   const authenticated = state.status === 'authenticated';
@@ -68,34 +67,38 @@ export function LandingPage() {
   return (
     <div className="landing-page" ref={landingRef}>
       <a className="skip-link" href="#landing-main">
-        ข้ามไปเนื้อหาหลัก
+        {t('landing.skipToContent')}
       </a>
       <header className="landing-header">
         <div className="landing-container landing-header-inner">
           <Link
             className="landing-brand-link"
             to="/"
-            aria-label="VELO POS หน้าแรก"
+            aria-label={t('landing.veloPosHome')}
           >
             <Brand />
           </Link>
-          <nav className="landing-navigation" aria-label="เมนูหน้าแรก">
+          <nav
+            className="landing-navigation"
+            aria-label={t('landing.homeNavigation')}
+          >
             <Link className="landing-shop-link" to={paths.shop}>
-              หน้าร้านออนไลน์
+              {t('landing.onlineStorefront')}
             </Link>
             <a className="landing-nav-guide" href="#how-it-works">
-              วิธีใช้งาน
+              {t('landing.howItWorks')}
             </a>
+            <LanguageSwitcher />
             {loading ? (
               <button className="button" type="button" disabled>
-                กำลังตรวจสอบ…
+                {t('landing.checking')}
               </button>
             ) : (
               <Link
                 className="button"
                 to={authenticated ? paths.workspace : paths.login}
               >
-                {authenticated ? 'เข้าสู่พื้นที่ทำงาน' : 'เข้าสู่ระบบ'}
+                {authenticated ? t('landing.goToWorkspace') : t('auth.signIn')}
               </Link>
             )}
           </nav>
@@ -106,48 +109,53 @@ export function LandingPage() {
           <div className="landing-container landing-hero-inner">
             <div className="landing-hero-copy">
               <span className="landing-eyebrow landing-hero-badge">
-                <Sparkles size={15} aria-hidden="true" /> SMART TOOLS. SIMPLER
-                RETAIL.
+                <Sparkles size={15} aria-hidden="true" />{' '}
+                {t('landing.smartToolsSimplerRetail')}
               </span>
               <h1 id="landing-title">
-                จัดการร้านให้ง่าย
+                {t('landing.simplifyYourStore')}
                 <br />
-                ขายได้<span className="landing-title-accent">อย่างมั่นใจ</span>
+                {t('landing.sell')}
+                <span className="landing-title-accent">
+                  {t('landing.withConfidence')}
+                </span>
               </h1>
               <p className="landing-hero-description">
-                ให้ทุกวันของร้าน เป็นเรื่องง่ายขึ้นด้วย SmartPOS
-                <br className="landing-desktop-break" /> เชื่อมต่อการขาย สินค้า
-                และสต็อกไว้ในพื้นที่เดียว
+                {t('landing.makeEveryDayAtYourStoreEasier')}
                 <br className="landing-desktop-break" />{' '}
-                เพื่อให้คุณมีเวลาดูแลสิ่งที่สำคัญกว่า
+                {t('landing.connectSalesProductsAndStockInOne')}
+                <br className="landing-desktop-break" />{' '}
+                {t('landing.soYouHaveTimeForWhatMatters')}
               </p>
               <div className="landing-hero-actions">
                 {loading ? (
                   <button className="button" type="button" disabled>
-                    กำลังตรวจสอบ…
+                    {t('landing.checking')}
                   </button>
                 ) : (
                   <Link
                     className="button"
                     to={authenticated ? paths.workspace : paths.register}
                   >
-                    {authenticated ? 'เข้าสู่พื้นที่ทำงาน' : 'เริ่มต้นใช้งาน'}
+                    {authenticated
+                      ? t('landing.goToWorkspace')
+                      : t('landing.getStarted')}
                     <ArrowRight size={18} aria-hidden="true" />
                   </Link>
                 )}
                 <a className="button button-secondary" href="#how-it-works">
-                  ดูวิธีใช้งาน
+                  {t('landing.seeHowItWorks')}
                   <ArrowDown size={16} aria-hidden="true" />
                 </a>
               </div>
               <ul
                 className="landing-hero-benefits"
-                aria-label="จุดเด่นของ SmartPOS"
+                aria-label={t('landing.smartposBenefits')}
               >
                 {[
-                  'ใช้งานเป็นระบบ',
-                  'เชื่อมต่อทุกงานร้าน',
-                  'เติบโตไปพร้อมคุณ',
+                  t('landing.stayOrganized'),
+                  t('landing.connectEveryStoreTask'),
+                  t('landing.growWithYourBusiness'),
                 ].map((benefit) => (
                   <li key={benefit}>
                     <Check size={14} aria-hidden="true" />
@@ -166,12 +174,11 @@ export function LandingPage() {
         >
           <div className="landing-container">
             <div className="landing-section-heading">
-              <p className="landing-eyebrow">เริ่มต้นได้ ไม่ซับซ้อน</p>
-              <h2 id="landing-how-title">พร้อมดูแลร้าน ใน 3 ขั้นตอน</h2>
-              <p>
-                จากการตั้งค่าครั้งแรก ถึงการขายหน้าร้าน
-                เริ่มจัดการทุกอย่างให้เป็นระบบไปด้วยกัน
-              </p>
+              <p className="landing-eyebrow">{t('landing.anEasyStart')}</p>
+              <h2 id="landing-how-title">
+                {t('landing.readyForYourStoreIn3Steps')}
+              </h2>
+              <p>{t('landing.fromInitialSetupToInStoreSales')}</p>
             </div>
             <ol className="landing-steps" data-landing-reveal="idle">
               {steps.map(({ number, icon: Icon, title, description }) => (
@@ -180,18 +187,16 @@ export function LandingPage() {
                     <span className="landing-step-number">{number}</span>
                     <Icon size={25} strokeWidth={1.6} aria-hidden="true" />
                   </div>
-                  <h3>{title}</h3>
-                  <p>{description}</p>
+                  <h3>{t(title)}</h3>
+                  <p>{t(description)}</p>
                 </li>
               ))}
             </ol>
             <div className="landing-note">
               <Sparkles size={19} aria-hidden="true" />
               <p>
-                <strong>
-                  เริ่มจากสิ่งที่ร้านต้องการ แล้วค่อยเติบโตไปด้วยกัน
-                </strong>{' '}
-                เครื่องมือสำหรับการขาย สต็อก และทีมงาน อยู่ในพื้นที่ทำงานเดียว
+                <strong>{t('landing.startWithWhatYourStoreNeedsThen')}</strong>{' '}
+                {t('landing.toolsForSalesStockAndYourTeam')}
               </p>
             </div>
           </div>
@@ -202,15 +207,16 @@ export function LandingPage() {
         >
           <div className="landing-container">
             <div className="landing-feature-panel">
-              <p className="landing-eyebrow">ออกแบบมาเพื่อการทำงานของร้าน</p>
+              <p className="landing-eyebrow">
+                {t('landing.designedForTheWayStoresWork')}
+              </p>
               <h2 id="landing-features-title">
-                ทุกส่วนของร้าน เชื่อมถึงกัน
+                {t('landing.everyPartOfYourStoreConnected')}
                 <br />
-                ในพื้นที่เดียว
+                {t('landing.inOnePlace')}
               </h2>
               <p className="landing-feature-intro">
-                ลดความยุ่งยากของงานหลังร้าน
-                ให้คุณและทีมทำงานร่วมกันได้อย่างเป็นระบบ
+                {t('landing.simplifyBackOfficeWorkAndHelpYour')}
               </p>
               <div className="landing-feature-grid" data-landing-reveal="idle">
                 {features.map(({ icon: Icon, title, description }) => (
@@ -218,8 +224,8 @@ export function LandingPage() {
                     <span className="landing-feature-icon">
                       <Icon size={23} strokeWidth={1.7} aria-hidden="true" />
                     </span>
-                    <h3>{title}</h3>
-                    <p>{description}</p>
+                    <h3>{t(title)}</h3>
+                    <p>{t(description)}</p>
                   </article>
                 ))}
               </div>
@@ -229,9 +235,12 @@ export function LandingPage() {
       </main>
       <footer className="landing-footer">
         <div className="landing-container landing-footer-inner">
-          <nav className="landing-footer-navigation" aria-label="ลิงก์ท้ายหน้า">
-            <Link to={paths.help}>คู่มือการใช้งาน</Link>
-            <a href="#how-it-works">วิธีเริ่มต้น</a>
+          <nav
+            className="landing-footer-navigation"
+            aria-label={t('landing.footerLinks')}
+          >
+            <Link to={paths.help}>{t('landing.help')}</Link>
+            <a href="#how-it-works">{t('landing.gettingStarted')}</a>
           </nav>
           <div className="landing-footer-links">
             <small>© {new Date().getFullYear()} VELO POS · SmartPOS</small>

@@ -1,4 +1,5 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render } from '../../test/render';
+import { screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -156,13 +157,11 @@ describe('QualityPage pagination styling and alignment', () => {
     renderQualityPage();
 
     await waitFor(() => {
-      expect(
-        screen.getByText('บันทึก lot จริง / Record observed lot'),
-      ).toBeInTheDocument();
+      expect(screen.getByText('บันทึก lot จริง')).toBeInTheDocument();
     });
 
     const batchForm = screen
-      .getByText('บันทึก lot จริง / Record observed lot')
+      .getByText('บันทึก lot จริง')
       .closest('.card')
       ?.querySelector('form');
     expect(batchForm).toBeInTheDocument();

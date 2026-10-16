@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useState, type CSSProperties } from 'react';
 import {
   ArrowLeft,
@@ -48,6 +49,8 @@ function BarcodeSVG({ barcode }: { barcode: Barcode }) {
 }
 
 export function LabelsPage() {
+  const { t } = useLanguage();
+
   const [search, setSearch] = useState('');
   const [productID, setProductID] = useState('');
   const [variantID, setVariantID] = useState('');
@@ -81,19 +84,19 @@ export function LabelsPage() {
 
   return (
     <div className="catalog-page catalog-labels-page">
-      <CatalogHeader title="ฉลากบาร์โค้ด / Print Preview">
+      <CatalogHeader title={t('catalog.barcodeLabelsPrintPreview')}>
         <Link className="button button-secondary" to="/products">
           <ArrowLeft size={16} aria-hidden="true" />
-          ย้อนกลับ / กลับรายการ
+          {t('catalog.backReturnToList')}
         </Link>
       </CatalogHeader>
       <CatalogNav />
 
       <Card className="catalog-print-controls">
         <div className="catalog-print-card-header">
-          <h2>พิมพ์ฉลากบาร์โค้ด</h2>
+          <h2>{t('catalog.printBarcodeLabels')}</h2>
           <p className="catalog-print-card-subtitle">
-            เลือกสินค้า กำหนดขนาด และดูตัวอย่างก่อนสั่งพิมพ์ฉลาก
+            {t('catalog.selectProductsSetLabelDimensionsAndPreview')}
           </p>
         </div>
 
@@ -102,24 +105,24 @@ export function LabelsPage() {
           <div className="catalog-print-section-header">
             <h3>
               <BarcodeIcon size={18} aria-hidden="true" />
-              เลือกสินค้าและบาร์โค้ด
+              {t('catalog.selectProductAndBarcode')}
             </h3>
-            <p>ค้นหาและเลือกสินค้า, Variant และรหัสบาร์โค้ดที่ต้องการพิมพ์</p>
+            <p>{t('catalog.findAndSelectTheProductVariantAnd')}</p>
           </div>
           <div className="catalog-print-grid-products">
             <label className="tenant-field">
-              ค้นหาสินค้าสำหรับฉลาก
+              {t('catalog.findProductsForLabels')}
               <input
                 value={search}
                 maxLength={200}
-                placeholder="ค้นหาชื่อ หรือ SKU..."
+                placeholder={t('catalog.searchNameOrSku')}
                 onChange={(event) => setSearch(event.target.value)}
               />
             </label>
             <label className="tenant-field">
-              สินค้าสำหรับฉลาก
+              {t('catalog.productForLabels')}
               <select
-                aria-label="สินค้าสำหรับฉลาก"
+                aria-label={t('catalog.productForLabels')}
                 value={productID}
                 onChange={(event) => {
                   setProductID(event.target.value);
@@ -127,7 +130,9 @@ export function LabelsPage() {
                   setBarcodeID('');
                 }}
               >
-                <option value="">เลือกสินค้า (ค้นหาชื่อ / SKU ได้)</option>
+                <option value="">
+                  {t('catalog.selectProductSearchByNameSku')}
+                </option>
                 {products.data?.items?.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.name}
@@ -136,16 +141,16 @@ export function LabelsPage() {
               </select>
             </label>
             <label className="tenant-field">
-              Variant สำหรับฉลาก
+              {t('catalog.variantForLabels')}
               <select
-                aria-label="Variant สำหรับฉลาก"
+                aria-label={t('catalog.variantForLabels')}
                 value={variant?.id ?? ''}
                 onChange={(event) => {
                   setVariantID(event.target.value);
                   setBarcodeID('');
                 }}
               >
-                <option value="">เลือก Variant</option>
+                <option value="">{t('catalog.selectVariant')}</option>
                 {product.data?.variants?.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.sku} · {item.name}
@@ -154,13 +159,13 @@ export function LabelsPage() {
               </select>
             </label>
             <label className="tenant-field">
-              บาร์โค้ดสำหรับฉลาก
+              {t('catalog.barcodeForLabels')}
               <select
-                aria-label="บาร์โค้ดสำหรับฉลาก"
+                aria-label={t('catalog.barcodeForLabels')}
                 value={barcode?.id ?? ''}
                 onChange={(event) => setBarcodeID(event.target.value)}
               >
-                <option value="">เลือกบาร์โค้ด</option>
+                <option value="">{t('catalog.selectBarcode')}</option>
                 {variant?.barcodes?.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.code} · {item.symbology}
@@ -176,15 +181,15 @@ export function LabelsPage() {
           <div className="catalog-print-section-header">
             <h3>
               <SlidersHorizontal size={18} aria-hidden="true" />
-              ขนาดฉลากและการพิมพ์
+              {t('catalog.labelDimensionsAndPrinting')}
             </h3>
-            <p>กำหนดขนาดความกว้าง ความสูง และจำนวนชุดที่ต้องการพิมพ์</p>
+            <p>{t('catalog.setWidthHeightAndTheNumberOf')}</p>
           </div>
           <div className="catalog-print-grid-settings">
             <label className="tenant-field">
-              ความกว้าง (mm)
+              {t('catalog.widthMm')}
               <select
-                aria-label="ความกว้าง (mm)"
+                aria-label={t('catalog.widthMm')}
                 value={width}
                 onChange={(event) => setWidth(Number(event.target.value))}
               >
@@ -196,9 +201,9 @@ export function LabelsPage() {
               </select>
             </label>
             <label className="tenant-field">
-              ความสูง (mm)
+              {t('catalog.heightMm')}
               <select
-                aria-label="ความสูง (mm)"
+                aria-label={t('catalog.heightMm')}
                 value={height}
                 onChange={(event) => setHeight(Number(event.target.value))}
               >
@@ -210,9 +215,9 @@ export function LabelsPage() {
               </select>
             </label>
             <label className="tenant-field">
-              จำนวนฉลาก
+              {t('catalog.labelCount')}
               <input
-                aria-label="จำนวนฉลาก"
+                aria-label={t('catalog.labelCount')}
                 type="number"
                 min={1}
                 max={100}
@@ -239,7 +244,7 @@ export function LabelsPage() {
             role="status"
           >
             <Info size={18} aria-hidden="true" />
-            <span>เลือก Variant ที่มีบาร์โค้ดก่อนพิมพ์</span>
+            <span>{t('catalog.selectAVariantWithABarcodeBefore')}</span>
           </div>
         )}
         {tooSmall && (
@@ -249,8 +254,8 @@ export function LabelsPage() {
           >
             <AlertCircle size={18} aria-hidden="true" />
             <span>
-              ฉลากนี้ต้องกว้างอย่างน้อย {minimum} mm เพื่อรักษา module width และ
-              quiet zone
+              {t('catalog.thisLabelMustBeAtLeast')} {minimum}{' '}
+              {t('catalog.mmWideToPreserveModuleWidthAnd')}
             </span>
           </div>
         )}
@@ -263,12 +268,13 @@ export function LabelsPage() {
                 {product.data.name} · {variant.name}
               </span>
               <span className="catalog-print-summary-meta">
-                SKU: {variant.sku} • รหัส: {barcode.code} ({barcode.symbology})
-                • {variant.selling_price} {variant.currency}
+                SKU: {variant.sku} {t('catalog.code')} {barcode.code} (
+                {barcode.symbology}) • {variant.selling_price}{' '}
+                {variant.currency}
               </span>
             </div>
             <Tag tone="neutral">
-              {width} × {height} mm • {copies} ฉลาก
+              {width} × {height} mm • {copies} {t('catalog.labels')}
             </Tag>
           </div>
         )}
@@ -280,28 +286,31 @@ export function LabelsPage() {
             onClick={() => window.print()}
           >
             <Printer size={16} aria-hidden="true" />
-            เปิด Print Preview / พิมพ์
+            {t('catalog.openPrintPreviewPrint')}
           </Button>
         </div>
         <p className="catalog-print-note">
-          ใช้ browser printing เท่านั้น ยังไม่รองรับคำสั่ง thermal printer
-          โดยตรง • ตรวจสแกนกับเครื่องจริงก่อนใช้งาน
+          {t('catalog.browserPrintingOnlyDirectThermalPrinterCommands')}
         </p>
       </Card>
 
       {/* แผ่นตัวอย่างพิมพ์ */}
       {barcode && variant && product.data && (
-        <section className="catalog-print-sheet-card" aria-label="ตัวอย่างฉลาก">
+        <section
+          className="catalog-print-sheet-card"
+          aria-label={t('catalog.labelPreview')}
+        >
           <div className="catalog-print-preview-header">
             <div>
-              <h2>ตัวอย่างก่อนพิมพ์ (Print Preview)</h2>
+              <h2>{t('catalog.printPreview2')}</h2>
               <p className="catalog-print-preview-meta">
-                ฉลากขนาด {width} × {height} mm • ทั้งหมด {copies} ฉลาก
+                {t('catalog.labelSize')} {width} × {height}{' '}
+                {t('catalog.mmTotal')} {copies} {t('catalog.labels')}
               </p>
             </div>
             <Button className="button-secondary" onClick={() => window.print()}>
               <Printer size={16} aria-hidden="true" />
-              พิมพ์ {copies} ฉลาก
+              {t('catalog.print')} {copies} {t('catalog.labels')}
             </Button>
           </div>
           <div

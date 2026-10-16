@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useRef, useState, type FormEvent } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
@@ -18,7 +19,6 @@ import {
 } from '../../lib/customers-api';
 import './customers.css';
 
-type Text = (thai: string, english: string) => string;
 function useScope() {
   const tenant = useOrganization(),
     { state } = useAuth();
@@ -81,14 +81,13 @@ function useCommand() {
   });
 }
 type Command = ReturnType<typeof useCommand>;
-function Feedback({ error, text }: { error: unknown; text: Text }) {
+function Feedback({ error }: { error: unknown }) {
+  const { t, localize } = useLanguage();
+
   return error ? (
     <p role="alert" className="error-state">
-      {text(
-        'ทำรายการไม่สำเร็จ: ตรวจสอบสิทธิ์ รหัส/ข้อมูลซ้ำ หรือ revision แล้วลองใหม่',
-        'Request failed: check permissions, duplicate identifiers or stale revision and retry',
-      )}{' '}
-      {error instanceof Error ? error.message : ''}
+      {t('customers.requestFailedCheckPermissionsDuplicateIdentifiersOr')}{' '}
+      {localize((error instanceof Error ? error.message : '') ?? '')}
     </p>
   ) : null;
 }
@@ -97,25 +96,25 @@ function Pager({
   total,
   size = 25,
   change,
-  text,
 }: {
   page: number;
   total: number;
   size?: number;
   change: (page: number) => void;
-  text: Text;
 }) {
+  const { t } = useLanguage();
+
   return (
     <div className="customer-pagination">
       <Button disabled={page === 1} onClick={() => change(page - 1)}>
-        {text('ก่อนหน้า', 'Previous')}
+        {t('catalog.previous')}
       </Button>
       <span>
-        {text('หน้า', 'Page')} {page} / {Math.max(1, Math.ceil(total / size))} ·{' '}
-        {total} {text('รายการ', 'records')}
+        {t('catalog.page')} {page} / {Math.max(1, Math.ceil(total / size))} ·{' '}
+        {total} {t('catalog.definitions')}
       </span>
       <Button disabled={page * size >= total} onClick={() => change(page + 1)}>
-        {text('ถัดไป', 'Next')}
+        {t('catalog.next')}
       </Button>
     </div>
   );
@@ -140,64 +139,44 @@ export function CustomersPage({
   );
 }
 function CustomerWorkspace({ view }: { view: 'list' | 'detail' | 'groups' }) {
-  const [language, setLanguage] = useState<'th' | 'en'>('th');
-  const text: Text = (thai, english) => (language === 'th' ? thai : english);
+  const { t } = useLanguage();
   return (
     <div className="catalog-page customer-page">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">CUSTOMER RELATIONSHIPS</p>
+          <p className="eyebrow">{t('customers.customerRelationships')}</p>
           <h1>
-            {text(
-              view === 'groups'
-                ? 'กลุ่มลูกค้า'
-                : view === 'detail'
-                  ? 'รายละเอียดลูกค้า'
-                  : 'ลูกค้า',
-              view === 'groups'
-                ? 'Customer groups'
-                : view === 'detail'
-                  ? 'Customer details'
-                  : 'Customers',
-            )}
+            {view === 'groups'
+              ? t('customers.customerGroups')
+              : view === 'detail'
+                ? t('customers.customerDetails')
+                : t('customers.customer')}
           </h1>
           <p>
-            {text(
-              'ลูกค้าร่วมทุกสาขาที่มีสิทธิ์ในองค์กร • ไม่ใช่บัญชีเข้าสู่ระบบ',
-              'Shared within authorized organization branches • Not authentication accounts',
+            {t(
+              'customers.sharedWithinAuthorizedOrganizationBranchesNotAuthentication',
             )}
           </p>
         </div>
-        <Field label="Language">
-          <select
-            value={language}
-            onChange={(event) =>
-              setLanguage(event.target.value === 'en' ? 'en' : 'th')
-            }
-          >
-            <option value="th">ไทย</option>
-            <option value="en">English</option>
-          </select>
-        </Field>
       </div>
       <nav className="catalog-nav">
-        <Link to="/customers">{text('ลูกค้า', 'Customers')}</Link>
-        <Link to="/customers/groups">
-          {text('กลุ่มลูกค้า', 'Customer groups')}
-        </Link>
-        <Link to="/pos">{text('ไปขายสินค้า', 'Open POS')}</Link>
+        <Link to="/customers">{t('customers.customer')}</Link>
+        <Link to="/customers/groups">{t('customers.customerGroups')}</Link>
+        <Link to="/pos">{t('customers.openPos')}</Link>
       </nav>
       {view === 'list' ? (
-        <CustomerList text={text} />
+        <CustomerList />
       ) : view === 'groups' ? (
-        <Groups text={text} />
+        <Groups />
       ) : (
-        <CustomerDetail text={text} />
+        <CustomerDetail />
       )}
     </div>
   );
 }
-function CustomerList({ text }: { text: Text }) {
+function CustomerList() {
+  const { t, labelCode } = useLanguage();
+
   const scope = useScope(),
     [params] = useSearchParams(),
     [page, setPage] = useState(1),
@@ -232,20 +211,15 @@ function CustomerList({ text }: { text: Text }) {
             setTerm(search.trim());
           }}
         >
-          <Field
-            label={text(
-              'ค้นหารหัส ชื่อ โทรศัพท์ อีเมล',
-              'Search code, name, phone, email',
-            )}
-          >
+          <Field label={t('customers.searchCodeNamePhoneEmail')}>
             <input
               value={search}
               maxLength={200}
               onChange={(event) => setSearch(event.target.value)}
             />
           </Field>
-          <Button type="submit">{text('ค้นหา', 'Search')}</Button>
-          <Field label={text('สถานะ', 'Status')}>
+          <Button type="submit">{t('customers.search')}</Button>
+          <Field label={t('auth.status')}>
             <select
               value={status}
               onChange={(event) => {
@@ -253,12 +227,12 @@ function CustomerList({ text }: { text: Text }) {
                 setPage(1);
               }}
             >
-              <option value="ACTIVE">{text('ใช้งาน', 'Active')}</option>
-              <option value="ARCHIVED">{text('เก็บถาวร', 'Archived')}</option>
-              <option value="">{text('ทั้งหมด', 'All')}</option>
+              <option value="ACTIVE">{t('customers.active')}</option>
+              <option value="ARCHIVED">{t('customers.archived')}</option>
+              <option value="">{t('common.all')}</option>
             </select>
           </Field>
-          <Field label={text('กลุ่ม', 'Group')}>
+          <Field label={t('customers.group')}>
             <select
               value={group}
               onChange={(event) => {
@@ -266,90 +240,76 @@ function CustomerList({ text }: { text: Text }) {
                 setPage(1);
               }}
             >
-              <option value="">{text('ทุกกลุ่ม', 'All groups')}</option>
+              <option value="">{t('customers.allGroups')}</option>
               {groups.data?.items.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.name} ({item.status})
+                  {item.name} ({labelCode(item.status)})
                 </option>
               ))}
             </select>
           </Field>
           {scope.tenant.can('customers.manage') && (
             <Button onClick={() => setCreating(!creating)}>
-              {text('เพิ่มลูกค้า', 'Create customer')}
+              {t('customers.createCustomer')}
             </Button>
           )}
         </form>
         {query.isPending && (
-          <Loading>{text('กำลังโหลดลูกค้า', 'Loading customers')}</Loading>
+          <Loading>{t('customers.loadingCustomers')}</Loading>
         )}
-        <Feedback error={query.error} text={text} />
+        <Feedback error={query.error} />
         {query.isError && (
           <Button onClick={() => void query.refetch()}>
-            {text('ลองใหม่', 'Retry')}
+            {t('customers.retry')}
           </Button>
         )}
         {query.data?.total === 0 && (
-          <p>
-            {text(
-              'ไม่พบลูกค้า ลองเปลี่ยนคำค้นหาหรือเพิ่มลูกค้า',
-              'No customers. Change filters or create a customer.',
-            )}
-          </p>
+          <p>{t('customers.noCustomersChangeFiltersOrCreateA')}</p>
         )}
         <SupplyTable
           className="record-table"
           headers={[
-            text('รหัส / ชื่อลูกค้า', 'Code / Customer name'),
-            text('สถานะ', 'Status'),
-            text('โทรศัพท์', 'Phone'),
-            text('อีเมล', 'Email'),
-            text('กลุ่มลูกค้า', 'Customer groups'),
+            t('customers.codeCustomerName'),
+            t('auth.status'),
+            t('customers.phone'),
+            t('auth.email'),
+            t('customers.customerGroups'),
           ]}
         >
           {query.data?.items.map((item) => (
             <tr key={item.id}>
               <td>
                 <Link to={`/customers/${item.id}`}>
-                  <strong>{item.name || text('ไม่ระบุชื่อ', 'Unnamed')}</strong>
+                  <strong>{item.name || t('customers.unnamed')}</strong>
                   <span className="record-secondary">{item.code}</span>
                 </Link>
               </td>
               <td>
                 <Tag tone={item.status === 'ACTIVE' ? 'success' : 'neutral'}>
                   {item.status === 'ACTIVE'
-                    ? text('ใช้งานอยู่', 'Active')
+                    ? t('customers.active3')
                     : item.status === 'ARCHIVED'
-                      ? text('เก็บถาวร', 'Archived')
+                      ? t('customers.archived')
                       : item.status}
                 </Tag>
               </td>
-              <td>{item.phone || text('ไม่ระบุ', 'Not provided')}</td>
-              <td>{item.email || text('ไม่ระบุ', 'Not provided')}</td>
+              <td>{item.phone || t('catalog.notProvided')}</td>
+              <td>{item.email || t('catalog.notProvided')}</td>
               <td>
                 {item.groups.map((entry) => entry.name).join(', ') ||
-                  text('ยังไม่มีกลุ่ม', 'No groups')}
+                  t('customers.noGroups')}
               </td>
             </tr>
           ))}
         </SupplyTable>
         {query.data && (
-          <Pager
-            page={page}
-            total={query.data.total}
-            change={setPage}
-            text={text}
-          />
+          <Pager page={page} total={query.data.total} change={setPage} />
         )}
       </Card>
       {creating && scope.tenant.can('customers.manage') && (
         <Card>
-          <h2>{text('เพิ่มลูกค้า', 'Create customer')}</h2>
-          <CustomerForm
-            text={text}
-            command={command}
-            onSaved={() => setCreating(false)}
-          />
+          <h2>{t('customers.createCustomer')}</h2>
+          <CustomerForm command={command} onSaved={() => setCreating(false)} />
         </Card>
       )}
     </>
@@ -357,15 +317,15 @@ function CustomerList({ text }: { text: Text }) {
 }
 function CustomerForm({
   value,
-  text,
   command,
   onSaved,
 }: {
   value?: Customer;
-  text: Text;
   command: Command;
   onSaved?: () => void;
 }) {
+  const { t } = useLanguage();
+
   const [form, setForm] = useState<CustomerInput>(
     value
       ? customerInput(value)
@@ -398,29 +358,18 @@ function CustomerForm({
   };
   return (
     <form onSubmit={submit} className="customer-form">
-      <p>
-        {text(
-          'กรอกเฉพาะที่จำเป็น โทรศัพท์/อีเมลไม่บังคับ และไม่สมัครการตลาดอัตโนมัติ',
-          'Collect only necessary information. Contact details are optional; marketing is opt-in.',
-        )}
-      </p>
+      <p>{t('customers.collectOnlyNecessaryInformationContactDetailsAre')}</p>
       {(['code', 'name', 'phone', 'email'] as const).map((field) => (
         <Field
           key={field}
-          label={text(
+          label={
             {
-              code: 'รหัสลูกค้า',
-              name: 'ชื่อ',
-              phone: 'โทรศัพท์',
-              email: 'อีเมล',
-            }[field],
-            {
-              code: 'Customer code',
-              name: 'Name',
-              phone: 'Phone',
-              email: 'Email',
-            }[field],
-          )}
+              code: t('customers.customerCode'),
+              name: t('common.name'),
+              phone: t('customers.phone'),
+              email: t('auth.email'),
+            }[field]
+          }
         >
           <input
             required={field === 'code'}
@@ -443,12 +392,7 @@ function CustomerForm({
           />
         </Field>
       ))}
-      <Field
-        label={text(
-          'บันทึก (ไม่เก็บข้อมูลอ่อนไหว)',
-          'Notes (no sensitive information)',
-        )}
-      >
+      <Field label={t('customers.notesNoSensitiveInformation')}>
         <input
           maxLength={2000}
           value={form.notes}
@@ -463,16 +407,13 @@ function CustomerForm({
             setForm({ ...form, marketing_consent: event.target.checked })
           }
         />
-        {text(
-          'ลูกค้ายินยอมรับการตลาดอย่างชัดเจน',
-          'Customer explicitly consents to marketing',
-        )}
+        {t('customers.customerExplicitlyConsentsToMarketing')}
       </label>
       <Button type="submit" disabled={command.isPending}>
-        {text('บันทึก', 'Save')}
+        {t('customers.save')}
       </Button>
-      <Feedback error={command.error} text={text} />
-      {saved && <p role="status">{text('บันทึกแล้ว', 'Saved')}</p>}
+      <Feedback error={command.error} />
+      {saved && <p role="status">{t('catalog.saved')}</p>}
     </form>
   );
 }
@@ -480,22 +421,17 @@ function Archive({
   path,
   revision,
   command,
-  text,
 }: {
   path: string;
   revision: number;
   command: Command;
-  text: Text;
 }) {
+  const { t } = useLanguage();
+
   const [confirm, setConfirm] = useState(false);
   return confirm ? (
     <div className="customer-archive">
-      <p>
-        {text(
-          'เก็บถาวรโดยไม่ลบประวัติธุรกรรม ย้อนกลับไม่ได้ในหน้านี้',
-          'Archive without deleting transactions. This screen cannot restore records.',
-        )}
-      </p>
+      <p>{t('customers.archiveWithoutDeletingTransactionsThisScreenCannot')}</p>
       <Button
         disabled={command.isPending}
         onClick={() =>
@@ -505,31 +441,31 @@ function Archive({
           )
         }
       >
-        {text('ยืนยันเก็บถาวร', 'Confirm archive')}
+        {t('customers.confirmArchive')}
       </Button>
-      <Button onClick={() => setConfirm(false)}>
-        {text('ยกเลิก', 'Cancel')}
-      </Button>
+      <Button onClick={() => setConfirm(false)}>{t('customers.cancel')}</Button>
     </div>
   ) : (
     <Button className="button-secondary" onClick={() => setConfirm(true)}>
-      {text('เก็บถาวร', 'Archive')}
+      {t('customers.archived')}
     </Button>
   );
 }
-function CustomerDetail({ text }: { text: Text }) {
+function CustomerDetail() {
+  const { t, formatDateTime, labelCode } = useLanguage();
+
   const { id = '' } = useParams(),
     scope = useScope(),
     query = useCustomerQuery<Customer>(`/customers/${id}`),
     command = useCommand();
   if (query.isPending)
-    return <Loading>{text('กำลังโหลดรายละเอียด', 'Loading customer')}</Loading>;
+    return <Loading>{t('customers.loadingCustomer')}</Loading>;
   if (!query.data)
     return (
       <>
-        <Feedback error={query.error} text={text} />
+        <Feedback error={query.error} />
         <Button onClick={() => void query.refetch()}>
-          {text('ลองใหม่', 'Retry')}
+          {t('customers.retry')}
         </Button>
       </>
     );
@@ -539,42 +475,34 @@ function CustomerDetail({ text }: { text: Text }) {
       {scope.tenant.can('loyalty.read') && (
         <nav className="catalog-nav">
           <Link to={`/loyalty?customer_id=${value.id}`}>
-            สมาชิกและแต้ม / Loyalty
+            {t('customers.loyalty')}
           </Link>
           <Link to={`/loyalty/history?customer_id=${value.id}`}>
-            ประวัติแต้ม / Points history
+            {t('customers.pointsHistory')}
           </Link>
         </nav>
       )}
       <Card>
         <h2>
-          {value.code} · {value.name || text('ไม่ระบุชื่อ', 'Unnamed')}
+          {value.code} · {value.name || t('customers.unnamed')}
         </h2>
-        <Tag>{value.status}</Tag>
+        <Tag>{labelCode(value.status)}</Tag>
         <p>
-          {text('แก้ไขล่าสุด', 'Updated')}{' '}
-          {new Date(value.updated_at).toLocaleString()} · revision{' '}
-          {value.revision}
+          {t('catalog.updated2')} {formatDateTime(value.updated_at)}{' '}
+          {t('customers.revision')} {value.revision}
         </p>
-        <p>
-          {text(
-            'ประวัติขายอ้างอิงรหัส ณ เวลาขาย ไม่เปลี่ยนตามข้อมูลปัจจุบัน',
-            'Sales retain the customer code recorded at checkout.',
-          )}
-        </p>
+        <p>{t('customers.salesRetainTheCustomerCodeRecordedAt')}</p>
         {scope.tenant.can('customers.manage') && value.status === 'ACTIVE' ? (
           <>
             <CustomerForm
               key={value.revision}
               value={value}
               command={command}
-              text={text}
             />
             <Archive
               path={`/customers/${value.id}`}
               revision={value.revision}
               command={command}
-              text={text}
             />
           </>
         ) : (
@@ -582,28 +510,25 @@ function CustomerDetail({ text }: { text: Text }) {
             {value.phone || '—'} · {value.email || '—'}
           </p>
         )}
-        <Feedback error={command.error} text={text} />
+        <Feedback error={command.error} />
       </Card>
-      <Memberships value={value} text={text} />
+      <Memberships value={value} />
       {scope.tenant.can('customers.history.read') ? (
         <>
-          <History id={id} text={text} />
-          <Audit id={id} text={text} />
+          <History id={id} />
+          <Audit id={id} />
         </>
       ) : (
         <Card>
-          <p>
-            {text(
-              'ไม่มีสิทธิ์ดูประวัติธุรกรรมลูกค้า',
-              'Customer history permission required',
-            )}
-          </p>
+          <p>{t('customers.customerHistoryPermissionRequired')}</p>
         </Card>
       )}
     </>
   );
 }
-function Memberships({ value, text }: { value: Customer; text: Text }) {
+function Memberships({ value }: { value: Customer }) {
+  const { t, labelCode } = useLanguage();
+
   const scope = useScope(),
     [page, setPage] = useState(1),
     query = useCustomerQuery<CustomerPage<CustomerGroup>>(
@@ -626,28 +551,28 @@ function Memberships({ value, text }: { value: Customer; text: Text }) {
     });
   return (
     <Card>
-      <h2>{text('สมาชิกกลุ่ม', 'Group memberships')}</h2>
-      {value.groups.length === 0 && <p>{text('ยังไม่มีกลุ่ม', 'No groups')}</p>}
+      <h2>{t('customers.groupMemberships')}</h2>
+      {value.groups.length === 0 && <p>{t('customers.noGroups')}</p>}
       {value.groups.map((group) => (
         <div className="customer-membership" key={group.id}>
           <span>
-            {group.name} · {group.status}
+            {group.name} · {labelCode(group.status)}
           </span>
           {can && (
             <Button
               disabled={command.isPending}
               onClick={() => change(group, false)}
             >
-              {text('นำออก', 'Remove')}
+              {t('catalog.remove')}
             </Button>
           )}
         </div>
       ))}
       {can && (
         <>
-          <h3>{text('เลือกกลุ่ม', 'Choose group')}</h3>
+          <h3>{t('customers.chooseGroup')}</h3>
           {query.isPending && <Loading />}
-          <Feedback error={query.error} text={text} />
+          <Feedback error={query.error} />
           <div className="catalog-actions">
             {query.data?.items
               .filter(
@@ -662,25 +587,22 @@ function Memberships({ value, text }: { value: Customer; text: Text }) {
                   disabled={command.isPending}
                   onClick={() => change(group, true)}
                 >
-                  {text('เพิ่มเข้ากลุ่ม', 'Add to')} {group.name}
+                  {t('customers.addTo')} {group.name}
                 </Button>
               ))}
           </div>
           {query.data && (
-            <Pager
-              page={page}
-              total={query.data.total}
-              change={setPage}
-              text={text}
-            />
+            <Pager page={page} total={query.data.total} change={setPage} />
           )}
         </>
       )}
-      <Feedback error={command.error} text={text} />
+      <Feedback error={command.error} />
     </Card>
   );
 }
-function History({ id, text }: { id: string; text: Text }) {
+function History({ id }: { id: string }) {
+  const { t, formatDateTime, labelCode } = useLanguage();
+
   const scope = useScope(),
     [page, setPage] = useState(1),
     [from, setFrom] = useState(''),
@@ -697,15 +619,10 @@ function History({ id, text }: { id: string; text: Text }) {
   );
   return (
     <Card>
-      <h2>{text('ประวัติธุรกรรม', 'Transaction history')}</h2>
-      <p>
-        {text(
-          'เฉพาะสาขาที่มีสิทธิ์ ยอดเงินรับใหม่จาก sale_payments.amount เท่านั้น เครดิตเปลี่ยนสินค้าไม่ใช่เงินรับใหม่',
-          'Authorized branches only. Collected funds use sale_payments.amount; exchange credits are not new money.',
-        )}
-      </p>
+      <h2>{t('customers.transactionHistory')}</h2>
+      <p>{t('customers.authorizedBranchesOnlyCollectedFundsUseSale')}</p>
       <div className="customer-filters">
-        <Field label={text('ตั้งแต่', 'From')}>
+        <Field label={t('customers.from')}>
           <input
             type="date"
             value={from}
@@ -715,7 +632,7 @@ function History({ id, text }: { id: string; text: Text }) {
             }}
           />
         </Field>
-        <Field label={text('ถึง', 'To')}>
+        <Field label={t('customers.to')}>
           <input
             type="date"
             value={to}
@@ -727,97 +644,82 @@ function History({ id, text }: { id: string; text: Text }) {
         </Field>
       </div>
       {query.isPending && <Loading />}
-      <Feedback error={query.error} text={text} />
+      <Feedback error={query.error} />
       {query.data && (
         <>
           <div className="customer-summary">
             <p>
-              {text('เงินรับใหม่', 'Collected')}
+              {t('customers.collected')}
               <strong>{moneyText(query.data.summary.paid)}</strong>
             </p>
             <p>
-              {text('คืนเงินยืนยันแล้ว', 'Confirmed refunds')}
+              {t('customers.confirmedRefunds')}
               <strong>{moneyText(query.data.summary.refunded)}</strong>
             </p>
             <p>
-              {text('รอคืนเงิน', 'Pending refunds')}
+              {t('customers.pendingRefunds')}
               <strong>{moneyText(query.data.summary.pending_refund)}</strong>
             </p>
             <p>
-              {text('เงินรับสุทธิ', 'Net collected')}
+              {t('customers.netCollected')}
               <strong>{moneyText(query.data.summary.net_collected)}</strong>
             </p>
           </div>
-          {query.data.total === 0 && (
-            <p>{text('ยังไม่มีธุรกรรม', 'No transactions yet')}</p>
-          )}
+          {query.data.total === 0 && <p>{t('customers.noTransactionsYet')}</p>}
           <div className="customer-cards">
             {query.data.items.map((item) => (
               <article className="customer-record" key={item.kind + item.id}>
                 <strong>
                   {item.kind} · {item.number}
                 </strong>
-                <Tag>{item.status}</Tag>
+                <Tag>{labelCode(item.status)}</Tag>
                 <p>
-                  {new Date(item.occurred_at).toLocaleString()} ·{' '}
-                  {item.branch_name}
+                  {formatDateTime(item.occurred_at)} · {item.branch_name}
                 </p>
                 <p>
-                  {text('ยอดเอกสาร', 'Document amount')}{' '}
-                  {moneyText(item.amount)} · {text('รับใหม่', 'Collected')}{' '}
-                  {moneyText(item.paid)} · {text('คืนยืนยัน', 'Refunded')}{' '}
-                  {moneyText(item.refunded)}
+                  {t('customers.documentAmount')} {moneyText(item.amount)} ·{' '}
+                  {t('customers.collected2')} {moneyText(item.paid)} ·{' '}
+                  {t('customers.refunded')} {moneyText(item.refunded)}
                 </p>
                 <Link to={`/sales/${item.sale_id}`}>
-                  {text('รายละเอียดการขายต้นทาง', 'Source sale details')}
+                  {t('customers.sourceSaleDetails')}
                 </Link>
               </article>
             ))}
           </div>
-          <Pager
-            page={page}
-            total={query.data.total}
-            change={setPage}
-            text={text}
-          />
+          <Pager page={page} total={query.data.total} change={setPage} />
         </>
       )}
     </Card>
   );
 }
-function Audit({ id, text }: { id: string; text: Text }) {
+function Audit({ id }: { id: string }) {
+  const { t, formatDateTime } = useLanguage();
+
   const [page, setPage] = useState(1),
     query = useCustomerQuery<
       CustomerPage<{ id: number; event_type: string; created_at: string }>
     >(`/customers/${id}/audit?page=${page}`);
   return (
     <Card>
-      <h2>{text('ประวัติการเปลี่ยนแปลง', 'Change history')}</h2>
-      <p>
-        {text(
-          'บันทึกเหตุการณ์และผู้กระทำ โดยไม่สำเนาโทรศัพท์ อีเมล หรือบันทึกส่วนตัว',
-          'Events and actor references only; no contact details or private notes copied into audit.',
-        )}
-      </p>
-      <Feedback error={query.error} text={text} />
+      <h2>{t('customers.changeHistory')}</h2>
+      <p>{t('customers.eventsAndActorReferencesOnlyNoContact')}</p>
+      <Feedback error={query.error} />
       {query.isPending && <Loading />}
       {query.data?.items.map((item) => (
         <p key={item.id}>
-          {item.event_type} · {new Date(item.created_at).toLocaleString()}
+          {item.event_type} · {formatDateTime(item.created_at)}
         </p>
       ))}
       {query.data && (
-        <Pager
-          page={page}
-          total={query.data.total}
-          change={setPage}
-          text={text}
-        />
+        <Pager page={page} total={query.data.total} change={setPage} />
       )}
     </Card>
   );
 }
-function Groups({ text }: { text: Text }) {
+function Groups() {
+  const { t, labelCode } = useLanguage();
+
   const scope = useScope(),
     [page, setPage] = useState(1),
     [status, setStatus] = useState(''),
@@ -831,7 +733,7 @@ function Groups({ text }: { text: Text }) {
   return (
     <>
       <Card>
-        <Field label={text('สถานะกลุ่ม', 'Group status')}>
+        <Field label={t('customers.groupStatus')}>
           <select
             value={status}
             onChange={(event) => {
@@ -840,58 +742,47 @@ function Groups({ text }: { text: Text }) {
               setSelected(null);
             }}
           >
-            <option value="">{text('ทั้งหมด', 'All')}</option>
-            <option value="ACTIVE">{text('ใช้งาน', 'Active')}</option>
-            <option value="ARCHIVED">{text('เก็บถาวร', 'Archived')}</option>
+            <option value="">{t('common.all')}</option>
+            <option value="ACTIVE">{t('customers.active')}</option>
+            <option value="ARCHIVED">{t('customers.archived')}</option>
           </select>
         </Field>
         {query.isPending && <Loading />}
-        <Feedback error={query.error} text={text} />
-        {query.data?.total === 0 && (
-          <p>{text('ไม่พบกลุ่มลูกค้า', 'No customer groups')}</p>
-        )}
+        <Feedback error={query.error} />
+        {query.data?.total === 0 && <p>{t('customers.noCustomerGroups')}</p>}
         <div className="customer-cards">
           {query.data?.items.map((item) => (
             <article className="customer-record" key={item.id}>
               <strong>
                 {item.code} · {item.name}
               </strong>
-              <Tag>{item.status}</Tag>
+              <Tag>{labelCode(item.status)}</Tag>
               <Link to={`/customers?group_id=${item.id}`}>
-                {item.member_count} {text('สมาชิก', 'members')}
+                {item.member_count} {t('customers.members')}
               </Link>
               {scope.tenant.can('customers.groups.manage') &&
                 item.status === 'ACTIVE' && (
                   <Button onClick={() => setSelected(item)}>
-                    {text('แก้ไขกลุ่ม', 'Edit group')}
+                    {t('customers.editGroup')}
                   </Button>
                 )}
             </article>
           ))}
         </div>
         {query.data && (
-          <Pager
-            page={page}
-            total={query.data.total}
-            change={setPage}
-            text={text}
-          />
+          <Pager page={page} total={query.data.total} change={setPage} />
         )}
       </Card>
       {scope.tenant.can('customers.groups.manage') && (
         <Card>
           <h2>
-            {text(
-              current ? 'แก้ไขกลุ่ม' : 'เพิ่มกลุ่ม',
-              current ? 'Edit group' : 'Create group',
-            )}
+            {current ? t('customers.editGroup') : t('customers.createGroup')}
           </h2>
           {current?.status !== 'ARCHIVED' && (
             <GroupForm
               key={current ? current.id + current.revision : 'new'}
               value={current ?? undefined}
               command={command}
-              text={text}
               done={() => setSelected(null)}
             />
           )}
@@ -900,18 +791,17 @@ function Groups({ text }: { text: Text }) {
               className="button-secondary"
               onClick={() => setSelected(null)}
             >
-              {text('กลุ่มใหม่', 'New group')}
+              {t('customers.newGroup')}
             </Button>
             {current?.status === 'ACTIVE' && (
               <Archive
                 path={`/customers/groups/${current.id}`}
                 revision={current.revision}
                 command={command}
-                text={text}
               />
             )}
           </div>
-          <Feedback error={command.error} text={text} />
+          <Feedback error={command.error} />
         </Card>
       )}
     </>
@@ -920,14 +810,14 @@ function Groups({ text }: { text: Text }) {
 function GroupForm({
   value,
   command,
-  text,
   done,
 }: {
   value?: CustomerGroup;
   command: Command;
-  text: Text;
   done: () => void;
 }) {
+  const { t } = useLanguage();
+
   const [code, setCode] = useState(value?.code ?? ''),
     [name, setName] = useState(value?.name ?? '');
   return (
@@ -955,7 +845,7 @@ function GroupForm({
         );
       }}
     >
-      <Field label={text('รหัสกลุ่ม', 'Group code')}>
+      <Field label={t('customers.groupCode')}>
         <input
           required
           maxLength={40}
@@ -963,7 +853,7 @@ function GroupForm({
           onChange={(event) => setCode(event.target.value)}
         />
       </Field>
-      <Field label={text('ชื่อกลุ่ม', 'Group name')}>
+      <Field label={t('customers.groupName')}>
         <input
           required
           maxLength={200}
@@ -972,7 +862,7 @@ function GroupForm({
         />
       </Field>
       <Button type="submit" disabled={command.isPending}>
-        {text('บันทึกกลุ่ม', 'Save group')}
+        {t('customers.saveGroup')}
       </Button>
     </form>
   );

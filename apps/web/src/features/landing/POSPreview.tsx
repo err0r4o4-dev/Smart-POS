@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useEffect, useRef, type PointerEvent } from 'react';
 import {
   ArrowRight,
@@ -13,12 +14,14 @@ import {
 } from 'lucide-react';
 
 const products = [
-  { icon: Coffee, name: 'เครื่องดื่ม', tone: 'yellow' },
-  { icon: ShoppingBag, name: 'ของใช้ประจำวัน', tone: 'blue' },
-  { icon: Package, name: 'สินค้าทั่วไป', tone: 'pink' },
-];
+  { icon: Coffee, name: 'landing.drinks', tone: 'yellow' },
+  { icon: ShoppingBag, name: 'landing.dailyEssentials', tone: 'blue' },
+  { icon: Package, name: 'landing.generalProducts', tone: 'pink' },
+] as const;
 
 export function POSPreview() {
+  const { t } = useLanguage();
+
   const previewRef = useRef<HTMLElement>(null);
 
   function resetTilt() {
@@ -85,25 +88,27 @@ export function POSPreview() {
         aria-hidden="true"
       >
         <Barcode size={25} strokeWidth={1.7} />
-        <span className="landing-preview-label">ทุกงานร้าน ในพื้นที่เดียว</span>
+        <span className="landing-preview-label">
+          {t('landing.everyStoreTaskInOnePlace')}
+        </span>
       </div>
       <div className="landing-pos-window" aria-hidden="true">
         <div className="landing-pos-topbar">
           <span className="landing-pos-brand">
             <ShoppingBasket size={19} /> VELO POS
           </span>
-          <span className="landing-pos-demo">DEMO</span>
+          <span className="landing-pos-demo">{t('landing.demo')}</span>
         </div>
         <div className="landing-pos-content">
           <div className="landing-pos-products">
             <div className="landing-pos-heading">
-              <span>สินค้าของร้าน</span>
+              <span>{t('landing.yourProducts')}</span>
               <span>
-                ดูทั้งหมด <ChevronRight size={12} />
+                {t('landing.viewAll')} <ChevronRight size={12} />
               </span>
             </div>
             <div className="landing-pos-search">
-              <Barcode size={14} /> ค้นหาสินค้าหรือสแกนบาร์โค้ด
+              <Barcode size={14} /> {t('landing.findProductsOrScanABarcode')}
             </div>
             <div className="landing-pos-product-grid">
               {products.map(({ icon: Icon, name, tone }) => (
@@ -113,21 +118,22 @@ export function POSPreview() {
                   >
                     <Icon size={36} strokeWidth={1.5} />
                   </div>
-                  <span>{name}</span>
-                  <small>พร้อมขาย</small>
+                  <span>{t(name)}</span>
+                  <small>{t('landing.readyToSell')}</small>
                 </div>
               ))}
             </div>
             <div className="landing-pos-stock">
               <span>
-                <span className="landing-status-dot" /> เชื่อมต่อการจัดการสต็อก
+                <span className="landing-status-dot" />{' '}
+                {t('landing.connectedStockManagement')}
               </span>
               <CheckCheck size={15} />
             </div>
           </div>
           <div className="landing-pos-cart">
             <span className="landing-pos-cart-title">
-              <ReceiptText size={16} /> รายการขาย
+              <ReceiptText size={16} /> {t('landing.saleItems')}
             </span>
             {products.slice(0, 2).map(({ icon: Icon, name }) => (
               <div className="landing-pos-cart-row" key={name}>
@@ -135,7 +141,7 @@ export function POSPreview() {
                   <Icon size={18} />
                 </span>
                 <div>
-                  <span>{name}</span>
+                  <span>{t(name)}</span>
                   <span className="landing-skeleton" />
                 </div>
                 <span>×1</span>
@@ -146,7 +152,7 @@ export function POSPreview() {
               <span className="landing-skeleton" />
             </div>
             <span className="landing-pos-checkout">
-              พร้อมสำหรับการขาย <ArrowRight size={14} />
+              {t('landing.readyForSales')} <ArrowRight size={14} />
             </span>
           </div>
         </div>
@@ -159,12 +165,12 @@ export function POSPreview() {
           <Check size={18} />
         </span>
         <div>
-          <strong>ทุกส่วน ทำงานร่วมกัน</strong>
-          <span>สินค้า · สต็อก · การขาย</span>
+          <strong>{t('landing.everythingWorksTogether')}</strong>
+          <span>{t('landing.productsStockSales')}</span>
         </div>
       </div>
       <figcaption id="landing-preview-caption">
-        ภาพตัวอย่างประกอบระบบ POS ไม่ใช่ข้อมูลการขายจริง
+        {t('landing.illustrativePosPreviewNotActualSalesData')}
       </figcaption>
     </figure>
   );

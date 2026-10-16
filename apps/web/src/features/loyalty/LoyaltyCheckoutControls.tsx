@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '../../components/ui/primitives';
@@ -19,6 +20,8 @@ export function LoyaltyCheckoutControls({
   locked: boolean;
   onSelection: (value: PricingSelection) => void;
 }) {
+  const { t, localize, labelCode } = useLanguage();
+
   const pos = usePOS(),
     [points, setPoints] = useState(''),
     [error, setError] = useState('');
@@ -62,26 +65,25 @@ export function LoyaltyCheckoutControls({
       });
     } catch (problem) {
       setError(
-        problem instanceof Error ? problem.message : 'Loyalty unavailable',
+        problem instanceof Error
+          ? problem.message
+          : t('loyalty.loyaltyUnavailable'),
       );
     }
   };
   return (
-    <section aria-label="แต้มสมาชิก / Loyalty points">
-      <h2>แลกแต้ม / Redeem points</h2>
+    <section aria-label={t('loyalty.loyaltyPoints')}>
+      <h2>{t('loyalty.redeemPoints')}</h2>
       {selected ? (
         <p>
-          แต้มใช้ได้ / Available: {selected.available} · {selected.status} /{' '}
-          {selected.program_status}
+          {t('loyalty.available')} {selected.available} ·{' '}
+          {labelCode(selected.status)} / {selected.program_status}
         </p>
       ) : (
-        <p>ยังไม่สมัครสมาชิก / Not enrolled</p>
+        <p>{t('loyalty.notEnrolled')}</p>
       )}
-      <p>
-        เป็นส่วนลด ไม่ใช่การชำระเงิน ไม่ซ้อนโปรโมชั่น / Discount, not payment.
-        No promotion stacking.
-      </p>
-      <Field label="แต้มจำนวนเต็ม / Integer points">
+      <p>{t('loyalty.discountNotPaymentNoPromotionStacking')}</p>
+      <Field label={t('loyalty.integerPoints')}>
         <input
           inputMode="numeric"
           pattern="[0-9]+"
@@ -101,10 +103,10 @@ export function LoyaltyCheckoutControls({
         }
         onClick={() => void apply()}
       >
-        ใช้แต้ม / Apply points
+        {t('loyalty.applyPoints')}
       </Button>
       {(error || account.error) && (
-        <p role="alert">{error || account.error?.message}</p>
+        <p role="alert">{localize((error || account.error?.message) ?? '')}</p>
       )}
     </section>
   );

@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react';
+import type { UiMessage } from '../../i18n';
 import type { POSTerminal, POSShift, POSCart } from '../../lib/pos-api';
 
 interface Workspace {
@@ -15,8 +16,8 @@ interface Workspace {
   setCart: (id: string) => void;
   busy: boolean;
   error: string;
-  message: string;
-  setMessage: (value: string) => void;
+  message: UiMessage;
+  setMessage: (value: UiMessage) => void;
   mutate: <Result>(
     path: string,
     body: object,

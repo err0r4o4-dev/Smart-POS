@@ -1,5 +1,6 @@
+import { render } from '../../test/render';
 import type { ReactNode } from 'react';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { navigation, staffNavigation } from '../../app/routes';

@@ -46,8 +46,7 @@ import {
   ResetPasswordPage,
 } from './route-pages';
 import { OrganizationGate } from '../features/organization/OrganizationGate';
-import { PageError } from '../components/feedback/PageError';
-import { Loading } from '../components/ui/primitives';
+import { PageError, RouteLoading } from '../components/feedback/PageError';
 import {
   createBrowserRouter,
   Navigate,
@@ -519,13 +518,7 @@ const routes: RouteObject[] = [
 export const router = createBrowserRouter([
   {
     element: (
-      <Suspense
-        fallback={
-          <main className="standalone">
-            <Loading>กำลังเปิดหน้า…</Loading>
-          </main>
-        }
-      >
+      <Suspense fallback={<RouteLoading />}>
         <Outlet />
       </Suspense>
     ),

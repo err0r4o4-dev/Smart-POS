@@ -1,3 +1,4 @@
+import { useLanguage } from '../app/language';
 import { useId, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
@@ -52,6 +53,8 @@ function GroupedMenu({
   groups = navigationGroups,
   homePath = paths.dashboard,
 }: NavigationMenuProps & { pathname: string }) {
+  const { localize } = useLanguage();
+
   const panelPrefix = useId();
   const visibleItems = items.filter((item) =>
     canAccess(access, item.permission, item.roles),
@@ -80,7 +83,7 @@ function GroupedMenu({
         onClick={onNavigate}
       >
         <Icon size={20} aria-hidden="true" />
-        <span>{item.label}</span>
+        <span>{localize(item.label ?? '')}</span>
       </NavLink>
     );
   };
@@ -111,7 +114,7 @@ function GroupedMenu({
                 })
               }
             >
-              <span>{group.label}</span>
+              <span>{localize(group.label ?? '')}</span>
               <ChevronDown size={16} aria-hidden="true" />
             </button>
             <div id={panelID} className="nav-group-items" hidden={!isExpanded}>

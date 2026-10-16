@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useState } from 'react';
 import { Button, Loading } from '../../components/ui/primitives';
 import { Field } from '../purchasing/SupplyUI';
@@ -34,6 +35,8 @@ export function AdjustmentBuilder({
   command: ReturnType<typeof useReturnsCommand>;
   saved: (doc: SaleAdjustment) => void;
 }) {
+  const { labelCode } = useLanguage();
+
   const [reason, setReason] = useState(editing?.reason ?? ''),
     [terminal, setTerminal] = useState(editing?.terminal_id ?? ''),
     [search, setSearch] = useState(''),
@@ -188,7 +191,9 @@ export function AdjustmentBuilder({
                 'DAMAGED',
                 'NO_STOCK_RETURN',
               ].map((value) => (
-                <option key={value}>{value}</option>
+                <option key={value} value={value}>
+                  {labelCode(value)}
+                </option>
               ))}
             </select>
           </Field>

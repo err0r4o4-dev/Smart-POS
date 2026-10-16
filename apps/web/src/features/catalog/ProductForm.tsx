@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useState, type FormEvent } from 'react';
 import { Button, Card } from '../../components/ui/primitives';
 import type {
@@ -32,10 +33,12 @@ export function ProductFields({
   brands: Taxonomy[];
   archive: boolean;
 }) {
+  const { t } = useLanguage();
+
   return (
     <div className="tenant-form-grid">
       <CatalogField
-        label="ชื่อสินค้า"
+        label={t('catalog.productName')}
         required
         value={value.name}
         change={(name) => change({ ...value, name })}
@@ -46,19 +49,19 @@ export function ProductFields({
         archive={archive}
       />
       <TaxonomySelect
-        label="หมวดหมู่สินค้า"
+        label={t('catalog.productCategory')}
         value={value.category_id}
         items={categories}
         change={(category_id) => change({ ...value, category_id })}
       />
       <TaxonomySelect
-        label="แบรนด์สินค้า"
+        label={t('catalog.productBrand')}
         value={value.brand_id}
         items={brands}
         change={(brand_id) => change({ ...value, brand_id })}
       />
       <label className="tenant-field catalog-wide">
-        คำอธิบาย
+        {t('catalog.description')}
         <textarea
           maxLength={2000}
           rows={3}
@@ -84,11 +87,13 @@ export function VariantFields({
   existing?: boolean;
   archive?: boolean;
 }) {
+  const { t } = useLanguage();
+
   const attributes = Object.entries(value.attributes);
   return (
     <div className="tenant-form-grid">
       <CatalogField
-        label="SKU"
+        label={t('common.sku')}
         value={value.sku}
         required
         maxLength={80}
@@ -97,33 +102,33 @@ export function VariantFields({
         change={(sku) => change({ ...value, sku })}
       />
       <CatalogField
-        label="ชื่อ Variant"
+        label={t('catalog.variantName')}
         value={value.name}
         required
         change={(name) => change({ ...value, name })}
       />
       <TaxonomySelect
-        label="หน่วยนับ Variant"
+        label={t('catalog.variantUnit')}
         value={value.unit_id}
         required
         items={units}
         change={(unit_id) => change({ ...value, unit_id: unit_id ?? '' })}
       />
       <StatusSelect
-        label="สถานะ Variant"
+        label={t('catalog.variantStatus')}
         value={value.status}
         archive={archive}
         change={(status) => change({ ...value, status })}
       />
       <CatalogField
-        label="ราคาทุน"
+        label={t('catalog.costPrice')}
         value={value.cost_price}
         required
         pattern="(0|[1-9][0-9]{0,15})(\.[0-9]{1,2})?"
         change={(cost_price) => change({ ...value, cost_price })}
       />
       <CatalogField
-        label="ราคาขาย"
+        label={t('catalog.sellingPrice')}
         value={value.selling_price}
         required
         pattern="(0|[1-9][0-9]{0,15})(\.[0-9]{1,2})?"
@@ -131,10 +136,10 @@ export function VariantFields({
       />
       <div className="catalog-wide">
         <label className="tenant-field">
-          คุณลักษณะ (size, flavor, packaging)
+          {t('catalog.attributesSizeFlavorPackaging')}
           <textarea
             rows={2}
-            aria-label="คุณลักษณะ Variant"
+            aria-label={t('catalog.variantAttributes')}
             value={attributes.map(([key, item]) => `${key}=${item}`).join('\n')}
             onChange={(event) => {
               const next: Record<string, string> = {};
@@ -148,9 +153,7 @@ export function VariantFields({
             }}
           />
         </label>
-        <small>
-          หนึ่งบรรทัดต่อ key=value • สูงสุด 12 รายการ • ราคาขายต้องมากกว่า 0
-        </small>
+        <small>{t('catalog.oneKeyValuePerLineUpTo')}</small>
       </div>
     </div>
   );
@@ -164,6 +167,8 @@ export function VariantEditor({
   units: Taxonomy[];
   productID: string;
 }) {
+  const { t } = useLanguage();
+
   const catalog = useCatalog();
   const [value, setValue] = useState(
     variant ? variantInput(variant) : { ...blankVariant },
@@ -192,14 +197,20 @@ export function VariantEditor({
       await catalog.refresh();
       setSaved(true);
     } catch (problem) {
-      setError(problem instanceof Error ? problem.message : 'บันทึกไม่ได้');
+      setError(
+        problem instanceof Error ? problem.message : t('catalog.unableToSave'),
+      );
     } finally {
       setBusy(false);
     }
   }
   return (
     <Card>
-      <h3>{variant ? `แก้ไข ${variant.sku}` : 'เพิ่ม Variant'}</h3>
+      <h3>
+        {variant
+          ? t('catalog.editValue0', { value0: variant.sku })
+          : t('catalog.addVariant')}
+      </h3>
       <form onSubmit={(event) => void submit(event)}>
         <VariantFields
           value={value}
@@ -209,7 +220,7 @@ export function VariantEditor({
           archive={catalog.tenant.can('catalog.archive')}
         />
         <CatalogError error={error} />
-        {saved && <p role="status">บันทึก Variant แล้ว</p>}
+        {saved && <p role="status">{t('catalog.variantSaved')}</p>}
         <Button
           type="submit"
           disabled={
@@ -218,7 +229,7 @@ export function VariantEditor({
             (!!variant && !catalog.tenant.can('catalog.update'))
           }
         >
-          {busy ? 'กำลังบันทึก…' : 'บันทึก Variant'}
+          {busy ? t('catalog.saving') : t('catalog.saveVariant')}
         </Button>
       </form>
     </Card>

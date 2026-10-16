@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { render } from '../test/render';
+import { screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { expect, it } from 'vitest';
 import { ProtectedRoute } from './ProtectedRoute';

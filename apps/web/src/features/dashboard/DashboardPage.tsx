@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -23,42 +24,44 @@ import {
 } from '../../components/ui/primitives';
 
 export function DashboardPage() {
+  const { t } = useLanguage();
+
   const readiness = useReadiness();
   return (
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">YOUR WORKSPACE, REIMAGINED</p>
-          <h1 tabIndex={-1}>A smarter start.</h1>
-          <p>The foundation for connected, confident retail.</p>
+          <p className="eyebrow">{t('dashboard.yourWorkspaceReimagined')}</p>
+          <h1 tabIndex={-1}>{t('dashboard.aSmarterStart')}</h1>
+          <p>{t('dashboard.theFoundationForConnectedConfidentRetail')}</p>
         </div>
         <Tag tone="amber">
           <CircleDot size={14} aria-hidden="true" />
-          Phase 0 · Foundation
+          {t('dashboard.phase0Foundation')}
         </Tag>
       </div>
       <section className="hero">
         <div className="hero-copy">
           <span className="hero-kicker">
             <Sparkles size={16} aria-hidden="true" />
-            BUILT TO GROW WITH YOU
+            {t('dashboard.builtToGrowWithYou')}
           </span>
           <h2>
-            Smart foundations.
+            {t('dashboard.smartFoundations')}
             <br />
-            Smarter retail.
+            {t('dashboard.smarterRetail')}
           </h2>
           <p>
-            From the first product to the next purchasing cycle.
+            {t('dashboard.fromTheFirstProductToTheNext')}
             <br className="desktop-break" />
-            One considered architecture, ready for what comes next.
+            {t('dashboard.oneConsideredArchitectureReadyForWhatComes')}
           </p>
           <Link className="button" to="/help">
-            Explore the foundation
+            {t('dashboard.exploreTheFoundation')}
             <ArrowRight size={18} aria-hidden="true" />
           </Link>
           <span className="hero-disclaimer">
-            Development workspace · no live retail data
+            {t('dashboard.developmentWorkspaceNoLiveRetailData')}
           </span>
         </div>
         <div className="hero-art" aria-hidden="true">
@@ -70,21 +73,21 @@ export function DashboardPage() {
           </div>
           <div className="art-label label-catalog">
             <Layers3 size={18} />
-            Catalog
+            {t('catalog.catalog')}
           </div>
           <div className="art-label label-inventory">
             <Database size={18} />
-            Inventory
+            {t('dashboard.inventory')}
           </div>
           <div className="art-label label-intelligence">
             <Sparkles size={18} />
-            Intelligence
+            {t('dashboard.intelligence')}
           </div>
         </div>
       </section>
       <div
         className="foundation-stats"
-        aria-label="Architecture scope, not business metrics"
+        aria-label={t('dashboard.architectureScopeNotBusinessMetrics')}
       >
         <Card>
           <span className="stat-icon">
@@ -93,9 +96,9 @@ export function DashboardPage() {
           <div>
             <strong>
               {modules.length}
-              <small>planned modules</small>
+              <small>{t('dashboard.plannedModules')}</small>
             </strong>
-            <p>Connected by clear boundaries</p>
+            <p>{t('dashboard.connectedByClearBoundaries')}</p>
           </div>
         </Card>
         <Card>
@@ -105,9 +108,9 @@ export function DashboardPage() {
           <div>
             <strong>
               {modules.reduce((total, item) => total + item.routes.length, 0)}
-              <small>planned pages</small>
+              <small>{t('dashboard.plannedPages')}</small>
             </strong>
-            <p>Documented, not yet implemented</p>
+            <p>{t('dashboard.documentedNotYetImplemented')}</p>
           </div>
         </Card>
         <Card>
@@ -116,9 +119,10 @@ export function DashboardPage() {
           </span>
           <div>
             <strong>
-              Phase 0<small>foundation first</small>
+              {t('dashboard.phase0')}
+              <small>{t('dashboard.foundationFirst')}</small>
             </strong>
-            <p>No simulated business activity</p>
+            <p>{t('dashboard.noSimulatedBusinessActivity')}</p>
           </div>
         </Card>
       </div>
@@ -126,12 +130,12 @@ export function DashboardPage() {
         <Card className="service-card">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">REAL-TIME READINESS</p>
-              <h2>System connection</h2>
+              <p className="eyebrow">{t('dashboard.realTimeReadiness')}</p>
+              <h2>{t('dashboard.systemConnection')}</h2>
             </div>
             <Button
               className="button-icon button-secondary"
-              aria-label="Refresh service status"
+              aria-label={t('dashboard.refreshServiceStatus')}
               onClick={() => void readiness.refetch()}
               disabled={readiness.isFetching}
             >
@@ -139,7 +143,7 @@ export function DashboardPage() {
             </Button>
           </div>
           <p className="muted">
-            Live status from the Go API. Checked every 30 seconds.
+            {t('dashboard.liveStatusFromTheGoApiChecked')}
           </p>
           {readiness.isPending ? (
             <Loading />
@@ -154,42 +158,41 @@ export function DashboardPage() {
                 <Check />
               </span>
               <div>
-                <strong>API & database ready</strong>
-                <p>Connection and migration version verified.</p>
+                <strong>{t('dashboard.apiDatabaseReady')}</strong>
+                <p>{t('dashboard.connectionAndMigrationVersionVerified')}</p>
               </div>
-              <Tag tone="success">Connected</Tag>
+              <Tag tone="success">{t('dashboard.connected')}</Tag>
             </div>
           )}
           <div className="service-notes">
             <span>
               <Database size={17} aria-hidden="true" />
-              PostgreSQL · transactional foundation
+              {t('dashboard.postgresqlTransactionalFoundation')}
             </span>
             <span>
               <Cpu size={17} aria-hidden="true" />
-              AI service · internal health only, no predictions
+              {t('dashboard.aiServiceInternalHealthOnlyNoPredictions')}
             </span>
           </div>
         </Card>
         <Card className="next-card">
-          <Tag tone="amber">UP NEXT · PHASE 1</Tag>
-          <h2>Make it your store.</h2>
+          <Tag tone="amber">{t('dashboard.upNextPhase1')}</Tag>
+          <h2>{t('dashboard.makeItYourStore')}</h2>
           <p>
-            Secure identity, organizations, branches and an accurate product
-            catalog.
+            {t('dashboard.secureIdentityOrganizationsBranchesAndAnAccurate')}
           </p>
           <ul>
             <li>
               <Check size={16} aria-hidden="true" />
-              Server-managed sessions & permissions
+              {t('dashboard.serverManagedSessionsPermissions')}
             </li>
             <li>
               <Check size={16} aria-hidden="true" />
-              Products, units & barcode handling
+              {t('dashboard.productsUnitsBarcodeHandling')}
             </li>
           </ul>
           <Link to="/help" className="text-link">
-            Read the development path
+            {t('dashboard.readTheDevelopmentPath')}
             <ArrowRight size={17} aria-hidden="true" />
           </Link>
         </Card>
@@ -197,10 +200,12 @@ export function DashboardPage() {
       <section className="module-section">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">ONE CONNECTED PLATFORM</p>
-            <h2>Designed for the whole store</h2>
+            <p className="eyebrow">{t('dashboard.oneConnectedPlatform')}</p>
+            <h2>{t('dashboard.designedForTheWholeStore')}</h2>
           </div>
-          <span className="muted">Business modules are planned</span>
+          <span className="muted">
+            {t('dashboard.businessModulesArePlanned')}
+          </span>
         </div>
         <div className="module-grid">
           {modules.map((item, index) => (
@@ -210,7 +215,9 @@ export function DashboardPage() {
               </span>
               <div>
                 <h3>{item.name}</h3>
-                <span>{item.routes.length} planned pages</span>
+                <span>
+                  {item.routes.length} {t('dashboard.plannedPages2')}
+                </span>
               </div>
               <span className="module-phase">P{item.phase}</span>
             </div>
@@ -219,10 +226,7 @@ export function DashboardPage() {
       </section>
       <div className="foundation-footnote">
         <Terminal size={18} aria-hidden="true" />
-        <p>
-          Explore the POS and authentication layout previews in the workspace
-          navigation. They do not process sales or credentials.
-        </p>
+        <p>{t('dashboard.exploreThePosAndAuthenticationLayoutPreviews')}</p>
       </div>
     </>
   );

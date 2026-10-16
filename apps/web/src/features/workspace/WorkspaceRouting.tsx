@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import {
   generatePath,
   Navigate,
@@ -17,6 +18,8 @@ import {
 import { ErrorState, Loading } from '../../components/ui/primitives';
 
 export function WorkspaceAreaGate() {
+  const { t, localize } = useLanguage();
+
   const { state } = useAuth();
   const tenant = useOrganization();
   const { pathname } = useLocation();
@@ -25,11 +28,11 @@ export function WorkspaceAreaGate() {
     state.status === 'authenticated'
   ) {
     if (tenant.loading)
-      return <Loading>กำลังตรวจสอบพื้นที่จัดการร้าน…</Loading>;
+      return <Loading>{t('workspace.checkingManagementWorkspace')}</Loading>;
     if (tenant.error)
       return (
         <ErrorState
-          message={tenant.error}
+          message={localize(tenant.error ?? '')}
           retry={() => void tenant.refresh()}
         />
       );
@@ -46,13 +49,19 @@ export function WorkspaceAreaGate() {
 }
 
 export function LegacyWorkspaceRedirect({ path }: { path: string }) {
+  const { t, localize } = useLanguage();
+
   const tenant = useOrganization();
   const params = useParams();
   const { search, hash } = useLocation();
-  if (tenant.loading) return <Loading>กำลังเลือกพื้นที่ทำงาน…</Loading>;
+  if (tenant.loading)
+    return <Loading>{t('workspace.selectingWorkspace')}</Loading>;
   if (tenant.error)
     return (
-      <ErrorState message={tenant.error} retry={() => void tenant.refresh()} />
+      <ErrorState
+        message={localize(tenant.error ?? '')}
+        retry={() => void tenant.refresh()}
+      />
     );
   if (!tenant.context) return <Navigate to={paths.account} replace />;
   const area =

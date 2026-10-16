@@ -1,3 +1,6 @@
+import { LanguageSwitcher } from '../../components/ui/LanguageSwitcher';
+import type { UiMessage } from '../../i18n';
+import { useLanguage } from '../../app/language';
 import { useEffect, useState, useRef, type ReactNode } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
@@ -23,6 +26,8 @@ import { businessArea } from '../../app/workspace-paths';
 import { paths } from '../../app/routes';
 
 export function POSWorkspace() {
+  const { t } = useLanguage();
+
   const tenant = useOrganization();
   const { pathname } = useLocation();
   const { state } = useAuth();
@@ -37,9 +42,10 @@ export function POSWorkspace() {
     >
       <div className="pos-workspace catalog-page">
         <a className="skip-link" href="#main-content">
-          ข้ามไปเนื้อหา
+          {t('pos.skipToContent')}
         </a>
         <header className="pos-header">
+          <LanguageSwitcher />
           <Link
             to={
               businessArea(pathname) === 'staff'
@@ -47,25 +53,25 @@ export function POSWorkspace() {
                 : workspaceHome(tenant.context.membership.role)
             }
           >
-            กลับพื้นที่ทำงาน
+            {t('pos.backToWorkspace')}
           </Link>
           <Brand />
           <ContextSwitchers />
         </header>
-        <nav className="pos-navigation" aria-label="เมนูขาย">
-          <Link to="/pos">ขายสินค้า</Link>
+        <nav className="pos-navigation" aria-label={t('pos.salesNavigation')}>
+          <Link to="/pos">{t('pos.sellProducts')}</Link>
           <Link to="/pos/held-carts">
-            ตะกร้าพัก <span className="shortcut-badge">F4</span>
+            {t('pos.heldCarts')} <span className="shortcut-badge">F4</span>
           </Link>
-          <Link to="/pos/checkout">ชำระเงิน</Link>
-          <Link to="/pos/register/open">เปิดกะ</Link>
-          <Link to="/pos/register/close">ปิดกะ</Link>
-          <Link to="/pos/register/history">ประวัติกะ</Link>
-          <Link to="/pos/shifts">ตรวจสอบการชำระเงิน</Link>
-          <Link to="/sales">ประวัติขาย</Link>
-          <Link to="/receipts">ใบเสร็จ</Link>
+          <Link to="/pos/checkout">{t('pos.checkout')}</Link>
+          <Link to="/pos/register/open">{t('pos.openShift')}</Link>
+          <Link to="/pos/register/close">{t('pos.closeShift')}</Link>
+          <Link to="/pos/register/history">{t('pos.shiftHistory')}</Link>
+          <Link to="/pos/shifts">{t('pos.paymentReview')}</Link>
+          <Link to="/sales">{t('pos.salesHistory')}</Link>
+          <Link to="/receipts">{t('pos.receipts')}</Link>
           {tenant.can('online_orders.read') && (
-            <Link to="/online-orders">ออเดอร์ออนไลน์</Link>
+            <Link to="/online-orders">{t('pos.onlineOrders')}</Link>
           )}
         </nav>
         <main id="main-content">
@@ -77,20 +83,22 @@ export function POSWorkspace() {
   );
 }
 function WorkspaceStatus() {
+  const { t, localize, messageText } = useLanguage();
+
   const pos = usePOS();
   return (
     <>
       <div className="pos-context">
         <label>
-          เครื่องขาย
+          {t('pos.terminal')}
           <select
-            aria-label="เครื่องขายที่ใช้งาน"
+            aria-label={t('pos.activeTerminal')}
             value={pos.terminal?.id ?? ''}
             disabled={pos.busy}
             onChange={(event) => pos.setTerminal(event.target.value)}
           >
             <option value="" disabled>
-              เลือกเครื่องขาย
+              {t('pos.selectTerminal')}
             </option>
             {pos.terminals.map((item) => (
               <option key={item.id} value={item.id}>
@@ -100,17 +108,20 @@ function WorkspaceStatus() {
           </select>
         </label>
         <span>
-          แคชเชียร์: {pos.user.slice(0, 8)} ·{' '}
-          {pos.shift ? 'กะเปิดอยู่' : 'ยังไม่เปิดกะของคุณ'}
+          {t('pos.cashier')} {pos.user.slice(0, 8)} ·{' '}
+          {pos.shift ? t('pos.shiftOpen') : t('pos.youHaveNoOpenShift')}
         </span>
       </div>
-      {pos.loading && <Loading>กำลังโหลดเครื่องขายและกะ…</Loading>}
+      {pos.loading && <Loading>{t('pos.loadingTerminalsAndShifts')}</Loading>}
       {pos.error && (
-        <ErrorState message={pos.error} retry={() => void pos.refresh()} />
+        <ErrorState
+          message={localize(pos.error ?? '')}
+          retry={() => void pos.refresh()}
+        />
       )}{' '}
       {pos.message && (
         <p className="notice" role="status">
-          {pos.message}
+          {messageText(pos.message)}
         </p>
       )}
     </>
@@ -129,6 +140,8 @@ function WorkspaceProvider({
   csrf: string;
   children: ReactNode;
 }) {
+  const { t } = useLanguage();
+
   const tenant = useOrganization();
   const client = useQueryClient();
   const navigate = useNavigate();
@@ -145,7 +158,7 @@ function WorkspaceProvider({
     return () => current.abort();
   }, []);
   const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState<UiMessage>('');
   const key = ['tenant', user, org, 'pos', branch];
   const terminals = useQuery({
     queryKey: [...key, 'terminals'],
@@ -225,7 +238,7 @@ function WorkspaceProvider({
     } catch (problem) {
       if (current.signal.aborted) return;
       setError(
-        problem instanceof Error ? problem.message : 'ทำรายการไม่สำเร็จ',
+        problem instanceof Error ? problem.message : t('pos.requestFailed'),
       );
       await refresh();
       return undefined;

@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Button, Card, Loading } from '../../components/ui/primitives';
@@ -6,6 +7,8 @@ import { ShopError } from './StorefrontPage';
 import { OrderDetails } from './OrderDetails';
 
 export function ShopTrackingPage() {
+  const { t } = useLanguage();
+
   const { slug = '', orderId = '' } = useParams();
   const { hash } = useLocation();
   const token = new URLSearchParams(hash.slice(1)).get('access') ?? '';
@@ -29,22 +32,23 @@ export function ShopTrackingPage() {
   return (
     <>
       <div className="shop-heading">
-        <h1>ติดตามออเดอร์</h1>
-        <Link to={`/shop/${slug}`}>กลับหน้าร้าน</Link>
+        <h1>{t('storefront.trackOrder')}</h1>
+        <Link to={`/shop/${slug}`}>{t('storefront.backToStorefront')}</Link>
       </div>
       <p className="notice">
-        เก็บลิงก์หน้านี้ไว้เป็นส่วนตัว ผู้ที่มีลิงก์สามารถดูสถานะออเดอร์ได้
-        ระบบไม่รับโอนเงินหรือหลักฐานชำระเงินออนไลน์
+        {t('storefront.keepThisLinkPrivateAnyoneWithThe')}
       </p>
       {!valid ? (
         <ShopError
           error={
-            new Error('ลิงก์ติดตามไม่ครบ กรุณาใช้ลิงก์ที่ได้รับหลังส่งออเดอร์')
+            new Error(t('storefront.incompleteTrackingLinkUseTheLinkReceived'))
           }
         />
       ) : (
         <>
-          {order.isPending && <Loading>กำลังตรวจสถานะออเดอร์…</Loading>}
+          {order.isPending && (
+            <Loading>{t('storefront.checkingOrderStatus')}</Loading>
+          )}
           {order.error && (
             <ShopError error={order.error} retry={() => void order.refetch()} />
           )}
@@ -56,7 +60,7 @@ export function ShopTrackingPage() {
                 disabled={order.isFetching}
                 onClick={() => void order.refetch()}
               >
-                อัปเดตสถานะ
+                {t('storefront.refreshStatus')}
               </Button>
             </Card>
           )}

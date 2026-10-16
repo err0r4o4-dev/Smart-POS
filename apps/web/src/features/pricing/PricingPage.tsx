@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
@@ -73,12 +74,10 @@ export function PricingPage({ view }: { view: View }) {
   );
 }
 function PricingWorkspace({ view }: { view: View }) {
-  const [language, setLanguage] = useState<'th' | 'en'>('th'),
-    [selected, setSelected] = useState('');
+  const { t, localize, labelCode } = useLanguage();
+  const [selected, setSelected] = useState('');
   const { id } = useParams();
   const tenant = useOrganization();
-  const text = (thai: string, english: string) =>
-    language === 'th' ? thai : english;
   const lists = usePricingQuery<PriceDefinition[]>('/pricing/lists'),
     promotions = usePricingQuery<PriceDefinition[]>('/promotions');
   const data = view === 'promotions' ? promotions : lists;
@@ -87,102 +86,73 @@ function PricingWorkspace({ view }: { view: View }) {
     <div className="catalog-page pricing-page">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">PRICING & PROMOTIONS</p>
+          <p className="eyebrow">{t('pricing.pricingPromotions')}</p>
           <h1>
-            {text(
-              view === 'approvals'
-                ? 'อนุมัติส่วนลด'
-                : view === 'promotions'
-                  ? 'โปรโมชัน'
-                  : view === 'lists'
-                    ? 'รายการราคา'
-                    : 'ราคาและโปรโมชัน',
-              view === 'approvals'
-                ? 'Discount approvals'
-                : view === 'promotions'
-                  ? 'Promotions'
-                  : view === 'lists'
-                    ? 'Price lists'
-                    : 'Pricing overview',
-            )}
+            {view === 'approvals'
+              ? t('pricing.discountApprovals')
+              : view === 'promotions'
+                ? t('pricing.promotions')
+                : view === 'lists'
+                  ? t('pricing.priceLists')
+                  : t('pricing.pricingAndPromotions')}
           </h1>
           <p>
-            {text(
-              'ราคาและสิทธิ์คำนวณโดยเซิร์ฟเวอร์ • THB • ไม่แก้ประวัติขายเดิม',
-              'Server-authoritative pricing • THB • Immutable sale history',
-            )}
+            {t('pricing.serverAuthoritativePricingThbImmutableSaleHistory')}
           </p>
         </div>
-        <Field label="Language">
-          <select
-            value={language}
-            onChange={(event) => setLanguage(event.target.value as 'th' | 'en')}
-          >
-            <option value="th">ไทย</option>
-            <option value="en">English</option>
-          </select>
-        </Field>
       </div>
       <nav className="catalog-nav">
-        <Link to="/pricing">{text('ภาพรวม', 'Overview')}</Link>
-        <Link to="/pricing/lists">{text('รายการราคา', 'Price lists')}</Link>
-        <Link to="/promotions">{text('โปรโมชัน', 'Promotions')}</Link>
-        <Link to="/discount-approvals">
-          {text('อนุมัติส่วนลด', 'Discount approvals')}
-        </Link>
+        <Link to="/pricing">{t('inventory.overview')}</Link>
+        <Link to="/pricing/lists">{t('pricing.priceLists')}</Link>
+        <Link to="/promotions">{t('pricing.promotions')}</Link>
+        <Link to="/discount-approvals">{t('pricing.discountApprovals')}</Link>
       </nav>
       {view === 'overview' ? (
         <>
           <div className="pricing-grid">
             <Card>
-              <h2>{text('รายการราคา', 'Price lists')}</h2>
+              <h2>{t('pricing.priceLists')}</h2>
               {lists.isPending ? (
                 <Loading />
               ) : (
                 <p>
-                  {lists.data?.length ?? 0} {text('รายการ', 'definitions')}
+                  {lists.data?.length ?? 0} {t('catalog.definitions')}
                 </p>
               )}
             </Card>
             <Card>
-              <h2>{text('โปรโมชัน', 'Promotions')}</h2>
+              <h2>{t('pricing.promotions')}</h2>
               {promotions.isPending ? (
                 <Loading />
               ) : (
                 <p>
-                  {promotions.data?.length ?? 0} {text('รายการ', 'definitions')}
+                  {promotions.data?.length ?? 0} {t('catalog.definitions')}
                 </p>
               )}
             </Card>
           </div>
           <Card>
-            <h2>{text('ลำดับการคำนวณ', 'Resolution order')}</h2>
+            <h2>{t('pricing.resolutionOrder')}</h2>
             <p>
-              {text(
-                'สาขา → องค์กร → Catalog; priority สูงก่อน และ UUID เป็นตัวตัดสินเสมอ',
-                'Branch → organization → catalog; descending priority then UUID tie-break',
-              )}
+              {t('pricing.branchOrganizationCatalogDescendingPriorityThenUuid')}
             </p>
-            <p>Draft → Pending approval → Approved → Active / Paused</p>
+            <p>{t('pricing.draftPendingApprovalApprovedActivePaused')}</p>
             <p>
-              {text(
-                'เปรียบเทียบชุด STACKABLE กับส่วนลดเดี่ยว EXCLUSIVE / BEST_DISCOUNT_ONLY เลือกยอดลดสูงสุด; ปัดเศษและจัดสรรด้วยจำนวนเต็ม',
-                'Compare ordered STACKABLE bundle with single EXCLUSIVE / BEST_DISCOUNT_ONLY candidates; largest discount wins, exact integer allocation',
-              )}
+              {t('pricing.compareOrderedStackableBundleWithSingleExclusive')}
             </p>
           </Card>
         </>
       ) : view === 'approvals' ? (
-        <ApprovalQueue english={language === 'en'} />
+        <ApprovalQueue />
       ) : (
         <div className="pricing-grid">
           <Card>
-            <h2>{text('รายการที่บันทึก', 'Saved definitions')}</h2>
+            <h2>{t('pricing.savedDefinitions')}</h2>
             {data.isPending && <Loading />}
-            {data.error && <p role="alert">{data.error.message}</p>}
-            {data.data?.length === 0 && (
-              <p>{text('ยังไม่มีรายการ', 'No definitions yet')}</p>
+            {data.error && (
+              <p role="alert">{localize(data.error.message ?? '')}</p>
             )}
+            {data.data?.length === 0 && <p>{t('pricing.noDefinitionsYet')}</p>}
             {data.data?.map((item) => (
               <div className="pricing-record" key={item.id}>
                 <button
@@ -191,36 +161,31 @@ function PricingWorkspace({ view }: { view: View }) {
                 >
                   {item.name}
                 </button>{' '}
-                <Tag>{item.status}</Tag>
+                <Tag>{labelCode(item.status)}</Tag>
                 <p>
-                  {item.branch_id || text('ทั้งองค์กร', 'Organization-wide')} ·
-                  priority {item.priority} · r{item.revision}
+                  {item.branch_id || t('pricing.organizationWide')}{' '}
+                  {t('pricing.priority2')}
+                  {item.priority} · r{item.revision}
                 </p>
                 {view === 'promotions' && (
                   <Link to={`/promotions/${item.id}`}>
-                    {text('รายละเอียด', 'Details')}
+                    {t('inventory.details')}
                   </Link>
                 )}
               </div>
             ))}
             <Button onClick={() => setSelected('')}>
-              {text('สร้าง Draft ใหม่', 'New draft')}
+              {t('pricing.newDraft')}
             </Button>
           </Card>
           <Card>
             {id && !chosen && !data.isPending ? (
-              <p role="alert">
-                {text(
-                  'ไม่พบโปรโมชันหรือไม่มีสิทธิ์',
-                  'Promotion not found or inaccessible',
-                )}
-              </p>
+              <p role="alert">{t('pricing.promotionNotFoundOrInaccessible')}</p>
             ) : (
               <DefinitionEditor
                 key={chosen ? [chosen.id, chosen.revision].join(':') : 'new'}
                 promotion={view === 'promotions'}
                 item={chosen}
-                english={language === 'en'}
                 canManage={tenant.can(
                   view === 'promotions'
                     ? 'promotions.manage'
@@ -240,17 +205,16 @@ function PricingWorkspace({ view }: { view: View }) {
 function DefinitionEditor({
   promotion,
   item,
-  english,
   canManage,
 }: {
   promotion: boolean;
   item?: PriceDefinition;
-  english: boolean;
   canManage: boolean;
 }) {
+  const { t, localize, labelCode } = useLanguage();
+
   const tenant = useOrganization(),
     command = useCommand();
-  const text = (thai: string, en: string) => (english ? en : thai);
   const [name, setName] = useState(item?.name ?? ''),
     [branch, setBranch] = useState(
       item?.branch_id ??
@@ -314,9 +278,9 @@ function DefinitionEditor({
   };
   return (
     <>
-      <h2>{item?.name ?? text('สร้าง Draft', 'Create draft')}</h2>
+      <h2>{item?.name ?? t('pricing.createDraft')}</h2>
       <form className="pricing-form" onSubmit={submit}>
-        <Field label={text('ชื่อ', 'Name')}>
+        <Field label={t('common.name')}>
           <input
             required
             maxLength={200}
@@ -325,16 +289,14 @@ function DefinitionEditor({
             onChange={(event) => setName(event.target.value)}
           />
         </Field>
-        <Field label={text('สาขา', 'Branch')}>
+        <Field label={t('organization.branch')}>
           <select
             value={branch}
             disabled={!editable || !!item}
             onChange={(event) => setBranch(event.target.value)}
           >
             {tenant.context?.membership.role === 'OWNER' && (
-              <option value="">
-                {text('ทั้งองค์กร', 'Organization-wide')}
-              </option>
+              <option value="">{t('pricing.organizationWide')}</option>
             )}
             {tenant.context?.branches.map((value) => (
               <option key={value.id} value={value.id}>
@@ -343,7 +305,7 @@ function DefinitionEditor({
             ))}
           </select>
         </Field>
-        <Field label="Priority">
+        <Field label={t('pricing.priority')}>
           <input
             type="number"
             min={-10000}
@@ -353,12 +315,7 @@ function DefinitionEditor({
             onChange={(event) => setPriority(Number(event.target.value))}
           />
         </Field>
-        <Field
-          label={text(
-            'เริ่ม RFC3339 พร้อม timezone',
-            'Starts at RFC3339 with timezone',
-          )}
-        >
+        <Field label={t('pricing.startsAtRfc3339WithTimezone')}>
           <input
             value={start}
             disabled={!editable}
@@ -366,12 +323,7 @@ function DefinitionEditor({
             placeholder="2026-10-10T09:00:00+07:00"
           />
         </Field>
-        <Field
-          label={text(
-            'สิ้นสุด RFC3339 พร้อม timezone',
-            'Ends at RFC3339 with timezone',
-          )}
-        >
+        <Field label={t('pricing.endsAtRfc3339WithTimezone')}>
           <input
             value={end}
             disabled={!editable}
@@ -380,7 +332,7 @@ function DefinitionEditor({
         </Field>
         {promotion ? (
           <>
-            <Field label={text('ประเภท', 'Type')}>
+            <Field label={t('common.type')}>
               <select
                 disabled={!editable}
                 value={rule.type}
@@ -402,12 +354,14 @@ function DefinitionEditor({
               >
                 {['PERCENTAGE', 'FIXED', 'BOGO', 'MINIMUM_SPEND'].map(
                   (value) => (
-                    <option key={value}>{value}</option>
+                    <option key={value} value={value}>
+                      {labelCode(value)}
+                    </option>
                   ),
                 )}
               </select>
             </Field>
-            <Field label="Policy">
+            <Field label={t('pricing.policy')}>
               <select
                 disabled={!editable}
                 value={rule.policy}
@@ -420,18 +374,15 @@ function DefinitionEditor({
               >
                 {['EXCLUSIVE', 'STACKABLE', 'BEST_DISCOUNT_ONLY'].map(
                   (value) => (
-                    <option key={value}>{value}</option>
+                    <option key={value} value={value}>
+                      {labelCode(value)}
+                    </option>
                   ),
                 )}
               </select>
             </Field>
             {rule.type === 'PERCENTAGE' ? (
-              <Field
-                label={text(
-                  'Basis points (100 = 1%)',
-                  'Basis points (100 = 1%)',
-                )}
-              >
+              <Field label={t('pricing.basisPoints1001')}>
                 <input
                   type="number"
                   min={1}
@@ -445,7 +396,7 @@ function DefinitionEditor({
               </Field>
             ) : rule.type === 'BOGO' ? (
               <>
-                <Field label="Buy X">
+                <Field label={t('pricing.buyX')}>
                   <input
                     type="number"
                     min={1}
@@ -457,7 +408,7 @@ function DefinitionEditor({
                     }
                   />
                 </Field>
-                <Field label="Get Y">
+                <Field label={t('pricing.getY')}>
                   <input
                     type="number"
                     min={1}
@@ -471,7 +422,7 @@ function DefinitionEditor({
                 </Field>
               </>
             ) : (
-              <Field label={text('ส่วนลด THB', 'Discount THB')}>
+              <Field label={t('pricing.discountThb')}>
                 <input
                   inputMode="decimal"
                   value={rule.amount}
@@ -480,7 +431,7 @@ function DefinitionEditor({
                 />
               </Field>
             )}
-            <Field label={text('ยอดขั้นต่ำ THB', 'Minimum spend THB')}>
+            <Field label={t('pricing.minimumSpendThb')}>
               <input
                 value={rule.minimum_spend}
                 inputMode="decimal"
@@ -490,12 +441,7 @@ function DefinitionEditor({
                 }
               />
             </Field>
-            <Field
-              label={text(
-                'จำนวนการใช้ (0 = ไม่จำกัด)',
-                'Usage limit (0 = unlimited)',
-              )}
-            >
+            <Field label={t('pricing.usageLimit0Unlimited')}>
               <input
                 type="number"
                 min={0}
@@ -507,12 +453,7 @@ function DefinitionEditor({
                 }
               />
             </Field>
-            <Field
-              label={text(
-                'หมวดหมู่ (ไม่เลือก = ทุกหมวด)',
-                'Categories (none = all)',
-              )}
-            >
+            <Field label={t('pricing.categoriesNoneAll')}>
               <select
                 multiple
                 value={rule.category_ids}
@@ -538,13 +479,13 @@ function DefinitionEditor({
         ) : null}
         {editable && (
           <>
-            <Field label={text('ค้นหาสินค้า', 'Search products')}>
+            <Field label={t('common.searchProducts')}>
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
             </Field>
-            <Field label={text('สินค้า', 'Product')}>
+            <Field label={t('common.products')}>
               <select
                 value={productID}
                 onChange={(event) => {
@@ -574,7 +515,7 @@ function DefinitionEditor({
               </select>
             </Field>
             {!promotion && (
-              <Field label={text('ราคา THB', 'Price THB')}>
+              <Field label={t('pricing.priceThb')}>
                 <input
                   inputMode="decimal"
                   value={price}
@@ -600,7 +541,7 @@ function DefinitionEditor({
                 }
               }}
             >
-              {text('เพิ่ม Variant', 'Add variant')}
+              {t('catalog.addVariant')}
             </Button>
           </>
         )}
@@ -632,18 +573,13 @@ function DefinitionEditor({
                         )
                   }
                 >
-                  {text('นำออก', 'Remove')}
+                  {t('catalog.remove')}
                 </Button>
               )}
             </p>
           ))}
           {promotion && rule.variant_ids.length === 0 && (
-            <p>
-              {text(
-                'ทุก Variant ที่ตรงหมวดหมู่',
-                'All variants matching categories',
-              )}
-            </p>
+            <p>{t('pricing.allVariantsMatchingCategories')}</p>
           )}
         </div>
         <Button
@@ -654,7 +590,7 @@ function DefinitionEditor({
             (!promotion && prices.length === 0)
           }
         >
-          {text('บันทึก Draft', 'Save draft')}
+          {t('pricing.saveDraft')}
         </Button>
       </form>
       {item && (
@@ -681,56 +617,48 @@ function DefinitionEditor({
                 })
               }
             >
-              {action}
+              {labelCode(action)}
             </Button>
           ))}
         </div>
       )}
-      {command.error && <p role="alert">{command.error.message}</p>}
-      {command.isSuccess && (
-        <p role="status">
-          {text(
-            'บันทึกแล้ว กรุณาเลือกรายการเพื่อดู revision ล่าสุด',
-            'Saved. Select the definition to view its latest revision.',
-          )}
-        </p>
+      {command.error && (
+        <p role="alert">{localize(command.error.message ?? '')}</p>
       )}
-      {products.error && <p role="alert">{products.error.message}</p>}
+      {command.isSuccess && (
+        <p role="status">{t('pricing.savedSelectTheDefinitionToViewIts')}</p>
+      )}
+      {products.error && (
+        <p role="alert">{localize(products.error.message ?? '')}</p>
+      )}
     </>
   );
 }
-function ApprovalQueue({ english }: { english: boolean }) {
+function ApprovalQueue() {
+  const { t, localize, formatDateTime, labelCode } = useLanguage();
+
   const query = usePricingQuery<DiscountApproval[]>('/discount-approvals'),
     command = useCommand(),
     tenant = useOrganization();
   return (
     <Card>
-      <h2>{english ? 'Approval queue' : 'รายการคำขอส่วนลด'}</h2>
-      <p>
-        {english
-          ? 'Request from the current POS cart. Approval expires after 15 minutes and is bound to cart and pricing revision.'
-          : 'ขอส่วนลดจากตะกร้า POS ปัจจุบัน คำขอหมดอายุใน 15 นาที และผูกกับ cart / pricing revision'}
-      </p>
-      <Link to="/pos/checkout">POS Checkout</Link>
+      <h2>{t('pricing.approvalQueue')}</h2>
+      <p>{t('pricing.requestFromTheCurrentPosCartApproval')}</p>
+      <Link to="/pos/checkout">{t('pricing.posCheckout')}</Link>
       {query.isPending && <Loading />}
-      {query.error && <p role="alert">{query.error.message}</p>}
-      {query.data?.length === 0 && (
-        <p>{english ? 'No requests' : 'ยังไม่มีคำขอ'}</p>
-      )}
+      {query.error && <p role="alert">{localize(query.error.message ?? '')}</p>}
+      {query.data?.length === 0 && <p>{t('pricing.noRequests')}</p>}
       {query.data?.map((item) => (
         <section key={item.id} className="pricing-record">
           <h3>
-            {item.amount} THB <Tag>{item.status}</Tag>
+            {item.amount} THB <Tag>{labelCode(item.status)}</Tag>
           </h3>
           <p>{item.reason}</p>
           <p>
-            Cart: {item.cart_id} · r{item.cart_revision}
+            {t('pricing.cart')} {item.cart_id} · r{item.cart_revision}
           </p>
           <p>
-            {english ? 'Expires' : 'หมดอายุ'}:{' '}
-            {new Date(item.expires_at).toLocaleString(
-              english ? 'en-US' : 'th-TH',
-            )}
+            {t('pricing.expires')}: {formatDateTime(item.expires_at)}
           </p>
           {item.status === 'PENDING' && tenant.can('discount.approve') && (
             <div className="catalog-actions">
@@ -745,14 +673,16 @@ function ApprovalQueue({ english }: { english: boolean }) {
                     })
                   }
                 >
-                  {action}
+                  {labelCode(action)}
                 </Button>
               ))}
             </div>
           )}
         </section>
       ))}
-      {command.error && <p role="alert">{command.error.message}</p>}
+      {command.error && (
+        <p role="alert">{localize(command.error.message ?? '')}</p>
+      )}
     </Card>
   );
 }

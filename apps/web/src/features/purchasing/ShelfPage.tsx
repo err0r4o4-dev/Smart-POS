@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
@@ -40,14 +41,14 @@ import {
   VariantPicker,
 } from './SupplyUI';
 
-const titles: Record<string, string> = {
-  overview: 'ชั้นวางสินค้า',
-  new: 'เพิ่มชั้นวาง',
-  detail: 'รายละเอียดชั้นวาง',
-  layout: 'ผังชั้นวาง',
-  replenishments: 'เติมสินค้าเข้าชั้นวาง',
-  discrepancies: 'ผลต่างตรวจนับชั้นวาง',
-};
+const titles = {
+  overview: 'purchasing.shelves',
+  new: 'purchasing.addShelf',
+  detail: 'purchasing.shelfDetails',
+  layout: 'purchasing.shelfLayout',
+  replenishments: 'purchasing.replenishShelves',
+  discrepancies: 'purchasing.shelfCountDifferences',
+} as const;
 export function ShelfPage({ view }: { view: string }) {
   const auth = useAuth(),
     tenant = useOrganization(),
@@ -61,6 +62,8 @@ export function ShelfPage({ view }: { view: string }) {
   );
 }
 function ShelfScreen({ view, id }: { view: string; id?: string }) {
+  const { t, labelCode } = useLanguage();
+
   const state = useSupplyScope(),
     [search, setSearch] = useState(''),
     [page, setPage] = useState(1),
@@ -74,22 +77,20 @@ function ShelfScreen({ view, id }: { view: string; id?: string }) {
     <section className="catalog-page supply-page">
       <header className="catalog-header">
         <div>
-          <p className="eyebrow">SHELVES · PHASE 4</p>
-          <h1>{titles[view]}</h1>
-          <p>
-            Recorded stock คือยอดใน Inventory Ledger ไม่ใช่จำนวนจริงก่อนตรวจนับ
-          </p>
+          <p className="eyebrow">{t('purchasing.shelvesPhase4')}</p>
+          <h1>{t(titles[view as keyof typeof titles])}</h1>
+          <p>{t('purchasing.recordedStockIsTheInventoryLedgerBalance')}</p>
         </div>
         {state.tenant.can('shelf.manage') && (
           <Link className="button" to="/shelves/new">
-            เพิ่มชั้นวาง
+            {t('purchasing.addShelf')}
           </Link>
         )}
       </header>
       <SupplyNav shelves />
       <SupplyFeedback state={state} />
       {!state.branch ? (
-        <p role="alert">เลือกสาขาจาก header ก่อนทำรายการ</p>
+        <p role="alert">{t('purchasing.selectABranchFromTheHeaderBefore')}</p>
       ) : (
         <>
           {view === 'new' && <ShelfForm state={state} />}
@@ -98,14 +99,14 @@ function ShelfScreen({ view, id }: { view: string; id?: string }) {
             <>
               <div className="catalog-actions">
                 <TextField
-                  label="ค้นหาชั้นวาง / Zone"
+                  label={t('purchasing.searchShelfZone')}
                   value={search}
                   change={(value) => {
                     setSearch(value);
                     setPage(1);
                   }}
                 />
-                <Field label="สถานะชั้นวาง">
+                <Field label={t('purchasing.shelfStatus')}>
                   <select
                     value={status}
                     onChange={(event) => {
@@ -113,9 +114,11 @@ function ShelfScreen({ view, id }: { view: string; id?: string }) {
                       setPage(1);
                     }}
                   >
-                    <option value="">ทุกสถานะ</option>
+                    <option value="">{t('purchasing.allStatuses')}</option>
                     {['ACTIVE', 'INACTIVE', 'ARCHIVED'].map((value) => (
-                      <option key={value}>{value}</option>
+                      <option key={value} value={value}>
+                        {labelCode(value)}
+                      </option>
                     ))}
                   </select>
                 </Field>
@@ -135,19 +138,19 @@ function ShelfScreen({ view, id }: { view: string; id?: string }) {
                     >
                       <Card className="shelf-metric-card">
                         <div className="shelf-metric-header">
-                          <span>ชั้นวางทั้งหมด</span>
+                          <span>{t('purchasing.allShelves')}</span>
                           <Layers size={18} aria-hidden="true" />
                         </div>
                         <div className="shelf-metric-value">
                           <span>
                             {list.data.total ?? list.data.items.length}
                           </span>
-                          <small>จุดชั้นวาง</small>
+                          <small>{t('purchasing.shelfLocations')}</small>
                         </div>
                       </Card>
                       <Card className="shelf-metric-card">
                         <div className="shelf-metric-header">
-                          <span>สินค้าที่ผูกไว้ทั้งหมด</span>
+                          <span>{t('purchasing.assignedProducts')}</span>
                           <Boxes size={18} aria-hidden="true" />
                         </div>
                         <div className="shelf-metric-value">
@@ -157,7 +160,7 @@ function ShelfScreen({ view, id }: { view: string; id?: string }) {
                               0,
                             )}
                           </span>
-                          <small>รายการ (Assignments)</small>
+                          <small>{t('purchasing.assignments')}</small>
                         </div>
                       </Card>
                       <Card
@@ -170,7 +173,11 @@ function ShelfScreen({ view, id }: { view: string; id?: string }) {
                         }`}
                       >
                         <div className="shelf-metric-header">
-                          <span>จุดที่ต้องเติมสินค้าด่วน</span>
+                          <span>
+                            {t(
+                              'purchasing.locationsNeedingUrgentReplenishment',
+                            )}
+                          </span>
                           <AlertTriangle
                             size={18}
                             aria-hidden="true"
@@ -203,8 +210,8 @@ function ShelfScreen({ view, id }: { view: string; id?: string }) {
                             {list.data.items.some(
                               (s) => (s.low_stock_count ?? 0) > 0,
                             )
-                              ? 'ชั้นวางที่ของใกล้หมด'
-                              : 'ทุกชั้นสต็อกพร้อมขาย'}
+                              ? t('purchasing.shelvesRunningLow')
+                              : t('purchasing.allShelvesAreStockedForSales')}
                           </small>
                         </div>
                         {list.data.items.some(
@@ -221,7 +228,7 @@ function ShelfScreen({ view, id }: { view: string; id?: string }) {
                               alignSelf: 'flex-start',
                             }}
                           >
-                            ไปที่หน้าเติมสินค้า ➔
+                            {t('purchasing.goToReplenishment')}
                           </Link>
                         )}
                       </Card>
@@ -230,12 +237,12 @@ function ShelfScreen({ view, id }: { view: string; id?: string }) {
                   <Card>
                     <SupplyTable
                       headers={[
-                        'Code',
+                        t('purchasing.code'),
                         'Shelf / Zone',
-                        'Assignments',
-                        'Low stock',
-                        'Status',
-                        'การจัดการ',
+                        t('purchasing.assignments2'),
+                        t('purchasing.lowStock'),
+                        t('auth.status'),
+                        t('inventory.actions'),
                       ]}
                     >
                       {list.data?.items.map((shelf) => (
@@ -255,13 +262,13 @@ function ShelfScreen({ view, id }: { view: string; id?: string }) {
                                     padding: '1px 8px',
                                   }}
                                 >
-                                  โซน: {shelf.zone}
+                                  {t('purchasing.zone2')} {shelf.zone}
                                 </span>
                               ) : (
                                 <small
                                   style={{ color: 'var(--text-tertiary)' }}
                                 >
-                                  ไม่ระบุโซน
+                                  {t('purchasing.noZoneSpecified')}
                                 </small>
                               )}
                             </div>
@@ -276,7 +283,7 @@ function ShelfScreen({ view, id }: { view: string; id?: string }) {
                                 color: 'var(--text-secondary)',
                               }}
                             >
-                              รายการ
+                              {t('catalog.definitions')}
                             </small>
                           </td>
                           <td>
@@ -291,7 +298,8 @@ function ShelfScreen({ view, id }: { view: string; id?: string }) {
                                     verticalAlign: '-2px',
                                   }}
                                 />
-                                {shelf.low_stock_count} จุดต้องเติม
+                                {shelf.low_stock_count}{' '}
+                                {t('purchasing.needReplenishment')}
                               </Tag>
                             ) : (
                               <Tag tone="success">
@@ -304,7 +312,7 @@ function ShelfScreen({ view, id }: { view: string; id?: string }) {
                                     verticalAlign: '-2px',
                                   }}
                                 />
-                                ปกติ
+                                {t('purchasing.normal')}
                               </Tag>
                             )}
                           </td>
@@ -318,7 +326,7 @@ function ShelfScreen({ view, id }: { view: string; id?: string }) {
                                     : 'neutral'
                               }
                             >
-                              {shelf.status}
+                              {labelCode(shelf.status)}
                             </Tag>
                           </td>
                           <td>
@@ -327,16 +335,18 @@ function ShelfScreen({ view, id }: { view: string; id?: string }) {
                                 className="button button-secondary"
                                 to={'/shelves/' + shelf.id}
                               >
-                                เปิดชั้นวาง
+                                {t('purchasing.openShelf')}
                                 <ChevronRight size={14} aria-hidden="true" />
                               </Link>
                               {shelf.low_stock_count > 0 && (
                                 <Link
                                   className="button"
                                   to="/shelves/replenishments"
-                                  title="สร้างใบงานเติมสินค้า"
+                                  title={t(
+                                    'purchasing.createReplenishmentTask',
+                                  )}
                                 >
-                                  เติมของ
+                                  {t('purchasing.replenish')}
                                 </Link>
                               )}
                             </div>
@@ -353,27 +363,29 @@ function ShelfScreen({ view, id }: { view: string; id?: string }) {
                 </>
               ) : (
                 <>
-                  <p>
-                    ผัง 2D แบบข้อมูลตาม Zone / Code — ไม่ใช่ตำแหน่งทางกายภาพหรือ
-                    AI optimization
-                  </p>
+                  <p>{t('purchasing.dataBased2dLayoutByZoneCode')}</p>
                   <div className="supply-layout">
                     {list.data?.items.map((shelf) => (
                       <Card key={shelf.id}>
                         <h2>
-                          {shelf.zone || 'ไม่ระบุ Zone'} · {shelf.code}
+                          {shelf.zone || t('purchasing.noZoneSpecified2')} ·{' '}
+                          {shelf.code}
                         </h2>
                         <p>
-                          {shelf.name} · {shelf.status}
+                          {shelf.name} · {labelCode(shelf.status)}
                         </p>
                         <p>
-                          {shelf.assignment_count} assignments ·{' '}
-                          {shelf.low_stock_count} ต่ำกว่า minimum
+                          {shelf.assignment_count}{' '}
+                          {t('purchasing.assignments3')} {shelf.low_stock_count}{' '}
+                          {t('purchasing.belowMinimum')}
                         </p>
                         <Button onClick={() => setSelected(shelf.id)}>
-                          ดู Slots / สินค้า
+                          {t('purchasing.viewSlotsProducts')}
                         </Button>
-                        <Link to={'/shelves/' + shelf.id}> จัดการ</Link>
+                        <Link to={'/shelves/' + shelf.id}>
+                          {' '}
+                          {t('catalog.manage')}
+                        </Link>
                       </Card>
                     ))}
                   </div>
@@ -398,16 +410,13 @@ function ShelfScreen({ view, id }: { view: string; id?: string }) {
           {view === 'discrepancies' && (
             <>
               <RemoteSelect<Shelf>
-                label="ชั้นวาง"
+                label={t('purchasing.shelf')}
                 path={`/shelves?branch_id=${state.branch}`}
                 value={selected}
                 change={setSelected}
                 display={(shelf) => `${shelf.code} · ${shelf.name}`}
               />
-              <p>
-                ผลตรวจนับล่าสุดเป็น snapshot; การอนุมัติและปรับสต็อกใช้
-                Inventory Count workflow เดิมเท่านั้น
-              </p>
+              <p>{t('purchasing.latestCountsAreSnapshotsApprovalAndStock')}</p>
               {selected && (
                 <ShelfDetail
                   key={selected}
@@ -417,7 +426,9 @@ function ShelfScreen({ view, id }: { view: string; id?: string }) {
                   discrepancies
                 />
               )}
-              <Link to="/shelves/counts">สร้าง / ตรวจสอบ Count</Link>
+              <Link to="/shelves/counts">
+                {t('purchasing.createReviewCount')}
+              </Link>
             </>
           )}
         </>
@@ -432,6 +443,8 @@ function ShelfForm({
   state: SupplyScope;
   initial?: Shelf;
 }) {
+  const { t, labelCode } = useLanguage();
+
   const navigate = useNavigate(),
     [code, setCode] = useState(initial?.code ?? ''),
     [name, setName] = useState(initial?.name ?? ''),
@@ -441,7 +454,11 @@ function ShelfForm({
     [location, setLocation] = useState(initial?.stock_location_id ?? '');
   return (
     <Card>
-      <h2>{initial ? 'แก้ไขชั้นวาง' : 'สร้างชั้นวางจาก Inventory Location'}</h2>
+      <h2>
+        {initial
+          ? t('purchasing.editShelf')
+          : t('purchasing.createShelfFromInventoryLocation')}
+      </h2>
       <form
         className="inventory-form"
         onSubmit={(event) => {
@@ -467,44 +484,57 @@ function ShelfForm({
             .catch(() => {});
         }}
       >
-        <TextField label="Shelf Code" value={code} change={setCode} required />
-        <TextField label="Shelf Name" value={name} change={setName} required />
-        <TextField label="Zone" value={zone} change={setZone} />
         <TextField
-          label="รายละเอียดชั้นวาง"
+          label={t('purchasing.shelfCode')}
+          value={code}
+          change={setCode}
+          required
+        />
+        <TextField
+          label={t('purchasing.shelfName')}
+          value={name}
+          change={setName}
+          required
+        />
+        <TextField
+          label={t('purchasing.zone3')}
+          value={zone}
+          change={setZone}
+        />
+        <TextField
+          label={t('purchasing.shelfDetails')}
           value={description}
           change={setDescription}
         />
         {initial ? (
           <p>
-            Inventory Location: <code>{location}</code> (ไม่สามารถย้าย location
-            ที่ผูกไว้)
+            {t('purchasing.inventoryLocation')} <code>{location}</code>{' '}
+            {t('purchasing.linkedLocationsCannotBeMoved')}
           </p>
         ) : (
           <RemoteSelect<StockLocation>
-            label="Inventory Shelf Location"
+            label={t('purchasing.inventoryShelfLocation')}
             path={`/inventory/locations?branch_id=${state.branch}&status=ACTIVE`}
             value={location}
             change={setLocation}
             display={(item) => `${item.code} · ${item.name} · ${item.type}`}
           />
         )}
-        <Field label="Shelf Status">
+        <Field label={t('purchasing.shelfStatus2')}>
           <select
             value={status}
             onChange={(event) => setStatus(event.target.value)}
           >
             {['ACTIVE', 'INACTIVE', 'ARCHIVED'].map((value) => (
-              <option key={value}>{value}</option>
+              <option key={value} value={value}>
+                {labelCode(value)}
+              </option>
             ))}
           </select>
         </Field>
-        <p>
-          ผูกได้เฉพาะ active SHELF / SALES_FLOOR; สร้าง location ที่ Inventory
-          ก่อน และหนึ่ง location ต่อหนึ่ง shelf
-        </p>
+        <p>{t('purchasing.onlyActiveShelfSalesFloorLocationsCan')}</p>
         <Button type="submit" disabled={state.busy || !state.branch}>
-          บันทึกชั้นวาง
+          {t('purchasing.saveShelf')}
         </Button>
       </form>
     </Card>
@@ -521,6 +551,8 @@ function ShelfDetail({
   readonly?: boolean;
   discrepancies?: boolean;
 }) {
+  const { t, labelCode } = useLanguage();
+
   const query = useSupplyQuery<Shelf>(`/shelves/${id}`);
   const shelf = query.data;
   return (
@@ -537,25 +569,25 @@ function ShelfDetail({
               {shelf.code} · {shelf.name}
             </h2>
             <p>
-              {shelf.zone} · {shelf.status} · Location{' '}
-              <code>{shelf.stock_location_id}</code>
+              {shelf.zone} · {labelCode(shelf.status)}{' '}
+              {t('purchasing.location')} <code>{shelf.stock_location_id}</code>
             </p>
             <SupplyTable
               headers={
                 discrepancies
                   ? [
                       'Slot / SKU',
-                      'Recorded now',
-                      'Count snapshot',
+                      t('purchasing.recordedNow'),
+                      t('purchasing.countSnapshot'),
                       'Expected / Counted / Variance',
-                      'Count review',
+                      t('purchasing.countReview'),
                     ]
                   : [
                       'Slot / SKU',
-                      'Recorded',
+                      t('purchasing.recorded'),
                       'Min / Target / Capacity',
-                      'Status',
-                      'Latest count',
+                      t('auth.status'),
+                      t('purchasing.latestCount'),
                     ]
               }
             >
@@ -572,9 +604,10 @@ function ShelfDetail({
                   {discrepancies ? (
                     <>
                       <td>
-                        {item.last_count?.counted_at ?? 'ยังไม่ตรวจนับ'}
+                        {item.last_count?.counted_at ??
+                          t('purchasing.notCountedYet')}
                         <br />
-                        {item.last_count?.status}
+                        {labelCode(item.last_count?.status)}
                       </td>
                       <td>
                         {item.last_count
@@ -588,7 +621,7 @@ function ShelfDetail({
                               '/inventory/counts/' + item.last_count.document_id
                             }
                           >
-                            เปิด Count
+                            {t('purchasing.openCount')}
                           </Link>
                         )}
                       </td>
@@ -600,7 +633,7 @@ function ShelfDetail({
                         {item.capacity_quantity} {item.unit}
                       </td>
                       <td>
-                        <Tag>{item.status}</Tag>
+                        <Tag>{labelCode(item.status)}</Tag>
                       </td>
                       <td>
                         {item.last_count ? (
@@ -609,11 +642,11 @@ function ShelfDetail({
                               '/inventory/counts/' + item.last_count.document_id
                             }
                           >
-                            {item.last_count.status} · Δ{' '}
+                            {labelCode(item.last_count.status)} · Δ{' '}
                             {item.last_count.variance}
                           </Link>
                         ) : (
-                          'ยังไม่ตรวจนับ'
+                          t('purchasing.notCountedYet')
                         )}
                       </td>
                     </>
@@ -622,7 +655,7 @@ function ShelfDetail({
               ))}
             </SupplyTable>
             {shelf.assignments.length === 0 && (
-              <p>ยังไม่มีสินค้าในชั้นวางนี้</p>
+              <p>{t('purchasing.noProductsOnThisShelfYet')}</p>
             )}
           </Card>
           {!readonly && (
@@ -631,7 +664,7 @@ function ShelfDetail({
                 <ShelfForm key={shelf.revision} state={state} initial={shelf} />
               )}
               <Card>
-                <h2>Slots ตามลำดับ</h2>
+                <h2>{t('purchasing.slotsInOrder')}</h2>
                 {shelf.slots.map((slot) => (
                   <Tag key={slot.id}>
                     {slot.position} · {slot.code}
@@ -664,6 +697,8 @@ function ShelfDetail({
   );
 }
 function SlotForm({ state, shelfID }: { state: SupplyScope; shelfID: string }) {
+  const { t } = useLanguage();
+
   const [code, setCode] = useState(''),
     [position, setPosition] = useState('0');
   return (
@@ -680,16 +715,21 @@ function SlotForm({ state, shelfID }: { state: SupplyScope; shelfID: string }) {
           .catch(() => {});
       }}
     >
-      <TextField label="Slot Code" value={code} change={setCode} required />
       <TextField
-        label="Slot Position"
+        label={t('purchasing.slotCode')}
+        value={code}
+        change={setCode}
+        required
+      />
+      <TextField
+        label={t('purchasing.slotPosition')}
         value={position}
         change={setPosition}
         type="number"
         required
       />
       <Button type="submit" disabled={state.busy}>
-        เพิ่ม Slot
+        {t('purchasing.addSlot')}
       </Button>
     </form>
   );
@@ -703,6 +743,8 @@ function AssignmentForm({
   shelf: Shelf;
   initial?: ShelfAssignment;
 }) {
+  const { t } = useLanguage();
+
   const [slot, setSlot] = useState(initial?.slot_id ?? ''),
     [variant, setVariant] = useState(initial?.variant_id ?? ''),
     [minimum, setMinimum] = useState(initial?.minimum_quantity ?? '0'),
@@ -712,7 +754,9 @@ function AssignmentForm({
   return (
     <Card>
       <h2>
-        {initial ? `แก้ไข Assignment · ${initial.sku}` : 'กำหนดสินค้าให้ Slot'}
+        {initial
+          ? t('purchasing.editAssignmentValue0', { value0: initial.sku })
+          : t('purchasing.assignProductToSlot')}
       </h2>
       <form
         className="inventory-form"
@@ -737,17 +781,18 @@ function AssignmentForm({
       >
         {initial ? (
           <p>
-            {initial.slot_code} · {initial.sku} (identity คงเดิม)
+            {initial.slot_code} · {initial.sku}{' '}
+            {t('purchasing.identityIsUnchanged')}
           </p>
         ) : (
           <>
-            <Field label="Slot">
+            <Field label={t('purchasing.slot')}>
               <select
                 required
                 value={slot}
                 onChange={(event) => setSlot(event.target.value)}
               >
-                <option value="">เลือก Slot</option>
+                <option value="">{t('purchasing.selectSlot')}</option>
                 {shelf.slots
                   .filter(
                     (item) =>
@@ -769,44 +814,43 @@ function AssignmentForm({
           </>
         )}
         <TextField
-          label="Minimum quantity"
+          label={t('purchasing.minimumQuantity')}
           value={minimum}
           change={setMinimum}
           required
         />
         <TextField
-          label="Target quantity"
+          label={t('purchasing.targetQuantity')}
           value={target}
           change={setTarget}
           required
         />
         <TextField
-          label="Capacity quantity"
+          label={t('purchasing.capacityQuantity')}
           value={capacity}
           change={setCapacity}
           required
         />
-        <Field label="Assignment Status">
+        <Field label={t('purchasing.assignmentStatus')}>
           <select
             value={status}
             onChange={(event) => setStatus(event.target.value)}
           >
-            <option>ACTIVE</option>
-            <option>INACTIVE</option>
+            <option>{t('purchasing.active6')}</option>
+            <option>{t('purchasing.inactive5')}</option>
           </select>
         </Field>
-        <p>
-          หน่วย Inventory เท่านั้น · 0 ≤ minimum ≤ target ≤ capacity; capacity
-          คือ configured maximum ไม่ใช่พื้นที่กายภาพ
-        </p>
+        <p>{t('purchasing.inventoryUnitsOnly0MinimumTargetCapacity')}</p>
         <Button type="submit" disabled={state.busy}>
-          บันทึก Assignment
+          {t('purchasing.saveAssignment')}
         </Button>
       </form>
     </Card>
   );
 }
 function Replenishments({ state }: { state: SupplyScope }) {
+  const { t, labelCode } = useLanguage();
+
   const [page, setPage] = useState(1),
     [suggestionPage, setSuggestionPage] = useState(1),
     [status, setStatus] = useState(''),
@@ -821,11 +865,8 @@ function Replenishments({ state }: { state: SupplyScope }) {
   return (
     <>
       <Card>
-        <h2>คำแนะนำเติมสินค้า</h2>
-        <p>
-          target − recorded โดยจำกัดด้วย warehouse stock และแผนเติมอื่น; task
-          ไม่จองสต็อกและตรวจ stock/capacity ใหม่ตอน complete
-        </p>
+        <h2>{t('purchasing.replenishmentSuggestions')}</h2>
+        <p>{t('purchasing.targetMinusRecordedLimitedByWarehouseStock')}</p>
         <QueryFeedback
           retry={() => void suggestions.refetch()}
           loading={suggestions.isFetching}
@@ -837,9 +878,9 @@ function Replenishments({ state }: { state: SupplyScope }) {
             'Shelf / SKU',
             'Recorded / Minimum',
             'Target / Capacity',
-            'Warehouse available',
-            'Suggested',
-            'Review',
+            t('purchasing.warehouseAvailable'),
+            t('purchasing.suggested'),
+            t('purchasing.review'),
           ]}
         >
           {suggestions.data?.items.map((item) => (
@@ -866,7 +907,7 @@ function Replenishments({ state }: { state: SupplyScope }) {
               <td>
                 {state.tenant.can('shelf.replenishment.create') && (
                   <CartBatchPicker
-                    actionLabel="สร้าง Task"
+                    actionLabel={t('purchasing.createTask')}
                     variant={item.variant_id}
                     location={item.source_location_id}
                     label={`Batch/Lot ${item.sku}`}
@@ -897,17 +938,17 @@ function Replenishments({ state }: { state: SupplyScope }) {
         />
       </Card>
       <Card>
-        <h2>Replenishment Tasks</h2>
+        <h2>{t('purchasing.replenishmentTasks')}</h2>
         <div className="catalog-actions">
           <TextField
-            label="ค้นหา Task / SKU"
+            label={t('purchasing.searchTaskSku')}
             value={search}
             change={(value) => {
               setSearch(value);
               setPage(1);
             }}
           />
-          <Field label="Task Status">
+          <Field label={t('purchasing.taskStatus')}>
             <select
               value={status}
               onChange={(event) => {
@@ -915,7 +956,7 @@ function Replenishments({ state }: { state: SupplyScope }) {
                 setPage(1);
               }}
             >
-              <option value="">ทุกสถานะ</option>
+              <option value="">{t('purchasing.allStatuses')}</option>
               {[
                 'OPEN',
                 'ASSIGNED',
@@ -923,7 +964,9 @@ function Replenishments({ state }: { state: SupplyScope }) {
                 'COMPLETED',
                 'CANCELLED',
               ].map((value) => (
-                <option key={value}>{value}</option>
+                <option key={value} value={value}>
+                  {labelCode(value)}
+                </option>
               ))}
             </select>
           </Field>
@@ -937,11 +980,11 @@ function Replenishments({ state }: { state: SupplyScope }) {
         <SupplyTable
           headers={[
             'Shelf / SKU',
-            'Source',
-            'Quantity',
-            'Status',
-            'Assignee',
-            'รายละเอียด',
+            t('purchasing.source'),
+            t('purchasing.quantity2'),
+            t('auth.status'),
+            t('purchasing.assignee'),
+            t('inventory.details'),
           ]}
         >
           {tasks.data?.items.map((task) => (
@@ -954,13 +997,15 @@ function Replenishments({ state }: { state: SupplyScope }) {
               <td>{task.source_name}</td>
               <td>{task.quantity}</td>
               <td>
-                <Tag>{task.status}</Tag>
+                <Tag>{labelCode(task.status)}</Tag>
               </td>
               <td>
-                <code>{task.assigned_to ?? 'ยังไม่มอบหมาย'}</code>
+                <code>{task.assigned_to ?? t('purchasing.unassigned')}</code>
               </td>
               <td>
-                <Button onClick={() => setSelected(task.id)}>เปิด Task</Button>
+                <Button onClick={() => setSelected(task.id)}>
+                  {t('purchasing.openTask')}
+                </Button>
               </td>
             </tr>
           ))}
@@ -976,6 +1021,8 @@ function Replenishments({ state }: { state: SupplyScope }) {
   );
 }
 function TaskDetail({ state, id }: { state: SupplyScope; id: string }) {
+  const { t, labelCode } = useLanguage();
+
   const query = useSupplyQuery<ReplenishmentTask>(
       `/shelves/replenishments/${id}`,
     ),
@@ -999,7 +1046,7 @@ function TaskDetail({ state, id }: { state: SupplyScope; id: string }) {
   }
   return (
     <Card>
-      <h2>Task Detail</h2>
+      <h2>{t('purchasing.taskDetail')}</h2>
       <QueryFeedback
         retry={() => void query.refetch()}
         loading={query.isFetching}
@@ -1008,15 +1055,21 @@ function TaskDetail({ state, id }: { state: SupplyScope; id: string }) {
       {task && (
         <>
           <p>
-            <code>{task.id}</code> · {task.status} · {task.quantity} หน่วย
-            Inventory
+            <code>{task.id}</code> · {labelCode(task.status)} · {task.quantity}{' '}
+            {t('purchasing.inventoryUnits')}
           </p>
           <p>
-            Assignment <code>{task.assignment_id}</code> · Source{' '}
-            <code>{task.source_location_id}</code>
+            {t('purchasing.assignment')} <code>{task.assignment_id}</code>{' '}
+            {t('purchasing.source2')} <code>{task.source_location_id}</code>
           </p>
-          <Link to={'/shelves/' + task.shelf_id}>เปิด Shelf</Link>
-          <TextField label="เหตุผล Task" value={reason} change={setReason} />
+          <Link to={'/shelves/' + task.shelf_id}>
+            {t('purchasing.openShelf2')}
+          </Link>
+          <TextField
+            label={t('purchasing.taskReason')}
+            value={reason}
+            change={setReason}
+          />
           {state.tenant.can('shelf.replenishment.assign') &&
             ['OPEN', 'ASSIGNED'].includes(task.status) && (
               <>
@@ -1025,12 +1078,12 @@ function TaskDetail({ state, id }: { state: SupplyScope; id: string }) {
                   loading={members.isFetching}
                   error={members.error}
                 />
-                <Field label="ผู้รับผิดชอบ Task">
+                <Field label={t('purchasing.taskAssignee')}>
                   <select
                     value={assignee}
                     onChange={(event) => setAssignee(event.target.value)}
                   >
-                    <option value="">เลือกพนักงาน</option>
+                    <option value="">{t('purchasing.selectEmployee')}</option>
                     {members.data
                       ?.filter(
                         (member) =>
@@ -1054,7 +1107,7 @@ function TaskDetail({ state, id }: { state: SupplyScope; id: string }) {
                     void act('assign').catch(() => {});
                   }}
                 >
-                  มอบหมาย Task
+                  {t('purchasing.assignTask')}
                 </Button>
               </>
             )}
@@ -1066,19 +1119,19 @@ function TaskDetail({ state, id }: { state: SupplyScope; id: string }) {
                   void act('start').catch(() => {});
                 }}
               >
-                เริ่ม Task
+                {t('purchasing.startTask')}
               </Button>
             )}
           {state.tenant.can('shelf.replenishment.complete') &&
             task.status === 'IN_PROGRESS' && (
               <>
-                <Field label="ยืนยันย้ายสินค้าจริง">
+                <Field label={t('purchasing.confirmPhysicalStockTransfer')}>
                   <input
                     type="checkbox"
                     checked={confirm}
                     onChange={(event) => setConfirm(event.target.checked)}
                   />
-                  ฉันตรวจสอบการย้ายสินค้าแล้ว
+                  {t('purchasing.iVerifiedTheStockTransfer')}
                 </Field>
                 <Button
                   disabled={state.busy || !confirm}
@@ -1086,7 +1139,7 @@ function TaskDetail({ state, id }: { state: SupplyScope; id: string }) {
                     void act('complete').catch(() => {});
                   }}
                 >
-                  Complete Task / Post Transfer
+                  {t('purchasing.completeTaskPostTransfer')}
                 </Button>
               </>
             )}
@@ -1098,13 +1151,13 @@ function TaskDetail({ state, id }: { state: SupplyScope; id: string }) {
                   void act('cancel').catch(() => {});
                 }}
               >
-                ยกเลิก Task
+                {t('purchasing.cancelTask')}
               </Button>
             )}
           {task.transfer_id && (
             <p>
               <Link to={'/inventory/transfers/' + task.transfer_id}>
-                เปิด Native Inventory Transfer
+                {t('purchasing.openInventoryTransfer')}
               </Link>
             </p>
           )}

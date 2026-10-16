@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
@@ -77,17 +78,17 @@ function inventoryStatusTone(
 }
 
 const sections = [
-  ['overview', 'ภาพรวม'],
-  ['balances', 'ยอดสต็อก'],
-  ['locations', 'สถานที่เก็บ'],
-  ['movements', 'ประวัติ'],
-  ['adjustments', 'ปรับปรุงสต็อก'],
-  ['counts', 'ตรวจนับ'],
-  ['transfers', 'โอนสินค้า'],
-  ['reorder-points', 'จุดสั่งซื้อ'],
+  ['overview', 'inventory.overview'],
+  ['balances', 'catalog.stockBalances'],
+  ['locations', 'inventory.storageLocations'],
+  ['movements', 'inventory.history'],
+  ['adjustments', 'inventory.stockAdjustments'],
+  ['counts', 'inventory.stockCounts'],
+  ['transfers', 'inventory.transfers'],
+  ['reorder-points', 'inventory.reorderPoints'],
 ] as const;
 const title = (section: string) =>
-  sections.find(([name]) => name === section)?.[1] ?? 'Inventory';
+  sections.find(([name]) => name === section)?.[1] ?? 'dashboard.inventory';
 export function InventoryPage({
   section,
   shelfOnly = false,
@@ -115,6 +116,8 @@ function InventoryScreen({
   id?: string;
   shelfOnly?: boolean;
 }) {
+  const { t, localize, labelCode } = useLanguage();
+
   const tenant = useOrganization();
   const org = tenant.context?.organization.id ?? '';
   const branch = tenant.branchID;
@@ -207,13 +210,15 @@ function InventoryScreen({
       <header className="catalog-header">
         <div>
           <p className="eyebrow">
-            {shelfOnly ? 'ตรวจนับสินค้าบนชั้นวาง' : 'จัดการสต็อก'}
+            {shelfOnly
+              ? t('inventory.shelfCounts')
+              : t('inventory.manageStock')}
           </p>
-          <h1>{title(section)}</h1>
-          <p>ตรวจสอบยอดคงเหลือ การเคลื่อนไหว และผลตรวจนับของสาขา</p>
+          <h1>{t(title(section))}</h1>
+          <p>{t('inventory.reviewBranchBalancesMovementsAndStockCount')}</p>
         </div>
       </header>
-      <nav className="catalog-nav" aria-label="Inventory">
+      <nav className="catalog-nav" aria-label={t('dashboard.inventory')}>
         {sections
           .filter(
             ([name]) =>
@@ -224,14 +229,14 @@ function InventoryScreen({
               key={name}
               to={name === 'overview' ? '/inventory' : '/inventory/' + name}
             >
-              {label}
+              {t(label)}
             </Link>
           ))}
       </nav>
       <p>
-        ขอบเขต:{' '}
+        {t('inventory.scope')}{' '}
         {tenant.context?.branches.find((item) => item.id === branch)?.name ??
-          'ยังไม่ได้เลือกสาขา'}{' '}
+          t('inventory.noBranchSelected')}{' '}
       </p>
       <CatalogError error={error} />
       <QueryFeedback
@@ -250,11 +255,11 @@ function InventoryScreen({
       />
       {success && (
         <p role="status" className="tenant-success">
-          {success}
+          {localize(success ?? '')}
         </p>
       )}
       {!branch ? (
-        <p role="status">กรุณาเลือกสาขาที่มีสิทธิ์ใช้งานก่อน</p>
+        <p role="status">{t('inventory.selectAnAuthorizedBranchFirst')}</p>
       ) : null}
       {!id && branch && section !== 'overview' && (
         <Card>
@@ -265,7 +270,7 @@ function InventoryScreen({
               setPage(1);
             }}
           >
-            <Field label="ค้นหา SKU / Product / Barcode">
+            <Field label={t('inventory.searchSkuProductBarcode')}>
               <input
                 value={search}
                 onChange={(event) => {
@@ -275,7 +280,7 @@ function InventoryScreen({
               />
             </Field>
             {['balances', 'movements', 'counts'].includes(section) && (
-              <Field label="Location filter">
+              <Field label={t('inventory.locationFilter')}>
                 <select
                   value={locationFilter}
                   onChange={(event) => {
@@ -283,7 +288,7 @@ function InventoryScreen({
                     setPage(1);
                   }}
                 >
-                  <option value="">ทั้งหมด</option>
+                  <option value="">{t('common.all')}</option>
                   {locations.data?.items.map((item) => (
                     <option key={item.id} value={item.id}>
                       {item.name}
@@ -299,19 +304,19 @@ function InventoryScreen({
               'transfers',
               'reorder-points',
             ].includes(section) && (
-              <Field label="Status filter">
+              <Field label={t('inventory.statusFilter')}>
                 <select
-                  aria-label="Status filter"
+                  aria-label={t('inventory.statusFilter')}
                   value={status}
                   onChange={(event) => {
                     setStatus(event.target.value);
                     setPage(1);
                   }}
                 >
-                  <option value="">ทั้งหมด</option>
+                  <option value="">{t('common.all')}</option>
                   {getStatusOptions(section).map((item) => (
                     <option key={item} value={item}>
-                      {item}
+                      {labelCode(item)}
                     </option>
                   ))}
                 </select>
@@ -330,7 +335,7 @@ function InventoryScreen({
             )}
             {section === 'balances' && (
               <>
-                <Field label="Stock status">
+                <Field label={t('inventory.stockStatus')}>
                   <select
                     value={stockStatus}
                     onChange={(event) => {
@@ -338,13 +343,15 @@ function InventoryScreen({
                       setPage(1);
                     }}
                   >
-                    <option value="">ทั้งหมด</option>
+                    <option value="">{t('common.all')}</option>
                     {['ZERO', 'POSITIVE', 'LOW'].map((item) => (
-                      <option key={item}>{item}</option>
+                      <option key={item} value={item}>
+                        {labelCode(item)}
+                      </option>
                     ))}
                   </select>
                 </Field>
-                <Field label="Category UUID">
+                <Field label={t('inventory.categoryUuid')}>
                   <input
                     value={category}
                     onChange={(event) => {
@@ -353,7 +360,7 @@ function InventoryScreen({
                     }}
                   />
                 </Field>
-                <Field label="Product status">
+                <Field label={t('inventory.productStatus')}>
                   <select
                     value={productStatus}
                     onChange={(event) => {
@@ -361,9 +368,11 @@ function InventoryScreen({
                       setPage(1);
                     }}
                   >
-                    <option value="">ทั้งหมด</option>
+                    <option value="">{t('common.all')}</option>
                     {['ACTIVE', 'INACTIVE', 'ARCHIVED'].map((item) => (
-                      <option key={item}>{item}</option>
+                      <option key={item} value={item}>
+                        {labelCode(item)}
+                      </option>
                     ))}
                   </select>
                 </Field>
@@ -371,21 +380,21 @@ function InventoryScreen({
             )}
             {section === 'movements' && (
               <>
-                <Field label="From timestamp">
+                <Field label={t('inventory.fromTimestamp')}>
                   <input
                     type="datetime-local"
                     value={from}
                     onChange={(event) => setFrom(event.target.value)}
                   />
                 </Field>
-                <Field label="To timestamp">
+                <Field label={t('inventory.toTimestamp')}>
                   <input
                     type="datetime-local"
                     value={to}
                     onChange={(event) => setTo(event.target.value)}
                   />
                 </Field>
-                <Field label="Actor UUID">
+                <Field label={t('inventory.actorUuid')}>
                   <input
                     value={actor}
                     onChange={(event) => setActor(event.target.value)}
@@ -394,7 +403,7 @@ function InventoryScreen({
               </>
             )}
             <Button type="submit" className="button-secondary">
-              ค้นหา
+              {t('customers.search')}
             </Button>
           </form>
         </Card>
@@ -403,18 +412,27 @@ function InventoryScreen({
         <>
           <div className="inventory-metrics">
             {[
-              ['Variants with recorded balances', data.stock.recorded_variants],
               [
-                'Active catalog variants (organization)',
+                t('inventory.variantsWithRecordedBalances'),
+                data.stock.recorded_variants,
+              ],
+              [
+                t('inventory.activeCatalogVariantsOrganization'),
                 data.alerts.active_variants,
               ],
               [
-                'Low-stock variants (branch reorder policy)',
+                t('inventory.lowStockVariantsBranchReorderPolicy'),
                 data.alerts.low_stock_variants,
               ],
-              ['Pending adjustments', data.operations.pending_adjustments],
-              ['Open counts', data.operations.open_counts],
-              ['Pending transfers', data.operations.pending_transfers],
+              [
+                t('inventory.pendingAdjustments'),
+                data.operations.pending_adjustments,
+              ],
+              [t('inventory.openCounts'), data.operations.open_counts],
+              [
+                t('inventory.pendingTransfers'),
+                data.operations.pending_transfers,
+              ],
             ].map(([label, value]) => (
               <Card key={label}>
                 <h2>{label}</h2>
@@ -423,9 +441,15 @@ function InventoryScreen({
             ))}
           </div>
           <Card>
-            <h2>Recorded Quantity — แยกตามหน่วยและ location type</h2>
+            <h2>{t('inventory.recordedQuantityByUnitAndLocationType')}</h2>
             {data.stock.by_unit.length ? (
-              <Table headers={['Unit', 'Location type', 'Recorded Quantity']}>
+              <Table
+                headers={[
+                  t('inventory.unit'),
+                  t('inventory.locationType'),
+                  t('inventory.recordedQuantity'),
+                ]}
+              >
                 {data.stock.by_unit.map((row) => (
                   <tr key={row.unit + row.type}>
                     <td>{row.unit}</td>
@@ -440,12 +464,19 @@ function InventoryScreen({
           </Card>
           {tenant.can('inventory.audit.read') && (
             <Card>
-              <h2>Recent movements</h2>
-              <Table headers={['SKU', 'Movement', 'Delta', 'Time']}>
+              <h2>{t('inventory.recentMovements')}</h2>
+              <Table
+                headers={[
+                  t('common.sku'),
+                  t('inventory.movement'),
+                  t('inventory.delta'),
+                  t('inventory.time'),
+                ]}
+              >
                 {data.recent_movements.map((movement) => (
                   <tr key={movement.id}>
                     <td>{movement.sku}</td>
-                    <td>{movement.movement_type}</td>
+                    <td>{labelCode(movement.movement_type)}</td>
                     <td>{movement.quantity_delta}</td>
                     <td>{movement.created_at}</td>
                   </tr>
@@ -458,15 +489,17 @@ function InventoryScreen({
       {!id && branch && section !== 'overview' && (
         <div
           className="inventory-options-toolbar"
-          aria-label="Location options pagination"
+          aria-label={t('inventory.locationOptionsPagination')}
         >
           <div className="inventory-options-group">
             <div className="inventory-options-info">
               <MapPin size={16} aria-hidden="true" />
-              <span>Location options: หน้า {locationPage}</span>
+              <span>
+                {t('inventory.locationOptionsPage')} {locationPage}
+              </span>
               {locations.data?.total ? (
                 <span className="inventory-options-total">
-                  • {locations.data.total} สถานที่
+                  • {locations.data.total} {t('inventory.locations')}
                 </span>
               ) : null}
             </div>
@@ -476,14 +509,14 @@ function InventoryScreen({
                 disabled={locationPage === 1}
                 onClick={() => setLocationPage(locationPage - 1)}
               >
-                Locations ก่อนหน้า
+                {t('inventory.previousLocations')}
               </Button>
               <Button
                 className="button-secondary button-compact"
                 disabled={locationPage * 100 >= (locations.data?.total ?? 0)}
                 onClick={() => setLocationPage(locationPage + 1)}
               >
-                Locations ถัดไป
+                {t('inventory.nextLocations')}
               </Button>
             </div>
           </div>
@@ -491,10 +524,12 @@ function InventoryScreen({
             <div className="inventory-options-group">
               <div className="inventory-options-info">
                 <MapPin size={16} aria-hidden="true" />
-                <span>Destination options: หน้า {destinationPage}</span>
+                <span>
+                  {t('inventory.destinationOptionsPage')} {destinationPage}
+                </span>
                 {destinations.data?.total ? (
                   <span className="inventory-options-total">
-                    • {destinations.data.total} ปลายทาง
+                    • {destinations.data.total} {t('inventory.destinations')}
                   </span>
                 ) : null}
               </div>
@@ -504,7 +539,7 @@ function InventoryScreen({
                   disabled={destinationPage === 1}
                   onClick={() => setDestinationPage(destinationPage - 1)}
                 >
-                  Destinations ก่อนหน้า
+                  {t('inventory.previousDestinations')}
                 </Button>
                 <Button
                   className="button-secondary button-compact"
@@ -513,7 +548,7 @@ function InventoryScreen({
                   }
                   onClick={() => setDestinationPage(destinationPage + 1)}
                 >
-                  Destinations ถัดไป
+                  {t('inventory.nextDestinations')}
                 </Button>
               </div>
             </div>
@@ -591,7 +626,7 @@ function InventoryScreen({
       {!id && section !== 'overview' && data && 'total' in data && (
         <Card>
           <h2>
-            {title(section)} — {data.total} รายการ
+            {t(title(section))} — {data.total} {t('catalog.definitions')}
           </h2>
           {!rows.length ? (
             <Empty />
@@ -599,11 +634,11 @@ function InventoryScreen({
             <Table
               headers={[
                 'Product / Variant / SKU',
-                'Barcode',
+                t('catalog.barcode2'),
                 'Branch / Location / Type',
                 'Recorded / Available / Reserved',
-                'Availability',
-                'Updated',
+                t('inventory.availability'),
+                t('catalog.updated2'),
               ]}
             >
               {rows.map((row) => (
@@ -646,7 +681,7 @@ function InventoryScreen({
                         to="/inventory/movements"
                       >
                         <History size={14} aria-hidden="true" />
-                        ดูประวัติ
+                        {t('inventory.viewHistory')}
                       </Link>
                     </div>
                   </td>
@@ -658,9 +693,9 @@ function InventoryScreen({
             <Table
               headers={[
                 'SKU / Location',
-                'Movement',
-                'Delta',
-                'Before → After',
+                t('inventory.movement'),
+                t('inventory.delta'),
+                t('inventory.beforeAfter'),
                 'Reference / Reason',
                 'Actor / Time',
               ]}
@@ -680,7 +715,7 @@ function InventoryScreen({
                     </td>
                     <td>
                       <Tag tone={movementTypeTone(row.movement_type)}>
-                        {row.movement_type}
+                        {labelCode(row.movement_type)}
                       </Tag>
                     </td>
                     <td>
@@ -701,7 +736,8 @@ function InventoryScreen({
                       {row.reason_code}
                       <br />
                       <span className="inventory-text-muted">
-                        Ref: {row.document_id ?? row.operation_id}
+                        {t('inventory.ref')}{' '}
+                        {row.document_id ?? row.operation_id}
                         {row.batch_id ? ` • Lot: ${row.batch_id}` : ''}
                       </span>
                     </td>
@@ -721,9 +757,9 @@ function InventoryScreen({
               headers={[
                 'Code / Name',
                 'Branch / Parent',
-                'Type',
-                'Status',
-                'Actions',
+                t('inventory.type'),
+                t('auth.status'),
+                t('inventory.actions'),
               ]}
             >
               {rows.map((row) => (
@@ -736,12 +772,12 @@ function InventoryScreen({
                   <td>
                     {row.branch_id}
                     <br />
-                    {row.parent_location_id ?? 'Physical root'}
+                    {row.parent_location_id ?? t('inventory.physicalRoot')}
                   </td>
                   <td>{row.type}</td>
                   <td>
                     <Tag tone={inventoryStatusTone(row.status)}>
-                      {row.status}
+                      {labelCode(row.status)}
                     </Tag>
                   </td>
                   <td>
@@ -766,8 +802,8 @@ function InventoryScreen({
               headers={[
                 'SKU / Branch',
                 'Minimum / Target',
-                'Eligible Recorded',
-                'Below minimum',
+                t('inventory.eligibleRecorded'),
+                t('inventory.belowMinimum'),
                 'Status / Edit',
               ]}
             >
@@ -782,10 +818,12 @@ function InventoryScreen({
                     {row.minimum_quantity} / {row.target_quantity}
                   </td>
                   <td>{row.current_quantity}</td>
-                  <td>{row.below_minimum ? 'ต่ำกว่าจุดสั่งซื้อ' : '—'}</td>
+                  <td>
+                    {row.below_minimum ? t('inventory.belowReorderPoint') : '—'}
+                  </td>
                   <td>
                     <Tag tone={inventoryStatusTone(row.status)}>
-                      {row.status}
+                      {labelCode(row.status)}
                     </Tag>
                     {tenant.can('inventory.reorder_point.manage') && (
                       <ReorderEditor
@@ -802,11 +840,11 @@ function InventoryScreen({
           ) : (
             <Table
               headers={[
-                'Reference',
-                'Locations',
-                'Status',
+                t('inventory.reference'),
+                t('inventory.locations2'),
+                t('auth.status'),
                 'Items / Creator',
-                'Details',
+                t('inventory.details'),
               ]}
             >
               {rows.map((row) => (
@@ -823,7 +861,7 @@ function InventoryScreen({
                   </td>
                   <td>
                     <Tag tone={inventoryStatusTone(row.status)}>
-                      {row.status}
+                      {labelCode(row.status)}
                     </Tag>
                   </td>
                   <td>
@@ -838,11 +876,11 @@ function InventoryScreen({
                         className="button-secondary"
                         onClick={() => void inspect(row)}
                       >
-                        รายละเอียด
+                        {t('inventory.details')}
                       </Button>
                     ) : (
                       <Link to={`/inventory/${section}/${row.id}`}>
-                        รายละเอียด
+                        {t('inventory.details')}
                       </Link>
                     )}
                   </td>

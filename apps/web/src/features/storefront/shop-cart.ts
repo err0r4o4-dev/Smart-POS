@@ -1,4 +1,4 @@
-import { useMemo, useSyncExternalStore } from 'react';
+﻿import { useMemo, useSyncExternalStore } from 'react';
 import type { ShopProduct } from '../../lib/storefront-api';
 import { exactDecimal } from '../../lib/pos-api';
 
@@ -11,6 +11,7 @@ export type CartEntry = Pick<
   | 'unit'
   | 'unit_type'
   | 'unit_price'
+  | 'image_url'
 > & { quantity: string };
 const memory = new Map<string, string>();
 const cartEvent = 'smartpos-shop-cart';
@@ -40,9 +41,11 @@ function readCart(value: string): CartEntry[] {
           'unit_type',
           'unit_price',
           'quantity',
-        ].every((key) => typeof item[key] === 'string') &&
-        exactDecimal(item.quantity, 3) !== null &&
-        exactDecimal(item.unit_price) !== null,
+        ].every((key) => typeof (item as Record<string, unknown>)[key] === 'string') &&
+        ((item as Record<string, unknown>).image_url === undefined ||
+          typeof (item as Record<string, unknown>).image_url === 'string') &&
+        exactDecimal((item as CartEntry).quantity, 3) !== null &&
+        exactDecimal((item as CartEntry).unit_price) !== null,
     );
   } catch {
     return [];

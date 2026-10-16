@@ -452,9 +452,6 @@ function CatalogProductCard({
         </span>
         <h2 id={`product-${product.variant_id}`}>{product.product_name}</h2>
         <p className="catalog-variant">{product.variant_name}</p>
-        <small className="catalog-product-sku">
-          {t('common.sku')} {product.sku} {t('storefront.unit')} {product.unit}
-        </small>
         <strong className="catalog-product-price">
           ฿{moneyText(product.unit_price)}
         </strong>

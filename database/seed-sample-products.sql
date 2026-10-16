@@ -194,8 +194,8 @@ BEGIN
 
   INSERT INTO product_variants (id, organization_id, product_id, sku, name, attributes, unit_id, cost_price, selling_price, currency, status)
   VALUES
-    (var_coke_can, v_org_id, p_coke, 'COKE-CAN-325', 'โค้ก 325 มล. กระป๋อง', '{"volume":"325ml","packaging":"กระป๋อง"}'::jsonb, u_can, 10.00, 15.00, 'THB', 'ACTIVE'),
-    (var_coke_pet, v_org_id, p_coke, 'COKE-PET-500', 'โค้ก 500 มล. ขวดพลาสติก', '{"volume":"500ml","packaging":"ขวด"}'::jsonb, u_bottle, 13.00, 19.00, 'THB', 'ACTIVE')
+    (var_coke_can, v_org_id, p_coke, 'COKE-CAN-325', 'โค้ก 325 มล. กระป๋อง', '{"volume":"325ml","packaging":"กระป๋อง","storefront_image_url":"/images/products/coke-can.svg"}'::jsonb, u_can, 10.00, 15.00, 'THB', 'ACTIVE'),
+    (var_coke_pet, v_org_id, p_coke, 'COKE-PET-500', 'โค้ก 500 มล. ขวดพลาสติก', '{"volume":"500ml","packaging":"ขวด","storefront_image_url":"/images/products/coke-pet.svg"}'::jsonb, u_bottle, 13.00, 19.00, 'THB', 'ACTIVE')
   ON CONFLICT (organization_id, sku) DO NOTHING;
 
   INSERT INTO product_barcodes (organization_id, variant_id, code, symbology, source, is_primary)
@@ -211,8 +211,8 @@ BEGIN
 
   INSERT INTO product_variants (id, organization_id, product_id, sku, name, attributes, unit_id, cost_price, selling_price, currency, status)
   VALUES
-    (var_lays_44, v_org_id, p_lays, 'LAYS-CLA-44G', 'เลย์ คลาสสิค ซองเล็ก 44 กรัม', '{"weight":"44g"}'::jsonb, u_bag, 16.00, 22.00, 'THB', 'ACTIVE'),
-    (var_lays_73, v_org_id, p_lays, 'LAYS-CLA-73G', 'เลย์ คลาสสิค ซองใหญ่ 73 กรัม', '{"weight":"73g"}'::jsonb, u_bag, 24.00, 32.00, 'THB', 'ACTIVE')
+    (var_lays_44, v_org_id, p_lays, 'LAYS-CLA-44G', 'เลย์ คลาสสิค ซองเล็ก 44 กรัม', '{"weight":"44g","storefront_image_url":"/images/products/lays-44g.svg"}'::jsonb, u_bag, 16.00, 22.00, 'THB', 'ACTIVE'),
+    (var_lays_73, v_org_id, p_lays, 'LAYS-CLA-73G', 'เลย์ คลาสสิค ซองใหญ่ 73 กรัม', '{"weight":"73g","storefront_image_url":"/images/products/lays-73g.svg"}'::jsonb, u_bag, 24.00, 32.00, 'THB', 'ACTIVE')
   ON CONFLICT (organization_id, sku) DO NOTHING;
 
   INSERT INTO product_barcodes (organization_id, variant_id, code, symbology, source, is_primary)
@@ -228,8 +228,8 @@ BEGIN
 
   INSERT INTO product_variants (id, organization_id, product_id, sku, name, attributes, unit_id, cost_price, selling_price, currency, status)
   VALUES
-    (var_mama_bag, v_org_id, p_mama, 'MAMA-TYK-55G', 'มาม่า ต้มยำกุ้ง ซอง 55 กรัม', '{"weight":"55g","packaging":"ซอง"}'::jsonb, u_bag, 5.50, 7.00, 'THB', 'ACTIVE'),
-    (var_mama_cup, v_org_id, p_mama, 'MAMA-TYK-CUP', 'มาม่า ต้มยำกุ้ง คัพ 60 กรัม', '{"weight":"60g","packaging":"คัพ"}'::jsonb, u_cup, 11.00, 15.00, 'THB', 'ACTIVE')
+    (var_mama_bag, v_org_id, p_mama, 'MAMA-TYK-55G', 'มาม่า ต้มยำกุ้ง ซอง 55 กรัม', '{"weight":"55g","packaging":"ซอง","storefront_image_url":"/images/products/mama-bag.svg"}'::jsonb, u_bag, 5.50, 7.00, 'THB', 'ACTIVE'),
+    (var_mama_cup, v_org_id, p_mama, 'MAMA-TYK-CUP', 'มาม่า ต้มยำกุ้ง คัพ 60 กรัม', '{"weight":"60g","packaging":"คัพ","storefront_image_url":"/images/products/mama-cup.svg"}'::jsonb, u_cup, 11.00, 15.00, 'THB', 'ACTIVE')
   ON CONFLICT (organization_id, sku) DO NOTHING;
 
   INSERT INTO product_barcodes (organization_id, variant_id, code, symbology, source, is_primary)
@@ -245,7 +245,7 @@ BEGIN
 
   INSERT INTO product_variants (id, organization_id, product_id, sku, name, attributes, unit_id, cost_price, selling_price, currency, status)
   VALUES
-    (var_ichi_pet, v_org_id, p_ichi, 'ICHI-ORI-420', 'อิชิตัน กรีนที 420 มล.', '{"volume":"420ml"}'::jsonb, u_bottle, 14.00, 20.00, 'THB', 'ACTIVE')
+    (var_ichi_pet, v_org_id, p_ichi, 'ICHI-ORI-420', 'อิชิตัน กรีนที 420 มล.', '{"volume":"420ml","storefront_image_url":"/images/products/ichitan.svg"}'::jsonb, u_bottle, 14.00, 20.00, 'THB', 'ACTIVE')
   ON CONFLICT (organization_id, sku) DO NOTHING;
 
   INSERT INTO product_barcodes (organization_id, variant_id, code, symbology, source, is_primary)
@@ -260,7 +260,7 @@ BEGIN
 
   INSERT INTO product_variants (id, organization_id, product_id, sku, name, attributes, unit_id, cost_price, selling_price, currency, status)
   VALUES
-    (var_dutch_box, v_org_id, p_dutch, 'DUTCH-4IN1-180', 'ดัชมิลล์ 4อิน1 กล่อง 180 มล.', '{"volume":"180ml"}'::jsonb, u_box, 8.50, 12.00, 'THB', 'ACTIVE')
+    (var_dutch_box, v_org_id, p_dutch, 'DUTCH-4IN1-180', 'ดัชมิลล์ 4อิน1 กล่อง 180 มล.', '{"volume":"180ml","storefront_image_url":"/images/products/dutchmill.svg"}'::jsonb, u_box, 8.50, 12.00, 'THB', 'ACTIVE')
   ON CONFLICT (organization_id, sku) DO NOTHING;
 
   INSERT INTO product_barcodes (organization_id, variant_id, code, symbology, source, is_primary)

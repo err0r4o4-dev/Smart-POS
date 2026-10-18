@@ -373,42 +373,44 @@ export function AccountPage() {
     }
   };
   return (
-    <div>
-      <section className="card account-card">
+    <section className="card account-card" aria-labelledby="account-title">
+      <header className="account-heading">
         <Tag tone="amber">{t('auth.account')}</Tag>
-        <h1>{t('auth.yourAccount')}</h1>
-        <dl>
+        <h1 id="account-title" tabIndex={-1}>
+          {t('auth.yourAccount')}
+        </h1>
+      </header>
+      <dl className="account-details-list">
+        <div>
           <dt>{t('auth.displayName')}</dt>
           <dd>{state.session.user.display_name}</dd>
+        </div>
+        <div>
           <dt>{t('auth.email')}</dt>
           <dd>{state.session.user.email}</dd>
+        </div>
+        <div>
           <dt>{t('auth.status')}</dt>
           <dd>{labelCode(state.session.user.status)}</dd>
-        </dl>
-        <p>
-          <Link to={paths.workspace}>
-            {t('auth.openYourRoleBasedWorkspace')}
-          </Link>{' '}
-          ·{' '}
-          <Link to="/setup">
-            {t('auth.selectOrganizationSetUpStoreAcceptInvitation')}
+        </div>
+      </dl>
+      <nav className="account-links" aria-label={t('auth.account')}>
+        <Link to={paths.workspace}>{t('auth.openYourRoleBasedWorkspace')}</Link>
+        <Link to="/setup">
+          {t('auth.selectOrganizationSetUpStoreAcceptInvitation')}
+        </Link>
+        {tenant.context && isManagementRole(tenant.context.membership.role) && (
+          <Link to="/manage/settings/store">
+            {t('auth.manageOrganizationAndBranches')}
           </Link>
-          {tenant.context &&
-            isManagementRole(tenant.context.membership.role) && (
-              <>
-                {' '}
-                ·{' '}
-                <Link to="/manage/settings/store">
-                  {t('auth.manageOrganizationAndBranches')}
-                </Link>
-              </>
-            )}
-        </p>
-        <ErrorMessage message={localize(error ?? '')} />
+        )}
+      </nav>
+      <ErrorMessage message={localize(error ?? '')} />
+      <div className="account-actions">
         <Button onClick={() => void logout()} disabled={pending}>
           {pending ? t('auth.signingOut') : t('auth.signOut')}
         </Button>
-      </section>
-    </div>
+      </div>
+    </section>
   );
 }

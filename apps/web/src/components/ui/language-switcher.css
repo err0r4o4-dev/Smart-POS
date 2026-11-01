@@ -6,32 +6,41 @@
   padding: 3px;
   border: 1px solid var(--border);
   border-radius: var(--radius-small);
-  background: var(--canvas);
+  background: var(--surface);
 }
 .language-switcher button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  min-width: 48px;
-  min-height: 38px;
-  padding: 6px 8px;
+  min-width: 46px;
+  min-height: 36px;
+  padding: 6px 10px;
   border: 1px solid transparent;
   border-radius: calc(var(--radius-small) - 4px);
   background: transparent;
   color: var(--text-strong);
   font: inherit;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
+  transition: all 0.15s ease;
 }
 .language-switcher button[aria-pressed='true'] {
-  border-color: var(--primary-border);
-  background: var(--primary-soft);
-  color: var(--primary-strong);
+  border-color: #fde68a;
+  background: #fef3c7;
+  color: #92400e;
+  font-weight: 600;
 }
-.language-switcher button:hover {
+.language-switcher button[aria-pressed='true']::before {
+  content: '✓ ';
+  font-weight: 700;
+  margin-right: 2px;
+  font-size: 12px;
+}
+.language-switcher button:hover:not([aria-pressed='true']) {
   background: var(--primary-subtle);
+  color: var(--text-primary);
 }
 .language-switcher button:focus-visible {
   outline: 2px solid var(--primary-strong);

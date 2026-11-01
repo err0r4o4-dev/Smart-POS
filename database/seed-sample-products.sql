@@ -94,6 +94,9 @@ DECLARE
 
   -- New Supplier ID
   supp_cpall uuid := gen_random_uuid();
+
+  -- POS Terminal ID
+  term_main uuid := gen_random_uuid();
 BEGIN
   -- ค้นหา organization จากฐานข้อมูล หากไม่มี ID เดิม ให้ใช้ Organization แรกที่พบ
   SELECT id INTO v_org_id FROM organizations WHERE id = '08ac3879-d23c-49a7-bd3c-8c7f0641b3b5';
@@ -191,8 +194,8 @@ BEGIN
 
   INSERT INTO product_variants (id, organization_id, product_id, sku, name, attributes, unit_id, cost_price, selling_price, currency, status)
   VALUES
-    (var_coke_can, v_org_id, p_coke, 'COKE-CAN-325', 'โค้ก 325 มล. กระป๋อง', '{"volume":"325ml","packaging":"กระป๋อง"}'::jsonb, u_can, 10.00, 15.00, 'THB', 'ACTIVE'),
-    (var_coke_pet, v_org_id, p_coke, 'COKE-PET-500', 'โค้ก 500 มล. ขวดพลาสติก', '{"volume":"500ml","packaging":"ขวด"}'::jsonb, u_bottle, 13.00, 19.00, 'THB', 'ACTIVE')
+    (var_coke_can, v_org_id, p_coke, 'COKE-CAN-325', 'โค้ก 325 มล. กระป๋อง', '{"volume":"325ml","packaging":"กระป๋อง","storefront_image_url":"/images/products/coke-can.svg"}'::jsonb, u_can, 10.00, 15.00, 'THB', 'ACTIVE'),
+    (var_coke_pet, v_org_id, p_coke, 'COKE-PET-500', 'โค้ก 500 มล. ขวดพลาสติก', '{"volume":"500ml","packaging":"ขวด","storefront_image_url":"/images/products/coke-pet.svg"}'::jsonb, u_bottle, 13.00, 19.00, 'THB', 'ACTIVE')
   ON CONFLICT (organization_id, sku) DO NOTHING;
 
   INSERT INTO product_barcodes (organization_id, variant_id, code, symbology, source, is_primary)
@@ -208,8 +211,8 @@ BEGIN
 
   INSERT INTO product_variants (id, organization_id, product_id, sku, name, attributes, unit_id, cost_price, selling_price, currency, status)
   VALUES
-    (var_lays_44, v_org_id, p_lays, 'LAYS-CLA-44G', 'เลย์ คลาสสิค ซองเล็ก 44 กรัม', '{"weight":"44g"}'::jsonb, u_bag, 16.00, 22.00, 'THB', 'ACTIVE'),
-    (var_lays_73, v_org_id, p_lays, 'LAYS-CLA-73G', 'เลย์ คลาสสิค ซองใหญ่ 73 กรัม', '{"weight":"73g"}'::jsonb, u_bag, 24.00, 32.00, 'THB', 'ACTIVE')
+    (var_lays_44, v_org_id, p_lays, 'LAYS-CLA-44G', 'เลย์ คลาสสิค ซองเล็ก 44 กรัม', '{"weight":"44g","storefront_image_url":"/images/products/lays-44g.svg"}'::jsonb, u_bag, 16.00, 22.00, 'THB', 'ACTIVE'),
+    (var_lays_73, v_org_id, p_lays, 'LAYS-CLA-73G', 'เลย์ คลาสสิค ซองใหญ่ 73 กรัม', '{"weight":"73g","storefront_image_url":"/images/products/lays-73g.svg"}'::jsonb, u_bag, 24.00, 32.00, 'THB', 'ACTIVE')
   ON CONFLICT (organization_id, sku) DO NOTHING;
 
   INSERT INTO product_barcodes (organization_id, variant_id, code, symbology, source, is_primary)
@@ -225,8 +228,8 @@ BEGIN
 
   INSERT INTO product_variants (id, organization_id, product_id, sku, name, attributes, unit_id, cost_price, selling_price, currency, status)
   VALUES
-    (var_mama_bag, v_org_id, p_mama, 'MAMA-TYK-55G', 'มาม่า ต้มยำกุ้ง ซอง 55 กรัม', '{"weight":"55g","packaging":"ซอง"}'::jsonb, u_bag, 5.50, 7.00, 'THB', 'ACTIVE'),
-    (var_mama_cup, v_org_id, p_mama, 'MAMA-TYK-CUP', 'มาม่า ต้มยำกุ้ง คัพ 60 กรัม', '{"weight":"60g","packaging":"คัพ"}'::jsonb, u_cup, 11.00, 15.00, 'THB', 'ACTIVE')
+    (var_mama_bag, v_org_id, p_mama, 'MAMA-TYK-55G', 'มาม่า ต้มยำกุ้ง ซอง 55 กรัม', '{"weight":"55g","packaging":"ซอง","storefront_image_url":"/images/products/mama-bag.svg"}'::jsonb, u_bag, 5.50, 7.00, 'THB', 'ACTIVE'),
+    (var_mama_cup, v_org_id, p_mama, 'MAMA-TYK-CUP', 'มาม่า ต้มยำกุ้ง คัพ 60 กรัม', '{"weight":"60g","packaging":"คัพ","storefront_image_url":"/images/products/mama-cup.svg"}'::jsonb, u_cup, 11.00, 15.00, 'THB', 'ACTIVE')
   ON CONFLICT (organization_id, sku) DO NOTHING;
 
   INSERT INTO product_barcodes (organization_id, variant_id, code, symbology, source, is_primary)
@@ -242,7 +245,7 @@ BEGIN
 
   INSERT INTO product_variants (id, organization_id, product_id, sku, name, attributes, unit_id, cost_price, selling_price, currency, status)
   VALUES
-    (var_ichi_pet, v_org_id, p_ichi, 'ICHI-ORI-420', 'อิชิตัน กรีนที 420 มล.', '{"volume":"420ml"}'::jsonb, u_bottle, 14.00, 20.00, 'THB', 'ACTIVE')
+    (var_ichi_pet, v_org_id, p_ichi, 'ICHI-ORI-420', 'อิชิตัน กรีนที 420 มล.', '{"volume":"420ml","storefront_image_url":"/images/products/ichitan.svg"}'::jsonb, u_bottle, 14.00, 20.00, 'THB', 'ACTIVE')
   ON CONFLICT (organization_id, sku) DO NOTHING;
 
   INSERT INTO product_barcodes (organization_id, variant_id, code, symbology, source, is_primary)
@@ -257,7 +260,7 @@ BEGIN
 
   INSERT INTO product_variants (id, organization_id, product_id, sku, name, attributes, unit_id, cost_price, selling_price, currency, status)
   VALUES
-    (var_dutch_box, v_org_id, p_dutch, 'DUTCH-4IN1-180', 'ดัชมิลล์ 4อิน1 กล่อง 180 มล.', '{"volume":"180ml"}'::jsonb, u_box, 8.50, 12.00, 'THB', 'ACTIVE')
+    (var_dutch_box, v_org_id, p_dutch, 'DUTCH-4IN1-180', 'ดัชมิลล์ 4อิน1 กล่อง 180 มล.', '{"volume":"180ml","storefront_image_url":"/images/products/dutchmill.svg"}'::jsonb, u_box, 8.50, 12.00, 'THB', 'ACTIVE')
   ON CONFLICT (organization_id, sku) DO NOTHING;
 
   INSERT INTO product_barcodes (organization_id, variant_id, code, symbology, source, is_primary)
@@ -338,6 +341,15 @@ BEGIN
   SELECT id INTO loc_floor FROM stock_locations WHERE organization_id = v_org_id AND branch_id = v_branch_id AND code = 'LOC-SALES-FLOOR';
   SELECT id INTO loc_shelf_drink FROM stock_locations WHERE organization_id = v_org_id AND branch_id = v_branch_id AND code = 'LOC-SHELF-DRINK';
   SELECT id INTO loc_shelf_snack FROM stock_locations WHERE organization_id = v_org_id AND branch_id = v_branch_id AND code = 'LOC-SHELF-SNACK';
+
+  -------------------------------------------------------------
+  -- 7.1 สร้างเครื่องคิดเงินและจุดขาย (POS Terminal)
+  -------------------------------------------------------------
+  INSERT INTO pos_terminals (id, organization_id, branch_id, code, name, stock_location_id, status, revision)
+  VALUES (term_main, v_org_id, v_branch_id, 'TERM-01', 'เคาน์เตอร์แคชเชียร์ 1 (หน้าร้าน)', loc_floor, 'ACTIVE', 1)
+  ON CONFLICT (organization_id, branch_id, code) DO NOTHING;
+
+  SELECT id INTO term_main FROM pos_terminals WHERE organization_id = v_org_id AND branch_id = v_branch_id AND code = 'TERM-01';
 
   -------------------------------------------------------------
   -- 8. ยอดสต็อกคงเหลือ (Stock Balances & Quality Balances)
@@ -652,6 +664,50 @@ BEGIN
 
   -- 8. เปิด Triggers กลับคืนมาตามเดิม
   ALTER TABLE stock_movements ENABLE TRIGGER ALL;
+
+  -------------------------------------------------------------
+  -- 14. ตั้งค่าหน้าร้านออนไลน์และเผยแพร่สินค้า (Storefront & Published Products)
+  -------------------------------------------------------------
+  INSERT INTO storefronts (
+    organization_id, slug, name, description, contact_phone,
+    pickup_instructions, terminal_id, published, accepting_orders, revision
+  )
+  VALUES (
+    v_org_id,
+    'main-store',
+    'ร้านค้าสาขาหลัก (SmartPOS Demo Store)',
+    'สั่งซื้อสินค้าล่วงหน้าผ่านออนไลน์และรับสินค้าได้ที่เคาน์เตอร์สาขาหลัก',
+    '02-123-4567',
+    'กรุณาแจ้งเลขออเดอร์หรือยื่นหน้าจอที่เคาน์เตอร์แคชเชียร์ 1',
+    term_main,
+    true,
+    true,
+    1
+  )
+  ON CONFLICT (organization_id) DO UPDATE SET
+    slug = EXCLUDED.slug,
+    name = EXCLUDED.name,
+    description = EXCLUDED.description,
+    contact_phone = EXCLUDED.contact_phone,
+    pickup_instructions = EXCLUDED.pickup_instructions,
+    terminal_id = EXCLUDED.terminal_id,
+    published = true,
+    accepting_orders = true,
+    revision = storefronts.revision + 1,
+    updated_at = now();
+
+  -- เผยแพร่สินค้าตัวอย่าง 5 รายการขึ้นหน้าร้านออนไลน์ /shop
+  INSERT INTO storefront_products (organization_id, variant_id, published)
+  VALUES
+    (v_org_id, var_coke_can, true),
+    (v_org_id, var_coke_pet, true),
+    (v_org_id, var_lays_44, true),
+    (v_org_id, var_lays_73, true),
+    (v_org_id, var_mama_bag, true),
+    (v_org_id, var_mama_cup, true),
+    (v_org_id, var_ichi_pet, true),
+    (v_org_id, var_dutch_box, true)
+  ON CONFLICT (organization_id, variant_id) DO UPDATE SET published = EXCLUDED.published;
 
   RAISE NOTICE 'Sample data with all statuses successfully created for organization %', v_org_id;
 END $$;

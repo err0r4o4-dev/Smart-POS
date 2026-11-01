@@ -471,6 +471,22 @@ it('retries an uncertain order with the same body, token and idempotency key', a
   expect(localStorage.getItem('shop-cart:test-shop')).toBe('[]');
   expect(sessionStorage.getItem('shop-pending:test-shop')).toBeNull();
 });
+it('renders product image in cart when image_url is available', async () => {
+  localStorage.setItem(
+    'shop-cart:test-shop',
+    JSON.stringify([
+      {
+        ...product,
+        quantity: '1.000',
+        image_url: 'https://example.com/coffee.jpg',
+      },
+    ]),
+  );
+  view('/shop/test-shop/cart');
+  const img = await screen.findByRole('img', { name: product.product_name });
+  expect(img).toHaveAttribute('src', 'https://example.com/coffee.jpg');
+});
+
 it('requires the private access fragment to track an order', () => {
   view('/shop/test-shop/track/order');
   expect(screen.getByRole('alert')).toHaveTextContent('ลิงก์ติดตามไม่ครบ');

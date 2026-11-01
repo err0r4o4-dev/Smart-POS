@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <rect width="200" height="200" rx="24" fill="#dcfce7"/>
+  <rect x="88" y="25" width="24" height="14" rx="3" fill="#15803d"/>
+  <path d="M90 39 L110 39 L118 65 L118 160 A8 8 0 0 1 110 168 L90 168 A8 8 0 0 1 82 160 L82 65 Z" fill="#16a34a"/>
+  <rect x="82" y="80" width="36" height="50" fill="#f0fdf4"/>
+  <text x="100" y="100" font-family="system-ui, sans-serif" font-size="9" font-weight="900" fill="#15803d" text-anchor="middle">ICHITAN</text>
+  <text x="100" y="115" font-family="system-ui, sans-serif" font-size="8" font-weight="bold" fill="#166534" text-anchor="middle">Green Tea</text>
+  <text x="100" y="145" font-family="system-ui, sans-serif" font-size="9" font-weight="bold" fill="#ffffff" text-anchor="middle">420ml</text>
+</svg>

@@ -1,7 +1,8 @@
-import { useLanguage } from '../../app/language';
+﻿import { useLanguage } from '../../app/language';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { PackageOpen } from 'lucide-react';
 import { Button, Card, Loading } from '../../components/ui/primitives';
 import { exactDecimal, moneyText } from '../../lib/pos-api';
 import {
@@ -16,7 +17,7 @@ import {
   type ShopSettings,
 } from '../../lib/storefront-api';
 import { ShopError } from './StorefrontPage';
-import { useShopCart } from './shop-cart';
+import { useShopCart, type CartEntry } from './shop-cart';
 
 interface RequestIdentity {
   key: string;
@@ -229,63 +230,30 @@ function CartContents({ slug }: { slug: string }) {
             className="shop-cart-lines"
           >
             {cart.items.map((item) => (
-              <Card key={item.variant_id} className="shop-cart-line">
-                <div>
-                  <h2>{item.product_name}</h2>
-                  <p>
-                    {item.variant_name} · {item.unit}
-                  </p>
-                  <small>
-                    ฿{moneyText(item.unit_price)} / {item.unit}{' '}
-                    {t('storefront.detailsWhenAddedToCart')}
-                  </small>
-                </div>
-                <label>
-                  {t('pos.quantity')} {item.product_name}
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    min={
-                      ['COUNT', 'PACKAGING'].includes(item.unit_type)
-                        ? '1'
-                        : '0.001'
-                    }
-                    step={
-                      ['COUNT', 'PACKAGING'].includes(item.unit_type)
-                        ? '1'
-                        : '0.001'
-                    }
-                    value={item.quantity}
-                    disabled={busy}
-                    onChange={(event) => {
-                      cart.update(
-                        cart.items.map((line) =>
-                          line.variant_id === item.variant_id
-                            ? { ...line, quantity: event.target.value }
-                            : line,
-                        ),
-                      );
-                      quote.reset();
-                      setError(null);
-                    }}
-                  />
-                </label>
-                <Button
-                  className="button-secondary"
-                  disabled={busy}
-                  onClick={() => {
-                    cart.update(
-                      cart.items.filter(
-                        (line) => line.variant_id !== item.variant_id,
-                      ),
-                    );
-                    quote.reset();
-                  }}
-                >
-                  {t('storefront.remove')} {item.product_name}{' '}
-                  {t('catalog.remove2')}
-                </Button>
-              </Card>
+              <CartLineItem
+                key={item.variant_id}
+                item={item}
+                busy={busy}
+                onUpdateQuantity={(nextQuantity) => {
+                  cart.update(
+                    cart.items.map((entry) =>
+                      entry.variant_id === item.variant_id
+                        ? { ...entry, quantity: nextQuantity }
+                        : entry,
+                    ),
+                  );
+                  quote.reset();
+                  setError(null);
+                }}
+                onRemove={() => {
+                  cart.update(
+                    cart.items.filter(
+                      (entry) => entry.variant_id !== item.variant_id,
+                    ),
+                  );
+                  quote.reset();
+                }}
+              />
             ))}
           </section>
           <Card className="shop-checkout">
@@ -412,5 +380,80 @@ function CartContents({ slug }: { slug: string }) {
         </div>
       )}
     </>
+  );
+}
+
+function CartLineItem({
+  item,
+  busy,
+  onUpdateQuantity,
+  onRemove,
+}: {
+  item: CartEntry;
+  busy: boolean;
+  onUpdateQuantity: (quantity: string) => void;
+  onRemove: () => void;
+}) {
+  const { t } = useLanguage();
+  const [imageFailed, setImageFailed] = useState(false);
+
+  return (
+    <Card className="shop-cart-line">
+      <div className="shop-cart-line-main">
+        <div className="shop-cart-line-media">
+          {item.image_url && !imageFailed ? (
+            <img
+              src={item.image_url}
+              alt={item.product_name}
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              onError={() => setImageFailed(true)}
+            />
+          ) : (
+            <div className="shop-cart-line-placeholder">
+              <PackageOpen size={30} strokeWidth={1.3} aria-hidden="true" />
+            </div>
+          )}
+        </div>
+        <div className="shop-cart-line-info">
+          <h2>{item.product_name}</h2>
+          <p>
+            {item.variant_name} · {item.unit}
+          </p>
+          <small>
+            ฿{moneyText(item.unit_price)} / {item.unit}{' '}
+            {t('storefront.detailsWhenAddedToCart')}
+          </small>
+        </div>
+      </div>
+      <label>
+        {t('pos.quantity')} {item.product_name}
+        <input
+          type="number"
+          inputMode="decimal"
+          min={
+            ['COUNT', 'PACKAGING'].includes(item.unit_type)
+              ? '1'
+              : '0.001'
+          }
+          step={
+            ['COUNT', 'PACKAGING'].includes(item.unit_type)
+              ? '1'
+              : '0.001'
+          }
+          value={item.quantity}
+          disabled={busy}
+          onChange={(event) => onUpdateQuantity(event.target.value)}
+        />
+      </label>
+      <Button
+        className="button-secondary"
+        disabled={busy}
+        onClick={onRemove}
+      >
+        {t('storefront.remove')} {item.product_name}{' '}
+        {t('catalog.remove2')}
+      </Button>
+    </Card>
   );
 }

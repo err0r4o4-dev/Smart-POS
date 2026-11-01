@@ -1,13 +1,17 @@
 import { useLanguage } from '../../app/language';
 import type { UiMessage } from '../../i18n';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Grid2X2,
+  Heart,
   LayoutGrid,
   List,
   Minus,
+  Package,
   PackageOpen,
   Plus,
   Search,
@@ -23,6 +27,7 @@ import {
   type ShopSettings,
 } from '../../lib/storefront-api';
 import { useShopCart } from './shop-cart';
+import { useShopFavorites } from './shop-favorites';
 import { ShopError, ShopPagination } from './shop-feedback';
 import './catalog.css';
 
@@ -41,18 +46,27 @@ function quantityText(value: bigint) {
 }
 
 export function ShopCatalog({ slug }: { slug: string }) {
-  const { t, messageText, localize } = useLanguage();
+  const { t, messageText, localize, language } = useLanguage();
 
   const cart = useShopCart(slug);
+  const favorites = useShopFavorites(slug);
   const [search, setSearch] = useState('');
   const [submitted, setSubmitted] = useState('');
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState(initialFilters);
   const [priceDraft, setPriceDraft] = useState({ minimum: '', maximum: '' });
   const [priceError, setPriceError] = useState('');
-  const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [view, setView] = useState<'grid' | 'list'>('list');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [message, setMessage] = useState<UiMessage>('');
+
+  useEffect(() => {
+    const onToggle = () => setSidebarCollapsed((v) => !v);
+    window.addEventListener('toggle-catalog-sidebar', onToggle);
+    return () => window.removeEventListener('toggle-catalog-sidebar', onToggle);
+  }, []);
+
   const shop = useQuery({
     queryKey: ['storefront', slug, 'settings'],
     queryFn: ({ signal }) =>
@@ -108,15 +122,28 @@ export function ShopCatalog({ slug }: { slug: string }) {
   );
   return (
     <div className="shop-catalog">
-      <div className="catalog-layout">
+      <div className={`catalog-layout ${sidebarCollapsed ? 'catalog-layout-sidebar-collapsed' : ''}`}>
         <aside
-          className="catalog-sidebar"
+          className={`catalog-sidebar ${sidebarCollapsed ? 'catalog-sidebar-collapsed' : ''}`}
           aria-label={t('catalog.productCategory')}
         >
-          <h2>
-            <Grid2X2 size={19} aria-hidden="true" />{' '}
-            {t('catalog.productCategory')}
-          </h2>
+          <div className="catalog-sidebar-header">
+            <h2>
+              {language === 'th' ? 'หมวดหมู่เมนู' : t('catalog.productCategory')}
+            </h2>
+            <button
+              type="button"
+              className="catalog-sidebar-collapse-btn"
+              aria-label={sidebarCollapsed ? (language === 'th' ? 'ขยายหมวดหมู่' : 'Expand categories') : (language === 'th' ? 'ย่อหมวดหมู่' : 'Collapse categories')}
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            >
+              {sidebarCollapsed ? (
+                <ChevronRight size={16} aria-hidden="true" />
+              ) : (
+                <ChevronLeft size={16} aria-hidden="true" />
+              )}
+            </button>
+          </div>
           <Button
             className="button-secondary catalog-category-toggle"
             aria-expanded={categoriesOpen}
@@ -138,7 +165,7 @@ export function ShopCatalog({ slug }: { slug: string }) {
               aria-pressed={!filters.category}
               onClick={() => changeFilters({ category: '' })}
             >
-              <LayoutGrid size={19} aria-hidden="true" />
+              <LayoutGrid size={18} aria-hidden="true" />
               <span>{t('common.all')}</span>
               <span className="catalog-category-count">{allCount}</span>
             </Button>
@@ -153,7 +180,7 @@ export function ShopCatalog({ slug }: { slug: string }) {
                   setCategoriesOpen(false);
                 }}
               >
-                <PackageOpen size={19} aria-hidden="true" />
+                <Package size={18} aria-hidden="true" />
                 <span>{category.name}</span>
                 <span className="catalog-category-count">{category.count}</span>
               </Button>
@@ -174,7 +201,7 @@ export function ShopCatalog({ slug }: { slug: string }) {
             }}
           >
             <label htmlFor="shop-search" className="catalog-search-field">
-              <Search size={20} aria-hidden="true" />
+              <Search size={19} aria-hidden="true" />
               <span className="catalog-visually-hidden">
                 {t('common.searchProducts')}
               </span>
@@ -184,21 +211,48 @@ export function ShopCatalog({ slug }: { slug: string }) {
                 value={search}
                 maxLength={100}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder={t('storefront.productNameVariantOrSku')}
+                placeholder={
+                  language === 'th'
+                    ? 'ค้นหาเมนูอาหาร เช่น ผัดกะเพรา ราดหน้า ผัดซีอิ๊ว'
+                    : t('storefront.productNameVariantOrSku')
+                }
               />
             </label>
-            <Button type="submit">{t('customers.search')}</Button>
+            <Button type="submit" className="catalog-search-submit">
+              {t('customers.search')}
+            </Button>
           </form>
           <div
             className="catalog-toolbar"
             role="group"
             aria-label={t('storefront.productFiltersAndDisplay')}
           >
+            <div className="catalog-sort-wrapper">
+              <SlidersHorizontal size={15} aria-hidden="true" />
+              <select
+                aria-label={t('storefront.sortProducts')}
+                value={filters.sort}
+                disabled={!supportsFilters}
+                onChange={(event) =>
+                  changeFilters({ sort: event.target.value })
+                }
+              >
+                <option value="name">
+                  {language === 'th' ? 'เรียงตาม: ยอดนิยม' : 'Sort: Popular'}
+                </option>
+                <option value="price_asc">
+                  {language === 'th' ? 'เรียงตาม: ราคา ต่ำ-สูง' : t('storefront.priceLowToHigh')}
+                </option>
+                <option value="price_desc">
+                  {language === 'th' ? 'เรียงตาม: ราคา สูง-ต่ำ' : t('storefront.priceHighToLow')}
+                </option>
+              </select>
+            </div>
             <details className="catalog-price-filter">
               <summary>
-                <SlidersHorizontal size={16} aria-hidden="true" />{' '}
+                <SlidersHorizontal size={15} aria-hidden="true" />{' '}
                 {t('storefront.priceRange')}{' '}
-                <ChevronDown size={16} aria-hidden="true" />
+                <ChevronDown size={15} aria-hidden="true" />
               </summary>
               <form
                 className="catalog-price-panel"
@@ -274,22 +328,6 @@ export function ShopCatalog({ slug }: { slug: string }) {
               </Button>
             )}
             <div className="catalog-view-controls">
-              <select
-                aria-label={t('storefront.sortProducts')}
-                value={filters.sort}
-                disabled={!supportsFilters}
-                onChange={(event) =>
-                  changeFilters({ sort: event.target.value })
-                }
-              >
-                <option value="name">{t('storefront.sortProductName')}</option>
-                <option value="price_asc">
-                  {t('storefront.priceLowToHigh')}
-                </option>
-                <option value="price_desc">
-                  {t('storefront.priceHighToLow')}
-                </option>
-              </select>
               <div
                 className="catalog-view-toggle"
                 role="group"
@@ -300,14 +338,14 @@ export function ShopCatalog({ slug }: { slug: string }) {
                   aria-pressed={view === 'grid'}
                   onClick={() => setView('grid')}
                 >
-                  <Grid2X2 size={19} aria-hidden="true" />
+                  <Grid2X2 size={18} aria-hidden="true" />
                 </Button>
                 <Button
                   aria-label={t('storefront.listView')}
                   aria-pressed={view === 'list'}
                   onClick={() => setView('list')}
                 >
-                  <List size={20} aria-hidden="true" />
+                  <List size={19} aria-hidden="true" />
                 </Button>
               </div>
             </div>
@@ -355,6 +393,19 @@ export function ShopCatalog({ slug }: { slug: string }) {
                     (item) => item.variant_id === product.variant_id,
                   )?.quantity ?? '0.000'
                 }
+                isFavorite={favorites.isFavorite(product.variant_id)}
+                onToggleFavorite={() => {
+                  const added = favorites.toggle(product.variant_id);
+                  setMessage(
+                    added
+                      ? (language === 'th'
+                          ? `บันทึก "${product.product_name}" ในรายการโปรดแล้ว`
+                          : `Added "${product.product_name}" to favorites`)
+                      : (language === 'th'
+                          ? `นำ "${product.product_name}" ออกจากรายการโปรดแล้ว`
+                          : `Removed "${product.product_name}" from favorites`),
+                  );
+                }}
                 disabled={
                   !store.accepting_orders ||
                   (cart.items.length >= 100 &&
@@ -396,15 +447,19 @@ export function ShopCatalog({ slug }: { slug: string }) {
 function CatalogProductCard({
   product,
   cartQuantity,
+  isFavorite = false,
+  onToggleFavorite,
   disabled,
   add,
 }: {
   product: ShopProduct;
   cartQuantity: string;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
   disabled: boolean;
   add: (quantity: string) => void;
 }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const stock = exactDecimal(product.available, 3) ?? 0n;
   const remaining = stock - (exactDecimal(cartQuantity, 3) ?? 0n);
@@ -441,85 +496,125 @@ function CatalogProductCard({
           />
         ) : (
           <div className="catalog-product-placeholder">
-            <PackageOpen size={62} strokeWidth={1.2} aria-hidden="true" />
+            <PackageOpen size={48} strokeWidth={1.2} aria-hidden="true" />
             <span>{t('catalog.noProductImageYet')}</span>
           </div>
         )}
+        <button
+          type="button"
+          className={`catalog-product-favorite ${isFavorite ? 'catalog-product-favorite-active' : ''}`}
+          aria-pressed={isFavorite}
+          aria-label={
+            isFavorite
+              ? (language === 'th' ? 'นำออกจากรายการโปรด' : 'Remove from favorites')
+              : (language === 'th' ? 'บันทึกในรายการโปรด' : 'Add to favorites')
+          }
+          title={
+            isFavorite
+              ? (language === 'th' ? 'นำออกจากรายการโปรด' : 'Remove from favorites')
+              : (language === 'th' ? 'บันทึกในรายการโปรด' : 'Add to favorites')
+          }
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onToggleFavorite?.();
+          }}
+        >
+          <Heart
+            size={16}
+            strokeWidth={isFavorite ? 0 : 1.8}
+            fill={isFavorite ? '#ef4444' : 'none'}
+            className={isFavorite ? 'heart-filled' : ''}
+            aria-hidden="true"
+          />
+        </button>
       </div>
       <div className="catalog-product-body">
-        <span className="catalog-product-category">
-          {product.category_name || t('common.products')}
-        </span>
-        <h2 id={`product-${product.variant_id}`}>{product.product_name}</h2>
-        <p className="catalog-variant">{product.variant_name}</p>
-        <small className="catalog-product-sku">
-          {t('common.sku')} {product.sku} {t('storefront.unit')} {product.unit}
-        </small>
-        <strong className="catalog-product-price">
-          ฿{moneyText(product.unit_price)}
-        </strong>
-        <p className="catalog-product-stock" data-ready={ready}>
-          <span aria-hidden="true" />
-          {ready
-            ? t('storefront.availableValue0Value1', {
-                value0: quantityText(stock),
-                value1: product.unit,
-              })
-            : t('storefront.productUnavailableForSale')}
-        </p>
-        <div className="catalog-product-actions">
-          <div className="catalog-quantity">
+        <div className="catalog-product-info">
+          <span className="catalog-product-category">
+            {product.category_name || t('common.products')}
+          </span>
+          <h2 id={`product-${product.variant_id}`}>{product.product_name}</h2>
+          <p className="catalog-variant">{product.variant_name}</p>
+        </div>
+        <div className="catalog-product-meta-actions">
+          <div className="catalog-product-price-stock">
+            <strong className="catalog-product-price">
+              ฿{moneyText(product.unit_price)}
+            </strong>
+            <p className="catalog-product-stock" data-ready={ready}>
+              <span className="catalog-stock-dot" aria-hidden="true" />
+              <span className="catalog-stock-text">
+                {ready
+                  ? language === 'th'
+                    ? 'พร้อมจำหน่าย'
+                    : 'In stock'
+                  : t('storefront.productUnavailableForSale')}
+              </span>
+              <span className="catalog-visually-hidden">
+                {ready
+                  ? t('storefront.availableValue0Value1', {
+                      value0: quantityText(stock),
+                      value1: product.unit,
+                    })
+                  : t('storefront.productUnavailableForSale')}
+              </span>
+            </p>
+          </div>
+          <div className="catalog-product-actions">
+            <div className="catalog-quantity">
+              <Button
+                aria-label={t('storefront.decreaseQuantityForValue0', {
+                  value0: product.product_name,
+                })}
+                disabled={disabled || !ready || units === null || units <= step}
+                onClick={() => {
+                  if (units !== null) setQuantity(quantityText(units - step));
+                }}
+              >
+                <Minus size={15} aria-hidden="true" />
+              </Button>
+              <label className="catalog-visually-hidden" htmlFor={inputID}>
+                {t('pos.quantity')} {product.product_name}
+              </label>
+              <input
+                id={inputID}
+                type="number"
+                inputMode={whole ? 'numeric' : 'decimal'}
+                min={quantityText(step)}
+                max={quantityText(remaining > 0n ? remaining : 0n)}
+                step={quantityText(step)}
+                value={quantity}
+                disabled={disabled || !ready || remaining < step}
+                aria-invalid={!valid && ready && remaining >= step}
+                aria-describedby={
+                  !valid && ready && remaining >= step ? errorID : undefined
+                }
+                onChange={(event) => setQuantity(event.target.value)}
+              />
+              <Button
+                aria-label={t('storefront.increaseQuantityForValue02', {
+                  value0: product.product_name,
+                })}
+                disabled={
+                  disabled || !ready || units === null || units + step > remaining
+                }
+                onClick={() => {
+                  if (units !== null) setQuantity(quantityText(units + step));
+                }}
+              >
+                <Plus size={15} aria-hidden="true" />
+              </Button>
+            </div>
             <Button
-              aria-label={t('storefront.decreaseQuantityForValue0', {
-                value0: product.product_name,
-              })}
-              disabled={disabled || !ready || units === null || units <= step}
-              onClick={() => {
-                if (units !== null) setQuantity(quantityText(units - step));
-              }}
+              className="catalog-add"
+              disabled={disabled || !ready || !valid}
+              onClick={() => add(quantity)}
             >
-              <Minus size={16} aria-hidden="true" />
-            </Button>
-            <label className="catalog-visually-hidden" htmlFor={inputID}>
-              {t('pos.quantity')} {product.product_name}
-            </label>
-            <input
-              id={inputID}
-              type="number"
-              inputMode={whole ? 'numeric' : 'decimal'}
-              min={quantityText(step)}
-              max={quantityText(remaining > 0n ? remaining : 0n)}
-              step={quantityText(step)}
-              value={quantity}
-              disabled={disabled || !ready || remaining < step}
-              aria-invalid={!valid && ready && remaining >= step}
-              aria-describedby={
-                !valid && ready && remaining >= step ? errorID : undefined
-              }
-              onChange={(event) => setQuantity(event.target.value)}
-            />
-            <Button
-              aria-label={t('storefront.increaseQuantityForValue02', {
-                value0: product.product_name,
-              })}
-              disabled={
-                disabled || !ready || units === null || units + step > remaining
-              }
-              onClick={() => {
-                if (units !== null) setQuantity(quantityText(units + step));
-              }}
-            >
-              <Plus size={16} aria-hidden="true" />
+              <ShoppingCart size={16} aria-hidden="true" />
+              {t('storefront.addToCart')}
             </Button>
           </div>
-          <Button
-            className="catalog-add"
-            disabled={disabled || !ready || !valid}
-            onClick={() => add(quantity)}
-          >
-            <ShoppingCart size={18} aria-hidden="true" />
-            {t('storefront.addToCart')}
-          </Button>
         </div>
         {!valid && ready && remaining >= step && (
           <small id={errorID} className="catalog-quantity-error">

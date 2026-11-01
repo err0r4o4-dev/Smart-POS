@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react';
+﻿import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { useShopCart } from './shop-cart';
 
@@ -13,11 +13,12 @@ const product = {
   available: '10.000',
   saleable: true,
   published: true,
+  image_url: 'https://example.com/coke.png',
 };
 beforeEach(() => localStorage.clear());
 afterEach(() => vi.restoreAllMocks());
 
-it('synchronizes header and catalog snapshots and does not lose rapid additions', () => {
+it('synchronizes header and catalog snapshots and preserves product image', () => {
   const first = renderHook(() => useShopCart('shared-cart'));
   const second = renderHook(() => useShopCart('shared-cart'));
   act(() => {
@@ -25,7 +26,9 @@ it('synchronizes header and catalog snapshots and does not lose rapid additions'
     first.result.current.add(product, '3.000');
   });
   expect(first.result.current.items[0].quantity).toBe('5.000');
+  expect(first.result.current.items[0].image_url).toBe('https://example.com/coke.png');
   expect(second.result.current.items[0].quantity).toBe('5.000');
+  expect(second.result.current.items[0].image_url).toBe('https://example.com/coke.png');
   act(() => second.result.current.update([]));
   expect(first.result.current.items).toEqual([]);
 });
@@ -57,6 +60,7 @@ it('updates from matching storage events without sharing another store cart', ()
     );
   });
   expect(first.result.current.items[0].quantity).toBe('2.000');
+  expect(first.result.current.items[0].image_url).toBe('https://example.com/coke.png');
   expect(second.result.current.items).toEqual([]);
 });
 

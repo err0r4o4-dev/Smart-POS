@@ -1,6 +1,6 @@
 import { useLanguage } from '../../app/language';
 import type { UiMessage } from '../../i18n';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   ChevronDown,
@@ -31,6 +31,36 @@ import { useShopFavorites } from './shop-favorites';
 import { ShopError, ShopPagination } from './shop-feedback';
 import './catalog.css';
 
+const CATEGORY_TRANSLATIONS: Record<string, string> = {
+  'ขนมขบเคี้ยว': 'Snacks',
+  'ผลิตภัณฑ์นมและเนย': 'Dairy & Butter',
+  'อาหารกึ่งสำเร็จรูป': 'Instant Food',
+  'เครื่องดื่ม': 'Beverages',
+};
+
+const PRODUCT_TRANSLATIONS: Record<string, string> = {
+  'โค้ก ออริจินัล': 'Coca-Cola Original',
+  'มันฝรั่งแท้ทอดกรอบ เลย์ รสคลาสสิค': "Lay's Classic Potato Chips",
+  'บะหมี่กึ่งสำเร็จรูป มาม่า รสต้มยำกุ้ง': 'Mama Instant Noodles Tom Yum Kung',
+  'ชาเขียวพร้อมดื่ม อิชิตัน กรีนที รสต้นตำรับ': 'Ichitan Green Tea Original',
+  'นมเปรี้ยว ดัชมิลล์ 4อิน1 รสผลไม้รวม': 'Dutch Mill 4-in-1 Mixed Fruit Drinking Yogurt',
+  'เนสกาแฟ เบลนด์ แอนด์ บรู ริช อโรมา': 'Nescafe Blend & Brew Rich Aroma',
+  'โออิชิ กรีนที รสข้าวญี่ปุ่น เก็นไมฉะ': 'Oishi Green Tea Genmaicha',
+  'เป๊ปซี่ กลิ่นไลม์ มะนาว ลิมิเต็ด (เลิกจำหน่าย)': 'Pepsi Lime Limited Edition',
+  'เลย์ แม็กซ์ แผ่นหยัก กลิ่นพริกปีศาจ เอกซ์ตรีม (เลิกจำหน่าย)': "Lay's Max Ghost Pepper Extreme",
+};
+
+function translateCategory(name: string | undefined, lang: string): string {
+  if (!name) return '';
+  if (lang !== 'en') return name;
+  return CATEGORY_TRANSLATIONS[name.trim()] ?? name;
+}
+
+function translateProduct(name: string | undefined, lang: string): string {
+  if (!name) return '';
+  if (lang !== 'en') return name;
+  return PRODUCT_TRANSLATIONS[name.trim()] ?? name;
+}
 const initialFilters = {
   category: '',
   minimum: '',
@@ -80,7 +110,7 @@ export function ShopCatalog({ slug }: { slug: string }) {
   if (filters.category) parameters.set('category_id', filters.category);
   if (filters.minimum) parameters.set('min_price', filters.minimum);
   if (filters.maximum) parameters.set('max_price', filters.maximum);
-  if (filters.sort !== 'name') parameters.set('sort', filters.sort);
+  if (filters.sort !== 'name' && filters.sort !== 'favorites') parameters.set('sort', filters.sort);
   const query = parameters.toString();
   const products = useQuery({
     queryKey: ['storefront', slug, 'products', query],
@@ -104,6 +134,15 @@ export function ShopCatalog({ slug }: { slug: string }) {
     setSubmitted('');
     setPage(1);
   };
+  const rawItems = products.data?.items ?? [];
+  const items = useMemo(() => {
+    if (filters.sort !== 'favorites') return rawItems;
+    return [...rawItems].sort((a, b) => {
+      const aFav = favorites.isFavorite(a.variant_id) ? 1 : 0;
+      const bFav = favorites.isFavorite(b.variant_id) ? 1 : 0;
+      return bFav - aFav;
+    });
+  }, [rawItems, filters.sort, favorites]);
   if (shop.isPending) return <Loading>{t('storefront.loadingStore')}</Loading>;
   if (shop.error || !shop.data)
     return <ShopError error={shop.error} retry={() => void shop.refetch()} />;
@@ -173,7 +212,7 @@ export function ShopCatalog({ slug }: { slug: string }) {
               <Button
                 key={category.id}
                 className="catalog-category"
-                aria-label={`${category.name} ${category.count}`}
+                aria-label={`${translateCategory(category.name, language)} ${category.count}`}
                 aria-pressed={filters.category === category.id}
                 onClick={() => {
                   changeFilters({ category: category.id });
@@ -181,7 +220,7 @@ export function ShopCatalog({ slug }: { slug: string }) {
                 }}
               >
                 <Package size={18} aria-hidden="true" />
-                <span>{category.name}</span>
+                <span>{translateCategory(category.name, language)}</span>
                 <span className="catalog-category-count">{category.count}</span>
               </Button>
             ))}
@@ -239,6 +278,9 @@ export function ShopCatalog({ slug }: { slug: string }) {
               >
                 <option value="name">
                   {language === 'th' ? 'เรียงตาม: ยอดนิยม' : 'Sort: Popular'}
+                </option>
+                <option value="favorites">
+                  {language === 'th' ? 'เรียงตาม: รายการโปรด' : 'Sort: Favorites'}
                 </option>
                 <option value="price_asc">
                   {language === 'th' ? 'เรียงตาม: ราคา ต่ำ-สูง' : t('storefront.priceLowToHigh')}
@@ -384,7 +426,7 @@ export function ShopCatalog({ slug }: { slug: string }) {
             </Card>
           )}
           <div className={`catalog-products catalog-products-${view}`}>
-            {products.data?.items.map((product) => (
+            {items.map((product) => (
               <CatalogProductCard
                 key={`${product.variant_id}:${product.image_url ?? ''}`}
                 product={product}
@@ -532,9 +574,9 @@ function CatalogProductCard({
       <div className="catalog-product-body">
         <div className="catalog-product-info">
           <span className="catalog-product-category">
-            {product.category_name || t('common.products')}
+            {translateCategory(product.category_name, language) || t('common.products')}
           </span>
-          <h2 id={`product-${product.variant_id}`}>{product.product_name}</h2>
+          <h2 id={`product-${product.variant_id}`}>{translateProduct(product.product_name, language)}</h2>
           <p className="catalog-variant">{product.variant_name}</p>
         </div>
         <div className="catalog-product-meta-actions">

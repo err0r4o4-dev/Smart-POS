@@ -83,6 +83,19 @@ describe('shared language preference', () => {
     expect(screen.getByRole('heading', { name: 'บันทึก' })).toBeVisible();
   });
 
+  it('renders language buttons without checkmark icons', () => {
+    render(
+      <LanguageProvider>
+        <LanguageSwitcher />
+      </LanguageProvider>,
+    );
+    const buttons = screen.getAllByRole('button');
+    expect(buttons).toHaveLength(2);
+    for (const button of buttons) {
+      expect(button.querySelector('svg')).toBeNull();
+    }
+  });
+
   it('keeps switching available when browser storage is blocked', () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('Blocked');

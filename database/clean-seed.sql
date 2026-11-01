@@ -20,6 +20,9 @@ BEGIN
       PERFORM set_config('app.user_id', v_user_id::text, true);
     END IF;
 
+    DELETE FROM storefront_products WHERE organization_id = v_org_id;
+    DELETE FROM storefronts WHERE organization_id = v_org_id;
+    DELETE FROM pos_terminals WHERE organization_id = v_org_id AND code = 'TERM-01';
     DELETE FROM supplier_products WHERE organization_id = v_org_id;
     DELETE FROM suppliers WHERE organization_id = v_org_id AND code IN ('SUP-CPALL', 'SUP-THAI-BEV');
     DELETE FROM shelf_assignments WHERE organization_id = v_org_id;

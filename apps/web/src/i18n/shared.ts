@@ -80,6 +80,12 @@ export const shared = defineMessages({
     cancelled: 'ยกเลิกแล้ว',
     orderExpired: 'ออเดอร์หมดอายุ',
     unableToConnectToStorefrontTryAgain: 'เชื่อมต่อหน้าร้านไม่ได้ กรุณาลองใหม่',
+    storeMenuProducts: 'เมนูร้าน / สินค้า',
+    salesHistoryMenu: 'ประวัติการขาย',
+    inventoryAndStockGroup: 'สินค้าคงคลังและสต็อก',
+    pricingAndPromotionsGroup: 'ราคาและโปรโมชั่น',
+    reportsAndAnalyticsGroup: 'รายงานและวิเคราะห์',
+    systemSettingsGroup: 'ตั้งค่าระบบ',
   },
   en: {
     storeOwner: 'Store owner',
@@ -165,5 +171,11 @@ export const shared = defineMessages({
     orderExpired: 'Order expired',
     unableToConnectToStorefrontTryAgain:
       'Unable to connect to storefront. Try again.',
+    storeMenuProducts: 'Store menu / Products',
+    salesHistoryMenu: 'Sales history',
+    inventoryAndStockGroup: 'Inventory and stock',
+    pricingAndPromotionsGroup: 'Pricing and promotions',
+    reportsAndAnalyticsGroup: 'Reports and analytics',
+    systemSettingsGroup: 'System settings',
   },
 });

@@ -55,6 +55,10 @@ export const shell = defineMessages({
     intelligentRetail: 'งานร้านอัจฉริยะ',
     roleValue0: 'บทบาท: {value0}',
     cartValue0: 'ตะกร้า ({value0})',
+    searchPlaceholder: 'ค้นหาเมนู, สินค้า, หรือคำสั่ง...',
+    notifications: 'การแจ้งเตือน',
+    viewSalesReport: 'ดูรายงานยอดขาย',
+    analyzeYourStore: 'วิเคราะห์ร้านของคุณ',
   },
   en: {
     invalidSingleStoreConfigurationCheckSystemSettings:
@@ -112,5 +116,9 @@ export const shell = defineMessages({
     intelligentRetail: 'INTELLIGENT RETAIL',
     roleValue0: 'Role: {value0}',
     cartValue0: 'Cart ({value0})',
+    searchPlaceholder: 'Search menus, products, or commands...',
+    notifications: 'Notifications',
+    viewSalesReport: 'View sales reports',
+    analyzeYourStore: 'Analyze your store',
   },
 });

@@ -6,12 +6,25 @@
 .inventory-page .catalog-nav {
   margin: 0;
 }
+.inventory-page .inventory-metrics .card {
+  padding: 18px 20px;
+  border-radius: 18px;
+  border-left: 4px solid var(--primary);
+  display: grid;
+  gap: 6px;
+}
 .inventory-page .inventory-metrics h2 {
-  font-size: 1rem;
+  font-size: 12.5px;
+  font-weight: 600;
   color: var(--text-secondary);
+  margin: 0;
 }
 .inventory-metrics strong {
-  font-size: 2rem;
+  font-size: clamp(20px, 2vw, 26px);
+  font-weight: 750;
+  letter-spacing: -0.6px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
 }
 .inventory-form {
   display: grid;

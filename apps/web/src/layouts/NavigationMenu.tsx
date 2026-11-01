@@ -2,11 +2,23 @@ import { useLanguage } from '../app/language';
 import { useId, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
+  BarChart3,
   BookOpen,
+  Briefcase,
   ChevronDown,
+  Contact,
+  FileText,
+  House,
   LayoutDashboard,
+  LayoutGrid,
+  Play,
+  Receipt,
+  ReceiptText,
+  Settings,
   ShieldCheck,
+  ShoppingCart,
   Terminal,
+  type LucideIcon,
 } from 'lucide-react';
 import { canAccess, type Session } from '../app/access';
 import {
@@ -21,6 +33,27 @@ const icons = {
   pos: Terminal,
   auth: ShieldCheck,
   help: BookOpen,
+};
+
+const pathIcons: Record<string, LucideIcon> = {
+  '/manage/dashboard': House,
+  '/manage/products': LayoutGrid,
+  '/manage/pos': Play,
+  '/manage/online-orders': ShoppingCart,
+  '/manage/sales': FileText,
+  '/manage/receipts': Receipt,
+  '/work/pos': Play,
+  '/work/online-orders': ShoppingCart,
+  '/work/sales': FileText,
+  '/work/receipts': Receipt,
+};
+
+const groupIcons: Record<string, LucideIcon> = {
+  inventory: Briefcase,
+  customers: Contact,
+  pricing: ReceiptText,
+  returns: BarChart3,
+  settings: Settings,
 };
 
 interface NavigationMenuProps {
@@ -64,16 +97,22 @@ function GroupedMenu({
       (item) => pathname === item.to || pathname.startsWith(item.to + '/'),
     )
     .sort((left, right) => right.to.length - left.to.length)[0];
-  const [expanded, setExpanded] = useState(
-    () =>
-      new Set(
-        groups
-          .filter((group) => activeItem && group.paths.includes(activeItem.to))
-          .map((group) => group.id),
-      ),
-  );
+  const [expanded, setExpanded] = useState(() => {
+    const initial = new Set(
+      groups
+        .filter((group) => activeItem && group.paths.includes(activeItem.to))
+        .map((group) => group.id),
+    );
+    if (
+      pathname === paths.dashboard &&
+      groups.some((group) => group.id === 'sales')
+    ) {
+      initial.add('sales');
+    }
+    return initial;
+  });
   const renderLink = (item: NavigationItem) => {
-    const Icon = icons[item.icon];
+    const Icon = pathIcons[item.to] ?? icons[item.icon];
     return (
       <NavLink
         key={item.to}
@@ -82,22 +121,34 @@ function GroupedMenu({
         className={({ isActive }) => 'nav-item ' + (isActive ? 'active' : '')}
         onClick={onNavigate}
       >
-        <Icon size={20} aria-hidden="true" />
+        <Icon size={19} aria-hidden="true" />
         <span>{localize(item.label ?? '')}</span>
       </NavLink>
     );
   };
+  const ungroupedTopItems = visibleItems.filter(
+    (item) =>
+      item.to === homePath ||
+      !groups.some((group) => group.paths.includes(item.to)),
+  );
+  const orderedTopItems = [
+    ...ungroupedTopItems.filter((item) => item.to === homePath),
+    ...ungroupedTopItems.filter((item) => item.to !== homePath),
+  ];
   return (
     <>
-      {visibleItems.filter((item) => item.to === homePath).map(renderLink)}
+      {orderedTopItems.map(renderLink)}
       {groups.map((group) => {
         const groupItems = group.paths.flatMap((path) =>
           visibleItems.filter((item) => item.to === path),
         );
         if (!groupItems.length) return null;
         const isExpanded = expanded.has(group.id);
-        const isActive = groupItems.some((item) => item.to === activeItem?.to);
+        const isActive =
+          groupItems.some((item) => item.to === activeItem?.to) ||
+          (group.id === 'sales' && isExpanded);
         const panelID = panelPrefix + '-' + group.id;
+        const GroupIcon = groupIcons[group.id];
         return (
           <div className="nav-group" key={group.id}>
             <button
@@ -114,8 +165,11 @@ function GroupedMenu({
                 })
               }
             >
-              <span>{localize(group.label ?? '')}</span>
-              <ChevronDown size={16} aria-hidden="true" />
+              <span className="nav-group-label">
+                {GroupIcon && <GroupIcon size={18} aria-hidden="true" />}
+                <span>{localize(group.label ?? '')}</span>
+              </span>
+              <ChevronDown size={15} aria-hidden="true" />
             </button>
             <div id={panelID} className="nav-group-items" hidden={!isExpanded}>
               {groupItems.map(renderLink)}
@@ -123,13 +177,6 @@ function GroupedMenu({
           </div>
         );
       })}
-      {visibleItems
-        .filter(
-          (item) =>
-            item.to !== homePath &&
-            !groups.some((group) => group.paths.includes(item.to)),
-        )
-        .map(renderLink)}
     </>
   );
 }

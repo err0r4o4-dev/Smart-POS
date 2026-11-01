@@ -13,5 +13,16 @@ export function WorkspaceLink({ to, ...props }: LinkProps) {
             ? workspacePath(to.pathname, area)
             : to.pathname,
         };
-  return <Link {...props} to={destination} />;
+  const targetPath =
+    typeof destination === 'string'
+      ? destination.split(/[?#]/)[0]
+      : (destination.pathname ?? '');
+  const isActive = Boolean(targetPath) && pathname === targetPath;
+  return (
+    <Link
+      data-active={isActive ? 'true' : undefined}
+      {...props}
+      to={destination}
+    />
+  );
 }

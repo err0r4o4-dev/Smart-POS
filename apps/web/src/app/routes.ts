@@ -115,7 +115,7 @@ const managementItems: NavigationItem[] = [
   },
   {
     to: '/sales',
-    label: 'ประวัติขาย',
+    label: 'ประวัติการขาย',
     icon: 'dashboard',
     permission: 'sales.read',
   },
@@ -151,7 +151,7 @@ const managementItems: NavigationItem[] = [
   },
   {
     to: paths.products,
-    label: 'จัดการสินค้า',
+    label: 'เมนูร้าน / สินค้า',
     icon: 'dashboard',
     permission: 'catalog.read',
   },
@@ -259,9 +259,15 @@ const managementGroups: NavigationGroup[] = [
     paths: ['/pos', '/online-orders', '/sales', '/receipts'],
   },
   {
-    id: 'returns',
-    label: 'คืนสินค้าและคืนเงิน',
-    paths: ['/pos/returns', '/pos/exchanges', '/sales/voids', '/sales/refunds'],
+    id: 'inventory',
+    label: 'สินค้าคงคลังและสต็อก',
+    paths: [
+      paths.inventory,
+      paths.shelves,
+      '/inventory/batches',
+      paths.purchasing,
+      paths.suppliers,
+    ],
   },
   {
     id: 'customers',
@@ -270,27 +276,17 @@ const managementGroups: NavigationGroup[] = [
   },
   {
     id: 'pricing',
-    label: 'ราคาและโปรโมชัน',
+    label: 'ราคาและโปรโมชั่น',
     paths: ['/pricing', '/promotions', '/discount-approvals'],
   },
   {
-    id: 'inventory',
-    label: 'สินค้าและสต็อก',
-    paths: [
-      paths.products,
-      paths.inventory,
-      paths.shelves,
-      '/inventory/batches',
-    ],
-  },
-  {
-    id: 'purchasing',
-    label: 'จัดซื้อและซัพพลายเออร์',
-    paths: [paths.suppliers, paths.purchasing],
+    id: 'returns',
+    label: 'รายงานและวิเคราะห์',
+    paths: ['/pos/returns', '/pos/exchanges', '/sales/voids', '/sales/refunds'],
   },
   {
     id: 'settings',
-    label: 'ตั้งค่าและผู้ใช้งาน',
+    label: 'ตั้งค่าระบบ',
     paths: [
       paths.setup,
       paths.store,
@@ -299,6 +295,7 @@ const managementGroups: NavigationGroup[] = [
       paths.employees,
       paths.roles,
       paths.account,
+      paths.help,
     ],
   },
 ];

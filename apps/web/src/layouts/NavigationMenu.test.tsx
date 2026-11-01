@@ -33,7 +33,7 @@ function renderMenu(path: string, access: Session = owner) {
   );
 }
 
-it('assigns every operational module to exactly one group', () => {
+it('assigns every grouped operational module to exactly one group', () => {
   const groupedPaths = navigationGroups.flatMap((group) => group.paths);
   expect(new Set(groupedPaths).size).toBe(groupedPaths.length);
   expect(
@@ -42,28 +42,31 @@ it('assigns every operational module to exactly one group', () => {
         navigation.some((item) => item.to === path),
       ),
       '/manage/dashboard',
-      '/help',
+      '/manage/products',
     ].sort(),
   ).toEqual(navigation.map((item) => item.to).sort());
 });
 
-it('keeps foundation links outside seven initially collapsed groups', () => {
+it('shows overview, store menu/products, and expands sales on the management dashboard', () => {
   renderMenu('/manage/dashboard');
-  expect(screen.getAllByRole('button')).toHaveLength(7);
-  for (const button of screen.getAllByRole('button'))
-    expect(button).toHaveAttribute('aria-expanded', 'false');
-  expect(screen.getAllByRole('link')).toHaveLength(2);
+  expect(screen.getAllByRole('button')).toHaveLength(6);
+  expect(screen.getByRole('button', { name: 'การขาย' })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
   expect(screen.getByRole('link', { name: 'ภาพรวมร้าน' })).toHaveAttribute(
     'aria-current',
     'page',
   );
+  expect(
+    screen.getByRole('link', { name: 'เมนูร้าน / สินค้า' }),
+  ).toBeVisible();
 });
 
 it('expands multiple groups independently and hides collapsed links', () => {
   renderMenu('/manage/dashboard');
   const sales = screen.getByRole('button', { name: 'การขาย' });
   const customers = screen.getByRole('button', { name: 'ลูกค้าและสมาชิก' });
-  fireEvent.click(sales);
   fireEvent.click(customers);
   expect(screen.getByRole('link', { name: 'เปิดหน้าขาย POS' })).toBeVisible();
   expect(screen.getByRole('link', { name: 'ฐานข้อมูลลูกค้า' })).toBeVisible();
@@ -81,7 +84,7 @@ it.each([
 ])('opens only the correct group for %s', (path) => {
   renderMenu(path);
   expect(
-    screen.getByRole('button', { name: 'คืนสินค้าและคืนเงิน' }),
+    screen.getByRole('button', { name: 'รายงานและวิเคราะห์' }),
   ).toHaveAttribute('aria-expanded', 'true');
   expect(screen.getByRole('button', { name: 'การขาย' })).toHaveAttribute(
     'aria-expanded',
@@ -94,15 +97,11 @@ it.each([
   );
 });
 
-it('opens the correct group for a nested route', () => {
+it('highlights the top-level product menu for a nested product route', () => {
   renderMenu('/manage/products/item-1');
   expect(
-    screen.getByRole('button', { name: 'สินค้าและสต็อก' }),
-  ).toHaveAttribute('aria-expanded', 'true');
-  expect(screen.getByRole('link', { name: 'จัดการสินค้า' })).toHaveAttribute(
-    'aria-current',
-    'page',
-  );
+    screen.getByRole('link', { name: 'เมนูร้าน / สินค้า' }),
+  ).toHaveAttribute('aria-current', 'page');
 });
 
 it('filters permissions before showing groups', () => {
@@ -135,8 +134,8 @@ it('opens the destination group on navigation', () => {
     const navigate = useNavigate();
     return (
       <>
-        <button onClick={() => navigate('/manage/products/item-1')}>
-          Visit product
+        <button onClick={() => navigate('/manage/inventory/balances')}>
+          Visit inventory
         </button>
         <NavigationMenu items={navigation} access={owner} />
       </>
@@ -147,24 +146,24 @@ it('opens the destination group on navigation', () => {
       <Harness />
     </MemoryRouter>,
   );
-  fireEvent.click(screen.getByRole('button', { name: 'Visit product' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Visit inventory' }));
   expect(
-    screen.getByRole('button', { name: 'สินค้าและสต็อก' }),
+    screen.getByRole('button', { name: 'สินค้าคงคลังและสต็อก' }),
   ).toHaveAttribute('aria-expanded', 'true');
 });
 
 it('opens the current group when permissions finish loading', () => {
   const view = render(
-    <MemoryRouter initialEntries={['/manage/products']}>
+    <MemoryRouter initialEntries={['/manage/inventory']}>
       <NavigationMenu items={navigation} access={{ authenticated: false }} />
     </MemoryRouter>,
   );
   view.rerender(
-    <MemoryRouter initialEntries={['/manage/products']}>
+    <MemoryRouter initialEntries={['/manage/inventory']}>
       <NavigationMenu items={navigation} access={owner} />
     </MemoryRouter>,
   );
   expect(
-    screen.getByRole('button', { name: 'สินค้าและสต็อก' }),
+    screen.getByRole('button', { name: 'สินค้าคงคลังและสต็อก' }),
   ).toHaveAttribute('aria-expanded', 'true');
 });

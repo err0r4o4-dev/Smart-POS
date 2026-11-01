@@ -1,18 +1,23 @@
 .catalog-page {
   display: grid;
-  gap: 20px;
+  gap: 18px;
   min-width: 0;
 }
 .catalog-page h1 {
-  font-size: clamp(24px, 3vw, 36px);
-  margin: 6px 0;
+  font-size: clamp(22px, 2.4vw, 28px);
+  font-weight: 700;
+  letter-spacing: -0.6px;
+  margin: 2px 0;
 }
 .catalog-page h2 {
-  font-size: 20px;
-  margin-bottom: 16px;
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 14px;
 }
 .catalog-page h3 {
-  margin-bottom: 12px;
+  font-size: 15px;
+  font-weight: 650;
+  margin-bottom: 10px;
 }
 .catalog-page p {
   overflow-wrap: anywhere;
@@ -24,22 +29,55 @@
   gap: 16px;
   flex-wrap: wrap;
 }
-.catalog-header p {
+.catalog-header p:not(.eyebrow) {
   color: var(--text-secondary);
+  font-size: 13px;
+  margin-top: 4px;
 }
 .catalog-actions {
   display: flex;
   align-items: end;
   gap: 12px;
   flex-wrap: wrap;
-  margin: 12px 0;
+  margin: 8px 0;
 }
 .catalog-nav {
   display: flex;
-  gap: 16px;
+  align-items: center;
+  gap: 8px;
   flex-wrap: wrap;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
 }
 .catalog-nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 6px 14px;
+  border-radius: 11px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-strong);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+.catalog-nav a:hover {
+  background: var(--canvas);
+  color: var(--text-primary);
+}
+.catalog-nav a[data-active='true'],
+.catalog-nav a[aria-current='page'] {
+  background: var(--primary-soft);
+  border-color: var(--primary-border);
   color: var(--primary-strong);
 }
 .catalog-wide {
@@ -51,32 +89,40 @@
 }
 .catalog-page .card {
   min-width: 0;
+  border-radius: 20px;
+  padding: clamp(18px, 2.4vw, 24px);
 }
 .catalog-page .notice {
-  margin-top: 28px;
-  margin-bottom: 24px;
+  margin-top: 16px;
+  margin-bottom: 16px;
 }
 .catalog-page form > .button,
 .catalog-variants-section > .button {
-  margin: 16px 8px 0 0;
+  margin: 14px 8px 0 0;
 }
 .catalog-page input,
 .catalog-page select,
 .catalog-page textarea {
   min-width: 0;
   width: 100%;
-  padding: 11px 13px;
+  min-height: 40px;
+  padding: 8px 12px;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 11px;
   background: var(--surface);
   color: var(--text-primary);
   font: inherit;
+  font-size: 13px;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 .catalog-page input:focus-visible,
 .catalog-page select:focus-visible,
 .catalog-page textarea:focus-visible {
-  outline: 3px solid var(--primary);
-  outline-offset: 2px;
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
 }
 .catalog-checkbox {
   display: flex;
@@ -85,13 +131,14 @@
 }
 .catalog-checkbox input {
   width: auto;
+  min-height: auto;
 }
 .catalog-filters {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr));
   align-items: end;
-  gap: 14px;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-bottom: 18px;
 }
 .catalog-table-wrap {
   width: 100%;
@@ -102,40 +149,45 @@
   width: 100%;
   min-width: 680px;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 13.5px;
   text-align: left;
 }
 .catalog-table th,
 .catalog-table td {
-  padding: 14px 12px;
+  padding: 13px 12px;
   border-bottom: 1px solid var(--border);
-  vertical-align: top;
+  vertical-align: middle;
   max-width: 260px;
   overflow-wrap: anywhere;
 }
 .catalog-table th {
-  color: var(--text-secondary);
-  background: var(--canvas);
+  color: var(--text-strong);
+  background: var(--secondary);
+  font-size: 12px;
+  font-weight: 650;
   white-space: nowrap;
+}
+.catalog-table tbody tr:hover td {
+  background: rgba(244, 197, 66, 0.04);
 }
 .catalog-table small {
   display: block;
   color: var(--text-secondary);
-  margin-top: 5px;
+  margin-top: 4px;
 }
 .catalog-page .catalog-table-wrap:has(> .record-table),
 .catalog-page .table-scroll:has(> .record-table) {
-  margin-block: 16px 4px;
+  margin-block: 12px 4px;
 }
 .catalog-page table.record-table {
   border-collapse: separate;
-  border-spacing: 0 12px;
+  border-spacing: 0 10px;
   width: 100%;
   text-align: start;
 }
 .catalog-page table.record-table th,
 .catalog-page table.record-table td {
-  padding: 16px;
+  padding: 14px 16px;
   vertical-align: middle;
   border: 0;
   overflow-wrap: anywhere;
@@ -143,7 +195,8 @@
 .catalog-page table.record-table th {
   background: var(--secondary);
   color: var(--text-strong);
-  font-size: var(--font-caption);
+  font-size: 12px;
+  font-weight: 650;
   white-space: nowrap;
 }
 .catalog-page table.record-table td {
@@ -152,6 +205,10 @@
 .catalog-page table.record-table tbody tr {
   border-radius: var(--radius-small);
   box-shadow: var(--shadow-card);
+  transition: box-shadow 0.15s;
+}
+.catalog-page table.record-table tbody tr:hover {
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
 }
 .catalog-page table.record-table :is(th, td):first-child {
   border-start-start-radius: var(--radius-small);
@@ -168,14 +225,15 @@
 }
 .record-table a:not(.button) {
   color: var(--primary-strong);
+  font-weight: 600;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 .record-table .record-secondary {
   display: block;
-  margin-top: 4px;
-  color: var(--text-strong);
-  font-size: var(--font-caption);
+  margin-top: 3px;
+  color: var(--text-secondary);
+  font-size: 12px;
 }
 .record-table .record-actions {
   display: flex;
@@ -185,16 +243,25 @@
 }
 .record-facts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
-  gap: 16px 24px;
-  margin-block: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 12px;
+  margin-block: 16px;
+}
+.record-facts > div {
+  padding: 12px 14px;
+  background: var(--canvas);
+  border: 1px solid var(--border);
+  border-radius: 14px;
 }
 .record-facts dt {
-  color: var(--text-strong);
-  font-size: var(--font-caption);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
 }
 .record-facts dd {
   margin: 4px 0 0;
+  font-weight: 600;
+  color: var(--text-primary);
   overflow-wrap: anywhere;
 }
 .catalog-pagination {
@@ -203,7 +270,11 @@
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
-  margin-top: 20px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-secondary);
 }
 .catalog-product-cell,
 .catalog-product-summary {

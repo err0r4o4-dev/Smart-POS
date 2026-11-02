@@ -1,17 +1,12 @@
 import { useLanguage } from '../../app/language';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useQuery } from '@tanstack/react-query';
 import {
-  AlertTriangle,
   Boxes,
-  CheckCircle2,
-  Clock,
   History,
-  Layers,
   MapPin,
-  Package,
 } from 'lucide-react';
 import { useInventoryCommand } from './inventory-hooks';
 import { QueryFeedback } from '../../components/feedback/QueryFeedback';
@@ -29,8 +24,6 @@ import type {
 import { Button, Card, Tag } from '../../components/ui/primitives';
 import {
   StandardFilterCard,
-  StandardKpiCard,
-  StandardKpiGrid,
   StandardPageHeader,
   StandardSearchField,
 } from '../../components/ui/StandardPage';

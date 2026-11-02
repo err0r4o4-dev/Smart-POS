@@ -413,8 +413,9 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
                 {metrics.completedCount} {t('pos.itemsUnit')}
               </strong>
               <span className="sales-kpi-trend sales-kpi-trend-up">
-                <span>{metrics.completionPct}%</span>
-                <small>{t('pos.ofAllItems')}</small>
+                <span>
+                  {metrics.completionPct}% {t('pos.ofAllItems')}
+                </span>
               </span>
             </div>
           </div>

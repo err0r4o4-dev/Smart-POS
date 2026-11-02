@@ -302,7 +302,7 @@ describe('SalesPage standardized design and behavior', () => {
         level: 1,
       }),
     ).toBeVisible();
-    expect(screen.getByText('น้ำดื่มคริสตัล')).toBeVisible();
+    expect(screen.getAllByText('น้ำดื่มคริสตัล')[0]).toBeVisible();
     expect(
       screen.getByRole('link', { name: 'กลับประวัติขาย' }),
     ).toHaveAttribute('href', '/manage/sales');

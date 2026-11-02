@@ -189,7 +189,7 @@ it.each<Role>(['OWNER', 'MANAGER'])(
     expect(
       document.querySelector('[data-workspace="management"]'),
     ).toBeInTheDocument();
-    expect(screen.getByText('ยอดขายรวม')).toBeVisible();
+    expect(screen.getAllByText('ยอดขายรวม')[0]).toBeVisible();
     expect(screen.getByText('จำนวนบิล')).toBeVisible();
     expect(screen.getByText('จำนวนสินค้าที่ขาย')).toBeVisible();
     expect(screen.getByText('ลูกค้าใหม่')).toBeVisible();

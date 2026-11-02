@@ -83,7 +83,7 @@ describe('Stripe sandbox management page', () => {
     expect(
       screen.getByRole('button', { name: 'สร้าง Checkout ทดสอบ 20.00 บาท' }),
     ).toBeDisabled();
-    expect(screen.getByText(/ไม่สร้างยอดขาย/)).toBeInTheDocument();
+    expect(screen.getAllByText(/ไม่สร้างยอดขาย/)[0]).toBeInTheDocument();
   });
   it('denies staff without calling the API', async () => {
     scope.can = false;

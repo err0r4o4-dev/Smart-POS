@@ -1,14 +1,16 @@
 import { useLanguage } from '../../app/language';
 import { Navigate, Outlet } from 'react-router-dom';
-import * as OrganizationModule from '../../app/OrganizationProvider';
+import { useOrganization } from '../../app/OrganizationProvider';
 import { ErrorState, Loading } from '../../components/ui/primitives';
 import type { Role } from '../../app/access';
 
-const { useOrganization } = OrganizationModule;
-const useSafeOrganization =
-  typeof OrganizationModule.useOptionalOrganization === 'function'
-    ? OrganizationModule.useOptionalOrganization
-    : OrganizationModule.useOrganization;
+function useSafeOrganization() {
+  try {
+    return useOrganization();
+  } catch {
+    return null;
+  }
+}
 export function OrganizationGate({
   permission,
   roles,

@@ -176,7 +176,7 @@
   overflow-wrap: anywhere;
 }
 .catalog-sidebar .catalog-category[aria-pressed='true'] {
-  background: #f59e0b;
+  background: var(--primary);
   color: #111827;
   font-weight: 600;
   border-color: transparent;
@@ -227,8 +227,8 @@
   transition: all 0.15s ease;
 }
 .catalog-search-field:focus-within {
-  border-color: #f59e0b;
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(244, 197, 66, 0.25);
 }
 .shop-catalog .catalog-search .catalog-search-field input {
   border: 0;
@@ -249,7 +249,7 @@
 .catalog-search > .catalog-search-submit {
   min-height: 48px;
   padding-inline: 26px;
-  background: #f59e0b;
+  background: var(--primary);
   color: #111827;
   font-weight: 600;
   font-size: 14px;
@@ -260,8 +260,8 @@
   transition: all 0.15s ease;
 }
 .catalog-search > .catalog-search-submit:hover {
-  background: #d97706;
-  color: #ffffff;
+  background: var(--primary-hover);
+  color: #111827;
 }
 
 /* Toolbar */
@@ -389,7 +389,7 @@
   transition: all 0.15s ease;
 }
 .catalog-view-toggle .button[aria-pressed='true'] {
-  background: #f59e0b;
+  background: var(--primary);
   color: #111827;
 }
 .catalog-view-toggle .button:hover:not([aria-pressed='true']) {
@@ -605,7 +605,7 @@
   min-height: 36px;
   padding: 8px 18px;
   border-radius: 8px;
-  background: #f59e0b;
+  background: var(--primary);
   color: #111827;
   font-size: 13px;
   font-weight: 600;
@@ -616,8 +616,8 @@
   transition: all 0.15s ease;
 }
 .catalog-products-list .catalog-add:hover:not(:disabled) {
-  background: #d97706;
-  color: #ffffff;
+  background: var(--primary-hover);
+  color: #111827;
 }
 
 /* Favorite Heart Button */
@@ -810,7 +810,7 @@
   height: 36px;
   padding: 0 10px;
   border-radius: 8px;
-  background: #f59e0b;
+  background: var(--primary);
   color: #111827;
   font-size: 12.5px;
   font-weight: 600;
@@ -821,8 +821,8 @@
   transition: all 0.15s ease;
 }
 .catalog-products-grid .catalog-add:hover:not(:disabled) {
-  background: #d97706;
-  color: #ffffff;
+  background: var(--primary-hover);
+  color: #111827;
 }
 
 .catalog-quantity-error,
@@ -882,14 +882,14 @@
   border-color: #d1d5db;
 }
 .catalog-pagination-next {
-  background: #f59e0b;
+  background: var(--primary);
   border: 1px solid transparent;
   color: #111827;
   font-weight: 600;
 }
 .catalog-pagination-next:hover:not(:disabled) {
-  background: #d97706;
-  color: #ffffff;
+  background: var(--primary-hover);
+  color: #111827;
 }
 .catalog-pagination-info {
   display: inline-flex;

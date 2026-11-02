@@ -2,7 +2,9 @@ import { useLanguage } from '../../app/language';
 import { useState } from 'react';
 import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavigate';
 import { useQuery } from '@tanstack/react-query';
+import { PauseCircle } from 'lucide-react';
 import { Button, Card } from '../../components/ui/primitives';
+import { StandardPageHeader } from '../../components/ui/StandardPage';
 import { QueryFeedback } from '../../components/feedback/QueryFeedback';
 import {
   posRequest,
@@ -40,8 +42,11 @@ export function HeldCartsPage() {
   });
   return (
     <>
-      <h1>{t('pos.heldCarts')}</h1>
-      <p>{t('pos.yourCartsOnThisDeviceOnlyStock')}</p>
+      <StandardPageHeader
+        icon={<PauseCircle size={24} />}
+        title={t('pos.heldCarts')}
+        description={t('pos.yourCartsOnThisDeviceOnlyStock')}
+      />
       <QueryFeedback
         loading={query.isFetching}
         error={query.error}

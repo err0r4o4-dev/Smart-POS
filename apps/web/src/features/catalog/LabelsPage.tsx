@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { Button, Card, Tag } from '../../components/ui/primitives';
+import { StandardContextBar } from '../../components/ui/StandardPage';
 import type { Product, CatalogPage, Barcode } from '../../lib/catalog-api';
 import { useCatalogQuery } from './catalog-hooks';
 import {
@@ -84,13 +85,17 @@ export function LabelsPage() {
 
   return (
     <div className="catalog-page catalog-labels-page">
-      <CatalogHeader title={t('catalog.barcodeLabelsPrintPreview')}>
+      <CatalogHeader
+        title={t('catalog.barcodeLabelsPrintPreview')}
+        icon={<Printer size={24} />}
+      >
         <Link className="button button-secondary" to="/products">
           <ArrowLeft size={16} aria-hidden="true" />
           {t('catalog.backReturnToList')}
         </Link>
       </CatalogHeader>
       <CatalogNav />
+      <StandardContextBar />
 
       <Card className="catalog-print-controls">
         <div className="catalog-print-card-header">

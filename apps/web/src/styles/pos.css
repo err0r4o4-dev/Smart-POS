@@ -13,9 +13,6 @@
   flex-wrap: wrap;
   margin-bottom: 20px;
 }
-.pos-header .tenant-switchers {
-  margin-left: auto;
-}
 .pos-navigation {
   padding: 6px;
   background: var(--surface);
@@ -88,9 +85,6 @@
   align-items: start;
   grid-template-columns: minmax(0, 1.7fr) minmax(300px, 1fr);
 }
-.content:has(.sales-filter-card) > .tenant-switchers {
-  display: none;
-}
 .sales-page-heading {
   margin-bottom: 4px;
   flex-wrap: wrap;
@@ -144,6 +138,7 @@
   gap: 16px;
   min-width: 0;
 }
+.sales-kpi-card,
 .sales-page .sales-kpi-card {
   padding: 18px 20px;
   border-radius: 18px;
@@ -179,6 +174,16 @@
   color: var(--success-strong);
   border: 1px solid #bbf7d0;
 }
+.sales-kpi-icon-info {
+  background: #eff6ff;
+  color: var(--info-strong);
+  border: 1px solid #bfdbfe;
+}
+.sales-kpi-icon-danger {
+  background: #fef2f2;
+  color: var(--error-strong);
+  border: 1px solid #fecaca;
+}
 .sales-kpi-body {
   display: grid;
   gap: 2px;
@@ -205,9 +210,13 @@
   font-size: 12px;
   font-weight: 600;
   margin-top: 2px;
+  color: var(--text-secondary);
 }
 .sales-kpi-trend-up {
   color: var(--success-strong);
+}
+.sales-kpi-trend-warn {
+  color: var(--warning-strong);
 }
 .sales-kpi-trend small {
   color: var(--text-secondary);
@@ -220,6 +229,8 @@
   flex-shrink: 0;
   align-self: flex-end;
 }
+.sales-filter-card,
+.sales-table-card,
 .sales-page .sales-filter-card,
 .sales-page .sales-table-card {
   padding: 20px 24px;
@@ -305,11 +316,19 @@
   font-weight: 600;
   color: var(--text-strong);
 }
+.sales-filter-field input,
+.sales-filter-field select,
 .sales-page .sales-filter-field input,
 .sales-page .sales-filter-field select {
+  width: 100%;
+  min-width: 0;
   min-height: 40px;
   padding: 8px 12px;
+  border: 1px solid var(--border);
   border-radius: 11px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font: inherit;
   font-size: 13px;
   font-weight: 400;
 }
@@ -325,6 +344,7 @@
   color: var(--text-tertiary);
   pointer-events: none;
 }
+.sales-input-with-icon input,
 .sales-page .sales-input-with-icon input {
   padding-left: 34px;
 }
@@ -487,6 +507,8 @@
   padding: 28px 12px;
   color: var(--text-secondary);
 }
+.sales-pagination-bar,
+.pos-pagination.sales-pagination-bar,
 .sales-page .pos-pagination.sales-pagination-bar {
   display: flex;
   align-items: center;
@@ -513,6 +535,7 @@
   font-size: 13px;
   color: var(--text-secondary);
 }
+.sales-page-size-label select,
 .sales-page .sales-page-size-label select {
   width: auto;
   min-width: 68px;
@@ -527,6 +550,7 @@
   gap: 6px;
   flex-wrap: wrap;
 }
+.sales-pagination-bar .sales-page-btn,
 .sales-page .sales-pagination-bar .sales-page-btn {
   min-width: 36px;
   width: 36px;
@@ -750,10 +774,6 @@
   .pos-workspace .pos-grid,
   .pos-sale-detail {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .pos-header .tenant-switchers {
-    margin-left: 0;
-    width: 100%;
   }
   .pos-search {
     flex-wrap: wrap;

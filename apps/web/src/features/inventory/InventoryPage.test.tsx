@@ -360,3 +360,14 @@ it('renders movements history table with formatted tags and deltas', async () =>
   expect(screen.getByText('0.000 → 150.000')).toBeVisible();
   expect(screen.getByText('ยอดเปิดรอบต้นงวด / Opening Stock')).toBeVisible();
 });
+
+it('offers only WAREHOUSE, QUARANTINE and DAMAGED when creating a storage location (no SHELF or SALES_FLOOR)', async () => {
+  renderLocations();
+  const typeSelect = await screen.findByRole('combobox', {
+    name: 'ประเภทสถานที่เก็บ',
+  });
+  const optionValues = within(typeSelect)
+    .getAllByRole('option')
+    .map((option) => (option as HTMLOptionElement).value);
+  expect(optionValues).toEqual(['WAREHOUSE', 'QUARANTINE', 'DAMAGED']);
+});

@@ -30,7 +30,6 @@ import {
 import { Brand, Tag } from '../components/ui/primitives';
 import { useAuth } from '../app/AuthProvider';
 import { useOrganization } from '../app/OrganizationProvider';
-import { ContextSwitchers } from '../features/organization/OrganizationGate';
 import { NavigationMenu } from './NavigationMenu';
 
 export function ManagementLayout() {
@@ -289,7 +288,6 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
           </button>
         </header>
         <main id="main-content" className="content">
-          {location.pathname !== paths.dashboard && <ContextSwitchers />}
           <Outlet />
         </main>
         <footer className="footer">

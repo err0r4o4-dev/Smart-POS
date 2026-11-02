@@ -1,20 +1,21 @@
 import { useLanguage } from '../../app/language';
 import { BookOpen, Code2, ShieldCheck } from 'lucide-react';
 import { Card, Tag } from '../../components/ui/primitives';
+import { StandardPageHeader } from '../../components/ui/StandardPage';
 
 export function HelpPage() {
   const { t } = useLanguage();
 
   return (
     <>
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">{t('help.developerWorkspace')}</p>
-          <h1 tabIndex={-1}>{t('help.buildOnSolidGround')}</h1>
-          <p>{t('help.aPracticalStartingPointForTheFive')}</p>
-        </div>
-        <Tag tone="amber">{t('dashboard.phase0')}</Tag>
-      </div>
+      <StandardPageHeader
+        icon={<BookOpen size={24} />}
+        eyebrow={t('help.developerWorkspace')}
+        title={t('help.buildOnSolidGround')}
+        description={t('help.aPracticalStartingPointForTheFive')}
+        headingTabIndex={-1}
+        actions={<Tag tone="amber">{t('dashboard.phase0')}</Tag>}
+      />
       <div className="help-grid">
         <Card>
           <Code2 className="help-icon" />

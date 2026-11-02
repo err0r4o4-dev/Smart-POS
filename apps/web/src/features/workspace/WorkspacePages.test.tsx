@@ -1,6 +1,6 @@
 import { render } from '../../test/render';
 import type { ReactNode } from 'react';
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { navigation, staffNavigation } from '../../app/routes';
@@ -175,6 +175,7 @@ beforeEach(() => {
   mocks.loading = false;
   mocks.error = '';
   mocks.context = null;
+  localStorage.clear();
   vi.clearAllMocks();
 });
 
@@ -246,7 +247,17 @@ it.each<Role>(['CASHIER', 'INVENTORY_STAFF', 'PURCHASING_STAFF'])(
 it('does not give inventory staff cashier tools', () => {
   selectRole('INVENTORY_STAFF', ['catalog.read', 'inventory.read']);
   renderWorkspace();
-  expect(screen.getByRole('link', { name: 'ข้อมูลสินค้า' })).toBeVisible();
+  expect(
+    within(screen.getByRole('main')).getByRole('link', {
+      name: 'ข้อมูลสินค้า',
+    }),
+  ).toBeVisible();
+  expect(
+    within(screen.getByRole('navigation', { name: 'เมนูหลัก' })).getByRole(
+      'link',
+      { name: 'ข้อมูลสินค้า' },
+    ),
+  ).toBeVisible();
   expect(
     document.querySelector('a[href="/manage/pos"]'),
   ).not.toBeInTheDocument();
@@ -263,8 +274,18 @@ it('keeps cashier menus scoped to granted tasks', () => {
     'sales.read',
   ]);
   renderWorkspace();
-  expect(screen.getByRole('link', { name: 'ขายหน้าร้าน' })).toBeVisible();
-  expect(screen.getByRole('link', { name: 'เปิดกะขาย' })).toBeVisible();
+  expect(
+    within(screen.getByRole('main')).getByRole('link', { name: 'ขายหน้าร้าน' }),
+  ).toBeVisible();
+  expect(
+    within(screen.getByRole('main')).getByRole('link', { name: 'เปิดกะขาย' }),
+  ).toBeVisible();
+  expect(
+    within(screen.getByRole('navigation', { name: 'เมนูหลัก' })).getByRole(
+      'link',
+      { name: 'ขายหน้าร้าน' },
+    ),
+  ).toBeVisible();
   expect(
     document.querySelector('a[href="/manage/inventory"]'),
   ).not.toBeInTheDocument();
@@ -438,3 +459,21 @@ it('switches sales trend granularity and period filter on the management dashboa
   expect(periodSelect).toHaveValue('7d');
 });
 
+it.each([
+  '/manage/dashboard',
+  '/manage/products/item-1',
+  '/manage/settings/store',
+  '/work',
+  '/work/products/item-1',
+  '/account',
+])('does not render the tenant-switchers bar on %s', (path) => {
+  selectRole('OWNER', allPermissions);
+  renderWorkspace(path);
+  expect(document.querySelector('.tenant-switchers')).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('combobox', { name: 'องค์กรที่ใช้งาน' }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('combobox', { name: 'สาขาที่ใช้งาน' }),
+  ).not.toBeInTheDocument();
+});

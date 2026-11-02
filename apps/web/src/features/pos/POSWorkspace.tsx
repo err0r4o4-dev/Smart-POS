@@ -8,7 +8,6 @@ import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavig
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
-import { ContextSwitchers } from '../organization/OrganizationGate';
 import { Brand, ErrorState, Loading } from '../../components/ui/primitives';
 import {
   posRequest,
@@ -56,7 +55,6 @@ export function POSWorkspace() {
             {t('pos.backToWorkspace')}
           </Link>
           <Brand />
-          <ContextSwitchers />
         </header>
         <nav className="pos-navigation" aria-label={t('pos.salesNavigation')}>
           <Link to="/pos">{t('pos.sellProducts')}</Link>

@@ -2,7 +2,9 @@ import { useLanguage } from '../../app/language';
 import { useRef, useState } from 'react';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useQuery } from '@tanstack/react-query';
+import { CreditCard } from 'lucide-react';
 import { Button, Card } from '../../components/ui/primitives';
+import { StandardPageHeader } from '../../components/ui/StandardPage';
 import {
   PricingCheckoutControls,
   type PricingSelection,
@@ -161,7 +163,11 @@ export function CheckoutPage() {
   };
   return (
     <>
-      <h1>{t('pos.checkout')}</h1>
+      <StandardPageHeader
+        icon={<CreditCard size={24} />}
+        title={t('pos.checkout')}
+        description={t('pos.finalPricesComeFromTheServerPricing')}
+      />
       <QueryFeedback
         loading={pending.isFetching}
         error={pending.error}

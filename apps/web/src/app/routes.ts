@@ -16,7 +16,6 @@ export const paths = {
   inventory: '/inventory',
   suppliers: '/suppliers',
   purchasing: '/purchasing/orders',
-  shelves: '/shelves',
   setup: '/setup',
   store: '/settings/store',
   branches: '/settings/branches',
@@ -144,12 +143,6 @@ const managementItems: NavigationItem[] = [
     permission: 'purchasing.read',
   },
   {
-    to: paths.shelves,
-    label: 'ชั้นวาง / เติมสินค้า',
-    icon: 'dashboard',
-    permission: 'shelf.read',
-  },
-  {
     to: paths.products,
     label: 'เมนูร้าน / สินค้า',
     icon: 'dashboard',
@@ -215,7 +208,6 @@ const staffItems: NavigationItem[] = [
       '/sales/refunds',
       '/sales/voids',
       '/inventory',
-      '/shelves',
       '/inventory/batches',
       '/suppliers',
       '/purchasing/orders',
@@ -263,7 +255,6 @@ const managementGroups: NavigationGroup[] = [
     label: 'สินค้าคงคลังและสต็อก',
     paths: [
       paths.inventory,
-      paths.shelves,
       '/inventory/batches',
       paths.purchasing,
       paths.suppliers,
@@ -321,7 +312,7 @@ const staffGroups: NavigationGroup[] = [
   {
     id: 'staff-stock',
     label: 'งานสินค้าและคลัง',
-    paths: ['/products', '/inventory', '/shelves', '/inventory/batches'],
+    paths: ['/products', '/inventory', '/inventory/batches'],
   },
   {
     id: 'staff-purchasing',

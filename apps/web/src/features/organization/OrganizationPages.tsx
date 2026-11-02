@@ -1,6 +1,7 @@
 import { useLanguage } from '../../app/language';
 import { useRef, useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
+import { Building2, GitBranch, ShieldCheck, Store, Users } from 'lucide-react';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavigate';
 import { useQuery } from '@tanstack/react-query';
@@ -8,6 +9,7 @@ import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
 import type { Role } from '../../app/access';
 import { Button, Card, Loading, Tag } from '../../components/ui/primitives';
+import { StandardPageHeader } from '../../components/ui/StandardPage';
 import {
   organizationRequest,
   type OrganizationInput,
@@ -341,15 +343,16 @@ export function SetupPage() {
   };
   return (
     <div className="tenant-page">
-      <header>
-        <Tag tone="amber">{t('organization.storeOnboarding')}</Tag>
-        <h1>{t('organization.setUpStore')}</h1>
-        <p>
-          {tenant.storeMode === 'single'
+      <StandardPageHeader
+        icon={<Building2 size={24} />}
+        eyebrow={t('organization.storeOnboarding')}
+        title={t('organization.setUpStore')}
+        description={
+          tenant.storeMode === 'single'
             ? t('organization.singleStoreModeUsesMembershipsOfThe')
-            : t('organization.createOrganizationOwnerMembershipAndMainBranch')}
-        </p>
-      </header>
+            : t('organization.createOrganizationOwnerMembershipAndMainBranch')
+        }
+      />
       {tenant.invitationToken && (
         <Card>
           <h2>{t('organization.organizationInvitation')}</h2>
@@ -512,11 +515,12 @@ export function StorePage() {
   };
   return (
     <div className="tenant-page">
-      <header>
-        <Tag tone="amber">{t('organization.organization2')}</Tag>
-        <h1>{t('organization.organizationDetails')}</h1>
-        <p>{tenant.context?.membership.role} · THB · Asia/Bangkok</p>
-      </header>
+      <StandardPageHeader
+        icon={<Store size={24} />}
+        eyebrow={t('organization.organization2')}
+        title={t('organization.organizationDetails')}
+        description={`${tenant.context?.membership.role} · THB · Asia/Bangkok`}
+      />
       <Card>
         <form onSubmit={(event) => void submit(event)}>
           <fieldset disabled={pending || !tenant.can('organization.update')}>
@@ -573,10 +577,14 @@ export function BranchesPage() {
   };
   return (
     <div className="tenant-page">
-      <header>
-        <h1>{t('organization.branch')}</h1>
-        <p>{t('organization.onlyBranchesAllowedByYourOrganizationAnd')}</p>
-      </header>
+      <StandardPageHeader
+        icon={<GitBranch size={24} />}
+        eyebrow={t('organization.branch')}
+        title={t('organization.branch')}
+        description={t(
+          'organization.onlyBranchesAllowedByYourOrganizationAnd',
+        )}
+      />
       <Card>
         <div className="tenant-actions">
           <Field
@@ -794,12 +802,14 @@ export function EmployeesPage() {
   };
   return (
     <div className="tenant-page">
-      <header>
-        <h1>{t('organization.employees')}</h1>
-        <p>
-          {t('organization.oneAccountCanJoinMultipleOrganizationsPermissions')}
-        </p>
-      </header>
+      <StandardPageHeader
+        icon={<Users size={24} />}
+        eyebrow={t('organization.employees')}
+        title={t('organization.employees')}
+        description={t(
+          'organization.oneAccountCanJoinMultipleOrganizationsPermissions',
+        )}
+      />
       <Card>
         {query.isPending && <Loading />}
         {query.error && <ErrorMessage message={query.error.message} />}
@@ -1016,10 +1026,18 @@ export function EmployeePage() {
   const history = useTenantData<AuditEvent[]>(`audit?member_id=${id}`);
   return (
     <div className="tenant-page">
-      <header>
-        <h1>{t('organization.employeeDetails')}</h1>
-        <Link to="/employees">{t('organization.backToEmployees')}</Link>
-      </header>
+      <StandardPageHeader
+        icon={<Users size={24} />}
+        title={t('organization.employeeDetails')}
+        actions={
+          <Link
+            className="button button-secondary sales-export-btn"
+            to="/employees"
+          >
+            {t('organization.backToEmployees')}
+          </Link>
+        }
+      />
       {query.isPending && <Loading />}
       {query.error && <ErrorMessage message={query.error.message} />}
       {query.data && (
@@ -1064,14 +1082,12 @@ export function RolesPage() {
   const permissions = [...new Set(Object.values(query.data ?? {}).flat())];
   return (
     <div className="tenant-page">
-      <header>
-        <h1>{t('organization.rolesAndPermissions')}</h1>
-        <p>
-          {t('organization.currentPermissions')}{' '}
-          {tenant.context?.membership.role}{' '}
-          {t('organization.applyToThisOrganizationOnly')}
-        </p>
-      </header>
+      <StandardPageHeader
+        icon={<ShieldCheck size={24} />}
+        eyebrow={t('organization.rolesAndPermissions')}
+        title={t('organization.rolesAndPermissions')}
+        description={`${t('organization.currentPermissions')} ${tenant.context?.membership.role} ${t('organization.applyToThisOrganizationOnly')}`}
+      />
       <Card>
         <p>{t('organization.ownersManageTheOrganizationAndAllBranches')}</p>
         {query.isPending && <Loading />}

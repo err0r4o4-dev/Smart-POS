@@ -1,5 +1,6 @@
 import { useLanguage } from '../../app/language';
 import { useState, type ReactNode } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { Button, Loading } from '../../components/ui/primitives';
 import { CatalogError } from '../catalog/CatalogUI';
@@ -103,54 +104,49 @@ export function Pagination({
 
   const pages = Math.max(1, Math.ceil(total / size));
   return (
-    <div className="catalog-pagination">
-      <Button
-        className="button-secondary"
-        disabled={page <= 1}
-        onClick={() => change(page - 1)}
-      >
-        {t('catalog.previous')}
-      </Button>
-      <span>
-        {t('catalog.page')} {page} / {pages} • {total}{' '}
-        {t('catalog.definitions')}
-      </span>
-      <Button
-        className="button-secondary"
-        disabled={page >= pages}
-        onClick={() => change(page + 1)}
-      >
-        {t('catalog.next')}
-      </Button>
+    <div className="catalog-pagination sales-pagination-bar">
+      <div className="sales-pagination-info">
+        <span>
+          {t('catalog.page')} {page} / {pages} • {total}{' '}
+          {t('catalog.definitions')}
+        </span>
+      </div>
+      <div className="sales-pagination-controls">
+        <Button
+          className="button-secondary"
+          disabled={page <= 1}
+          onClick={() => change(page - 1)}
+        >
+          <ChevronLeft size={15} aria-hidden="true" />
+          <span>{t('catalog.previous')}</span>
+        </Button>
+        <strong className="sales-page-number active">{page}</strong>
+        <Button
+          className="button-secondary"
+          disabled={page >= pages}
+          onClick={() => change(page + 1)}
+        >
+          <span>{t('catalog.next')}</span>
+          <ChevronRight size={15} aria-hidden="true" />
+        </Button>
+      </div>
     </div>
   );
 }
-export function SupplyNav({ shelves = false }: { shelves?: boolean }) {
+export function SupplyNav() {
   const { t } = useLanguage();
 
-  const links = shelves
-    ? [
-        ['/shelves', t('purchasing.shelf')],
-        ['/shelves/layout', t('purchasing.shelfLayout')],
-        ['/shelves/replenishments', t('purchasing.replenishStock')],
-        ['/shelves/counts', t('inventory.stockCounts')],
-        ['/shelves/discrepancies', t('purchasing.countDifferences')],
-      ]
-    : [
-        ['/suppliers', t('purchasing.supplier')],
-        ['/purchasing/orders', t('purchasing.purchaseOrders')],
-        ['/purchasing/receipts', t('purchasing.receiveProducts')],
-        ['/purchasing/returns', t('purchasing.returnToSupplier')],
-        ['/purchasing/suggestions', t('purchasing.reorderSuggestions')],
-      ];
+  const links = [
+    ['/suppliers', t('purchasing.supplier')],
+    ['/purchasing/orders', t('purchasing.purchaseOrders')],
+    ['/purchasing/receipts', t('purchasing.receiveProducts')],
+    ['/purchasing/returns', t('purchasing.returnToSupplier')],
+    ['/purchasing/suggestions', t('purchasing.reorderSuggestions')],
+  ];
   return (
     <nav
       className="catalog-nav"
-      aria-label={
-        shelves
-          ? t('purchasing.shelfWorkflows')
-          : t('purchasing.purchasingWorkflows')
-      }
+      aria-label={t('purchasing.purchasingWorkflows')}
     >
       {links.map(([path, label]) => (
         <Link key={path} to={path}>

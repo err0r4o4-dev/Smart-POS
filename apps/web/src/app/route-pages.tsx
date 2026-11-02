@@ -96,11 +96,6 @@ export const PurchasingPage = lazy(() =>
     default: module.PurchasingPage,
   })),
 );
-export const ShelfPage = lazy(() =>
-  import('../features/purchasing/ShelfPage').then((module) => ({
-    default: module.ShelfPage,
-  })),
-);
 export const ReturnsPage = lazy(() =>
   import('../features/returns/ReturnsPage').then((module) => ({
     default: module.ReturnsPage,

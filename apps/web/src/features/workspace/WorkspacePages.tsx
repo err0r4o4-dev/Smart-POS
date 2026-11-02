@@ -44,6 +44,7 @@ import {
   type NavigationItem,
 } from '../../app/routes';
 import { Card, ErrorState, Loading, Tag } from '../../components/ui/primitives';
+import { StandardPageHeader } from '../../components/ui/StandardPage';
 import { WorkspaceAreaGate } from './WorkspaceRouting';
 
 export function OrganizationWorkspaceProvider() {
@@ -1153,16 +1154,14 @@ export function StaffHomePage() {
   const role = tenant.context.membership.role;
   return (
     <div className="workspace-home">
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">{t('workspace.staffWorkspace')}</p>
-          <h1 tabIndex={-1}>{t('workspace.myWork')}</h1>
-          <p>
-            {tenant.context.organization.name} · {localize(roleLabels[role])}
-          </p>
-        </div>
-        <Tag tone="amber">{localize(roleLabels[role])}</Tag>
-      </div>
+      <StandardPageHeader
+        icon={<ShieldCheck size={24} />}
+        eyebrow={t('workspace.staffWorkspace')}
+        title={t('workspace.myWork')}
+        headingTabIndex={-1}
+        description={`${tenant.context.organization.name} · ${localize(roleLabels[role])}`}
+        actions={<Tag tone="amber">{localize(roleLabels[role])}</Tag>}
+      />
       <Card className="workspace-intro">
         <ShieldCheck size={27} aria-hidden="true" />
         <div>

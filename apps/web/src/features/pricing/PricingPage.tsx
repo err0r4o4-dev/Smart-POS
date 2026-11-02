@@ -1,11 +1,13 @@
 import { useLanguage } from '../../app/language';
 import { useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
+import { BadgePercent } from 'lucide-react';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
 import { Button, Card, Loading, Tag } from '../../components/ui/primitives';
+import { StandardPageHeader } from '../../components/ui/StandardPage';
 import { Field } from '../purchasing/SupplyUI';
 import {
   pricingRequest,
@@ -84,23 +86,22 @@ function PricingWorkspace({ view }: { view: View }) {
   const chosen = data.data?.find((item) => item.id === (id ?? selected));
   return (
     <div className="catalog-page pricing-page">
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">{t('pricing.pricingPromotions')}</p>
-          <h1>
-            {view === 'approvals'
-              ? t('pricing.discountApprovals')
-              : view === 'promotions'
-                ? t('pricing.promotions')
-                : view === 'lists'
-                  ? t('pricing.priceLists')
-                  : t('pricing.pricingAndPromotions')}
-          </h1>
-          <p>
-            {t('pricing.serverAuthoritativePricingThbImmutableSaleHistory')}
-          </p>
-        </div>
-      </div>
+      <StandardPageHeader
+        icon={<BadgePercent size={24} />}
+        eyebrow={t('pricing.pricingPromotions')}
+        title={
+          view === 'approvals'
+            ? t('pricing.discountApprovals')
+            : view === 'promotions'
+              ? t('pricing.promotions')
+              : view === 'lists'
+                ? t('pricing.priceLists')
+                : t('pricing.pricingAndPromotions')
+        }
+        description={t(
+          'pricing.serverAuthoritativePricingThbImmutableSaleHistory',
+        )}
+      />
       <nav className="catalog-nav">
         <Link to="/pricing">{t('inventory.overview')}</Link>
         <Link to="/pricing/lists">{t('pricing.priceLists')}</Link>

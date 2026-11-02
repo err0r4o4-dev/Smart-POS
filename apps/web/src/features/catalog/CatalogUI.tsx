@@ -1,29 +1,41 @@
 import { useLanguage } from '../../app/language';
 import type { ReactNode } from 'react';
+import {
+  Award,
+  ChevronLeft,
+  ChevronRight,
+  Layers,
+  Package,
+  Ruler,
+} from 'lucide-react';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { Button, Loading } from '../../components/ui/primitives';
+import { StandardPageHeader } from '../../components/ui/StandardPage';
 import type { CatalogStatus, Taxonomy } from '../../lib/catalog-api';
 export function CatalogHeader({
   title,
+  icon,
   children,
 }: {
   title: string;
+  icon?: ReactNode;
   children?: ReactNode;
 }) {
   const { t } = useLanguage();
 
   return (
-    <div className="catalog-header">
-      <div>
-        <p className="eyebrow">{t('catalog.manageProducts')}</p>
-        <h1>{title}</h1>
-        <p>
+    <StandardPageHeader
+      icon={icon ?? <Package size={24} />}
+      eyebrow={t('catalog.manageProducts')}
+      title={title}
+      description={
+        <>
           {t('catalog.sharedOrganizationCatalog')}{' '}
           <Link to="/inventory/balances">{t('catalog.viewBranchStock')}</Link>
-        </p>
-      </div>
-      <div className="catalog-actions">{children}</div>
-    </div>
+        </>
+      }
+      actions={children}
+    />
   );
 }
 export function CatalogNav() {
@@ -31,10 +43,22 @@ export function CatalogNav() {
 
   return (
     <nav className="catalog-nav" aria-label={t('catalog.catalog')}>
-      <Link to="/products">{t('common.products')}</Link>
-      <Link to="/categories">{t('catalog.categories')}</Link>
-      <Link to="/brands">{t('catalog.brands')}</Link>
-      <Link to="/units">{t('catalog.units')}</Link>
+      <Link to="/products">
+        <Package size={15} aria-hidden="true" />
+        <span>{t('common.products')}</span>
+      </Link>
+      <Link to="/categories">
+        <Layers size={15} aria-hidden="true" />
+        <span>{t('catalog.categories')}</span>
+      </Link>
+      <Link to="/brands">
+        <Award size={15} aria-hidden="true" />
+        <span>{t('catalog.brands')}</span>
+      </Link>
+      <Link to="/units">
+        <Ruler size={15} aria-hidden="true" />
+        <span>{t('catalog.units')}</span>
+      </Link>
     </nav>
   );
 }
@@ -164,25 +188,32 @@ export function Pagination({
 
   const pages = Math.max(1, Math.ceil(total / size));
   return (
-    <div className="catalog-pagination">
-      <Button
-        className="button-secondary"
-        disabled={page <= 1}
-        onClick={() => change(page - 1)}
-      >
-        {t('catalog.previous')}
-      </Button>
-      <span>
-        {t('catalog.page')} {page} / {pages} • {total}{' '}
-        {t('catalog.definitions')}
-      </span>
-      <Button
-        className="button-secondary"
-        disabled={page >= pages}
-        onClick={() => change(page + 1)}
-      >
-        {t('catalog.next')}
-      </Button>
+    <div className="catalog-pagination sales-pagination-bar">
+      <div className="sales-pagination-info">
+        <span>
+          {t('catalog.page')} {page} / {pages} • {total}{' '}
+          {t('catalog.definitions')}
+        </span>
+      </div>
+      <div className="sales-pagination-controls">
+        <Button
+          className="button-secondary"
+          disabled={page <= 1}
+          onClick={() => change(page - 1)}
+        >
+          <ChevronLeft size={15} aria-hidden="true" />
+          <span>{t('catalog.previous')}</span>
+        </Button>
+        <strong className="sales-page-number active">{page}</strong>
+        <Button
+          className="button-secondary"
+          disabled={page >= pages}
+          onClick={() => change(page + 1)}
+        >
+          <span>{t('catalog.next')}</span>
+          <ChevronRight size={15} aria-hidden="true" />
+        </Button>
+      </div>
     </div>
   );
 }

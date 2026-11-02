@@ -1,11 +1,13 @@
 import { useLanguage } from '../../app/language';
 import { useRef, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { Award } from 'lucide-react';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
 import { Button, Card, Loading, Tag } from '../../components/ui/primitives';
+import { StandardPageHeader } from '../../components/ui/StandardPage';
 import { moneyText } from '../../lib/pos-api';
 import { Field, SupplyTable } from '../purchasing/SupplyUI';
 import {
@@ -159,17 +161,16 @@ export function LoyaltyPage({ history = false }: { history?: boolean }) {
   const query = history ? entries : accounts;
   return (
     <div className="catalog-page loyalty-page">
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">{t('loyalty.loyaltyRewards2')}</p>
-          <h1>{history ? t(copy.history) : t(copy.title)}</h1>
-          <p>
-            {history
-              ? t('loyalty.reviewPointsEarnedSpentAndRelatedTransactions')
-              : t('loyalty.reviewMembershipLoyaltyProgramsAndAvailablePoints')}
-          </p>
-        </div>
-      </div>
+      <StandardPageHeader
+        icon={<Award size={24} />}
+        eyebrow={t('loyalty.loyaltyRewards2')}
+        title={history ? t(copy.history) : t(copy.title)}
+        description={
+          history
+            ? t('loyalty.reviewPointsEarnedSpentAndRelatedTransactions')
+            : t('loyalty.reviewMembershipLoyaltyProgramsAndAvailablePoints')
+        }
+      />
       <nav className="catalog-nav">
         <Link to="/loyalty">{t(copy.title)}</Link>
         <Link

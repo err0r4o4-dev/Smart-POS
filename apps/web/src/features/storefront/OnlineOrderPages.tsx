@@ -1,11 +1,32 @@
 import { useLanguage } from '../../app/language';
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  ArrowLeft,
+  CheckCircle2,
+  ClipboardList,
+  Clock,
+  CreditCard,
+  ExternalLink,
+  Eye,
+  Package,
+  RefreshCw,
+  ShoppingBag,
+  Store,
+  Terminal,
+} from 'lucide-react';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
 import { Button, Card, Loading, Tag } from '../../components/ui/primitives';
+import {
+  StandardFilterCard,
+  StandardKpiCard,
+  StandardKpiGrid,
+  StandardPageHeader,
+  StandardStatusTabs,
+} from '../../components/ui/StandardPage';
 import { ApiError } from '../../lib/api';
 import {
   posRequest,
@@ -115,16 +136,66 @@ export function StorefrontSettingsPage() {
   );
   return (
     <div className="catalog-page online-admin">
-      <div className="shop-heading">
-        <div>
-          <p className="eyebrow">{t('storefront.receiveOnlineOrders')}</p>
-          <h1>{t('storefront.onlineStorefrontSettings')}</h1>
-        </div>
-        <Link to="/settings/storefront/payments">
-          {t('storefront.testStripeSandbox')}
-        </Link>
-        <Link to="/online-orders">{t('storefront.manageOrders')}</Link>
-      </div>
+      <StandardPageHeader
+        icon={<Store size={24} />}
+        eyebrow={t('storefront.receiveOnlineOrders')}
+        title={t('storefront.onlineStorefrontSettings')}
+        description={t('storefront.publishSelectedProductsForPickupAndPos')}
+        actions={
+          <>
+            <Link
+              className="button button-secondary sales-export-btn"
+              to="/settings/storefront/payments"
+            >
+              <CreditCard size={15} aria-hidden="true" />
+              <span>{t('storefront.testStripeSandbox')}</span>
+            </Link>
+            <Link className="button sales-new-sale-btn" to="/online-orders">
+              <ShoppingBag size={15} aria-hidden="true" />
+              <span>{t('storefront.manageOrders')}</span>
+            </Link>
+          </>
+        }
+      />
+
+      <StandardKpiGrid label={t('storefront.onlineStorefrontSettings')}>
+        <StandardKpiCard
+          icon={<Store size={20} />}
+          tone={settings.data?.published ? 'success' : 'amber'}
+          label={t('storefront.publishStorefront')}
+          value={
+            settings.data?.published
+              ? t('storefront.published')
+              : t('storefront.unpublished')
+          }
+          subtext={settings.data?.slug ? `/shop/${settings.data.slug}` : '—'}
+          sparkline
+        />
+        <StandardKpiCard
+          icon={<CheckCircle2 size={20} />}
+          tone={settings.data?.accepting_orders ? 'success' : 'amber'}
+          label={t('storefront.acceptOrders')}
+          value={
+            settings.data?.accepting_orders
+              ? t('storefront.published')
+              : t('storefront.unpublished')
+          }
+          trendUp={Boolean(settings.data?.accepting_orders)}
+        />
+        <StandardKpiCard
+          icon={<Terminal size={20} />}
+          tone="amber"
+          label={t('pos.terminal')}
+          value={`${terminals.data?.items.length ?? 0} ${t('pos.itemsUnit')}`}
+        />
+        <StandardKpiCard
+          icon={<Package size={20} />}
+          tone="info"
+          label={t('storefront.publishedProducts')}
+          value={`${listings.data?.total ?? 0} ${t('pos.itemsUnit')}`}
+        />
+      </StandardKpiGrid>
+
       <p className="notice">
         {t('storefront.publishSelectedProductsForPickupAndPos')}
       </p>
@@ -152,37 +223,45 @@ export function StorefrontSettingsPage() {
       )}
       {settings.data && (
         <>
-          <div className="shop-heading">
-            <h2>{t('storefront.publishedProducts')}</h2>
-            <a
-              href={`/shop/${settings.data.slug}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {t('storefront.previewStorefront')}
-            </a>
-          </div>
-          <form
-            className="shop-search"
+          <StandardFilterCard
+            title={t('storefront.publishedProducts')}
+            headerControls={
+              <a
+                className="button button-secondary sales-detail-link"
+                href={`/shop/${settings.data.slug}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <ExternalLink size={14} aria-hidden="true" />
+                <span>{t('storefront.previewStorefront')}</span>
+              </a>
+            }
+            useForm
             onSubmit={(event) => {
               event.preventDefault();
               setSubmitted(search.trim());
               setPage(1);
             }}
+            onReset={() => {
+              setSearch('');
+              setSubmitted('');
+              setPage(1);
+            }}
+            searchSubmit
+            searchLabel={t('customers.search')}
           >
-            <label htmlFor="listing-search">
-              {t('storefront.findProductsToPublish')}
-            </label>
-            <div className="shop-actions">
+            <div className="sales-filter-field">
+              <label htmlFor="listing-search">
+                {t('storefront.findProductsToPublish')}
+              </label>
               <input
                 id="listing-search"
                 maxLength={100}
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
-              <Button type="submit">{t('customers.search')}</Button>
             </div>
-          </form>
+          </StandardFilterCard>
           {listings.isPending && (
             <Loading>{t('storefront.loadingProducts')}</Loading>
           )}
@@ -193,7 +272,9 @@ export function StorefrontSettingsPage() {
             />
           )}
           {listings.data?.total === 0 && (
-            <p>{t('storefront.noProductsListedAddProductsToThe')}</p>
+            <p className="sales-empty-message">
+              {t('storefront.noProductsListedAddProductsToThe')}
+            </p>
           )}
           <div className="online-listings">
             {listings.data?.items.map((item) => (
@@ -429,22 +510,90 @@ export function OnlineOrdersPage() {
     `/online-orders?branch_id=${scope.branch}&status=${status}&page=${page}`,
     !!scope.branch,
   );
+  const items = useMemo(() => orders.data?.items ?? [], [orders.data?.items]);
+  const totalOrders = orders.data?.total ?? 0;
+  const pendingCount = useMemo(
+    () =>
+      items.filter((item) => ['PENDING', 'PREPARING'].includes(item.status))
+        .length,
+    [items],
+  );
+  const readyCount = useMemo(
+    () => items.filter((item) => item.status === 'READY').length,
+    [items],
+  );
+  const completedCount = useMemo(
+    () => items.filter((item) => item.status === 'COMPLETED').length,
+    [items],
+  );
+
   return (
     <div className="catalog-page online-admin">
-      <div className="shop-heading">
-        <div>
-          <p className="eyebrow">{t('storefront.storePickupPayThroughPos')}</p>
-          <h1>{t('pos.onlineOrders')}</h1>
-        </div>
-        {scope.tenant.can('storefront.manage') && (
-          <Link to="/settings/storefront">
-            {t('storefront.storefrontSettings')}
-          </Link>
-        )}
-      </div>
-      <div className="shop-actions">
-        <label>
-          {t('catalog.filterStatus')}
+      <StandardPageHeader
+        icon={<ShoppingBag size={24} />}
+        eyebrow={t('storefront.storePickupPayThroughPos')}
+        title={t('pos.onlineOrders')}
+        description={t('storefront.storePickupPayThroughPos')}
+        actions={
+          <>
+            <Button
+              className="button-secondary sales-export-btn"
+              onClick={() => void orders.refetch()}
+            >
+              <RefreshCw size={15} aria-hidden="true" />
+              <span>{t('storefront.refreshList')}</span>
+            </Button>
+            {scope.tenant.can('storefront.manage') && (
+              <Link
+                className="button sales-new-sale-btn"
+                to="/settings/storefront"
+              >
+                <Store size={15} aria-hidden="true" />
+                <span>{t('storefront.storefrontSettings')}</span>
+              </Link>
+            )}
+          </>
+        }
+      />
+
+      <StandardKpiGrid label={t('pos.onlineOrders')}>
+        <StandardKpiCard
+          icon={<ShoppingBag size={20} />}
+          tone="amber"
+          label={t('pos.onlineOrders')}
+          value={`${totalOrders} ${t('pos.itemsUnit')}`}
+          sparkline
+        />
+        <StandardKpiCard
+          icon={<Clock size={20} />}
+          tone="amber"
+          label={localize(orderStatusLabels.PENDING)}
+          value={`${pendingCount} ${t('pos.itemsUnit')}`}
+        />
+        <StandardKpiCard
+          icon={<Package size={20} />}
+          tone="info"
+          label={localize(orderStatusLabels.READY)}
+          value={`${readyCount} ${t('pos.itemsUnit')}`}
+        />
+        <StandardKpiCard
+          icon={<CheckCircle2 size={20} />}
+          tone="success"
+          label={localize(orderStatusLabels.COMPLETED)}
+          value={`${completedCount} ${t('pos.itemsUnit')}`}
+          trendUp
+        />
+      </StandardKpiGrid>
+
+      <StandardFilterCard
+        onReset={() => {
+          setStatus('');
+          setPage(1);
+        }}
+        onSearch={() => void orders.refetch()}
+      >
+        <label className="sales-filter-field">
+          <span>{t('catalog.filterStatus')}</span>
           <select
             value={status}
             onChange={(event) => {
@@ -460,62 +609,93 @@ export function OnlineOrdersPage() {
             ))}
           </select>
         </label>
-        <Button
-          className="button-secondary"
-          onClick={() => void orders.refetch()}
-        >
-          {t('storefront.refreshList')}
-        </Button>
-      </div>
+      </StandardFilterCard>
+
       {!scope.branch && (
         <p role="status">{t('storefront.selectABranchToViewOrders')}</p>
       )}
-      {orders.isFetching && <Loading>{t('storefront.loadingOrders')}</Loading>}
-      {orders.error && (
-        <ShopError error={orders.error} retry={() => void orders.refetch()} />
-      )}
-      {orders.data?.total === 0 && (
-        <Card>
-          <h2>{t('storefront.noOrdersListedYet')}</h2>
-          <p>{t('storefront.actualStorefrontOrdersAppearHereNoSimulated')}</p>
-        </Card>
-      )}
-      <div className="online-listings">
-        {orders.data?.items.map((order) => (
-          <Card className="online-listing" key={order.id}>
-            <div>
-              <h2>
-                <Link to={`/online-orders/${order.id}`}>{order.number}</Link>
-              </h2>
-              <p>
-                {order.customer_name} · {order.contact_phone}
-              </p>
-              <small>{formatDateTime(order.created_at)}</small>
-            </div>
-            <Tag tone={order.status === 'COMPLETED' ? 'success' : 'amber'}>
-              {localize(orderStatusLabels[order.status])}
-            </Tag>
-            <div>
-              <strong>
-                ฿{moneyText(order.final_total ?? order.estimated_total)}
-              </strong>
-              <p>
-                {order.payment_status === 'UNPAID'
-                  ? t('storefront.unpaid')
-                  : t('storefront.paidInStore')}
-              </p>
-            </div>
-          </Card>
-        ))}
-      </div>
-      {orders.data && (
-        <ShopPagination
-          page={page}
-          total={orders.data.total}
-          pageSize={orders.data.page_size}
-          change={setPage}
+
+      <Card className="sales-table-card">
+        <StandardStatusTabs
+          ariaLabel={t('catalog.filterStatus')}
+          value={status}
+          onChange={(next) => {
+            setStatus(next);
+            setPage(1);
+          }}
+          tabs={[
+            {
+              key: '',
+              label: t('purchasing.allStatuses'),
+              count: status === '' ? totalOrders : items.length,
+              icon: <ClipboardList size={15} aria-hidden="true" />,
+            },
+            ...Object.entries(orderStatusLabels).map(([value, label]) => ({
+              key: value,
+              label: localize(label),
+              count: items.filter((item) => item.status === value).length,
+            })),
+          ]}
         />
-      )}
+        {orders.isFetching && <Loading>{t('storefront.loadingOrders')}</Loading>}
+        {orders.error && (
+          <ShopError error={orders.error} retry={() => void orders.refetch()} />
+        )}
+        {orders.data?.total === 0 && (
+          <div className="sales-empty-message">
+            <h2>{t('storefront.noOrdersListedYet')}</h2>
+            <p>{t('storefront.actualStorefrontOrdersAppearHereNoSimulated')}</p>
+          </div>
+        )}
+        <div className="online-listings">
+          {orders.data?.items.map((order) => (
+            <Card className="online-listing" key={order.id}>
+              <div className="sales-number-cell">
+                <span className="sales-doc-icon" aria-hidden="true">
+                  <ShoppingBag size={18} />
+                </span>
+                <div>
+                  <h2>
+                    <Link to={`/online-orders/${order.id}`}>{order.number}</Link>
+                  </h2>
+                  <p>
+                    {order.customer_name} · {order.contact_phone}
+                  </p>
+                  <small>{formatDateTime(order.created_at)}</small>
+                </div>
+              </div>
+              <Tag tone={order.status === 'COMPLETED' ? 'success' : 'amber'}>
+                {localize(orderStatusLabels[order.status])}
+              </Tag>
+              <div>
+                <strong>
+                  ฿{moneyText(order.final_total ?? order.estimated_total)}
+                </strong>
+                <p>
+                  {order.payment_status === 'UNPAID'
+                    ? t('storefront.unpaid')
+                    : t('storefront.paidInStore')}
+                </p>
+              </div>
+              <Link
+                to={`/online-orders/${order.id}`}
+                className="button button-secondary sales-detail-link"
+              >
+                <Eye size={15} aria-hidden="true" />
+                <span>{t('pos.viewDetails')}</span>
+              </Link>
+            </Card>
+          ))}
+        </div>
+        {orders.data && (
+          <ShopPagination
+            page={page}
+            total={orders.data.total}
+            pageSize={orders.data.page_size}
+            change={setPage}
+          />
+        )}
+      </Card>
     </div>
   );
 }
@@ -531,10 +711,19 @@ export function OnlineOrderPage() {
   const command = useCommand();
   return (
     <div className="catalog-page online-admin">
-      <div className="shop-heading">
-        <h1>{t('storefront.onlineOrderDetails')}</h1>
-        <Link to="/online-orders">{t('storefront.backToOrders')}</Link>
-      </div>
+      <StandardPageHeader
+        icon={<ShoppingBag size={24} />}
+        title={t('storefront.onlineOrderDetails')}
+        actions={
+          <Link
+            className="button button-secondary sales-export-btn"
+            to="/online-orders"
+          >
+            <ArrowLeft size={15} aria-hidden="true" />
+            <span>{t('storefront.backToOrders')}</span>
+          </Link>
+        }
+      />
       {order.isPending && <Loading>{t('storefront.loadingOrders')}</Loading>}
       {order.error && (
         <ShopError error={order.error} retry={() => void order.refetch()} />

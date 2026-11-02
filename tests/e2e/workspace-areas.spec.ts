@@ -313,7 +313,10 @@ for (const width of [375, 1440]) {
     page.on('pageerror', (error) => errors.push(error.message));
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/work');
-    await page.getByRole('link', { name: 'ข้อมูลสินค้า', exact: true }).click();
+    await page
+      .getByRole('main')
+      .getByRole('link', { name: 'ข้อมูลสินค้า', exact: true })
+      .click();
     await expect(page).toHaveURL(/\/work\/products$/);
     await expect(page.locator('[data-workspace="staff"]')).toBeVisible();
     await expect(page.locator('a[href="/manage/employees"]')).toHaveCount(0);

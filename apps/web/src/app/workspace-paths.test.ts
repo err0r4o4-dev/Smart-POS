@@ -13,11 +13,17 @@ it.each([
   'sales',
   'purchasing/orders',
   'customers',
-  'shelves',
 ])('scopes %s without losing queries or fragments', (module) => {
   const path = `/${module}/item-1?search=abc#details`;
   expect(workspacePath(path, 'management')).toBe('/manage' + path);
   expect(workspacePath(path, 'staff')).toBe('/work' + path);
+});
+
+it('does not treat removed /shelves flow as a business workspace path', () => {
+  expect(isBusinessPath('/shelves')).toBe(false);
+  expect(isBusinessPath('/shelves/replenishments')).toBe(false);
+  expect(workspacePath('/shelves', 'management')).toBe('/shelves');
+  expect(workspacePath('/shelves', 'staff')).toBe('/shelves');
 });
 
 it.each([

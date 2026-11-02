@@ -945,6 +945,97 @@ export function SaleDetailsPage() {
           {t('pos.backToSalesHistory')}
         </Link>
       </div>
+      <section
+        className="sales-kpi-grid no-print"
+        aria-label={t('pos.salesSummaryRegion')}
+      >
+        <Card className="sales-kpi-card">
+          <div className="sales-kpi-content">
+            <span
+              className="sales-kpi-icon sales-kpi-icon-amber"
+              aria-hidden="true"
+            >
+              <Coins size={20} />
+            </span>
+            <div className="sales-kpi-body">
+              <span className="sales-kpi-label">{t('pos.netTotal')}</span>
+              <strong className="sales-kpi-value">
+                ฿{moneyText(sale.grand_total)}
+              </strong>
+              <span className="sales-kpi-trend sales-kpi-trend-up">
+                <span>
+                  {t('pos.beforeDiscount')} ฿{moneyText(sale.subtotal)}
+                </span>
+              </span>
+            </div>
+          </div>
+        </Card>
+        <Card className="sales-kpi-card">
+          <div className="sales-kpi-content">
+            <span
+              className="sales-kpi-icon sales-kpi-icon-amber"
+              aria-hidden="true"
+            >
+              <FileText size={20} />
+            </span>
+            <div className="sales-kpi-body">
+              <span className="sales-kpi-label">{t('pos.saleItems')}</span>
+              <strong className="sales-kpi-value">
+                {sale.items.length} {t('pos.itemsUnit')}
+              </strong>
+              <span className="sales-kpi-trend">
+                <small>{sale.receipt.receipt_number}</small>
+              </span>
+            </div>
+          </div>
+        </Card>
+        <Card className="sales-kpi-card">
+          <div className="sales-kpi-content">
+            <span
+              className="sales-kpi-icon sales-kpi-icon-amber"
+              aria-hidden="true"
+            >
+              <BadgeDollarSign size={20} />
+            </span>
+            <div className="sales-kpi-body">
+              <span className="sales-kpi-label">{t('pos.paymentMethod')}</span>
+              <strong className="sales-kpi-value">
+                {localize(paymentLabels[sale.payment.method])}
+              </strong>
+              <span className="sales-kpi-trend">
+                <small>
+                  {sale.branch_name} · {sale.terminal_name}
+                </small>
+              </span>
+            </div>
+          </div>
+        </Card>
+        <Card className="sales-kpi-card">
+          <div className="sales-kpi-content">
+            <span
+              className="sales-kpi-icon sales-kpi-icon-success"
+              aria-hidden="true"
+            >
+              <CheckCircle2 size={20} />
+            </span>
+            <div className="sales-kpi-body">
+              <span className="sales-kpi-label">{t('auth.status')}</span>
+              <strong className="sales-kpi-value">
+                {sale.status === 'COMPLETED'
+                  ? t('pos.saleCompleted')
+                  : sale.status}
+              </strong>
+              <span className="sales-kpi-trend sales-kpi-trend-up">
+                <span>
+                  {sale.payment_status === 'CONFIRMED'
+                    ? t('pos.paymentConfirmed')
+                    : sale.payment_status}
+                </span>
+              </span>
+            </div>
+          </div>
+        </Card>
+      </section>
       <div className="pos-sale-detail">
         <Card className="no-print sale-information">
           <h2>{sale.sale_number}</h2>

@@ -98,13 +98,15 @@ export function LocationEditor({
       </Field>
       <Field label={t('inventory.locationType')}>
         <select value={type} onChange={(event) => setType(event.target.value)}>
-          {['WAREHOUSE', 'SALES_FLOOR', 'SHELF', 'QUARANTINE', 'DAMAGED'].map(
-            (item) => (
-              <option key={item} value={item}>
-                {labelCode(item)}
-              </option>
-            ),
-          )}
+          {(initial?.type &&
+          !['WAREHOUSE', 'QUARANTINE', 'DAMAGED'].includes(initial.type)
+            ? [initial.type, 'WAREHOUSE', 'QUARANTINE', 'DAMAGED']
+            : ['WAREHOUSE', 'QUARANTINE', 'DAMAGED']
+          ).map((item) => (
+            <option key={item} value={item}>
+              {labelCode(item)}
+            </option>
+          ))}
         </select>
       </Field>
       <Field label={t('inventory.parentLocationNavigationOnly')}>

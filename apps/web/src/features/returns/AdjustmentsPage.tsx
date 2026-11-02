@@ -1,10 +1,12 @@
 import { useLanguage } from '../../app/language';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { RefreshCw } from 'lucide-react';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
 import { Button, Card, Loading, Tag } from '../../components/ui/primitives';
+import { StandardPageHeader } from '../../components/ui/StandardPage';
 import { CatalogError } from '../catalog/CatalogUI';
 import { Field } from '../purchasing/SupplyUI';
 import type { POSPage, POSShift, SaleSummary } from '../../lib/pos-api';
@@ -72,12 +74,12 @@ function Workspace({ reversal }: { reversal: boolean }) {
   }
   return (
     <div className="catalog-page returns-page">
-      <div className="page-heading">
-        <div>
-          <h1>{reversal ? text.voids : text.exchanges}</h1>
-          <p>{text.notice}</p>
-        </div>
-      </div>
+      <StandardPageHeader
+        icon={<RefreshCw size={24} />}
+        eyebrow={t('returns.businessOperations')}
+        title={reversal ? text.voids : text.exchanges}
+        description={text.notice}
+      />
       <nav className="catalog-nav">
         <Link to="/pos/exchanges">{text.exchanges}</Link>
         <Link to="/sales/voids">{text.voids}</Link>

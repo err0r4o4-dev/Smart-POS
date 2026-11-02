@@ -26,7 +26,7 @@ it('offers recovery without claiming a failed render rolled back a transaction',
     ),
   ).not.toBeInTheDocument();
   expect(
-    screen.getByRole('button', { name: 'โหลดหน้าอีกครั้ง' }),
+    screen.getByRole('button', { name: 'โหลดใหม่' }),
   ).toBeEnabled();
 });
 

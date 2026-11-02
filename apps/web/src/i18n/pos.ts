@@ -106,8 +106,8 @@ export const pos = defineMessages({
     youHaveNoOpenShift: 'ยังไม่เปิดกะของคุณ',
     loadingTerminalsAndShifts: 'กำลังโหลดเครื่องขายและกะ…',
     requestFailed: 'ทำรายการไม่สำเร็จ',
-    openRegisterShift: 'เปิดกะขาย',
-    closeShiftAndCountCash: 'ปิดกะและนับเงิน',
+    openRegisterShift: 'เปิดกะ',
+    closeShiftAndCountCash: 'ปิดกะ',
     eachTerminalCanHaveOneOpenShift:
       'หนึ่งเครื่องมีได้หนึ่งกะ และหนึ่งแคชเชียร์มีได้หนึ่งกะเปิด',
     openingCash: 'เงินเปิดกะ',
@@ -358,8 +358,8 @@ export const pos = defineMessages({
     youHaveNoOpenShift: 'You have no open shift',
     loadingTerminalsAndShifts: 'Loading terminals and shifts…',
     requestFailed: 'Request failed',
-    openRegisterShift: 'Open register shift',
-    closeShiftAndCountCash: 'Close shift and count cash',
+    openRegisterShift: 'Open shift',
+    closeShiftAndCountCash: 'Close shift',
     eachTerminalCanHaveOneOpenShift:
       'Each terminal can have one open shift, and each cashier can have one open shift',
     openingCash: 'Opening cash',

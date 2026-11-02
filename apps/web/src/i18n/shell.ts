@@ -2,30 +2,30 @@ import { defineMessages } from './defineMessages';
 export const shell = defineMessages({
   th: {
     invalidSingleStoreConfigurationCheckSystemSettings:
-      'ข้อมูลร้านเดียวไม่ถูกต้อง กรุณาตรวจการตั้งค่าระบบ',
+      'ตั้งค่าร้านไม่ถูกต้อง ตรวจสอบระบบ',
     checkingYourSession: 'กำลังตรวจสอบเซสชัน…',
     couldNotVerifyYourSession: 'ไม่สามารถตรวจสอบเซสชันได้',
     openingPage: 'กำลังเปิดหน้า…',
     unableToDisplayThisPage: 'ไม่สามารถแสดงหน้านี้ได้',
     reloadThePageIfYouWereSaving:
       'ลองโหลดหน้าอีกครั้ง หากกำลังบันทึกหรือชำระเงิน ให้ตรวจสอบสถานะรายการก่อนทำซ้ำ',
-    reloadPage: 'โหลดหน้าอีกครั้ง',
+    reloadPage: 'โหลดใหม่',
     noResultsAdjustYourSearchOrSelect:
-      'ไม่พบข้อมูล ลองปรับเงื่อนไขค้นหาหรือเลือกสาขาอื่น',
-    unableToLoadData: 'โหลดข้อมูลไม่สำเร็จ',
-    tryLoadingAgain: 'ลองโหลดข้อมูลอีกครั้ง',
+      'ไม่พบข้อมูล ลองค้นหาใหม่หรือเลือกสาขาอื่น',
+    unableToLoadData: 'โหลดข้อมูลไม่ได้',
+    tryLoadingAgain: 'ลองโหลดใหม่',
     loadingData: 'กำลังโหลดข้อมูล…',
-    checkingServiceReadiness: 'กำลังตรวจสอบความพร้อมของบริการ…',
+    checkingServiceReadiness: 'กำลังตรวจสอบบริการ…',
     serviceNotReady: 'บริการยังไม่พร้อม',
     tryAgain: 'ลองอีกครั้ง',
     lessComplexity: 'ซับซ้อนน้อยลง',
     morePossibility: 'ทำได้มากขึ้น',
     oneConnectedWorkspaceForTheWayYour:
       'พื้นที่ทำงานที่เชื่อมต่อทุกงานร้านของคุณ',
-    backToHomeAndEntrances: 'กลับหน้าหลักและทางเข้า',
+    backToHomeAndEntrances: 'กลับหน้าหลัก',
     storeManagement: 'จัดการร้าน',
-    accountAndAccess: 'บัญชีและการเข้าใช้งาน',
-    homeAndEntrances: 'หน้าหลักและทางเข้า',
+    accountAndAccess: 'บัญชีและสิทธิ์',
+    homeAndEntrances: 'หน้าหลัก',
     systemStatus: 'สถานะระบบ',
     storeTeamSignIn: 'เข้าสู่ระบบทีมร้าน',
     enterStoreAcceptInvitation: 'เข้าร้าน / รับคำเชิญ',
@@ -33,15 +33,15 @@ export const shell = defineMessages({
     noStoreWorkspaceSelected: 'ยังไม่ได้เลือกพื้นที่ร้าน',
     mainNavigation: 'เมนูหลัก',
     manageStoreDataAndSettingsWithinYour:
-      'จัดการข้อมูลและการตั้งค่าของร้านตามสิทธิ์ของคุณ',
-    onlyTasksAllowedByYourRoleAre: 'แสดงเฉพาะงานที่บทบาทของคุณได้รับอนุญาต',
+      'จัดการข้อมูลและการตั้งค่าตามสิทธิ์ของคุณ',
+    onlyTasksAllowedByYourRoleAre: 'แสดงเฉพาะงานที่คุณมีสิทธิ์',
     storeTeamAccountsAreNotOnlineShopper:
-      'บัญชีทีมร้านไม่ใช่บัญชีผู้ซื้อออนไลน์',
+      'บัญชีทีมร้านใช้จัดการร้าน ไม่ใช่บัญชีลูกค้า',
     storeTeam: 'ทีมร้าน',
     viewStorefront: 'ดูหน้าร้าน',
     openNavigation: 'เปิดเมนู',
     theCustomerStorefrontIsSeparateFromThe:
-      'หน้าร้านลูกค้าแยกจากพื้นที่ทีมร้าน',
+      'หน้าร้านลูกค้าแยกจากหน้าทีมร้าน',
     navigation: 'เมนู',
     closeNavigation: 'ปิดเมนู',
     customerStorefront: 'หน้าร้านลูกค้า',
@@ -55,10 +55,10 @@ export const shell = defineMessages({
     intelligentRetail: 'งานร้านอัจฉริยะ',
     roleValue0: 'บทบาท: {value0}',
     cartValue0: 'ตะกร้า ({value0})',
-    searchPlaceholder: 'ค้นหาเมนู, สินค้า, หรือคำสั่ง...',
+    searchPlaceholder: 'ค้นหาเมนูหรือสินค้า…',
     notifications: 'การแจ้งเตือน',
     viewSalesReport: 'ดูรายงานยอดขาย',
-    analyzeYourStore: 'วิเคราะห์ร้านของคุณ',
+    analyzeYourStore: 'วิเคราะห์ร้าน',
   },
   en: {
     invalidSingleStoreConfigurationCheckSystemSettings:
@@ -84,8 +84,8 @@ export const shell = defineMessages({
       'One connected workspace for the way your store works.',
     backToHomeAndEntrances: 'Back to home and entrances',
     storeManagement: 'Store management',
-    accountAndAccess: 'Account and access',
-    homeAndEntrances: 'Home and entrances',
+    accountAndAccess: 'Account and permissions',
+    homeAndEntrances: 'Home',
     systemStatus: 'System status',
     storeTeamSignIn: 'Store team sign in',
     enterStoreAcceptInvitation: 'Enter store / Accept invitation',
@@ -94,7 +94,7 @@ export const shell = defineMessages({
     mainNavigation: 'Main navigation',
     manageStoreDataAndSettingsWithinYour:
       'Manage store data and settings within your permissions',
-    onlyTasksAllowedByYourRoleAre: 'Only tasks allowed by your role are shown',
+    onlyTasksAllowedByYourRoleAre: 'Only tasks you can access are shown',
     storeTeamAccountsAreNotOnlineShopper:
       'Store team accounts are not online shopper accounts',
     storeTeam: 'Store team',

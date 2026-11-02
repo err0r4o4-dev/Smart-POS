@@ -59,21 +59,21 @@ it('expands all menu groups by default when no saved state exists', () => {
     expect(button).toHaveAttribute('aria-expanded', 'true');
   }
   expect(screen.getAllByRole('link')).toHaveLength(navigation.length);
-  expect(screen.getByRole('link', { name: 'ภาพรวมร้าน' })).toHaveAttribute(
+  expect(screen.getByRole('link', { name: 'ภาพรวม' })).toHaveAttribute(
     'aria-current',
     'page',
   );
   expect(
-    screen.getByRole('link', { name: 'เมนูร้าน / สินค้า' }),
+    screen.getByRole('link', { name: 'สินค้า' }),
   ).toBeVisible();
 });
 
 it('toggles groups independently and remembers collapsed/expanded state across refresh', () => {
   const firstRender = renderMenu('/manage/dashboard');
   fireEvent.click(screen.getByRole('button', { name: 'การขาย' }));
-  fireEvent.click(screen.getByRole('button', { name: 'ตั้งค่าระบบ' }));
+  fireEvent.click(screen.getByRole('button', { name: 'ตั้งค่า' }));
   expect(
-    screen.queryByRole('link', { name: 'เปิดหน้าขาย POS' }),
+    screen.queryByRole('link', { name: 'ขายหน้าร้าน' }),
   ).not.toBeInTheDocument();
   expect(
     screen.queryByRole('link', { name: 'ข้อมูลองค์กร' }),
@@ -87,7 +87,7 @@ it('toggles groups independently and remembers collapsed/expanded state across r
     'aria-expanded',
     'false',
   );
-  expect(screen.getByRole('button', { name: 'ตั้งค่าระบบ' })).toHaveAttribute(
+  expect(screen.getByRole('button', { name: 'ตั้งค่า' })).toHaveAttribute(
     'aria-expanded',
     'false',
   );
@@ -103,7 +103,7 @@ it('toggles groups independently and remembers collapsed/expanded state across r
     'aria-expanded',
     'true',
   );
-  expect(screen.getByRole('button', { name: 'ตั้งค่าระบบ' })).toHaveAttribute(
+  expect(screen.getByRole('button', { name: 'ตั้งค่า' })).toHaveAttribute(
     'aria-expanded',
     'false',
   );
@@ -135,14 +135,14 @@ it.each([
   (path) => {
     const initial = renderMenu('/manage/dashboard');
     fireEvent.click(
-      screen.getByRole('button', { name: 'รายงานและวิเคราะห์' }),
+      screen.getByRole('button', { name: 'รายงาน' }),
     );
     fireEvent.click(screen.getByRole('button', { name: 'การขาย' }));
     initial.unmount();
 
     renderMenu(path);
     expect(
-      screen.getByRole('button', { name: 'รายงานและวิเคราะห์' }),
+      screen.getByRole('button', { name: 'รายงาน' }),
     ).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('button', { name: 'การขาย' })).toHaveAttribute(
       'aria-expanded',
@@ -159,7 +159,7 @@ it.each([
 it('highlights the top-level product menu for a nested product route', () => {
   renderMenu('/manage/products/item-1');
   expect(
-    screen.getByRole('link', { name: 'เมนูร้าน / สินค้า' }),
+    screen.getByRole('link', { name: 'สินค้า' }),
   ).toHaveAttribute('aria-current', 'page');
 });
 
@@ -182,7 +182,7 @@ it('filters permissions before showing groups', () => {
 it('removes preview links while retaining the real POS entry', () => {
   renderMenu('/manage/pos');
   expect(document.querySelectorAll('a[href^="/preview/"]')).toHaveLength(0);
-  expect(screen.getByRole('link', { name: 'เปิดหน้าขาย POS' })).toHaveAttribute(
+  expect(screen.getByRole('link', { name: 'ขายหน้าร้าน' })).toHaveAttribute(
     'href',
     '/manage/pos',
   );
@@ -206,18 +206,18 @@ it('opens a collapsed destination group on in-app navigation while preserving ot
     </MemoryRouter>,
   );
   fireEvent.click(
-    screen.getByRole('button', { name: 'สินค้าคงคลังและสต็อก' }),
+    screen.getByRole('button', { name: 'สินค้าและสต็อก' }),
   );
-  fireEvent.click(screen.getByRole('button', { name: 'ตั้งค่าระบบ' }));
+  fireEvent.click(screen.getByRole('button', { name: 'ตั้งค่า' }));
   expect(
-    screen.getByRole('button', { name: 'สินค้าคงคลังและสต็อก' }),
+    screen.getByRole('button', { name: 'สินค้าและสต็อก' }),
   ).toHaveAttribute('aria-expanded', 'false');
 
   fireEvent.click(screen.getByRole('button', { name: 'Visit inventory' }));
   expect(
-    screen.getByRole('button', { name: 'สินค้าคงคลังและสต็อก' }),
+    screen.getByRole('button', { name: 'สินค้าและสต็อก' }),
   ).toHaveAttribute('aria-expanded', 'true');
-  expect(screen.getByRole('button', { name: 'ตั้งค่าระบบ' })).toHaveAttribute(
+  expect(screen.getByRole('button', { name: 'ตั้งค่า' })).toHaveAttribute(
     'aria-expanded',
     'false',
   );
@@ -245,7 +245,7 @@ it('does not expose removed shelf or replenishment navigation links in managemen
 it('opens the current group when permissions finish loading even if previously collapsed elsewhere', () => {
   const prior = renderMenu('/manage/dashboard');
   fireEvent.click(
-    screen.getByRole('button', { name: 'สินค้าคงคลังและสต็อก' }),
+    screen.getByRole('button', { name: 'สินค้าและสต็อก' }),
   );
   prior.unmount();
 
@@ -260,6 +260,6 @@ it('opens the current group when permissions finish loading even if previously c
     </MemoryRouter>,
   );
   expect(
-    screen.getByRole('button', { name: 'สินค้าคงคลังและสต็อก' }),
+    screen.getByRole('button', { name: 'สินค้าและสต็อก' }),
   ).toHaveAttribute('aria-expanded', 'true');
 });

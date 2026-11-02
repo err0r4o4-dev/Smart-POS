@@ -132,7 +132,7 @@ it.each(['single', 'multi', undefined])(
     });
     view('/shop');
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'ข้อมูลร้านเดียวไม่ถูกต้อง',
+      'ตั้งค่าร้านไม่ถูกต้อง',
     );
     expect(
       screen.queryByRole('link', { name: 'ดูสินค้า' }),

@@ -185,13 +185,13 @@ it.each<Role>(['OWNER', 'MANAGER'])(
     selectRole(role, allPermissions);
     expect(workspaceHome(role)).toBe('/manage/dashboard');
     renderWorkspace();
-    expect(screen.getByRole('heading', { name: 'ภาพรวมร้าน' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'ภาพรวม' })).toBeVisible();
     expect(
       document.querySelector('[data-workspace="management"]'),
     ).toBeInTheDocument();
     expect(screen.getAllByText('ยอดขายรวม')[0]).toBeVisible();
     expect(screen.getByText('จำนวนบิล')).toBeVisible();
-    expect(screen.getByText('จำนวนสินค้าที่ขาย')).toBeVisible();
+    expect(screen.getByText('สินค้าที่ขาย')).toBeVisible();
     expect(screen.getByText('ลูกค้าใหม่')).toBeVisible();
     expect(
       screen.getByRole('heading', { name: 'แนวโน้มยอดขาย' }),
@@ -211,7 +211,7 @@ it.each<Role>(['OWNER', 'MANAGER'])(
     ).toBeVisible();
     expect(screen.getByRole('link', { name: 'จัดการสินค้า' })).toBeVisible();
     expect(
-      screen.getByPlaceholderText('ค้นหาเมนู, สินค้า, หรือคำสั่ง...'),
+      screen.getByPlaceholderText('ค้นหาเมนูหรือสินค้า…'),
     ).toBeVisible();
     expect(screen.getByRole('button', { name: 'การแจ้งเตือน' })).toBeVisible();
     expect(screen.getByText('ดูรายงานยอดขาย')).toBeVisible();
@@ -278,7 +278,7 @@ it('keeps cashier menus scoped to granted tasks', () => {
     within(screen.getByRole('main')).getByRole('link', { name: 'ขายหน้าร้าน' }),
   ).toBeVisible();
   expect(
-    within(screen.getByRole('main')).getByRole('link', { name: 'เปิดกะขาย' }),
+    within(screen.getByRole('main')).getByRole('link', { name: 'เปิดกะ' }),
   ).toBeVisible();
   expect(
     within(screen.getByRole('navigation', { name: 'เมนูหลัก' })).getByRole(
@@ -296,7 +296,7 @@ it('redirects a staff dashboard bookmark to their own workspace', () => {
   renderWorkspace('/manage/dashboard');
   expect(screen.getByRole('heading', { name: 'งานของฉัน' })).toBeVisible();
   expect(
-    screen.queryByRole('heading', { name: 'ภาพรวมร้าน' }),
+    screen.queryByRole('heading', { name: 'ภาพรวม' }),
   ).not.toBeInTheDocument();
 });
 

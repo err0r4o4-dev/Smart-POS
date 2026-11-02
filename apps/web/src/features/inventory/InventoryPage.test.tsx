@@ -134,7 +134,7 @@ it('retries failed location options as well as the main inventory list', async (
   );
   unavailable = false;
   fireEvent.click(
-    screen.getByRole('button', { name: 'ลองโหลดข้อมูลอีกครั้ง' }),
+    screen.getByRole('button', { name: 'ลองโหลดใหม่' }),
   );
   await waitFor(() =>
     expect(screen.queryByRole('alert')).not.toBeInTheDocument(),

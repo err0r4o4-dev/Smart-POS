@@ -29,7 +29,7 @@ it('replaces the footer logo with guide links while keeping the header brand', (
     footer.getByRole('navigation', { name: 'ลิงก์ท้ายหน้า' }),
   );
   expect(
-    navigation.getByRole('link', { name: 'คู่มือการใช้งาน' }),
+    navigation.getByRole('link', { name: 'คู่มือ' }),
   ).toHaveAttribute('href', '/help');
   expect(
     navigation.getByRole('link', { name: 'วิธีเริ่มต้น' }),
@@ -61,7 +61,7 @@ it('shows landing sections and real destinations without the management sidebar'
     'href',
     '#how-it-works',
   );
-  expect(screen.getByRole('link', { name: 'คู่มือการใช้งาน' })).toHaveAttribute(
+  expect(screen.getByRole('link', { name: 'คู่มือ' })).toHaveAttribute(
     'href',
     '/help',
   );
@@ -79,7 +79,7 @@ it('shows landing sections and real destinations without the management sidebar'
     document.querySelector('.landing-access-grid'),
   ).not.toBeInTheDocument();
   expect(
-    screen.getByText('ภาพตัวอย่างประกอบระบบ POS ไม่ใช่ข้อมูลการขายจริง'),
+    screen.getByText('ภาพประกอบ POS ไม่ใช่ข้อมูลขายจริง'),
   ).toBeVisible();
   expect(
     screen.queryByRole('navigation', { name: 'Main navigation' }),
@@ -94,7 +94,7 @@ it('resolves the real role instead of treating every signed-in user as an owner'
   mocks.status = 'authenticated';
   renderLanding();
   const workspaceLinks = screen.getAllByRole('link', {
-    name: 'เข้าสู่พื้นที่ทำงาน',
+    name: 'เข้าพื้นที่ทำงาน',
   });
   expect(workspaceLinks).toHaveLength(2);
   for (const link of workspaceLinks)

@@ -5,20 +5,20 @@ export const help = defineMessages({
     aPracticalStartingPointForTheFive: 'จุดเริ่มต้นสำหรับทีมนักพัฒนา 5 คน',
     startLocally: 'เริ่มใช้งานในเครื่อง',
     fromTheRepositoryRootWithNode24:
-      'จาก root ของ repository โดยใช้ Node 24 และ Docker Desktop:',
+      'เริ่มจาก root ด้วย Node 24 และ Docker Desktop:',
     openLocalhost8088ForTheCompleteSame:
-      'เปิด localhost:8088 เพื่อใช้ระบบครบชุดบน origin เดียว ข้อมูลในฐานข้อมูลคงอยู่หลังเริ่มระบบใหม่',
+      'เปิด localhost:8088 เพื่อใช้ระบบครบชุด ข้อมูลยังอยู่หลังรีสตาร์ต',
     knowTheBoundary: 'เข้าใจขอบเขตการทำงาน',
     signInAndSelectYourOrganizationTo:
-      'เข้าสู่ระบบและเลือกองค์กรเพื่อจัดการสินค้าและใช้ POS การชำระเงินต้องมีสิทธิ์ POS และเปิดกะขายแล้ว',
-    followTheRoadmap: 'ติดตามแผนพัฒนา',
+      'เข้าสู่ระบบ เลือกองค์กร แล้วจัดการสินค้าและใช้ POS ต้องมีสิทธิ์ POS และเปิดกะ',
+    followTheRoadmap: 'ดูแผนพัฒนา',
     identityCatalogInventoryPosSalesPurchasingShelves:
-      'บัญชีและแค็ตตาล็อก → สต็อก → POS และการขาย → จัดซื้อและชั้นวาง → งานธุรกิจ → AI → ความพร้อมใช้งานจริง',
+      'บัญชี → สินค้า → สต็อก → POS → จัดซื้อ → งานธุรกิจ → AI',
     detailedContractsModuleOwnershipAndAcceptanceGates:
-      'สัญญา API ผู้รับผิดชอบโมดูล และเกณฑ์ตรวจรับอยู่ในโฟลเดอร์ docs ของ repository',
+      'สัญญา API เจ้าของโมดูล และเกณฑ์ตรวจรับอยู่ใน docs',
     developerWorkspace: 'พื้นที่นักพัฒนา',
     healthStatusIsRealModulePageCounts:
-      'สถานะสุขภาพเป็นข้อมูลจริง จำนวนโมดูลและหน้าแสดงขอบเขตสถาปัตยกรรม ไม่ใช่กิจกรรมการขาย',
+      'สถานะระบบเป็นข้อมูลจริง จำนวนโมดูลและหน้าเป็นขอบเขตระบบ ไม่ใช่ยอดขาย',
   },
   en: {
     buildOnSolidGround: 'Build on solid ground.',
@@ -28,17 +28,17 @@ export const help = defineMessages({
     fromTheRepositoryRootWithNode24:
       'From the repository root, with Node 24 and Docker Desktop:',
     openLocalhost8088ForTheCompleteSame:
-      'Open localhost:8088 for the complete same-origin stack. Database volumes persist across restarts.',
+      'Open localhost:8088 for the full stack. Database data persists after restart.',
     knowTheBoundary: 'Know the boundary',
     signInAndSelectYourOrganizationTo:
-      'Sign in and select your organization to use product management and POS. Checkout requires POS access and an open register shift.',
-    followTheRoadmap: 'Follow the roadmap',
+      'Sign in, select an organization, and use POS. POS access and an open shift are required.',
+    followTheRoadmap: 'View the roadmap',
     identityCatalogInventoryPosSalesPurchasingShelves:
-      'Identity & catalog → inventory → POS & sales → purchasing & shelves → business operations → AI → production readiness.',
+      'Identity → Products → Stock → POS → Purchasing → Business → AI',
     detailedContractsModuleOwnershipAndAcceptanceGates:
       'Detailed contracts, module ownership and acceptance gates are in the repository’s docs directory.',
     developerWorkspace: 'DEVELOPER WORKSPACE',
     healthStatusIsRealModulePageCounts:
-      'Health status is real. Module/page counts describe the architecture, not sales activity.',
+      'System status is real. Module and page counts show system scope, not sales.',
   },
 });

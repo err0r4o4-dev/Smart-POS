@@ -12,25 +12,25 @@ export const dashboard = defineMessages({
       'สถาปัตยกรรมที่พร้อมสำหรับขั้นตอนต่อไป',
     exploreTheFoundation: 'สำรวจรากฐานระบบ',
     developmentWorkspaceNoLiveRetailData:
-      'พื้นที่พัฒนาระบบ · ไม่มีข้อมูลร้านจริง',
+      'พื้นที่พัฒนา · ไม่มีข้อมูลร้านจริง',
     inventory: 'สินค้าคงคลัง',
     intelligence: 'ระบบอัจฉริยะ',
     architectureScopeNotBusinessMetrics:
-      'ขอบเขตสถาปัตยกรรม ไม่ใช่ตัวชี้วัดธุรกิจ',
+      'ข้อมูลโครงสร้างระบบ ไม่ใช่ยอดธุรกิจ',
     connectedByClearBoundaries: 'เชื่อมต่อกันด้วยขอบเขตที่ชัดเจน',
-    documentedNotYetImplemented: 'มีเอกสารแล้ว ยังไม่ได้พัฒนา',
+    documentedNotYetImplemented: 'มีเอกสาร แต่ยังไม่พัฒนา',
     phase0: 'เฟส 0',
     noSimulatedBusinessActivity: 'ไม่มีการจำลองกิจกรรมธุรกิจ',
     systemConnection: 'การเชื่อมต่อระบบ',
     refreshServiceStatus: 'ตรวจสอบสถานะบริการใหม่',
-    liveStatusFromTheGoApiChecked: 'สถานะจริงจาก Go API ตรวจสอบทุก 30 วินาที',
+    liveStatusFromTheGoApiChecked: 'สถานะจริงจาก Go API ตรวจทุก 30 วินาที',
     apiDatabaseReady: 'API และฐานข้อมูลพร้อม',
     connectionAndMigrationVersionVerified:
       'ตรวจสอบการเชื่อมต่อและเวอร์ชัน migration แล้ว',
     connected: 'เชื่อมต่อแล้ว',
     postgresqlTransactionalFoundation: 'PostgreSQL · รากฐานธุรกรรม',
     aiServiceInternalHealthOnlyNoPredictions:
-      'บริการ AI · ตรวจสุขภาพภายในเท่านั้น ยังไม่มีการพยากรณ์',
+      'บริการ AI · ตรวจสุขภาพเท่านั้น ยังไม่พยากรณ์',
     makeItYourStore: 'สร้างระบบสำหรับร้านของคุณ',
     secureIdentityOrganizationsBranchesAndAnAccurate:
       'บัญชี องค์กร สาขา และแค็ตตาล็อกสินค้าที่ถูกต้อง',
@@ -40,7 +40,7 @@ export const dashboard = defineMessages({
     designedForTheWholeStore: 'ออกแบบสำหรับทุกส่วนของร้าน',
     businessModulesArePlanned: 'โมดูลธุรกิจอยู่ในแผน',
     exploreThePosAndAuthenticationLayoutPreviews:
-      'สำรวจตัวอย่างหน้าจอ POS และเข้าสู่ระบบจากเมนูพื้นที่ทำงาน ตัวอย่างเหล่านี้ไม่ประมวลผลการขายหรือข้อมูลเข้าสู่ระบบ',
+      'ดูหน้าจอ POS และเข้าสู่ระบบจากเมนูพื้นที่ทำงาน หน้านี้ไม่ทำรายการขาย',
     yourWorkspaceReimagined: 'พื้นที่ทำงานรูปแบบใหม่ของคุณ',
     builtToGrowWithYou: 'พร้อมเติบโตไปกับคุณ',
     plannedModules: 'โมดูลตามแผน',
@@ -64,13 +64,13 @@ export const dashboard = defineMessages({
       'One considered architecture, ready for what comes next.',
     exploreTheFoundation: 'Explore the foundation',
     developmentWorkspaceNoLiveRetailData:
-      'Development workspace · no live retail data',
+      'Development area · no live retail data',
     inventory: 'Inventory',
     intelligence: 'Intelligence',
     architectureScopeNotBusinessMetrics:
-      'Architecture scope, not business metrics',
+      'System structure, not business totals',
     connectedByClearBoundaries: 'Connected by clear boundaries',
-    documentedNotYetImplemented: 'Documented, not yet implemented',
+    documentedNotYetImplemented: 'Documented, not built yet',
     phase0: 'Phase 0',
     noSimulatedBusinessActivity: 'No simulated business activity',
     systemConnection: 'System connection',
@@ -93,7 +93,7 @@ export const dashboard = defineMessages({
     designedForTheWholeStore: 'Designed for the whole store',
     businessModulesArePlanned: 'Business modules are planned',
     exploreThePosAndAuthenticationLayoutPreviews:
-      'Explore the POS and authentication layout previews in the workspace navigation. They do not process sales or credentials.',
+      'Open the POS and sign-in screens from workspace navigation. They do not process sales.',
     yourWorkspaceReimagined: 'YOUR WORKSPACE, REIMAGINED',
     builtToGrowWithYou: 'BUILT TO GROW WITH YOU',
     plannedModules: 'planned modules',

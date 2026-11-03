@@ -1,3 +1,4 @@
+import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
 import { useLanguage } from '../../app/language';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
@@ -32,9 +33,12 @@ function PasswordField({
 
   const [visible, setVisible] = useState(false);
   return (
-    <>
+    <div className="auth-field-group">
       <label htmlFor="password">{t('auth.password')}</label>
-      <div className="password-control">
+      <div className="password-control auth-input-wrapper">
+        <span className="auth-input-icon" aria-hidden="true">
+          <Lock size={18} />
+        </span>
         <input
           id="password"
           type={visible ? 'text' : 'password'}
@@ -44,16 +48,19 @@ function PasswordField({
           required
           minLength={autoComplete === 'current-password' ? undefined : 12}
           maxLength={128}
+          placeholder={t('auth.password')}
         />
         <button
           type="button"
+          className="auth-password-toggle"
           onClick={() => setVisible(!visible)}
           aria-label={visible ? t('auth.hidePassword') : t('auth.showPassword')}
         >
-          {visible ? t('auth.hide') : t('auth.show')}
+          {visible ? <EyeOff size={18} /> : <Eye size={18} />}
+          <span>{visible ? t('auth.hide') : t('auth.show')}</span>
         </button>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -90,35 +97,60 @@ export function LoginPage() {
   };
   return (
     <AuthLayout>
-      <Tag tone="amber">{t('auth.accountAccess')}</Tag>
-      <h2>{t('auth.welcomeBack')}</h2>
-      <p>{t('auth.signInForStoreOwnersManagersAnd')}</p>
+      <div className="auth-header-card">
+        <Tag tone="amber">{t('auth.accountAccess')}</Tag>
+        <h2>{t('auth.welcomeBack')}</h2>
+        <p>{t('auth.signInForStoreOwnersManagersAnd')}</p>
+      </div>
       {params.has('registered') && (
-        <p role="status">{t('auth.accountCreatedSignInToContinue')}</p>
+        <p role="status" className="auth-status-banner">
+          {t('auth.accountCreatedSignInToContinue')}
+        </p>
       )}
-      <form onSubmit={submit}>
+      <form onSubmit={submit} className="auth-form-body">
         <fieldset disabled={pending}>
-          <label htmlFor="email">{t('auth.emailAddress')}</label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            autoComplete="username"
-            required
-            maxLength={254}
-          />
+          <div className="auth-field-group">
+            <label htmlFor="email">{t('auth.emailAddress')}</label>
+            <div className="auth-input-wrapper">
+              <span className="auth-input-icon" aria-hidden="true">
+                <Mail size={18} />
+              </span>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                autoComplete="username"
+                required
+                maxLength={254}
+                placeholder="name@company.com"
+              />
+            </div>
+          </div>
           <PasswordField value={password} onChange={setPassword} />
           <ErrorMessage message={localize(error ?? '')} />
-          <Button type="submit">
-            {pending ? t('auth.signingIn') : t('auth.signIn')}
+          <Button type="submit" className="auth-submit-btn">
+            {pending ? (
+              <>
+                <Loading /> {t('auth.signingIn')}
+              </>
+            ) : (
+              <>
+                <LogIn size={18} /> {t('auth.signIn')}
+              </>
+            )}
           </Button>
         </fieldset>
       </form>
-      <p className="auth-links">
-        <Link to="/forgot-password">{t('auth.forgotPassword')}</Link>
-        <Link to="/register">{t('auth.createAccount')}</Link>
-      </p>
+      <div className="auth-links">
+        <Link to="/forgot-password" className="auth-link-subtle">
+          {t('auth.forgotPassword')}
+        </Link>
+        <div className="auth-link-register-prompt">
+          <span>Don't have an account? </span>
+          <Link to="/register">{t('auth.createAccount')}</Link>
+        </div>
+      </div>
     </AuthLayout>
   );
 }
@@ -389,7 +421,7 @@ export function AccountPage() {
           <Link to={paths.workspace}>
             {t('auth.openYourRoleBasedWorkspace')}
           </Link>{' '}
-          ·{' '}
+          Â·{' '}
           <Link to="/setup">
             {t('auth.selectOrganizationSetUpStoreAcceptInvitation')}
           </Link>
@@ -397,7 +429,7 @@ export function AccountPage() {
             isManagementRole(tenant.context.membership.role) && (
               <>
                 {' '}
-                ·{' '}
+                Â·{' '}
                 <Link to="/manage/settings/store">
                   {t('auth.manageOrganizationAndBranches')}
                 </Link>
@@ -412,3 +444,4 @@ export function AccountPage() {
     </div>
   );
 }
+

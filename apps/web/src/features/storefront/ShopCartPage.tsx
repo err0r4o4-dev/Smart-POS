@@ -1,5 +1,4 @@
-﻿
-import { useLanguage } from '../../app/language';
+﻿import { useLanguage } from '../../app/language';
 import { useState, type CSSProperties } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -110,16 +109,11 @@ function displayQuantity(quantity: string): string {
 
   if (fraction === 0n) return whole.toString();
 
-  return `${whole}.${fraction
-    .toString()
-    .padStart(3, '0')
-    .replace(/0+$/, '')}`;
+  return `${whole}.${fraction.toString().padStart(3, '0').replace(/0+$/, '')}`;
 }
 
 function quantityText(amount: bigint): string {
-  return `${amount / 1000n}.${(amount % 1000n)
-    .toString()
-    .padStart(3, '0')}`;
+  return `${amount / 1000n}.${(amount % 1000n).toString().padStart(3, '0')}`;
 }
 
 export function ShopCartPage() {
@@ -131,9 +125,24 @@ export function ShopCartPage() {
 function CartContents({ slug }: { slug: string }) {
   const { t } = useLanguage();
 
-const [diningType, setDiningType] = useState<'takeaway' | 'dine-in'>('takeaway');
-const [selectedTable, setSelectedTable] = useState('');
-const exampleTables = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A10', 'A11', 'A12'];
+  const [diningType, setDiningType] = useState<'takeaway' | 'dine-in'>(
+    'takeaway',
+  );
+  const [selectedTable, setSelectedTable] = useState('');
+  const exampleTables = [
+    'A1',
+    'A2',
+    'A3',
+    'A4',
+    'A5',
+    'A6',
+    'A7',
+    'A8',
+    'A9',
+    'A10',
+    'A11',
+    'A12',
+  ];
 
   const cart = useShopCart(slug);
   const navigate = useNavigate();
@@ -146,12 +155,9 @@ const exampleTables = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A1
       },
   );
 
-  const [pending, setPending] = useState(
-    () => pendingIdentity(slug) !== null,
-  );
+  const [pending, setPending] = useState(() => pendingIdentity(slug) !== null);
 
-  const [retryInput, setRetryInput] =
-    useState<ShopOrderInput | null>(null);
+  const [retryInput, setRetryInput] = useState<ShopOrderInput | null>(null);
 
   const [customer, setCustomer] = useState({
     customer_name: '',
@@ -182,8 +188,7 @@ const exampleTables = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A1
       }),
   });
 
-  const trackingPath =
-    `/shop/${slug}/track/${identity.key}#access=${identity.token}`;
+  const trackingPath = `/shop/${slug}/track/${identity.key}#access=${identity.token}`;
 
   // Existing order submission.
   const submission = useMutation({
@@ -254,16 +259,9 @@ const exampleTables = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A1
     if (submission.isPending) return;
 
     try {
-      sessionStorage.setItem(
-        `shop-pending:${slug}`,
-        JSON.stringify(identity),
-      );
+      sessionStorage.setItem(`shop-pending:${slug}`, JSON.stringify(identity));
     } catch {
-      setError(
-        new Error(
-          t('storefront.theBrowserCouldNotSaveTheTracking'),
-        ),
-      );
+      setError(new Error(t('storefront.theBrowserCouldNotSaveTheTracking')));
       return;
     }
 
@@ -280,27 +278,20 @@ const exampleTables = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A1
         <h1>
           {submission.isPending
             ? t('storefront.submittingOrder')
-            : t(
-                'storefront.checkTheOriginalRequestBeforeResubmitting',
-              )}
+            : t('storefront.checkTheOriginalRequestBeforeResubmitting')}
         </h1>
 
         <p>
-          {t('storefront.requestId')}{' '}
-          <code>{identity.key}</code>
+          {t('storefront.requestId')} <code>{identity.key}</code>
         </p>
 
-        <p>
-          {t('storefront.ifTheNetworkFailsTheOrderMay')}
-        </p>
+        <p>{t('storefront.ifTheNetworkFailsTheOrderMay')}</p>
 
         {error != null && <ShopError error={error} />}
 
         <div className="shop-actions">
           <Button
-            disabled={
-              submission.isPending || recovery.isPending
-            }
+            disabled={submission.isPending || recovery.isPending}
             onClick={() => recovery.mutate()}
           >
             {t('storefront.checkOrderResult')}
@@ -309,9 +300,7 @@ const exampleTables = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A1
           {retryInput && (
             <Button
               className="button-secondary"
-              disabled={
-                submission.isPending || recovery.isPending
-              }
+              disabled={submission.isPending || recovery.isPending}
               onClick={() => send(retryInput)}
             >
               {t('storefront.retryTheSameRequest')}
@@ -328,16 +317,12 @@ const exampleTables = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A1
                   quote.reset();
                 }}
               >
-                {t(
-                  'storefront.returnToReviewWithTheSameId',
-                )}
+                {t('storefront.returnToReviewWithTheSameId')}
               </Button>
             )}
         </div>
 
-        <p>
-          {t('storefront.contactDetailsAreNotStoredInThe')}
-        </p>
+        <p>{t('storefront.contactDetailsAreNotStoredInThe')}</p>
       </Card>
     );
   }
@@ -359,8 +344,7 @@ const exampleTables = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A1
 
   const estimated = cart.items.reduce(
     (total, item) =>
-      total +
-      (estimatedLine(item.unit_price, item.quantity) ?? 0n),
+      total + (estimatedLine(item.unit_price, item.quantity) ?? 0n),
     0n,
   );
 
@@ -410,16 +394,11 @@ const exampleTables = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A1
       </div>
 
       {shop.isPending && (
-        <Loading>
-          {t('storefront.checkingStoreStatus')}
-        </Loading>
+        <Loading>{t('storefront.checkingStoreStatus')}</Loading>
       )}
 
       {shop.error && (
-        <ShopError
-          error={shop.error}
-          retry={() => void shop.refetch()}
-        />
+        <ShopError error={shop.error} retry={() => void shop.refetch()} />
       )}
 
       {/* NOTICE BAR */}
@@ -471,17 +450,11 @@ const exampleTables = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A1
             textAlign: 'center',
           }}
         >
-          <ShoppingCart
-            size={36}
-            color={theme.muted}
-            aria-hidden="true"
-          />
+          <ShoppingCart size={36} color={theme.muted} aria-hidden="true" />
 
           <h2>{t('storefront.yourCartIsEmpty')}</h2>
 
-          <Link to={`/shop/${slug}`}>
-            {t('storefront.backToProducts')}
-          </Link>
+          <Link to={`/shop/${slug}`}>{t('storefront.backToProducts')}</Link>
         </div>
       )}
 
@@ -526,8 +499,7 @@ const exampleTables = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A1
                 onRemove={() => {
                   cart.update(
                     cart.items.filter(
-                      (entry) =>
-                        entry.variant_id !== item.variant_id,
+                      (entry) => entry.variant_id !== item.variant_id,
                     ),
                   );
 
@@ -548,165 +520,162 @@ const exampleTables = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A1
             }}
           >
             {/* ORDER TYPE - PRESENTATION ONLY */}
-           
-<section style={{ marginBottom: 13 }}>
-  <h2 style={sectionTitleStyle}>
-    <UtensilsCrossed size={21} aria-hidden="true" />
-    รูปแบบการรับประทาน
-  </h2>
 
-  <div
-    style={{
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
-      gap: 8,
-    }}
-  >
-    <button
-      type="button"
-      aria-pressed={diningType === 'takeaway'}
-      onClick={() => {
-        setDiningType('takeaway');
-        setSelectedTable('');
-      }}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        minHeight: 43,
-        padding: 8,
-        border:
-          diningType === 'takeaway'
-            ? '1px solid #F8CA49'
-            : '1px solid #E9EBF0',
-        borderRadius: 9,
-        background:
-          diningType === 'takeaway' ? theme.yellow : '#F7F8FA',
-        color: diningType === 'takeaway' ? theme.navy : '#778093',
-        fontSize: 13,
-        fontWeight: 700,
-        cursor: 'pointer',
-      }}
-    >
-      <ShoppingBag size={17} aria-hidden="true" />
-      ซื้อกลับบ้าน
-    </button>
+            <section style={{ marginBottom: 13 }}>
+              <h2 style={sectionTitleStyle}>
+                <UtensilsCrossed size={21} aria-hidden="true" />
+                รูปแบบการรับประทาน
+              </h2>
 
-    <button
-      type="button"
-      aria-pressed={diningType === 'dine-in'}
-      onClick={() => setDiningType('dine-in')}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        minHeight: 43,
-        padding: 8,
-        border:
-          diningType === 'dine-in'
-            ? '1px solid #F8CA49'
-            : '1px solid #E9EBF0',
-        borderRadius: 9,
-        background:
-          diningType === 'dine-in' ? theme.yellow : '#F7F8FA',
-        color: diningType === 'dine-in' ? theme.navy : '#778093',
-        fontSize: 13,
-        fontWeight: 700,
-        cursor: 'pointer',
-      }}
-    >
-      <UtensilsCrossed size={17} aria-hidden="true" />
-      ทานที่ร้าน
-    </button>
-  </div>
-</section>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: 8,
+                }}
+              >
+                <button
+                  type="button"
+                  aria-pressed={diningType === 'takeaway'}
+                  onClick={() => {
+                    setDiningType('takeaway');
+                    setSelectedTable('');
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    minHeight: 43,
+                    padding: 8,
+                    border:
+                      diningType === 'takeaway'
+                        ? '1px solid #F8CA49'
+                        : '1px solid #E9EBF0',
+                    borderRadius: 9,
+                    background:
+                      diningType === 'takeaway' ? theme.yellow : '#F7F8FA',
+                    color: diningType === 'takeaway' ? theme.navy : '#778093',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <ShoppingBag size={17} aria-hidden="true" />
+                  ซื้อกลับบ้าน
+                </button>
 
+                <button
+                  type="button"
+                  aria-pressed={diningType === 'dine-in'}
+                  onClick={() => setDiningType('dine-in')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    minHeight: 43,
+                    padding: 8,
+                    border:
+                      diningType === 'dine-in'
+                        ? '1px solid #F8CA49'
+                        : '1px solid #E9EBF0',
+                    borderRadius: 9,
+                    background:
+                      diningType === 'dine-in' ? theme.yellow : '#F7F8FA',
+                    color: diningType === 'dine-in' ? theme.navy : '#778093',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <UtensilsCrossed size={17} aria-hidden="true" />
+                  ทานที่ร้าน
+                </button>
+              </div>
+            </section>
 
             {/* TABLE PREVIEW - NOT CONNECTED TO API */}
-          
-<section
-  style={{
-    padding: 12,
-    marginBottom: 12,
-    background: theme.pale,
-    borderRadius: 10,
-  }}
->
-  <div
-    style={{
-      display: 'flex',
-      alignItems: 'flex-start',
-      gap: 12,
-    }}
-  >
-    <UtensilsCrossed size={20} aria-hidden="true" />
 
-    <div style={{ flex: 1, minWidth: 0 }}>
-      <label
-        htmlFor="shop-cart-table"
-        style={{
-          display: 'block',
-          marginBottom: 7,
-          fontSize: 14,
-          fontWeight: 700,
-        }}
-      >
-        โต๊ะ
-      </label>
+            <section
+              style={{
+                padding: 12,
+                marginBottom: 12,
+                background: theme.pale,
+                borderRadius: 10,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 12,
+                }}
+              >
+                <UtensilsCrossed size={20} aria-hidden="true" />
 
-      <select
-        id="shop-cart-table"
-        value={selectedTable}
-        disabled={diningType !== 'dine-in'}
-        onChange={(event) => setSelectedTable(event.target.value)}
-        style={{
-          width: '100%',
-          minHeight: 43,
-          padding: '10px 12px',
-          border: '1px solid #E9EBF0',
-          borderRadius: 8,
-          background:
-            diningType === 'dine-in' ? '#FFFFFF' : '#F7F8FA',
-          color:
-            diningType === 'dine-in' ? theme.navy : '#9BA3B1',
-          fontSize: 13,
-          cursor:
-            diningType === 'dine-in' ? 'pointer' : 'not-allowed',
-        }}
-      >
-        <option value="">
-          {diningType === 'dine-in'
-            ? 'กรุณาเลือกโต๊ะ (ตัวอย่าง)'
-            : 'เลือกทานที่ร้านก่อน'}
-        </option>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <label
+                    htmlFor="shop-cart-table"
+                    style={{
+                      display: 'block',
+                      marginBottom: 7,
+                      fontSize: 14,
+                      fontWeight: 700,
+                    }}
+                  >
+                    โต๊ะ
+                  </label>
 
-        {exampleTables.map((table) => (
-          <option key={table} value={table}>
-            โต๊ะ {table}
-          </option>
-        ))}
-      </select>
+                  <select
+                    id="shop-cart-table"
+                    value={selectedTable}
+                    disabled={diningType !== 'dine-in'}
+                    onChange={(event) => setSelectedTable(event.target.value)}
+                    style={{
+                      width: '100%',
+                      minHeight: 43,
+                      padding: '10px 12px',
+                      border: '1px solid #E9EBF0',
+                      borderRadius: 8,
+                      background:
+                        diningType === 'dine-in' ? '#FFFFFF' : '#F7F8FA',
+                      color: diningType === 'dine-in' ? theme.navy : '#9BA3B1',
+                      fontSize: 13,
+                      cursor:
+                        diningType === 'dine-in' ? 'pointer' : 'not-allowed',
+                    }}
+                  >
+                    <option value="">
+                      {diningType === 'dine-in'
+                        ? 'กรุณาเลือกโต๊ะ (ตัวอย่าง)'
+                        : 'เลือกทานที่ร้านก่อน'}
+                    </option>
 
-      {diningType === 'dine-in' && (
-        <p
-          style={{
-            margin: '8px 0 0',
-            color: '#8B6A22',
-            fontSize: 12,
-            lineHeight: 1.5,
-          }}
-        >
-          {selectedTable
-            ? `เลือกโต๊ะ ${selectedTable} แล้ว (ตัวอย่าง UI)`
-            : 'หมายเลขโต๊ะเป็นข้อมูลตัวอย่าง ยังไม่เชื่อมระบบร้าน'}
-        </p>
-      )}
-    </div>
-  </div>
-</section>
+                    {exampleTables.map((table) => (
+                      <option key={table} value={table}>
+                        โต๊ะ {table}
+                      </option>
+                    ))}
+                  </select>
 
+                  {diningType === 'dine-in' && (
+                    <p
+                      style={{
+                        margin: '8px 0 0',
+                        color: '#8B6A22',
+                        fontSize: 12,
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {selectedTable
+                        ? `เลือกโต๊ะ ${selectedTable} แล้ว (ตัวอย่าง UI)`
+                        : 'หมายเลขโต๊ะเป็นข้อมูลตัวอย่าง ยังไม่เชื่อมระบบร้าน'}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </section>
 
             {/* PAYMENT */}
             <section
@@ -744,9 +713,7 @@ const exampleTables = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A1
                   }}
                 />
 
-                <span>
-                  {t('storefront.pickUpAndPayInStore')}
-                </span>
+                <span>{t('storefront.pickUpAndPayInStore')}</span>
               </div>
 
               {shop.data?.pickup_instructions && (
@@ -771,9 +738,7 @@ const exampleTables = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A1
                 borderTop: `1px solid ${theme.border}`,
               }}
             >
-              <h2 style={sectionTitleStyle}>
-                สรุปคำสั่งซื้อ
-              </h2>
+              <h2 style={sectionTitleStyle}>สรุปคำสั่งซื้อ</h2>
 
               <div
                 style={{
@@ -786,9 +751,7 @@ const exampleTables = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A1
                   fontSize: 13,
                 }}
               >
-                <span>
-                  ค่าสินค้า ({cart.items.length} รายการ)
-                </span>
+                <span>ค่าสินค้า ({cart.items.length} รายการ)</span>
 
                 <span style={{ color: theme.navy }}>
                   ฿{moneyText(centsText(estimated))}
@@ -841,121 +804,110 @@ const exampleTables = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A1
             {/* REVIEW BUTTON */}
             {/* REVIEW BUTTON */}
 
-{diningType === 'dine-in' && (
-  <button
-    type="button"
-    disabled={!selectedTable}
-    onClick={() => {
-      window.alert(
-        `ตัวอย่าง UI: เลือกสั่งอาหารทานที่โต๊ะ ${selectedTable} แล้ว\nยังไม่ได้ส่งคำสั่งซื้อไปยังระบบร้าน`,
-      );
-    }}
-    style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 10,
-      width: '100%',
-      minHeight: 45,
-      marginBottom: 12,
-      padding: '10px 14px',
-      border: 0,
-      borderRadius: 9,
-      background: selectedTable ? theme.yellow : '#E9EBF0',
-      color: theme.navy,
-      fontSize: 14,
-      fontWeight: 800,
-      cursor: selectedTable ? 'pointer' : 'not-allowed',
-    }}
-  >
-    <UtensilsCrossed size={18} aria-hidden="true" />
-    สั่งอาหารทานที่ร้าน
-    <ArrowRight size={17} aria-hidden="true" />
-  </button>
-)}
+            {diningType === 'dine-in' && (
+              <button
+                type="button"
+                disabled={!selectedTable}
+                onClick={() => {
+                  window.alert(
+                    `ตัวอย่าง UI: เลือกสั่งอาหารทานที่โต๊ะ ${selectedTable} แล้ว\nยังไม่ได้ส่งคำสั่งซื้อไปยังระบบร้าน`,
+                  );
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 10,
+                  width: '100%',
+                  minHeight: 45,
+                  marginBottom: 12,
+                  padding: '10px 14px',
+                  border: 0,
+                  borderRadius: 9,
+                  background: selectedTable ? theme.yellow : '#E9EBF0',
+                  color: theme.navy,
+                  fontSize: 14,
+                  fontWeight: 800,
+                  cursor: selectedTable ? 'pointer' : 'not-allowed',
+                }}
+              >
+                <UtensilsCrossed size={18} aria-hidden="true" />
+                สั่งอาหารทานที่ร้าน
+                <ArrowRight size={17} aria-hidden="true" />
+              </button>
+            )}
 
-<button
-  type="button"
-  disabled={
-    busy ||
-    !valid ||
-    !shop.data?.accepting_orders ||
-    diningType === 'dine-in'
-  }
-  onClick={() => {
-    setError(null);
-    quote.mutate();
-  }}
-  style={{
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    width: '100%',
-    minHeight: 45,
-    padding: '10px 14px',
-    border: 0,
-    borderRadius: 9,
-    background: theme.yellow,
-    color: theme.navy,
-    fontSize: 13,
-    fontWeight: 800,
-    cursor:
-      busy || diningType === 'dine-in'
-        ? 'not-allowed'
-        : 'pointer',
-  }}
->
-  {t('storefront.reviewItemsAndLatestTotal')}
-  <ArrowRight size={17} aria-hidden="true" />
-</button>
+            <button
+              type="button"
+              disabled={
+                busy ||
+                !valid ||
+                !shop.data?.accepting_orders ||
+                diningType === 'dine-in'
+              }
+              onClick={() => {
+                setError(null);
+                quote.mutate();
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 10,
+                width: '100%',
+                minHeight: 45,
+                padding: '10px 14px',
+                border: 0,
+                borderRadius: 9,
+                background: theme.yellow,
+                color: theme.navy,
+                fontSize: 13,
+                fontWeight: 800,
+                cursor:
+                  busy || diningType === 'dine-in' ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {t('storefront.reviewItemsAndLatestTotal')}
+              <ArrowRight size={17} aria-hidden="true" />
+            </button>
 
-{diningType === 'dine-in' && (
-  <p
-    role="status"
-    style={{
-      margin: '10px 0',
-      padding: '10px 12px',
-      borderRadius: 8,
-      background: '#FFF5D6',
-      color: '#8B5D0A',
-      fontSize: 12,
-      lineHeight: 1.6,
-    }}
-  >
-    โหมดทานที่ร้านยังไม่รองรับการส่งคำสั่งซื้อ
-    กรุณาเลือกซื้อกลับบ้านเพื่อดำเนินการต่อ
-  </p>
-)}
+            {diningType === 'dine-in' && (
+              <p
+                role="status"
+                style={{
+                  margin: '10px 0',
+                  padding: '10px 12px',
+                  borderRadius: 8,
+                  background: '#FFF5D6',
+                  color: '#8B5D0A',
+                  fontSize: 12,
+                  lineHeight: 1.6,
+                }}
+              >
+                โหมดทานที่ร้านยังไม่รองรับการส่งคำสั่งซื้อ
+                กรุณาเลือกซื้อกลับบ้านเพื่อดำเนินการต่อ
+              </p>
+            )}
 
             {shop.data && !shop.data.accepting_orders && (
               <p role="status">
-                {t(
-                  'storefront.theStoreHasTemporarilyPausedOrders',
-                )}
+                {t('storefront.theStoreHasTemporarilyPausedOrders')}
               </p>
             )}
 
             {!valid && (
               <p role="alert">
-                {t(
-                  'storefront.enterValidQuantitiesPiecePackProductsRequire',
-                )}
+                {t('storefront.enterValidQuantitiesPiecePackProductsRequire')}
               </p>
             )}
 
-            {quote.error && (
-              <ShopError error={quote.error} />
-            )}
+            {quote.error && <ShopError error={quote.error} />}
 
-            {error != null && (
-              <ShopError error={error} />
-            )}
+            {error != null && <ShopError error={error} />}
 
             {/* ORIGINAL CHECKOUT FORM */}
-           
-            {quote.data && diningType === 'takeaway' && (
 
+            {quote.data && diningType === 'takeaway' && (
               <form
                 style={{
                   display: 'flex',
@@ -972,12 +924,10 @@ const exampleTables = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A1
 
                   send({
                     ...customer,
-                    items: cart.items.map(
-                      ({ variant_id, quantity }) => ({
-                        variant_id,
-                        quantity,
-                      }),
-                    ),
+                    items: cart.items.map(({ variant_id, quantity }) => ({
+                      variant_id,
+                      quantity,
+                    })),
                     quote_id: quote.data.quote_id,
                     access_token: identity.token,
                   });
@@ -992,15 +942,12 @@ const exampleTables = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A1
                   {quote.data.items.map((line) => (
                     <p key={line.variant_id}>
                       {line.product_name} × {line.quantity}{' '}
-                      {t('storefront.label')}{' '}
-                      {moneyText(line.line_total)}
+                      {t('storefront.label')} {moneyText(line.line_total)}
                     </p>
                   ))}
 
                   <small>
-                    {t(
-                      'storefront.excludesDiscountsRewardsThatMayApplyAt',
-                    )}
+                    {t('storefront.excludesDiscountsRewardsThatMayApplyAt')}
                   </small>
                 </div>
 
@@ -1065,25 +1012,16 @@ const exampleTables = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A1
                   }}
                 >
                   <input type="checkbox" required />
-                  {t(
-                    'storefront.iUnderstandStockIsReservedAfterSuccessful',
-                  )}
+                  {t('storefront.iUnderstandStockIsReservedAfterSuccessful')}
                 </label>
 
                 <p>
-                  <small>
-                    {t(
-                      'storefront.theStoreUsesYourNameAndPhone',
-                    )}
-                  </small>
+                  <small>{t('storefront.theStoreUsesYourNameAndPhone')}</small>
                 </p>
 
                 <Button
                   type="submit"
-                  disabled={
-                    busy ||
-                    !shop.data?.accepting_orders
-                  }
+                  disabled={busy || !shop.data?.accepting_orders}
                 >
                   {t('storefront.submitOrderUnpaid')}
                 </Button>
@@ -1109,22 +1047,17 @@ function CartLineItem({
 }) {
   const { t } = useLanguage();
   const [imageFailed, setImageFailed] = useState(false);
-  const [quantityInput, setQuantityInput] = useState(
-    () => displayQuantity(item.quantity),
+  const [quantityInput, setQuantityInput] = useState(() =>
+    displayQuantity(item.quantity),
   );
   const [editing, setEditing] = useState(false);
 
-  const isCount = ['COUNT', 'PACKAGING'].includes(
-    item.unit_type,
-  );
+  const isCount = ['COUNT', 'PACKAGING'].includes(item.unit_type);
 
   const amount = exactDecimal(item.quantity, 3);
   const step = isCount ? 1000n : 1n;
 
-  const lineTotal = estimatedLine(
-    item.unit_price,
-    item.quantity,
-  );
+  const lineTotal = estimatedLine(item.unit_price, item.quantity);
 
   const changeBy = (delta: bigint) => {
     if (amount === null) return;
@@ -1271,7 +1204,8 @@ function CartLineItem({
                   fontWeight: 400,
                 }}
               >
-                {' '} / {item.unit}
+                {' '}
+                / {item.unit}
               </span>
             </div>
 
@@ -1347,11 +1281,7 @@ function CartLineItem({
           >
             <button
               type="button"
-              disabled={
-                busy ||
-                amount === null ||
-                amount <= step
-              }
+              disabled={busy || amount === null || amount <= step}
               onClick={() => changeBy(-1n)}
               aria-label={`Decrease ${item.product_name}`}
               style={{
@@ -1393,26 +1323,16 @@ function CartLineItem({
               <input
                 type="text"
                 inputMode={isCount ? 'numeric' : 'decimal'}
-                value={
-                  editing
-                    ? quantityInput
-                    : displayQuantity(item.quantity)
-                }
+                value={editing ? quantityInput : displayQuantity(item.quantity)}
                 disabled={busy}
                 onFocus={() => {
-                  setQuantityInput(
-                    displayQuantity(item.quantity),
-                  );
+                  setQuantityInput(displayQuantity(item.quantity));
                   setEditing(true);
                 }}
-                onChange={(event) =>
-                  handleQuantityChange(event.target.value)
-                }
+                onChange={(event) => handleQuantityChange(event.target.value)}
                 onBlur={() => {
                   setEditing(false);
-                  setQuantityInput(
-                    displayQuantity(item.quantity),
-                  );
+                  setQuantityInput(displayQuantity(item.quantity));
                 }}
                 style={{
                   display: 'block',

@@ -397,6 +397,7 @@ function CartLineItem({
   const { t } = useLanguage();
   const [imageFailed, setImageFailed] = useState(false);
 
+
   return (
     <Card className="shop-cart-line">
       <div className="shop-cart-line-main">

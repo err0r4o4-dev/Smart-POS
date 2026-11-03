@@ -419,7 +419,7 @@
 .landing-pos-brand svg {
   color: var(--primary-strong);
 }
-.landing-pos-demo {
+.landing-pos-label {
   padding: 3px 8px;
   background: var(--primary-soft);
   border-radius: var(--radius-pill);

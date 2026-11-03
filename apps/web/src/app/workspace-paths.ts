@@ -8,7 +8,6 @@ const businessRoots = [
   '/inventory',
   '/suppliers',
   '/purchasing',
-  '/shelves',
   '/sales',
   '/receipts',
   '/pos',

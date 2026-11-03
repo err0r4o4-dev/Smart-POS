@@ -16,7 +16,6 @@ export const paths = {
   inventory: '/inventory',
   suppliers: '/suppliers',
   purchasing: '/purchasing/orders',
-  shelves: '/shelves',
   setup: '/setup',
   store: '/settings/store',
   branches: '/settings/branches',
@@ -79,7 +78,7 @@ const managementItems: NavigationItem[] = [
   },
   {
     to: '/discount-approvals',
-    label: 'อนุมัติส่วนลด / Discount approvals',
+    label: 'อนุมัติส่วนลด',
     icon: 'dashboard',
     permission: 'discount.read',
   },
@@ -97,25 +96,25 @@ const managementItems: NavigationItem[] = [
   },
   {
     to: '/sales/voids',
-    label: 'กลับรายการขาย',
+    label: 'ยกเลิกรายการขาย',
     icon: 'pos',
     permission: 'sales.void.read',
   },
   {
     to: '/sales/refunds',
-    label: 'ติดตามการคืนเงิน',
+    label: 'คืนเงิน',
     icon: 'dashboard',
     permission: 'refunds.read',
   },
   {
     to: '/pos',
-    label: 'เปิดหน้าขาย POS',
+    label: 'ขายหน้าร้าน',
     icon: 'pos',
     permission: 'pos.access',
   },
   {
     to: '/sales',
-    label: 'ประวัติขาย',
+    label: 'รายการขาย',
     icon: 'dashboard',
     permission: 'sales.read',
   },
@@ -127,38 +126,32 @@ const managementItems: NavigationItem[] = [
   },
   {
     to: paths.inventory,
-    label: 'คลังสินค้า / สต็อก',
+    label: 'สต็อก',
     icon: 'dashboard',
     permission: 'inventory.read',
   },
   {
     to: paths.suppliers,
-    label: 'Supplier',
+    label: 'ซัพพลายเออร์',
     icon: 'dashboard',
     permission: 'supplier.read',
   },
   {
     to: paths.purchasing,
-    label: 'จัดซื้อ / รับสินค้า',
+    label: 'จัดซื้อ',
     icon: 'dashboard',
     permission: 'purchasing.read',
   },
   {
-    to: paths.shelves,
-    label: 'ชั้นวาง / เติมสินค้า',
-    icon: 'dashboard',
-    permission: 'shelf.read',
-  },
-  {
     to: paths.products,
-    label: 'จัดการสินค้า',
+    label: 'สินค้า',
     icon: 'dashboard',
     permission: 'catalog.read',
   },
-  { to: paths.setup, label: 'ตั้งค่าร้าน / เลือกองค์กร', icon: 'auth' },
+  { to: paths.setup, label: 'ตั้งค่าร้าน', icon: 'auth' },
   {
     to: paths.store,
-    label: 'ข้อมูลองค์กร',
+    label: 'องค์กร',
     icon: 'dashboard',
     permission: 'organization.read',
   },
@@ -176,13 +169,13 @@ const managementItems: NavigationItem[] = [
   },
   {
     to: paths.roles,
-    label: 'บทบาทและสิทธิ์',
+    label: 'สิทธิ์ผู้ใช้',
     icon: 'auth',
     permission: 'role.read',
   },
-  { to: paths.dashboard, label: 'ภาพรวมร้าน', icon: 'dashboard' },
-  { to: paths.account, label: 'บัญชีของฉัน', icon: 'auth' },
-  { to: paths.help, label: 'คู่มือการใช้งาน', icon: 'help' },
+  { to: paths.dashboard, label: 'ภาพรวม', icon: 'dashboard' },
+  { to: paths.account, label: 'บัญชี', icon: 'auth' },
+  { to: paths.help, label: 'คู่มือ', icon: 'help' },
 ];
 
 export const navigation: NavigationItem[] = managementItems.map((item) => ({
@@ -195,14 +188,14 @@ const staffItems: NavigationItem[] = [
   { to: paths.staff, label: 'งานของฉัน', icon: 'dashboard' },
   {
     to: '/pos/register/open',
-    label: 'เปิดกะขาย',
+    label: 'เปิดกะ',
     icon: 'pos',
     permission: 'pos.register.open',
   },
   { to: '/pos', label: 'ขายหน้าร้าน', icon: 'pos', permission: 'pos.access' },
   {
     to: '/pos/register/close',
-    label: 'ปิดกะและนับเงิน',
+    label: 'ปิดกะ',
     icon: 'pos',
     permission: 'pos.register.close',
   },
@@ -215,7 +208,6 @@ const staffItems: NavigationItem[] = [
       '/sales/refunds',
       '/sales/voids',
       '/inventory',
-      '/shelves',
       '/inventory/batches',
       '/suppliers',
       '/purchasing/orders',
@@ -230,8 +222,8 @@ const staffItems: NavigationItem[] = [
     icon: 'dashboard',
     permission: 'catalog.read',
   },
-  { to: paths.account, label: 'บัญชีของฉัน', icon: 'auth' },
-  { to: paths.help, label: 'คู่มือการใช้งาน', icon: 'help' },
+  { to: paths.account, label: 'บัญชี', icon: 'auth' },
+  { to: paths.help, label: 'คู่มือ', icon: 'help' },
 ];
 
 export const staffNavigation: NavigationItem[] = staffItems.map((item) => ({
@@ -240,10 +232,10 @@ export const staffNavigation: NavigationItem[] = staffItems.map((item) => ({
 }));
 
 export const accountNavigation: NavigationItem[] = [
-  { to: paths.workspace, label: 'เข้าสู่พื้นที่ทำงาน', icon: 'dashboard' },
-  { to: paths.account, label: 'บัญชีของฉัน', icon: 'auth' },
-  { to: paths.setup, label: 'เลือกองค์กร / รับคำเชิญ', icon: 'auth' },
-  { to: paths.help, label: 'คู่มือการใช้งาน', icon: 'help' },
+  { to: paths.workspace, label: 'เข้าพื้นที่ทำงาน', icon: 'dashboard' },
+  { to: paths.account, label: 'บัญชี', icon: 'auth' },
+  { to: paths.setup, label: 'เลือกองค์กร', icon: 'auth' },
+  { to: paths.help, label: 'คู่มือ', icon: 'help' },
 ];
 
 export interface NavigationGroup {
@@ -259,9 +251,14 @@ const managementGroups: NavigationGroup[] = [
     paths: ['/pos', '/online-orders', '/sales', '/receipts'],
   },
   {
-    id: 'returns',
-    label: 'คืนสินค้าและคืนเงิน',
-    paths: ['/pos/returns', '/pos/exchanges', '/sales/voids', '/sales/refunds'],
+    id: 'inventory',
+    label: 'สินค้าและสต็อก',
+    paths: [
+      paths.inventory,
+      '/inventory/batches',
+      paths.purchasing,
+      paths.suppliers,
+    ],
   },
   {
     id: 'customers',
@@ -274,23 +271,13 @@ const managementGroups: NavigationGroup[] = [
     paths: ['/pricing', '/promotions', '/discount-approvals'],
   },
   {
-    id: 'inventory',
-    label: 'สินค้าและสต็อก',
-    paths: [
-      paths.products,
-      paths.inventory,
-      paths.shelves,
-      '/inventory/batches',
-    ],
-  },
-  {
-    id: 'purchasing',
-    label: 'จัดซื้อและซัพพลายเออร์',
-    paths: [paths.suppliers, paths.purchasing],
+    id: 'returns',
+    label: 'รายงาน',
+    paths: ['/pos/returns', '/pos/exchanges', '/sales/voids', '/sales/refunds'],
   },
   {
     id: 'settings',
-    label: 'ตั้งค่าและผู้ใช้งาน',
+    label: 'ตั้งค่า',
     paths: [
       paths.setup,
       paths.store,
@@ -299,6 +286,7 @@ const managementGroups: NavigationGroup[] = [
       paths.employees,
       paths.roles,
       paths.account,
+      paths.help,
     ],
   },
 ];
@@ -306,7 +294,7 @@ const managementGroups: NavigationGroup[] = [
 const staffGroups: NavigationGroup[] = [
   {
     id: 'staff-sales',
-    label: 'งานขายหน้าร้าน',
+    label: 'งานขาย',
     paths: [
       '/pos/register/open',
       '/online-orders',
@@ -318,13 +306,13 @@ const staffGroups: NavigationGroup[] = [
   },
   {
     id: 'staff-returns',
-    label: 'คืนสินค้าและคืนเงิน',
+    label: 'คืนสินค้าและเงิน',
     paths: ['/pos/returns', '/pos/exchanges', '/sales/voids', '/sales/refunds'],
   },
   {
     id: 'staff-stock',
-    label: 'งานสินค้าและคลัง',
-    paths: ['/products', '/inventory', '/shelves', '/inventory/batches'],
+    label: 'งานสินค้า',
+    paths: ['/products', '/inventory', '/inventory/batches'],
   },
   {
     id: 'staff-purchasing',
@@ -333,7 +321,7 @@ const staffGroups: NavigationGroup[] = [
   },
   {
     id: 'staff-customers',
-    label: 'ข้อมูลลูกค้าและสมาชิก',
+    label: 'ลูกค้าและสมาชิก',
     paths: ['/customers', '/loyalty'],
   },
 ];

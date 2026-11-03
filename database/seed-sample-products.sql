@@ -1,5 +1,5 @@
 ﻿  -- SmartPOS Sample Data Seed Script
--- สำหรับสร้างสินค้าตัวอย่าง หมวดหมู่ แบรนด์ สต็อก ชั้นวาง ล็อตสินค้า และซัพพลายเออร์
+-- สำหรับสร้างสินค้าตัวอย่าง หมวดหมู่ แบรนด์ สต็อกคลังสินค้า ล็อตสินค้า และซัพพลายเออร์
 -- ครอบคลุมทุกสถานะสินค้า: ACTIVE, INACTIVE, ARCHIVED
 
 DO $$
@@ -68,18 +68,6 @@ DECLARE
 
   -- Location IDs
   loc_wh uuid := gen_random_uuid();
-  loc_floor uuid := gen_random_uuid();
-  loc_shelf_drink uuid := gen_random_uuid();
-  loc_shelf_snack uuid := gen_random_uuid();
-
-  -- Shelf IDs
-  sh_drink uuid := gen_random_uuid();
-  slot_d1 uuid := gen_random_uuid();
-  slot_d2 uuid := gen_random_uuid();
-
-  sh_snack uuid := gen_random_uuid();
-  slot_s1 uuid := gen_random_uuid();
-  slot_s2 uuid := gen_random_uuid();
 
   -- Batch IDs
   batch_coke uuid := gen_random_uuid();
@@ -88,7 +76,6 @@ DECLARE
 
   -- Inventory Operations for Movements
   op_opening uuid := gen_random_uuid();
-  op_transfer uuid := gen_random_uuid();
   op_adjust_in uuid := gen_random_uuid();
   op_adjust_out uuid := gen_random_uuid();
 
@@ -327,59 +314,39 @@ BEGIN
   ON CONFLICT (organization_id, code) DO NOTHING;
 
   -------------------------------------------------------------
-  -- 7. สร้างสถานที่จัดเก็บสต็อก (Stock Locations)
+  -- 7. สร้างสถานที่จัดเก็บสต็อก (Stock Locations - คลังหลักที่เดียว)
   -------------------------------------------------------------
   INSERT INTO stock_locations (id, organization_id, branch_id, code, name, type, status, description, created_by, updated_by)
   VALUES
-    (loc_wh, v_org_id, v_branch_id, 'LOC-WH-MAIN', 'คลังสินค้าหลัก (หลังร้าน)', 'WAREHOUSE', 'ACTIVE', 'พื้นที่สต็อกสินค้าสำรองหลังร้าน', v_user_id, v_user_id),
-    (loc_floor, v_org_id, v_branch_id, 'LOC-SALES-FLOOR', 'พื้นที่ขายหน้าร้าน', 'SALES_FLOOR', 'ACTIVE', 'พื้นที่วางสินค้าพร้อมขายหน้าร้าน', v_user_id, v_user_id),
-    (loc_shelf_drink, v_org_id, v_branch_id, 'LOC-SHELF-DRINK', 'โซนชั้นวางเครื่องดื่ม A', 'SHELF', 'ACTIVE', 'ชั้นวางแผนกเครื่องดื่ม', v_user_id, v_user_id),
-    (loc_shelf_snack, v_org_id, v_branch_id, 'LOC-SHELF-SNACK', 'โซนชั้นวางขนมขบเคี้ยว B', 'SHELF', 'ACTIVE', 'ชั้นวางแผนกขนมและอาหารกึ่งสำเร็จรูป', v_user_id, v_user_id)
+    (loc_wh, v_org_id, v_branch_id, 'LOC-WH-MAIN', 'คลังสินค้าหลัก', 'WAREHOUSE', 'ACTIVE', 'คลังสินค้าหลักสำหรับจัดเก็บ ตรวจนับ และขายสินค้าทั้งหมด', v_user_id, v_user_id)
   ON CONFLICT (organization_id, branch_id, code) DO NOTHING;
 
   SELECT id INTO loc_wh FROM stock_locations WHERE organization_id = v_org_id AND branch_id = v_branch_id AND code = 'LOC-WH-MAIN';
-  SELECT id INTO loc_floor FROM stock_locations WHERE organization_id = v_org_id AND branch_id = v_branch_id AND code = 'LOC-SALES-FLOOR';
-  SELECT id INTO loc_shelf_drink FROM stock_locations WHERE organization_id = v_org_id AND branch_id = v_branch_id AND code = 'LOC-SHELF-DRINK';
-  SELECT id INTO loc_shelf_snack FROM stock_locations WHERE organization_id = v_org_id AND branch_id = v_branch_id AND code = 'LOC-SHELF-SNACK';
 
   -------------------------------------------------------------
-  -- 7.1 สร้างเครื่องคิดเงินและจุดขาย (POS Terminal)
+  -- 7.1 สร้างเครื่องคิดเงินและจุดขาย (POS Terminal ผูกคลังหลัก)
   -------------------------------------------------------------
   INSERT INTO pos_terminals (id, organization_id, branch_id, code, name, stock_location_id, status, revision)
-  VALUES (term_main, v_org_id, v_branch_id, 'TERM-01', 'เคาน์เตอร์แคชเชียร์ 1 (หน้าร้าน)', loc_floor, 'ACTIVE', 1)
-  ON CONFLICT (organization_id, branch_id, code) DO NOTHING;
+  VALUES (term_main, v_org_id, v_branch_id, 'TERM-01', 'เคาน์เตอร์แคชเชียร์ 1 (หน้าร้าน)', loc_wh, 'ACTIVE', 1)
+  ON CONFLICT (organization_id, branch_id, code) DO UPDATE SET stock_location_id = EXCLUDED.stock_location_id;
 
   SELECT id INTO term_main FROM pos_terminals WHERE organization_id = v_org_id AND branch_id = v_branch_id AND code = 'TERM-01';
 
   -------------------------------------------------------------
-  -- 8. ยอดสต็อกคงเหลือ (Stock Balances & Quality Balances)
+  -- 8. ยอดสต็อกคงเหลือ (Stock Balances & Quality Balances - คลังหลักที่เดียว)
   -------------------------------------------------------------
-  -- คลังสินค้าหลังร้าน
   INSERT INTO stock_balances (organization_id, branch_id, location_id, variant_id, quantity, version)
   VALUES
-    (v_org_id, v_branch_id, loc_wh, var_coke_can, 120.000, 1),
-    (v_org_id, v_branch_id, loc_wh, var_coke_pet, 80.000, 1),
-    (v_org_id, v_branch_id, loc_wh, var_lays_44, 90.000, 1),
-    (v_org_id, v_branch_id, loc_wh, var_lays_73, 50.000, 1),
-    (v_org_id, v_branch_id, loc_wh, var_mama_bag, 200.000, 1),
-    (v_org_id, v_branch_id, loc_wh, var_mama_cup, 72.000, 1),
-    (v_org_id, v_branch_id, loc_wh, var_ichi_pet, 60.000, 1),
-    (v_org_id, v_branch_id, loc_wh, var_dutch_box, 60.000, 1),
+    (v_org_id, v_branch_id, loc_wh, var_coke_can, 150.000, 1),
+    (v_org_id, v_branch_id, loc_wh, var_coke_pet, 104.000, 1),
+    (v_org_id, v_branch_id, loc_wh, var_lays_44, 115.000, 1),
+    (v_org_id, v_branch_id, loc_wh, var_lays_73, 65.000, 1),
+    (v_org_id, v_branch_id, loc_wh, var_mama_bag, 250.000, 1),
+    (v_org_id, v_branch_id, loc_wh, var_mama_cup, 96.000, 1),
+    (v_org_id, v_branch_id, loc_wh, var_ichi_pet, 84.000, 1),
+    (v_org_id, v_branch_id, loc_wh, var_dutch_box, 84.000, 1),
     (v_org_id, v_branch_id, loc_wh, var_nescafe, 40.000, 1),
     (v_org_id, v_branch_id, loc_wh, var_oishi, 30.000, 1)
-  ON CONFLICT (organization_id, location_id, variant_id) DO UPDATE SET quantity = EXCLUDED.quantity;
-
-  -- หน้าร้าน / ลานวางขาย (เฉพาะสินค้า ACTIVE)
-  INSERT INTO stock_balances (organization_id, branch_id, location_id, variant_id, quantity, version)
-  VALUES
-    (v_org_id, v_branch_id, loc_floor, var_coke_can, 30.000, 1),
-    (v_org_id, v_branch_id, loc_floor, var_coke_pet, 24.000, 1),
-    (v_org_id, v_branch_id, loc_floor, var_lays_44, 25.000, 1),
-    (v_org_id, v_branch_id, loc_floor, var_lays_73, 15.000, 1),
-    (v_org_id, v_branch_id, loc_floor, var_mama_bag, 50.000, 1),
-    (v_org_id, v_branch_id, loc_floor, var_mama_cup, 24.000, 1),
-    (v_org_id, v_branch_id, loc_floor, var_ichi_pet, 24.000, 1),
-    (v_org_id, v_branch_id, loc_floor, var_dutch_box, 24.000, 1)
   ON CONFLICT (organization_id, location_id, variant_id) DO UPDATE SET quantity = EXCLUDED.quantity;
 
   -- Quality Stock Balances (synced)
@@ -401,58 +368,11 @@ BEGIN
     (v_org_id, v_branch_id, var_mama_cup, 12.000, 60.000, 'ACTIVE', v_user_id),
     (v_org_id, v_branch_id, var_ichi_pet, 15.000, 50.000, 'ACTIVE', v_user_id),
     (v_org_id, v_branch_id, var_dutch_box, 15.000, 50.000, 'ACTIVE', v_user_id)
-  ON CONFLICT (organization_id, branch_id, variant_id) DO UPDATE 
+  ON CONFLICT (organization_id, branch_id, variant_id) DO UPDATE
   SET minimum_quantity = EXCLUDED.minimum_quantity, target_quantity = EXCLUDED.target_quantity;
 
   -------------------------------------------------------------
-  -- 10. ชั้นวางสินค้า & การจัดวาง (Shelves & Shelf Assignments)
-  -------------------------------------------------------------
-  INSERT INTO shelves (id, organization_id, branch_id, stock_location_id, code, name, zone, description, status, created_by, updated_by)
-  VALUES (sh_drink, v_org_id, v_branch_id, loc_shelf_drink, 'SHELF-A1', 'ชั้นวางเครื่องดื่ม A1', 'โซน A หน้าร้าน', 'ชั้นวางเครื่องดื่มกระป๋องและขวด', 'ACTIVE', v_user_id, v_user_id)
-  ON CONFLICT (organization_id, branch_id, code) DO NOTHING;
-
-  SELECT id INTO sh_drink FROM shelves WHERE organization_id = v_org_id AND branch_id = v_branch_id AND code = 'SHELF-A1';
-
-  INSERT INTO shelf_slots (id, organization_id, shelf_id, code, position)
-  VALUES
-    (slot_d1, v_org_id, sh_drink, 'SLOT-A1-01', 1),
-    (slot_d2, v_org_id, sh_drink, 'SLOT-A1-02', 2)
-  ON CONFLICT (organization_id, shelf_id, code) DO NOTHING;
-
-  SELECT id INTO slot_d1 FROM shelf_slots WHERE organization_id = v_org_id AND shelf_id = sh_drink AND code = 'SLOT-A1-01';
-  SELECT id INTO slot_d2 FROM shelf_slots WHERE organization_id = v_org_id AND shelf_id = sh_drink AND code = 'SLOT-A1-02';
-
-  INSERT INTO shelf_assignments (organization_id, shelf_id, slot_id, variant_id, minimum_quantity, target_quantity, capacity_quantity, status)
-  VALUES
-    (v_org_id, sh_drink, slot_d1, var_coke_can, 5.000, 20.000, 30.000, 'ACTIVE'),
-    (v_org_id, sh_drink, slot_d2, var_ichi_pet, 4.000, 15.000, 24.000, 'ACTIVE')
-  ON CONFLICT (organization_id, shelf_id, variant_id) DO UPDATE
-  SET minimum_quantity = EXCLUDED.minimum_quantity, target_quantity = EXCLUDED.target_quantity, capacity_quantity = EXCLUDED.capacity_quantity;
-
-  INSERT INTO shelves (id, organization_id, branch_id, stock_location_id, code, name, zone, description, status, created_by, updated_by)
-  VALUES (sh_snack, v_org_id, v_branch_id, loc_shelf_snack, 'SHELF-B1', 'ชั้นวางขนมและอาหารกึ่งสำเร็จรูป B1', 'โซน B หน้าร้าน', 'ชั้นวางขนมขบเคี้ยวและมาม่า', 'ACTIVE', v_user_id, v_user_id)
-  ON CONFLICT (organization_id, branch_id, code) DO NOTHING;
-
-  SELECT id INTO sh_snack FROM shelves WHERE organization_id = v_org_id AND branch_id = v_branch_id AND code = 'SHELF-B1';
-
-  INSERT INTO shelf_slots (id, organization_id, shelf_id, code, position)
-  VALUES
-    (slot_s1, v_org_id, sh_snack, 'SLOT-B1-01', 1),
-    (slot_s2, v_org_id, sh_snack, 'SLOT-B1-02', 2)
-  ON CONFLICT (organization_id, shelf_id, code) DO NOTHING;
-
-  SELECT id INTO slot_s1 FROM shelf_slots WHERE organization_id = v_org_id AND shelf_id = sh_snack AND code = 'SLOT-B1-01';
-  SELECT id INTO slot_s2 FROM shelf_slots WHERE organization_id = v_org_id AND shelf_id = sh_snack AND code = 'SLOT-B1-02';
-
-  INSERT INTO shelf_assignments (organization_id, shelf_id, slot_id, variant_id, minimum_quantity, target_quantity, capacity_quantity, status)
-  VALUES
-    (v_org_id, sh_snack, slot_s1, var_lays_44, 5.000, 15.000, 25.000, 'ACTIVE'),
-    (v_org_id, sh_snack, slot_s2, var_mama_bag, 10.000, 30.000, 50.000, 'ACTIVE')
-  ON CONFLICT (organization_id, shelf_id, variant_id) DO UPDATE
-  SET minimum_quantity = EXCLUDED.minimum_quantity, target_quantity = EXCLUDED.target_quantity, capacity_quantity = EXCLUDED.capacity_quantity;
-
-  -------------------------------------------------------------
-  -- 11. ล็อตสินค้าและวันหมดอายุ (Product Batches & Quality Tracking)
+  -- 10. ล็อตสินค้าและวันหมดอายุ (Product Batches & Quality Tracking)
   -------------------------------------------------------------
   INSERT INTO product_batches (id, organization_id, variant_id, lot_number, manufactured_on, expires_on, status, reason, created_by, updated_by)
   VALUES
@@ -535,7 +455,6 @@ BEGIN
   INSERT INTO inventory_operations (id, organization_id, actor_id, operation, idempotency_key, fingerprint, result, created_at)
   VALUES
     (op_opening, v_org_id, v_user_id, 'OPENING_BALANCE', gen_random_uuid(), repeat('1', 64), '{"status":"POSTED"}'::jsonb, now() - interval '7 days'),
-    (op_transfer, v_org_id, v_user_id, 'TRANSFER', gen_random_uuid(), repeat('2', 64), '{"status":"POSTED"}'::jsonb, now() - interval '4 days'),
     (op_adjust_in, v_org_id, v_user_id, 'ADJUSTMENT', gen_random_uuid(), repeat('3', 64), '{"status":"POSTED"}'::jsonb, now() - interval '1 days' - interval '2 hours'),
     (op_adjust_out, v_org_id, v_user_id, 'ADJUSTMENT', gen_random_uuid(), repeat('4', 64), '{"status":"POSTED"}'::jsonb, now() - interval '1 days')
   ON CONFLICT (organization_id, id) DO NOTHING;
@@ -597,69 +516,12 @@ BEGIN
     VALUES (v_org_id, v_branch_id, loc_wh, var_oishi, 'OPENING_BALANCE', 30.000, 0.000, 30.000, op_opening, 'ยอดเปิดรอบสินค้า', v_user_id, now() - interval '7 days');
   END IF;
 
-  -- 7.2 โอนย้ายสต็อกเข้าหน้าร้าน (Transfer Out / Transfer In) 4-2 วันก่อน
+  -- 7.2 ปรับปรุงยอดสินค้าในคลังหลัก (Stock Adjustment) 1 วันก่อน
   IF var_coke_can IS NOT NULL THEN
     INSERT INTO stock_movements (organization_id, branch_id, location_id, variant_id, batch_id, movement_type, quantity_delta, quantity_before, quantity_after, operation_id, reason_code, performed_by, created_at)
     VALUES
-      (v_org_id, v_branch_id, loc_wh, var_coke_can, batch_coke, 'TRANSFER_OUT', -30.000, 150.000, 120.000, op_transfer, 'เติมสต็อกพื้นที่ขายหน้าร้าน', v_user_id, now() - interval '4 days' - interval '1 hour'),
-      (v_org_id, v_branch_id, loc_floor, var_coke_can, batch_coke, 'TRANSFER_IN', 30.000, 0.000, 30.000, op_transfer, 'รับเข้าพื้นที่ขายหน้าร้าน', v_user_id, now() - interval '4 days');
-  END IF;
-
-  IF var_coke_pet IS NOT NULL THEN
-    INSERT INTO stock_movements (organization_id, branch_id, location_id, variant_id, movement_type, quantity_delta, quantity_before, quantity_after, operation_id, reason_code, performed_by, created_at)
-    VALUES
-      (v_org_id, v_branch_id, loc_wh, var_coke_pet, 'TRANSFER_OUT', -24.000, 104.000, 80.000, op_transfer, 'เติมสต็อกพื้นที่ขายหน้าร้าน', v_user_id, now() - interval '4 days' - interval '1 hour'),
-      (v_org_id, v_branch_id, loc_floor, var_coke_pet, 'TRANSFER_IN', 24.000, 0.000, 24.000, op_transfer, 'รับเข้าพื้นที่ขายหน้าร้าน', v_user_id, now() - interval '4 days');
-  END IF;
-
-  IF var_lays_44 IS NOT NULL THEN
-    INSERT INTO stock_movements (organization_id, branch_id, location_id, variant_id, batch_id, movement_type, quantity_delta, quantity_before, quantity_after, operation_id, reason_code, performed_by, created_at)
-    VALUES
-      (v_org_id, v_branch_id, loc_wh, var_lays_44, batch_lays, 'TRANSFER_OUT', -25.000, 115.000, 90.000, op_transfer, 'ย้ายไปชั้นวางขนมขบเคี้ยว', v_user_id, now() - interval '3 days' - interval '1 hour'),
-      (v_org_id, v_branch_id, loc_floor, var_lays_44, batch_lays, 'TRANSFER_IN', 25.000, 0.000, 25.000, op_transfer, 'รับเข้าพื้นที่ขายหน้าร้าน', v_user_id, now() - interval '3 days');
-  END IF;
-
-  IF var_lays_73 IS NOT NULL THEN
-    INSERT INTO stock_movements (organization_id, branch_id, location_id, variant_id, movement_type, quantity_delta, quantity_before, quantity_after, operation_id, reason_code, performed_by, created_at)
-    VALUES
-      (v_org_id, v_branch_id, loc_wh, var_lays_73, 'TRANSFER_OUT', -15.000, 65.000, 50.000, op_transfer, 'ย้ายไปชั้นวางขนมขบเคี้ยว', v_user_id, now() - interval '3 days' - interval '1 hour'),
-      (v_org_id, v_branch_id, loc_floor, var_lays_73, 'TRANSFER_IN', 15.000, 0.000, 15.000, op_transfer, 'รับเข้าพื้นที่ขายหน้าร้าน', v_user_id, now() - interval '3 days');
-  END IF;
-
-  IF var_mama_bag IS NOT NULL THEN
-    INSERT INTO stock_movements (organization_id, branch_id, location_id, variant_id, movement_type, quantity_delta, quantity_before, quantity_after, operation_id, reason_code, performed_by, created_at)
-    VALUES
-      (v_org_id, v_branch_id, loc_wh, var_mama_bag, 'TRANSFER_OUT', -50.000, 250.000, 200.000, op_transfer, 'เบิกไปวางขายหน้าร้าน', v_user_id, now() - interval '4 days' - interval '1 hour'),
-      (v_org_id, v_branch_id, loc_floor, var_mama_bag, 'TRANSFER_IN', 50.000, 0.000, 50.000, op_transfer, 'รับเข้าพื้นที่ขายหน้าร้าน', v_user_id, now() - interval '4 days');
-  END IF;
-
-  IF var_mama_cup IS NOT NULL THEN
-    INSERT INTO stock_movements (organization_id, branch_id, location_id, variant_id, movement_type, quantity_delta, quantity_before, quantity_after, operation_id, reason_code, performed_by, created_at)
-    VALUES
-      (v_org_id, v_branch_id, loc_wh, var_mama_cup, 'TRANSFER_OUT', -24.000, 96.000, 72.000, op_transfer, 'เบิกไปวางขายหน้าร้าน', v_user_id, now() - interval '4 days' - interval '1 hour'),
-      (v_org_id, v_branch_id, loc_floor, var_mama_cup, 'TRANSFER_IN', 24.000, 0.000, 24.000, op_transfer, 'รับเข้าพื้นที่ขายหน้าร้าน', v_user_id, now() - interval '4 days');
-  END IF;
-
-  IF var_ichi_pet IS NOT NULL THEN
-    INSERT INTO stock_movements (organization_id, branch_id, location_id, variant_id, movement_type, quantity_delta, quantity_before, quantity_after, operation_id, reason_code, performed_by, created_at)
-    VALUES
-      (v_org_id, v_branch_id, loc_wh, var_ichi_pet, 'TRANSFER_OUT', -24.000, 84.000, 60.000, op_transfer, 'เติมตู้แช่เครื่องดื่มหน้าร้าน', v_user_id, now() - interval '2 days' - interval '1 hour'),
-      (v_org_id, v_branch_id, loc_floor, var_ichi_pet, 'TRANSFER_IN', 24.000, 0.000, 24.000, op_transfer, 'รับเข้าพื้นที่ขายหน้าร้าน', v_user_id, now() - interval '2 days');
-  END IF;
-
-  IF var_dutch_box IS NOT NULL THEN
-    INSERT INTO stock_movements (organization_id, branch_id, location_id, variant_id, batch_id, movement_type, quantity_delta, quantity_before, quantity_after, operation_id, reason_code, performed_by, created_at)
-    VALUES
-      (v_org_id, v_branch_id, loc_wh, var_dutch_box, batch_dutch, 'TRANSFER_OUT', -24.000, 84.000, 60.000, op_transfer, 'เติมตู้แช่นมเปรี้ยวหน้าร้าน', v_user_id, now() - interval '2 days' - interval '1 hour'),
-      (v_org_id, v_branch_id, loc_floor, var_dutch_box, batch_dutch, 'TRANSFER_IN', 24.000, 0.000, 24.000, op_transfer, 'รับเข้าพื้นที่ขายหน้าร้าน', v_user_id, now() - interval '2 days');
-  END IF;
-
-  -- 7.3 ปรับปรุงยอดสินค้า (Stock Adjustment) 1 วันก่อน
-  IF var_coke_can IS NOT NULL THEN
-    INSERT INTO stock_movements (organization_id, branch_id, location_id, variant_id, batch_id, movement_type, quantity_delta, quantity_before, quantity_after, operation_id, reason_code, performed_by, created_at)
-    VALUES
-      (v_org_id, v_branch_id, loc_wh, var_coke_can, batch_coke, 'ADJUSTMENT_IN', 10.000, 120.000, 130.000, op_adjust_in, 'ตรวจนับพบสินค้าเกินในคลัง', v_user_id, now() - interval '1 day' - interval '2 hours'),
-      (v_org_id, v_branch_id, loc_wh, var_coke_can, batch_coke, 'ADJUSTMENT_OUT', -10.000, 130.000, 120.000, op_adjust_out, 'ปรับยอดแก้ไขความคลาดเคลื่อน', v_user_id, now() - interval '1 day');
+      (v_org_id, v_branch_id, loc_wh, var_coke_can, batch_coke, 'ADJUSTMENT_IN', 10.000, 150.000, 160.000, op_adjust_in, 'ตรวจนับพบสินค้าเกินในคลังหลัก', v_user_id, now() - interval '1 day' - interval '2 hours'),
+      (v_org_id, v_branch_id, loc_wh, var_coke_can, batch_coke, 'ADJUSTMENT_OUT', -10.000, 160.000, 150.000, op_adjust_out, 'ปรับยอดแก้ไขความคลาดเคลื่อนในคลังหลัก', v_user_id, now() - interval '1 day');
   END IF;
 
   -- 8. เปิด Triggers กลับคืนมาตามเดิม

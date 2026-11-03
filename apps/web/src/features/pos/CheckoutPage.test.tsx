@@ -63,7 +63,7 @@ it('keeps cash input and blocks a new checkout until pending server state can be
   expect(prepare).toBeDisabled();
   expect(mocks.mutate).not.toHaveBeenCalled();
   fireEvent.click(
-    screen.getByRole('button', { name: 'ลองโหลดข้อมูลอีกครั้ง' }),
+    screen.getByRole('button', { name: 'ลองโหลดใหม่' }),
   );
   await waitFor(() => expect(prepare).toBeEnabled());
   expect(screen.getByLabelText('เงินรับ')).toHaveValue('10.00');

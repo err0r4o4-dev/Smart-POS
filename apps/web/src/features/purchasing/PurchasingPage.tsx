@@ -1,10 +1,12 @@
 import { useLanguage } from '../../app/language';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { ShoppingCart, Plus } from 'lucide-react';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
 import { Button, Card, Tag } from '../../components/ui/primitives';
+import { StandardPageHeader } from '../../components/ui/StandardPage';
 import type {
   Supplier,
   PurchaseDocument,
@@ -76,20 +78,26 @@ function PurchasingScreen({ view, id }: { view: string; id?: string }) {
     );
   return (
     <section className="catalog-page supply-page">
-      <header className="catalog-header">
-        <div>
-          <p className="eyebrow">{t('purchasing.purchasingAndReceiving')}</p>
-          <h1>{t(titles[view as keyof typeof titles])}</h1>
-          <p>
-            {t('purchasing.manageSuppliersPurchaseOrdersAndBranchReceiving')}
-          </p>
-        </div>
-        {view === 'orders' && state.tenant.can('purchasing.order.create') && (
-          <Link className="button" to="/purchasing/orders/new">
-            {t('purchasing.createPo')}
-          </Link>
+      <StandardPageHeader
+        icon={<ShoppingCart size={24} />}
+        eyebrow={t('purchasing.purchasingAndReceiving')}
+        title={t(titles[view as keyof typeof titles])}
+        description={t(
+          'purchasing.manageSuppliersPurchaseOrdersAndBranchReceiving',
         )}
-      </header>
+        actions={
+          view === 'orders' &&
+          state.tenant.can('purchasing.order.create') ? (
+            <Link
+              className="button sales-new-sale-btn"
+              to="/purchasing/orders/new"
+            >
+              <Plus size={16} aria-hidden="true" />
+              <span>{t('purchasing.createPo')}</span>
+            </Link>
+          ) : undefined
+        }
+      />
       <SupplyNav />
       <SupplyFeedback state={state} />
       {view !== 'suppliers' && view !== 'supplier' && !state.branch && (

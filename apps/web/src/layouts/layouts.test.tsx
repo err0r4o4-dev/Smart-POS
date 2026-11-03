@@ -30,7 +30,7 @@ it('shows operational help without links to removed previews', () => {
   expect(
     screen.getByRole('heading', { name: 'Know the boundary' }),
   ).toBeVisible();
-  expect(screen.getByText(/Checkout requires POS access/)).toBeVisible();
+  expect(screen.getByText(/POS access and an open shift are required/)).toBeVisible();
   expect(document.querySelectorAll('a[href^="/preview/"]')).toHaveLength(0);
   expect(screen.queryByText(/preview/i)).not.toBeInTheDocument();
 });

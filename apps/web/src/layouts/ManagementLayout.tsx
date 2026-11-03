@@ -2,7 +2,17 @@ import { LanguageSwitcher } from '../components/ui/LanguageSwitcher';
 import { useLanguage } from '../app/language';
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { Menu, Store, X } from 'lucide-react';
+import {
+  BarChart3,
+  Bell,
+  ChevronDown,
+  ChevronRight,
+  House,
+  Menu,
+  Search,
+  Store,
+  X,
+} from 'lucide-react';
 import {
   anonymousSession,
   isManagementRole,
@@ -20,7 +30,6 @@ import {
 import { Brand, Tag } from '../components/ui/primitives';
 import { useAuth } from '../app/AuthProvider';
 import { useOrganization } from '../app/OrganizationProvider';
-import { ContextSwitchers } from '../features/organization/OrganizationGate';
 import { NavigationMenu } from './NavigationMenu';
 
 export function ManagementLayout() {
@@ -137,9 +146,9 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
         </NavLink>
         <div className="workspace-context">
           <span className="context-icon">
-            <Store size={19} aria-hidden="true" />
+            <Store size={18} aria-hidden="true" />
           </span>
-          <div>
+          <div className="context-copy">
             <strong>{tenant.context?.organization.name ?? 'SmartPOS'}</strong>
             <small>
               {tenant.context?.branches.find(
@@ -147,14 +156,21 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
               )?.name ?? t('inventory.noBranchSelected')}
             </small>
           </div>
+          <ChevronDown
+            size={15}
+            className="context-chevron"
+            aria-hidden="true"
+          />
         </div>
         <div className="workspace-area-label">
           <strong>{areaTitle}</strong>
-          <small>
-            {role
-              ? t('shell.roleValue0', { value0: localize(roleLabels[role]) })
-              : t('shell.noStoreWorkspaceSelected')}
-          </small>
+          {area !== 'management' && (
+            <small>
+              {role
+                ? t('shell.roleValue0', { value0: localize(roleLabels[role]) })
+                : t('shell.noStoreWorkspaceSelected')}
+            </small>
+          )}
         </div>
         <nav
           className="sidebar-navigation"
@@ -167,41 +183,83 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
             homePath={homePath}
           />
         </nav>
-        <div className="sidebar-note">
-          <strong>{areaTitle}</strong>
-          <p>
-            {area === 'management'
-              ? t('shell.manageStoreDataAndSettingsWithinYour')
-              : area === 'staff'
+        {area === 'management' ? (
+          <NavLink
+            to="/manage/sales"
+            className="sidebar-note sidebar-report-card"
+          >
+            <span className="sidebar-report-icon" aria-hidden="true">
+              <BarChart3 size={18} />
+            </span>
+            <div className="sidebar-report-copy">
+              <strong>{t('shell.viewSalesReport')}</strong>
+              <p>{t('shell.analyzeYourStore')}</p>
+            </div>
+            <ChevronRight size={16} aria-hidden="true" />
+          </NavLink>
+        ) : (
+          <div className="sidebar-note">
+            <strong>{areaTitle}</strong>
+            <p>
+              {area === 'staff'
                 ? t('shell.onlyTasksAllowedByYourRoleAre')
                 : t('shell.storeTeamAccountsAreNotOnlineShopper')}
-          </p>
-          <NavLink to="/">{t('shell.homeAndEntrances')}</NavLink>
-        </div>
+            </p>
+            <NavLink to="/">{t('shell.homeAndEntrances')}</NavLink>
+          </div>
+        )}
       </aside>
       <div className="workspace-main">
         <header className="topbar">
           <div className="breadcrumb">
-            {areaTitle} <span>/</span>
+            <span className="breadcrumb-home" aria-hidden="true">
+              <House size={15} />
+            </span>
+            <span>{areaTitle}</span>
+            <span>/</span>
             <strong>{pageTitle}</strong>
           </div>
           <div className="topbar-right">
-            <LanguageSwitcher />
-            <Tag tone="amber">
-              {role ? localize(roleLabels[role]) : t('shell.storeTeam')}
-            </Tag>
-            <NavLink to={paths.shop} className="workspace-area-link">
-              {t('shell.viewStorefront')}
-            </NavLink>
-            {role && isManagementRole(role) && (
-              <NavLink
-                to={area === 'staff' ? paths.dashboard : paths.staff}
-                className="workspace-area-link"
-              >
-                {area === 'staff'
-                  ? t('shell.storeManagement')
-                  : t('workspace.staffWorkspace')}
-              </NavLink>
+            {area === 'management' ? (
+              <>
+                <label className="topbar-search">
+                  <Search size={15} aria-hidden="true" />
+                  <input
+                    type="search"
+                    placeholder={t('shell.searchPlaceholder')}
+                    aria-label={t('shell.searchPlaceholder')}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="topbar-bell"
+                  aria-label={t('shell.notifications')}
+                >
+                  <Bell size={18} aria-hidden="true" />
+                  <span className="topbar-bell-dot" aria-hidden="true" />
+                </button>
+                <LanguageSwitcher />
+              </>
+            ) : (
+              <>
+                <LanguageSwitcher />
+                <Tag tone="amber">
+                  {role ? localize(roleLabels[role]) : t('shell.storeTeam')}
+                </Tag>
+                <NavLink to={paths.shop} className="workspace-area-link">
+                  {t('shell.viewStorefront')}
+                </NavLink>
+                {role && isManagementRole(role) && (
+                  <NavLink
+                    to={area === 'staff' ? paths.dashboard : paths.staff}
+                    className="workspace-area-link"
+                  >
+                    {area === 'staff'
+                      ? t('shell.storeManagement')
+                      : t('workspace.staffWorkspace')}
+                  </NavLink>
+                )}
+              </>
             )}
             <NavLink
               to={state.status === 'authenticated' ? '/account' : '/login'}
@@ -230,7 +288,6 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
           </button>
         </header>
         <main id="main-content" className="content">
-          <ContextSwitchers />
           <Outlet />
         </main>
         <footer className="footer">

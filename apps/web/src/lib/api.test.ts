@@ -11,7 +11,7 @@ it('accepts actual readiness', async () => {
   );
   await expect(getReadiness()).resolves.toEqual({ status: 'ready' });
 });
-it('does not replace dependency failures with demo success', async () => {
+it('does not replace dependency failures with fallback success', async () => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }));
   await expect(getReadiness()).rejects.toThrow('unavailable');
 });

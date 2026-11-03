@@ -1,6 +1,24 @@
 import { useLanguage } from '../../app/language';
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
+import {
+  Archive,
+  Award,
+  Check,
+  CheckCircle2,
+  ClipboardList,
+  Layers,
+  PauseCircle,
+  Pencil,
+  Ruler,
+} from 'lucide-react';
 import { Button, Card, Tag } from '../../components/ui/primitives';
+import {
+  StandardFilterCard,
+  StandardKpiCard,
+  StandardKpiGrid,
+  StandardSearchField,
+  StandardStatusTabs,
+} from '../../components/ui/StandardPage';
 import type {
   CatalogPage,
   Taxonomy,
@@ -91,6 +109,37 @@ export function TaxonomyPage({ kind }: { kind: Kind }) {
     `/${kind}?page=${page}&page_size=20&search=${encodeURIComponent(search)}&status=${status}`,
   );
   const options = useTaxonomyOptions(kind);
+  const items = useMemo(() => query.data?.items ?? [], [query.data?.items]);
+  const totalCount = query.data?.total ?? 0;
+  const activeCount = useMemo(
+    () => items.filter((item) => item.status === 'ACTIVE').length,
+    [items],
+  );
+  const inactiveCount = useMemo(
+    () => items.filter((item) => item.status === 'INACTIVE').length,
+    [items],
+  );
+  const archivedCount = useMemo(
+    () => items.filter((item) => item.status === 'ARCHIVED').length,
+    [items],
+  );
+  const kindIcon =
+    kind === 'categories' ? (
+      <Layers size={24} />
+    ) : kind === 'brands' ? (
+      <Award size={24} />
+    ) : (
+      <Ruler size={24} />
+    );
+  const rowIcon =
+    kind === 'categories' ? (
+      <Layers size={18} aria-hidden="true" />
+    ) : kind === 'brands' ? (
+      <Award size={18} aria-hidden="true" />
+    ) : (
+      <Ruler size={18} aria-hidden="true" />
+    );
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
@@ -116,42 +165,114 @@ export function TaxonomyPage({ kind }: { kind: Kind }) {
   }
   return (
     <div className="catalog-page">
-      <CatalogHeader title={t(labels[kind])} />
+      <CatalogHeader title={t(labels[kind])} icon={kindIcon} />
       <CatalogNav />
-      <Card>
-        <div className="catalog-filters">
-          <CatalogField
-            label={t('catalog.searchValue0', { value0: t(labels[kind]) })}
-            value={search}
-            change={(next) => {
-              setSearch(next);
+
+      <StandardKpiGrid label={t(labels[kind])}>
+        <StandardKpiCard
+          icon={rowIcon}
+          tone="amber"
+          label={t(labels[kind])}
+          value={`${totalCount} ${t('pos.itemsUnit')}`}
+          sparkline
+        />
+        <StandardKpiCard
+          icon={<CheckCircle2 size={20} />}
+          tone="success"
+          label={labelCode('ACTIVE')}
+          value={`${activeCount} ${t('pos.itemsUnit')}`}
+          trendUp
+        />
+        <StandardKpiCard
+          icon={<PauseCircle size={20} />}
+          tone="amber"
+          label={labelCode('INACTIVE')}
+          value={`${inactiveCount} ${t('pos.itemsUnit')}`}
+        />
+        <StandardKpiCard
+          icon={<Archive size={20} />}
+          tone="info"
+          label={labelCode('ARCHIVED')}
+          value={`${archivedCount} ${t('pos.itemsUnit')}`}
+        />
+      </StandardKpiGrid>
+
+      <StandardFilterCard
+        onReset={() => {
+          setSearch('');
+          setStatus('');
+          setPage(1);
+        }}
+        onSearch={() => setPage(1)}
+      >
+        <StandardSearchField
+          label={t('catalog.searchValue0', { value0: t(labels[kind]) })}
+          value={search}
+          onChange={(event) => {
+            setSearch(event.target.value);
+            setPage(1);
+          }}
+        />
+        <label className="sales-filter-field">
+          <span>{t('catalog.filterStatus')}</span>
+          <select
+            value={status}
+            onChange={(event) => {
+              setStatus(event.target.value);
               setPage(1);
             }}
-          />
-          <label className="tenant-field">
-            {t('catalog.filterStatus')}
-            <select
-              value={status}
-              onChange={(event) => {
-                setStatus(event.target.value);
-                setPage(1);
-              }}
-            >
-              <option value="">{t('catalog.activeInactive2')}</option>
-              {['ACTIVE', 'INACTIVE', 'ARCHIVED'].map((item) => (
-                <option key={item} value={item}>
-                  {labelCode(item)}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
+          >
+            <option value="">{t('catalog.activeInactive2')}</option>
+            {['ACTIVE', 'INACTIVE', 'ARCHIVED'].map((item) => (
+              <option key={item} value={item}>
+                {labelCode(item)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </StandardFilterCard>
+
+      <Card className="sales-table-card">
+        <StandardStatusTabs
+          ariaLabel={t('catalog.filterStatus')}
+          value={status}
+          onChange={(next) => {
+            setStatus(next);
+            setPage(1);
+          }}
+          tabs={[
+            {
+              key: '',
+              label: t('common.all'),
+              count: status === '' ? totalCount : items.length,
+              icon: <ClipboardList size={15} aria-hidden="true" />,
+            },
+            {
+              key: 'ACTIVE',
+              label: labelCode('ACTIVE'),
+              count: activeCount,
+              icon: <CheckCircle2 size={15} aria-hidden="true" />,
+            },
+            {
+              key: 'INACTIVE',
+              label: labelCode('INACTIVE'),
+              count: inactiveCount,
+              icon: <PauseCircle size={15} aria-hidden="true" />,
+            },
+            {
+              key: 'ARCHIVED',
+              label: labelCode('ARCHIVED'),
+              count: archivedCount,
+              icon: <Archive size={15} aria-hidden="true" />,
+            },
+          ]}
+        />
         <CatalogLoading pending={query.isPending} />
         <CatalogError error={query.error ?? options.error} />
         {query.data && (
           <>
-            <div className="catalog-table-wrap">
-              <table className="catalog-table">
+            <div className="catalog-table-wrap table-scroll sales-history-table">
+              <table className="catalog-table record-table">
                 <thead>
                   <tr>
                     <th>{t('common.name')}</th>
@@ -169,22 +290,35 @@ export function TaxonomyPage({ kind }: { kind: Kind }) {
                   {query.data.items.map((item) => (
                     <tr key={item.id}>
                       <td>
-                        {item.name}
-                        <small>{item.description}</small>
-                        {kind === 'categories' && item.parent_id && (
-                          <small>
-                            {t('catalog.parentCategory')}{' '}
-                            {options.data?.find(
-                              (parent) => parent.id === item.parent_id,
-                            )?.name ?? item.parent_id}
-                          </small>
-                        )}
+                        <div className="sales-number-cell">
+                          <span className="sales-doc-icon" aria-hidden="true">
+                            {rowIcon}
+                          </span>
+                          <div>
+                            <strong>{item.name}</strong>
+                            {item.description && (
+                              <small className="sales-secondary">
+                                {item.description}
+                              </small>
+                            )}
+                            {kind === 'categories' && item.parent_id && (
+                              <small className="sales-secondary">
+                                {t('catalog.parentCategory')}{' '}
+                                {options.data?.find(
+                                  (parent) => parent.id === item.parent_id,
+                                )?.name ?? item.parent_id}
+                              </small>
+                            )}
+                          </div>
+                        </div>
                       </td>
                       {kind === 'units' && (
                         <>
                           <td>
-                            {item.code}
-                            <small>{labelCode(item.unit_type)}</small>
+                            <strong>{item.code}</strong>
+                            <small className="sales-secondary">
+                              {labelCode(item.unit_type)}
+                            </small>
                           </td>
                           <td>
                             {item.conversion_factor}{' '}
@@ -196,20 +330,26 @@ export function TaxonomyPage({ kind }: { kind: Kind }) {
                       )}
                       <td>
                         <Tag tone={statusTone(item.status)}>
-                          {labelCode(item.status)}
+                          {item.status === 'ACTIVE' && (
+                            <Check size={12} aria-hidden="true" />
+                          )}
+                          <span>{labelCode(item.status)}</span>
                         </Tag>
                       </td>
                       {allowed && (
                         <td>
                           <Button
-                            className="button-secondary"
+                            className="button-secondary sales-detail-link"
                             onClick={() => {
                               setEditing(item);
                               setValue(inputOf(item, kind));
                               setSaved(false);
                             }}
                           >
-                            {t('catalog.edit')} {item.name}
+                            <Pencil size={14} aria-hidden="true" />
+                            <span>
+                              {t('catalog.edit')} {item.name}
+                            </span>
                           </Button>
                         </td>
                       )}
@@ -219,7 +359,7 @@ export function TaxonomyPage({ kind }: { kind: Kind }) {
               </table>
             </div>
             {!query.data.items.length && (
-              <p>
+              <p className="sales-empty-message">
                 {t('catalog.noneYet')}
                 {t(labels[kind])}
               </p>

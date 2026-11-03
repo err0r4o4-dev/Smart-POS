@@ -99,7 +99,7 @@ it('aborts stale mutation on unmount and never yields data to navigation', async
   );
   let pending: Promise<unknown>;
   await act(async () => {
-    pending = hook.result.current.run('/shelves/replenishments', {});
+    pending = hook.result.current.run('/purchasing/orders', {});
   });
   hook.unmount();
   finish({ id: 'stale' });
@@ -108,7 +108,7 @@ it('aborts stale mutation on unmount and never yields data to navigation', async
 });
 it('isolates cache keys by user, organization and branch', () => {
   const { client, Wrapper } = wrapper(),
-    hook = renderHook(() => useSupplyQuery('/shelves', false), {
+    hook = renderHook(() => useSupplyQuery('/suppliers', false), {
       wrapper: Wrapper,
     });
   mocks.org = 'org-b';
@@ -121,8 +121,8 @@ it('isolates cache keys by user, organization and branch', () => {
       .getAll()
       .map((query) => query.queryKey),
   ).toEqual([
-    ['tenant', 'user-a', 'org-a', 'branch-a', 'supply', '/shelves'],
-    ['tenant', 'user-b', 'org-b', 'branch-b', 'supply', '/shelves'],
+    ['tenant', 'user-a', 'org-a', 'branch-a', 'supply', '/suppliers'],
+    ['tenant', 'user-b', 'org-b', 'branch-b', 'supply', '/suppliers'],
   ]);
   expect(mocks.request).not.toHaveBeenCalled();
 });

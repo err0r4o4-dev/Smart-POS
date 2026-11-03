@@ -47,13 +47,12 @@ for (const width of [1024, 1440]) {
           exact: true,
         });
         const note = sidebar.locator('.sidebar-note');
-        await expect(menu.getByRole('button')).toHaveCount(7);
+        await expect(menu.getByRole('button')).toHaveCount(6);
         await page.screenshot({
           path: testInfo.outputPath('sidebar-categories.png'),
         });
         for (const button of await menu.getByRole('button').all()) {
-          await expect(button).toHaveAttribute('aria-expanded', 'false');
-          await button.click();
+          await expect(button).toHaveAttribute('aria-expanded', 'true');
         }
         await expect(menu.getByRole('link')).toHaveCount(navigation.length);
         await expect(menu.locator('a[href^="/preview/"]')).toHaveCount(0);
@@ -148,7 +147,7 @@ test('mobile navigation still opens, navigates and dismisses', async ({
     exact: true,
   });
   await expect(menu.locator('a[href^="/preview/"]')).toHaveCount(0);
-  await expect(menu.getByRole('button')).toHaveCount(7);
+  await expect(menu.getByRole('button')).toHaveCount(6);
   await page.keyboard.press('Shift+Tab');
   await expect(
     menu.getByRole('link', { name: 'คู่มือการใช้งาน', exact: true }),
@@ -158,14 +157,16 @@ test('mobile navigation still opens, navigates and dismisses', async ({
     page.getByRole('button', { name: 'Close navigation' }),
   ).toBeFocused();
   const firstGroup = menu.getByRole('button').first();
-  await firstGroup.focus();
-  await page.keyboard.press('Enter');
   await expect(firstGroup).toHaveAttribute('aria-expanded', 'true');
   await expect(menu.locator('a[href="/manage/pos"]')).toBeVisible();
-  await page.screenshot({ path: testInfo.outputPath('mobile-categories.png') });
-  await page.keyboard.press('Space');
+  await firstGroup.focus();
+  await page.keyboard.press('Enter');
   await expect(firstGroup).toHaveAttribute('aria-expanded', 'false');
   await expect(menu.locator('a[href="/manage/pos"]')).toBeHidden();
+  await page.screenshot({ path: testInfo.outputPath('mobile-categories.png') });
+  await page.keyboard.press('Space');
+  await expect(firstGroup).toHaveAttribute('aria-expanded', 'true');
+  await expect(menu.locator('a[href="/manage/pos"]')).toBeVisible();
   await menu
     .getByRole('link', { name: 'คู่มือการใช้งาน', exact: true })
     .click();
@@ -178,32 +179,34 @@ test('mobile navigation still opens, navigates and dismisses', async ({
   await expect(page.locator('body')).toHaveJSProperty('scrollWidth', 375);
 });
 
-test('deep links open the destination group and highlight only its menu', async ({
+test('deep links open a collapsed destination group and highlight only its menu', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 720 });
-  for (const path of ['/manage/sales/voids', '/manage/products/item-1']) {
-    await page.goto(path);
-    const menu = page.getByRole('navigation', {
-      name: 'Main navigation',
-      exact: true,
-    });
-    const group = path.startsWith('/manage/sales/')
-      ? 'คืนสินค้าและคืนเงิน'
-      : 'สินค้าและสต็อก';
-    await expect(
-      menu.getByRole('button', { name: group, exact: true }),
-    ).toHaveAttribute('aria-expanded', 'true');
-    await expect(menu.locator('a[aria-current="page"]')).toHaveCount(1);
-    await expect(menu.locator('a[aria-current="page"]')).toBeVisible();
-    await expect(menu.locator('a[aria-current="page"]')).toHaveAttribute(
-      'href',
-      path.startsWith('/manage/sales/')
-        ? '/manage/sales/voids'
-        : '/manage/products',
-    );
-    await expect(
-      menu.getByRole('button', { name: 'การขาย', exact: true }),
-    ).toHaveAttribute('aria-expanded', 'false');
-  }
+  await page.goto('/manage/dashboard');
+  const initialMenu = page.getByRole('navigation', {
+    name: 'Main navigation',
+    exact: true,
+  });
+  await initialMenu.getByRole('button', { name: 'การขาย', exact: true }).click();
+  await initialMenu
+    .getByRole('button', { name: 'รายงานและวิเคราะห์', exact: true })
+    .click();
+
+  await page.goto('/manage/sales/voids');
+  const menu = page.getByRole('navigation', {
+    name: 'Main navigation',
+    exact: true,
+  });
+  await expect(
+    menu.getByRole('button', { name: 'รายงานและวิเคราะห์', exact: true }),
+  ).toHaveAttribute('aria-expanded', 'true');
+  await expect(
+    menu.getByRole('button', { name: 'การขาย', exact: true }),
+  ).toHaveAttribute('aria-expanded', 'false');
+  await expect(menu.locator('a[aria-current="page"]')).toHaveCount(1);
+  await expect(menu.locator('a[aria-current="page"]')).toHaveAttribute(
+    'href',
+    '/manage/sales/voids',
+  );
 });

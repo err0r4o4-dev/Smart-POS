@@ -3,7 +3,9 @@ import { useEffect, useRef, useState } from 'react';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavigate';
 import { useQuery } from '@tanstack/react-query';
+import { ShoppingCart } from 'lucide-react';
 import { Button, Card } from '../../components/ui/primitives';
+import { StandardPageHeader } from '../../components/ui/StandardPage';
 import { QueryFeedback } from '../../components/feedback/QueryFeedback';
 import {
   posRequest,
@@ -123,8 +125,11 @@ export function POSTerminalPage() {
   };
   return (
     <>
-      <h1>{t('pos.sellProducts')}</h1>
-      <p>{t('pos.stockShowsRecordedBalancesAtTheSelling')}</p>
+      <StandardPageHeader
+        icon={<ShoppingCart size={24} />}
+        title={t('pos.sellProducts')}
+        description={t('pos.stockShowsRecordedBalancesAtTheSelling')}
+      />
       {!pos.shift && (
         <p className="notice">
           {t('pos.youMust')}{' '}

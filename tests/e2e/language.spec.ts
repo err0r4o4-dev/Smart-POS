@@ -185,10 +185,11 @@ for (const role of ['OWNER', 'CASHIER'] as const) {
           .click();
         await expect(page.getByRole('dialog')).toBeVisible();
         if (role === 'OWNER')
-          await page
-            .getByRole('dialog')
-            .getByRole('button', { name: 'Settings and users' })
-            .click();
+          await expect(
+            page
+              .getByRole('dialog')
+              .getByRole('button', { name: 'System settings' }),
+          ).toHaveAttribute('aria-expanded', 'true');
         await expect(
           page
             .getByRole('navigation', { name: 'Mobile navigation' })

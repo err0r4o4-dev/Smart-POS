@@ -46,7 +46,7 @@ export const inventory = defineMessages({
     configure: 'ตั้งค่า',
     reorderPoint: 'จุดสั่งซื้อ',
     evaluatesActiveWarehouseSalesFloorShelfExcludes:
-      'ประเมิน active WAREHOUSE + SALES_FLOOR + SHELF; ไม่รวม quarantine/damaged/transit',
+      'ประเมินสต็อกคลังสินค้า (WAREHOUSE) ที่เปิดใช้งาน; ไม่รวม quarantine/damaged/transit',
     minimumQuantity: 'จำนวนขั้นต่ำ',
     targetQuantity: 'จำนวนเป้าหมาย',
     reorderStatus: 'สถานะจุดสั่งซื้อ',
@@ -182,7 +182,7 @@ export const inventory = defineMessages({
     configure: 'Configure',
     reorderPoint: 'Reorder Point',
     evaluatesActiveWarehouseSalesFloorShelfExcludes:
-      'Evaluates active WAREHOUSE + SALES_FLOOR + SHELF; excludes quarantine, damaged and transit stock',
+      'Evaluates active WAREHOUSE stock; excludes quarantine, damaged and transit stock',
     minimumQuantity: 'Minimum Quantity',
     targetQuantity: 'Target Quantity',
     reorderStatus: 'Reorder status',

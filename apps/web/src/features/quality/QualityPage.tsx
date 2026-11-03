@@ -1,9 +1,11 @@
 import { useLanguage } from '../../app/language';
 import { useState, type FormEvent } from 'react';
+import { Award } from 'lucide-react';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
 import { Button, Card, Tag } from '../../components/ui/primitives';
+import { StandardPageHeader } from '../../components/ui/StandardPage';
 import { useSupplyQuery, useSupplyScope } from '../purchasing/purchasing-hooks';
 import {
   Field,
@@ -89,7 +91,14 @@ function QualityWorkspace({ view }: { view: View }) {
   }
   return (
     <div className="catalog-page quality-page">
-      <h1>{t(titles[view])}</h1>
+      <StandardPageHeader
+        icon={<Award size={24} />}
+        eyebrow="BATCH / LOT / EXPIRY"
+        title={t(titles[view])}
+        description={t(
+          'quality.theStockLedgerIsAuthoritativeAggregateTracked',
+        )}
+      />
       <nav className="catalog-nav" aria-label={t('quality.qualityNavigation')}>
         {Object.entries(titles).map(([name, label]) => (
           <Link key={name} to={`/inventory/${name}`}>

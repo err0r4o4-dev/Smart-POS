@@ -130,7 +130,7 @@ func sourceAcceptance(test *testing.T, ctx context.Context, organizations *organ
 			test.Fatalf("source order retry: %v", problem)
 		}
 		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, shop.LocationID, variant, "7.000", "0.000", "7.000")
-		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, backLocation, variant, "3.000", "2.000", "0.000")
+		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, backLocation, variant, "3.000", "2.000", "1.000")
 		products, problem := service.Products(ctx, "", "", shop.Slug, "", 1)
 		if problem != nil || len(products.Items) != 1 || products.Items[0].Available != "1.000" {
 			test.Fatalf("online warehouse availability: %+v error %v", products.Items, problem)
@@ -156,7 +156,7 @@ func sourceAcceptance(test *testing.T, ctx context.Context, organizations *organ
 			test.Fatal(problem)
 		}
 		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, shop.LocationID, variant, "7.000", "0.000", "7.000")
-		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, backLocation, variant, "3.000", "0.000", "0.000")
+		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, backLocation, variant, "3.000", "0.000", "3.000")
 	})
 	order, err = service.CreateOrder(ctx, shop.Slug, "d8888888-8888-4888-8888-888888888888", request)
 	if err != nil {
@@ -296,6 +296,6 @@ func settleBackSource(test *testing.T, ctx context.Context, organizations *organ
 			test.Fatalf("warehouse settlement replay: %v", err)
 		}
 		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, shop.LocationID, variant, "7.000", "0.000", "7.000")
-		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, location, variant, "1.000", "0.000", "0.000")
+		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, location, variant, "1.000", "0.000", "1.000")
 	})
 }

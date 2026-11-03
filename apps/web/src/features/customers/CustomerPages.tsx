@@ -1,11 +1,13 @@
 import { useLanguage } from '../../app/language';
 import { useRef, useState, type FormEvent } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
+import { Users } from 'lucide-react';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
 import { Button, Card, Loading, Tag } from '../../components/ui/primitives';
+import { StandardPageHeader } from '../../components/ui/StandardPage';
 import { Field, SupplyTable } from '../purchasing/SupplyUI';
 import { moneyText } from '../../lib/pos-api';
 import {
@@ -142,23 +144,20 @@ function CustomerWorkspace({ view }: { view: 'list' | 'detail' | 'groups' }) {
   const { t } = useLanguage();
   return (
     <div className="catalog-page customer-page">
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">{t('customers.customerRelationships')}</p>
-          <h1>
-            {view === 'groups'
-              ? t('customers.customerGroups')
-              : view === 'detail'
-                ? t('customers.customerDetails')
-                : t('customers.customer')}
-          </h1>
-          <p>
-            {t(
-              'customers.sharedWithinAuthorizedOrganizationBranchesNotAuthentication',
-            )}
-          </p>
-        </div>
-      </div>
+      <StandardPageHeader
+        icon={<Users size={24} />}
+        eyebrow={t('customers.customerRelationships')}
+        title={
+          view === 'groups'
+            ? t('customers.customerGroups')
+            : view === 'detail'
+              ? t('customers.customerDetails')
+              : t('customers.customer')
+        }
+        description={t(
+          'customers.sharedWithinAuthorizedOrganizationBranchesNotAuthentication',
+        )}
+      />
       <nav className="catalog-nav">
         <Link to="/customers">{t('customers.customer')}</Link>
         <Link to="/customers/groups">{t('customers.customerGroups')}</Link>

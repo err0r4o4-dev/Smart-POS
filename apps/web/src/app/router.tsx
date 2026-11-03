@@ -19,7 +19,6 @@ import {
   LabelsPage,
   InventoryPage,
   PurchasingPage,
-  ShelfPage,
   ReturnsPage,
   AdjustmentsPage,
   POSWorkspace,
@@ -309,40 +308,6 @@ const routes: RouteObject[] = [
                   {
                     path: '/purchasing/suggestions',
                     element: <PurchasingPage view="suggestions" />,
-                  },
-                ],
-              },
-              {
-                element: <OrganizationGate permission="shelf.read" />,
-                children: [
-                  {
-                    path: '/shelves',
-                    element: <ShelfPage view="overview" />,
-                  },
-                  {
-                    path: '/shelves/:id',
-                    element: <ShelfPage view="detail" />,
-                  },
-                  ...['layout', 'replenishments', 'discrepancies'].map(
-                    (view) => ({
-                      path: '/shelves/' + view,
-                      element: <ShelfPage view={view} />,
-                    }),
-                  ),
-                ],
-              },
-              {
-                element: <OrganizationGate permission="shelf.manage" />,
-                children: [
-                  { path: '/shelves/new', element: <ShelfPage view="new" /> },
-                ],
-              },
-              {
-                element: <OrganizationGate permission="inventory.read" />,
-                children: [
-                  {
-                    path: '/shelves/counts',
-                    element: <InventoryPage section="counts" shelfOnly />,
                   },
                 ],
               },

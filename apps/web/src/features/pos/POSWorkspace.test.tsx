@@ -15,13 +15,17 @@ vi.mock('../../app/AuthProvider', () => ({
 }));
 vi.mock('../../app/OrganizationProvider', () => ({
   useOrganization: () => ({
-    context: { organization: { id: 'org' }, membership: { role: 'OWNER' } },
+    organizations: [{ id: 'org', name: 'yam' }],
+    context: {
+      organization: { id: 'org', name: 'yam' },
+      membership: { role: 'OWNER' },
+      branches: [{ id: mocks.branch, name: 'สาขาหลัก' }],
+    },
     branchID: mocks.branch,
+    loading: false,
+    select: vi.fn(),
     can: () => true,
   }),
-}));
-vi.mock('../organization/OrganizationGate', () => ({
-  ContextSwitchers: () => null,
 }));
 vi.mock('../../lib/pos-api', async (original) => ({
   ...(await original<typeof import('../../lib/pos-api')>()),
@@ -115,4 +119,17 @@ it('does not yield a delayed mutation result to the next branch', async () => {
     await expect(pending).resolves.toBeUndefined();
   });
   await waitFor(() => expect(workspace.busy).toBe(false));
+});
+
+it('does not render the tenant-switchers bar in the POS workspace header', async () => {
+  mocks.request.mockResolvedValue({ items: [], total: 0 });
+  setup();
+  await screen.findByText('branch-a');
+  expect(document.querySelector('.tenant-switchers')).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('combobox', { name: 'องค์กรที่ใช้งาน' }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('combobox', { name: 'สาขาที่ใช้งาน' }),
+  ).not.toBeInTheDocument();
 });

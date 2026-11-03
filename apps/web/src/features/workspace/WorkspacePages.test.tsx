@@ -1,6 +1,6 @@
 import { render } from '../../test/render';
 import type { ReactNode } from 'react';
-import { screen } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { navigation, staffNavigation } from '../../app/routes';
@@ -175,25 +175,49 @@ beforeEach(() => {
   mocks.loading = false;
   mocks.error = '';
   mocks.context = null;
+  localStorage.clear();
   vi.clearAllMocks();
 });
 
 it.each<Role>(['OWNER', 'MANAGER'])(
-  'takes %s to management without fake sales metrics',
+  'renders the store overview dashboard for %s with KPIs, charts, recent sales, alerts, and quick actions',
   (role) => {
     selectRole(role, allPermissions);
     expect(workspaceHome(role)).toBe('/manage/dashboard');
     renderWorkspace();
-    expect(screen.getByRole('heading', { name: 'ภาพรวมร้าน' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'ภาพรวม' })).toBeVisible();
     expect(
       document.querySelector('[data-workspace="management"]'),
     ).toBeInTheDocument();
+    expect(screen.getAllByText('ยอดขายรวม')[0]).toBeVisible();
+    expect(screen.getByText('จำนวนบิล')).toBeVisible();
+    expect(screen.getByText('สินค้าที่ขาย')).toBeVisible();
+    expect(screen.getByText('ลูกค้าใหม่')).toBeVisible();
+    expect(
+      screen.getByRole('heading', { name: 'แนวโน้มยอดขาย' }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole('heading', { name: 'ยอดขายตามช่องทาง' }),
+    ).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'สินค้าขายดี' })).toBeVisible();
+    expect(
+      screen.getByRole('heading', { name: 'รายการขายล่าสุด' }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole('heading', { name: 'แจ้งเตือนสำคัญ' }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole('heading', { name: 'ทางลัดการทำงาน' }),
+    ).toBeVisible();
     expect(screen.getByRole('link', { name: 'จัดการสินค้า' })).toBeVisible();
     expect(
-      screen.getByText('ยังไม่เปิดรับออเดอร์หรือชำระเงินออนไลน์', {
-        exact: false,
-      }),
+      screen.getByPlaceholderText('ค้นหาเมนูหรือสินค้า…'),
     ).toBeVisible();
+    expect(screen.getByRole('button', { name: 'การแจ้งเตือน' })).toBeVisible();
+    expect(screen.getByText('ดูรายงานยอดขาย')).toBeVisible();
+    expect(screen.getByText('SAL-28a6e1f3')).toBeVisible();
+    expect(screen.getByText('น้ำดื่ม VELO')).toBeVisible();
+    expect(screen.getByText('สินค้าใกล้หมดสต็อก')).toBeVisible();
   },
 );
 
@@ -223,7 +247,17 @@ it.each<Role>(['CASHIER', 'INVENTORY_STAFF', 'PURCHASING_STAFF'])(
 it('does not give inventory staff cashier tools', () => {
   selectRole('INVENTORY_STAFF', ['catalog.read', 'inventory.read']);
   renderWorkspace();
-  expect(screen.getByRole('link', { name: 'ข้อมูลสินค้า' })).toBeVisible();
+  expect(
+    within(screen.getByRole('main')).getByRole('link', {
+      name: 'ข้อมูลสินค้า',
+    }),
+  ).toBeVisible();
+  expect(
+    within(screen.getByRole('navigation', { name: 'เมนูหลัก' })).getByRole(
+      'link',
+      { name: 'ข้อมูลสินค้า' },
+    ),
+  ).toBeVisible();
   expect(
     document.querySelector('a[href="/manage/pos"]'),
   ).not.toBeInTheDocument();
@@ -240,8 +274,18 @@ it('keeps cashier menus scoped to granted tasks', () => {
     'sales.read',
   ]);
   renderWorkspace();
-  expect(screen.getByRole('link', { name: 'ขายหน้าร้าน' })).toBeVisible();
-  expect(screen.getByRole('link', { name: 'เปิดกะขาย' })).toBeVisible();
+  expect(
+    within(screen.getByRole('main')).getByRole('link', { name: 'ขายหน้าร้าน' }),
+  ).toBeVisible();
+  expect(
+    within(screen.getByRole('main')).getByRole('link', { name: 'เปิดกะ' }),
+  ).toBeVisible();
+  expect(
+    within(screen.getByRole('navigation', { name: 'เมนูหลัก' })).getByRole(
+      'link',
+      { name: 'ขายหน้าร้าน' },
+    ),
+  ).toBeVisible();
   expect(
     document.querySelector('a[href="/manage/inventory"]'),
   ).not.toBeInTheDocument();
@@ -252,7 +296,7 @@ it('redirects a staff dashboard bookmark to their own workspace', () => {
   renderWorkspace('/manage/dashboard');
   expect(screen.getByRole('heading', { name: 'งานของฉัน' })).toBeVisible();
   expect(
-    screen.queryByRole('heading', { name: 'ภาพรวมร้าน' }),
+    screen.queryByRole('heading', { name: 'ภาพรวม' }),
   ).not.toBeInTheDocument();
 });
 
@@ -389,4 +433,47 @@ it('keeps operational permission checks authoritative in work', () => {
   selectRole('OWNER', []);
   renderWorkspace('/work/products/item-1');
   expect(screen.getByRole('heading', { name: 'Forbidden' })).toBeVisible();
+});
+
+it('switches sales trend granularity and period filter on the management dashboard', () => {
+  selectRole('OWNER', allPermissions);
+  renderWorkspace('/manage/dashboard');
+  const dailyBtn = screen.getByRole('button', { name: 'รายวัน' });
+  const weeklyBtn = screen.getByRole('button', { name: 'รายสัปดาห์' });
+  const monthlyBtn = screen.getByRole('button', { name: 'รายเดือน' });
+
+  expect(dailyBtn).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByText('27 ต.ค. 2026')).toBeVisible();
+
+  fireEvent.click(weeklyBtn);
+  expect(weeklyBtn).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByText('สัปดาห์ที่ 4 ต.ค. 2026')).toBeVisible();
+
+  fireEvent.click(monthlyBtn);
+  expect(monthlyBtn).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByText('ตุลาคม 2026')).toBeVisible();
+
+  const periodSelect = screen.getByRole('combobox', { name: 'เลือกช่วงเวลา' });
+  expect(periodSelect).toHaveValue('30d');
+  fireEvent.change(periodSelect, { target: { value: '7d' } });
+  expect(periodSelect).toHaveValue('7d');
+});
+
+it.each([
+  '/manage/dashboard',
+  '/manage/products/item-1',
+  '/manage/settings/store',
+  '/work',
+  '/work/products/item-1',
+  '/account',
+])('does not render the tenant-switchers bar on %s', (path) => {
+  selectRole('OWNER', allPermissions);
+  renderWorkspace(path);
+  expect(document.querySelector('.tenant-switchers')).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('combobox', { name: 'องค์กรที่ใช้งาน' }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('combobox', { name: 'สาขาที่ใช้งาน' }),
+  ).not.toBeInTheDocument();
 });

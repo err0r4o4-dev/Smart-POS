@@ -197,3 +197,6 @@ export function useOrganization() {
   if (!value) throw new Error('OrganizationProvider is required');
   return value;
 }
+export function useOptionalOrganization() {
+  return useContext(OrganizationStateContext);
+}

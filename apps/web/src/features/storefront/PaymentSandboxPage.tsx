@@ -2,10 +2,22 @@ import { useLanguage } from '../../app/language';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Coins,
+  CreditCard,
+  ShieldCheck,
+} from 'lucide-react';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { Button, Card, Loading, Tag } from '../../components/ui/primitives';
+import {
+  StandardKpiCard,
+  StandardKpiGrid,
+  StandardPageHeader,
+} from '../../components/ui/StandardPage';
 import {
   createSandboxCheckout,
   refundSandboxCheckout,
@@ -124,15 +136,55 @@ function SandboxPanel({
   const error = status.error ?? checkout.error ?? create.error ?? refund.error;
   return (
     <div className="catalog-page online-admin">
-      <div className="shop-heading">
-        <div>
-          <p className="eyebrow">{t('storefront.onlinePaymentsSandbox')}</p>
-          <h1>{t('storefront.testStripeConnection')}</h1>
-        </div>
-        <Link to="/settings/storefront">
-          {t('storefront.backToStorefrontSettings')}
-        </Link>
-      </div>
+      <StandardPageHeader
+        icon={<CreditCard size={24} />}
+        eyebrow={t('storefront.onlinePaymentsSandbox')}
+        title={t('storefront.testStripeConnection')}
+        description={t('storefront.testModeOnlyNoRealFundsSales')}
+        actions={
+          <Link
+            className="button button-secondary sales-export-btn"
+            to="/settings/storefront"
+          >
+            <ArrowLeft size={15} aria-hidden="true" />
+            <span>{t('storefront.backToStorefrontSettings')}</span>
+          </Link>
+        }
+      />
+
+      <StandardKpiGrid label={t('storefront.onlinePaymentsSandbox')}>
+        <StandardKpiCard
+          icon={<CreditCard size={20} />}
+          tone="amber"
+          label="Provider"
+          value="Stripe Test"
+          sparkline
+        />
+        <StandardKpiCard
+          icon={<CheckCircle2 size={20} />}
+          tone={status.data?.configured ? 'success' : 'amber'}
+          label={t('storefront.connection')}
+          value={
+            status.data?.configured
+              ? t('storefront.testKeyConfigured')
+              : t('storefront.notReadyToTest')
+          }
+          trendUp={Boolean(status.data?.configured)}
+        />
+        <StandardKpiCard
+          icon={<Coins size={20} />}
+          tone="amber"
+          label={t('pos.total')}
+          value="฿20.00"
+        />
+        <StandardKpiCard
+          icon={<ShieldCheck size={20} />}
+          tone="info"
+          label={t('storefront.testSession')}
+          value={session ? session.slice(0, 12) + '…' : '—'}
+        />
+      </StandardKpiGrid>
+
       <p className="notice">{t('storefront.testModeOnlyNoRealFundsSales')}</p>
       {status.isPending && (
         <Loading>{t('storefront.checkingSandboxSettings')}</Loading>

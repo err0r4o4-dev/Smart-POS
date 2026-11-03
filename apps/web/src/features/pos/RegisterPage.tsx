@@ -1,7 +1,9 @@
 import { useLanguage } from '../../app/language';
 import { useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Clock } from 'lucide-react';
 import { Button, Card } from '../../components/ui/primitives';
+import { StandardPageHeader } from '../../components/ui/StandardPage';
 import {
   posRequest,
   moneyText,
@@ -77,8 +79,9 @@ export function RegisterPage({
   });
   return (
     <>
-      <h1>
-        {
+      <StandardPageHeader
+        icon={<Clock size={24} />}
+        title={
           {
             open: t('pos.openRegisterShift'),
             close: t('pos.closeShiftAndCountCash'),
@@ -86,7 +89,7 @@ export function RegisterPage({
             shifts: t('pos.paymentReview'),
           }[section]
         }
-      </h1>
+      />
       {section === 'open' && (
         <>
           <Card>
@@ -141,9 +144,7 @@ export function RegisterPage({
                 >
                   <option value="">{t('pos.selectLocation')}</option>
                   {locations.data?.items
-                    .filter((item) =>
-                      ['WAREHOUSE', 'SALES_FLOOR', 'SHELF'].includes(item.type),
-                    )
+                    .filter((item) => item.type === 'WAREHOUSE')
                     .map((item) => (
                       <option value={item.id} key={item.id}>
                         {item.name} ({item.type})

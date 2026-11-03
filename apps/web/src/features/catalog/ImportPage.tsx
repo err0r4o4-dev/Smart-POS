@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { Button, Card, Tag } from '../../components/ui/primitives';
+import { StandardContextBar } from '../../components/ui/StandardPage';
 import { uploadCatalog, type ImportJob } from '../../lib/catalog-api';
 import { useCatalog } from './catalog-hooks';
 import { CatalogHeader, CatalogNav, CatalogError } from './CatalogUI';
@@ -120,13 +121,17 @@ export function ImportPage() {
   }
   return (
     <div className="catalog-page">
-      <CatalogHeader title={t('catalog.importProductsCsvXlsx')}>
+      <CatalogHeader
+        title={t('catalog.importProductsCsvXlsx')}
+        icon={<UploadCloud size={24} />}
+      >
         <Link className="button button-secondary" to="/products">
           <ArrowLeft size={16} aria-hidden="true" />
           {t('catalog.backReturnToList')}
         </Link>
       </CatalogHeader>
       <CatalogNav />
+      <StandardContextBar />
       <Card>
         <div className="import-card-header">
           <h2>{t('catalog.step1SelectFileAndValidate')}</h2>

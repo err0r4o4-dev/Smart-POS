@@ -1,10 +1,32 @@
 import { useLanguage } from '../../app/language';
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavigate';
-import { ArrowLeft, Package } from 'lucide-react';
+import {
+  Archive,
+  ArrowLeft,
+  Award,
+  Check,
+  CheckCircle2,
+  ClipboardList,
+  Eye,
+  Layers,
+  Package,
+  PauseCircle,
+  Plus,
+  Printer,
+  Upload,
+} from 'lucide-react';
 import { Button, Card, Tag } from '../../components/ui/primitives';
+import {
+  StandardContextBar,
+  StandardFilterCard,
+  StandardKpiCard,
+  StandardKpiGrid,
+  StandardSearchField,
+  StandardStatusTabs,
+} from '../../components/ui/StandardPage';
 import { QueryFeedback } from '../../components/feedback/QueryFeedback';
 import {
   productInput,
@@ -64,98 +86,198 @@ export function ProductsPage() {
   );
   const categories = useTaxonomyOptions('categories');
   const brands = useTaxonomyOptions('brands');
+  const items = useMemo(() => query.data?.items ?? [], [query.data?.items]);
+  const totalProducts = query.data?.total ?? 0;
+  const activeCount = useMemo(
+    () => items.filter((item) => item.status === 'ACTIVE').length,
+    [items],
+  );
+  const inactiveCount = useMemo(
+    () => items.filter((item) => item.status === 'INACTIVE').length,
+    [items],
+  );
+  const archivedCount = useMemo(
+    () => items.filter((item) => item.status === 'ARCHIVED').length,
+    [items],
+  );
+
   return (
     <div className="catalog-page">
       <CatalogHeader title={t('common.products')}>
         <>
-          {catalog.tenant.can('catalog.create') && (
-            <Link className="button" to="/products/new">
-              {t('catalog.addProduct')}
-            </Link>
-          )}
           {catalog.tenant.can('catalog.import') && (
-            <Link className="button button-secondary" to="/products/import">
-              {t('catalog.importProducts')}
+            <Link
+              className="button button-secondary sales-export-btn"
+              to="/products/import"
+            >
+              <Upload size={15} aria-hidden="true" />
+              <span>{t('catalog.importProducts')}</span>
             </Link>
           )}
           {catalog.tenant.can('catalog.labels.print') && (
-            <Link className="button button-secondary" to="/products/labels">
-              {t('catalog.printLabels')}
+            <Link
+              className="button button-secondary sales-export-btn"
+              to="/products/labels"
+            >
+              <Printer size={15} aria-hidden="true" />
+              <span>{t('catalog.printLabels')}</span>
+            </Link>
+          )}
+          {catalog.tenant.can('catalog.create') && (
+            <Link className="button sales-new-sale-btn" to="/products/new">
+              <Plus size={16} aria-hidden="true" />
+              <span>{t('catalog.addProduct')}</span>
             </Link>
           )}
         </>
       </CatalogHeader>
       <CatalogNav />
+
+      <StandardKpiGrid label={t('common.products')}>
+        <StandardKpiCard
+          icon={<Package size={20} />}
+          tone="amber"
+          label={t('common.products')}
+          value={`${totalProducts} ${t('pos.itemsUnit')}`}
+          subtext={t('catalog.sharedOrganizationCatalog')}
+          sparkline
+        />
+        <StandardKpiCard
+          icon={<CheckCircle2 size={20} />}
+          tone="success"
+          label={labelCode('ACTIVE')}
+          value={`${activeCount} ${t('pos.itemsUnit')}`}
+          subtext={t('pos.ofAllItems')}
+          trendUp
+        />
+        <StandardKpiCard
+          icon={<Layers size={20} />}
+          tone="amber"
+          label={t('catalog.categories')}
+          value={`${categories.data?.length ?? 0} ${t('pos.itemsUnit')}`}
+        />
+        <StandardKpiCard
+          icon={<Award size={20} />}
+          tone="info"
+          label={t('catalog.brands')}
+          value={`${brands.data?.length ?? 0} ${t('pos.itemsUnit')}`}
+        />
+      </StandardKpiGrid>
+
       <BarcodeScanner />
-      <Card>
-        <form
-          className="catalog-filters"
-          onSubmit={(event) => {
-            event.preventDefault();
-            setParams(search ? { search } : {});
+
+      <StandardFilterCard
+        useForm
+        onSubmit={(event) => {
+          event.preventDefault();
+          setParams(search ? { search } : {});
+          setPage(1);
+        }}
+        onReset={() => {
+          setSearch('');
+          setParams({});
+          setStatus('');
+          setCategory(null);
+          setBrand(null);
+          setSort('name');
+          setPage(1);
+        }}
+        searchSubmit
+        searchLabel={t('common.searchProducts')}
+      >
+        <StandardSearchField
+          label={t('catalog.searchNameSkuBarcode')}
+          maxLength={200}
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+        <label className="sales-filter-field">
+          <span>{t('catalog.filterStatus')}</span>
+          <select
+            value={status}
+            onChange={(event) => {
+              setStatus(event.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="">{t('catalog.activeInactive')}</option>
+            {['ACTIVE', 'INACTIVE', 'ARCHIVED'].map((item) => (
+              <option key={item} value={item}>
+                {labelCode(item)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <TaxonomySelect
+          label={t('catalog.filterCategory')}
+          value={category}
+          items={categories.data ?? []}
+          change={(value) => {
+            setCategory(value);
             setPage(1);
           }}
-        >
-          <label className="tenant-field">
-            {t('catalog.searchNameSkuBarcode')}
-            <input
-              maxLength={200}
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-          </label>
-          <label className="tenant-field">
-            {t('catalog.filterStatus')}
-            <select
-              value={status}
-              onChange={(event) => {
-                setStatus(event.target.value);
-                setPage(1);
-              }}
-            >
-              <option value="">{t('catalog.activeInactive')}</option>
-              {['ACTIVE', 'INACTIVE', 'ARCHIVED'].map((item) => (
-                <option key={item} value={item}>
-                  {labelCode(item)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <TaxonomySelect
-            label={t('catalog.filterCategory')}
-            value={category}
-            items={categories.data ?? []}
-            change={(value) => {
-              setCategory(value);
+        />
+        <TaxonomySelect
+          label={t('catalog.filterBrand')}
+          value={brand}
+          items={brands.data ?? []}
+          change={(value) => {
+            setBrand(value);
+            setPage(1);
+          }}
+        />
+        <label className="sales-filter-field">
+          <span>{t('catalog.sortBy')}</span>
+          <select
+            value={sort}
+            onChange={(event) => {
+              setSort(event.target.value);
               setPage(1);
             }}
-          />
-          <TaxonomySelect
-            label={t('catalog.filterBrand')}
-            value={brand}
-            items={brands.data ?? []}
-            change={(value) => {
-              setBrand(value);
-              setPage(1);
-            }}
-          />
-          <label className="tenant-field">
-            {t('catalog.sortBy')}
-            <select
-              value={sort}
-              onChange={(event) => {
-                setSort(event.target.value);
-                setPage(1);
-              }}
-            >
-              <option value="name">{t('catalog.nameAZ')}</option>
-              <option value="-name">{t('catalog.nameZA')}</option>
-              <option value="-updated">{t('catalog.updated2')}</option>
-              <option value="updated">{t('catalog.oldestUpdated')}</option>
-            </select>
-          </label>
-          <Button type="submit">{t('common.searchProducts')}</Button>
-        </form>
+          >
+            <option value="name">{t('catalog.nameAZ')}</option>
+            <option value="-name">{t('catalog.nameZA')}</option>
+            <option value="-updated">{t('catalog.updated2')}</option>
+            <option value="updated">{t('catalog.oldestUpdated')}</option>
+          </select>
+        </label>
+      </StandardFilterCard>
+
+      <Card className="sales-table-card">
+        <StandardStatusTabs
+          ariaLabel={t('catalog.filterStatus')}
+          value={status}
+          onChange={(next) => {
+            setStatus(next);
+            setPage(1);
+          }}
+          tabs={[
+            {
+              key: '',
+              label: t('common.all'),
+              count: status === '' ? totalProducts : items.length,
+              icon: <ClipboardList size={15} aria-hidden="true" />,
+            },
+            {
+              key: 'ACTIVE',
+              label: labelCode('ACTIVE'),
+              count: activeCount,
+              icon: <CheckCircle2 size={15} aria-hidden="true" />,
+            },
+            {
+              key: 'INACTIVE',
+              label: labelCode('INACTIVE'),
+              count: inactiveCount,
+              icon: <PauseCircle size={15} aria-hidden="true" />,
+            },
+            {
+              key: 'ARCHIVED',
+              label: labelCode('ARCHIVED'),
+              count: archivedCount,
+              icon: <Archive size={15} aria-hidden="true" />,
+            },
+          ]}
+        />
         <QueryFeedback
           loading={
             query.isFetching || categories.isFetching || brands.isFetching
@@ -170,19 +292,22 @@ export function ProductsPage() {
         {query.data && (
           <>
             <div
-              className="catalog-table-wrap"
+              className="catalog-table-wrap table-scroll sales-history-table"
               tabIndex={0}
               role="region"
               aria-label={t('catalog.productList')}
             >
-              <table className="catalog-table">
+              <table className="catalog-table record-table">
                 <thead>
                   <tr>
                     <th>{t('common.products')}</th>
                     <th>{t('catalog.skuBarcode')}</th>
                     <th>{t('catalog.categoryBrand')}</th>
-                    <th>{t('catalog.sellingPrice')}</th>
+                    <th className="sales-amount">
+                      {t('catalog.sellingPrice')}
+                    </th>
                     <th>{t('auth.status')}</th>
+                    <th>{t('catalog.definitions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -191,13 +316,13 @@ export function ProductsPage() {
                       <td>
                         <div className="catalog-product-cell">
                           <span
-                            className="catalog-image"
+                            className="sales-doc-icon catalog-image"
                             aria-label={t('catalog.noProductImageYet')}
                           >
-                            <Package aria-hidden="true" />
+                            <Package size={18} aria-hidden="true" />
                           </span>
                           <Link to={`/products/${product.id}`}>
-                            {product.name}
+                            <strong>{product.name}</strong>
                           </Link>
                         </div>
                       </td>
@@ -205,7 +330,7 @@ export function ProductsPage() {
                         {product.variants.map((variant) => (
                           <div key={variant.id}>
                             <code>{variant.sku}</code>
-                            <small>
+                            <small className="sales-secondary">
                               {variant.barcodes.find((item) => item.is_primary)
                                 ?.code ?? t('catalog.noBarcodesYet')}
                             </small>
@@ -213,20 +338,40 @@ export function ProductsPage() {
                         ))}
                       </td>
                       <td>
-                        {product.category_name || '—'}
-                        <small>{product.brand_name || '—'}</small>
+                        <strong className="sales-branch-name">
+                          {product.category_name || '—'}
+                        </strong>
+                        <small className="sales-secondary">
+                          {product.brand_name || '—'}
+                        </small>
                       </td>
-                      <td>
+                      <td className="sales-amount">
                         {product.variants.map((variant) => (
                           <div key={variant.id}>
-                            {variant.selling_price} {variant.currency}
+                            <strong>
+                              ฿{variant.selling_price} {variant.currency}
+                            </strong>
                           </div>
                         ))}
                       </td>
                       <td>
                         <Tag tone={statusTone(product.status)}>
-                          {labelCode(product.status)}
+                          {product.status === 'ACTIVE' && (
+                            <Check size={12} aria-hidden="true" />
+                          )}
+                          <span>{labelCode(product.status)}</span>
                         </Tag>
+                      </td>
+                      <td>
+                        <div className="sales-row-actions">
+                          <Link
+                            to={`/products/${product.id}`}
+                            className="button button-secondary sales-detail-link"
+                          >
+                            <Eye size={15} aria-hidden="true" />
+                            <span>{t('pos.viewDetails')}</span>
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -234,7 +379,7 @@ export function ProductsPage() {
               </table>
             </div>
             {!query.data.items.length && (
-              <p className="empty-state">
+              <p className="empty-state sales-empty-message">
                 {t('catalog.noProductsFoundStartByCreatingUnits')}
               </p>
             )}
@@ -254,14 +399,18 @@ export function ProductDetailsPage() {
   return (
     <div className="catalog-page">
       <CatalogHeader title={t('catalog.productDetails')}>
+        <Link className="button button-secondary sales-export-btn" to="/products">
+          <ArrowLeft size={16} aria-hidden="true" />
+          <span>{t('catalog.backToProducts')}</span>
+        </Link>
         {catalog.tenant.can('catalog.update') && (
-          <Link className="button" to={`/products/${id}/edit`}>
-            {t('catalog.editProduct')}
+          <Link className="button sales-new-sale-btn" to={`/products/${id}/edit`}>
+            <span>{t('catalog.editProduct')}</span>
           </Link>
         )}
-        <Link to="/products">{t('catalog.backToProducts')}</Link>
       </CatalogHeader>
       <CatalogNav />
+      <StandardContextBar />
       <CatalogLoading pending={query.isPending} />
       <CatalogError error={query.error} />
       {query.data && (
@@ -424,6 +573,7 @@ function ProductEditor({
         </Link>
       </CatalogHeader>
       <CatalogNav />
+      <StandardContextBar />
       <Card>
         <form onSubmit={(event) => void submit(event)}>
           <h2>{t('catalog.productInformation')}</h2>

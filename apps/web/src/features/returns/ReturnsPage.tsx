@@ -1,10 +1,12 @@
 import { useLanguage } from '../../app/language';
 import { useState, type FormEvent } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
+import { Undo2 } from 'lucide-react';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
 import { Button, Card, Loading, Tag } from '../../components/ui/primitives';
+import { StandardPageHeader } from '../../components/ui/StandardPage';
 import { CatalogError } from '../catalog/CatalogUI';
 import { Field, SupplyTable } from '../purchasing/SupplyUI';
 import type { POSPage, POSShift, SaleSummary } from '../../lib/pos-api';
@@ -87,13 +89,12 @@ function RefundPage({ code }: { code: string }) {
   const id = isID ? code : matches?.length === 1 ? matches[0].id : '';
   return (
     <div className="catalog-page returns-page">
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">{t('returns.refundDetails')}</p>
-          <h1>{text.settlement}</h1>
-          <p>{code}</p>
-        </div>
-      </div>
+      <StandardPageHeader
+        icon={<Undo2 size={24} />}
+        eyebrow={t('returns.refundDetails')}
+        title={text.settlement}
+        description={code}
+      />
       <nav className="catalog-nav">
         <Link to="/sales/refunds">{text.refundList}</Link>
       </nav>
@@ -129,13 +130,12 @@ function ReturnsWorkspace({ refunds }: { refunds: boolean }) {
   );
   return (
     <div className="catalog-page returns-page">
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">{t('returns.businessOperations')}</p>
-          <h1>{refunds ? text.refunds : text.returns}</h1>
-          <p>{text.privacy}</p>
-        </div>
-      </div>
+      <StandardPageHeader
+        icon={<Undo2 size={24} />}
+        eyebrow={t('returns.businessOperations')}
+        title={refunds ? text.refunds : text.returns}
+        description={text.privacy}
+      />
       <nav className="catalog-nav">
         <Link to="/sales">{text.back}</Link>
         <Link to="/pos/returns">{text.returns}</Link>
@@ -430,9 +430,7 @@ function ReturnLines({
                         (location) =>
                           location.status === 'ACTIVE' &&
                           (disposition === 'RESTOCK_SELLABLE'
-                            ? ['WAREHOUSE', 'SHELF', 'SALES_FLOOR'].includes(
-                                location.type,
-                              )
+                            ? location.type === 'WAREHOUSE'
                             : location.type === disposition),
                       )
                       .map((location) => (

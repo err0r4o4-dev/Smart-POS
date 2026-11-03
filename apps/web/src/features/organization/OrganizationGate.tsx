@@ -3,6 +3,14 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useOrganization } from '../../app/OrganizationProvider';
 import { ErrorState, Loading } from '../../components/ui/primitives';
 import type { Role } from '../../app/access';
+
+function useSafeOrganization() {
+  try {
+    return useOrganization();
+  } catch {
+    return null;
+  }
+}
 export function OrganizationGate({
   permission,
   roles,
@@ -35,16 +43,20 @@ export function OrganizationGate({
     />
   );
 }
-export function ContextSwitchers() {
+export function ContextSwitchers({
+  className = 'tenant-switchers',
+}: {
+  className?: string;
+} = {}) {
   const { t } = useLanguage();
 
-  const tenant = useOrganization();
-  if (!tenant.organizations.length) return null;
+  const tenant = useSafeOrganization();
+  if (!tenant?.organizations?.length) return null;
   return (
-    <div className="tenant-switchers">
+    <div className={className}>
       {tenant.storeMode !== 'single' && (
-        <label>
-          {t('organization.organization')}
+        <label className="sales-filter-field">
+          <span>{t('organization.organization')}</span>
           <select
             aria-label={t('organization.activeOrganization')}
             value={tenant.context?.organization.id ?? ''}
@@ -62,8 +74,8 @@ export function ContextSwitchers() {
           </select>
         </label>
       )}
-      <label>
-        {t('organization.branch')}
+      <label className="sales-filter-field">
+        <span>{t('organization.branch')}</span>
         <select
           aria-label={t('organization.activeBranch')}
           value={tenant.branchID}
@@ -76,7 +88,7 @@ export function ContextSwitchers() {
           <option value="" disabled>
             {t('organization.noAccessibleBranches')}
           </option>
-          {tenant.context?.branches.map((item) => (
+          {tenant.context?.branches?.map((item) => (
             <option key={item.id} value={item.id}>
               {item.name}
             </option>

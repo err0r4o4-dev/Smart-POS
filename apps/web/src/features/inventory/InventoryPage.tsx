@@ -3,7 +3,11 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useQuery } from '@tanstack/react-query';
-import { MapPin, History } from 'lucide-react';
+import {
+  Boxes,
+  History,
+  MapPin,
+} from 'lucide-react';
 import { useInventoryCommand } from './inventory-hooks';
 import { QueryFeedback } from '../../components/feedback/QueryFeedback';
 import { useOrganization } from '../../app/OrganizationProvider';
@@ -18,6 +22,11 @@ import type {
   StockMovement,
 } from '../../lib/inventory-api';
 import { Button, Card, Tag } from '../../components/ui/primitives';
+import {
+  StandardFilterCard,
+  StandardPageHeader,
+  StandardSearchField,
+} from '../../components/ui/StandardPage';
 import { CatalogError, Pagination } from '../catalog/CatalogUI';
 import { Field, Table, Empty } from './InventoryUI';
 import {
@@ -89,13 +98,7 @@ const sections = [
 ] as const;
 const title = (section: string) =>
   sections.find(([name]) => name === section)?.[1] ?? 'dashboard.inventory';
-export function InventoryPage({
-  section,
-  shelfOnly = false,
-}: {
-  section: string;
-  shelfOnly?: boolean;
-}) {
+export function InventoryPage({ section }: { section: string }) {
   const tenant = useOrganization();
   const { id } = useParams();
   return (
@@ -103,18 +106,15 @@ export function InventoryPage({
       key={`${tenant.context?.organization.id}:${tenant.branchID}:${section}:${id ?? ''}`}
       section={section}
       id={id}
-      shelfOnly={shelfOnly}
     />
   );
 }
 function InventoryScreen({
   section,
   id,
-  shelfOnly,
 }: {
   section: string;
   id?: string;
-  shelfOnly?: boolean;
 }) {
   const { t, localize, labelCode } = useLanguage();
 
@@ -141,7 +141,6 @@ function InventoryScreen({
     type,
     page: String(page),
     page_size: '20',
-    ...(shelfOnly ? { shelf_only: 'true' } : {}),
     location_id: locationFilter,
     stock_status: stockStatus,
     category_id: category,
@@ -173,7 +172,7 @@ function InventoryScreen({
     queryKey: [...key, 'locations-for-form', locationPage],
     queryFn: ({ signal }) =>
       organizationRequest<InventoryPageData<StockLocation>>(
-        `${base}/locations?branch_id=${branch}&page_size=100&page=${locationPage}${shelfOnly ? '&shelf_only=true' : ''}`,
+        `${base}/locations?branch_id=${branch}&page_size=100&page=${locationPage}`,
         { signal },
       ),
     enabled: !!org && !!branch,
@@ -207,17 +206,12 @@ function InventoryScreen({
   }
   return (
     <section className="catalog-page inventory-page">
-      <header className="catalog-header">
-        <div>
-          <p className="eyebrow">
-            {shelfOnly
-              ? t('inventory.shelfCounts')
-              : t('inventory.manageStock')}
-          </p>
-          <h1>{t(title(section))}</h1>
-          <p>{t('inventory.reviewBranchBalancesMovementsAndStockCount')}</p>
-        </div>
-      </header>
+      <StandardPageHeader
+        icon={<Boxes size={24} />}
+        eyebrow={t('inventory.manageStock')}
+        title={t(title(section))}
+        description={t('inventory.reviewBranchBalancesMovementsAndStockCount')}
+      />
       <nav className="catalog-nav" aria-label={t('dashboard.inventory')}>
         {sections
           .filter(
@@ -233,11 +227,6 @@ function InventoryScreen({
             </Link>
           ))}
       </nav>
-      <p>
-        {t('inventory.scope')}{' '}
-        {tenant.context?.branches.find((item) => item.id === branch)?.name ??
-          t('inventory.noBranchSelected')}{' '}
-      </p>
       <CatalogError error={error} />
       <QueryFeedback
         loading={
@@ -262,151 +251,161 @@ function InventoryScreen({
         <p role="status">{t('inventory.selectAnAuthorizedBranchFirst')}</p>
       ) : null}
       {!id && branch && section !== 'overview' && (
-        <Card>
-          <form
-            className="inventory-filters"
-            onSubmit={(event) => {
-              event.preventDefault();
+        <StandardFilterCard
+          title={t('pos.searchAndFilterData')}
+          useForm
+          onSubmit={(event) => {
+            event.preventDefault();
+            setPage(1);
+          }}
+          onReset={() => {
+            setSearch('');
+            setLocationFilter('');
+            setStatus('');
+            setType('');
+            setStockStatus('');
+            setCategory('');
+            setProductStatus('');
+            setFrom('');
+            setTo('');
+            setActor('');
+            setPage(1);
+          }}
+          searchSubmit
+          searchLabel={t('customers.search')}
+        >
+          <StandardSearchField
+            label={t('inventory.searchSkuProductBarcode')}
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value);
               setPage(1);
             }}
-          >
-            <Field label={t('inventory.searchSkuProductBarcode')}>
-              <input
-                value={search}
+          />
+          {['balances', 'movements', 'counts'].includes(section) && (
+            <Field label={t('inventory.locationFilter')}>
+              <select
+                value={locationFilter}
                 onChange={(event) => {
-                  setSearch(event.target.value);
+                  setLocationFilter(event.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="">{t('common.all')}</option>
+                {locations.data?.items.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
+          {[
+            'locations',
+            'adjustments',
+            'counts',
+            'transfers',
+            'reorder-points',
+          ].includes(section) && (
+            <Field label={t('inventory.statusFilter')}>
+              <select
+                aria-label={t('inventory.statusFilter')}
+                value={status}
+                onChange={(event) => {
+                  setStatus(event.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="">{t('common.all')}</option>
+                {getStatusOptions(section).map((item) => (
+                  <option key={item} value={item}>
+                    {labelCode(item)}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
+          {['locations', 'balances', 'movements'].includes(section) && (
+            <Field label="Type / Movement type">
+              <input
+                value={type}
+                onChange={(event) => {
+                  setType(event.target.value);
                   setPage(1);
                 }}
               />
             </Field>
-            {['balances', 'movements', 'counts'].includes(section) && (
-              <Field label={t('inventory.locationFilter')}>
+          )}
+          {section === 'balances' && (
+            <>
+              <Field label={t('inventory.stockStatus')}>
                 <select
-                  value={locationFilter}
+                  value={stockStatus}
                   onChange={(event) => {
-                    setLocationFilter(event.target.value);
+                    setStockStatus(event.target.value);
                     setPage(1);
                   }}
                 >
                   <option value="">{t('common.all')}</option>
-                  {locations.data?.items.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            )}
-            {[
-              'locations',
-              'adjustments',
-              'counts',
-              'transfers',
-              'reorder-points',
-            ].includes(section) && (
-              <Field label={t('inventory.statusFilter')}>
-                <select
-                  aria-label={t('inventory.statusFilter')}
-                  value={status}
-                  onChange={(event) => {
-                    setStatus(event.target.value);
-                    setPage(1);
-                  }}
-                >
-                  <option value="">{t('common.all')}</option>
-                  {getStatusOptions(section).map((item) => (
+                  {['ZERO', 'POSITIVE', 'LOW'].map((item) => (
                     <option key={item} value={item}>
                       {labelCode(item)}
                     </option>
                   ))}
                 </select>
               </Field>
-            )}
-            {['locations', 'balances', 'movements'].includes(section) && (
-              <Field label="Type / Movement type">
+              <Field label={t('inventory.categoryUuid')}>
                 <input
-                  value={type}
+                  value={category}
                   onChange={(event) => {
-                    setType(event.target.value);
+                    setCategory(event.target.value);
                     setPage(1);
                   }}
                 />
               </Field>
-            )}
-            {section === 'balances' && (
-              <>
-                <Field label={t('inventory.stockStatus')}>
-                  <select
-                    value={stockStatus}
-                    onChange={(event) => {
-                      setStockStatus(event.target.value);
-                      setPage(1);
-                    }}
-                  >
-                    <option value="">{t('common.all')}</option>
-                    {['ZERO', 'POSITIVE', 'LOW'].map((item) => (
-                      <option key={item} value={item}>
-                        {labelCode(item)}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label={t('inventory.categoryUuid')}>
-                  <input
-                    value={category}
-                    onChange={(event) => {
-                      setCategory(event.target.value);
-                      setPage(1);
-                    }}
-                  />
-                </Field>
-                <Field label={t('inventory.productStatus')}>
-                  <select
-                    value={productStatus}
-                    onChange={(event) => {
-                      setProductStatus(event.target.value);
-                      setPage(1);
-                    }}
-                  >
-                    <option value="">{t('common.all')}</option>
-                    {['ACTIVE', 'INACTIVE', 'ARCHIVED'].map((item) => (
-                      <option key={item} value={item}>
-                        {labelCode(item)}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              </>
-            )}
-            {section === 'movements' && (
-              <>
-                <Field label={t('inventory.fromTimestamp')}>
-                  <input
-                    type="datetime-local"
-                    value={from}
-                    onChange={(event) => setFrom(event.target.value)}
-                  />
-                </Field>
-                <Field label={t('inventory.toTimestamp')}>
-                  <input
-                    type="datetime-local"
-                    value={to}
-                    onChange={(event) => setTo(event.target.value)}
-                  />
-                </Field>
-                <Field label={t('inventory.actorUuid')}>
-                  <input
-                    value={actor}
-                    onChange={(event) => setActor(event.target.value)}
-                  />
-                </Field>
-              </>
-            )}
-            <Button type="submit" className="button-secondary">
-              {t('customers.search')}
-            </Button>
-          </form>
-        </Card>
+              <Field label={t('inventory.productStatus')}>
+                <select
+                  value={productStatus}
+                  onChange={(event) => {
+                    setProductStatus(event.target.value);
+                    setPage(1);
+                  }}
+                >
+                  <option value="">{t('common.all')}</option>
+                  {['ACTIVE', 'INACTIVE', 'ARCHIVED'].map((item) => (
+                    <option key={item} value={item}>
+                      {labelCode(item)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </>
+          )}
+          {section === 'movements' && (
+            <>
+              <Field label={t('inventory.fromTimestamp')}>
+                <input
+                  type="datetime-local"
+                  value={from}
+                  onChange={(event) => setFrom(event.target.value)}
+                />
+              </Field>
+              <Field label={t('inventory.toTimestamp')}>
+                <input
+                  type="datetime-local"
+                  value={to}
+                  onChange={(event) => setTo(event.target.value)}
+                />
+              </Field>
+              <Field label={t('inventory.actorUuid')}>
+                <input
+                  value={actor}
+                  onChange={(event) => setActor(event.target.value)}
+                />
+              </Field>
+            </>
+          )}
+        </StandardFilterCard>
       )}
       {section === 'overview' && data && 'stock' in data && (
         <>

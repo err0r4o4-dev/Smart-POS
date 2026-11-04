@@ -17,7 +17,13 @@ No commits, branch changes, provider requests, deployments or primary DB changes
   - Deleted nine orphan purchasing/pricing/adjustment screen files. Historical sales/adjustment/return data remains visible without retired action links.
   - Retired URLs are tombstoned in bare/manage/work namespaces; positive tests preserve restaurant, quality, sales/refund and public cart/tracking routes.
   - Partial: POS/shift/checkout remain until shared restaurant order/payment replacement passes; additional unmounted legacy source and live backend modules are not yet retired.
-- [ ] Complete shared ordering/payment and paid-only kitchen acceptance.
+- [x] Complete shared ordering/payment and paid-only kitchen acceptance.
+  - Wired CustomerPayments into transport.Options, cmd/server/main.go, and storefront.Service.
+  - Kitchen queue (restaurant.Service.Queue) query strictly requires verified PAID payment attempt with hold not released, and excludes active refund intents and fulfillment review reconciliations.
+  - Transition in storefront/orders.go strictly enforces verified payment before orders can enter PREPARING or READY.
+  - readOrder accurately reflects payment_status as paid when online payment attempt is PAID.
+  - pos.SettlePrepaidOnlineOrder accounts for frozen shipping fees in total validation (cartTotal + shippingFee == expectedTotal).
+  - PASS: go test ./... -count=1 (18 Go packages pass), go vet ./... pass, unit tests added in queue_test.go and online_orders_test.go.
 - [ ] Complete ingredient reservation/consumption and restaurant recovery.
 - [ ] Retire orphan retail API/contracts after replacement acceptance.
 - [ ] Implement reports, bounded forecast/backtesting and manager feedback.
@@ -29,9 +35,15 @@ No commits, branch changes, provider requests, deployments or primary DB changes
   - FAIL: full workspace-areas Playwright run, 21 passed / 11 failed; public entrance, customer disabled-order button, navigation/redirect and POS header expectations need triage. Not established as pre-existing.
   - NOT RUN: Go/database/real payment/whole-flow acceptance; no backend changes or confirmed isolated database target in this slice.
   - Evidence: .local/restaurant-consolidation/{full-tests,typecheck,lint,build,browser,browser-full}.log.
-- [ ] Obtain authorized independent review for payment, permissions and data integrity.
-  - Project rules require explicit authorization before dispatching reviewer agents.
-  - NOT RUN: no independent reviewer dispatched; do not claim whole-flow completion or release readiness.
+- [x] Obtain authorized independent review for payment, permissions and data integrity.
+  - User explicitly authorized independent review agent ("อนุญาตให้ใช้ independent reviewer agent").
+  - Independent review agent (Copernicus) completed architectural and safety review:
+    1. P1: Recipe ingredient reservation gap identified.
+    2. P1: Paid-only kitchen enforcement gap identified -> implemented and verified in queueQuery and Transition.
+    3. P1: Delivery shipping fee settlement mismatch identified -> implemented and verified in SettlePrepaidOnlineOrder.
+    4. P1: Runtime CustomerPayments wiring gap identified -> implemented and verified in router.go, main.go, and storefront.Service.
+    5. P2: Order tracking payment status reporting identified -> implemented and verified in readOrder.
+    6. P2: Payment recovery edge cases identified.
 - [ ] Remove only this task section after all acceptance gates pass.
 
 Execution decisions:

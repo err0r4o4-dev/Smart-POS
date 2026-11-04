@@ -297,3 +297,18 @@ func TestQueuePeriodWithoutPreviousUsesConfiguredClose(testContext *testing.T) {
 		testContext.Fatalf("unexpected first period: %+v, %v", actual, err)
 	}
 }
+
+func TestQueueQueryEnforcesPaidAndReconciliationGuards(t *testing.T) {
+	requiredFragments := []string{
+		"payment.state='PAID'",
+		"NOT payment.stock_hold_released",
+		"online_refund_intents",
+		"online_payment_reconciliations",
+		"action='FULFILLMENT_REVIEW'",
+	}
+	for _, fragment := range requiredFragments {
+		if !strings.Contains(queueQuery, fragment) {
+			t.Fatalf("queueQuery must contain %q to enforce paid-only kitchen and prevent refunded/reconciled items from appearing", fragment)
+		}
+	}
+}

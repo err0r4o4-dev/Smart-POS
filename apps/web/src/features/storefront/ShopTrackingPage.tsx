@@ -13,11 +13,15 @@ export function ShopTrackingPage() {
   const { hash } = useLocation();
   const token = new URLSearchParams(hash.slice(1)).get('access') ?? '';
   const valid = /^[a-f0-9]{64}$/.test(token);
+
   const order = useQuery({
     queryKey: ['storefront-tracking', slug, orderId, token],
     queryFn: ({ signal }) =>
       storefrontRequest<OnlineOrder>(`/${slug}/track`, {
-        body: { order_id: orderId, access_token: token },
+        body: {
+          order_id: orderId,
+          access_token: token,
+        },
         signal,
       }),
     enabled: valid,
@@ -29,15 +33,38 @@ export function ShopTrackingPage() {
         : false,
     gcTime: 0,
   });
+
   return (
     <>
       <div className="shop-heading">
         <h1>{t('storefront.trackOrder')}</h1>
-        <Link to={`/shop/${slug}`}>{t('storefront.backToStorefront')}</Link>
+
+        <Link
+          to={`/shop/${slug}`}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '10px 16px',
+            borderRadius: 11,
+            border: '1px solid #F0C542',
+            background: '#FFF3CA',
+            color: '#111B38',
+            fontFamily: 'inherit',
+            fontSize: 14,
+            fontWeight: 700,
+            textDecoration: 'none',
+            lineHeight: 1.5,
+          }}
+        >
+          {t('storefront.backToStorefront')}
+        </Link>
       </div>
+
       <p className="notice">
         {t('storefront.keepThisLinkPrivateAnyoneWithThe')}
       </p>
+
       {!valid ? (
         <ShopError
           error={
@@ -49,12 +76,15 @@ export function ShopTrackingPage() {
           {order.isPending && (
             <Loading>{t('storefront.checkingOrderStatus')}</Loading>
           )}
+
           {order.error && (
             <ShopError error={order.error} retry={() => void order.refetch()} />
           )}
+
           {order.data && (
             <Card>
               <OrderDetails order={order.data} />
+
               <Button
                 className="button-secondary"
                 disabled={order.isFetching}

@@ -1,6 +1,9 @@
 import { defineMessages } from './defineMessages';
 export const catalog = defineMessages({
   th: {
+    restaurantItems: 'เมนูและวัตถุดิบ',
+    recipes: 'สูตรอาหาร',
+    searchRestaurantItems: 'ค้นหาชื่อเมนู / วัตถุดิบ / SKU',
     barcodeError: 'บาร์โค้ดผิดพลาด',
     barcode: 'บาร์โค้ด ·',
     primary: 'หลัก',
@@ -227,6 +230,9 @@ export const catalog = defineMessages({
     barcodeLabelsPrintPreview: 'ฉลากบาร์โค้ด / ตัวอย่างก่อนพิมพ์',
   },
   en: {
+    restaurantItems: 'Menu and ingredients',
+    recipes: 'Recipes',
+    searchRestaurantItems: 'Search menu / ingredients / SKU',
     barcodeError: 'Barcode error',
     barcode: 'Barcode ·',
     primary: 'Primary',

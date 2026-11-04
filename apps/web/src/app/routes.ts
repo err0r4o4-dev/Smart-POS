@@ -65,12 +65,6 @@ const managementItems: NavigationItem[] = [
     permission: 'inventory.read',
   },
   {
-    to: '/restaurant/forecast',
-    label: 'พยากรณ์ (ยังไม่พร้อม)',
-    icon: 'dashboard',
-    permission: 'sales.read',
-  },
-  {
     to: '/settings/storefront',
     label: 'หน้าร้านออนไลน์',
     icon: 'dashboard',
@@ -87,54 +81,6 @@ const managementItems: NavigationItem[] = [
     label: 'ของเสีย / หมดอายุ',
     icon: 'dashboard',
     permission: 'quality.read',
-  },
-  {
-    to: '/loyalty',
-    label: 'สมาชิกและรางวัล / Loyalty',
-    icon: 'dashboard',
-    permission: 'loyalty.read',
-  },
-  {
-    to: '/customers',
-    label: 'ฐานข้อมูลลูกค้า',
-    icon: 'dashboard',
-    permission: 'customers.read',
-  },
-  {
-    to: '/pricing',
-    label: 'ราคาเมนู',
-    icon: 'dashboard',
-    permission: 'pricing.read',
-  },
-  {
-    to: '/promotions',
-    label: 'โปรโมชัน / Promotions',
-    icon: 'dashboard',
-    permission: 'promotions.read',
-  },
-  {
-    to: '/discount-approvals',
-    label: 'อนุมัติส่วนลด',
-    icon: 'dashboard',
-    permission: 'discount.read',
-  },
-  {
-    to: '/pos/returns',
-    label: 'คืนสินค้าลูกค้า',
-    icon: 'pos',
-    permission: 'returns.read',
-  },
-  {
-    to: '/pos/exchanges',
-    label: 'เปลี่ยนสินค้า',
-    icon: 'pos',
-    permission: 'exchange.read',
-  },
-  {
-    to: '/sales/voids',
-    label: 'ยกเลิกรายการขาย',
-    icon: 'pos',
-    permission: 'sales.void.read',
   },
   {
     to: '/sales/refunds',
@@ -159,24 +105,6 @@ const managementItems: NavigationItem[] = [
     label: 'ใบเสร็จ',
     icon: 'dashboard',
     permission: 'receipts.read',
-  },
-  {
-    to: paths.inventory,
-    label: 'วัตถุดิบ',
-    icon: 'dashboard',
-    permission: 'inventory.read',
-  },
-  {
-    to: paths.suppliers,
-    label: 'ซัพพลายเออร์',
-    icon: 'dashboard',
-    permission: 'supplier.read',
-  },
-  {
-    to: paths.purchasing,
-    label: 'จัดซื้อ',
-    icon: 'dashboard',
-    permission: 'purchasing.read',
   },
   {
     to: paths.products,
@@ -214,17 +142,11 @@ const managementItems: NavigationItem[] = [
   { to: paths.help, label: 'คู่มือ', icon: 'help' },
 ];
 
-const restaurantManagementItems = managementItems.filter(
-  (item) => item.to !== paths.suppliers && item.to !== paths.purchasing,
-);
-
-export const navigation: NavigationItem[] = restaurantManagementItems.map(
-  (item) => ({
-    ...item,
-    to: workspacePath(item.to, 'management'),
-    roles: managementRoles,
-  }),
-);
+export const navigation: NavigationItem[] = managementItems.map((item) => ({
+  ...item,
+  to: workspacePath(item.to, 'management'),
+  roles: managementRoles,
+}));
 
 const staffItems: NavigationItem[] = [
   { to: paths.staff, label: 'งานของฉัน', icon: 'dashboard' },
@@ -246,27 +168,19 @@ const staffItems: NavigationItem[] = [
     icon: 'pos',
     permission: 'pos.register.close',
   },
-  ...restaurantManagementItems.filter((item) =>
+  ...managementItems.filter((item) =>
     [
       '/sales',
       '/receipts',
-      '/pos/returns',
-      '/pos/exchanges',
       '/sales/refunds',
-      '/sales/voids',
-      '/inventory',
       '/inventory/batches',
-      '/suppliers',
-      '/purchasing/orders',
-      '/customers',
       '/online-orders',
       '/restaurant/queue',
-      '/loyalty',
     ].includes(item.to),
   ),
   {
     to: paths.products,
-    label: 'ข้อมูลสินค้า',
+    label: 'เมนูอาหาร',
     icon: 'dashboard',
     permission: 'catalog.read',
   },
@@ -300,41 +214,18 @@ const managementGroups: NavigationGroup[] = [
   },
   {
     id: 'menu',
-    label: 'เมนูและโปรโมชัน',
-    paths: [
-      paths.products,
-      '/restaurant/recipes',
-      '/pricing',
-      '/promotions',
-      '/discount-approvals',
-    ],
+    label: 'เมนูและสูตรอาหาร',
+    paths: [paths.products, '/restaurant/recipes'],
   },
   {
     id: 'inventory',
     label: 'วัตถุดิบ',
-    paths: [
-      paths.inventory,
-      '/inventory/batches',
-      '/restaurant/quick-stock',
-      '/restaurant/forecast',
-    ],
-  },
-  {
-    id: 'customers',
-    label: 'ลูกค้าและสมาชิก',
-    paths: ['/customers', '/loyalty'],
+    paths: ['/inventory/batches', '/restaurant/quick-stock'],
   },
   {
     id: 'reports',
     label: 'รายงาน',
-    paths: [
-      '/sales',
-      '/receipts',
-      '/sales/refunds',
-      '/sales/voids',
-      '/pos/returns',
-      '/pos/exchanges',
-    ],
+    paths: ['/sales', '/receipts', '/sales/refunds'],
   },
   {
     id: 'settings',
@@ -369,24 +260,12 @@ const staffGroups: NavigationGroup[] = [
   {
     id: 'staff-reports',
     label: 'ยอดขายและการแก้ไข',
-    paths: [
-      '/sales',
-      '/receipts',
-      '/pos/returns',
-      '/pos/exchanges',
-      '/sales/voids',
-      '/sales/refunds',
-    ],
+    paths: ['/sales', '/receipts', '/sales/refunds'],
   },
   {
     id: 'staff-menu',
     label: 'เมนูและวัตถุดิบ',
-    paths: ['/products', '/inventory', '/inventory/batches'],
-  },
-  {
-    id: 'staff-customers',
-    label: 'ลูกค้าและสมาชิก',
-    paths: ['/customers', '/loyalty'],
+    paths: ['/products', '/inventory/batches'],
   },
 ];
 export const navigationGroups: NavigationGroup[] = managementGroups.map(

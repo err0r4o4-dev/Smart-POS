@@ -232,8 +232,7 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
 
   const effectivePageSize = query.data?.page_size || pageSize;
   const totalPages = Math.max(1, Math.ceil(totalRecords / effectivePageSize));
-  const startItem =
-    totalRecords === 0 ? 0 : (page - 1) * effectivePageSize + 1;
+  const startItem = totalRecords === 0 ? 0 : (page - 1) * effectivePageSize + 1;
   const endItem =
     totalRecords === 0
       ? 0
@@ -311,7 +310,10 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
       >
         <Card className="sales-kpi-card sales-kpi-card-featured">
           <div className="sales-kpi-content">
-            <span className="sales-kpi-icon sales-kpi-icon-amber" aria-hidden="true">
+            <span
+              className="sales-kpi-icon sales-kpi-icon-amber"
+              aria-hidden="true"
+            >
               <Coins size={20} />
             </span>
             <div className="sales-kpi-body">
@@ -362,7 +364,10 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
 
         <Card className="sales-kpi-card">
           <div className="sales-kpi-content">
-            <span className="sales-kpi-icon sales-kpi-icon-amber" aria-hidden="true">
+            <span
+              className="sales-kpi-icon sales-kpi-icon-amber"
+              aria-hidden="true"
+            >
               <FileText size={20} />
             </span>
             <div className="sales-kpi-body">
@@ -383,7 +388,10 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
 
         <Card className="sales-kpi-card">
           <div className="sales-kpi-content">
-            <span className="sales-kpi-icon sales-kpi-icon-amber" aria-hidden="true">
+            <span
+              className="sales-kpi-icon sales-kpi-icon-amber"
+              aria-hidden="true"
+            >
               <BadgeDollarSign size={20} />
             </span>
             <div className="sales-kpi-body">
@@ -429,7 +437,11 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
             <h2>{t('pos.searchAndFilterData')}</h2>
           </div>
           <div className="sales-filter-header-controls">
-            <div className="sales-date-presets" role="group" aria-label={t('pos.customDateRangePreset')}>
+            <div
+              className="sales-date-presets"
+              role="group"
+              aria-label={t('pos.customDateRangePreset')}
+            >
               {(
                 [
                   ['today', t('pos.todayPreset')],
@@ -1040,11 +1052,6 @@ export function SaleDetailsPage() {
       <div className="pos-sale-detail">
         <Card className="no-print sale-information">
           <h2>{sale.sale_number}</h2>
-          {sale.customer_id && tenant.can('loyalty.read') && (
-            <Link to={`/loyalty/history?customer_id=${sale.customer_id}`}>
-              {t('pos.customerPointsHistory')}
-            </Link>
-          )}
           <div className="sales-statuses">
             <Tag tone={sale.status === 'COMPLETED' ? 'success' : 'neutral'}>
               {sale.status === 'COMPLETED'
@@ -1159,30 +1166,15 @@ export function SaleDetailsPage() {
             </SupplyTable>
           </details>
           <p>{t('pos.originalSalesRemainUnchangedReturnsExchangesAnd')}</p>
-          <nav className="catalog-nav">
-            <Link to={`/pos/exchanges?sale_id=${sale.id}`}>
-              {t('pos.exchanges')}
-            </Link>
-            <Link to={`/sales/voids?sale_id=${sale.id}`}>
-              {t('pos.reversal')}
-            </Link>
-          </nav>
           {sale.adjustments?.map((item) => (
             <p key={item.id}>
-              <Link
-                to={`${item.kind === 'EXCHANGE' ? '/pos/exchanges' : '/sales/voids'}?document_id=${item.id}`}
-              >
-                {item.number}
-              </Link>{' '}
-              · {labelCode(item.status)} · {item.net_difference} THB
+              {item.number} · {labelCode(item.status)} · {item.net_difference}{' '}
+              THB
             </p>
           ))}
           {sale.returns?.map((item) => (
             <p key={item.id}>
-              <Link to={`/pos/returns?return_id=${item.id}`}>
-                {item.number}
-              </Link>{' '}
-              · {labelCode(item.status)}
+              {item.number} · {labelCode(item.status)}
             </p>
           ))}
         </Card>

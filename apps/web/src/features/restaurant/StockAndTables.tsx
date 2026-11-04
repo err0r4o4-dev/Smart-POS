@@ -7,7 +7,6 @@ import type {
   StockBalance,
   StockLocation,
 } from '../../lib/inventory-api';
-import { WorkspaceLink } from '../../app/WorkspaceNavigation';
 import type { ShopSettings } from '../../lib/storefront-api';
 import { Field, Table } from '../inventory/InventoryUI';
 import {
@@ -268,7 +267,6 @@ export function QuickStockScreen() {
           บันทึกวัตถุดิบ
         </Button>
       </form>
-      <WorkspaceLink to="/inventory">ดูยอดคงเหลือและประวัติสต็อก</WorkspaceLink>
     </Card>
   );
 }

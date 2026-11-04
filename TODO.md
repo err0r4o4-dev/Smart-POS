@@ -1,3 +1,44 @@
+# Restaurant-only consolidation (2026-11-04)
+
+Approved scope: execute the restaurant-only plan on feature/fix-flow-system.
+Keep dine-in QR, pickup, delivery, payment-before-kitchen, recipes/ingredients,
+sales/refunds, forecasting and feedback. Remove unrelated retail interfaces and
+retire unused backend entry points only after replacement/dependency checks.
+Preserve historical records, existing task sections and authorization boundaries.
+No commits, branch changes, provider requests, deployments or primary DB changes.
+
+- [x] Inspect current branch, dependencies and current acceptance gaps.
+  - Branch remains feature/fix-flow-system. Existing recipe-aware POS/inventory engines still have live callers; no backend or database changes made.
+  - Forecast remains FORECAST_NOT_CONFIGURED; storefront customer payment gateway is not wired in transport/router.go.
+- [x] Define and run failing tests for restaurant-only navigation/routes.
+  - RED/GREEN logs: .local/restaurant-consolidation/red-scope.log and scope-iteration.log; current full frontend suite passes.
+- [ ] Consolidate restaurant workspaces and remove unused retail screens.
+  - Completed UI slice: restaurant task dashboard replaces fabricated metrics; retail navigation/routes and catalog brand/barcode/import/label tools removed.
+  - Deleted nine orphan purchasing/pricing/adjustment screen files. Historical sales/adjustment/return data remains visible without retired action links.
+  - Retired URLs are tombstoned in bare/manage/work namespaces; positive tests preserve restaurant, quality, sales/refund and public cart/tracking routes.
+  - Partial: POS/shift/checkout remain until shared restaurant order/payment replacement passes; additional unmounted legacy source and live backend modules are not yet retired.
+- [ ] Complete shared ordering/payment and paid-only kitchen acceptance.
+- [ ] Complete ingredient reservation/consumption and restaurant recovery.
+- [ ] Retire orphan retail API/contracts after replacement acceptance.
+- [ ] Implement reports, bounded forecast/backtesting and manager feedback.
+- [ ] Run focused and full applicable checks, browser and isolated DB acceptance.
+  - PASS (2026-11-05): npm run test -- 52 frontend files / 355 tests, contracts 18 modules / 120 routes, logging 10 tests, dev-stack 5 tests.
+  - PASS: npm run typecheck; npm run lint (0 errors, 5 warnings); npm run build; git diff --check.
+  - PASS: focused Playwright workspace-areas restaurant/navigation checks, 15 cases; mocked API only, 320/768/1440px restaurant screenshots inspected.
+  - Main reviewed the affected UI diff, route precedence and retained historical display. Task-owned Vite server on port 15179 stopped after verification; no independent review claimed.
+  - FAIL: full workspace-areas Playwright run, 21 passed / 11 failed; public entrance, customer disabled-order button, navigation/redirect and POS header expectations need triage. Not established as pre-existing.
+  - NOT RUN: Go/database/real payment/whole-flow acceptance; no backend changes or confirmed isolated database target in this slice.
+  - Evidence: .local/restaurant-consolidation/{full-tests,typecheck,lint,build,browser,browser-full}.log.
+- [ ] Obtain authorized independent review for payment, permissions and data integrity.
+  - Project rules require explicit authorization before dispatching reviewer agents.
+  - NOT RUN: no independent reviewer dispatched; do not claim whole-flow completion or release readiness.
+- [ ] Remove only this task section after all acceptance gates pass.
+
+Execution decisions:
+- Use the current branch, already based on restaurant commit 440bafd; no merge or branch switch.
+- Use this existing tracker instead of creating additional plan/ledger files.
+- Do not drop historical tables or remove the payment/stock engine while callers remain.
+
 # Restaurant Ordering and Forecast Flow
 
 - [x] Inspect current storefront, POS, inventory, payment, and AI boundaries

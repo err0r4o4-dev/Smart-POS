@@ -125,6 +125,15 @@ it('shows forecast unavailability honestly rather than invented demand', async (
   expect(screen.queryByRole('table')).not.toBeInTheDocument();
 });
 
+it('does not send ingredient management back to the retired retail warehouse', async () => {
+  stockResponses();
+  view('quick-stock');
+  await screen.findByRole('option', { name: 'ครัวหลัก' });
+  expect(
+    document.querySelector('a[href="/inventory"]'),
+  ).not.toBeInTheDocument();
+});
+
 function stockResponses() {
   let version = 7;
   mocks.request.mockImplementation((_org: string, path: string) => {

@@ -82,54 +82,14 @@ export const TaxonomyPage = lazy(() =>
     default: module.TaxonomyPage,
   })),
 );
-export const ImportPage = lazy(() =>
-  import('../features/catalog/ImportPage').then((module) => ({
-    default: module.ImportPage,
-  })),
-);
-export const LabelsPage = lazy(() =>
-  import('../features/catalog/LabelsPage').then((module) => ({
-    default: module.LabelsPage,
-  })),
-);
-export const InventoryPage = lazy(() =>
-  import('../features/inventory/InventoryPage').then((module) => ({
-    default: module.InventoryPage,
-  })),
-);
-export const PurchasingPage = lazy(() =>
-  import('../features/purchasing/PurchasingPage').then((module) => ({
-    default: module.PurchasingPage,
-  })),
-);
 export const ReturnsPage = lazy(() =>
   import('../features/returns/ReturnsPage').then((module) => ({
     default: module.ReturnsPage,
   })),
 );
-export const AdjustmentsPage = lazy(() =>
-  import('../features/returns/AdjustmentsPage').then((module) => ({
-    default: module.AdjustmentsPage,
-  })),
-);
 export const POSWorkspace = lazy(() =>
   import('../features/pos/POSWorkspace').then((module) => ({
     default: module.POSWorkspace,
-  })),
-);
-export const PricingPage = lazy(() =>
-  import('../features/pricing/PricingPage').then((module) => ({
-    default: module.PricingPage,
-  })),
-);
-export const CustomersPage = lazy(() =>
-  import('../features/customers/CustomerPages').then((module) => ({
-    default: module.CustomersPage,
-  })),
-);
-export const LoyaltyPage = lazy(() =>
-  import('../features/loyalty/LoyaltyPage').then((module) => ({
-    default: module.LoyaltyPage,
   })),
 );
 export const QualityPage = lazy(() =>

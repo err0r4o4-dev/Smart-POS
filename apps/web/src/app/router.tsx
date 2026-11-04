@@ -16,16 +16,8 @@ import {
   ProductDetailsPage,
   ProductEditorPage,
   TaxonomyPage,
-  ImportPage,
-  LabelsPage,
-  InventoryPage,
-  PurchasingPage,
   ReturnsPage,
-  AdjustmentsPage,
   POSWorkspace,
-  PricingPage,
-  CustomersPage,
-  LoyaltyPage,
   QualityPage,
   POSTerminalPage,
   HeldCartsPage,
@@ -66,6 +58,37 @@ import {
 import { managementRoles } from './access';
 import { paths } from './routes';
 import { RequireSession } from './ProtectedRoute';
+
+const retiredRetailPaths = [
+  '/suppliers',
+  '/suppliers/*',
+  '/purchasing',
+  '/purchasing/*',
+  '/shelves',
+  '/shelves/*',
+  '/inventory',
+  '/inventory/*',
+  '/loyalty',
+  '/loyalty/*',
+  '/customers',
+  '/customers/*',
+  '/pricing',
+  '/pricing/*',
+  '/promotions',
+  '/promotions/*',
+  '/discount-approvals',
+  '/discount-approvals/*',
+  '/brands',
+  '/brands/*',
+  '/products/import',
+  '/products/labels',
+  '/pos/exchanges',
+  '/pos/exchanges/*',
+  '/pos/returns',
+  '/pos/returns/*',
+  '/sales/voids',
+  '/sales/voids/*',
+];
 
 const routes: RouteObject[] = [
   { path: '/', element: <LandingPage /> },
@@ -109,16 +132,6 @@ const routes: RouteObject[] = [
                 children: [
                   { path: paths.dashboard, element: <ManagementHomePage /> },
                   { path: paths.staff, element: <StaffHomePage /> },
-                ],
-              },
-              {
-                element: <OrganizationGate permission="loyalty.read" />,
-                children: [
-                  { path: '/loyalty', element: <LoyaltyPage /> },
-                  {
-                    path: '/loyalty/history',
-                    element: <LoyaltyPage history />,
-                  },
                 ],
               },
               {
@@ -175,27 +188,6 @@ const routes: RouteObject[] = [
                   },
                 ],
               },
-              {
-                element: <OrganizationGate permission="customers.read" />,
-                children: [
-                  { path: '/customers', element: <CustomersPage /> },
-                  {
-                    path: '/customers/:id',
-                    element: <CustomersPage view="detail" />,
-                  },
-                ],
-              },
-              {
-                element: (
-                  <OrganizationGate permission="customers.groups.read" />
-                ),
-                children: [
-                  {
-                    path: '/customers/groups',
-                    element: <CustomersPage view="groups" />,
-                  },
-                ],
-              },
               { path: paths.account, element: <AccountPage /> },
               {
                 element: <OrganizationGate permission="quality.read" />,
@@ -216,60 +208,6 @@ const routes: RouteObject[] = [
                 ],
               },
               {
-                element: <OrganizationGate permission="pricing.read" />,
-                children: [
-                  {
-                    path: '/pricing',
-                    element: <PricingPage view="overview" />,
-                  },
-                  {
-                    path: '/pricing/lists',
-                    element: <PricingPage view="lists" />,
-                  },
-                ],
-              },
-              {
-                element: <OrganizationGate permission="promotions.read" />,
-                children: [
-                  {
-                    path: '/promotions',
-                    element: <PricingPage view="promotions" />,
-                  },
-                  {
-                    path: '/promotions/:id',
-                    element: <PricingPage view="promotions" />,
-                  },
-                ],
-              },
-              {
-                element: <OrganizationGate permission="discount.read" />,
-                children: [
-                  {
-                    path: '/discount-approvals',
-                    element: <PricingPage view="approvals" />,
-                  },
-                ],
-              },
-              {
-                element: <OrganizationGate permission="exchange.read" />,
-                children: [
-                  { path: '/pos/exchanges', element: <AdjustmentsPage /> },
-                ],
-              },
-              {
-                element: <OrganizationGate permission="sales.void.read" />,
-                children: [
-                  {
-                    path: '/sales/voids',
-                    element: <AdjustmentsPage reversal />,
-                  },
-                ],
-              },
-              {
-                element: <OrganizationGate permission="returns.read" />,
-                children: [{ path: '/pos/returns', element: <ReturnsPage /> }],
-              },
-              {
                 element: <OrganizationGate permission="refunds.read" />,
                 children: [
                   {
@@ -279,62 +217,6 @@ const routes: RouteObject[] = [
                   {
                     path: '/sales/refunds/:code',
                     element: <ReturnsPage refunds />,
-                  },
-                ],
-              },
-              {
-                element: <OrganizationGate permission="supplier.read" />,
-                children: [
-                  {
-                    path: '/suppliers',
-                    element: <PurchasingPage view="suppliers" />,
-                  },
-                  {
-                    path: '/suppliers/:id',
-                    element: <PurchasingPage view="supplier" />,
-                  },
-                ],
-              },
-              {
-                element: <OrganizationGate permission="purchasing.read" />,
-                children: [
-                  {
-                    path: '/purchasing/orders',
-                    element: <PurchasingPage view="orders" />,
-                  },
-                  {
-                    path: '/purchasing/orders/:id',
-                    element: <PurchasingPage view="order" />,
-                  },
-                  {
-                    path: '/purchasing/receipts',
-                    element: <PurchasingPage view="receipts" />,
-                  },
-                  {
-                    path: '/purchasing/returns',
-                    element: <PurchasingPage view="returns" />,
-                  },
-                ],
-              },
-              {
-                element: (
-                  <OrganizationGate permission="purchasing.order.create" />
-                ),
-                children: [
-                  {
-                    path: '/purchasing/orders/new',
-                    element: <PurchasingPage view="new" />,
-                  },
-                ],
-              },
-              {
-                element: (
-                  <OrganizationGate permission="purchasing.suggestion.read" />
-                ),
-                children: [
-                  {
-                    path: '/purchasing/suggestions',
-                    element: <PurchasingPage view="suggestions" />,
                   },
                 ],
               },
@@ -352,35 +234,6 @@ const routes: RouteObject[] = [
                 ],
               },
               {
-                element: <OrganizationGate permission="inventory.read" />,
-                children: [
-                  {
-                    path: '/inventory',
-                    element: <InventoryPage section="overview" />,
-                  },
-                  ...[
-                    'balances',
-                    'locations',
-                    'movements',
-                    'adjustments',
-                    'counts',
-                    'transfers',
-                    'reorder-points',
-                  ].map((section) => ({
-                    path: '/inventory/' + section,
-                    element: <InventoryPage section={section} />,
-                  })),
-                  {
-                    path: '/inventory/counts/:id',
-                    element: <InventoryPage section="counts" />,
-                  },
-                  {
-                    path: '/inventory/transfers/:id',
-                    element: <InventoryPage section="transfers" />,
-                  },
-                ],
-              },
-              {
                 element: <OrganizationGate permission="catalog.read" />,
                 children: [
                   { path: '/products', element: <ProductsPage /> },
@@ -390,10 +243,6 @@ const routes: RouteObject[] = [
                     element: (
                       <TaxonomyPage key="categories" kind="categories" />
                     ),
-                  },
-                  {
-                    path: '/brands',
-                    element: <TaxonomyPage key="brands" kind="brands" />,
                   },
                   {
                     path: '/units',
@@ -414,18 +263,6 @@ const routes: RouteObject[] = [
                     path: '/products/:id/edit',
                     element: <ProductEditorPage edit />,
                   },
-                ],
-              },
-              {
-                element: <OrganizationGate permission="catalog.import" />,
-                children: [
-                  { path: '/products/import', element: <ImportPage /> },
-                ],
-              },
-              {
-                element: <OrganizationGate permission="catalog.labels.print" />,
-                children: [
-                  { path: '/products/labels', element: <LabelsPage /> },
                 ],
               },
               {
@@ -515,6 +352,14 @@ export const router = createBrowserRouter([
       </Suspense>
     ),
     errorElement: <PageError />,
-    children: scopeWorkspaceRoutes(routes),
+    children: [
+      ...['', '/manage', '/work'].flatMap((prefix) =>
+        retiredRetailPaths.map((path) => ({
+          path: prefix + path,
+          element: <SystemPage />,
+        })),
+      ),
+      ...scopeWorkspaceRoutes(routes),
+    ],
   },
 ]);

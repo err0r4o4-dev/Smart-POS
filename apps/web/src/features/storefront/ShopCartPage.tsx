@@ -1,6 +1,12 @@
-﻿import { useLanguage } from '../../app/language';
+import { useLanguage } from '../../app/language';
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { PackageOpen } from 'lucide-react';
 import { Button, Card, Loading } from '../../components/ui/primitives';
@@ -15,6 +21,7 @@ import {
   type ShopOrderInput,
   type ShopQuote,
   type ShopSettings,
+  readTableToken,
 } from '../../lib/storefront-api';
 import { ShopError } from './StorefrontPage';
 import { useShopCart, type CartEntry } from './shop-cart';
@@ -39,10 +46,15 @@ function pendingIdentity(slug: string): RequestIdentity | null {
 }
 export function ShopCartPage() {
   const { slug = '' } = useParams();
-  return <CartContents key={slug} slug={slug} />;
+  const { search } = useLocation();
+  return <CartContents key={`${slug}:${search}`} slug={slug} />;
 }
 function CartContents({ slug }: { slug: string }) {
   const { t } = useLanguage();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const tableToken = readTableToken(searchParams.toString());
+  const shopPath = location.pathname.replace(/\/cart$/, '') + location.search;
 
   const cart = useShopCart(slug);
   const navigate = useNavigate();
@@ -71,6 +83,9 @@ function CartContents({ slug }: { slug: string }) {
     mutationFn: () =>
       storefrontRequest<ShopQuote>(`/${slug}/quote`, {
         body: {
+          ...(tableToken
+            ? { fulfillment: 'PICKUP', table_token: tableToken }
+            : {}),
           items: cart.items.map(({ variant_id, quantity }) => ({
             variant_id,
             quantity,
@@ -208,8 +223,11 @@ function CartContents({ slug }: { slug: string }) {
     <>
       <div className="shop-heading">
         <h1>{t('pos.shoppingCart')}</h1>
-        <Link to={`/shop/${slug}`}>{t('storefront.chooseMoreProducts')}</Link>
+        <Link to={shopPath}>{t('storefront.chooseMoreProducts')}</Link>
       </div>
+      {tableToken === null && (
+        <p role="alert">ลิงก์โต๊ะไม่ถูกต้อง กรุณาสแกน QR ที่โต๊ะอีกครั้ง</p>
+      )}
       {shop.isPending && (
         <Loading>{t('storefront.checkingStoreStatus')}</Loading>
       )}
@@ -220,7 +238,7 @@ function CartContents({ slug }: { slug: string }) {
       {!cart.items.length && (
         <Card>
           <h2>{t('storefront.yourCartIsEmpty')}</h2>
-          <Link to={`/shop/${slug}`}>{t('storefront.backToProducts')}</Link>
+          <Link to={shopPath}>{t('storefront.backToProducts')}</Link>
         </Card>
       )}
       {!!cart.items.length && (
@@ -257,14 +275,28 @@ function CartContents({ slug }: { slug: string }) {
             ))}
           </section>
           <Card className="shop-checkout">
-            <h2>{t('storefront.pickUpAndPayInStore')}</h2>
+            <h2>
+              {tableToken
+                ? 'สั่งอาหารที่โต๊ะ'
+                : t('storefront.pickUpAndPayInStore')}
+            </h2>
+            {tableToken && (
+              <p className="notice">
+                ตรวจสอบรหัสโต๊ะและรายการอาหารในขั้นตรวจรายการ
+              </p>
+            )}
             <p>{shop.data?.pickup_instructions}</p>
             <p>
               {t('storefront.estimatedCartTotal')}{' '}
               <strong>฿{moneyText(centsText(estimated))}</strong>
             </p>
             <Button
-              disabled={busy || !valid || !shop.data?.accepting_orders}
+              disabled={
+                busy ||
+                !valid ||
+                tableToken === null ||
+                !shop.data?.accepting_orders
+              }
               onClick={() => {
                 setError(null);
                 quote.mutate();
@@ -296,11 +328,15 @@ function CartContents({ slug }: { slug: string }) {
                       quantity,
                     })),
                     quote_id: quote.data.quote_id,
+                    ...(tableToken
+                      ? { fulfillment: 'PICKUP', table_token: tableToken }
+                      : {}),
                     access_token: identity.token,
                   });
                 }}
               >
                 <div className="shop-quote" role="status">
+                  {quote.data.table_code && <p>โต๊ะ {quote.data.table_code}</p>}
                   <h3>
                     {t('storefront.latestTotal')}
                     {moneyText(quote.data.estimated_total)}
@@ -431,28 +467,15 @@ function CartLineItem({
         <input
           type="number"
           inputMode="decimal"
-          min={
-            ['COUNT', 'PACKAGING'].includes(item.unit_type)
-              ? '1'
-              : '0.001'
-          }
-          step={
-            ['COUNT', 'PACKAGING'].includes(item.unit_type)
-              ? '1'
-              : '0.001'
-          }
+          min={['COUNT', 'PACKAGING'].includes(item.unit_type) ? '1' : '0.001'}
+          step={['COUNT', 'PACKAGING'].includes(item.unit_type) ? '1' : '0.001'}
           value={item.quantity}
           disabled={busy}
           onChange={(event) => onUpdateQuantity(event.target.value)}
         />
       </label>
-      <Button
-        className="button-secondary"
-        disabled={busy}
-        onClick={onRemove}
-      >
-        {t('storefront.remove')} {item.product_name}{' '}
-        {t('catalog.remove2')}
+      <Button className="button-secondary" disabled={busy} onClick={onRemove}>
+        {t('storefront.remove')} {item.product_name} {t('catalog.remove2')}
       </Button>
     </Card>
   );

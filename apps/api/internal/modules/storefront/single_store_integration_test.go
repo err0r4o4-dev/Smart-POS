@@ -333,4 +333,18 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 		}
 		catalogAcceptance(t, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "catalog-fixture"))
 	})
+	t.Run("durable restaurant queue numbers", func(testContext *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "9c111111-1111-4111-8111-111111111111", createInput("QUEUE"))
+		if problem != nil {
+			testContext.Fatal(problem)
+		}
+		restaurantQueueAcceptance(testContext, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "queue-fixture"), first.Organization.ID)
+	})
+	t.Run("restaurant queue schema isolation", func(testContext *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "9d111111-1111-4111-8111-111111111111", createInput("QUEUE_SCHEMA"))
+		if problem != nil {
+			testContext.Fatal(problem)
+		}
+		restaurantQueueSchemaAcceptance(testContext, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "queue-schema-fixture"), first.Organization.ID)
+	})
 }

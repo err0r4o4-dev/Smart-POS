@@ -72,7 +72,18 @@ func readCart(ctx context.Context, tx pgx.Tx, actor organization.Member, user, o
 		}
 		value.BatchID = input.batch
 		value.BatchVerified = input.batch != nil
-		if err = inventory.QualityAvailabilityForCart(ctx, tx, org, stockLocation, value.VariantID, input.batch, id, &value.Available, &value.Saleable); err != nil {
+		recipe, hasRecipe, err := readActiveSaleRecipe(ctx, tx, org, item.BranchID, value.VariantID)
+		if err != nil {
+			return item, err
+		}
+		if hasRecipe {
+			var recipeSaleable bool
+			value.Available, recipeSaleable, err = recipeCapacity(ctx, tx, org, stockLocation, id, value.Quantity, recipe)
+			if err != nil {
+				return item, err
+			}
+			value.Saleable = value.Saleable && recipeSaleable
+		} else if err = inventory.QualityAvailabilityForCart(ctx, tx, org, stockLocation, value.VariantID, input.batch, id, &value.Available, &value.Saleable); err != nil {
 			return item, dbError(err)
 		}
 		amount, _ := scaled(value.LineTotal, 2)

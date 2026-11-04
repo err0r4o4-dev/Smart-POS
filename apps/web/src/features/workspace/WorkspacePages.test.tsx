@@ -275,7 +275,7 @@ it('keeps cashier menus scoped to granted tasks', () => {
   ]);
   renderWorkspace();
   expect(
-    within(screen.getByRole('main')).getByRole('link', { name: 'ขายหน้าร้าน' }),
+    within(screen.getByRole('main')).getByRole('link', { name: 'รับออเดอร์หน้าร้าน' }),
   ).toBeVisible();
   expect(
     within(screen.getByRole('main')).getByRole('link', { name: 'เปิดกะ' }),
@@ -283,7 +283,7 @@ it('keeps cashier menus scoped to granted tasks', () => {
   expect(
     within(screen.getByRole('navigation', { name: 'เมนูหลัก' })).getByRole(
       'link',
-      { name: 'ขายหน้าร้าน' },
+      { name: 'รับออเดอร์หน้าร้าน' },
     ),
   ).toBeVisible();
   expect(

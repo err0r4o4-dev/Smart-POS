@@ -8,6 +8,7 @@ import {
   OnlineOrdersPage,
   OnlineOrderPage,
   StorefrontSettingsPage,
+  RestaurantPage,
   DashboardPage,
   HelpPage,
   SystemPage,
@@ -123,6 +124,10 @@ const routes: RouteObject[] = [
               {
                 element: <OrganizationGate permission="online_orders.read" />,
                 children: [
+                  {
+                    path: '/restaurant/queue',
+                    element: <RestaurantPage view="queue" />,
+                  },
                   { path: '/online-orders', element: <OnlineOrdersPage /> },
                   {
                     path: '/online-orders/:orderId',
@@ -130,6 +135,28 @@ const routes: RouteObject[] = [
                   },
                 ],
               },
+              ...(
+                [
+                  ['recipes', 'catalog.read'],
+                  ['tables', 'online_orders.manage'],
+                  ['quick-stock', 'inventory.read'],
+                  ['forecast', 'sales.read'],
+                  ['settings', 'storefront.manage'],
+                ] as const
+              ).map(([view, permission]) => ({
+                element: (
+                  <OrganizationGate
+                    permission={permission}
+                    roles={managementRoles}
+                  />
+                ),
+                children: [
+                  {
+                    path: `/restaurant/${view}`,
+                    element: <RestaurantPage view={view} />,
+                  },
+                ],
+              })),
               {
                 element: (
                   <OrganizationGate

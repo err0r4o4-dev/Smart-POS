@@ -1,0 +1,56 @@
+.restaurant-page {
+  display: grid;
+  gap: var(--space-4, 1rem);
+  min-width: 0;
+}
+.restaurant-form {
+  display: grid;
+  gap: 1rem;
+  max-width: 60rem;
+}
+.restaurant-form fieldset,
+.restaurant-picker {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+.restaurant-picker legend {
+  padding: 0;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+.restaurant-ingredient {
+  display: grid;
+  gap: 0.75rem;
+  padding-block: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.restaurant-list {
+  display: grid;
+  gap: 1rem;
+  padding-inline-start: 1.5rem;
+}
+.restaurant-page .catalog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.restaurant-page .catalog-field {
+  min-width: 0;
+}
+.restaurant-page input,
+.restaurant-page select {
+  max-width: 100%;
+  min-width: 0;
+}
+@media (max-width: 640px) {
+  .restaurant-page .catalog-actions > .button {
+    flex: 1 1 auto;
+  }
+  .restaurant-page .catalog-panel {
+    padding: 1rem;
+  }
+}

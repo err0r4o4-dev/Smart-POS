@@ -376,6 +376,86 @@ it('does not invent an empty shop when loading fails', async () => {
     screen.queryByText('ยังไม่มีร้านที่เปิดเผยแพร่'),
   ).not.toBeInTheDocument();
 });
+it('keeps table QR context through cart review and submission', async () => {
+  const tableToken = 'c'.repeat(64);
+  fetchMock.mockImplementation(async (url: string) => {
+    if (url.endsWith('/quote'))
+      return response({ ...quote, table_code: 'T01' });
+    if (url.endsWith('/orders') || url.endsWith('/track'))
+      return response({ ...order, table_code: 'T01' });
+    if (url.includes('/products?'))
+      return response({ items: [product], total: 1, page: 1, page_size: 24 });
+    return response(settings);
+  });
+  localStorage.setItem(
+    'shop-cart:test-shop',
+    JSON.stringify([{ ...product, quantity: '1.000' }]),
+  );
+  view(`/shop/test-shop?table=${tableToken}`);
+  const cartLink = screen.getByRole('link', { name: /ตะกร้า/ });
+  expect(cartLink).toHaveAttribute(
+    'href',
+    `/shop/test-shop/cart?table=${tableToken}`,
+  );
+  fireEvent.click(cartLink);
+  const review = await screen.findByRole('button', {
+    name: 'ตรวจรายการและยอดล่าสุด',
+  });
+  await waitFor(() => expect(review).toBeEnabled());
+  fireEvent.click(review);
+  expect(await screen.findByText('โต๊ะ T01')).toBeVisible();
+  fireEvent.change(screen.getByLabelText('ชื่อผู้รับสินค้า'), {
+    target: { value: 'Synthetic guest' },
+  });
+  fireEvent.change(screen.getByLabelText('เบอร์ติดต่อ'), {
+    target: { value: '0800000000' },
+  });
+  fireEvent.click(screen.getByRole('checkbox'));
+  fireEvent.click(
+    screen.getByRole('button', { name: 'ส่งออเดอร์ · ยังไม่ชำระเงิน' }),
+  );
+  expect(
+    await screen.findByRole('heading', { name: 'ติดตามออเดอร์' }),
+  ).toBeVisible();
+  expect(await screen.findByText('โต๊ะ T01')).toBeVisible();
+  for (const endpoint of ['/quote', '/orders']) {
+    const call = fetchMock.mock.calls.find(([url]) =>
+      String(url).endsWith(endpoint),
+    );
+    expect(JSON.parse(call![1].body)).toEqual(
+      expect.objectContaining({
+        table_token: tableToken,
+        fulfillment: 'PICKUP',
+      }),
+    );
+  }
+});
+
+it.each([
+  'table=invalid',
+  'table=',
+  `table=${'A'.repeat(64)}`,
+  `table=${'a'.repeat(64)}&table=${'b'.repeat(64)}`,
+])(
+  'does not silently change an invalid QR into ordinary pickup: %s',
+  async (search) => {
+    localStorage.setItem(
+      'shop-cart:test-shop',
+      JSON.stringify([{ ...product, quantity: '1.000' }]),
+    );
+    view(`/shop/test-shop/cart?${search}`);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'ลิงก์โต๊ะไม่ถูกต้อง',
+    );
+    expect(
+      screen.getByRole('button', { name: 'ตรวจรายการและยอดล่าสุด' }),
+    ).toBeDisabled();
+    expect(
+      fetchMock.mock.calls.some(([url]) => String(url).endsWith('/quote')),
+    ).toBe(false);
+  },
+);
+
 it('invalidates a reviewed quote after quantity changes', async () => {
   localStorage.setItem(
     'shop-cart:test-shop',

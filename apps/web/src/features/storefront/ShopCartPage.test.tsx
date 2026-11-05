@@ -137,6 +137,52 @@ it('quotes and submits delivery with the customer address', async () => {
   );
 });
 
+it('keeps the quoted delivery total as a heading', async () => {
+  request.mockImplementation(async (path: string) =>
+    path.endsWith('/quote')
+      ? {
+          quote_id: 'quote',
+          items: [],
+          estimated_total: '15.00',
+          shipping_fee: '5.00',
+          currency: 'THB',
+        }
+      : { accepting_orders: true, delivery_enabled: true },
+  );
+  view();
+  fireEvent.click(await screen.findByRole('button', { name: 'จัดส่ง' }));
+  fireEvent.click(
+    screen.getByRole('button', { name: 'ตรวจรายการและยอดล่าสุด' }),
+  );
+  expect(await screen.findByRole('heading', { name: /15\.00/ })).toBeVisible();
+});
+
+it('shows delivery fee copy without the pickup-only disclaimer', async () => {
+  request.mockImplementation(async (path: string) =>
+    path.endsWith('/quote')
+      ? {
+          quote_id: 'quote',
+          items: [],
+          estimated_total: '15.00',
+          shipping_fee: '5.00',
+          currency: 'THB',
+        }
+      : { accepting_orders: true, delivery_enabled: true },
+  );
+  view();
+  fireEvent.click(await screen.findByRole('button', { name: 'จัดส่ง' }));
+  fireEvent.click(
+    screen.getByRole('button', { name: 'ตรวจรายการและยอดล่าสุด' }),
+  );
+  expect(await screen.findByText('ค่าจัดส่ง ฿5.00')).toBeVisible();
+  expect(
+    screen.queryByText(/ไม่มีค่าจัดส่ง เพราะรับที่ร้านเท่านั้น/),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByText('ยอดรวมรวมค่าจัดส่งแล้ว ยังไม่รวมส่วนลด/รางวัลที่อาจใช้ได้ที่ POS'),
+  ).toBeVisible();
+});
+
 it('requires a QR token for dine-in and never submits an example table', async () => {
   view();
   fireEvent.click(screen.getByRole('button', { name: 'ทานที่ร้าน' }));

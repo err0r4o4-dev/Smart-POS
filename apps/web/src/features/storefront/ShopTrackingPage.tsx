@@ -129,7 +129,10 @@ function TrackingContents({
     queryKey: ['storefront-tracking', slug, orderId, token],
     queryFn: ({ signal }) =>
       storefrontRequest<OnlineOrder>(`/${slug}/track`, {
-        body: { order_id: orderId, access_token: token },
+        body: {
+          order_id: orderId,
+          access_token: token,
+        },
         signal,
       }),
     enabled: valid,
@@ -183,13 +186,35 @@ function TrackingContents({
     <>
       <div className="shop-heading">
         <h1>{t('storefront.trackOrder')}</h1>
-        <Link to={`/shop/${slug}`}>{t('storefront.backToStorefront')}</Link>
+
+        <Link
+          to={`/shop/${slug}`}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '10px 16px',
+            borderRadius: 11,
+            border: '1px solid #F0C542',
+            background: '#FFF3CA',
+            color: '#111B38',
+            fontFamily: 'inherit',
+            fontSize: 14,
+            fontWeight: 700,
+            textDecoration: 'none',
+            lineHeight: 1.5,
+          }}
+        >
+          {t('storefront.backToStorefront')}
+        </Link>
       </div>
+
       <p className="notice">
         {language === 'th'
           ? 'เก็บลิงก์นี้เป็นส่วนตัว ผู้ที่มีลิงก์สามารถดูออเดอร์ได้'
           : 'Keep this link private. Anyone with it can view the order.'}
       </p>
+
       {!valid ? (
         <ShopError
           error={
@@ -201,9 +226,11 @@ function TrackingContents({
           {order.isPending && (
             <Loading>{t('storefront.checkingOrderStatus')}</Loading>
           )}
+
           {order.error && (
             <ShopError error={order.error} retry={() => void order.refetch()} />
           )}
+
           {order.data && (
             <Card>
               <OrderDetails order={order.data} />

@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Loading, Tag } from '../../components/ui/primitives';
 import { AuthLayout } from '../../layouts/AuthLayout';
+import { LoginLayout } from '../../layouts/LoginLayout';
 import { forgotPassword, register, resetPassword } from '../../lib/api';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
@@ -96,10 +97,10 @@ export function LoginPage() {
     }
   };
   return (
-    <AuthLayout>
+    <LoginLayout>
       <div className="auth-header-card">
         <Tag tone="amber">{t('auth.accountAccess')}</Tag>
-        <h2>{t('auth.welcomeBack')}</h2>
+        <h2 id="login-title">{t('auth.welcomeBack')}</h2>
         <p>{t('auth.signInForStoreOwnersManagersAnd')}</p>
       </div>
       {params.has('registered') && (
@@ -151,7 +152,7 @@ export function LoginPage() {
           <Link to="/register">{t('auth.createAccount')}</Link>
         </div>
       </div>
-    </AuthLayout>
+    </LoginLayout>
   );
 }
 

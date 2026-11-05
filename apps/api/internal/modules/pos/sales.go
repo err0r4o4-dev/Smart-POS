@@ -43,13 +43,21 @@ func settle(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org
 	if err = validateReward(ctx, tx, actor, org, item); err != nil {
 		return "", err
 	}
-	movements := []inventory.Item{}
+	movements, err := effectiveSaleMovements(ctx, tx, org, item.BranchID, item.Items)
+	if err != nil {
+		return "", err
+	}
 	for _, snapshot := range item.Items {
 		current, err := variant(ctx, tx, org, value.StockLocationID, snapshot.VariantID, snapshot.Quantity, snapshot.UnitPrice)
 		if err != nil {
 			return "", err
 		}
-		if err = inventory.QualityAvailabilityForCart(ctx, tx, org, value.StockLocationID, snapshot.VariantID, snapshot.BatchID, item.CartID, &current.Available, &current.Saleable); err != nil {
+		_, hasRecipe, err := readActiveSaleRecipe(ctx, tx, org, item.BranchID, snapshot.VariantID)
+		if err != nil {
+			return "", err
+		}
+		if hasRecipe {
+		} else if err = inventory.QualityAvailabilityForCart(ctx, tx, org, value.StockLocationID, snapshot.VariantID, snapshot.BatchID, item.CartID, &current.Available, &current.Saleable); err != nil {
 			return "", dbError(err)
 		}
 		if !current.Saleable {
@@ -58,12 +66,13 @@ func settle(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org
 		if current.PriceChanged {
 			return "", ErrPrice
 		}
-		quantity, _ := scaled(current.Quantity, 3)
-		stock, _ := scaled(current.Available, 3)
-		if stock < quantity {
-			return "", ErrStock
+		if !hasRecipe {
+			quantity, _ := scaled(current.Quantity, 3)
+			stock, _ := scaled(current.Available, 3)
+			if stock < quantity {
+				return "", ErrStock
+			}
 		}
-		movements = append(movements, inventory.Item{VariantID: snapshot.VariantID, Quantity: snapshot.Quantity, BatchID: snapshot.BatchID})
 	}
 	op, err := inventory.BeginSale(ctx, tx, user, org, item.ID, item.Items)
 	if err != nil {

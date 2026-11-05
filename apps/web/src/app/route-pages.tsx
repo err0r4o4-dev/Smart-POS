@@ -1,5 +1,11 @@
 import { lazy } from 'react';
 
+export const RestaurantPage = lazy(() =>
+  import('../features/restaurant/RestaurantPage').then((module) => ({
+    default: module.RestaurantPage,
+  })),
+);
+
 export const PaymentSandboxPage = lazy(() =>
   import('../features/storefront/PaymentSandboxPage').then((module) => ({
     default: module.PaymentSandboxPage,

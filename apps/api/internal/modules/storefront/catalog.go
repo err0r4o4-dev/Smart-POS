@@ -31,7 +31,16 @@ func productForOrder(ctx context.Context, tx pgx.Tx, org string, shop Settings, 
 	_, priceError := pos.EstimateOnlineLine(result.UnitPrice, "1.000", result.UnitType)
 	result.Saleable = value.ProductStatus == "ACTIVE" && value.VariantStatus == "ACTIVE" && value.UnitStatus == "ACTIVE" && value.Currency == "THB" && priceError == nil
 	err = tx.QueryRow(ctx, `SELECT COALESCE((SELECT published FROM storefront_products WHERE organization_id=$1 AND variant_id=$2),false),greatest(0.000,storefront_sellable_quantity($1,$3,$2)-storefront_reserved_quantity($1,$3,$2)+COALESCE((SELECT item.quantity FROM online_order_items item JOIN online_orders doc ON doc.organization_id=item.organization_id AND doc.id=item.order_id WHERE item.organization_id=$1 AND item.variant_id=$2 AND doc.id=nullif($4,'')::uuid AND doc.stock_location_id=$3 AND doc.stock_reserved AND storefront_order_live(doc.organization_id,doc.id)),0.000))::text`, org, id, shop.LocationID, order).Scan(&result.Published, &result.Available)
-	return result, dbError(err)
+	if err != nil {
+		return result, dbError(err)
+	}
+	if recipeAvailable, hasRecipe, recipeSaleable, problem := pos.RecipeAvailability(ctx, tx, org, shop.BranchID, shop.LocationID, order, id, "1.000"); problem != nil {
+		return result, problem
+	} else if hasRecipe {
+		result.Available = recipeAvailable
+		result.Saleable = result.Saleable && recipeSaleable
+	}
+	return result, nil
 }
 func products(ctx context.Context, tx pgx.Tx, org string, shop Settings, search string, page int, public bool) (Page[Product], error) {
 	result := Page[Product]{Items: []Product{}, Page: page, PageSize: 24}
@@ -163,6 +172,12 @@ func quote(ctx context.Context, tx pgx.Tx, org string, shop Settings, items []It
 		if err != nil {
 			return result, err
 		}
+		if recipeAvailable, hasRecipe, recipeSaleable, problem := pos.RecipeAvailability(ctx, tx, org, shop.BranchID, shop.LocationID, "", input.VariantID, input.Quantity); problem != nil {
+			return result, problem
+		} else if hasRecipe {
+			value.Available = recipeAvailable
+			value.Saleable = value.Saleable && recipeSaleable
+		}
 		if !value.Published || !value.Saleable {
 			return result, ErrStock
 		}
@@ -203,6 +218,9 @@ func quote(ctx context.Context, tx pgx.Tx, org string, shop Settings, items []It
 	return result, nil
 }
 func (service *Service) Quote(ctx context.Context, slug string, input QuoteInput) (Quote, error) {
+	if input.validateTableContext() != nil {
+		return Quote{}, ErrInput
+	}
 	tx, org, err := service.public(ctx, slug, false)
 	if err != nil {
 		return Quote{}, err
@@ -212,9 +230,25 @@ func (service *Service) Quote(ctx context.Context, slug string, input QuoteInput
 	if err != nil {
 		return Quote{}, err
 	}
-	result, err := quote(ctx, tx, org, shop, input.Items, input.Fulfillment)
+	result, _, err := quoteForTable(ctx, tx, org, shop, input)
 	if err != nil {
 		return result, fmt.Errorf("quote: %w", err)
 	}
 	return result, nil
+}
+
+func quoteForTable(ctx context.Context, tx pgx.Tx, org string, shop Settings, input QuoteInput) (Quote, string, error) {
+	tableID, tableCode, err := dineInTable(ctx, tx, org, shop.BranchID, input.TableToken)
+	if err != nil {
+		return Quote{}, "", err
+	}
+	result, err := quote(ctx, tx, org, shop, input.Items, input.Fulfillment)
+	if err != nil {
+		return result, "", err
+	}
+	if tableID != "" {
+		result.TableCode = tableCode
+		result.ID = digest(struct{ QuoteID, TableID, TableCode string }{result.ID, tableID, tableCode})
+	}
+	return result, tableID, nil
 }

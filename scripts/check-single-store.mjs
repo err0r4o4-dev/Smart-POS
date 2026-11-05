@@ -151,7 +151,7 @@ try {
   }
   if (!ready) throw new Error('Ephemeral PostgreSQL did not become ready.');
   const migrationDSN = `postgres://smartpos_dev:${password}@${name}-db:5432/${database}?sslmode=disable`;
-  run('docker', [
+  const migrationArgs = [
     'run',
     '--rm',
     '--pull',
@@ -166,9 +166,11 @@ try {
     '-database',
     migrationDSN,
     'up',
-  ]);
+  ];
+  run('docker', migrationArgs);
+  run('docker', migrationArgs);
   console.log(
-    'PASS: official migrations applied only to new task-owned tmpfs PostgreSQL.',
+    'PASS: official migrations and no-change rerun applied only to new task-owned tmpfs PostgreSQL.',
   );
   run('docker', [
     'exec',

@@ -5,15 +5,15 @@ import YAML from 'yaml';
 const modules = JSON.parse(
   readFileSync('packages/contracts/routes.json', 'utf8'),
 );
-const expected = [6, 4, 9, 6, 9, 11, 7, 8, 5, 5, 4, 6, 7, 5, 10, 4, 8];
-assert.equal(modules.length, 17);
+const expected = [6, 4, 9, 6, 9, 11, 7, 8, 5, 5, 4, 6, 7, 5, 10, 4, 8, 6];
+assert.equal(modules.length, 18);
 assert.deepEqual(
   modules.map((item) => item.routes.length),
   expected,
 );
 const routes = modules.flatMap((item) => item.routes);
-assert.equal(routes.length, 114);
-assert.equal(new Set(routes).size, 114);
+assert.equal(routes.length, 120);
+assert.equal(new Set(routes).size, 120);
 const routeDocs = readFileSync('docs/architecture/routes.md', 'utf8');
 const moduleDocs = readFileSync('docs/architecture/modules.md', 'utf8');
 for (const item of modules) {
@@ -33,6 +33,17 @@ const sandboxPaths = [
 ].map(
   (suffix) => '/api/v1/organizations/{id}/storefront/payment-sandbox' + suffix,
 );
+const restaurantPaths = [
+  '/settings',
+  '/recipes',
+  '/recipes/{recipeId}',
+  '/tables',
+  '/tables/{tableId}',
+  '/queue',
+  '/forecast',
+  '/quick-stock',
+].map((path) => '/api/v1/organizations/{id}/restaurant' + path);
+
 const storefrontPaths = [
   '/api/v1/storefronts',
   ...['', '/products', '/quote', '/orders', '/track'].map(
@@ -236,6 +247,7 @@ assert.deepEqual(
     ...loyaltyPaths,
     ...qualityPaths,
     ...storefrontPaths,
+    ...restaurantPaths,
     ...sandboxPaths,
     '/api/v1/auth/forgot-password',
     '/api/v1/auth/login',
@@ -353,8 +365,8 @@ for (const path of ['/api/v1/organizations', '/api/v1/storefronts']) {
 assert.ok(
   api.paths['/api/v1/organizations'].post.description.includes('single-store'),
 );
-for (const path of storefrontPaths) {
-  for (const method of ['get', 'post', 'put']) {
+for (const path of [...storefrontPaths, ...restaurantPaths]) {
+  for (const method of ['get', 'post', 'put', 'patch']) {
     const operation = api.paths[path][method];
     if (!operation) continue;
     if (path.startsWith('/api/v1/storefronts')) {
@@ -379,6 +391,64 @@ assert.equal(
   api.components.schemas.StorefrontOrderInput.properties.access_token.pattern,
   '^[a-f0-9]{64}$',
 );
+for (const name of ['StorefrontQuoteInput', 'StorefrontOrderInput']) {
+  const schema = api.components.schemas[name];
+  assert.equal(schema.properties.table_token?.writeOnly, true);
+  assert.equal(schema.properties.table_token?.pattern, '^[a-f0-9]{64}$');
+  assert.deepEqual(schema.properties.fulfillment?.enum, ['PICKUP', 'DELIVERY']);
+  assert.ok(
+    schema.allOf.some(
+      (rule) =>
+        rule.if?.required?.includes('table_token') &&
+        rule.then?.properties?.fulfillment?.const === 'PICKUP',
+    ),
+  );
+}
+for (const name of [
+  'StorefrontQuote',
+  'PublicOnlineOrder',
+  'OnlineOrder',
+  'RestaurantQueueItem',
+]) {
+  assert.equal(
+    api.components.schemas[name].properties.table_code?.type,
+    'string',
+  );
+  assert.equal(api.components.schemas[name].properties.table_token, undefined);
+}
+assert.equal(
+  api.components.schemas.RestaurantTable.properties.qr_token?.readOnly,
+  true,
+);
+assert.equal(
+  api.components.schemas.RestaurantTable.properties.qr_token?.pattern,
+  '^[a-f0-9]{64}$',
+);
+assert.ok(
+  api.components.schemas.RestaurantQueueItem.properties.channel.enum.includes(
+    'DINE_IN',
+  ),
+);
+const restaurantQueue =
+  api.paths['/api/v1/organizations/{id}/restaurant/queue'].get;
+assert.deepEqual(restaurantQueue.security, [{ sessionCookie: [] }]);
+assert.match(restaurantQueue.description, /durable queue numbers/i);
+assert.doesNotMatch(restaurantQueue.description, /no daily queue allocation/i);
+const restaurantQueueNumber =
+  api.components.schemas.RestaurantQueueItem.properties.queue_number;
+assert.equal(restaurantQueueNumber.type, 'string');
+for (const pattern of [
+  /durable/i,
+  /closing time/i,
+  /midnight alone/i,
+  /gaps/i,
+  /WEB-/,
+])
+  assert.match(restaurantQueueNumber.description, pattern);
+assert.doesNotMatch(
+  restaurantQueueNumber.description,
+  /current position|not a durable|can change when orders leave/i,
+);
 for (const field of [
   'customer_name',
   'contact_phone',
@@ -388,6 +458,9 @@ for (const field of [
   'cart_id',
   'sale_id',
   'access_hash',
+  'delivery_address',
+  'table_token',
+  'qr_token',
 ])
   assert.equal(
     api.components.schemas.PublicOnlineOrder.properties[field],
@@ -809,5 +882,5 @@ assert.ok(
   'Internal AI must not publish a host port',
 );
 console.log(
-  'PASS: 17 modules, 114 unique documented routes, Stripe sandbox/storefront/POS contracts and service health wiring',
+  'PASS: 18 modules, 120 unique documented routes, Stripe sandbox/storefront/POS contracts and service health wiring',
 );

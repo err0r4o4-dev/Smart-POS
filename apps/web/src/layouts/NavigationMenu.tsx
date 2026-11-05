@@ -49,10 +49,11 @@ const pathIcons: Record<string, LucideIcon> = {
 };
 
 const groupIcons: Record<string, LucideIcon> = {
+  sales: ShoppingCart,
+  menu: ReceiptText,
   inventory: Briefcase,
   customers: Contact,
-  pricing: ReceiptText,
-  returns: BarChart3,
+  reports: BarChart3,
   settings: Settings,
 };
 

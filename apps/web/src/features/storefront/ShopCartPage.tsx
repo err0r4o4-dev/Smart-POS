@@ -27,6 +27,7 @@ import {
   type ShopOrderInput,
   type ShopQuote,
   type ShopSettings,
+  readTableToken,
 } from '../../lib/storefront-api';
 import { ShopError } from './StorefrontPage';
 import { useShopCart, type CartEntry } from './shop-cart';
@@ -305,6 +306,9 @@ function CartContents({ slug }: { slug: string }) {
     mutationFn: () =>
       storefrontRequest<ShopQuote>(`/${slug}/quote`, {
         body: {
+          ...(tableToken
+            ? { fulfillment: 'PICKUP', table_token: tableToken }
+            : {}),
           items: cart.items.map(({ variant_id, quantity }) => ({
             variant_id,
             quantity,
@@ -824,6 +828,10 @@ function CartContents({ slug }: { slug: string }) {
       />
 
       <Steps active={1} language={language} />
+
+      {tableToken === null && (
+        <p role="alert">ลิงก์โต๊ะไม่ถูกต้อง กรุณาสแกน QR ที่โต๊ะอีกครั้ง</p>
+      )}
 
       {shop.isPending && (
         <Loading>{t('storefront.checkingStoreStatus')}</Loading>

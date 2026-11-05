@@ -1,6 +1,7 @@
 export type BusinessArea = 'management' | 'staff';
 
 const businessRoots = [
+  '/restaurant',
   '/products',
   '/categories',
   '/brands',
@@ -22,6 +23,11 @@ const businessRoots = [
   '/roles',
 ];
 const managementRoots = [
+  '/restaurant/settings',
+  '/restaurant/recipes',
+  '/restaurant/tables',
+  '/restaurant/quick-stock',
+  '/restaurant/forecast',
   '/settings',
   '/employees',
   '/roles',

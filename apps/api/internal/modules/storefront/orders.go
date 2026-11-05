@@ -6,7 +6,26 @@ import (
 	"errors"
 	"github.com/jackc/pgx/v5"
 	"smartpos/api/internal/modules/organization"
+	"smartpos/api/internal/modules/restaurant"
 )
+
+func dineInTable(ctx context.Context, tx pgx.Tx, org, branch, token string) (string, string, error) {
+	if token == "" {
+		return "", "", nil
+	}
+	if !tokenPattern.MatchString(token) {
+		return "", "", ErrInput
+	}
+	var id, code string
+	err := tx.QueryRow(ctx, `SELECT id::text,code FROM restaurant_tables WHERE organization_id=$1 AND branch_id=$2 AND status='ACTIVE' AND qr_token_hash=$3 FOR SHARE`, org, branch, accessHash(token)).Scan(&id, &code)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", "", ErrInput
+	}
+	if err != nil {
+		return "", "", dbError(err)
+	}
+	return id, code, nil
+}
 
 func readOrder(ctx context.Context, tx pgx.Tx, org, id string, public bool) (Order, error) {
 	result := Order{Items: []Line{}, Events: []Event{}, PaymentStatus: "UNPAID"}
@@ -14,7 +33,7 @@ func readOrder(ctx context.Context, tx pgx.Tx, org, id string, public bool) (Ord
 	if err != nil {
 		return result, dbError(err)
 	}
-	if err = tx.QueryRow(ctx, "SELECT fulfillment,shipping_fee::text,(estimated_total-shipping_fee)::text,delivery_address FROM online_orders WHERE organization_id=$1 AND id=$2", org, id).Scan(&result.Fulfillment, &result.ShippingFee, &result.Subtotal, &result.DeliveryAddress); err != nil {
+	if err = tx.QueryRow(ctx, `SELECT doc.fulfillment,doc.shipping_fee::text,(doc.estimated_total-doc.shipping_fee)::text,doc.delivery_address,COALESCE(table_map.table_code,'') FROM online_orders doc LEFT JOIN restaurant_order_tables table_map ON table_map.organization_id=doc.organization_id AND table_map.order_id=doc.id WHERE doc.organization_id=$1 AND doc.id=$2`, org, id).Scan(&result.Fulfillment, &result.ShippingFee, &result.Subtotal, &result.DeliveryAddress, &result.TableCode); err != nil {
 		return result, dbError(err)
 	}
 	if result.Status == "COMPLETED" {
@@ -91,7 +110,7 @@ func (service *Service) CreateOrder(ctx context.Context, slug, key string, input
 	if err != nil {
 		return Order{}, err
 	}
-	quote, err := quote(ctx, tx, org, shop, input.Items, input.Fulfillment)
+	quote, tableID, err := quoteForTable(ctx, tx, org, shop, QuoteInput{Items: input.Items, Fulfillment: input.Fulfillment, TableToken: input.TableToken})
 	if err != nil {
 		return Order{}, err
 	}
@@ -102,9 +121,26 @@ func (service *Service) CreateOrder(ctx context.Context, slug, key string, input
 	if err != nil {
 		return Order{}, dbError(err)
 	}
+	if tableID != "" {
+		if _, err = tx.Exec(ctx, "INSERT INTO restaurant_order_tables(organization_id,order_id,table_id,table_code) VALUES($1,$2,$3,$4)", org, key, tableID, quote.TableCode); err != nil {
+			return Order{}, dbError(err)
+		}
+	}
 	for _, line := range quote.Items {
 		_, err = tx.Exec(ctx, `INSERT INTO online_order_items(organization_id,order_id,variant_id,product_name,variant_name,sku,unit,quantity,unit_price,line_total) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, org, key, line.VariantID, line.ProductName, line.VariantName, line.SKU, line.Unit, line.Quantity, line.UnitPrice, line.LineTotal)
 		if err != nil {
+			return Order{}, dbError(err)
+		}
+	}
+	if _, err = restaurant.AssignQueueNumber(ctx, tx, org, shop.BranchID, key); err != nil {
+		switch {
+		case errors.Is(err, restaurant.ErrInput):
+			return Order{}, ErrInput
+		case errors.Is(err, restaurant.ErrConflict):
+			return Order{}, ErrConflict
+		case errors.Is(err, restaurant.ErrNotFound):
+			return Order{}, ErrNotFound
+		default:
 			return Order{}, dbError(err)
 		}
 	}

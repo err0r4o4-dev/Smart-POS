@@ -6,6 +6,18 @@ import {
   workspacePath,
 } from './workspace-paths';
 
+it('scopes restaurant queues to both workspaces but keeps administration in management', () => {
+  expect(workspacePath('/restaurant/queue', 'staff')).toBe(
+    '/work/restaurant/queue',
+  );
+  expect(workspacePath('/restaurant/settings', 'staff')).toBe(
+    '/manage/restaurant/settings',
+  );
+  expect(workspacePath('/restaurant/recipes', 'management')).toBe(
+    '/manage/restaurant/recipes',
+  );
+});
+
 it.each([
   'products',
   'inventory',

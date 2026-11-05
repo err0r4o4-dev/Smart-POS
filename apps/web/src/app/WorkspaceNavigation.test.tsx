@@ -44,7 +44,7 @@ function Harness() {
   );
 }
 
-it.each(['/work', '/manage'])(
+it.each(['/manage'])(
   'keeps links and programmatic navigation within %s',
   (prefix) => {
     render(
@@ -78,3 +78,19 @@ it.each(['/work', '/manage'])(
     );
   },
 );
+
+it('does not generate staff workspace links or navigations from a retired work location', () => {
+  render(
+    <MemoryRouter initialEntries={['/work/products']}>
+      <Harness />
+    </MemoryRouter>,
+  );
+  expect(screen.getByRole('link', { name: 'Product' })).toHaveAttribute(
+    'href',
+    '/products/item?search=abc#details',
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+  expect(screen.getByLabelText('Location')).toHaveTextContent(
+    '/products/item/edit?mode=1#form',
+  );
+});

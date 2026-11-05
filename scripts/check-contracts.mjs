@@ -5,15 +5,22 @@ import YAML from 'yaml';
 const modules = JSON.parse(
   readFileSync('packages/contracts/routes.json', 'utf8'),
 );
-const expected = [6, 4, 9, 6, 9, 11, 7, 8, 5, 5, 4, 6, 7, 5, 10, 4, 8, 6];
+const retiredEmployeeRoutes = ['/employees', '/employees/:id', '/roles'];
+assert.ok(
+  modules.every((module) =>
+    module.routes.every((route) => !retiredEmployeeRoutes.includes(route)),
+  ),
+  'Employee and role management must not be part of the active route inventory',
+);
+const expected = [6, 4, 9, 6, 9, 11, 7, 8, 5, 5, 4, 6, 7, 2, 10, 4, 8, 6];
 assert.equal(modules.length, 18);
 assert.deepEqual(
   modules.map((item) => item.routes.length),
   expected,
 );
 const routes = modules.flatMap((item) => item.routes);
-assert.equal(routes.length, 120);
-assert.equal(new Set(routes).size, 120);
+assert.equal(routes.length, 117);
+assert.equal(new Set(routes).size, 117);
 const routeDocs = readFileSync('docs/architecture/routes.md', 'utf8');
 const moduleDocs = readFileSync('docs/architecture/modules.md', 'utf8');
 for (const item of modules) {
@@ -25,6 +32,29 @@ for (const item of modules) {
     assert.ok(routeDocs.includes('`' + route + '`'), `Missing route ${route}`);
 }
 const api = YAML.parse(readFileSync('packages/contracts/openapi.yaml', 'utf8'));
+assert.deepEqual(api.components.schemas.Role.enum, ['OWNER']);
+const retiredEmployeePaths = [
+  '/api/v1/invitations/accept',
+  ...[
+    '/members',
+    '/members/{memberId}',
+    '/roles',
+    '/invitations',
+    '/invitations/{invitationId}',
+  ].map((suffix) => '/api/v1/organizations/{id}' + suffix),
+];
+for (const path of retiredEmployeePaths)
+  assert.equal(
+    api.paths[path],
+    undefined,
+    `Retired employee API remains: ${path}`,
+  );
+for (const schema of ['MemberInput', 'InviteInput', 'Invitation'])
+  assert.equal(
+    api.components.schemas[schema],
+    undefined,
+    `Retired employee input remains: ${schema}`,
+  );
 const sandboxPaths = [
   '',
   '/checkouts',
@@ -264,19 +294,13 @@ assert.deepEqual(
     '/api/v1/auth/me',
     '/api/v1/auth/register',
     '/api/v1/auth/reset-password',
-    '/api/v1/invitations/accept',
     '/api/v1/organizations',
     '/api/v1/organizations/{id}',
     '/api/v1/organizations/{id}/audit',
     '/api/v1/organizations/{id}/branches',
     '/api/v1/organizations/{id}/branches/{branchId}',
     '/api/v1/organizations/{id}/context',
-    '/api/v1/organizations/{id}/invitations',
-    '/api/v1/organizations/{id}/invitations/{invitationId}',
-    '/api/v1/organizations/{id}/members',
-    '/api/v1/organizations/{id}/members/{memberId}',
     '/api/v1/organizations/{id}/permissions',
-    '/api/v1/organizations/{id}/roles',
     '/api/v1/system',
     '/health/live',
     '/health/ready',
@@ -304,8 +328,7 @@ assert.deepEqual(
   Object.keys(memberSchema.properties).sort(),
 );
 for (const [path, item] of Object.entries(api.paths)) {
-  if (!path.includes('/organizations') && path !== '/api/v1/invitations/accept')
-    continue;
+  if (!path.includes('/organizations')) continue;
   for (const method of ['get', 'post', 'put', 'patch', 'delete']) {
     if (!item[method]) continue;
     assert.deepEqual(item[method].security, [{ sessionCookie: [] }]);
@@ -958,5 +981,5 @@ assert.ok(
   'Internal AI must not publish a host port',
 );
 console.log(
-  'PASS: 18 modules, 120 unique documented routes, Stripe sandbox/storefront/POS contracts and service health wiring',
+  'PASS: 18 modules, 117 unique documented routes, owner-only access, Stripe sandbox/storefront/POS contracts and service health wiring',
 );

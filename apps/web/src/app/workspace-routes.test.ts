@@ -2,7 +2,7 @@ import { createElement } from 'react';
 import { expect, it } from 'vitest';
 import { scopeWorkspaceRoutes } from './workspace-routes';
 
-it('retains existing permission parents and page elements for both scoped paths', () => {
+it('retains existing permission parents and page elements for owner scoped paths', () => {
   const gate = createElement('div', { id: 'permission-gate' });
   const page = createElement('h1', null, 'Product');
   const routes = scopeWorkspaceRoutes([
@@ -12,10 +12,8 @@ it('retains existing permission parents and page elements for both scoped paths'
   expect(routes[0].children?.map((route) => route.path)).toEqual([
     '/products/:id',
     '/manage/products/:id',
-    '/work/products/:id',
   ]);
   expect(routes[0].children?.[1].element).toBe(page);
-  expect(routes[0].children?.[2].element).toBe(page);
   expect(routes[0].children?.[0].element).not.toBe(page);
 });
 

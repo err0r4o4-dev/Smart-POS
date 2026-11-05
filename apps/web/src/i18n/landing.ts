@@ -2,8 +2,7 @@ import { defineMessages } from './defineMessages';
 export const landing = defineMessages({
   th: {
     setUpYourStoreAndBranches: 'ตั้งค่าร้านและสาขา',
-    addStoreBranchAndStaffDetailsTo:
-      'เพิ่มข้อมูลร้าน สาขา และทีมงานให้พร้อมใช้งาน',
+    addStoreBranchAndStaffDetailsTo: 'เพิ่มข้อมูลร้านและสาขาให้พร้อมใช้งาน',
     addProductsAndManageStock: 'เพิ่มสินค้าและจัดการสต็อก',
     organizeProductsSetPricesAndBarcodesAnd:
       'จัดหมวดหมู่สินค้า ตั้งราคา และดูแลสต็อกในที่เดียว',
@@ -14,11 +13,9 @@ export const landing = defineMessages({
     manageProductDetailsAndStockMovementsIn:
       'จัดการสินค้าและสต็อกในที่เดียว ไม่ต้องสลับหลายเครื่องมือ',
     keepStoresAndBranchesOrganized: 'ดูแลร้านและสาขาได้เป็นระบบ',
-    workInEachBranchSContextAnd:
-      'แยกงานแต่ละสาขา และจัดการร้านกับทีมจากพื้นที่เดียว',
-    giveYourTeamTheRightAccess: 'กำหนดสิทธิ์ให้เหมาะกับทีม',
-    manageStaffRolesAndPermissionsSoEach:
-      'กำหนดสิทธิ์ให้ทีม แต่ละคนเห็นเฉพาะงานที่ต้องทำ',
+    workInEachBranchSContextAnd: 'แยกงานแต่ละสาขาและจัดการร้านจากพื้นที่เดียว',
+    giveYourTeamTheRightAccess: 'พื้นที่สำหรับเจ้าของร้าน',
+    manageStaffRolesAndPermissionsSoEach: 'จัดการร้านจากบัญชีเจ้าของร้าน',
     skipToContent: 'ข้ามไปเนื้อหาหลัก',
     homeNavigation: 'เมนูหน้าแรก',
     onlineStorefront: 'หน้าร้านออนไลน์',
@@ -28,8 +25,7 @@ export const landing = defineMessages({
     simplifyYourStore: 'จัดการร้านให้ง่าย',
     sell: 'ขายได้',
     withConfidence: 'อย่างมั่นใจ',
-    makeEveryDayAtYourStoreEasier:
-      'ทำให้งานร้านง่ายขึ้นด้วย SmartPOS',
+    makeEveryDayAtYourStoreEasier: 'ทำให้งานร้านง่ายขึ้นด้วย SmartPOS',
     connectSalesProductsAndStockInOne:
       'เชื่อมต่อการขาย สินค้า และสต็อกไว้ในพื้นที่เดียว',
     soYouHaveTimeForWhatMatters: 'เพื่อให้คุณมีเวลาดูแลสิ่งที่สำคัญกว่า',
@@ -45,13 +41,11 @@ export const landing = defineMessages({
       'ตั้งแต่เริ่มต้นจนถึงขายหน้าร้าน จัดการทุกอย่างในที่เดียว',
     startWithWhatYourStoreNeedsThen:
       'เริ่มจากสิ่งที่ร้านต้องการ แล้วค่อยเติบโตไปด้วยกัน',
-    toolsForSalesStockAndYourTeam:
-      'เครื่องมือขาย จัดการสต็อก และดูแลทีมในที่เดียว',
+    toolsForSalesStockAndYourTeam: 'เครื่องมือขายและจัดการสต็อกในที่เดียว',
     designedForTheWayStoresWork: 'ออกแบบมาเพื่อการทำงานของร้าน',
     everyPartOfYourStoreConnected: 'ทุกส่วนของร้าน เชื่อมถึงกัน',
     inOnePlace: 'ในพื้นที่เดียว',
-    simplifyBackOfficeWorkAndHelpYour:
-      'ลดงานหลังร้าน ให้ทีมทำงานร่วมกันง่ายขึ้น',
+    simplifyBackOfficeWorkAndHelpYour: 'ลดงานหลังร้านให้จัดการได้ง่ายขึ้น',
     footerLinks: 'ลิงก์ท้ายหน้า',
     help: 'คู่มือ',
     gettingStarted: 'วิธีเริ่มต้น',
@@ -77,7 +71,7 @@ export const landing = defineMessages({
   en: {
     setUpYourStoreAndBranches: 'Set up your store and branches',
     addStoreBranchAndStaffDetailsTo:
-      'Add store, branch and team details to get started.',
+      'Add store and branch details to get started.',
     addProductsAndManageStock: 'Add products and manage stock',
     organizeProductsSetPricesAndBarcodesAnd:
       'Organize products, set prices, and manage stock in one place.',
@@ -89,10 +83,10 @@ export const landing = defineMessages({
       'Manage products and stock in one place.',
     keepStoresAndBranchesOrganized: 'Keep stores and branches organized',
     workInEachBranchSContextAnd:
-      "Keep each branch organized and manage your team from one workspace.",
-    giveYourTeamTheRightAccess: 'Give your team the right access',
+      'Keep each branch organized from one workspace.',
+    giveYourTeamTheRightAccess: 'A workspace for store owners',
     manageStaffRolesAndPermissionsSoEach:
-      'Set team permissions so each person sees the work they need.',
+      'Manage your store from an owner account.',
     skipToContent: 'Skip to content',
     homeNavigation: 'Home navigation',
     onlineStorefront: 'Online storefront',
@@ -102,8 +96,7 @@ export const landing = defineMessages({
     simplifyYourStore: 'Simplify your store',
     sell: 'Sell ',
     withConfidence: 'with confidence',
-    makeEveryDayAtYourStoreEasier:
-      'Make store work easier with SmartPOS',
+    makeEveryDayAtYourStoreEasier: 'Make store work easier with SmartPOS',
     connectSalesProductsAndStockInOne:
       'Connect sales, products and stock in one place',
     soYouHaveTimeForWhatMatters: 'so you have time for what matters most',
@@ -119,13 +112,11 @@ export const landing = defineMessages({
       'From setup to in-store sales, keep your work in one place.',
     startWithWhatYourStoreNeedsThen:
       'Start with what your store needs, then grow together',
-    toolsForSalesStockAndYourTeam:
-      'Tools for sales, stock, and your team in one place',
+    toolsForSalesStockAndYourTeam: 'Tools for sales and stock in one place',
     designedForTheWayStoresWork: 'Designed for the way stores work',
     everyPartOfYourStoreConnected: 'Every part of your store, connected',
     inOnePlace: 'in one place',
-    simplifyBackOfficeWorkAndHelpYour:
-      'Simplify back-office work and help your team work together',
+    simplifyBackOfficeWorkAndHelpYour: 'Simplify back-office work',
     footerLinks: 'Footer links',
     help: 'Help',
     gettingStarted: 'Getting started',

@@ -42,10 +42,6 @@ const pathIcons: Record<string, LucideIcon> = {
   '/manage/online-orders': ShoppingCart,
   '/manage/sales': FileText,
   '/manage/receipts': Receipt,
-  '/work/pos': Play,
-  '/work/online-orders': ShoppingCart,
-  '/work/sales': FileText,
-  '/work/receipts': Receipt,
 };
 
 const groupIcons: Record<string, LucideIcon> = {

@@ -8,7 +8,6 @@ import { LoginLayout } from '../../layouts/LoginLayout';
 import { forgotPassword, register, resetPassword } from '../../lib/api';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
-import { isManagementRole } from '../../app/access';
 import { paths } from '../../app/routes';
 
 function ErrorMessage({ message }: { message: string }) {
@@ -418,25 +417,39 @@ export function AccountPage() {
           <dt>{t('auth.status')}</dt>
           <dd>{labelCode(state.session.user.status)}</dd>
         </dl>
-        <p>
-          <Link to={paths.workspace}>
-            {t('auth.openYourRoleBasedWorkspace')}
-          </Link>{' '}
-          Â·{' '}
-          <Link to="/setup">
-            {t('auth.selectOrganizationSetUpStoreAcceptInvitation')}
-          </Link>
-          {tenant.context &&
-            isManagementRole(tenant.context.membership.role) && (
-              <>
-                {' '}
-                Â·{' '}
-                <Link to="/manage/settings/store">
-                  {t('auth.manageOrganizationAndBranches')}
-                </Link>
-              </>
+        {tenant.context?.membership.role === 'OWNER' ? (
+          <p>
+            <Link to={paths.dashboard}>
+              {t('auth.openYourRoleBasedWorkspace')}
+            </Link>
+            {' · '}
+            <Link to="/setup">{t('organization.setUpStore')}</Link>
+          </p>
+        ) : !tenant.loading && !tenant.error ? (
+          <div role="status">
+            <p>
+              {t(
+                !tenant.context && tenant.storeMode === 'multi'
+                  ? 'auth.noOwnedStore'
+                  : 'auth.ownerOnlyAccess',
+              )}
+            </p>
+            {!tenant.context && tenant.storeMode === 'multi' && (
+              <p>
+                <Link to="/setup">{t('organization.setUpStore')}</Link>
+              </p>
             )}
-        </p>
+          </div>
+        ) : tenant.error ? (
+          <p role="alert">
+            {localize(tenant.error)}{' '}
+            <Button onClick={() => void tenant.refresh()}>
+              {t('organization.refreshPermissions')}
+            </Button>
+          </p>
+        ) : (
+          <Loading />
+        )}
         <ErrorMessage message={localize(error ?? '')} />
         <Button onClick={() => void logout()} disabled={pending}>
           {pending ? t('auth.signingOut') : t('auth.signOut')}
@@ -445,4 +458,3 @@ export function AccountPage() {
     </div>
   );
 }
-

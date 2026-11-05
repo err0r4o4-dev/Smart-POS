@@ -1,5 +1,13 @@
 # Module specifications
 
+## Owner-only transition (2026-11-05)
+
+The approved backoffice policy permits active OWNER memberships only. The
+implementation, contract inventory and acceptance checks are in progress.
+Historical role-specific permissions and phase results below do not establish
+current access for non-owner roles. Accounts, memberships and history remain;
+no schema migration is planned. See `TODO.md` for status.
+
 Current online-extension status (2026-10-12): **PARTIAL / PAUSED by user request**, clean schema23 required by Go. Existing storefront pickup/source/reservation behavior and internal payment/reconciliation/delivery-snapshot/pre-shipment-refund services do not complete customer Checkout/refund HTTP/runtime/UI, shipment/returns or online reports. Inventory entries remain specifications, not proof of capability. See [current cumulative scope and policy](payment-sandbox.md#current-online-flow-status-2026-10-12) and [recorded evidence](../development/verification.md).
 
 Phases0–2 implement platform/presentation, identity, organization/branch/employee membership with fixed RBAC, catalog and inventory core. Phases3–5 add locally accepted POS, purchasing/shelves, business exceptions, pricing, customers/Loyalty and Quality; reporting/intelligence and other unimplemented groups remain planned. API groups/events below are proposals unless explicitly marked implemented; actual router registration and OpenAPI determine the public contract. Page counts use the canonical17-module/114-route inventory including Storefront and its sandbox diagnostic. Upstream dependencies are constrained by dependencies.md. See [Phase1B architecture](organization.md), [Phase1C architecture](catalog.md) and the dated current-status boundaries below.
@@ -14,7 +22,7 @@ Current status supersedes older introductory scope: Phase0–4 and Phase5.1–5.
 - Permissions: storefront.manage for Owner/Manager; online_orders.read/manage for Owner/Manager/Cashier with branch scope.
 - Invariants: explicit product publication, immutable estimates and pickup snapshots, hashed tracking access, idempotent creation/import/settlement, no stock reservation, no invented completion.
 - Boundaries: customer accounts, shipping, customer online payment and costing remain unimplemented. A management-only Stripe sandbox diagnostic can create/check/refund synthetic test payments without touching local orders, sales or stock. See [Storefront](storefront.md) and [sandbox](payment-sandbox.md).
-- Current canonical inventory: 17 modules / 114 logical routes; dated Phase5 acceptance counts below remain historical evidence, not sandbox verification.
+- Historical inventory at the earlier storefront checkpoint: 17 modules / 114 logical routes; the approved owner-only inventory target is 117 routes.
 
 ## Authentication (6 pages)
 
@@ -29,7 +37,7 @@ Current status supersedes older introductory scope: Phase0–4 and Phase5.1–5.
 - Error cases: invalid credentials, expired recovery, forbidden tenant.
 - Tests: session expiry, CSRF, enumeration, tenant denial.
 - Implementation phase: 1.
-- Current status: Phase 1A registration, login/logout, recovery, session persistence/account and Phase 1B `/setup` organization onboarding/selection/invitation acceptance are implemented and locally verified. Organization membership is distinct from global identity.
+- Current status: Phase 1A registration, login/logout, recovery, session persistence/account and Phase 1B `/setup` organization onboarding/selection were locally verified; invitation acceptance is being retired. Organization membership is distinct from global identity.
 
 ## Dashboard (4 pages)
 
@@ -210,20 +218,9 @@ Current status supersedes older introductory scope: Phase0–4 and Phase5.1–5.
 - Implementation phase: 6.
 - Current status: documented/planned; no implementation.
 
-## Employees & Permissions (5 pages)
+## Employees & Permissions (2 planned pages)
 
-- Business purpose: Least-privilege staff operations.
-- Responsibilities: Staff lifecycle, roles, branch grants, approval queue, audit views.
-- Planned pages: `/employees`, `/employees/:id`, `/roles`, `/approvals`, `/audit-logs`.
-- Planned API groups: /employees, /roles, /approvals, /audit-logs.
-- Domain entities: users, roles, permissions, organization_members, approval_requests, audit_logs.
-- Dependencies: owning domains/upstream capabilities in [dependency matrix](dependencies.md); authorization through identity and organization for all tenant operations.
-- Permissions: employees.manage, roles.manage, approvals.review, audit.read.
-- Business events: MembershipChanged, RoleGranted, ApprovalDecided.
-- Error cases: self-escalation, last owner removal, expired approval.
-- Tests: role/branch matrix, escalation denial, immutable audit.
-- Implementation phase: 1.
-- Current status: Phase 1B `/employees`, `/employees/:id`, `/roles` implement invitations, scoped employee read/update/removal, fixed-role matrix and member change history. Live API is `/organizations/{id}/members`, `/invitations`, `/roles`, `/permissions`, `/audit`, plus `/invitations/accept`, not the proposed generic groups above. `/approvals` and `/audit-logs` remain planned. Operational sales/inventory/purchasing permissions are deferred.
+Phase 1B previously implemented `/employees`, `/employees/:id` and `/roles` for employee and role administration. The approved transition retires those pages and invitation, member and role administration APIs. The module retains `/approvals` and `/audit-logs` as planned, unregistered routes; they are not active staff administration UI. The contract inventory contains 117 routes; overall acceptance remains open.
 
 ## Settings (10 pages)
 

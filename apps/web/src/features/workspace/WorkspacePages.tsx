@@ -1,6 +1,6 @@
 import { useLanguage } from '../../app/language';
 import { Link, Navigate } from 'react-router-dom';
-import { ArrowRight, ShieldCheck, Store } from 'lucide-react';
+import { ArrowRight, Store } from 'lucide-react';
 import {
   useOrganization,
   OrganizationProvider,
@@ -15,7 +15,6 @@ import {
   paths,
   navigation,
   navigationGroups,
-  staffNavigation,
   type NavigationItem,
 } from '../../app/routes';
 import { Card, ErrorState, Loading, Tag } from '../../components/ui/primitives';
@@ -83,7 +82,7 @@ export function ManagementHomePage() {
   const tenant = useOrganization();
   if (!tenant.context) return null;
   const role = tenant.context.membership.role;
-  if (!isManagementRole(role)) return <Navigate to={paths.staff} replace />;
+  if (!isManagementRole(role)) return <Navigate to={paths.forbidden} replace />;
   const branchName =
     tenant.context.branches.find((branch) => branch.id === tenant.branchID)
       ?.name ?? t('workspace.mainBranch');
@@ -120,54 +119,6 @@ export function ManagementHomePage() {
           <TaskCards items={group.items} />
         </Card>
       ))}
-    </div>
-  );
-}
-
-export function StaffHomePage() {
-  const { t, localize } = useLanguage();
-
-  const tenant = useOrganization();
-  if (!tenant.context) return null;
-  const role = tenant.context.membership.role;
-  return (
-    <div className="workspace-home">
-      <StandardPageHeader
-        icon={<ShieldCheck size={24} />}
-        eyebrow={t('workspace.staffWorkspace')}
-        title={t('workspace.myWork')}
-        headingTabIndex={-1}
-        description={`${tenant.context.organization.name} · ${localize(roleLabels[role])}`}
-        actions={<Tag tone="amber">{localize(roleLabels[role])}</Tag>}
-      />
-      <Card className="workspace-intro">
-        <ShieldCheck size={27} aria-hidden="true" />
-        <div>
-          <h2>{t('workspace.chooseATaskForYourRole')}</h2>
-          <p>{t('workspace.onlyAuthorizedToolsForYourCurrentOrganization')}</p>
-        </div>
-      </Card>
-      <section aria-labelledby="staff-tasks-title">
-        <h2 id="staff-tasks-title">{t('workspace.workTools')}</h2>
-        <TaskCards
-          items={staffNavigation.filter(
-            (item) =>
-              ![paths.staff, paths.account, paths.help].some(
-                (path) => path === item.to,
-              ),
-          )}
-        />
-      </section>
-      <Card>
-        <h2>{t('workspace.accountAndHelp')}</h2>
-        <p>{t('workspace.yourRoleIsAssignedByTheStore')}</p>
-        <div className="tenant-actions">
-          <Link className="button button-secondary" to={paths.account}>
-            {t('workspace.myAccount')}
-          </Link>
-          <Link to={paths.help}>{t('landing.help')}</Link>
-        </div>
-      </Card>
     </div>
   );
 }

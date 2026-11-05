@@ -27,7 +27,7 @@ export const shell = defineMessages({
     accountAndAccess: 'บัญชีและสิทธิ์',
     homeAndEntrances: 'หน้าหลัก',
     systemStatus: 'สถานะระบบ',
-    storeTeamSignIn: 'เข้าสู่ระบบทีมร้าน',
+    storeTeamSignIn: 'เข้าสู่ระบบเจ้าของร้าน',
     enterStoreAcceptInvitation: 'เข้าร้าน / รับคำเชิญ',
     acceptStoreInvitation: 'รับคำเชิญเข้าร้าน',
     noStoreWorkspaceSelected: 'ยังไม่ได้เลือกพื้นที่ร้าน',
@@ -35,13 +35,11 @@ export const shell = defineMessages({
     manageStoreDataAndSettingsWithinYour:
       'จัดการข้อมูลและการตั้งค่าตามสิทธิ์ของคุณ',
     onlyTasksAllowedByYourRoleAre: 'แสดงเฉพาะงานที่คุณมีสิทธิ์',
-    storeTeamAccountsAreNotOnlineShopper:
-      'บัญชีทีมร้านใช้จัดการร้าน ไม่ใช่บัญชีลูกค้า',
-    storeTeam: 'ทีมร้าน',
+    storeTeamAccountsAreNotOnlineShopper: 'พื้นที่จัดการร้านสำหรับเจ้าของร้าน',
+    storeTeam: 'เจ้าของร้าน',
     viewStorefront: 'ดูหน้าร้าน',
     openNavigation: 'เปิดเมนู',
-    theCustomerStorefrontIsSeparateFromThe:
-      'หน้าร้านลูกค้าแยกจากหน้าทีมร้าน',
+    theCustomerStorefrontIsSeparateFromThe: 'หน้าร้านลูกค้าแยกจากหน้าทีมร้าน',
     navigation: 'เมนู',
     closeNavigation: 'ปิดเมนู',
     customerStorefront: 'หน้าร้านลูกค้า',
@@ -87,7 +85,7 @@ export const shell = defineMessages({
     accountAndAccess: 'Account and permissions',
     homeAndEntrances: 'Home',
     systemStatus: 'System status',
-    storeTeamSignIn: 'Store team sign in',
+    storeTeamSignIn: 'Owner sign in',
     enterStoreAcceptInvitation: 'Enter store / Accept invitation',
     acceptStoreInvitation: 'Accept store invitation',
     noStoreWorkspaceSelected: 'No store workspace selected',
@@ -96,8 +94,8 @@ export const shell = defineMessages({
       'Manage store data and settings within your permissions',
     onlyTasksAllowedByYourRoleAre: 'Only tasks you can access are shown',
     storeTeamAccountsAreNotOnlineShopper:
-      'Store team accounts are not online shopper accounts',
-    storeTeam: 'Store team',
+      'Store management is available to owners',
+    storeTeam: 'Store owner',
     viewStorefront: 'View storefront',
     openNavigation: 'Open navigation',
     theCustomerStorefrontIsSeparateFromThe:

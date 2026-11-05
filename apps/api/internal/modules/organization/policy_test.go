@@ -3,58 +3,20 @@ package organization
 import "testing"
 
 func TestInventoryPolicy(t *testing.T) {
-	for _, role := range []string{"OWNER", "MANAGER"} {
+	for _, role := range Roles {
 		for _, permission := range InventoryPermissions {
-			if !hasPermission(role, permission) {
-				t.Fatalf("missing %s permission for %s", permission, role)
+			if got, want := hasPermission(role, permission), role == "OWNER"; got != want {
+				t.Errorf("%s %s: got %t, want %t", role, permission, got, want)
 			}
-		}
-	}
-	for _, role := range []string{"CASHIER", "INVENTORY_STAFF", "PURCHASING_STAFF"} {
-		for _, permission := range []string{"inventory.opening_balance.create", "inventory.adjustment.approve", "inventory.adjustment.post", "inventory.count.post", "inventory.transfer.approve"} {
-			if hasPermission(role, permission) {
-				t.Fatalf("unexpected %s permission for %s", permission, role)
-			}
-		}
-	}
-	for _, permission := range InventoryPermissions {
-		if permission != "inventory.read" && hasPermission("CASHIER", permission) {
-			t.Fatalf("cashier mutation/audit escalation: %s", permission)
 		}
 	}
 }
 
 func TestRolePolicy(t *testing.T) {
-	for _, role := range Roles {
-		if !hasPermission(role, "organization.read") {
-			t.Errorf("missing read for %s", role)
+	for _, role := range append(append([]string{}, Roles...), "ADMIN") {
+		if got, want := hasPermission(role, "organization.read"), role == "OWNER"; got != want {
+			t.Errorf("%s organization.read: got %t, want %t", role, got, want)
 		}
-	}
-	if len(Permissions("ADMIN")) != 0 || hasPermission("MANAGER", "organization.update") || hasPermission("CASHIER", "employee.read") {
-		t.Fatal("policy does not deny by default")
-	}
-}
-func TestManagerScope(t *testing.T) {
-	actor := Member{ID: "manager", Role: "MANAGER", Status: "ACTIVE", BranchIDs: []string{"a"}}
-	target := Member{ID: "cashier", Role: "CASHIER", Status: "ACTIVE", BranchIDs: []string{"a"}}
-	if !canManage(actor, target, "INVENTORY_STAFF", []string{"a"}) {
-		t.Fatal("authorized subordinate denied")
-	}
-	for _, role := range []string{"OWNER", "MANAGER", "ADMIN"} {
-		if canManage(actor, target, role, []string{"a"}) {
-			t.Fatal("escalation allowed")
-		}
-	}
-	if canManage(actor, target, "CASHIER", []string{"b"}) {
-		t.Fatal("branch escalation")
-	}
-	target.BranchIDs = []string{"a", "b"}
-	if canManage(actor, target, "CASHIER", []string{"a"}) {
-		t.Fatal("partial overlap must not authorize")
-	}
-	actor.Status = "SUSPENDED"
-	if canManage(actor, target, "CASHIER", []string{"a"}) {
-		t.Fatal("suspended actor allowed")
 	}
 }
 func TestValidation(t *testing.T) {

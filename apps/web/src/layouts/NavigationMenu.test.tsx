@@ -2,13 +2,8 @@ import { render } from '../test/render';
 import { fireEvent, screen } from '@testing-library/react';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { beforeEach, expect, it } from 'vitest';
-import {
-  navigation,
-  navigationGroups,
-  staffNavigation,
-  staffNavigationGroups,
-} from '../app/routes';
-import { isManagementRole, type Session } from '../app/access';
+import { navigation, navigationGroups } from '../app/routes';
+import type { Session } from '../app/access';
 import { NavigationMenu } from './NavigationMenu';
 
 beforeEach(() => {
@@ -24,13 +19,12 @@ const owner: Session = {
 };
 
 function renderMenu(path: string, access: Session = owner) {
-  const staff = access.authenticated && !isManagementRole(access.role);
   return render(
     <MemoryRouter initialEntries={[path]}>
       <NavigationMenu
-        items={staff ? staffNavigation : navigation}
-        groups={staff ? staffNavigationGroups : navigationGroups}
-        homePath={staff ? '/work' : '/manage/dashboard'}
+        items={navigation}
+        groups={navigationGroups}
+        homePath="/manage/dashboard"
         access={access}
       />
     </MemoryRouter>,
@@ -155,19 +149,14 @@ it('highlights the top-level product menu for a nested product route', () => {
   );
 });
 
-it('filters permissions before showing groups', () => {
-  renderMenu('/work/products', {
+it('does not show owner navigation to legacy staff', () => {
+  renderMenu('/manage/products', {
     authenticated: true,
     role: 'INVENTORY_STAFF',
     permissions: ['catalog.read'],
   });
   expect(
-    screen.queryByRole('button', { name: 'การขายและคิว' }),
-  ).not.toBeInTheDocument();
-  expect(screen.getAllByRole('button')).toHaveLength(1);
-  expect(screen.getByRole('link', { name: 'เมนูอาหาร' })).toBeVisible();
-  expect(
-    screen.queryByRole('link', { name: 'คลังสินค้า / สต็อก', hidden: true }),
+    screen.queryByRole('link', { name: 'เมนูอาหาร' }),
   ).not.toBeInTheDocument();
 });
 
@@ -221,23 +210,9 @@ it('does not expose removed shelf, replenishment, or purchasing navigation links
         item.to.includes('/purchasing') || item.to.includes('/suppliers'),
     ),
   ).toBe(false);
-  expect(
-    staffNavigation.some(
-      (item) =>
-        item.to.includes('/purchasing') || item.to.includes('/suppliers'),
-    ),
-  ).toBe(false);
   expect(navigation.some((item) => item.to.includes('/shelves'))).toBe(false);
-  expect(staffNavigation.some((item) => item.to.includes('/shelves'))).toBe(
-    false,
-  );
   expect(
     navigationGroups
-      .flatMap((group) => group.paths)
-      .some((path) => path.includes('/shelves')),
-  ).toBe(false);
-  expect(
-    staffNavigationGroups
       .flatMap((group) => group.paths)
       .some((path) => path.includes('/shelves')),
   ).toBe(false);

@@ -3,7 +3,6 @@ import { workspacePath } from './workspace-paths';
 
 export const paths = {
   workspace: '/workspace',
-  staff: '/work',
   shop: '/shop',
   system: '/help/system',
   dashboard: '/manage/dashboard',
@@ -19,8 +18,6 @@ export const paths = {
   setup: '/setup',
   store: '/settings/store',
   branches: '/settings/branches',
-  employees: '/employees',
-  roles: '/roles',
   help: '/help',
   forbidden: '/403',
   notFound: '/404',
@@ -125,18 +122,6 @@ const managementItems: NavigationItem[] = [
     icon: 'dashboard',
     permission: 'branch.read',
   },
-  {
-    to: paths.employees,
-    label: 'พนักงาน',
-    icon: 'auth',
-    permission: 'employee.read',
-  },
-  {
-    to: paths.roles,
-    label: 'สิทธิ์ผู้ใช้',
-    icon: 'auth',
-    permission: 'role.read',
-  },
   { to: paths.dashboard, label: 'ภาพรวม', icon: 'dashboard' },
   { to: paths.account, label: 'บัญชี', icon: 'auth' },
   { to: paths.help, label: 'คู่มือ', icon: 'help' },
@@ -148,55 +133,9 @@ export const navigation: NavigationItem[] = managementItems.map((item) => ({
   roles: managementRoles,
 }));
 
-const staffItems: NavigationItem[] = [
-  { to: paths.staff, label: 'งานของฉัน', icon: 'dashboard' },
-  {
-    to: '/pos/register/open',
-    label: 'เปิดกะ',
-    icon: 'pos',
-    permission: 'pos.register.open',
-  },
-  {
-    to: '/pos',
-    label: 'รับออเดอร์หน้าร้าน',
-    icon: 'pos',
-    permission: 'pos.access',
-  },
-  {
-    to: '/pos/register/close',
-    label: 'ปิดกะ',
-    icon: 'pos',
-    permission: 'pos.register.close',
-  },
-  ...managementItems.filter((item) =>
-    [
-      '/sales',
-      '/receipts',
-      '/sales/refunds',
-      '/inventory/batches',
-      '/online-orders',
-      '/restaurant/queue',
-    ].includes(item.to),
-  ),
-  {
-    to: paths.products,
-    label: 'เมนูอาหาร',
-    icon: 'dashboard',
-    permission: 'catalog.read',
-  },
-  { to: paths.account, label: 'บัญชี', icon: 'auth' },
-  { to: paths.help, label: 'คู่มือ', icon: 'help' },
-];
-
-export const staffNavigation: NavigationItem[] = staffItems.map((item) => ({
-  ...item,
-  to: workspacePath(item.to, 'staff'),
-}));
-
 export const accountNavigation: NavigationItem[] = [
   { to: paths.workspace, label: 'เข้าพื้นที่ทำงาน', icon: 'dashboard' },
   { to: paths.account, label: 'บัญชี', icon: 'auth' },
-  { to: paths.setup, label: 'เลือกองค์กร', icon: 'auth' },
   { to: paths.help, label: 'คู่มือ', icon: 'help' },
 ];
 
@@ -237,46 +176,15 @@ const managementGroups: NavigationGroup[] = [
       '/restaurant/settings',
       '/restaurant/tables',
       paths.branches,
-      paths.employees,
-      paths.roles,
       paths.account,
       paths.help,
     ],
   },
 ];
 
-const staffGroups: NavigationGroup[] = [
-  {
-    id: 'staff-sales',
-    label: 'งานขายและคิว',
-    paths: [
-      '/pos/register/open',
-      '/restaurant/queue',
-      '/online-orders',
-      '/pos',
-      '/pos/register/close',
-    ],
-  },
-  {
-    id: 'staff-reports',
-    label: 'ยอดขายและการแก้ไข',
-    paths: ['/sales', '/receipts', '/sales/refunds'],
-  },
-  {
-    id: 'staff-menu',
-    label: 'เมนูและวัตถุดิบ',
-    paths: ['/products', '/inventory/batches'],
-  },
-];
 export const navigationGroups: NavigationGroup[] = managementGroups.map(
   (group) => ({
     ...group,
     paths: group.paths.map((path) => workspacePath(path, 'management')),
-  }),
-);
-export const staffNavigationGroups: NavigationGroup[] = staffGroups.map(
-  (group) => ({
-    ...group,
-    paths: group.paths.map((path) => workspacePath(path, 'staff')),
   }),
 );

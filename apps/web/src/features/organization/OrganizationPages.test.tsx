@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   refresh: vi.fn(),
   select: vi.fn(),
   storeMode: 'multi' as 'single' | 'multi',
+  role: 'OWNER' as string | null,
 }));
 vi.mock('../../app/AuthProvider', () => ({
   useAuth: () => ({
@@ -28,7 +29,7 @@ vi.mock('../../app/OrganizationProvider', () => ({
   useOrganization: () => ({
     storeMode: mocks.storeMode,
     organizations: [],
-    invitationToken: '',
+    context: mocks.role ? { membership: { role: mocks.role } } : null,
     refresh: mocks.refresh,
     select: mocks.select,
   }),
@@ -39,10 +40,12 @@ vi.mock('../../lib/organization-api', () => ({
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.storeMode = 'multi';
+  mocks.role = 'OWNER';
   mocks.refresh.mockResolvedValue(undefined);
 });
 it('does not offer organization creation for an account outside the configured store', () => {
   mocks.storeMode = 'single';
+  mocks.role = null;
   render(
     <MemoryRouter>
       <SetupPage />
@@ -52,10 +55,10 @@ it('does not offer organization creation for an account outside the configured s
   expect(
     screen.queryByRole('button', { name: 'ถัดไป' }),
   ).not.toBeInTheDocument();
-  expect(screen.getByText(/ขอคำเชิญจากเจ้าของร้าน/)).toBeVisible();
   expect(mocks.request).not.toHaveBeenCalled();
 });
-it('requires organization fields and creates a complete atomic onboarding payload', async () => {
+it('creates a first organization for an authenticated account without an owned organization', async () => {
+  mocks.role = null;
   mocks.request.mockResolvedValue({ organization: { id: 'new-org' } });
   render(
     <MemoryRouter>
@@ -117,3 +120,17 @@ it('retains the same idempotency key for a failed submission retry', async () =>
     mocks.request.mock.calls[1][1].key,
   );
 });
+
+it.each(['MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'PURCHASING_STAFF'])(
+  'does not offer setup or creation to %s',
+  (role) => {
+    mocks.role = role;
+    render(
+      <MemoryRouter>
+        <SetupPage />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByLabelText('ชื่อองค์กร')).not.toBeInTheDocument();
+    expect(mocks.request).not.toHaveBeenCalled();
+  },
+);

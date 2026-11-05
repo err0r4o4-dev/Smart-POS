@@ -160,23 +160,7 @@ func (service *Service) authorized(ctx context.Context, userID, orgID, permissio
 	if actor.Status != "ACTIVE" {
 		return fail(ErrNotFound)
 	}
-	if actor.Role != "OWNER" {
-		allowed, err := branches(ctx, tx, orgID, actor, true)
-		if err != nil {
-			return fail(err)
-		}
-		actor.BranchIDs = []string{}
-		for _, branch := range allowed {
-			actor.BranchIDs = append(actor.BranchIDs, branch.ID)
-		}
-		if actor.Role == "MANAGER" && len(actor.BranchIDs) == 0 {
-			actor.Permissions = []string{"organization.read", "branch.read"}
-		}
-		if actor.Role == "MANAGER" && len(actor.BranchIDs) == 0 && permission != "organization.read" && permission != "branch.read" {
-			return fail(ErrDenied)
-		}
-	}
-	if !hasPermission(actor.Role, permission) {
+	if actor.Role != "OWNER" || !hasPermission(actor.Role, permission) {
 		return fail(ErrDenied)
 	}
 	return tx, actor, nil
@@ -216,7 +200,7 @@ func (service *Service) List(ctx context.Context, userID string) ([]Organization
 		return nil, err
 	}
 	defer tx.Rollback(ctx)
-	rows, err := tx.Query(ctx, `SELECT o.id,o.name,o.code,o.business_type,CASE WHEN m.role IN ('OWNER','MANAGER') THEN o.contact_email ELSE '' END,CASE WHEN m.role IN ('OWNER','MANAGER') THEN o.contact_phone ELSE '' END,CASE WHEN m.role IN ('OWNER','MANAGER') THEN o.address ELSE '' END,o.currency,o.status FROM organizations o JOIN organization_memberships m ON m.organization_id=o.id WHERE m.user_id=$1 AND m.status='ACTIVE' AND o.status='ACTIVE' AND ($2::uuid IS NULL OR o.id=$2) ORDER BY o.name`, userID, service.storeFilter())
+	rows, err := tx.Query(ctx, `SELECT o.id,o.name,o.code,o.business_type,o.contact_email,o.contact_phone,o.address,o.currency,o.status FROM organizations o JOIN organization_memberships m ON m.organization_id=o.id WHERE m.user_id=$1 AND m.role='OWNER' AND m.status='ACTIVE' AND o.status='ACTIVE' AND ($2::uuid IS NULL OR o.id=$2) ORDER BY o.name`, userID, service.storeFilter())
 	if err != nil {
 		return nil, err
 	}

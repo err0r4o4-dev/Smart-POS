@@ -28,9 +28,6 @@ import {
   SetupPage,
   StorePage,
   BranchesPage,
-  EmployeesPage,
-  EmployeePage,
-  RolesPage,
   AccountPage,
   ForgotPasswordPage,
   LoginPage,
@@ -51,7 +48,6 @@ import { RoleWorkspaceLayout } from '../layouts/RoleWorkspaceLayout';
 import { StorefrontLayout } from '../layouts/StorefrontLayout';
 import {
   ManagementHomePage,
-  StaffHomePage,
   WorkspaceEntryPage,
   OrganizationWorkspaceProvider,
 } from '../features/workspace/WorkspacePages';
@@ -120,10 +116,6 @@ const routes: RouteObject[] = [
                 element: <LegacyWorkspaceRedirect path="/dashboard" />,
               },
               {
-                path: '/staff',
-                element: <LegacyWorkspaceRedirect path="/staff" />,
-              },
-              {
                 path: '/manage',
                 element: <Navigate to={paths.dashboard} replace />,
               },
@@ -131,7 +123,6 @@ const routes: RouteObject[] = [
                 element: <OrganizationGate />,
                 children: [
                   { path: paths.dashboard, element: <ManagementHomePage /> },
-                  { path: paths.staff, element: <StaffHomePage /> },
                 ],
               },
               {
@@ -272,27 +263,6 @@ const routes: RouteObject[] = [
                   { path: paths.branches, element: <BranchesPage /> },
                 ],
               },
-              {
-                element: (
-                  <OrganizationGate
-                    permission="employee.read"
-                    roles={managementRoles}
-                  />
-                ),
-                children: [
-                  { path: paths.employees, element: <EmployeesPage /> },
-                  { path: '/employees/:id', element: <EmployeePage /> },
-                ],
-              },
-              {
-                element: (
-                  <OrganizationGate
-                    permission="role.read"
-                    roles={managementRoles}
-                  />
-                ),
-                children: [{ path: paths.roles, element: <RolesPage /> }],
-              },
             ],
           },
         ],
@@ -353,7 +323,7 @@ export const router = createBrowserRouter([
     ),
     errorElement: <PageError />,
     children: [
-      ...['', '/manage', '/work'].flatMap((prefix) =>
+      ...['', '/manage'].flatMap((prefix) =>
         retiredRetailPaths.map((path) => ({
           path: prefix + path,
           element: <SystemPage />,

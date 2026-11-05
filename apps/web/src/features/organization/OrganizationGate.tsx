@@ -32,7 +32,9 @@ export function OrganizationGate({
         retry={() => void tenant.refresh()}
       />
     );
-  if (!tenant.context) return <Navigate to="/setup" replace />;
+  if (!tenant.context) return <Navigate to="/account" replace />;
+  if (tenant.context.membership.role !== 'OWNER')
+    return <Navigate to="/403" replace />;
   if (roles && !roles.includes(tenant.context.membership.role))
     return <Navigate to="/403" replace />;
   if (permission && !tenant.can(permission))

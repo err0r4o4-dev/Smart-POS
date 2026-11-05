@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: SmartPOS Foundation through Business Operations API
   version: 1.0.0
-  description: Phase 0-4 and Phase 5.1-5.6 local implementation includes returns/refunds, exchanges/voids, pricing/promotions, customers, loyalty and batch/expiry/quality. Existing POS and Inventory retain exact decimal money/quantity, integer points, immutable ledgers and atomic tenant/branch-authorized posting. Loyalty rewards are discounts, never fake payments. Batch picking is explicit; FEFO recommends, never physically attests. Legacy stock is untracked without invented provenance. Manual refund reporting/confirmation is reconciliation evidence, not payment-provider verification. Tenant writes require allowed Origin and X-CSRF-Token; transactional commands require Idempotency-Key. Valuation, split-lot allocation, gateway payments and AI remain deferred; production readiness is not claimed.
+  description: Backoffice operations require an active OWNER membership in the requested organization. Legacy non-owner memberships retain historical data but have no backoffice access. Employee, role administration and invitation endpoints are retired. Public storefront ordering and identity registration remain available. Phase 0-4 and Phase 5.1-5.6 local implementation includes returns/refunds, exchanges/voids, pricing/promotions, customers, loyalty and batch/expiry/quality. Existing POS and Inventory retain exact decimal money/quantity, integer points, immutable ledgers and atomic tenant/branch-authorized posting. Loyalty rewards are discounts, never fake payments. Batch picking is explicit; FEFO recommends, never physically attests. Legacy stock is untracked without invented provenance. Manual refund reporting/confirmation is reconciliation evidence, not payment-provider verification. Tenant writes require allowed Origin and X-CSRF-Token; transactional commands require Idempotency-Key. Valuation, split-lot allocation, gateway payments and AI remain deferred; production readiness is not claimed.
 servers:
   - url: /
 paths:
@@ -266,7 +266,7 @@ paths:
       operationId: importOnlineOrderToPOS
       security:
         - sessionCookie: []
-      description: online_orders.manage, pos.cart.manage, pos.checkout; READY, exact terminal/location and own open shift. Linked cart replay/resume is cashier-owned. Items/quantities locked; batch and latest price review required.
+      description: online_orders.manage, pos.cart.manage, pos.checkout; READY, exact terminal/location and own open shift. Linked cart replay/resume is operator-owned. Items/quantities locked; batch and latest price review required.
       parameters:
         - $ref: '#/components/parameters/CSRF'
       responses:
@@ -406,7 +406,7 @@ paths:
       operationId: getOnlineOrder
       security:
         - sessionCookie: []
-      description: online_orders.read and branch access; staff-only contact.
+      description: online_orders.read and branch access; owner-only contact.
       parameters: []
       responses:
         '200':
@@ -3395,230 +3395,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{id}/members:
-    parameters: [{ $ref: '#/components/parameters/OrganizationID' }]
-    get:
-      operationId: listMembers
-      security: [{ sessionCookie: [] }]
-      description: Owner sees all historical memberships; Manager sees themselves and subordinate members whose entire assignment is within their branch scope.
-      responses:
-        '200':
-          {
-            description: Scoped members,
-            content:
-              {
-                application/json:
-                  {
-                    schema:
-                      {
-                        type: object,
-                        properties:
-                          {
-                            data:
-                              {
-                                type: array,
-                                items: { $ref: '#/components/schemas/Member' },
-                              },
-                          },
-                      },
-                  },
-              },
-          }
-        '401': { $ref: '#/components/responses/AuthError' }
-        '403': { $ref: '#/components/responses/AuthError' }
-        '404': { $ref: '#/components/responses/AuthError' }
-  /api/v1/organizations/{id}/members/{memberId}:
-    parameters:
-      [
-        { $ref: '#/components/parameters/OrganizationID' },
-        {
-          in: path,
-          name: memberId,
-          required: true,
-          schema: { type: string, format: uuid },
-        },
-      ]
-    get:
-      operationId: getMember
-      security: [{ sessionCookie: [] }]
-      responses:
-        '200': { $ref: '#/components/responses/Member' }
-        '401': { $ref: '#/components/responses/AuthError' }
-        '403': { $ref: '#/components/responses/AuthError' }
-        '404': { $ref: '#/components/responses/AuthError' }
-    patch:
-      operationId: updateMember
-      security: [{ sessionCookie: [] }]
-      description: Consolidated role/status/branch assignment update. Owner may promote existing members to Owner. Manager changes subordinate roles only, cannot modify themselves/Owner/Manager and must control all old and new branches. Last active owner protection is serialized transactionally; inactive memberships lose API access immediately.
-      parameters: [{ $ref: '#/components/parameters/CSRF' }]
-      requestBody:
-        {
-          required: true,
-          content:
-            {
-              application/json:
-                { schema: { $ref: '#/components/schemas/MemberInput' } },
-            },
-        }
-      responses:
-        '200': { $ref: '#/components/responses/Member' }
-        '400': { $ref: '#/components/responses/InvalidInput' }
-        '401': { $ref: '#/components/responses/AuthError' }
-        '403': { $ref: '#/components/responses/AuthError' }
-        '404': { $ref: '#/components/responses/AuthError' }
-        '409': { $ref: '#/components/responses/AuthError' }
-    delete:
-      operationId: removeMember
-      security: [{ sessionCookie: [] }]
-      description: Soft removal preserving user account, branch history and audit. No user deletion. Final active Owner cannot be removed.
-      parameters: [{ $ref: '#/components/parameters/CSRF' }]
-      responses:
-        '200': { $ref: '#/components/responses/Member' }
-        '401': { $ref: '#/components/responses/AuthError' }
-        '403': { $ref: '#/components/responses/AuthError' }
-        '404': { $ref: '#/components/responses/AuthError' }
-        '409': { $ref: '#/components/responses/AuthError' }
-  /api/v1/organizations/{id}/invitations:
-    parameters: [{ $ref: '#/components/parameters/OrganizationID' }]
-    get:
-      operationId: listInvitations
-      security: [{ sessionCookie: [] }]
-      description: Owner/authorized Manager, newest 200 records, no raw tokens.
-      responses:
-        '200':
-          {
-            description: Scoped invitation list,
-            content:
-              {
-                application/json:
-                  {
-                    schema:
-                      {
-                        type: object,
-                        properties:
-                          {
-                            data:
-                              {
-                                type: array,
-                                items:
-                                  { $ref: '#/components/schemas/Invitation' },
-                              },
-                          },
-                      },
-                  },
-              },
-          }
-        '401': { $ref: '#/components/responses/AuthError' }
-        '403': { $ref: '#/components/responses/AuthError' }
-        '404': { $ref: '#/components/responses/AuthError' }
-    post:
-      operationId: inviteMember
-      security: [{ sessionCookie: [] }]
-      description: 48-hour hashed one-use token delivered using configured SMTP. Intended email binding; OWNER invitation prohibited. Manager cannot invite Manager or assign outside their branches. SMTP failure rolls back and returns generic 503. Delivery is bounded but not a durable outbox.
-      parameters: [{ $ref: '#/components/parameters/CSRF' }]
-      requestBody:
-        {
-          required: true,
-          content:
-            {
-              application/json:
-                { schema: { $ref: '#/components/schemas/InviteInput' } },
-            },
-        }
-      responses:
-        '201':
-          {
-            description: Delivered invitation,
-            content:
-              {
-                application/json:
-                  {
-                    schema:
-                      {
-                        type: object,
-                        properties:
-                          { data: { $ref: '#/components/schemas/Invitation' } },
-                      },
-                  },
-              },
-          }
-        '400': { $ref: '#/components/responses/InvalidInput' }
-        '401': { $ref: '#/components/responses/AuthError' }
-        '403': { $ref: '#/components/responses/AuthError' }
-        '404': { $ref: '#/components/responses/AuthError' }
-        '409': { $ref: '#/components/responses/AuthError' }
-        '503': { $ref: '#/components/responses/AuthError' }
-  /api/v1/organizations/{id}/invitations/{invitationId}:
-    parameters:
-      [
-        { $ref: '#/components/parameters/OrganizationID' },
-        {
-          in: path,
-          name: invitationId,
-          required: true,
-          schema: { type: string, format: uuid },
-        },
-      ]
-    delete:
-      operationId: revokeInvitation
-      security: [{ sessionCookie: [] }]
-      parameters: [{ $ref: '#/components/parameters/CSRF' }]
-      responses:
-        '200':
-          {
-            description: Revoked,
-            content:
-              {
-                application/json:
-                  {
-                    schema:
-                      {
-                        type: object,
-                        properties:
-                          {
-                            data:
-                              {
-                                type: object,
-                                properties: { revoked: { type: boolean } },
-                              },
-                          },
-                      },
-                  },
-              },
-          }
-        '401': { $ref: '#/components/responses/AuthError' }
-        '403': { $ref: '#/components/responses/AuthError' }
-        '404': { $ref: '#/components/responses/AuthError' }
-  /api/v1/invitations/accept:
-    post:
-      operationId: acceptInvitation
-      security: [{ sessionCookie: [] }]
-      description: Authenticated intended recipient only. Rechecks inviter authority and active branch assignments. Atomically consumes invitation and creates/reactivates one membership. Expired/revoked/replayed/wrong-email tokens return 404; existing active/suspended memberships return 409.
-      parameters: [{ $ref: '#/components/parameters/CSRF' }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              {
-                type: object,
-                additionalProperties: false,
-                required: [token],
-                properties: { token: { type: string, writeOnly: true } },
-              }
-      responses:
-        '200': { $ref: '#/components/responses/OrganizationContext' }
-        '400': { $ref: '#/components/responses/InvalidInput' }
-        '401': { $ref: '#/components/responses/AuthError' }
-        '403': { $ref: '#/components/responses/AuthError' }
-        '404': { $ref: '#/components/responses/AuthError' }
-        '409': { $ref: '#/components/responses/AuthError' }
   /api/v1/organizations/{id}/audit:
     parameters: [{ $ref: '#/components/parameters/OrganizationID' }]
     get:
       operationId: organizationAudit
       security: [{ sessionCookie: [] }]
-      description: Newest 100 records. Owner all; Manager requires all event branches within their assignments and visible target membership. No secrets or raw tokens.
+      description: Newest 100 records, OWNER only within the requested organization. Historical actor identifiers are retained. No secrets or raw tokens.
       parameters:
         [{ in: query, name: member_id, schema: { type: string, format: uuid } }]
       responses:
@@ -3654,7 +3436,7 @@ paths:
       security: [{ sessionCookie: [] }]
       responses:
         '200':
-          description: Active memberships only; subordinate roles receive redacted contact fields. In single-store mode, only active membership in the configured store is returned; no membership returns an empty array.
+          description: Active OWNER memberships only. Legacy non-owner memberships are not listed. In single-store mode, only active ownership of the configured store is returned; no ownership returns an empty array.
           headers:
             X-SmartPOS-Store-Mode:
               $ref: '#/components/headers/StoreMode'
@@ -3714,6 +3496,7 @@ paths:
       responses:
         '200': { $ref: '#/components/responses/OrganizationContext' }
         '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
         '404': { $ref: '#/components/responses/AuthError' }
     patch:
       operationId: updateOrganization
@@ -3762,6 +3545,7 @@ paths:
       responses:
         '200': { $ref: '#/components/responses/OrganizationContext' }
         '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
         '404': { $ref: '#/components/responses/AuthError' }
   /api/v1/organizations/{id}/permissions:
     parameters: [{ $ref: '#/components/parameters/OrganizationID' }]
@@ -3781,38 +3565,6 @@ paths:
                         type: object,
                         properties:
                           { data: { type: array, items: { type: string } } },
-                      },
-                  },
-              },
-          }
-        '401': { $ref: '#/components/responses/AuthError' }
-        '404': { $ref: '#/components/responses/AuthError' }
-  /api/v1/organizations/{id}/roles:
-    parameters: [{ $ref: '#/components/parameters/OrganizationID' }]
-    get:
-      operationId: roleMatrix
-      security: [{ sessionCookie: [] }]
-      description: Fixed role permission map. Owner/Manager only. Manager permissions additionally require assigned branch scope and cannot modify Owner, Manager or themselves.
-      responses:
-        '200':
-          {
-            description: Fixed role map,
-            content:
-              {
-                application/json:
-                  {
-                    schema:
-                      {
-                        type: object,
-                        properties:
-                          {
-                            data:
-                              {
-                                type: object,
-                                additionalProperties:
-                                  { type: array, items: { type: string } },
-                              },
-                          },
                       },
                   },
               },
@@ -3892,7 +3644,7 @@ paths:
     patch:
       operationId: updateBranch
       security: [{ sessionCookie: [] }]
-      description: OWNER may activate/deactivate except final ACTIVE branch. Manager updates only their ACTIVE assigned branches, without status changes. No hard-delete operation.
+      description: OWNER only; may activate/deactivate except the final ACTIVE branch. No hard-delete operation.
       parameters: [{ $ref: '#/components/parameters/CSRF' }]
       requestBody:
         {
@@ -6092,8 +5844,7 @@ paths:
       operationId: posOperation1
       summary: GET /pos/terminals
       description:
-        'Permission: pos.access. Tenant/branch scope; Cashier reads own
-        records only. Manual payments require acknowledged=true and reference.
+        'Permission: pos.access. Tenant/branch scope; OWNER only. Manual payments require acknowledged=true and reference.
         Completion can return RECONCILIATION_REQUIRED with durable funds evidence
         and no sale or stock commit. No gateway or automatic refund.'
       security:
@@ -6184,8 +5935,7 @@ paths:
       operationId: posOperation8
       summary: POST /pos/terminals
       description:
-        'Permission: pos.terminal.manage. Tenant/branch scope; Cashier
-        reads own records only. Manual payments require acknowledged=true and
+        'Permission: pos.terminal.manage. Tenant/branch scope; OWNER only. Manual payments require acknowledged=true and
         reference. Completion can return RECONCILIATION_REQUIRED with durable
         funds evidence and no sale or stock commit. No gateway or automatic
         refund.'
@@ -6253,8 +6003,7 @@ paths:
       operationId: posOperation2
       summary: GET /pos/products
       description:
-        'Permission: pos.access. Tenant/branch scope; Cashier reads own
-        records only. Manual payments require acknowledged=true and reference.
+        'Permission: pos.access. Tenant/branch scope; OWNER only. Manual payments require acknowledged=true and reference.
         Completion can return RECONCILIATION_REQUIRED with durable funds evidence
         and no sale or stock commit. No gateway or automatic refund.'
       security:
@@ -6350,7 +6099,7 @@ paths:
       operationId: posOperation3
       summary: GET /pos/shifts
       description: 'Permission: pos.register.history.read. Tenant/branch scope;
-        Cashier reads own records only. Manual payments require acknowledged=true
+        OWNER only. Manual payments require acknowledged=true
         and reference. Completion can return RECONCILIATION_REQUIRED with durable
         funds evidence and no sale or stock commit. No gateway or automatic
         refund.'
@@ -6443,8 +6192,7 @@ paths:
       operationId: posOperation4
       summary: GET /pos/carts
       description:
-        'Permission: pos.cart.manage. Tenant/branch scope; Cashier reads
-        own records only. Manual payments require acknowledged=true and reference.
+        'Permission: pos.cart.manage. Tenant/branch scope; OWNER only. Manual payments require acknowledged=true and reference.
         Completion can return RECONCILIATION_REQUIRED with durable funds evidence
         and no sale or stock commit. No gateway or automatic refund.'
       security:
@@ -6535,8 +6283,7 @@ paths:
       operationId: posOperation13
       summary: POST /pos/carts
       description:
-        'Permission: pos.cart.manage. Tenant/branch scope; Cashier reads
-        own records only. Manual payments require acknowledged=true and reference.
+        'Permission: pos.cart.manage. Tenant/branch scope; OWNER only. Manual payments require acknowledged=true and reference.
         Completion can return RECONCILIATION_REQUIRED with durable funds evidence
         and no sale or stock commit. No gateway or automatic refund.'
       security:
@@ -6607,8 +6354,7 @@ paths:
       operationId: posOperation5
       summary: GET /pos/checkouts
       description:
-        'Permission: pos.checkout. Tenant/branch scope; Cashier reads own
-        records only. Manual payments require acknowledged=true and reference.
+        'Permission: pos.checkout. Tenant/branch scope; OWNER only. Manual payments require acknowledged=true and reference.
         Completion can return RECONCILIATION_REQUIRED with durable funds evidence
         and no sale or stock commit. No gateway or automatic refund.'
       security:
@@ -6700,8 +6446,7 @@ paths:
       operationId: posOperation6
       summary: GET /pos/barcodes/{code}
       description:
-        'Permission: pos.access. Tenant/branch scope; Cashier reads own
-        records only. Manual payments require acknowledged=true and reference.
+        'Permission: pos.access. Tenant/branch scope; OWNER only. Manual payments require acknowledged=true and reference.
         Completion can return RECONCILIATION_REQUIRED with durable funds evidence
         and no sale or stock commit. No gateway or automatic refund.'
       security:
@@ -6797,8 +6542,7 @@ paths:
       operationId: posOperation7
       summary: GET /pos/payment-methods
       description:
-        'Permission: pos.access. Tenant/branch scope; Cashier reads own
-        records only. Manual payments require acknowledged=true and reference.
+        'Permission: pos.access. Tenant/branch scope; OWNER only. Manual payments require acknowledged=true and reference.
         Completion can return RECONCILIATION_REQUIRED with durable funds evidence
         and no sale or stock commit. No gateway or automatic refund.'
       security:
@@ -6864,8 +6608,7 @@ paths:
       operationId: posOperation9
       summary: PATCH /pos/terminals/{resourceId}
       description:
-        'Permission: pos.terminal.manage. Tenant/branch scope; Cashier
-        reads own records only. Manual payments require acknowledged=true and
+        'Permission: pos.terminal.manage. Tenant/branch scope; OWNER only. Manual payments require acknowledged=true and
         reference. Completion can return RECONCILIATION_REQUIRED with durable
         funds evidence and no sale or stock commit. No gateway or automatic
         refund.'
@@ -6939,8 +6682,7 @@ paths:
       operationId: posOperation10
       summary: POST /pos/shifts/open
       description:
-        'Permission: pos.register.open. Tenant/branch scope; Cashier reads
-        own records only. Manual payments require acknowledged=true and reference.
+        'Permission: pos.register.open. Tenant/branch scope; OWNER only. Manual payments require acknowledged=true and reference.
         Completion can return RECONCILIATION_REQUIRED with durable funds evidence
         and no sale or stock commit. No gateway or automatic refund.'
       security:
@@ -7013,7 +6755,7 @@ paths:
       operationId: posOperation11
       summary: GET /pos/shifts/{resourceId}
       description: 'Permission: pos.register.history.read. Tenant/branch scope;
-        Cashier reads own records only. Manual payments require acknowledged=true
+        OWNER only. Manual payments require acknowledged=true
         and reference. Completion can return RECONCILIATION_REQUIRED with durable
         funds evidence and no sale or stock commit. No gateway or automatic
         refund.'
@@ -7080,7 +6822,7 @@ paths:
       operationId: posOperation12
       summary: POST /pos/shifts/{resourceId}/close
       description: 'Permission: pos.register.close (pos.register.close.other for
-        another cashier). Tenant/branch scope; Cashier reads own records only.
+        another operator). Tenant/branch scope; OWNER only.
         Manual payments require acknowledged=true and reference. Completion can
         return RECONCILIATION_REQUIRED with durable funds evidence and no sale or
         stock commit. No gateway or automatic refund.'
@@ -7158,8 +6900,7 @@ paths:
       operationId: posOperation14
       summary: GET /pos/carts/{resourceId}
       description:
-        'Permission: pos.cart.manage. Tenant/branch scope; Cashier reads
-        own records only. Manual payments require acknowledged=true and reference.
+        'Permission: pos.cart.manage. Tenant/branch scope; OWNER only. Manual payments require acknowledged=true and reference.
         Completion can return RECONCILIATION_REQUIRED with durable funds evidence
         and no sale or stock commit. No gateway or automatic refund.'
       security:
@@ -7224,8 +6965,7 @@ paths:
       operationId: posOperation15
       summary: PATCH /pos/carts/{resourceId}
       description:
-        'Permission: pos.cart.manage. Tenant/branch scope; Cashier reads
-        own records only. Manual payments require acknowledged=true and reference.
+        'Permission: pos.cart.manage. Tenant/branch scope; OWNER only. Manual payments require acknowledged=true and reference.
         Completion can return RECONCILIATION_REQUIRED with durable funds evidence
         and no sale or stock commit. No gateway or automatic refund.'
       security:
@@ -7296,8 +7036,7 @@ paths:
       operationId: posOperation16
       summary: POST /pos/carts/{resourceId}/hold
       description:
-        'Permission: pos.cart.manage. Tenant/branch scope; Cashier reads
-        own records only. Manual payments require acknowledged=true and reference.
+        'Permission: pos.cart.manage. Tenant/branch scope; OWNER only. Manual payments require acknowledged=true and reference.
         Completion can return RECONCILIATION_REQUIRED with durable funds evidence
         and no sale or stock commit. No gateway or automatic refund.'
       security:
@@ -7370,8 +7109,7 @@ paths:
       operationId: posOperation17
       summary: POST /pos/carts/{resourceId}/resume
       description:
-        'Permission: pos.cart.manage. Tenant/branch scope; Cashier reads
-        own records only. Manual payments require acknowledged=true and reference.
+        'Permission: pos.cart.manage. Tenant/branch scope; OWNER only. Manual payments require acknowledged=true and reference.
         Completion can return RECONCILIATION_REQUIRED with durable funds evidence
         and no sale or stock commit. No gateway or automatic refund.'
       security:
@@ -7444,8 +7182,7 @@ paths:
       operationId: posOperation18
       summary: POST /pos/carts/{resourceId}/cancel
       description:
-        'Permission: pos.cart.manage. Tenant/branch scope; Cashier reads
-        own records only. Manual payments require acknowledged=true and reference.
+        'Permission: pos.cart.manage. Tenant/branch scope; OWNER only. Manual payments require acknowledged=true and reference.
         Completion can return RECONCILIATION_REQUIRED with durable funds evidence
         and no sale or stock commit. No gateway or automatic refund.'
       security:
@@ -7518,7 +7255,7 @@ paths:
       operationId: posOperation19
       summary: POST /pos/checkout
       description: 'Permission: pos.checkout + pos.payment.cash/manual_confirm.
-        Tenant/branch scope; Cashier reads own records only. Manual payments
+        Tenant/branch scope; OWNER only. Manual payments
         require acknowledged=true and reference. Completion can return
         RECONCILIATION_REQUIRED with durable funds evidence and no sale or stock
         commit. No gateway or automatic refund.'
@@ -7592,8 +7329,7 @@ paths:
       operationId: posOperation20
       summary: GET /pos/checkouts/{resourceId}
       description:
-        'Permission: pos.checkout. Tenant/branch scope; Cashier reads own
-        records only. Manual payments require acknowledged=true and reference.
+        'Permission: pos.checkout. Tenant/branch scope; OWNER only. Manual payments require acknowledged=true and reference.
         Completion can return RECONCILIATION_REQUIRED with durable funds evidence
         and no sale or stock commit. No gateway or automatic refund.'
       security:
@@ -7659,8 +7395,7 @@ paths:
       operationId: posOperation21
       summary: POST /pos/checkouts/{resourceId}/complete
       description:
-        'Permission: pos.checkout. Tenant/branch scope; Cashier reads own
-        records only. Manual payments require acknowledged=true and reference.
+        'Permission: pos.checkout. Tenant/branch scope; OWNER only. Manual payments require acknowledged=true and reference.
         Completion can return RECONCILIATION_REQUIRED with durable funds evidence
         and no sale or stock commit. No gateway or automatic refund.'
       security:
@@ -7734,8 +7469,7 @@ paths:
       operationId: posOperation22
       summary: POST /pos/checkouts/{resourceId}/cancel
       description:
-        'Permission: pos.checkout. Tenant/branch scope; Cashier reads own
-        records only. Manual payments require acknowledged=true and reference.
+        'Permission: pos.checkout. Tenant/branch scope; OWNER only. Manual payments require acknowledged=true and reference.
         Completion can return RECONCILIATION_REQUIRED with durable funds evidence
         and no sale or stock commit. No gateway or automatic refund.'
       security:
@@ -7808,8 +7542,7 @@ paths:
       operationId: posOperation23
       summary: POST /pos/checkouts/{resourceId}/resolve
       description:
-        'Permission: pos.payment.reconcile. Tenant/branch scope; Cashier
-        reads own records only. Manual payments require acknowledged=true and
+        'Permission: pos.payment.reconcile. Tenant/branch scope; OWNER only. Manual payments require acknowledged=true and
         reference. Completion can return RECONCILIATION_REQUIRED with durable
         funds evidence and no sale or stock commit. No gateway or automatic
         refund.'
@@ -7884,7 +7617,7 @@ paths:
       summary: POST /pos/payments/{resourceId}/confirm
       description:
         'Permission: pos.payment.cash/manual_confirm. Tenant/branch scope;
-        Cashier reads own records only. Manual payments require acknowledged=true
+        OWNER only. Manual payments require acknowledged=true
         and reference. Completion can return RECONCILIATION_REQUIRED with durable
         funds evidence and no sale or stock commit. No gateway or automatic
         refund.'
@@ -7962,8 +7695,7 @@ paths:
       operationId: posOperation25
       summary: GET /sales
       description:
-        'Permission: sales.read. Tenant/branch scope; Cashier reads own
-        records only. Manual payments require acknowledged=true and reference.
+        'Permission: sales.read. Tenant/branch scope; OWNER only. Manual payments require acknowledged=true and reference.
         Completion can return RECONCILIATION_REQUIRED with durable funds evidence
         and no sale or stock commit. No gateway or automatic refund.'
       security:
@@ -8080,8 +7812,7 @@ paths:
       operationId: posOperation26
       summary: GET /sales/{resourceId}
       description:
-        'Permission: sales.read. Tenant/branch scope; Cashier reads own
-        records only. Manual payments require acknowledged=true and reference.
+        'Permission: sales.read. Tenant/branch scope; OWNER only. Manual payments require acknowledged=true and reference.
         Completion can return RECONCILIATION_REQUIRED with durable funds evidence
         and no sale or stock commit. No gateway or automatic refund.'
       security:
@@ -8147,8 +7878,7 @@ paths:
       operationId: posOperation27
       summary: GET /receipts
       description:
-        'Permission: receipts.read. Tenant/branch scope; Cashier reads own
-        records only. Manual payments require acknowledged=true and reference.
+        'Permission: receipts.read. Tenant/branch scope; OWNER only. Manual payments require acknowledged=true and reference.
         Completion can return RECONCILIATION_REQUIRED with durable funds evidence
         and no sale or stock commit. No gateway or automatic refund.'
       security:
@@ -8265,8 +7995,7 @@ paths:
       operationId: posOperation28
       summary: GET /receipts/{resourceId}
       description:
-        'Permission: receipts.read. Tenant/branch scope; Cashier reads own
-        records only. Manual payments require acknowledged=true and reference.
+        'Permission: receipts.read. Tenant/branch scope; OWNER only. Manual payments require acknowledged=true and reference.
         Completion can return RECONCILIATION_REQUIRED with durable funds evidence
         and no sale or stock commit. No gateway or automatic refund.'
       security:
@@ -13174,8 +12903,7 @@ paths:
     get:
       operationId: customerReturns1
       description: Requires returns.read. Rechecks tenant membership and branch,
-        including replay. Cashiers access own original sales/requests only, no
-        approval/settlement. Return posting is atomic local Inventory/refund
+        including replay. OWNER only. Return posting is atomic local Inventory/refund
         creation. Settlement is manual acknowledgement, not bank verification;
         never auto-retry external payout. Cash binds an open own shift, blocks
         closure while reported or unreconciled. See business-operations
@@ -13244,8 +12972,7 @@ paths:
       operationId: customerReturns2
       description:
         Requires returns.create. Rechecks tenant membership and branch,
-        including replay. Cashiers access own original sales/requests only, no
-        approval/settlement. Return posting is atomic local Inventory/refund
+        including replay. OWNER only. Return posting is atomic local Inventory/refund
         creation. Settlement is manual acknowledgement, not bank verification;
         never auto-retry external payout. Cash binds an open own shift, blocks
         closure while reported or unreconciled. See business-operations
@@ -13296,8 +13023,7 @@ paths:
     get:
       operationId: customerReturns3
       description: Requires returns.read. Rechecks tenant membership and branch,
-        including replay. Cashiers access own original sales/requests only, no
-        approval/settlement. Return posting is atomic local Inventory/refund
+        including replay. OWNER only. Return posting is atomic local Inventory/refund
         creation. Settlement is manual acknowledgement, not bank verification;
         never auto-retry external payout. Cash binds an open own shift, blocks
         closure while reported or unreconciled. See business-operations
@@ -13340,8 +13066,7 @@ paths:
     get:
       operationId: customerReturns4
       description: Requires returns.read. Rechecks tenant membership and branch,
-        including replay. Cashiers access own original sales/requests only, no
-        approval/settlement. Return posting is atomic local Inventory/refund
+        including replay. OWNER only. Return posting is atomic local Inventory/refund
         creation. Settlement is manual acknowledgement, not bank verification;
         never auto-retry external payout. Cash binds an open own shift, blocks
         closure while reported or unreconciled. See business-operations
@@ -13385,8 +13110,7 @@ paths:
       operationId: customerReturns5
       description:
         Requires returns.create. Rechecks tenant membership and branch,
-        including replay. Cashiers access own original sales/requests only, no
-        approval/settlement. Return posting is atomic local Inventory/refund
+        including replay. OWNER only. Return posting is atomic local Inventory/refund
         creation. Settlement is manual acknowledgement, not bank verification;
         never auto-retry external payout. Cash binds an open own shift, blocks
         closure while reported or unreconciled. See business-operations
@@ -13444,8 +13168,7 @@ paths:
       operationId: customerReturns6
       description:
         Requires returns.approve. Rechecks tenant membership and branch,
-        including replay. Cashiers access own original sales/requests only, no
-        approval/settlement. Return posting is atomic local Inventory/refund
+        including replay. OWNER only. Return posting is atomic local Inventory/refund
         creation. Settlement is manual acknowledgement, not bank verification;
         never auto-retry external payout. Cash binds an open own shift, blocks
         closure while reported or unreconciled. See business-operations
@@ -13503,8 +13226,7 @@ paths:
       operationId: customerReturns7
       description:
         Requires returns.approve. Rechecks tenant membership and branch,
-        including replay. Cashiers access own original sales/requests only, no
-        approval/settlement. Return posting is atomic local Inventory/refund
+        including replay. OWNER only. Return posting is atomic local Inventory/refund
         creation. Settlement is manual acknowledgement, not bank verification;
         never auto-retry external payout. Cash binds an open own shift, blocks
         closure while reported or unreconciled. See business-operations
@@ -13562,8 +13284,7 @@ paths:
       operationId: customerReturns8
       description:
         Requires returns.create. Rechecks tenant membership and branch,
-        including replay. Cashiers access own original sales/requests only, no
-        approval/settlement. Return posting is atomic local Inventory/refund
+        including replay. OWNER only. Return posting is atomic local Inventory/refund
         creation. Settlement is manual acknowledgement, not bank verification;
         never auto-retry external payout. Cash binds an open own shift, blocks
         closure while reported or unreconciled. See business-operations
@@ -13621,8 +13342,7 @@ paths:
       operationId: customerReturns9
       description:
         Requires returns.complete. Rechecks tenant membership and branch,
-        including replay. Cashiers access own original sales/requests only, no
-        approval/settlement. Return posting is atomic local Inventory/refund
+        including replay. OWNER only. Return posting is atomic local Inventory/refund
         creation. Settlement is manual acknowledgement, not bank verification;
         never auto-retry external payout. Cash binds an open own shift, blocks
         closure while reported or unreconciled. See business-operations
@@ -13679,8 +13399,7 @@ paths:
     get:
       operationId: customerReturns10
       description: Requires refunds.read. Rechecks tenant membership and branch,
-        including replay. Cashiers access own original sales/requests only, no
-        approval/settlement. Return posting is atomic local Inventory/refund
+        including replay. OWNER only. Return posting is atomic local Inventory/refund
         creation. Settlement is manual acknowledgement, not bank verification;
         never auto-retry external payout. Cash binds an open own shift, blocks
         closure while reported or unreconciled. See business-operations
@@ -13749,8 +13468,7 @@ paths:
     get:
       operationId: customerReturns11
       description: Requires refunds.read. Rechecks tenant membership and branch,
-        including replay. Cashiers access own original sales/requests only, no
-        approval/settlement. Return posting is atomic local Inventory/refund
+        including replay. OWNER only. Return posting is atomic local Inventory/refund
         creation. Settlement is manual acknowledgement, not bank verification;
         never auto-retry external payout. Cash binds an open own shift, blocks
         closure while reported or unreconciled. See business-operations
@@ -13794,8 +13512,7 @@ paths:
       operationId: customerReturns12
       description:
         Requires refunds.settlement.report. Rechecks tenant membership and
-        branch, including replay. Cashiers access own original sales/requests
-        only, no approval/settlement. Return posting is atomic local
+        branch, including replay. OWNER only. Return posting is atomic local
         Inventory/refund creation. Settlement is manual acknowledgement, not bank
         verification; never auto-retry external payout. Cash binds an open own
         shift, blocks closure while reported or unreconciled. See
@@ -13853,8 +13570,7 @@ paths:
       operationId: customerReturns13
       description:
         Requires refunds.settlement.confirm. Rechecks tenant membership and
-        branch, including replay. Cashiers access own original sales/requests
-        only, no approval/settlement. Return posting is atomic local
+        branch, including replay. OWNER only. Return posting is atomic local
         Inventory/refund creation. Settlement is manual acknowledgement, not bank
         verification; never auto-retry external payout. Cash binds an open own
         shift, blocks closure while reported or unreconciled. See
@@ -13912,8 +13628,7 @@ paths:
       operationId: customerReturns14
       description:
         Requires refunds.settlement.confirm. Rechecks tenant membership and
-        branch, including replay. Cashiers access own original sales/requests
-        only, no approval/settlement. Return posting is atomic local
+        branch, including replay. OWNER only. Return posting is atomic local
         Inventory/refund creation. Settlement is manual acknowledgement, not bank
         verification; never auto-retry external payout. Cash binds an open own
         shift, blocks closure while reported or unreconciled. See
@@ -13973,8 +13688,7 @@ paths:
         Tenant/branch scoped; revision-bound approval; original sales immutable. Exact
         historical credit and authoritative POS pricing. Manual funds are operator evidence, not bank
         verification. Cash binds an own open shift. Atomic Return/Inventory/POS posting; failure
-        preserves RECONCILIATION_REQUIRED. Self-approval allowed for Owner/Manager; Cashier cannot
-        approve/reverse/refund.
+        preserves RECONCILIATION_REQUIRED. Self-approval allowed for OWNER.
       security:
         - sessionCookie: []
       parameters:
@@ -14043,8 +13757,7 @@ paths:
         Tenant/branch scoped; revision-bound approval; original sales immutable. Exact
         historical credit and authoritative POS pricing. Manual funds are operator evidence, not bank
         verification. Cash binds an own open shift. Atomic Return/Inventory/POS posting; failure
-        preserves RECONCILIATION_REQUIRED. Self-approval allowed for Owner/Manager; Cashier cannot
-        approve/reverse/refund.
+        preserves RECONCILIATION_REQUIRED. Self-approval allowed for OWNER.
       security:
         - sessionCookie: []
       parameters:
@@ -14096,8 +13809,7 @@ paths:
         Tenant/branch scoped; revision-bound approval; original sales immutable. Exact
         historical credit and authoritative POS pricing. Manual funds are operator evidence, not bank
         verification. Cash binds an own open shift. Atomic Return/Inventory/POS posting; failure
-        preserves RECONCILIATION_REQUIRED. Self-approval allowed for Owner/Manager; Cashier cannot
-        approve/reverse/refund.
+        preserves RECONCILIATION_REQUIRED. Self-approval allowed for OWNER.
       security:
         - sessionCookie: []
       parameters:
@@ -14149,8 +13861,7 @@ paths:
         Tenant/branch scoped; revision-bound approval; original sales immutable. Exact
         historical credit and authoritative POS pricing. Manual funds are operator evidence, not bank
         verification. Cash binds an own open shift. Atomic Return/Inventory/POS posting; failure
-        preserves RECONCILIATION_REQUIRED. Self-approval allowed for Owner/Manager; Cashier cannot
-        approve/reverse/refund.
+        preserves RECONCILIATION_REQUIRED. Self-approval allowed for OWNER.
       security:
         - sessionCookie: []
       parameters:
@@ -14225,8 +13936,7 @@ paths:
         Tenant/branch scoped; revision-bound approval; original sales immutable. Exact
         historical credit and authoritative POS pricing. Manual funds are operator evidence, not bank
         verification. Cash binds an own open shift. Atomic Return/Inventory/POS posting; failure
-        preserves RECONCILIATION_REQUIRED. Self-approval allowed for Owner/Manager; Cashier cannot
-        approve/reverse/refund.
+        preserves RECONCILIATION_REQUIRED. Self-approval allowed for OWNER.
       security:
         - sessionCookie: []
       parameters:
@@ -14282,8 +13992,7 @@ paths:
         Tenant/branch scoped; revision-bound approval; original sales immutable. Exact
         historical credit and authoritative POS pricing. Manual funds are operator evidence, not bank
         verification. Cash binds an own open shift. Atomic Return/Inventory/POS posting; failure
-        preserves RECONCILIATION_REQUIRED. Self-approval allowed for Owner/Manager; Cashier cannot
-        approve/reverse/refund.
+        preserves RECONCILIATION_REQUIRED. Self-approval allowed for OWNER.
       security:
         - sessionCookie: []
       parameters:
@@ -14341,8 +14050,7 @@ paths:
         Tenant/branch scoped; revision-bound approval; original sales immutable. Exact
         historical credit and authoritative POS pricing. Manual funds are operator evidence, not bank
         verification. Cash binds an own open shift. Atomic Return/Inventory/POS posting; failure
-        preserves RECONCILIATION_REQUIRED. Self-approval allowed for Owner/Manager; Cashier cannot
-        approve/reverse/refund.
+        preserves RECONCILIATION_REQUIRED. Self-approval allowed for OWNER.
       security:
         - sessionCookie: []
       parameters:
@@ -14400,8 +14108,7 @@ paths:
         Tenant/branch scoped; revision-bound approval; original sales immutable. Exact
         historical credit and authoritative POS pricing. Manual funds are operator evidence, not bank
         verification. Cash binds an own open shift. Atomic Return/Inventory/POS posting; failure
-        preserves RECONCILIATION_REQUIRED. Self-approval allowed for Owner/Manager; Cashier cannot
-        approve/reverse/refund.
+        preserves RECONCILIATION_REQUIRED. Self-approval allowed for OWNER.
       security:
         - sessionCookie: []
       parameters:
@@ -14459,8 +14166,7 @@ paths:
         Tenant/branch scoped; revision-bound approval; original sales immutable. Exact
         historical credit and authoritative POS pricing. Manual funds are operator evidence, not bank
         verification. Cash binds an own open shift. Atomic Return/Inventory/POS posting; failure
-        preserves RECONCILIATION_REQUIRED. Self-approval allowed for Owner/Manager; Cashier cannot
-        approve/reverse/refund.
+        preserves RECONCILIATION_REQUIRED. Self-approval allowed for OWNER.
       security:
         - sessionCookie: []
       parameters:
@@ -14518,8 +14224,7 @@ paths:
         Tenant/branch scoped; revision-bound approval; original sales immutable. Exact
         historical credit and authoritative POS pricing. Manual funds are operator evidence, not bank
         verification. Cash binds an own open shift. Atomic Return/Inventory/POS posting; failure
-        preserves RECONCILIATION_REQUIRED. Self-approval allowed for Owner/Manager; Cashier cannot
-        approve/reverse/refund.
+        preserves RECONCILIATION_REQUIRED. Self-approval allowed for OWNER.
       security:
         - sessionCookie: []
       parameters:
@@ -14577,8 +14282,7 @@ paths:
         Tenant/branch scoped; revision-bound approval; original sales immutable. Exact
         historical credit and authoritative POS pricing. Manual funds are operator evidence, not bank
         verification. Cash binds an own open shift. Atomic Return/Inventory/POS posting; failure
-        preserves RECONCILIATION_REQUIRED. Self-approval allowed for Owner/Manager; Cashier cannot
-        approve/reverse/refund. Negative-difference completion requires current Owner/Manager
+        preserves RECONCILIATION_REQUIRED. Self-approval allowed for OWNER. Negative-difference completion requires current OWNER
         authority, including cached completion replay after role demotion.
       security:
         - sessionCookie: []
@@ -14637,8 +14341,7 @@ paths:
         Tenant/branch scoped; revision-bound approval; original sales immutable. Exact
         historical credit and authoritative POS pricing. Manual funds are operator evidence, not bank
         verification. Cash binds an own open shift. Atomic Return/Inventory/POS posting; failure
-        preserves RECONCILIATION_REQUIRED. Self-approval allowed for Owner/Manager; Cashier cannot
-        approve/reverse/refund.
+        preserves RECONCILIATION_REQUIRED. Self-approval allowed for OWNER.
       security:
         - sessionCookie: []
       parameters:
@@ -14707,8 +14410,7 @@ paths:
         Tenant/branch scoped; revision-bound approval; original sales immutable. Exact
         historical credit and authoritative POS pricing. Manual funds are operator evidence, not bank
         verification. Cash binds an own open shift. Atomic Return/Inventory/POS posting; failure
-        preserves RECONCILIATION_REQUIRED. Self-approval allowed for Owner/Manager; Cashier cannot
-        approve/reverse/refund.
+        preserves RECONCILIATION_REQUIRED. Self-approval allowed for OWNER.
       security:
         - sessionCookie: []
       parameters:
@@ -14760,8 +14462,7 @@ paths:
         Tenant/branch scoped; revision-bound approval; original sales immutable. Exact
         historical credit and authoritative POS pricing. Manual funds are operator evidence, not bank
         verification. Cash binds an own open shift. Atomic Return/Inventory/POS posting; failure
-        preserves RECONCILIATION_REQUIRED. Self-approval allowed for Owner/Manager; Cashier cannot
-        approve/reverse/refund.
+        preserves RECONCILIATION_REQUIRED. Self-approval allowed for OWNER.
       security:
         - sessionCookie: []
       parameters:
@@ -14813,8 +14514,7 @@ paths:
         Tenant/branch scoped; revision-bound approval; original sales immutable. Exact
         historical credit and authoritative POS pricing. Manual funds are operator evidence, not bank
         verification. Cash binds an own open shift. Atomic Return/Inventory/POS posting; failure
-        preserves RECONCILIATION_REQUIRED. Self-approval allowed for Owner/Manager; Cashier cannot
-        approve/reverse/refund.
+        preserves RECONCILIATION_REQUIRED. Self-approval allowed for OWNER.
       security:
         - sessionCookie: []
       parameters:
@@ -14889,8 +14589,7 @@ paths:
         Tenant/branch scoped; revision-bound approval; original sales immutable. Exact
         historical credit and authoritative POS pricing. Manual funds are operator evidence, not bank
         verification. Cash binds an own open shift. Atomic Return/Inventory/POS posting; failure
-        preserves RECONCILIATION_REQUIRED. Self-approval allowed for Owner/Manager; Cashier cannot
-        approve/reverse/refund.
+        preserves RECONCILIATION_REQUIRED. Self-approval allowed for OWNER.
       security:
         - sessionCookie: []
       parameters:
@@ -14946,8 +14645,7 @@ paths:
         Tenant/branch scoped; revision-bound approval; original sales immutable. Exact
         historical credit and authoritative POS pricing. Manual funds are operator evidence, not bank
         verification. Cash binds an own open shift. Atomic Return/Inventory/POS posting; failure
-        preserves RECONCILIATION_REQUIRED. Self-approval allowed for Owner/Manager; Cashier cannot
-        approve/reverse/refund.
+        preserves RECONCILIATION_REQUIRED. Self-approval allowed for OWNER.
       security:
         - sessionCookie: []
       parameters:
@@ -15005,8 +14703,7 @@ paths:
         Tenant/branch scoped; revision-bound approval; original sales immutable. Exact
         historical credit and authoritative POS pricing. Manual funds are operator evidence, not bank
         verification. Cash binds an own open shift. Atomic Return/Inventory/POS posting; failure
-        preserves RECONCILIATION_REQUIRED. Self-approval allowed for Owner/Manager; Cashier cannot
-        approve/reverse/refund.
+        preserves RECONCILIATION_REQUIRED. Self-approval allowed for OWNER.
       security:
         - sessionCookie: []
       parameters:
@@ -15064,8 +14761,7 @@ paths:
         Tenant/branch scoped; revision-bound approval; original sales immutable. Exact
         historical credit and authoritative POS pricing. Manual funds are operator evidence, not bank
         verification. Cash binds an own open shift. Atomic Return/Inventory/POS posting; failure
-        preserves RECONCILIATION_REQUIRED. Self-approval allowed for Owner/Manager; Cashier cannot
-        approve/reverse/refund.
+        preserves RECONCILIATION_REQUIRED. Self-approval allowed for OWNER.
       security:
         - sessionCookie: []
       parameters:
@@ -15123,8 +14819,7 @@ paths:
         Tenant/branch scoped; revision-bound approval; original sales immutable. Exact
         historical credit and authoritative POS pricing. Manual funds are operator evidence, not bank
         verification. Cash binds an own open shift. Atomic Return/Inventory/POS posting; failure
-        preserves RECONCILIATION_REQUIRED. Self-approval allowed for Owner/Manager; Cashier cannot
-        approve/reverse/refund.
+        preserves RECONCILIATION_REQUIRED. Self-approval allowed for OWNER.
       security:
         - sessionCookie: []
       parameters:
@@ -15182,8 +14877,7 @@ paths:
         Tenant/branch scoped; revision-bound approval; original sales immutable. Exact
         historical credit and authoritative POS pricing. Manual funds are operator evidence, not bank
         verification. Cash binds an own open shift. Atomic Return/Inventory/POS posting; failure
-        preserves RECONCILIATION_REQUIRED. Self-approval allowed for Owner/Manager; Cashier cannot
-        approve/reverse/refund.
+        preserves RECONCILIATION_REQUIRED. Self-approval allowed for OWNER.
       security:
         - sessionCookie: []
       parameters:
@@ -15241,8 +14935,7 @@ paths:
         Tenant/branch scoped; revision-bound approval; original sales immutable. Exact
         historical credit and authoritative POS pricing. Manual funds are operator evidence, not bank
         verification. Cash binds an own open shift. Atomic Return/Inventory/POS posting; failure
-        preserves RECONCILIATION_REQUIRED. Self-approval allowed for Owner/Manager; Cashier cannot
-        approve/reverse/refund.
+        preserves RECONCILIATION_REQUIRED. Self-approval allowed for OWNER.
       security:
         - sessionCookie: []
       parameters:
@@ -16236,8 +15929,7 @@ paths:
         - sessionCookie: []
       description:
         'Requires customers.read; active organization membership and branch authorization are checked
-        before any idempotent replay. Customer data is organization-wide, not a user account. Cashier reads have
-        masked phone/email and omit note/consent values. Cache-Control: no-store. Archival preserves immutable
+        before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control: no-store. Archival preserves immutable
         transaction references.'
       responses:
         '200':
@@ -16297,8 +15989,7 @@ paths:
         - sessionCookie: []
       description:
         'Requires customers.manage; active organization membership and branch authorization are checked
-        before any idempotent replay. Customer data is organization-wide, not a user account. Cashier reads have
-        masked phone/email and omit note/consent values. Cache-Control: no-store. Archival preserves immutable
+        before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control: no-store. Archival preserves immutable
         transaction references.'
       responses:
         '200':
@@ -16350,8 +16041,7 @@ paths:
         - sessionCookie: []
       description:
         'Requires customers.read; active organization membership and branch authorization are checked
-        before any idempotent replay. Customer data is organization-wide, not a user account. Cashier reads have
-        masked phone/email and omit note/consent values. Cache-Control: no-store. Archival preserves immutable
+        before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control: no-store. Archival preserves immutable
         transaction references.'
       responses:
         '200':
@@ -16400,8 +16090,7 @@ paths:
         - sessionCookie: []
       description:
         'Requires customers.read; active organization membership and branch authorization are checked
-        before any idempotent replay. Customer data is organization-wide, not a user account. Cashier reads have
-        masked phone/email and omit note/consent values. Cache-Control: no-store. Archival preserves immutable
+        before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control: no-store. Archival preserves immutable
         transaction references.'
       responses:
         '200':
@@ -16434,8 +16123,7 @@ paths:
         - sessionCookie: []
       description:
         'Requires customers.manage; active organization membership and branch authorization are checked
-        before any idempotent replay. Customer data is organization-wide, not a user account. Cashier reads have
-        masked phone/email and omit note/consent values. Cache-Control: no-store. Archival preserves immutable
+        before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control: no-store. Archival preserves immutable
         transaction references.'
       responses:
         '200':
@@ -16484,8 +16172,7 @@ paths:
         - sessionCookie: []
       description:
         'Requires customers.manage; active organization membership and branch authorization are checked
-        before any idempotent replay. Customer data is organization-wide, not a user account. Cashier reads have
-        masked phone/email and omit note/consent values. Cache-Control: no-store. Archival preserves immutable
+        before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control: no-store. Archival preserves immutable
         transaction references.'
       responses:
         '200':
@@ -16534,8 +16221,7 @@ paths:
         - sessionCookie: []
       description:
         'Requires customers.history.read; active organization membership and branch authorization are
-        checked before any idempotent replay. Customer data is organization-wide, not a user account. Cashier
-        reads have masked phone/email and omit note/consent values. Cache-Control: no-store. Archival preserves
+        checked before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control: no-store. Archival preserves
         immutable transaction references.'
       responses:
         '200':
@@ -16608,8 +16294,7 @@ paths:
         - sessionCookie: []
       description:
         'Requires customers.history.read; active organization membership and branch authorization are
-        checked before any idempotent replay. Customer data is organization-wide, not a user account. Cashier
-        reads have masked phone/email and omit note/consent values. Cache-Control: no-store. Archival preserves
+        checked before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control: no-store. Archival preserves
         immutable transaction references.'
       responses:
         '200':
@@ -16659,8 +16344,7 @@ paths:
         - sessionCookie: []
       description:
         'Requires customers.groups.read; active organization membership and branch authorization are
-        checked before any idempotent replay. Customer data is organization-wide, not a user account. Cashier
-        reads have masked phone/email and omit note/consent values. Cache-Control: no-store. Archival preserves
+        checked before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control: no-store. Archival preserves
         immutable transaction references.'
       responses:
         '200':
@@ -16715,8 +16399,7 @@ paths:
         - sessionCookie: []
       description:
         'Requires customers.groups.manage; active organization membership and branch authorization are
-        checked before any idempotent replay. Customer data is organization-wide, not a user account. Cashier
-        reads have masked phone/email and omit note/consent values. Cache-Control: no-store. Archival preserves
+        checked before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control: no-store. Archival preserves
         immutable transaction references.'
       responses:
         '200':
@@ -16774,8 +16457,7 @@ paths:
         - sessionCookie: []
       description:
         'Requires customers.groups.manage; active organization membership and branch authorization are
-        checked before any idempotent replay. Customer data is organization-wide, not a user account. Cashier
-        reads have masked phone/email and omit note/consent values. Cache-Control: no-store. Archival preserves
+        checked before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control: no-store. Archival preserves
         immutable transaction references.'
       responses:
         '200':
@@ -16824,8 +16506,7 @@ paths:
         - sessionCookie: []
       description:
         'Requires customers.groups.manage; active organization membership and branch authorization are
-        checked before any idempotent replay. Customer data is organization-wide, not a user account. Cashier
-        reads have masked phone/email and omit note/consent values. Cache-Control: no-store. Archival preserves
+        checked before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control: no-store. Archival preserves
         immutable transaction references.'
       responses:
         '200':
@@ -16881,7 +16562,7 @@ paths:
       description:
         'Requires customers.manage and customers.groups.manage; active organization membership and branch
         authorization are checked before any idempotent replay. Customer data is organization-wide, not a user
-        account. Cashier reads have masked phone/email and omit note/consent values. Cache-Control: no-store.
+        account. Backoffice reads require OWNER access. Cache-Control: no-store.
         Archival preserves immutable transaction references.'
       responses:
         '200':
@@ -16931,7 +16612,7 @@ paths:
       description:
         'Requires pos.cart.manage and customers.select; active organization membership and branch
         authorization are checked before any idempotent replay. Customer data is organization-wide, not a user
-        account. Cashier reads have masked phone/email and omit note/consent values. Cache-Control: no-store.
+        account. Backoffice reads require OWNER access. Cache-Control: no-store.
         Archival preserves immutable transaction references.'
       responses:
         '200':
@@ -22929,11 +22610,7 @@ components:
           anyOf:
             - $ref: '#/components/schemas/CatalogImportResult'
             - type: 'null'
-    Role:
-      {
-        type: string,
-        enum: [OWNER, MANAGER, CASHIER, INVENTORY_STAFF, PURCHASING_STAFF],
-      }
+    Role: { type: string, enum: [OWNER] }
     OrganizationInput:
       type: object
       required: [name, code, business_type]
@@ -22997,21 +22674,6 @@ components:
         email: { type: string }
         status: { type: string, enum: [ACTIVE, INACTIVE] }
         is_main: { type: boolean }
-    MemberInput:
-      type: object
-      additionalProperties: false
-      required: [role, status, branch_ids]
-      properties:
-        role: { $ref: '#/components/schemas/Role' }
-        status: { type: string, enum: [ACTIVE, SUSPENDED, REMOVED] }
-        branch_ids:
-          {
-            type: array,
-            maxItems: 100,
-            uniqueItems: true,
-            items: { type: string, format: uuid },
-            description: Nonempty ACTIVE same-tenant branches for non-Owner memberships; empty for OWNER.,
-          }
     Member:
       type: object
       additionalProperties: false
@@ -23049,39 +22711,6 @@ components:
         branches:
           { type: array, items: { $ref: '#/components/schemas/Branch' } }
         permissions: { type: array, items: { type: string } }
-    InviteInput:
-      type: object
-      additionalProperties: false
-      required: [email, role, branch_ids]
-      properties:
-        email: { type: string, format: email, maxLength: 254 }
-        role:
-          {
-            type: string,
-            enum: [MANAGER, CASHIER, INVENTORY_STAFF, PURCHASING_STAFF],
-          }
-        branch_ids:
-          {
-            type: array,
-            minItems: 1,
-            maxItems: 100,
-            uniqueItems: true,
-            items: { type: string, format: uuid },
-          }
-    Invitation:
-      allOf:
-        - { $ref: '#/components/schemas/InviteInput' }
-        - {
-            type: object,
-            required: [id, expires_at, status],
-            properties:
-              {
-                id: { type: string, format: uuid },
-                expires_at: { type: string, format: date-time },
-                status:
-                  { type: string, enum: [PENDING, ACCEPTED, REVOKED, EXPIRED] },
-              },
-          }
     AuditEvent:
       type: object
       required: [id, actor_id, event_type, object_id, request_id, created_at]

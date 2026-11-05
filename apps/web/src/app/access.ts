@@ -5,8 +5,8 @@ export type Session =
   | { authenticated: true; role: Role; permissions: string[] };
 export const anonymousSession: Session = { authenticated: false };
 
-export type WorkspaceArea = 'management' | 'staff' | 'account';
-export const managementRoles: Role[] = ['OWNER', 'MANAGER'];
+export type WorkspaceArea = 'management' | 'account';
+export const managementRoles: Role[] = ['OWNER'];
 export const roleLabels: Record<Role, string> = {
   OWNER: 'เจ้าของร้าน',
   MANAGER: 'ผู้จัดการ',
@@ -20,7 +20,7 @@ export function isManagementRole(role: Role) {
 }
 
 export function workspaceHome(role: Role) {
-  return isManagementRole(role) ? '/manage/dashboard' : '/work';
+  return isManagementRole(role) ? '/manage/dashboard' : '/account';
 }
 
 export function canAccess(

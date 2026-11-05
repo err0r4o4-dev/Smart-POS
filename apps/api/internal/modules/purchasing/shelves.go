@@ -291,6 +291,13 @@ func (service *Service) CreateTask(ctx context.Context, user, org, key string, i
 	}
 	return finish(ctx, tx, user, org, op, "shelf.task.created", id, result)
 }
+func taskTransition(status, action string) (string, error) {
+	if status == "IN_PROGRESS" && action == "assign" {
+		return status, nil
+	}
+	return transition("TASK", status, action)
+}
+
 func (service *Service) ActTask(ctx context.Context, user, org, id, action, key string, input ActionInput) (json.RawMessage, error) {
 	permission := "shelf.replenishment.complete"
 	if action == "assign" {
@@ -326,7 +333,7 @@ func (service *Service) ActTask(ctx context.Context, user, org, id, action, key 
 	if revision != input.Revision {
 		return nil, ErrConflict
 	}
-	next, err := transition("TASK", status, action)
+	next, err := taskTransition(status, action)
 	if err != nil {
 		return nil, err
 	}
@@ -338,7 +345,7 @@ func (service *Service) ActTask(ctx context.Context, user, org, id, action, key 
 			return nil, ErrInput
 		}
 		var eligible bool
-		err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM organization_memberships member WHERE member.organization_id=$1 AND member.user_id=$2 AND member.status='ACTIVE' AND member.role IN ('OWNER','MANAGER','INVENTORY_STAFF') AND (member.role='OWNER' OR EXISTS(SELECT 1 FROM branch_memberships access WHERE access.organization_id=member.organization_id AND access.membership_id=member.id AND access.branch_id=$3)))`, org, input.AssignedTo, item.Branch).Scan(&eligible)
+		err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM organization_memberships member JOIN users account ON account.id=member.user_id WHERE member.organization_id=$1 AND member.user_id=$2 AND member.status='ACTIVE' AND member.role='OWNER' AND account.status='ACTIVE')`, org, input.AssignedTo).Scan(&eligible)
 		if err != nil {
 			return nil, err
 		}

@@ -1,7 +1,7 @@
 import { isValidElement } from 'react';
 import { matchRoutes } from 'react-router-dom';
 import { expect, it } from 'vitest';
-import { navigation, staffNavigation } from './routes';
+import { navigation } from './routes';
 import { router } from './router';
 import {
   SystemPage,
@@ -56,8 +56,8 @@ it.each(['', '/manage', '/work'])(
 );
 
 it('removes retail-only tools from both workspaces while retaining restaurant work', () => {
-  const links = [...navigation, ...staffNavigation].map((item) => item.to);
-  for (const prefix of ['/manage', '/work']) {
+  const links = navigation.map((item) => item.to);
+  for (const prefix of ['/manage']) {
     for (const path of removedPaths) {
       expect(links, prefix + path).not.toContain(prefix + path);
     }
@@ -72,7 +72,7 @@ it('removes retail-only tools from both workspaces while retaining restaurant wo
   expect(links).not.toContain('/manage/restaurant/forecast');
 });
 
-it.each(['/manage', '/work'])(
+it.each(['/manage'])(
   'keeps live restaurant and historical record routes under %s',
   (prefix) => {
     for (const [path, component] of [
@@ -101,4 +101,20 @@ it('preserves customer online cart and tracking routes', () => {
     const element = matchRoutes(router.routes, path)?.at(-1)?.route.element;
     expect(isValidElement(element) && element.type, path).toBe(component);
   }
+});
+
+it.each([
+  '/work',
+  '/work/pos',
+  '/work/restaurant/queue',
+  '/staff',
+  '/employees',
+  '/employees/a',
+  '/manage/employees',
+  '/manage/employees/a',
+  '/roles',
+  '/manage/roles',
+])('does not expose retired route %s', (path) => {
+  const element = matchRoutes(router.routes, path)?.at(-1)?.route.element;
+  expect(isValidElement(element) && element.type).toBe(SystemPage);
 });

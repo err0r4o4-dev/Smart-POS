@@ -57,7 +57,7 @@ func CurrentApprover(ctx context.Context, tx pgx.Tx, org, id string) error {
 		return nil
 	}
 	var authorized bool
-	err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM discount_approvals approval JOIN organization_memberships member ON member.organization_id=approval.organization_id AND member.user_id=approval.approved_by JOIN users account ON account.id=member.user_id JOIN branches branch ON branch.organization_id=approval.organization_id AND branch.id=approval.branch_id WHERE approval.organization_id=$1 AND approval.id=$2 AND member.status='ACTIVE' AND account.status='ACTIVE' AND branch.status='ACTIVE' AND (member.role='OWNER' OR (member.role='MANAGER' AND EXISTS(SELECT 1 FROM branch_memberships WHERE organization_id=member.organization_id AND membership_id=member.id AND branch_id=approval.branch_id))))`, org, id).Scan(&authorized)
+	err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM discount_approvals approval JOIN organization_memberships member ON member.organization_id=approval.organization_id AND member.user_id=approval.approved_by JOIN users account ON account.id=member.user_id JOIN branches branch ON branch.organization_id=approval.organization_id AND branch.id=approval.branch_id WHERE approval.organization_id=$1 AND approval.id=$2 AND member.status='ACTIVE' AND account.status='ACTIVE' AND branch.status='ACTIVE' AND member.role='OWNER')`, org, id).Scan(&authorized)
 	if err != nil {
 		return err
 	}

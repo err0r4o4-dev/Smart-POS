@@ -1,5 +1,4 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
-import { posFixture } from '../integration/pos-fixtures.mjs';
 import {
   inventoryAccount,
   inventoryMembership,
@@ -18,6 +17,7 @@ test('Phase 3: real POS, funds confirmation, receipts, register and responsive b
   browser,
 }, testInfo) => {
   test.setTimeout(360_000);
+  const { posFixture } = await import('../integration/pos-fixtures.mjs');
   const fixture = await posFixture();
   const contexts: BrowserContext[] = [];
   const errors: string[] = [];

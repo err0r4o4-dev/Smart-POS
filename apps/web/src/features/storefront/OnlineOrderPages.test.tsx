@@ -72,7 +72,7 @@ function view(settings = false) {
         initialEntries={[
           settings
             ? '/manage/settings/storefront'
-            : '/work/online-orders/order',
+            : '/manage/online-orders/order',
         ]}
       >
         <Routes>
@@ -81,7 +81,7 @@ function view(settings = false) {
             element={<StorefrontSettingsPage />}
           />
           <Route
-            path="/work/online-orders/:orderId"
+            path="/manage/online-orders/:orderId"
             element={<OnlineOrderPage />}
           />
         </Routes>
@@ -293,7 +293,7 @@ it('requires a visible reason to reject and sends the current order revision', a
     screen.queryByRole('button', { name: /สำเร็จ/ }),
   ).not.toBeInTheDocument();
 });
-it('keeps read-only staff without mutation controls', async () => {
+it('keeps read-only access without mutation controls', async () => {
   mocks.manage = false;
   view();
   expect(await screen.findByText('WEB-TEST')).toBeVisible();
@@ -324,7 +324,7 @@ it('allows preparing an order with verified payment', async () => {
     await screen.findByRole('button', { name: 'เริ่มเตรียมสินค้า' }),
   ).toBeEnabled();
 });
-it('sends READY orders to POS in the current staff workspace', async () => {
+it('sends READY orders to POS in the management workspace', async () => {
   mocks.request.mockResolvedValue({
     ...order,
     status: 'READY',
@@ -333,7 +333,7 @@ it('sends READY orders to POS in the current staff workspace', async () => {
   view();
   expect(
     await screen.findByRole('link', { name: 'ลูกค้ามารับ · เปิดเข้า POS' }),
-  ).toHaveAttribute('href', '/work/pos?online_order=order');
+  ).toHaveAttribute('href', '/manage/pos?online_order=order');
   expect(
     screen.queryByRole('button', { name: /สำเร็จ/ }),
   ).not.toBeInTheDocument();

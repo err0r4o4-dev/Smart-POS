@@ -25,7 +25,7 @@ export const organization = defineMessages({
     checkingAccount: 'กำลังตรวจสอบบัญชี…',
     setUpStore: 'ตั้งค่าร้าน',
     signInWithTheRecipientSEmail:
-      'เข้าสู่ระบบด้วยอีเมลผู้รับก่อนสร้างร้านหรือรับคำเชิญ หากยังไม่มีบัญชีให้สมัครแล้วกลับมาเปิดคำเชิญ',
+      'เข้าสู่ระบบด้วยบัญชีเจ้าของร้านเพื่อจัดการร้าน',
     registerAccount: 'สมัครบัญชี',
     checkingStoreModeAndAccess: 'กำลังตรวจสอบโหมดร้านและสิทธิ์เข้าใช้งาน…',
     refreshPermissions: 'ตรวจสิทธิ์ใหม่',
@@ -136,7 +136,7 @@ export const organization = defineMessages({
     checkingAccount: 'Checking account…',
     setUpStore: 'Set up store',
     signInWithTheRecipientSEmail:
-      "Sign in with the recipient's email before creating a store or accepting an invitation. If you have no account, register and reopen the invitation.",
+      'Sign in with your owner account to manage your store.',
     registerAccount: 'Register account',
     checkingStoreModeAndAccess: 'Checking store mode and access…',
     refreshPermissions: 'Refresh permissions',

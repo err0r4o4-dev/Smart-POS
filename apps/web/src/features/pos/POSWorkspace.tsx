@@ -21,14 +21,11 @@ import {
 import { WorkspaceContext } from './POSContext';
 import { usePOS } from './POSContext';
 import { workspaceHome } from '../../app/access';
-import { businessArea } from '../../app/workspace-paths';
-import { paths } from '../../app/routes';
 
 export function POSWorkspace() {
   const { t } = useLanguage();
 
   const tenant = useOrganization();
-  const { pathname } = useLocation();
   const { state } = useAuth();
   if (!tenant.context || !state.session) return null;
   return (
@@ -45,13 +42,7 @@ export function POSWorkspace() {
         </a>
         <header className="pos-header">
           <LanguageSwitcher />
-          <Link
-            to={
-              businessArea(pathname) === 'staff'
-                ? paths.staff
-                : workspaceHome(tenant.context.membership.role)
-            }
-          >
+          <Link to={workspaceHome(tenant.context.membership.role)}>
             {t('pos.backToWorkspace')}
           </Link>
           <Brand />

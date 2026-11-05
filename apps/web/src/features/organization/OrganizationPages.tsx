@@ -1,13 +1,12 @@
 import { useLanguage } from '../../app/language';
 import { useRef, useState, type FormEvent } from 'react';
-import { useParams } from 'react-router-dom';
-import { Building2, GitBranch, ShieldCheck, Store, Users } from 'lucide-react';
+import { Navigate } from 'react-router-dom';
+import { Building2, GitBranch, Store } from 'lucide-react';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavigate';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
-import type { Role } from '../../app/access';
 import { Button, Card, Loading, Tag } from '../../components/ui/primitives';
 import { StandardPageHeader } from '../../components/ui/StandardPage';
 import {
@@ -16,9 +15,6 @@ import {
   type OrganizationContext,
   type BranchInput,
   type Branch,
-  type Member,
-  type Invitation,
-  type AuditEvent,
 } from '../../lib/organization-api';
 
 const blankOrganization: OrganizationInput = {
@@ -37,13 +33,6 @@ const blankBranch: BranchInput = {
   email: '',
   status: 'ACTIVE',
 };
-const roleNames: Role[] = [
-  'OWNER',
-  'MANAGER',
-  'CASHIER',
-  'INVENTORY_STAFF',
-  'PURCHASING_STAFF',
-];
 function ErrorMessage({ message }: { message: string }) {
   const { localize } = useLanguage();
 
@@ -273,35 +262,14 @@ export function SetupPage() {
         </Button>
       </div>
     );
-  const accept = async () => {
-    setPending(true);
-    setError('');
-    try {
-      const result = await organizationRequest<OrganizationContext>(
-        '/invitations/accept',
-        {
-          method: 'POST',
-          body: { token: tenant.invitationToken },
-          csrf: state.session.csrf_token,
-        },
-      );
-      tenant.clearInvitation();
-      await tenant.refresh();
-      tenant.select(result.organization.id);
-      navigate('/manage/settings/store');
-    } catch (failure) {
-      setError(
-        failure instanceof Error
-          ? failure.message
-          : t('organization.unableToAcceptInvitation'),
-      );
-    } finally {
-      setPending(false);
-    }
-  };
+  if (
+    (tenant.context && tenant.context.membership.role !== 'OWNER') ||
+    (!tenant.context && tenant.storeMode !== 'multi')
+  )
+    return <Navigate to="/account" replace />;
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (tenant.storeMode === 'single') {
+    if (tenant.storeMode !== 'multi') {
       setError(t('organization.singleStoreModeDoesNotAllowAdditional'));
       return;
     }
@@ -353,18 +321,6 @@ export function SetupPage() {
             : t('organization.createOrganizationOwnerMembershipAndMainBranch')
         }
       />
-      {tenant.invitationToken && (
-        <Card>
-          <h2>{t('organization.organizationInvitation')}</h2>
-          <p>
-            {t('organization.accountAcceptingThisInvitation')}{' '}
-            {state.session.user.email}
-          </p>
-          <Button disabled={pending} onClick={() => void accept()}>
-            {t('organization.acceptInvitation')}
-          </Button>
-        </Card>
-      )}
       {tenant.organizations.length > 0 && (
         <Card>
           <h2>
@@ -388,16 +344,10 @@ export function SetupPage() {
           </div>
         </Card>
       )}
-      {tenant.storeMode === 'single' && tenant.organizations.length === 0 && (
-        <Card>
-          <h2>{t('organization.youDoNotHaveAccessToThis')}</h2>
-          <p>{t('organization.requestAnInvitationFromTheStoreOwner')}</p>
-        </Card>
-      )}
       {tenant.storeMode === 'single' && (
         <ErrorMessage message={localize(error ?? '')} />
       )}
-      {tenant.storeMode !== 'single' && (
+      {tenant.storeMode === 'multi' && (
         <Card>
           <p className="tenant-step" role="status">
             {t('organization.step')} {step + 1} / 3 ·{' '}
@@ -581,9 +531,7 @@ export function BranchesPage() {
         icon={<GitBranch size={24} />}
         eyebrow={t('organization.branch')}
         title={t('organization.branch')}
-        description={t(
-          'organization.onlyBranchesAllowedByYourOrganizationAnd',
-        )}
+        description={t('organization.onlyBranchesAllowedByYourOrganizationAnd')}
       />
       <Card>
         <div className="tenant-actions">
@@ -675,452 +623,6 @@ export function BranchesPage() {
           </form>
         </Card>
       )}
-    </div>
-  );
-}
-function BranchAssignments({
-  value,
-  change,
-}: {
-  value: string[];
-  change: (value: string[]) => void;
-}) {
-  const { t } = useLanguage();
-
-  const tenant = useOrganization();
-  return (
-    <fieldset className="tenant-assignments">
-      <legend>{t('organization.assignedBranches')}</legend>
-      {tenant.context?.branches.map((branch) => (
-        <label key={branch.id}>
-          <input
-            type="checkbox"
-            checked={value.includes(branch.id)}
-            onChange={(event) =>
-              change(
-                event.target.checked
-                  ? [...value, branch.id]
-                  : value.filter((item) => item !== branch.id),
-              )
-            }
-          />
-          {branch.name}
-        </label>
-      ))}
-    </fieldset>
-  );
-}
-function RoleSelect({
-  value,
-  change,
-  invite = false,
-}: {
-  value: Role;
-  change: (role: Role) => void;
-  invite?: boolean;
-}) {
-  const { t } = useLanguage();
-
-  const tenant = useOrganization();
-  const allowed = roleNames.filter((role) =>
-    tenant.context?.membership.role === 'OWNER'
-      ? !invite || role !== 'OWNER'
-      : ['CASHIER', 'INVENTORY_STAFF', 'PURCHASING_STAFF'].includes(role),
-  );
-  return (
-    <label className="tenant-field">
-      {t('organization.role')}
-      <select
-        aria-label={t('organization.role')}
-        value={value}
-        onChange={(event) => change(event.target.value as Role)}
-      >
-        {allowed.map((role) => (
-          <option key={role} value={role}>
-            {role}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-export function EmployeesPage() {
-  const { t, labelCode, localize } = useLanguage();
-
-  const tenant = useOrganization();
-  const query = useTenantData<Member[]>(t('customers.members'));
-  const invitations = useTenantData<Invitation[]>('invitations');
-  const write = useWrite();
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState<Role>('CASHIER');
-  const [branchIDs, setBranchIDs] = useState<string[]>([]);
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    setError('');
-    setMessage('');
-    if (!branchIDs.length) {
-      setError(t('organization.selectAtLeastOneBranch'));
-      return;
-    }
-    setPending(true);
-    try {
-      await write('invitations', 'POST', {
-        email,
-        role,
-        branch_ids: branchIDs,
-      });
-      setMessage(t('organization.invitationSentExpiresIn48Hours'));
-      setEmail('');
-    } catch (failure) {
-      setError(
-        failure instanceof Error
-          ? failure.message
-          : t('organization.unableToInvite'),
-      );
-    } finally {
-      setPending(false);
-    }
-  };
-  const revoke = async (id: string) => {
-    setPending(true);
-    setError('');
-    try {
-      await write(`invitations/${id}`, 'DELETE');
-      setMessage(t('organization.invitationCancelled'));
-    } catch (failure) {
-      setError(
-        failure instanceof Error
-          ? failure.message
-          : t('organization.unableToCancel'),
-      );
-    } finally {
-      setPending(false);
-    }
-  };
-  return (
-    <div className="tenant-page">
-      <StandardPageHeader
-        icon={<Users size={24} />}
-        eyebrow={t('organization.employees')}
-        title={t('organization.employees')}
-        description={t(
-          'organization.oneAccountCanJoinMultipleOrganizationsPermissions',
-        )}
-      />
-      <Card>
-        {query.isPending && <Loading />}
-        {query.error && <ErrorMessage message={query.error.message} />}
-        <div className="tenant-list">
-          {query.data?.map((member) => (
-            <article className="tenant-row" key={member.id}>
-              <div>
-                <h3>
-                  <Link to={`/employees/${member.id}`}>
-                    {member.display_name}
-                  </Link>
-                </h3>
-                <p>{member.email}</p>
-                <p>
-                  {member.role} ·{' '}
-                  {member.role === 'OWNER'
-                    ? t('organization.allBranches')
-                    : member.branch_ids
-                        .map(
-                          (id) =>
-                            tenant.context?.branches.find(
-                              (item) => item.id === id,
-                            )?.name ?? t('organization.inactiveBranch'),
-                        )
-                        .join(', ')}
-                </p>
-                <Tag>{labelCode(member.status)}</Tag>
-              </div>
-              <Link
-                className="button button-secondary"
-                to={`/employees/${member.id}`}
-              >
-                {t('inventory.details')}
-              </Link>
-            </article>
-          ))}
-        </div>
-        {query.data?.length === 0 && (
-          <p>{t('organization.noEmployeesWithinYourAccessScope')}</p>
-        )}
-      </Card>
-      {tenant.can('employee.invite') && (
-        <Card>
-          <h2>{t('organization.inviteEmployee')}</h2>
-          <form onSubmit={(event) => void submit(event)}>
-            <fieldset disabled={pending}>
-              <Field
-                label={t('organization.employeeEmail')}
-                value={email}
-                onChange={setEmail}
-                type="email"
-                required
-                maxLength={254}
-              />
-              <RoleSelect value={role} change={setRole} invite />
-              <BranchAssignments value={branchIDs} change={setBranchIDs} />
-              <Button type="submit">{t('organization.sendInvitation')}</Button>
-            </fieldset>
-          </form>
-          <div className="tenant-list">
-            {invitations.data?.map((item) => (
-              <article className="tenant-row" key={item.id}>
-                <p>
-                  {item.email} · {item.role} · {labelCode(item.status)}
-                </p>
-                {item.status === 'PENDING' && (
-                  <Button
-                    className="button-secondary"
-                    disabled={pending}
-                    onClick={() => void revoke(item.id)}
-                  >
-                    {t('organization.cancelInvitation')}
-                  </Button>
-                )}
-              </article>
-            ))}
-          </div>
-          <p role="status">{localize(message)}</p>
-          <ErrorMessage message={error || invitations.error?.message || ''} />
-        </Card>
-      )}
-    </div>
-  );
-}
-function MemberEditor({ member }: { member: Member }) {
-  const { t, localize, labelCode } = useLanguage();
-
-  const tenant = useOrganization();
-  const write = useWrite();
-  const [role, setRole] = useState(member.role);
-  const [status, setStatus] = useState(member.status);
-  const [branchIDs, setBranchIDs] = useState(member.branch_ids);
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
-  const [confirm, setConfirm] = useState(false);
-  const actor = tenant.context!.membership;
-  const allowed =
-    actor.role === 'OWNER' ||
-    (actor.id !== member.id &&
-      ['CASHIER', 'INVENTORY_STAFF', 'PURCHASING_STAFF'].includes(
-        member.role,
-      ) &&
-      member.branch_ids.length > 0 &&
-      member.branch_ids.every((id) => actor.branch_ids.includes(id)));
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    setPending(true);
-    setError('');
-    setMessage('');
-    try {
-      await write(`members/${member.id}`, 'PATCH', {
-        role,
-        status,
-        branch_ids: branchIDs,
-      });
-      setMessage(t('organization.permissionsSaved'));
-    } catch (failure) {
-      setError(
-        failure instanceof Error
-          ? failure.message
-          : t('organization.unableToSave'),
-      );
-    } finally {
-      setPending(false);
-    }
-  };
-  const remove = async () => {
-    setPending(true);
-    setError('');
-    try {
-      await write(`members/${member.id}`, 'DELETE');
-      setMessage(t('organization.organizationAccessRevoked'));
-      setConfirm(false);
-    } catch (failure) {
-      setError(
-        failure instanceof Error
-          ? failure.message
-          : t('organization.unableToRevokeAccess'),
-      );
-    } finally {
-      setPending(false);
-    }
-  };
-  return (
-    <Card>
-      <h2>{t('organization.accessAssignments')}</h2>
-      <form onSubmit={(event) => void submit(event)}>
-        <fieldset
-          disabled={pending || !allowed || !tenant.can('employee.update')}
-        >
-          <RoleSelect value={role} change={setRole} />
-          <label className="tenant-field">
-            {t('loyalty.membershipStatus')}
-            <select
-              aria-label={t('loyalty.membershipStatus')}
-              value={status}
-              onChange={(event) => setStatus(event.target.value)}
-            >
-              {['ACTIVE', 'SUSPENDED', 'REMOVED'].map((value) => (
-                <option key={value} value={value}>
-                  {labelCode(value)}
-                </option>
-              ))}
-            </select>
-          </label>
-          {role !== 'OWNER' && (
-            <BranchAssignments value={branchIDs} change={setBranchIDs} />
-          )}
-          {allowed && (
-            <Button type="submit">{t('organization.saveMembership')}</Button>
-          )}
-        </fieldset>
-      </form>
-      {allowed && tenant.can('employee.remove') && (
-        <div className="tenant-actions">
-          {confirm ? (
-            <>
-              <p>
-                {t('organization.revokeAccessFor')} {member.display_name}{' '}
-                {t('organization.fromThisOrganizationTheUserAccountWill')}
-              </p>
-              <Button disabled={pending} onClick={() => void remove()}>
-                {t('organization.confirmMembershipRevocation')}
-              </Button>
-              <Button
-                className="button-secondary"
-                onClick={() => setConfirm(false)}
-              >
-                {t('customers.cancel')}
-              </Button>
-            </>
-          ) : (
-            <Button
-              className="button-secondary"
-              disabled={pending || member.status === 'REMOVED'}
-              onClick={() => setConfirm(true)}
-            >
-              {t('organization.revokeMembership')}
-            </Button>
-          )}
-        </div>
-      )}
-      <p role="status">{localize(message)}</p>
-      <ErrorMessage message={localize(error ?? '')} />
-    </Card>
-  );
-}
-export function EmployeePage() {
-  const { t, formatDateTime, labelCode } = useLanguage();
-
-  const { id } = useParams();
-  const query = useTenantData<Member>(`members/${id}`);
-  const history = useTenantData<AuditEvent[]>(`audit?member_id=${id}`);
-  return (
-    <div className="tenant-page">
-      <StandardPageHeader
-        icon={<Users size={24} />}
-        title={t('organization.employeeDetails')}
-        actions={
-          <Link
-            className="button button-secondary sales-export-btn"
-            to="/employees"
-          >
-            {t('organization.backToEmployees')}
-          </Link>
-        }
-      />
-      {query.isPending && <Loading />}
-      {query.error && <ErrorMessage message={query.error.message} />}
-      {query.data && (
-        <>
-          <Card>
-            <h2>{query.data.display_name}</h2>
-            <p>{query.data.email}</p>
-            <Tag>{labelCode(query.data.status)}</Tag>
-            <p>
-              {query.data.role} ·{' '}
-              {query.data.permissions.join(', ') ||
-                t('organization.accessUnavailable')}
-            </p>
-          </Card>
-          <MemberEditor
-            key={`${query.data.id}:${query.data.role}:${query.data.status}:${query.data.branch_ids.join(',')}`}
-            member={query.data}
-          />
-        </>
-      )}
-      <Card>
-        <h2>{t('organization.permissionChangeHistory')}</h2>
-        {history.error && <ErrorMessage message={history.error.message} />}
-        {history.data?.map((event) => (
-          <p key={event.id}>
-            {formatDateTime(event.created_at)} · {event.event_type} ·{' '}
-            {event.request_id}
-          </p>
-        ))}
-        {history.data?.length === 0 && (
-          <p>{t('organization.noEntriesWithinYourAccessScope')}</p>
-        )}
-      </Card>
-    </div>
-  );
-}
-export function RolesPage() {
-  const { t } = useLanguage();
-
-  const tenant = useOrganization();
-  const query = useTenantData<Record<Role, string[]>>('roles');
-  const permissions = [...new Set(Object.values(query.data ?? {}).flat())];
-  return (
-    <div className="tenant-page">
-      <StandardPageHeader
-        icon={<ShieldCheck size={24} />}
-        eyebrow={t('organization.rolesAndPermissions')}
-        title={t('organization.rolesAndPermissions')}
-        description={`${t('organization.currentPermissions')} ${tenant.context?.membership.role} ${t('organization.applyToThisOrganizationOnly')}`}
-      />
-      <Card>
-        <p>{t('organization.ownersManageTheOrganizationAndAllBranches')}</p>
-        {query.isPending && <Loading />}
-        {query.error && <ErrorMessage message={query.error.message} />}
-        <div
-          className="tenant-table-wrap"
-          tabIndex={0}
-          aria-label={t('organization.permissionMatrix')}
-        >
-          <table className="tenant-table">
-            <thead>
-              <tr>
-                <th>{t('organization.permission')}</th>
-                {roleNames.map((role) => (
-                  <th key={role}>{role}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {permissions.map((permission) => (
-                <tr key={permission}>
-                  <th>{permission}</th>
-                  {roleNames.map((role) => (
-                    <td key={role}>
-                      {query.data?.[role].includes(permission) ? '✓' : '—'}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
     </div>
   );
 }

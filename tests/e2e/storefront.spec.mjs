@@ -1,6 +1,5 @@
 import { expect, test } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
-import { posFixture } from '../integration/pos-fixtures.mjs';
 
 test.skip(
   process.env.AUTH_E2E !== '1',
@@ -15,6 +14,7 @@ test('guest pickup order, staff preparation, locked POS cart and actual settleme
     /^smartpos_phase53_[a-z0-9_]+$/,
   );
   expect(process.env.E2E_BASE_URL).toBe('http://localhost:18088');
+  const { posFixture } = await import('../integration/pos-fixtures.mjs');
   const fixture = await posFixture();
   const contexts = [];
   const errors = [];

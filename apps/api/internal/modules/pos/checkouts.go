@@ -84,8 +84,10 @@ func (service *Service) PrepareCheckout(ctx context.Context, user, org, key stri
 		if problem != nil {
 			return result, problem
 		}
-		if problem = pricing.CurrentApprover(ctx, tx, org, result.Pricing.ApprovalID); problem != nil {
-			return result, problem
+		if result.Status != "COMPLETED" {
+			if problem = pricing.CurrentApprover(ctx, tx, org, result.Pricing.ApprovalID); problem != nil {
+				return result, problem
+			}
 		}
 		if result.Status == "AWAITING_PAYMENT" {
 			problem = revalidate(ctx, tx, org, result)
@@ -215,8 +217,10 @@ func (service *Service) ConfirmPayment(ctx context.Context, user, org, id, key s
 		}
 	}
 	if item.Status != "AWAITING_PAYMENT" {
-		if err = pricing.CurrentApprover(ctx, tx, org, item.Pricing.ApprovalID); err != nil {
-			return item, err
+		if item.Status != "COMPLETED" {
+			if err = pricing.CurrentApprover(ctx, tx, org, item.Pricing.ApprovalID); err != nil {
+				return item, err
+			}
 		}
 		var previous string
 		err = tx.QueryRow(ctx, "SELECT COALESCE(confirmation_key::text,'') FROM pos_checkouts WHERE organization_id=$1 AND id=$2", org, id).Scan(&previous)

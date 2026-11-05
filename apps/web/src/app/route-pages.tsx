@@ -142,21 +142,6 @@ export const BranchesPage = lazy(() =>
     default: module.BranchesPage,
   })),
 );
-export const EmployeesPage = lazy(() =>
-  import('../features/organization/OrganizationPages').then((module) => ({
-    default: module.EmployeesPage,
-  })),
-);
-export const EmployeePage = lazy(() =>
-  import('../features/organization/OrganizationPages').then((module) => ({
-    default: module.EmployeePage,
-  })),
-);
-export const RolesPage = lazy(() =>
-  import('../features/organization/OrganizationPages').then((module) => ({
-    default: module.RolesPage,
-  })),
-);
 export const AccountPage = lazy(() =>
   import('../features/auth/AuthPages').then((module) => ({
     default: module.AccountPage,

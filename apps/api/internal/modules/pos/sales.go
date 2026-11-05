@@ -148,9 +148,6 @@ func (service *Service) CompleteCheckout(ctx context.Context, user, org, id stri
 		return item, organization.ErrDenied
 	}
 	if item.Status == "COMPLETED" {
-		if err = pricing.CurrentApprover(ctx, tx, org, item.Pricing.ApprovalID); err != nil {
-			return item, err
-		}
 		return item, nil
 	}
 	if !allowed([]string{"CONFIRMED", "RECONCILIATION_REQUIRED"}, item.Status) {

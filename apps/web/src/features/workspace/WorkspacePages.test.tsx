@@ -3,18 +3,14 @@ import type { ReactNode } from 'react';
 import { screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, expect, it, vi } from 'vitest';
-import { navigation, staffNavigation } from '../../app/routes';
+import { navigation } from '../../app/routes';
 import { managementRoles, workspaceHome, type Role } from '../../app/access';
 import type { OrganizationContext } from '../../lib/organization-api';
 import { RequireSession } from '../../app/ProtectedRoute';
 import { OrganizationGate } from '../organization/OrganizationGate';
 import { LegacyWorkspaceRedirect, WorkspaceAreaGate } from './WorkspaceRouting';
 import { RoleWorkspaceLayout } from '../../layouts/RoleWorkspaceLayout';
-import {
-  ManagementHomePage,
-  StaffHomePage,
-  WorkspaceEntryPage,
-} from './WorkspacePages';
+import { ManagementHomePage, WorkspaceEntryPage } from './WorkspacePages';
 
 const mocks = vi.hoisted(() => ({
   context: null as OrganizationContext | null,
@@ -119,7 +115,13 @@ function Harness({ path }: { path: string }) {
                   path="/manage/dashboard"
                   element={<ManagementHomePage />}
                 />
-                <Route path="/work" element={<StaffHomePage />} />
+              </Route>
+              <Route element={<OrganizationGate permission="pos.access" />}>
+                <Route path="/manage/pos" element={<h1>POS</h1>} />
+                <Route
+                  path="/pos"
+                  element={<LegacyWorkspaceRedirect path="/pos" />}
+                />
               </Route>
               <Route element={<OrganizationGate permission="catalog.read" />}>
                 <Route
@@ -156,9 +158,7 @@ function renderWorkspace(path = '/workspace') {
 }
 const allPermissions = [
   ...new Set(
-    [...navigation, ...staffNavigation].flatMap((item) =>
-      item.permission ? [item.permission] : [],
-    ),
+    navigation.flatMap((item) => (item.permission ? [item.permission] : [])),
   ),
 ];
 
@@ -179,7 +179,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-it.each<Role>(['OWNER', 'MANAGER'])(
+it.each<Role>(['OWNER'])(
   'renders restaurant tasks for %s without fabricated retail metrics or retired links',
   (role) => {
     selectRole(role, allPermissions);
@@ -221,101 +221,19 @@ it.each<Role>(['OWNER', 'MANAGER'])(
   },
 );
 
-it.each<Role>(['CASHIER', 'INVENTORY_STAFF', 'PURCHASING_STAFF'])(
-  'takes %s to staff and omits owner menus even with broad permissions',
+it.each<Role>(['MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'PURCHASING_STAFF'])(
+  'keeps %s in account and denies management despite broad permissions',
   (role) => {
     selectRole(role, allPermissions);
-    expect(workspaceHome(role)).toBe('/work');
     renderWorkspace();
-    expect(screen.getByRole('heading', { name: 'งานของฉัน' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Account' })).toBeVisible();
     expect(
-      document.querySelector('[data-workspace="staff"]'),
-    ).toBeInTheDocument();
-    for (const path of [
-      '/manage/employees',
-      '/manage/roles',
-      '/manage/settings/store',
-      '/manage/settings/branches',
-      '/manage/pricing',
-    ])
-      expect(
-        document.querySelector(`a[href="${path}"]`),
-      ).not.toBeInTheDocument();
+      document.querySelector('[data-workspace="management"]'),
+    ).not.toBeInTheDocument();
   },
 );
 
-it('does not give inventory staff cashier tools', () => {
-  selectRole('INVENTORY_STAFF', ['catalog.read', 'inventory.read']);
-  renderWorkspace();
-  expect(
-    within(screen.getByRole('main')).getByRole('link', {
-      name: 'เมนูอาหาร',
-    }),
-  ).toBeVisible();
-  expect(
-    within(screen.getByRole('navigation', { name: 'เมนูหลัก' })).getByRole(
-      'link',
-      { name: 'เมนูอาหาร' },
-    ),
-  ).toBeVisible();
-  expect(
-    document.querySelector('a[href="/manage/pos"]'),
-  ).not.toBeInTheDocument();
-  expect(
-    document.querySelector('a[href="/manage/purchasing/orders"]'),
-  ).not.toBeInTheDocument();
-});
-
-it('keeps cashier menus scoped to granted tasks', () => {
-  selectRole('CASHIER', [
-    'pos.access',
-    'pos.register.open',
-    'pos.register.close',
-    'sales.read',
-  ]);
-  renderWorkspace();
-  expect(
-    within(screen.getByRole('main')).getByRole('link', {
-      name: 'รับออเดอร์หน้าร้าน',
-    }),
-  ).toBeVisible();
-  expect(
-    within(screen.getByRole('main')).getByRole('link', { name: 'เปิดกะ' }),
-  ).toBeVisible();
-  expect(
-    within(screen.getByRole('navigation', { name: 'เมนูหลัก' })).getByRole(
-      'link',
-      { name: 'รับออเดอร์หน้าร้าน' },
-    ),
-  ).toBeVisible();
-  expect(
-    document.querySelector('a[href="/manage/inventory"]'),
-  ).not.toBeInTheDocument();
-});
-
-it('redirects a staff dashboard bookmark to their own workspace', () => {
-  selectRole('CASHIER', ['pos.access']);
-  renderWorkspace('/manage/dashboard');
-  expect(screen.getByRole('heading', { name: 'งานของฉัน' })).toBeVisible();
-  expect(
-    screen.queryByRole('heading', { name: 'ภาพรวม' }),
-  ).not.toBeInTheDocument();
-});
-
-it('allows an owner to use staff tasks without changing their role', () => {
-  selectRole('OWNER', allPermissions);
-  renderWorkspace('/work');
-  expect(
-    document.querySelector('[data-workspace="staff"]'),
-  ).toBeInTheDocument();
-  expect(screen.getByRole('link', { name: 'จัดการร้าน' })).toHaveAttribute(
-    'href',
-    '/manage/dashboard',
-  );
-  expect(mocks.context?.membership.role).toBe('OWNER');
-});
-
-it.each<Role>(['CASHIER', 'INVENTORY_STAFF', 'PURCHASING_STAFF'])(
+it.each<Role>(['MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'PURCHASING_STAFF'])(
   'denies management settings on a direct link for %s',
   (role) => {
     selectRole(role, allPermissions);
@@ -357,70 +275,31 @@ it('shows a context failure instead of pretending a role is available', () => {
   ).not.toBeInTheDocument();
 });
 
-it('removes owner menus when membership changes to cashier', () => {
+it('denies access when owner membership changes to cashier', () => {
   selectRole('OWNER', allPermissions);
   const view = renderWorkspace('/manage/dashboard');
-  expect(
-    document.querySelector('a[href="/manage/employees"]'),
-  ).toBeInTheDocument();
-  selectRole('CASHIER', ['pos.access']);
+  expect(screen.getByRole('heading', { name: 'ภาพรวม' })).toBeVisible();
+  selectRole('CASHIER', allPermissions);
   view.rerender(<Harness path="/manage/dashboard" />);
-  expect(screen.getByRole('heading', { name: 'งานของฉัน' })).toBeVisible();
-  expect(
-    document.querySelector('a[href="/manage/employees"]'),
-  ).not.toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Forbidden' })).toBeVisible();
 });
 
-it('keeps anonymous visitors out of staff routes', () => {
-  mocks.status = 'anonymous';
-  renderWorkspace('/work');
-  expect(screen.getByRole('heading', { name: 'Sign in' })).toBeVisible();
-  expect(
-    screen.queryByRole('heading', { name: 'งานของฉัน' }),
-  ).not.toBeInTheDocument();
+it('redirects an owner legacy product path with query and hash', () => {
+  selectRole('OWNER', ['catalog.read']);
+  renderWorkspace('/products/item-1?search=abc#details');
+  expect(screen.getByLabelText('Location')).toHaveTextContent(
+    '/manage/products/item-1?search=abc#details',
+  );
 });
 
-it.each([
-  ['OWNER', '/manage/products/item-1?search=abc#details'],
-  ['CASHIER', '/work/products/item-1?search=abc#details'],
-] as const)(
-  'redirects legacy nested paths for %s with params, search and hash intact',
-  (role, destination) => {
-    selectRole(role, ['catalog.read']);
-    renderWorkspace('/products/item-1?search=abc#details');
-    expect(
-      screen.getByRole('heading', { name: 'Product details' }),
-    ).toBeVisible();
-    expect(screen.getByLabelText('Location')).toHaveTextContent(destination);
-  },
-);
-
-it.each(['OWNER', 'CASHIER'] as const)(
-  'keeps an old staff bookmark in work for %s',
+it.each<Role>(['MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'PURCHASING_STAFF'])(
+  'denies %s legacy product paths even with permission',
   (role) => {
     selectRole(role, allPermissions);
-    renderWorkspace('/staff');
-    expect(screen.getByLabelText('Location')).toHaveTextContent('/work');
-    expect(
-      document.querySelector('[data-workspace="staff"]'),
-    ).toBeInTheDocument();
+    renderWorkspace('/products/item-1');
+    expect(screen.getByRole('heading', { name: 'Forbidden' })).toBeVisible();
   },
 );
-
-it('keeps an owner on a nested work page without changing the membership', () => {
-  selectRole('OWNER', allPermissions);
-  renderWorkspace('/work/products/item-1');
-  expect(
-    screen.getByRole('heading', { name: 'Product details' }),
-  ).toBeVisible();
-  expect(
-    document.querySelector('[data-workspace="staff"]'),
-  ).toBeInTheDocument();
-  expect(
-    document.querySelector('a[href="/manage/employees"]'),
-  ).not.toBeInTheDocument();
-  expect(mocks.context?.membership.role).toBe('OWNER');
-});
 
 it('denies management product paths to a cashier even with catalog permission', () => {
   selectRole('CASHIER', allPermissions);
@@ -431,9 +310,9 @@ it('denies management product paths to a cashier even with catalog permission', 
   ).not.toBeInTheDocument();
 });
 
-it('keeps operational permission checks authoritative in work', () => {
+it('keeps operational permission checks authoritative in management', () => {
   selectRole('OWNER', []);
-  renderWorkspace('/work/products/item-1');
+  renderWorkspace('/manage/products/item-1');
   expect(screen.getByRole('heading', { name: 'Forbidden' })).toBeVisible();
 });
 
@@ -472,3 +351,21 @@ it.each([
     screen.queryByRole('combobox', { name: 'สาขาที่ใช้งาน' }),
   ).not.toBeInTheDocument();
 });
+
+it('allows an owner with POS permission to access POS', () => {
+  selectRole('OWNER', ['pos.access']);
+  renderWorkspace('/manage/pos');
+  expect(screen.getByRole('heading', { name: 'POS' })).toBeVisible();
+});
+
+it.each<Role>(['MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'PURCHASING_STAFF'])(
+  'denies %s direct and unprefixed POS access',
+  (role) => {
+    selectRole(role, ['pos.access']);
+    const view = renderWorkspace('/manage/pos');
+    expect(screen.getByRole('heading', { name: 'Forbidden' })).toBeVisible();
+    view.unmount();
+    renderWorkspace('/pos');
+    expect(screen.getByRole('heading', { name: 'Forbidden' })).toBeVisible();
+  },
+);

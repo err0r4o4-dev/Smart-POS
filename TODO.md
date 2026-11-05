@@ -1,3 +1,78 @@
+# Owner-only backoffice (2026-11-05)
+
+Approved scope: restrict backoffice access to active OWNER memberships; reject
+MANAGER, CASHIER, INVENTORY_STAFF and PURCHASING_STAFF. Remove the `/work`
+workspace and invitation, member and role administration UI and API. Retain
+account/login and `/shop` ordering, all accounts, memberships and history, and
+the existing schema; no migration. Size: Large. Risk: High (authorization and
+tenant isolation). Recovery: reverse only this task's changes; preserve data and
+unrelated work. Backend, frontend, contracts and documentation have separate owners.
+
+- [/] Implement owner-only server policy and organization listing, retire the
+      administration endpoints and update the frontend workspace and guards.
+- [/] Update contracts, route inventory and assigned architecture/security docs.
+- [ ] Verify owner access and non-owner denial, tenant isolation, retired routes,
+      account/login and shop journeys, and preservation of existing data/schema.
+- [/] Backend authority follow-up: require a current OWNER discount approver for
+      new work while preserving completed replay; require an active OWNER and
+      active account for new shelf assignments. Preserve historical data.
+      Main reports implementation and Go checks. Final independent security
+      delta review found no new confirmed defect; database runtime verification
+      remains pending.
+- [/] Reconcile the contract inventory to 117 routes: remove `/employees`,
+      `/employees/:id` and `/roles`; retain planned, unregistered `/approvals`
+      and `/audit-logs` in the employees module.
+  - Main reports PASS `npm run contracts:check`: 18 modules / 117 routes after
+    six OpenAPI paths and three retired inputs were removed and Role set to OWNER.
+    The earlier contract assertion failure preceded that update.
+- [/] Record current tests, contract checks, independent security/code review and
+      browser results from Main. Acceptance remains open.
+  - Main reports fresh PASS `go test ./... -count=1` (18 test packages;
+    `cmd/server` has no tests) and `go vet ./...` from `apps/api` after the
+    authority follow-up. Some added checks inspect query/source text and do not
+    establish database runtime semantics.
+  - Main reports initial `npm run test` FAIL: one of 419 tests failed on legacy
+    invitation fragment cleanup in OrganizationProvider. A later frozen frontend
+    run PASSed: 56 files / 414 web tests, 18 modules / 117 routes, 10 log and
+    5 dev-stack tests. It emitted a jsdom `scrollTo` warning.
+  - Main reports PASS `npm run typecheck`, `npm run lint` (0 errors, 5 warnings)
+    and `npm run build`. Test log: `.local/owner-only-final-test.log`.
+  - Final independent security read-only delta review PASS: no new confirmed
+    defect. Prior approver and assignment issues were addressed; completed replay
+    retains caller, tenant, key and reference checks, and new posting revalidates.
+    This is not release-readiness approval. Required database integration is
+    BLOCKED: Docker/PostgreSQL unavailable; query/source assertions do not prove
+    SQL or replay semantics. Live acceptance must cover replay without duplicate
+    effects, nonowner/foreign/inactive rejection, and assignment recovery,
+    idempotency and status.
+  - Main reports independent frontend/contracts code-review PASS with no confirmed
+    defect. This was static/source review, not database runtime verification.
+  - Main reports PASS Prettier check for the contract files and scripts, and no
+    database diff. `npm run verify:organization` was BLOCKED at its safe preflight:
+    it requires OWNER_ONLY_INSTANCE, a full disposable DB/API target, IDs and a
+    shop slug. Docker, psql and postgres executables were unavailable in command
+    discovery; no database integration acceptance is claimed.
+  - The test engineer reconciled obsolete staff-positive coverage in the primary
+    `tests/e2e/organization.spec.ts` using the actual `/setup` organization
+    buttons. Formatting and collection passed (166 tests / 30 files); real runtime
+    remains BLOCKED because the disposable binding is unverified. Broader legacy
+    staff-positive domain suites, including catalog and POS, remain unreconciled.
+    They have not been blanket-skipped or accepted by this task.
+  - Main reported PASS: 35 mocked browser cases in 48.6 seconds using
+    `tests/e2e/owner-only.spec.ts` and `tests/e2e/workspace-areas.spec.ts` with
+    one worker and the fixture helper running. Log:
+    `.local/owner-only-main-final-browser-2.log`. Main inspected owner/nonowner
+    mobile screenshots. An earlier retry failed all 35 with ERR_CONNECTION_REFUSED
+    after the helper stopped. That run preceded final test strengthening. The test
+    engineer reports a subsequent PASS of 35 mocked cases on the frozen test
+    source (`.local/owner-only-review-browser`) after restoring public private-
+    request rejection, pageerror and Escape/focus checks. Final collection log:
+    `.local/owner-only-review-collection.log`. Final independent test delta review
+    PASS: no confirmed defects; restored checks and setup selectors were reviewed,
+    with no new skips. Mocked APIs do not establish real backend acceptance.
+  - Main reports current PASS `git diff --check` and Prettier checks for tests
+    and contracts.
+
 Historical source observation (superseded by the restaurant flow continuation):
 storefront/orders.go handled a missing payment attempt by setting hasPayment=false,
 so the payment/hold/refund/reconciliation checks in that transition branch were

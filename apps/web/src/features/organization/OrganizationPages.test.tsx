@@ -38,7 +38,7 @@ it('keeps PromptPay distinct from bank transfer in the payment payload', async (
 });
 
 it.each([
-  ['profile', { organization: { name: 'A', code: 'A', business_type: 'RESTAURANT', contact_email: '', contact_phone: '', address: '' }, branch: { name: 'B', code: 'B', address: '', phone: '', email: '' }, service_modes: { dine_in: true, takeaway: false, delivery: false } }],
+  ['profile', { organization: { name: 'A', business_type: 'RESTAURANT', contact_email: '', contact_phone: '', address: '' }, service_modes: { dine_in: true, takeaway: false, delivery: false } }],
   ['services', { service_modes: { dine_in: true, takeaway: false, delivery: false } }],
   ['menu', { categories: [], items: [] }],
   ['payments', { cash: true, bank_transfer: false, promptpay: false, card: false }],
@@ -128,6 +128,38 @@ function renderSetup(initialEntries = ['/setup']) {
   const result = render(page());
   return { ...result, client, refreshView: () => result.rerender(page()) };
 }
+
+it('creates and saves a profile using only visible store fields', async () => {
+  mocks.role = null;
+  mocks.request.mockImplementation((path: string) => path === '/organizations'
+    ? Promise.resolve({ organization: { id: 'new-org' }, branches: [{ id: 'branch' }] })
+    : Promise.resolve({ ...setupState }));
+  renderSetup();
+  expect(screen.queryByLabelText('รหัสร้าน')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('ชื่อสาขาหลัก')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('รหัสสาขาหลัก')).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('ชื่อร้าน'), { target: { value: 'ร้านใหม่' } });
+  fireEvent.change(screen.getByLabelText('ประเภทร้าน'), { target: { value: 'RESTAURANT' } });
+  fireEvent.change(screen.getByLabelText('อีเมลร้าน'), { target: { value: 'owner@example.test' } });
+  fireEvent.change(screen.getByLabelText('โทรศัพท์ร้าน'), { target: { value: '123' } });
+  fireEvent.change(screen.getByLabelText('ที่อยู่ร้าน'), { target: { value: 'Bangkok' } });
+  fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
+  const organization = { name: 'ร้านใหม่', business_type: 'RESTAURANT', contact_email: 'owner@example.test', contact_phone: '123', address: 'Bangkok' };
+  await waitFor(() => expect(mocks.request).toHaveBeenCalledWith('/organizations', expect.objectContaining({ body: organization, csrf: 'csrf', key: expect.any(String) })));
+  await waitFor(() => expect(mocks.request).toHaveBeenCalledWith('/organizations/new-org/restaurant/setup/profile', expect.objectContaining({ body: { branch_id: 'branch', organization, ...organization, service_modes: { dine_in: true, takeaway: true, delivery: false } }, csrf: 'csrf', key: expect.any(String) })));
+});
+
+it('omits existing metadata when saving a hydrated profile', async () => {
+  mocks.context = { organization: { id: 'org-1' }, membership: { role: 'OWNER' } };
+  const profile = { organization: { name: 'ร้านเดิม', code: 'EXISTING', business_type: 'RESTAURANT', contact_email: 'saved@example.test', contact_phone: '123', address: 'Bangkok' }, branch: { name: 'สาขาเดิม', code: 'OLD', address: 'เดิม', phone: '', email: '' }, service_modes: { dine_in: true, takeaway: true, delivery: false } };
+  mocks.request.mockResolvedValue({ ...setupState, profile });
+  renderSetup();
+  await waitFor(() => expect(screen.getByLabelText('ชื่อร้าน')).toHaveValue('ร้านเดิม'));
+  fireEvent.change(screen.getByLabelText('ชื่อร้าน'), { target: { value: 'ร้านแก้ไข' } });
+  fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
+  const organization = { name: 'ร้านแก้ไข', business_type: 'RESTAURANT', contact_email: 'saved@example.test', contact_phone: '123', address: 'Bangkok' };
+  await waitFor(() => expect(mocks.request).toHaveBeenCalledWith('/organizations/org-1/restaurant/setup/profile', expect.objectContaining({ body: { branch_id: 'branch', organization, ...organization, service_modes: profile.service_modes } })));
+});
 
 const tableSetup = { ...setupState, current_step: 'tables', tables: { zones: [{ code: 'Z1', name: 'โซน' }], tables: [{ code: 'T1', name: 'โต๊ะ', zone: 'โซน', seats: 4 }], qr_enabled: true } };
 const issuedTokens = [{ table_id: 'table-1', code: 'T1', qr_token: 'test-secret-token' }];
@@ -234,8 +266,8 @@ it('shows download failure when revoking the local secret export URL fails', asy
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
   await screen.findByDisplayValue(/test-secret-token/);
   fireEvent.click(screen.getByRole('button', { name: /ดาวน์โหลดรหัสลับ/ }));
-  expect(await screen.findByRole('status')).toHaveTextContent('ดาวน์โหลดแล้ว');
   await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('ดาวน์โหลดไม่สำเร็จ'));
+  expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:issued-secrets');
 });
 
 it('does not export deferred secrets after an owner becomes a non-owner', async () => {
@@ -277,7 +309,6 @@ it('prevents editing until the initial saved profile has loaded', async () => {
   resolveSetup({ ...setupState, profile: { organization: { name: 'ร้านเดิม', code: 'SAVED', business_type: 'RESTAURANT', contact_email: 'saved@example.test', contact_phone: '', address: '' }, branch: { name: 'สาขา', code: 'MAIN', address: '', phone: '', email: '' }, service_modes: { dine_in: true, takeaway: true, delivery: false } } });
   await waitFor(() => expect(screen.getByLabelText('ชื่อร้าน')).toBeEnabled());
   fireEvent.change(screen.getByLabelText('ชื่อร้าน'), { target: { value: 'ชื่อใหม่' } });
-  expect(screen.getByLabelText('รหัสร้าน')).toHaveValue('SAVED');
   expect(screen.getByLabelText('อีเมลร้าน')).toHaveValue('saved@example.test');
 });
 
@@ -299,7 +330,6 @@ it('does not select or save a newly created store after the user changes', async
   mocks.request.mockImplementationOnce(() => new Promise((resolve) => { finishCreation = resolve; }));
   const view = renderSetup();
   fireEvent.change(screen.getByLabelText('ชื่อร้าน'), { target: { value: 'ร้านเดิม' } });
-  fireEvent.change(screen.getByLabelText('รหัสร้าน'), { target: { value: 'OLD' } });
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
   mocks.userID = 'another-user';
   view.refreshView();
@@ -322,7 +352,6 @@ it('saves the profile before a refreshed organization selection remounts the wiz
     view.refreshView();
   });
   fireEvent.change(screen.getByLabelText('ชื่อร้าน'), { target: { value: 'ร้านใหม่' } });
-  fireEvent.change(screen.getByLabelText('รหัสร้าน'), { target: { value: 'NEW' } });
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
   await waitFor(() => expect(mocks.request).toHaveBeenCalledWith('/organizations/new-org/restaurant/setup/profile', expect.objectContaining({ method: 'PUT' })));
 });
@@ -351,31 +380,30 @@ async function completeProfile() {
   if (!mocks.context) mocks.request.mockResolvedValueOnce({ organization: { id: 'new-org' } });
   if (mocks.context) await waitFor(() => expect(screen.getByRole('button', { name: /บันทึกและถัดไป/ })).toBeEnabled());
   fireEvent.change(screen.getByLabelText('ชื่อร้าน'), { target: { value: 'ร้านตัวอย่าง' } });
-  fireEvent.change(screen.getByLabelText('รหัสร้าน'), { target: { value: 'THAI' } });
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  await screen.findByText('ขั้นตอนที่ 2 จาก 6');
+  await screen.findByText('ขั้นตอนที่ 2 จาก 7');
 }
 
 async function completeServicesAndTables() {
   expect(screen.getByLabelText('ทานที่ร้าน')).toBeChecked();
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  await screen.findByText('ขั้นตอนที่ 3 จาก 6');
+  await screen.findByText('ขั้นตอนที่ 3 จาก 7');
   fireEvent.change(screen.getByLabelText('จำนวนที่นั่งโต๊ะแรก'), { target: { value: '4' } });
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  await screen.findByText('ขั้นตอนที่ 4 จาก 6');
+  await screen.findByText('ขั้นตอนที่ 4 จาก 7');
 }
 
 it('renders six steps and keeps the first step blocked by honest validation', () => {
   renderSetup();
 
-  expect(screen.getByText('ขั้นตอนที่ 1 จาก 6')).toBeInTheDocument();
+  expect(screen.getByText('ขั้นตอนที่ 1 จาก 7')).toBeInTheDocument();
   expect(screen.getAllByText('ข้อมูลร้าน').length).toBeGreaterThan(0);
   expect(screen.getByRole('button', { name: /บันทึกและถัดไป/ })).toBeEnabled();
 
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
 
-  expect(screen.getByRole('alert')).toHaveTextContent('กรอกชื่อร้านและรหัสร้านให้ครบ');
-  expect(screen.getByText('ขั้นตอนที่ 1 จาก 6')).toBeInTheDocument();
+  expect(screen.getByRole('alert')).toHaveTextContent('กรอกชื่อร้านให้ครบ');
+  expect(screen.getByText('ขั้นตอนที่ 1 จาก 7')).toBeInTheDocument();
 });
 
 it('supports forward and backward navigation while preserving values', async () => {
@@ -387,7 +415,6 @@ it('supports forward and backward navigation while preserving values', async () 
   fireEvent.click(screen.getByRole('button', { name: /ย้อนกลับ/ }));
 
   expect(screen.getByLabelText('ชื่อร้าน')).toHaveValue('ร้านตัวอย่าง');
-  expect(screen.getByLabelText('รหัสร้าน')).toHaveValue('THAI');
 });
 
 it('shows card payments as unavailable instead of allowing false completion', async () => {
@@ -398,7 +425,7 @@ it('shows card payments as unavailable instead of allowing false completion', as
   fireEvent.change(screen.getByLabelText('ชื่อเมนูแรก'), { target: { value: 'ผัดไทย' } });
   fireEvent.change(screen.getByLabelText('ราคาเมนูแรก (บาท)'), { target: { value: '80' } });
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  await screen.findByText('ขั้นตอนที่ 5 จาก 6');
+  await screen.findByText('ขั้นตอนที่ 5 จาก 7');
 
   const card = screen.getByLabelText(/บัตรเครดิต/);
   expect(card).toBeDisabled();
@@ -428,7 +455,7 @@ it('resumes the server step with saved configuration', async () => {
   renderSetup();
   expect(await screen.findByLabelText('ชื่อเมนูแรก')).toHaveValue('ข้าว');
   expect(screen.getByLabelText('ราคาเมนูแรก (บาท)')).toHaveValue(45.5);
-  expect(screen.getByText('ขั้นตอนที่ 4 จาก 6')).toBeInTheDocument();
+  expect(screen.getByText('ขั้นตอนที่ 4 จาก 7')).toBeInTheDocument();
 });
 
 it('never enables activation when server readiness is false', async () => {
@@ -476,9 +503,9 @@ it('shows the exact server readiness reason and keeps activation disabled', asyn
   fireEvent.change(screen.getByLabelText('ชื่อเมนูแรก'), { target: { value: 'ผัดไทย' } });
   fireEvent.change(screen.getByLabelText('ราคาเมนูแรก (บาท)'), { target: { value: '80' } });
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  await screen.findByText('ขั้นตอนที่ 5 จาก 6');
+  await screen.findByText('ขั้นตอนที่ 5 จาก 7');
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  await screen.findByText('ขั้นตอนที่ 6 จาก 6');
+  await screen.findByText('ขั้นตอนที่ 6 จาก 7');
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
   await screen.findByRole('button', { name: /เปิดใช้งานร้าน/ });
 
@@ -500,9 +527,9 @@ it('completes readiness review once and routes to the existing dashboard', async
   fireEvent.change(screen.getByLabelText('ชื่อเมนูแรก'), { target: { value: 'ผัดไทย' } });
   fireEvent.change(screen.getByLabelText('ราคาเมนูแรก (บาท)'), { target: { value: '80' } });
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  await screen.findByText('ขั้นตอนที่ 5 จาก 6');
+  await screen.findByText('ขั้นตอนที่ 5 จาก 7');
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  await screen.findByText('ขั้นตอนที่ 6 จาก 6');
+  await screen.findByText('ขั้นตอนที่ 6 จาก 7');
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
   await screen.findByRole('button', { name: /เปิดใช้งานร้าน/ });
 

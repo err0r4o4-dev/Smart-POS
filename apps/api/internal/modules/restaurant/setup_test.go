@@ -280,6 +280,121 @@ func TestSetupProfileReadinessRequiresRestaurantProfile(t *testing.T) {
 	}
 }
 
+func TestSetupProfileAllowsOmittedBranch(testContext *testing.T) {
+	var input SetupProfileInput
+	if err := json.Unmarshal([]byte(`{"organization":{"name":"Cafe","business_type":"RESTAURANT"}}`), &input); err != nil {
+		testContext.Fatal(err)
+	}
+	branch := "11111111-1111-4111-8111-111111111111"
+	if err := input.normalize(branch); err != nil {
+		testContext.Fatalf("omitted branch and code rejected: %v", err)
+	}
+	if input.BranchID != branch || input.Branch != nil || input.Code != "" {
+		testContext.Fatalf("omitted metadata changed: %+v", input)
+	}
+	first, err := json.Marshal(input)
+	if err != nil {
+		testContext.Fatal(err)
+	}
+	var retry SetupProfileInput
+	if err := json.Unmarshal([]byte(`{"organization":{"name":"Cafe","business_type":"RESTAURANT"}}`), &retry); err != nil {
+		testContext.Fatal(err)
+	}
+	if err := retry.normalize(branch); err != nil {
+		testContext.Fatal(err)
+	}
+	second, err := json.Marshal(retry)
+	if err != nil || string(first) != string(second) {
+		testContext.Fatalf("retry fingerprint input differs: %s / %s: %v", first, second, err)
+	}
+	retry.Organization.Code = "invalid code!"
+	if err := retry.normalize(branch); !errors.Is(err, ErrInput) {
+		testContext.Fatalf("invalid explicit organization code: %v", err)
+	}
+}
+
+func TestSetupProfileExplicitBranchRequiresNameAndCode(testContext *testing.T) {
+	for _, tc := range []struct {
+		name, branch string
+		valid        bool
+	}{
+		{"omitted", `null`, true},
+		{"empty", `{}`, false},
+		{"missing name", `{"code":"MAIN"}`, false},
+		{"missing code", `{"name":"Main"}`, false},
+		{"blank name", `{"name":"  ","code":"MAIN"}`, false},
+		{"invalid code", `{"name":"Main","code":"bad code"}`, false},
+		{"41 character code", `{"name":"Main","code":"` + strings.Repeat("A", 41) + `"}`, true},
+		{"50 character code", `{"name":"Main","code":"` + strings.Repeat("A", 50) + `"}`, true},
+		{"51 character code", `{"name":"Main","code":"` + strings.Repeat("A", 51) + `"}`, false},
+		{"legacy branch", `{"name":"Main","code":"MAIN","address":"Old address","phone":"123","email":"a@example.com"}`, true},
+	} {
+		testContext.Run(tc.name, func(testContext *testing.T) {
+			var input SetupProfileInput
+			payload := `{"branch_id":"11111111-1111-4111-8111-111111111111","organization":{"name":"Cafe","business_type":"RESTAURANT"},"branch":` + tc.branch + `}`
+			if err := json.Unmarshal([]byte(payload), &input); err != nil {
+				testContext.Fatal(err)
+			}
+			err := input.Validate()
+			if tc.valid && err != nil {
+				testContext.Fatalf("valid profile rejected: %v", err)
+			}
+			if !tc.valid && !errors.Is(err, ErrInput) {
+				testContext.Fatalf("incomplete branch: got %v, want ErrInput", err)
+			}
+		})
+	}
+}
+
+func TestSetupProfilePreservesExplicitBranchFingerprint(testContext *testing.T) {
+	branchCode := strings.Repeat("A", 50)
+	payload := `{"organization":{"name":" Cafe ","code":" cafe ","business_type":"RESTAURANT","contact_email":" cafe@example.com ","contact_phone":"123","address":"Cafe address"},"branch":{"name":"  Main branch  ","code":"` + branchCode + `","address":"  Address  ","phone":" 123 ","email":" Test@example.com "}}`
+	var input SetupProfileInput
+	if err := json.Unmarshal([]byte(payload), &input); err != nil {
+		testContext.Fatal(err)
+	}
+	branch := "11111111-1111-4111-8111-111111111111"
+	if err := input.normalize(branch); err != nil {
+		testContext.Fatal(err)
+	}
+	var expected SetupProfileInput
+	baseline := `{"branch_id":"` + branch + `","name":"Cafe","code":"CAFE","business_type":"RESTAURANT","contact_email":"cafe@example.com","contact_phone":"123","address":"Cafe address","organization":{"name":" Cafe ","code":" cafe ","business_type":"RESTAURANT","contact_email":" cafe@example.com ","contact_phone":"123","address":"Cafe address"},"branch":{"name":"  Main branch  ","code":"` + branchCode + `","address":"  Address  ","phone":" 123 ","email":" Test@example.com "}}`
+	if err := json.Unmarshal([]byte(baseline), &expected); err != nil {
+		testContext.Fatal(err)
+	}
+	expectedFingerprintInput, err := json.Marshal(expected)
+	if err != nil {
+		testContext.Fatal(err)
+	}
+	first, err := json.Marshal(input)
+	if err != nil {
+		testContext.Fatal(err)
+	}
+	if string(first) != string(expectedFingerprintInput) {
+		testContext.Fatalf("legacy fingerprint input changed: got %s, want %s", first, expectedFingerprintInput)
+	}
+	for attempt := 0; attempt < 2; attempt++ {
+		if err := input.Validate(); err != nil {
+			testContext.Fatal(err)
+		}
+	}
+	afterValidation, err := json.Marshal(input)
+	if err != nil || string(afterValidation) != string(first) {
+		testContext.Fatalf("repeated validation changed fingerprint input: %s / %s: %v", first, afterValidation, err)
+	}
+	var retry SetupProfileInput
+	if err := json.Unmarshal([]byte(payload), &retry); err != nil {
+		testContext.Fatal(err)
+	}
+	if err := retry.normalize(branch); err != nil {
+		testContext.Fatal(err)
+	}
+	second, err := json.Marshal(retry)
+	if err != nil || string(first) != string(second) {
+		testContext.Fatalf("retry fingerprint input differs: %s / %s: %v", first, second, err)
+	}
+}
+
 func TestSetupCompletionRequiresOneProgressRow(t *testing.T) {
 	if err := completeSetupProgressResult(0); !errors.Is(err, ErrConflict) {
 		t.Fatalf("zero rows: got %v", err)

@@ -1,6 +1,7 @@
 import {
   organizationRequest,
   type OrganizationInput,
+  type OrganizationCreateInput,
   type BranchInput,
   type OrganizationContext,
 } from '../../lib/organization-api';
@@ -28,9 +29,13 @@ export interface IssuedTableQRToken {
 }
 
 export interface SetupProfileInput {
-  organization: Pick<OrganizationInput, 'name' | 'code' | 'business_type' | 'contact_email' | 'contact_phone' | 'address'>;
-  branch: Pick<BranchInput, 'name' | 'code' | 'address' | 'phone' | 'email'>;
+  organization: Pick<OrganizationInput, 'name' | 'business_type' | 'contact_email' | 'contact_phone' | 'address'>;
   service_modes: { dine_in: boolean; takeaway: boolean; delivery: boolean };
+}
+
+interface SetupProfileState extends SetupProfileInput {
+  organization: SetupProfileInput['organization'] & Pick<OrganizationInput, 'code'>;
+  branch: Pick<BranchInput, 'name' | 'code' | 'address' | 'phone' | 'email'>;
 }
 
 export interface SetupServicesInput {
@@ -69,7 +74,7 @@ export interface SetupState {
   steps: SetupStepState[];
   readiness: { ready: boolean; incomplete: SetupReadinessItem[] };
   capabilities: { cardPayments: boolean; promptPay: boolean };
-  profile?: SetupProfileInput;
+  profile?: SetupProfileState;
   services?: SetupServicesInput;
   tables?: SetupTablesInput;
   menu?: SetupMenuInput;
@@ -103,7 +108,7 @@ interface BackendSetupState {
   completed: boolean;
   readiness: { ready: boolean; incomplete: SetupReadinessItem[] };
   steps: BackendSetupStep[];
-  profile?: SetupProfileInput;
+  profile?: SetupProfileState;
   services?: SetupServicesInput['service_modes'];
   tables?: SetupTablesInput;
   menu?: SetupMenuInput;
@@ -168,7 +173,7 @@ export function getSetup(context: SetupContext, signal?: AbortSignal) {
   return organizationRequest<BackendSetupState>(setupPath(context) + branchQuery(context), { signal }).then(normalizeState);
 }
 
-export function createOrganization(body: OrganizationInput & { branch: BranchInput }, csrf: string, key: string) {
+export function createOrganization(body: OrganizationCreateInput, csrf: string, key: string) {
   return organizationRequest<OrganizationContext>('/organizations', { method: 'POST', body, csrf, key });
 }
 
@@ -179,15 +184,12 @@ function toBackendPayload(
 ) {
   if (step === 'profile') {
     const input = body as SetupProfileInput;
+    const { name, business_type, contact_email, contact_phone, address } = input.organization;
+    const organization = { name, business_type, contact_email, contact_phone, address };
     return {
       branch_id: branchID,
-      organization: input.organization,
-      branch: input.branch,
-      name: input.organization.name,
-      business_type: 'RESTAURANT',
-      contact_email: input.organization.contact_email,
-      contact_phone: input.organization.contact_phone,
-      address: input.organization.address,
+      organization,
+      ...organization,
       service_modes: input.service_modes,
     };
   }

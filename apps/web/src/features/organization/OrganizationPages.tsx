@@ -8,9 +8,11 @@ import {
   Building2,
   Check,
   CheckCircle2,
+  ChevronDown,
   CircleAlert,
   CreditCard,
   GitBranch,
+  Info,
   LayoutGrid,
   ListChecks,
   MapPinned,
@@ -32,7 +34,6 @@ import { SettingsPage } from './SettingsPage';
 import { StorefrontSettingsPage } from './StorefrontSettingsPage';
 import {
   organizationRequest,
-  type OrganizationInput,
   type BranchInput,
   type Branch,
 } from '../../lib/organization-api';
@@ -52,14 +53,6 @@ import {
   type IssuedTableQRToken,
 } from './setup-api';
 
-const blankOrganization: OrganizationInput = {
-  name: '',
-  code: '',
-  business_type: 'RETAIL',
-  contact_email: '',
-  contact_phone: '',
-  address: '',
-};
 const blankBranch: BranchInput = {
   name: '',
   code: '',
@@ -203,7 +196,7 @@ function useWrite() {
   };
 }
 type SetupFormState = {
-  profile: SetupProfileInput;
+  profile: SetupProfileInput & { organization: { description?: string } };
   tables: SetupTablesInput;
   menu: SetupMenuInput;
   services: SetupServicesInput;
@@ -213,8 +206,7 @@ type SetupFormState = {
 
 const createSetupForm = (): SetupFormState => ({
   profile: {
-    organization: { ...blankOrganization, business_type: 'RESTAURANT' },
-    branch: { name: 'สาขาหลัก', code: 'MAIN', address: '', phone: '', email: '' },
+    organization: { name: '', business_type: 'RESTAURANT', contact_email: '', contact_phone: '', address: '', description: '' },
     service_modes: { dine_in: true, takeaway: true, delivery: false },
   },
   services: { service_modes: { dine_in: true, takeaway: true, delivery: false } },
@@ -225,13 +217,62 @@ const createSetupForm = (): SetupFormState => ({
 });
 
 const setupMeta = [
-  { key: 'profile', label: 'ข้อมูลร้าน', description: 'เริ่มจากรายละเอียดร้าน', icon: Store },
-  { key: 'services', label: 'รูปแบบบริการ', description: 'เลือกช่องทางบริการของร้าน', icon: Store },
-  { key: 'tables', label: 'พื้นที่และโต๊ะ', description: 'จัดโซน โต๊ะ และ QR สำหรับหน้าร้าน', icon: MapPinned },
-  { key: 'menu', label: 'เมนู', description: 'เพิ่มหมวดหมู่และเมนูแรกของร้าน', icon: Utensils },
-  { key: 'payments', label: 'การชำระเงิน', description: 'เลือกช่องทางรับชำระที่ใช้งานจริง', icon: WalletCards },
-  { key: 'orders', label: 'การสั่งซื้อ', description: 'กำหนด QR คิวครัว และค่าธรรมเนียม', icon: ReceiptText },
-  { key: 'review', label: 'ตรวจสอบความพร้อม', description: 'ตรวจรายการก่อนเปิดใช้งานร้าน', icon: ListChecks },
+  {
+    key: 'profile',
+    label: 'ข้อมูลร้าน',
+    sidebarSubtitle: 'ตั้งค่าข้อมูลพื้นฐานของร้าน',
+    cardSubtitle: 'กรอกข้อมูลพื้นฐานของร้านอาหาร เพื่อเริ่มใช้งานระบบ',
+    description: 'กรอกข้อมูลพื้นฐานของร้านอาหาร เพื่อเริ่มใช้งานระบบ',
+    icon: Store,
+  },
+  {
+    key: 'services',
+    label: 'รูปแบบบริการ',
+    sidebarSubtitle: 'เลือกรูปแบบการให้บริการ',
+    cardSubtitle: 'เลือกรูปแบบการให้บริการ',
+    description: 'เลือกช่องทางบริการของร้าน',
+    icon: Store,
+  },
+  {
+    key: 'tables',
+    label: 'พื้นที่และโต๊ะ',
+    sidebarSubtitle: 'จัดการพื้นที่และโต๊ะ',
+    cardSubtitle: 'จัดการพื้นที่และโต๊ะ',
+    description: 'จัดโซน โต๊ะ และ QR สำหรับหน้าร้าน',
+    icon: MapPinned,
+  },
+  {
+    key: 'menu',
+    label: 'เมนู',
+    sidebarSubtitle: 'เพิ่มและจัดการเมนู',
+    cardSubtitle: 'เพิ่มและจัดการเมนู',
+    description: 'เพิ่มหมวดหมู่และเมนูแรกของร้าน',
+    icon: Utensils,
+  },
+  {
+    key: 'payments',
+    label: 'การชำระเงิน',
+    sidebarSubtitle: 'ตั้งค่าวิธีการรับชำระ',
+    cardSubtitle: 'ตั้งค่าวิธีการรับชำระ',
+    description: 'เลือกช่องทางรับชำระที่ใช้งานจริง',
+    icon: WalletCards,
+  },
+  {
+    key: 'orders',
+    label: 'การสั่งซื้อ',
+    sidebarSubtitle: 'ตั้งค่าช่องทางการสั่งซื้อ',
+    cardSubtitle: 'ตั้งค่าช่องทางการสั่งซื้อ',
+    description: 'กำหนด QR คิวครัว และค่าธรรมเนียม',
+    icon: ReceiptText,
+  },
+  {
+    key: 'review',
+    label: 'ตรวจสอบความพร้อม',
+    sidebarSubtitle: 'ตรวจทานข้อมูลก่อนเริ่มใช้งาน',
+    cardSubtitle: 'ตรวจทานข้อมูลก่อนเริ่มใช้งาน',
+    description: 'ตรวจรายการก่อนเปิดใช้งานร้าน',
+    icon: ListChecks,
+  },
 ] as const;
 
 type SetupStepIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6;
@@ -248,6 +289,7 @@ function SetupInput({
   onChange,
   required = false,
   type = 'text',
+  placeholder,
   min,
   step,
 }: {
@@ -256,20 +298,71 @@ function SetupInput({
   onChange: (value: string) => void;
   required?: boolean;
   type?: string;
+  placeholder?: string;
   min?: string;
   step?: string;
 }) {
   return (
     <label className="setup-field">
-      <span>{label}</span>
+      <span className="setup-field-label">
+        {label}
+        {required && <span className="setup-required" aria-hidden="true"> *</span>}
+      </span>
       <input
+        aria-label={label}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         required={required}
         type={type}
+        placeholder={placeholder}
         min={min}
         step={step}
       />
+    </label>
+  );
+}
+
+function SetupSelectOrInput({
+  label,
+  value,
+  onChange,
+  required = false,
+  placeholder,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  required?: boolean;
+  placeholder?: string;
+  options: Array<{ value: string; label: string }>;
+}) {
+  return (
+    <label className="setup-field">
+      <span className="setup-field-label">
+        {label}
+        {required && <span className="setup-required" aria-hidden="true"> *</span>}
+      </span>
+      <div className="setup-select-wrapper">
+        <input
+          aria-label={label}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          required={required}
+          type="text"
+          placeholder={placeholder}
+          list="setup-business-types"
+          className="setup-select-input"
+        />
+        <ChevronDown size={18} className="setup-chevron-icon" aria-hidden="true" />
+        <datalist id="setup-business-types">
+          {options.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </datalist>
+      </div>
     </label>
   );
 }
@@ -298,8 +391,8 @@ function SetupToggle({
 function localReadiness(form: SetupFormState): SetupReadinessItem[] {
   const incomplete: SetupReadinessItem[] = [];
   const profile = form.profile;
-  if (!profile.organization.name.trim() || !profile.organization.code.trim())
-    incomplete.push({ key: 'profile', label: 'ข้อมูลร้าน', reason: 'กรอกชื่อและรหัสร้านให้ครบ' });
+  if (!profile.organization.name.trim() || !profile.organization.business_type.trim())
+    incomplete.push({ key: 'profile', label: 'ข้อมูลร้าน', reason: 'กรอกชื่อและประเภทร้านให้ครบ' });
   if (!form.tables.zones.some((zone) => zone.name.trim()) || !form.tables.tables.some((table) => table.name.trim()))
     incomplete.push({ key: 'tables', label: 'พื้นที่และโต๊ะ', reason: 'เพิ่มอย่างน้อยหนึ่งโซนและหนึ่งโต๊ะ' });
   if (!form.menu.categories.some((category) => category.name.trim()) || !form.menu.items.some((item) => item.name.trim() && decimalValid(item.price)))
@@ -332,15 +425,97 @@ function SetupStepFields({
   if (step === 0)
     return (
       <div className="setup-form-section">
+        <div className="setup-form-row">
+          <SetupInput
+            label="ชื่อร้าน"
+            value={profile.organization.name}
+            placeholder="เช่น VELO Cafe & Restaurant"
+            required
+            onChange={(name) =>
+              update('profile', {
+                ...profile,
+                organization: { ...profile.organization, name },
+              })
+            }
+          />
+        </div>
         <div className="setup-form-grid">
-          <SetupInput label="ชื่อร้าน" value={profile.organization.name} required onChange={(name) => update('profile', { ...profile, organization: { ...profile.organization, name } })} />
-          <SetupInput label="รหัสร้าน" value={profile.organization.code} required onChange={(code) => update('profile', { ...profile, organization: { ...profile.organization, code } })} />
-          <SetupInput label="ประเภทร้าน" value={profile.organization.business_type} required onChange={(business_type) => update('profile', { ...profile, organization: { ...profile.organization, business_type } })} />
-          <SetupInput label="อีเมลร้าน" value={profile.organization.contact_email} type="email" onChange={(contact_email) => update('profile', { ...profile, organization: { ...profile.organization, contact_email } })} />
-          <SetupInput label="โทรศัพท์ร้าน" value={profile.organization.contact_phone} onChange={(contact_phone) => update('profile', { ...profile, organization: { ...profile.organization, contact_phone } })} />
-          <SetupInput label="ที่อยู่ร้าน" value={profile.organization.address} onChange={(address) => update('profile', { ...profile, organization: { ...profile.organization, address } })} />
-          <SetupInput label="ชื่อสาขาหลัก" value={profile.branch.name} required onChange={(name) => update('profile', { ...profile, branch: { ...profile.branch, name } })} />
-          <SetupInput label="รหัสสาขาหลัก" value={profile.branch.code} required onChange={(code) => update('profile', { ...profile, branch: { ...profile.branch, code } })} />
+          <SetupSelectOrInput
+            label="ประเภทร้าน"
+            value={profile.organization.business_type}
+            placeholder="เช่น RESTAURANT"
+            required
+            options={[
+              { value: 'RESTAURANT', label: 'RESTAURANT' },
+              { value: 'CAFE', label: 'CAFE' },
+              { value: 'BAKERY', label: 'BAKERY' },
+              { value: 'FAST_FOOD', label: 'FAST_FOOD' },
+              { value: 'BAR', label: 'BAR' },
+            ]}
+            onChange={(business_type) =>
+              update('profile', {
+                ...profile,
+                organization: { ...profile.organization, business_type },
+              })
+            }
+          />
+          <SetupInput
+            label="อีเมลร้าน"
+            value={profile.organization.contact_email}
+            placeholder="เช่น contact@velocafe.com"
+            type="email"
+            onChange={(contact_email) =>
+              update('profile', {
+                ...profile,
+                organization: { ...profile.organization, contact_email },
+              })
+            }
+          />
+        </div>
+        <div className="setup-form-grid">
+          <SetupInput
+            label="โทรศัพท์ร้าน"
+            value={profile.organization.contact_phone}
+            placeholder="เช่น 061-507-1665"
+            onChange={(contact_phone) =>
+              update('profile', {
+                ...profile,
+                organization: { ...profile.organization, contact_phone },
+              })
+            }
+          />
+          <SetupInput
+            label="ที่อยู่ร้าน"
+            value={profile.organization.address}
+            placeholder="เช่น 123 ถ.สุขุมวิท ต.คลองตัน อ.คลองตัน จ.กรุงเทพฯ 26120"
+            onChange={(address) =>
+              update('profile', {
+                ...profile,
+                organization: { ...profile.organization, address },
+              })
+            }
+          />
+        </div>
+        <div className="setup-form-row">
+          <SetupInput
+            label="คำอธิบายร้าน"
+            value={profile.organization.description ?? ''}
+            placeholder="เช่น ร้านอาหารและคาเฟ่ อาหารไทย เครื่องดื่ม และเบเกอรี่"
+            onChange={(description) =>
+              update('profile', {
+                ...profile,
+                organization: { ...profile.organization, description },
+              })
+            }
+          />
+        </div>
+        <div className="setup-notice-callout">
+          <div className="setup-notice-icon">
+            <Info size={18} aria-hidden="true" />
+          </div>
+          <p>
+            คุณสามารถแก้ไขข้อมูลเหล่านี้ได้ในภายหลัง เช่น ชื่อร้าน ที่อยู่ อีเมล หรือข้อมูลสาขา ผ่านการตั้งค่าร้านค้าในระบบ
+          </p>
         </div>
       </div>
     );
@@ -553,9 +728,9 @@ function ScopedSetupPage() {
   };
   const validationMessage = () => {
     if (step === 0) {
-      const { organization, branch } = form.profile;
-      if (!organization.name.trim() || !organization.code.trim()) return 'กรอกชื่อร้านและรหัสร้านให้ครบ';
-      if (!organization.business_type.trim() || !branch.name.trim() || !branch.code.trim()) return 'กรอกประเภทร้านและข้อมูลสาขาหลักให้ครบ';
+      const { organization } = form.profile;
+      if (!organization.name.trim()) return 'กรอกชื่อร้านให้ครบ';
+      if (!organization.business_type.trim()) return 'กรอกประเภทร้านให้ครบ';
     }
     if (step === 1 && !Object.values(form.services.service_modes).some(Boolean)) return 'เลือกช่องทางบริการอย่างน้อยหนึ่งรูปแบบ';
     if (step === 2 && (!form.tables.zones[0]?.name.trim() || !form.tables.tables[0]?.name.trim() || !Number.isSafeInteger(form.tables.tables[0]?.seats) || form.tables.tables[0].seats < 1)) return 'กรอกชื่อโซน โต๊ะ และจำนวนที่นั่งให้ครบ';
@@ -632,10 +807,8 @@ function ScopedSetupPage() {
       let requestContext = setupContext;
       if (step === 0 && !tenant.context) {
         if (tenant.storeMode !== 'multi') throw new Error(t('organization.singleStoreModeDoesNotAllowAdditional'));
-        const payload = {
-          ...form.profile.organization,
-          branch: { ...form.profile.branch, status: 'ACTIVE' },
-        };
+        const { name, business_type, contact_email, contact_phone, address } = form.profile.organization;
+        const payload = { name, business_type, contact_email, contact_phone, address };
         const encoded = JSON.stringify(payload);
         if (creationRef.current.payload !== encoded)
           creationRef.current = { key: setupKey(), payload: encoded };
@@ -652,7 +825,10 @@ function ScopedSetupPage() {
         requestContext = nextContext;
       }
       const stepKey = (['profile', 'services', 'tables', 'menu', 'payments', 'orders'] as const)[step];
-      const stepPayload = stepKey === 'profile' ? { ...form.profile, service_modes: form.services.service_modes } : form[stepKey];
+      const { description: _desc, ...cleanOrg } = form.profile.organization;
+      const stepPayload = stepKey === 'profile'
+        ? { ...form.profile, organization: cleanOrg, service_modes: form.services.service_modes }
+        : form[stepKey];
       if (stepKey === 'tables') {
         setIssuedTokens([]);
         setCopyStatus('');
@@ -684,67 +860,165 @@ function ScopedSetupPage() {
   };
 
   return (
-    <main className="setup-page" aria-labelledby="setup-title">
-      <StandardPageHeader icon={<Building2 size={24} />} eyebrow="ตั้งค่าร้านอาหาร" title={<span id="setup-title">เริ่มต้นใช้งานร้านอาหาร</span>} description="ตั้งค่าพื้นฐานให้ครบ แล้วเปิดร้านใน SmartPOS ได้ทันที" />
-      {tenant.organizations.length > 0 && !tenant.context && (
-        <Card className="setup-existing-card">
-          <div><strong>มีร้านที่เข้าถึงได้อยู่แล้ว</strong><p>เลือกร้านเพื่อตรวจสอบการตั้งค่า</p></div>
-          <div className="tenant-actions">
-            {tenant.organizations.map((item) => <Button key={item.id} className="button-secondary" onClick={() => tenant.select(item.id)}>{item.name}</Button>)}
+    <div className="setup-page-wrapper">
+      <main className="setup-page" aria-labelledby="setup-title">
+        <header className="setup-header-bar">
+          <div className="setup-header-brand-group">
+            <div className="setup-logo-badge" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M4 4L12 20L20 4H15L12 12.5L9 4H4Z" fill="white" />
+              </svg>
+            </div>
+            <span className="setup-brand-name">VELOPOS</span>
           </div>
-        </Card>
-      )}
-      {setupQuery.error && <ErrorMessage message={setupQuery.error.message} />}
-      <div className="setup-layout">
-        <aside className="setup-rail" aria-label="ความคืบหน้าการตั้งค่า">
-          <div className="setup-rail-heading"><span className="setup-brand-mark">S</span><div><strong>ตั้งค่าร้าน</strong><small>พร้อมขายในไม่กี่ขั้นตอน</small></div></div>
-          <ol>
-            {setupMeta.map((item, index) => {
-              const Icon = item.icon;
-              const complete = index < step || Boolean(serverState?.steps?.find((entry) => entry.key === item.key)?.complete);
-              return <li key={item.key} className={index === step ? 'is-active' : complete ? 'is-complete' : ''}><button type="button" onClick={() => index <= step && setStep(index as SetupStepIndex)} disabled={pending || index > step} aria-current={index === step ? 'step' : undefined}><span className="setup-rail-icon">{complete ? <Check size={15} aria-hidden="true" /> : <Icon size={16} aria-hidden="true" />}</span><span><strong>{item.label}</strong><small>{complete ? 'เสร็จแล้ว' : index === step ? 'กำลังดำเนินการ' : 'รอการตั้งค่า'}</small></span></button></li>;
-            })}
-          </ol>
-          <div className="setup-rail-note"><CheckCircle2 size={17} aria-hidden="true" /><span>ข้อมูลจะถูกบันทึกเป็นระยะ และกลับมาทำต่อได้</span></div>
-        </aside>
-        <section className="setup-main">
-          <div className="setup-overview-grid" aria-label="ขั้นตอนการตั้งค่าทั้งหมด">
-            {setupMeta.map((item, index) => { const Icon = item.icon; const complete = index < step || Boolean(serverState?.steps?.find((entry) => entry.key === item.key)?.complete); return <button type="button" key={item.key} className={`setup-overview-card ${index === step ? 'is-active' : ''} ${complete ? 'is-complete' : ''}`} onClick={() => index <= step && setStep(index as SetupStepIndex)} disabled={pending || index > step}><span className="setup-overview-icon"><Icon size={18} aria-hidden="true" /></span><span><strong>{item.label}</strong><small>{complete ? 'เสร็จแล้ว' : index === step ? 'กำลังตั้งค่า' : 'ยังไม่เริ่ม'}</small></span>{complete && <Check size={15} aria-hidden="true" />}</button>; })}
+          <div className="setup-header-divider" aria-hidden="true" />
+          <div className="setup-header-titles">
+            <h1 id="setup-title" className="setup-header-title">เริ่มต้นใช้งานร้านอาหาร</h1>
+            <p className="setup-header-subtitle">ตั้งค่าร้านอาหารครั้งแรก เพื่อให้ VELOPOS พร้อมใช้งานกับร้านของคุณ</p>
           </div>
-          <Card className="setup-card">
-            <div className="setup-card-heading"><div><p className="setup-step-count">{step === 6 ? 'ตรวจสอบความพร้อม' : `ขั้นตอนที่ ${step + 1} จาก 6`}</p><h2 ref={stepHeadingRef} tabIndex={-1}>{setupMeta[step].label}</h2><p>{setupMeta[step].description}</p></div><span className="setup-card-icon" aria-hidden="true">{(() => { const Icon = setupMeta[step].icon; return <Icon size={22} />; })()}</span></div>
-            {setupQuery.isPending && orgID && <Loading>กำลังโหลดความคืบหน้าที่บันทึกไว้…</Loading>}
-            {setupQuery.error && <div className="setup-retry"><CircleAlert size={18} aria-hidden="true" /><span>{hydratedScope ? 'โหลดความคืบหน้าไม่สำเร็จ คุณยังกรอกข้อมูลต่อได้' : 'โหลดความคืบหน้าไม่สำเร็จ กรุณาลองใหม่ก่อนแก้ไขข้อมูล'}</span><Button className="button-secondary" onClick={() => void setupQuery.refetch()}>ลองใหม่</Button></div>}
-            <form noValidate onSubmit={(event) => void saveStep(event)}>
-              <fieldset disabled={pending || (Boolean(setupContext) && !hydratedScope)}>
-                {step < 6 ? <SetupStepFields step={step} form={form} update={update} promptPayAvailable={Boolean(serverState?.capabilities.promptPay)} /> : <><ReadinessReview items={readinessItems} form={form} ready={isReady} /><ul>{readinessItems.map((item, index) => <li key={`${item.key}-${index}`}>{item.label}: {item.reason}</li>)}</ul></>}
-                {issuedTokens.length > 0 && <section aria-labelledby="issued-table-tokens">
-                  <h3 id="issued-table-tokens">รหัสลับ QR โต๊ะที่ออกให้</h3>
-                  <p>เก็บรหัสลับนี้อย่างปลอดภัย คัดลอกหรือดาวน์โหลดก่อนออกจากหน้านี้ รหัสจากการส่งคำขอเดิมซ้ำอาจใช้ไม่ได้หากมีการหมุนเวียนภายหลัง</p>
-                  <label className="setup-field"><span>รหัสลับโต๊ะ</span><textarea readOnly rows={5} value={JSON.stringify(issuedTokens, null, 2)} /></label>
-                  <div className="tenant-actions">
-                    <Button className="button-secondary" onClick={() => { void (async () => { try { await navigator.clipboard.writeText(JSON.stringify(issuedTokens, null, 2)); if (activeRef.current) setCopyStatus('คัดลอกแล้ว'); } catch { if (activeRef.current) setCopyStatus('คัดลอกไม่สำเร็จ กรุณาเลือกข้อความเพื่อคัดลอก'); } })(); }}>คัดลอกรหัสลับ</Button>
-                    <Button className="button-secondary" onClick={downloadIssuedTokens}>ดาวน์โหลดรหัสลับ</Button>
-                  </div>
-                  <p role="status">{copyStatus}</p>
-                </section>}
-                {error && <ErrorMessage message={localize(error)} />}
-                <div className="setup-actions">
-                  <Button className="button-secondary" onClick={() => { setError(''); setStep((current) => Math.max(0, current - 1) as SetupStepIndex); }} disabled={step === 0 || pending}><ArrowLeft size={17} aria-hidden="true" /> ย้อนกลับ</Button>
-                  <Button type="submit" disabled={pending || (Boolean(setupContext) && setupQuery.isPending) || (step === 6 && !isReady)}>{pending ? 'กำลังบันทึก…' : step === 6 ? 'เปิดใช้งานร้าน' : 'บันทึกและถัดไป'}{step === 6 ? <CheckCircle2 size={17} aria-hidden="true" /> : <ArrowRight size={17} aria-hidden="true" />}</Button>
-                </div>
-              </fieldset>
-            </form>
+        </header>
+
+        {tenant.organizations.length > 0 && !tenant.context && (
+          <Card className="setup-existing-card">
+            <div><strong>มีร้านที่เข้าถึงได้อยู่แล้ว</strong><p>เลือกร้านเพื่อตรวจสอบการตั้งค่า</p></div>
+            <div className="tenant-actions">
+              {tenant.organizations.map((item) => <Button key={item.id} className="button-secondary" onClick={() => tenant.select(item.id)}>{item.name}</Button>)}
+            </div>
           </Card>
-        </section>
-      </div>
-    </main>
+        )}
+        {setupQuery.error && <ErrorMessage message={setupQuery.error.message} />}
+
+        <div className="setup-layout">
+          <aside className="setup-rail" aria-label="ความคืบหน้าการตั้งค่า">
+            <div className="setup-rail-header">
+              <h2 className="setup-rail-title">ขั้นตอนตั้งค่าร้าน</h2>
+              <p className="setup-rail-subtitle">ตั้งค่า 7 ขั้นตอน เพื่อเริ่มใช้งานร้านอาหารกับ VELOPOS</p>
+            </div>
+            <div className="setup-stepper-container">
+              <div className="setup-stepper-line" aria-hidden="true" />
+              <ol className="setup-stepper-list">
+                {setupMeta.map((item, index) => {
+                  const complete = index < step || Boolean(serverState?.steps?.find((entry) => entry.key === item.key)?.complete);
+                  const isActive = index === step;
+                  return (
+                    <li key={item.key} className={`setup-step-item ${isActive ? 'is-active' : ''} ${complete ? 'is-complete' : ''}`}>
+                      <button
+                        type="button"
+                        onClick={() => index <= step && setStep(index as SetupStepIndex)}
+                        disabled={pending || index > step}
+                        aria-current={isActive ? 'step' : undefined}
+                        className="setup-step-button"
+                      >
+                        <span className="setup-step-circle">
+                          {complete && !isActive ? <Check size={14} strokeWidth={3} aria-hidden="true" /> : index + 1}
+                        </span>
+                        <div className="setup-step-text">
+                          <strong className="setup-step-name">{item.label}</strong>
+                          <small className="setup-step-desc">{item.sidebarSubtitle}</small>
+                        </div>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
+          </aside>
+
+          <section className="setup-main">
+            <Card className="setup-card">
+              <div className="setup-card-top-row">
+                <span className="setup-step-pill">ขั้นตอนที่ {step + 1} จาก 7</span>
+              </div>
+              <div className="setup-card-heading">
+                <div className="setup-card-heading-left">
+                  <span className="setup-card-icon-squircle" aria-hidden="true">
+                    {(() => {
+                      const Icon = setupMeta[step].icon;
+                      return <Icon size={24} strokeWidth={2} />;
+                    })()}
+                  </span>
+                  <div>
+                    <h2 ref={stepHeadingRef} tabIndex={-1} className="setup-card-title">
+                      {setupMeta[step].label}
+                    </h2>
+                    <p className="setup-card-subtitle">{setupMeta[step].cardSubtitle}</p>
+                  </div>
+                </div>
+                <div className="setup-decorative-badge" aria-hidden="true">
+                  <div className="setup-sparkles">
+                    <span className="sparkle sparkle-1" />
+                    <span className="sparkle sparkle-2" />
+                    <span className="sparkle sparkle-3" />
+                  </div>
+                  <div className="setup-decorative-circle">
+                    <Store size={26} strokeWidth={1.8} />
+                  </div>
+                </div>
+              </div>
+
+              {setupQuery.isPending && orgID && <Loading>กำลังโหลดความคืบหน้าที่บันทึกไว้…</Loading>}
+              {setupQuery.error && (
+                <div className="setup-retry">
+                  <CircleAlert size={18} aria-hidden="true" />
+                  <span>{hydratedScope ? 'โหลดความคืบหน้าไม่สำเร็จ คุณยังกรอกข้อมูลต่อได้' : 'โหลดความคืบหน้าไม่สำเร็จ กรุณาลองใหม่ก่อนแก้ไขข้อมูล'}</span>
+                  <Button className="button-secondary" onClick={() => void setupQuery.refetch()}>ลองใหม่</Button>
+                </div>
+              )}
+
+              <form noValidate onSubmit={(event) => void saveStep(event)}>
+                <fieldset disabled={pending || (Boolean(setupContext) && !hydratedScope)}>
+                  {step < 6 ? (
+                    <SetupStepFields step={step} form={form} update={update} promptPayAvailable={Boolean(serverState?.capabilities.promptPay)} />
+                  ) : (
+                    <>
+                      <ReadinessReview items={readinessItems} form={form} ready={isReady} />
+                      <ul>{readinessItems.map((item, index) => <li key={`${item.key}-${index}`}>{item.label}: {item.reason}</li>)}</ul>
+                    </>
+                  )}
+                  {issuedTokens.length > 0 && (
+                    <section aria-labelledby="issued-table-tokens">
+                      <h3 id="issued-table-tokens">รหัสลับ QR โต๊ะที่ออกให้</h3>
+                      <p>เก็บรหัสลับนี้อย่างปลอดภัย คัดลอกหรือดาวน์โหลดก่อนออกจากหน้านี้ รหัสจากการส่งคำขอเดิมซ้ำอาจใช้ไม่ได้หากมีการหมุนเวียนภายหลัง</p>
+                      <label className="setup-field"><span>รหัสลับโต๊ะ</span><textarea readOnly rows={5} value={JSON.stringify(issuedTokens, null, 2)} /></label>
+                      <div className="tenant-actions">
+                        <Button className="button-secondary" onClick={() => { void (async () => { try { await navigator.clipboard.writeText(JSON.stringify(issuedTokens, null, 2)); if (activeRef.current) setCopyStatus('คัดลอกแล้ว'); } catch { if (activeRef.current) setCopyStatus('คัดลอกไม่สำเร็จ กรุณาเลือกข้อความเพื่อคัดลอก'); } })(); }}>คัดลอกรหัสลับ</Button>
+                        <Button className="button-secondary" onClick={downloadIssuedTokens}>ดาวน์โหลดรหัสลับ</Button>
+                      </div>
+                      <p role="status">{copyStatus}</p>
+                    </section>
+                  )}
+                  {error && <ErrorMessage message={localize(error)} />}
+                  <div className="setup-actions">
+                    <Button
+                      type="button"
+                      className="setup-btn-back"
+                      onClick={() => { setError(''); setStep((current) => Math.max(0, current - 1) as SetupStepIndex); }}
+                      disabled={step === 0 || pending}
+                    >
+                      <ArrowLeft size={16} aria-hidden="true" /> ย้อนกลับ
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="setup-btn-next"
+                      disabled={pending || (Boolean(setupContext) && setupQuery.isPending) || (step === 6 && !isReady)}
+                    >
+                      {pending ? 'กำลังบันทึก…' : step === 6 ? 'เปิดใช้งานร้าน' : 'บันทึกและถัดไป'}
+                      {step === 6 ? <CheckCircle2 size={16} aria-hidden="true" /> : <ArrowRight size={16} aria-hidden="true" />}
+                    </Button>
+                  </div>
+                </fieldset>
+              </form>
+            </Card>
+          </section>
+        </div>
+      </main>
+    </div>
   );
 }
 
 function ReadinessReview({ items, form, ready }: { items: SetupReadinessItem[]; form: SetupFormState; ready: boolean }) {
   const checks = [
-    { key: 'profile', label: 'ข้อมูลร้านและสาขา', done: !items.some((item) => item.key === 'profile'), detail: `${form.profile.organization.name || 'ยังไม่ได้ระบุชื่อร้าน'} · ${form.profile.branch.name || 'ยังไม่ได้ระบุสาขา'}` },
+    { key: 'profile', label: 'ข้อมูลร้าน', done: !items.some((item) => item.key === 'profile'), detail: form.profile.organization.name || 'ยังไม่ได้ระบุชื่อร้าน' },
     { key: 'tables', label: 'พื้นที่และโต๊ะ', done: !items.some((item) => item.key === 'tables'), detail: `${form.tables.zones[0]?.name || 'ยังไม่มีโซน'} · ${form.tables.tables[0]?.name || 'ยังไม่มีโต๊ะ'}` },
     { key: 'menu', label: 'เมนูและราคา', done: !items.some((item) => item.key === 'menu'), detail: form.menu.items[0]?.name || 'ยังไม่มีเมนู' },
     { key: 'payments', label: 'ช่องทางการชำระเงิน', done: !items.some((item) => item.key === 'payments'), detail: form.payments.cash ? 'เงินสด' : form.payments.bank_transfer ? 'โอนเงิน' : 'ยังไม่ได้เลือก' },

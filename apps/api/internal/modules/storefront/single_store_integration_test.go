@@ -242,6 +242,9 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 			t.Fatalf("membership required: %v", problem)
 		}
 	})
+	t.Run("restaurant onboarding generated metadata and profile preservation", func(testContext *testing.T) {
+		onboardingAcceptance(testContext, ctx, accounts, multi, single, owner.ID, guest.ID, second)
+	})
 	t.Run("public directory and slug reads cannot expose another store", func(t *testing.T) {
 		result, problem := shop.Directory(ctx)
 		if problem != nil {

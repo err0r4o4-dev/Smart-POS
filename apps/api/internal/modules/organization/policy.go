@@ -96,6 +96,30 @@ func (input *OrganizationInput) validate() error {
 	}
 	return nil
 }
+
+func (input *CreateInput) validateCreate() error {
+	missingCode := strings.TrimSpace(input.Code) == ""
+	if missingCode {
+		input.Code = "TEMP"
+	}
+	err := input.OrganizationInput.validate()
+	if missingCode {
+		input.Code = ""
+	}
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(input.Branch.Name) == "" {
+		input.Branch.Name = "สาขาหลัก"
+	}
+	if strings.TrimSpace(input.Branch.Code) == "" {
+		input.Branch.Code = "MAIN"
+	}
+	if input.Branch.validate() != nil || input.Branch.Status != "ACTIVE" {
+		return ErrInput
+	}
+	return nil
+}
 func (input *BranchInput) validate() error {
 	input.Name = strings.TrimSpace(input.Name)
 	input.Code = strings.ToUpper(strings.TrimSpace(input.Code))

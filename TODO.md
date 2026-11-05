@@ -1,3 +1,45 @@
+# Restaurant Setup UI Redesign (/setup) (2026-11-06)
+
+Approved scope: Redesign `/setup` page UI to match the user's VELOPOS screenshot reference.
+Includes VELOPOS branding header bar with top warm glow, 2-column layout with left 7-step vertical stepper card,
+right step card with step pill badge ("ขั้นตอนที่ 1 จาก 7"), icon squircle and decorative illustration,
+exact field layout and placeholders for Step 1 ("ข้อมูลร้าน"), info notice callout, and action buttons.
+Preserve all functional logic, step validations, API contracts, and tests.
+
+- [x] 1. Update `setup.css` with exact layout, color tokens, typography, stepper styles, decorative badges, and responsive behavior
+- [x] 2. Update `OrganizationPages.tsx` to implement VELOPOS header bar, 7-step stepper rail, exact form fields and placeholders, and card layout
+- [x] 3. Update `OrganizationPages.test.tsx` to reflect the 7-step count ("ขั้นตอนที่ 1 จาก 7")
+- [/] 4. Run tests, typecheck, and lint verification
+- [ ] 5. Verify visual integrity and responsive behavior (320px, 768px, 1440px)
+
+# Onboarding simplification (2026-11-06)
+
+- [/] Align organization creation and restaurant setup with the additive
+  onboarding contract: generated organization code, default main branch,
+  and preservation of identifiers, organization code and omitted branch.
+  Legacy explicit inputs and strict organization/branch updates remain supported.
+- [ ] Reconcile the OpenAPI request shapes with the final backend and frontend
+      changes and run the contract inventory check.
+- [x] Main reports Go tests, vet and build passed with the database DSN unset;
+      focused web checks passed 57 cases. These results precede the pending
+      explicit-branch validation fix and do not establish database acceptance.
+- [ ] Rerun the required Go checks after the backend and integration changes.
+- [x] Main reports typecheck, web build and contract inventory passed; lint had
+      zero errors and seven warnings. Recheck affected inputs after the fix.
+- [x] Main reports six mocked browser cases passed at 320 and 1440 pixels;
+      screenshots were inspected. Live database-backed browser acceptance is open.
+- [?] Verify creation, retries, rollback and profile preservation against an
+  isolated task-owned disposable database; Main reports this is blocked.
+- [?] Aggregate `npm run test` FAIL: 4 failed / 475 passed in 62 web files;
+  failures are NavigationMenu (1), SettingsPage (2), and
+  StorefrontSettingsPage (1), outside this task. No baseline was run.
+  The scoped QR export timing fix passes. Log:
+  `.local/onboarding-simplification/test-final.log`.
+- [x] Main reports separate `npm run test:logs` PASS (10) and
+      `npm run test:dev-stack` PASS (5).
+- [ ] Complete independent code and security review for the transaction and
+      idempotency changes, including the pending explicit-branch validation delta.
+
 # Owner-only backoffice (2026-11-05)
 
 Approved scope: restrict backoffice access to active OWNER memberships; reject

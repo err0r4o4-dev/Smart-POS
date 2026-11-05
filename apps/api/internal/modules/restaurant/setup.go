@@ -26,6 +26,7 @@ const (
 )
 
 var setupSKU = regexp.MustCompile(`^[A-Z0-9][A-Z0-9_.-]{0,79}$`)
+var setupBranchCode = regexp.MustCompile(`^[A-Z0-9][A-Z0-9_-]{0,49}$`)
 
 const setupMenuUnitLookupSQL = "SELECT id::text FROM units WHERE organization_id=$1 AND code=$2 AND unit_type='COUNT' AND status='ACTIVE'"
 
@@ -187,9 +188,14 @@ func (input *SetupProfileInput) normalize(branch string) error {
 		input.Name, input.Code, input.BusinessType = input.Organization.Name, input.Organization.Code, input.Organization.BusinessType
 		input.ContactEmail, input.ContactPhone, input.Address = input.Organization.ContactEmail, input.Organization.ContactPhone, input.Organization.Address
 	}
+	if input.BranchID == "" {
+		input.BranchID = branch
+	}
 	if input.Branch != nil {
-		if input.BranchID == "" {
-			input.BranchID = branch
+		name := strings.TrimSpace(input.Branch.Name)
+		code := strings.ToUpper(strings.TrimSpace(input.Branch.Code))
+		if name == "" || utf8.RuneCountInString(name) > 200 || strings.ContainsAny(name, "\x00\r\n") || !setupBranchCode.MatchString(code) {
+			return ErrInput
 		}
 	}
 	input.BranchID, input.Name, input.Code, input.BusinessType, input.ContactEmail = strings.TrimSpace(input.BranchID), strings.TrimSpace(input.Name), strings.ToUpper(strings.TrimSpace(input.Code)), strings.TrimSpace(input.BusinessType), strings.TrimSpace(input.ContactEmail)

@@ -7,6 +7,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"strings"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -255,7 +257,7 @@ func (service *Service) Create(ctx context.Context, userID, key string, input Cr
 	if service.SingleStoreOrganizationID != "" {
 		return Context{}, ErrDenied
 	}
-	if !uuidPattern.MatchString(key) || input.validate() != nil || input.Branch.validate() != nil || input.Branch.Status != "ACTIVE" {
+	if !uuidPattern.MatchString(key) || input.validateCreate() != nil {
 		return Context{}, ErrInput
 	}
 	encoded, _ := json.Marshal(input)
@@ -287,6 +289,9 @@ func (service *Service) Create(ctx context.Context, userID, key string, input Cr
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return Context{}, err
+	}
+	if input.Code == "" {
+		input.Code = "ORG_" + strings.ToUpper(strings.ReplaceAll(orgID, "-", ""))
 	}
 	_, err = tx.Exec(ctx, "INSERT INTO organizations(id,name,code,business_type,contact_email,contact_phone,address,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8)", orgID, input.Name, input.Code, input.BusinessType, input.ContactEmail, input.ContactPhone, input.Address, userID)
 	if err != nil {

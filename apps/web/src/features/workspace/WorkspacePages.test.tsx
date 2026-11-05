@@ -14,6 +14,7 @@ import { ManagementHomePage, WorkspaceEntryPage } from './WorkspacePages';
 
 const mocks = vi.hoisted(() => ({
   context: null as OrganizationContext | null,
+  storeMode: null as string | null,
   status: 'authenticated',
   loading: false,
   error: '',
@@ -35,6 +36,7 @@ vi.mock('../../app/OrganizationProvider', () => ({
   OrganizationProvider: ({ children }: { children: ReactNode }) => children,
   useOrganization: () => ({
     context: mocks.context,
+    storeMode: mocks.storeMode,
     organizations: mocks.context ? [mocks.context.organization] : [],
     branchID: 'branch',
     loading: mocks.loading,
@@ -99,6 +101,7 @@ function Harness({ path }: { path: string }) {
       <Routes>
         <Route element={<WorkspaceAreaGate />}>
           <Route element={<RoleWorkspaceLayout />}>
+            <Route path="/setup" element={<h1>Setup</h1>} />
             <Route element={<RequireSession />}>
               <Route path="/workspace" element={<WorkspaceEntryPage />} />
               <Route
@@ -175,6 +178,7 @@ beforeEach(() => {
   mocks.loading = false;
   mocks.error = '';
   mocks.context = null;
+  mocks.storeMode = 'multi';
   localStorage.clear();
   vi.clearAllMocks();
 });
@@ -245,15 +249,31 @@ it.each<Role>(['MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'PURCHASING_STAFF'])(
   },
 );
 
-it('leaves a signed-in user without membership in neutral account onboarding', () => {
+it('redirects a signed-in user without a store to setup in multi-store mode', () => {
   renderWorkspace();
+  expect(screen.getByRole('heading', { name: 'Setup' })).toBeVisible();
+  expect(screen.getByLabelText('Location')).toHaveTextContent('/setup');
+});
+
+it.each(['single', null, 'unknown'])(
+  'leaves a signed-in user without membership in account when store mode is %s',
+  (storeMode) => {
+    mocks.storeMode = storeMode;
+    renderWorkspace();
+    expect(screen.getByRole('heading', { name: 'Account' })).toBeVisible();
+    expect(
+      document.querySelector('[data-workspace="account"]'),
+    ).toBeInTheDocument();
+    expect(
+      document.querySelector('a[href="/manage/employees"]'),
+    ).not.toBeInTheDocument();
+  },
+);
+
+it('keeps direct account access available without a store in multi-store mode', () => {
+  renderWorkspace('/account');
   expect(screen.getByRole('heading', { name: 'Account' })).toBeVisible();
-  expect(
-    document.querySelector('[data-workspace="account"]'),
-  ).toBeInTheDocument();
-  expect(
-    document.querySelector('a[href="/manage/employees"]'),
-  ).not.toBeInTheDocument();
+  expect(screen.getByLabelText('Location')).toHaveTextContent('/account');
 });
 
 it('does not render privileged menus while role context loads', () => {
@@ -266,10 +286,20 @@ it('does not render privileged menus while role context loads', () => {
   expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
 });
 
+it('stays on workspace while a multi-store account without context loads', () => {
+  mocks.loading = true;
+  renderWorkspace();
+  expect(screen.getByRole('status')).toHaveTextContent(
+    'กำลังเลือกพื้นที่ตามสิทธิ์',
+  );
+  expect(screen.getByLabelText('Location')).toHaveTextContent('/workspace');
+});
+
 it('shows a context failure instead of pretending a role is available', () => {
   mocks.error = 'Context unavailable';
   renderWorkspace();
   expect(screen.getByRole('alert')).toHaveTextContent('Context unavailable');
+  expect(screen.getByLabelText('Location')).toHaveTextContent('/workspace');
   expect(
     document.querySelector('[data-workspace="management"]'),
   ).not.toBeInTheDocument();

@@ -42,7 +42,13 @@ export function WorkspaceEntryPage() {
         retry={() => void tenant.refresh()}
       />
     );
-  if (!tenant.context) return <Navigate to={paths.account} replace />;
+  if (!tenant.context)
+    return (
+      <Navigate
+        to={tenant.storeMode === 'multi' ? paths.setup : paths.account}
+        replace
+      />
+    );
   return (
     <Navigate to={workspaceHome(tenant.context.membership.role)} replace />
   );

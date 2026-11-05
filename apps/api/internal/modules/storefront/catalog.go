@@ -30,11 +30,11 @@ func productForOrder(ctx context.Context, tx pgx.Tx, org string, shop Settings, 
 	}
 	_, priceError := pos.EstimateOnlineLine(result.UnitPrice, "1.000", result.UnitType)
 	result.Saleable = value.ProductStatus == "ACTIVE" && value.VariantStatus == "ACTIVE" && value.UnitStatus == "ACTIVE" && value.Currency == "THB" && priceError == nil
-	err = tx.QueryRow(ctx, `SELECT COALESCE((SELECT published FROM storefront_products WHERE organization_id=$1 AND variant_id=$2),false),greatest(0.000,storefront_sellable_quantity($1,$3,$2)-storefront_reserved_quantity($1,$3,$2)+COALESCE((SELECT item.quantity FROM online_order_items item JOIN online_orders doc ON doc.organization_id=item.organization_id AND doc.id=item.order_id WHERE item.organization_id=$1 AND item.variant_id=$2 AND doc.id=nullif($4,'')::uuid AND doc.stock_location_id=$3 AND doc.stock_reserved AND storefront_order_live(doc.organization_id,doc.id)),0.000))::text`, org, id, shop.LocationID, order).Scan(&result.Published, &result.Available)
+	err = tx.QueryRow(ctx, `SELECT COALESCE((SELECT published FROM storefront_products WHERE organization_id=$1 AND variant_id=$2),false),greatest(0.000,storefront_sellable_quantity($1,$3,$2)-storefront_reserved_quantity_for_order($1,$3,$2,nullif($4,'')::uuid))::text`, org, id, shop.LocationID, order).Scan(&result.Published, &result.Available)
 	if err != nil {
 		return result, dbError(err)
 	}
-	if recipeAvailable, hasRecipe, recipeSaleable, problem := pos.RecipeAvailability(ctx, tx, org, shop.BranchID, shop.LocationID, order, id, "1.000"); problem != nil {
+	if recipeAvailable, hasRecipe, recipeSaleable, problem := pos.RecipeAvailabilityForOrder(ctx, tx, org, shop.BranchID, shop.LocationID, order, id, "1.000"); problem != nil {
 		return result, problem
 	} else if hasRecipe {
 		result.Available = recipeAvailable

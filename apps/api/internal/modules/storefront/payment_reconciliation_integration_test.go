@@ -122,11 +122,8 @@ func paymentReconciliationAcceptance(test *testing.T, ctx context.Context, organ
 		if problem != nil || current.Status != "REFUND_REVIEW_REQUIRED" || retrieves != 1 {
 			test.Fatalf("current review: %+v error %v calls %d", current, problem, retrieves)
 		}
-		for _, status := range []string{"PREPARING", "READY"} {
-			order, problem = service.Transition(ctx, owner, org, order.ID, storefront.TransitionInput{Revision: order.Revision, Status: status})
-			if problem != nil {
-				test.Fatal(problem)
-			}
+		if _, problem = service.Transition(ctx, owner, org, order.ID, storefront.TransitionInput{Revision: order.Revision, Status: "PREPARING"}); !errors.Is(problem, storefront.ErrConflict) {
+			test.Fatalf("reviewed payment entered preparation: %v", problem)
 		}
 		point := &pos.Service{Organization: organizations}
 		if _, problem = point.OpenShift(ctx, owner, org, "6a777777-7777-4777-8777-777777777777", pos.ShiftInput{TerminalID: shop.TerminalID, OpeningCash: "0.00"}); problem != nil {

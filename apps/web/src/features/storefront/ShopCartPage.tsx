@@ -1,6 +1,6 @@
 ﻿import { useLanguage } from '../../app/language';
 import { useEffect, useState, type CSSProperties, type FormEvent } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   ArrowLeft,
@@ -259,18 +259,21 @@ function displayQuantity(quantity: string): string {
 
 export function ShopCartPage() {
   const { slug = '' } = useParams();
-  return <CartContents key={slug} slug={slug} />;
+  const { search } = useLocation();
+  return <CartContents key={`${slug}:${search}`} slug={slug} />;
 }
 
 function CartContents({ slug }: { slug: string }) {
   const { t, language } = useLanguage();
   const ui = copy[language];
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const tableToken = readTableToken(searchParams.toString());
+  const shopPath = location.pathname.replace(/\/cart$/, '') + location.search;
   const navigate = useNavigate();
   const cart = useShopCart(slug);
-
-  const [diningType, setDiningType] = useState<'takeaway' | 'dine-in'>(
-    'takeaway',
-  );
+  const [diningType, setDiningType] = useState<'takeaway' | 'dine-in' | 'delivery'>(tableToken ? 'dine-in' : 'takeaway');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
 
   const [selectedTable, setSelectedTable] = useState('');
   const [demoTable, setDemoTable] = useState<string | null>(null);
@@ -298,23 +301,31 @@ function CartContents({ slug }: { slug: string }) {
   const shop = useQuery({
     queryKey: ['storefront', slug, 'settings'],
     queryFn: ({ signal }) =>
-      storefrontRequest<ShopSettings>(`/${slug}`, { signal }),
+      storefrontRequest<ShopSettings & { delivery_enabled?: boolean }>(
+        `/${slug}`,
+        { signal },
+      ),
     retry: false,
   });
 
   const quote = useMutation({
     mutationFn: () =>
-      storefrontRequest<ShopQuote>(`/${slug}/quote`, {
-        body: {
-          ...(tableToken
-            ? { fulfillment: 'PICKUP', table_token: tableToken }
-            : {}),
-          items: cart.items.map(({ variant_id, quantity }) => ({
-            variant_id,
-            quantity,
-          })),
+      storefrontRequest<ShopQuote & { shipping_fee?: string }>(
+        `/${slug}/quote`,
+        {
+          body: {
+            ...(tableToken
+              ? { fulfillment: 'PICKUP', table_token: tableToken }
+              : diningType === 'delivery'
+                ? { fulfillment: 'DELIVERY' }
+                : {}),
+            items: cart.items.map(({ variant_id, quantity }) => ({
+              variant_id,
+              quantity,
+            })),
+          },
         },
-      }),
+      ),
   });
 
   const trackingPath = `/shop/${slug}/track/${identity.key}#access=${identity.token}`;
@@ -382,7 +393,7 @@ function CartContents({ slug }: { slug: string }) {
     onError: (problem) => setError(problem),
   });
 
-  const send = (input: ShopOrderInput) => {
+  const send = (input: ShopOrderInput & { delivery_address?: string }) => {
     if (submission.isPending) return;
 
     try {
@@ -404,7 +415,7 @@ function CartContents({ slug }: { slug: string }) {
     setError(null);
   };
 
-  const selectDining = (mode: 'takeaway' | 'dine-in') => {
+  const selectDining = (mode: 'takeaway' | 'dine-in' | 'delivery') => {
     if (mode !== diningType) {
       setDiningType(mode);
 
@@ -416,7 +427,7 @@ function CartContents({ slug }: { slug: string }) {
     }
   };
 
-  const checkoutOpen = diningType === 'takeaway' && !!quote.data;
+  const checkoutOpen = (diningType !== 'dine-in' || !!tableToken) && !!quote.data;
 
   useEffect(() => {
     if (checkoutOpen) {
@@ -513,7 +524,9 @@ function CartContents({ slug }: { slug: string }) {
     if (
       !quote.data ||
       busy ||
-      diningType !== 'takeaway' ||
+      (diningType === 'dine-in' && !tableToken) ||
+      tableToken === null ||
+      (diningType === 'delivery' && !deliveryAddress.trim()) ||
       !valid ||
       !shop.data?.accepting_orders
     ) {
@@ -527,13 +540,17 @@ function CartContents({ slug }: { slug: string }) {
         quantity,
       })),
       quote_id: quote.data.quote_id,
+      ...(tableToken
+        ? { fulfillment: 'PICKUP', table_token: tableToken }
+        : diningType === 'delivery'
+          ? { fulfillment: 'DELIVERY', delivery_address: deliveryAddress.trim() }
+          : {}),
       access_token: identity.token,
     });
   };
 
   // PAGE 2: CHECKOUT
-  if (checkoutOpen) {
-    return (
+  const checkout = checkoutOpen ? (
       <div style={page}>
         <PageHeader
           heading={ui.checkout}
@@ -639,14 +656,15 @@ function CartContents({ slug }: { slug: string }) {
             >
               <strong>{ui.priceReviewed}</strong>
 
-              <strong
+              <h3
                 style={{
                   color: palette.price,
                   fontSize: 24,
+                  margin: 0,
                 }}
               >
                 ฿{moneyText(quote.data.estimated_total)}
-              </strong>
+              </h3>
             </div>
 
             <p
@@ -656,7 +674,11 @@ function CartContents({ slug }: { slug: string }) {
                 color: palette.muted,
               }}
             >
-              {t('storefront.excludesDiscountsRewardsThatMayApplyAt')}
+              {diningType === 'delivery'
+                ? language === 'th'
+                  ? 'ยอดรวมรวมค่าจัดส่งแล้ว ยังไม่รวมส่วนลด/รางวัลที่อาจใช้ได้ที่ POS'
+                  : 'Total includes the quoted shipping fee. Excludes discounts / rewards that may apply at POS.'
+                : t('storefront.excludesDiscountsRewardsThatMayApplyAt')}
             </p>
 
             <p
@@ -674,8 +696,12 @@ function CartContents({ slug }: { slug: string }) {
                   marginRight: 6,
                 }}
               />
-              {ui.pickup}
+              {language === 'th' ? 'ตรวจสอบการชำระเงินหลังส่งออเดอร์' : 'Check payment after submitting the order'}
             </p>
+            {quote.data.table_code && <p>โต๊ะ {quote.data.table_code}</p>}
+            {diningType === 'delivery' && quote.data.shipping_fee && (
+              <p>ค่าจัดส่ง ฿{moneyText(quote.data.shipping_fee)}</p>
+            )}
           </section>
 
           {/* CUSTOMER FORM */}
@@ -726,6 +752,13 @@ function CartContents({ slug }: { slug: string }) {
                 }
               />
             </label>
+
+            {diningType === 'delivery' && (
+              <label style={{ fontSize: 14, fontWeight: 600 }}>
+                {language === 'th' ? 'ที่อยู่จัดส่ง' : 'Delivery address'}
+                <input required maxLength={2000} style={control} value={deliveryAddress} onChange={(event) => setDeliveryAddress(event.target.value)} />
+              </label>
+            )}
 
             <label style={{ fontSize: 14, fontWeight: 600 }}>
               {t('storefront.noteToStore')}
@@ -781,7 +814,7 @@ function CartContents({ slug }: { slug: string }) {
 
             <button
               type="submit"
-              disabled={busy || !shop.data?.accepting_orders}
+              disabled={busy || !shop.data?.accepting_orders || (diningType === 'delivery' && !deliveryAddress.trim())}
               style={{
                 ...action,
                 opacity: busy || !shop.data?.accepting_orders ? 0.6 : 1,
@@ -815,16 +848,17 @@ function CartContents({ slug }: { slug: string }) {
           </form>
         </div>
       </div>
-    );
-  }
+    ) : null;
 
   // PAGE 1: CART
   return (
-    <div style={page}>
+    <>
+    {checkout}
+    <div style={page} hidden={checkoutOpen}>
       <PageHeader
         heading={t('pos.shoppingCart')}
         backText={t('storefront.chooseMoreProducts')}
-        to={`/shop/${slug}`}
+        to={shopPath}
       />
 
       <Steps active={1} language={language} />
@@ -898,7 +932,7 @@ function CartContents({ slug }: { slug: string }) {
 
           <h2 style={{ margin: 0 }}>{t('storefront.yourCartIsEmpty')}</h2>
 
-          <Link to={`/shop/${slug}`} style={secondary}>
+          <Link to={shopPath} style={secondary}>
             {t('storefront.backToProducts')}
           </Link>
         </div>
@@ -979,7 +1013,7 @@ function CartContents({ slug }: { slug: string }) {
                     type="button"
                     key={mode}
                     aria-pressed={diningType === mode}
-                    disabled={busy}
+                    disabled={busy || (mode === 'takeaway' && !!tableToken)}
                     onClick={() => selectDining(mode)}
                     style={{
                       ...action,
@@ -1003,11 +1037,16 @@ function CartContents({ slug }: { slug: string }) {
                     {mode === 'takeaway' ? ui.takeaway : ui.dineIn}
                   </button>
                 ))}
+                {!tableToken && shop.data?.delivery_enabled && (
+                  <button type="button" aria-pressed={diningType === 'delivery'} disabled={busy} onClick={() => selectDining('delivery')} style={{ ...action, minWidth: 0, minHeight: 44, fontSize: 13, padding: '8px 6px', border: `1px solid ${diningType === 'delivery' ? palette.yellow : palette.border}`, background: diningType === 'delivery' ? palette.yellow : '#F7F8FA' }}>
+                    {language === 'th' ? 'จัดส่ง' : 'Delivery'}
+                  </button>
+                )}
               </div>
             </section>
 
             {/* TABLE SELECTION */}
-            <section style={pale}>
+            {!tableToken && <section style={pale}>
               <label
                 htmlFor="shop-cart-table"
                 style={{
@@ -1061,7 +1100,7 @@ function CartContents({ slug }: { slug: string }) {
                     : ui.tableDemo}
                 </p>
               )}
-            </section>
+            </section>}
 
             {/* PAYMENT */}
             <section style={pale}>
@@ -1093,24 +1132,27 @@ function CartContents({ slug }: { slug: string }) {
                 />
 
                 <span>
-                  {diningType === 'takeaway'
-                    ? t('storefront.pickUpAndPayInStore')
-                    : ui.dineInPayment}
+                  {language === 'th'
+                    ? 'ตรวจสอบการชำระเงินหลังส่งออเดอร์'
+                    : 'Check payment after submitting the order'}
                 </span>
               </div>
 
-              {diningType === 'takeaway' && shop.data?.pickup_instructions && (
-                <p
-                  style={{
-                    margin: '8px 0 0 30px',
-                    fontSize: 12,
-                    color: palette.muted,
-                    overflowWrap: 'anywhere',
-                  }}
-                >
-                  {shop.data.pickup_instructions}
-                </p>
-              )}
+              {diningType === 'takeaway' &&
+                !tableToken &&
+                shop.data?.pickup_instructions && (
+                  <p
+                    style={{
+                      margin: '9px 0 0 30px',
+                      color: palette.muted,
+                      fontSize: 12,
+                      overflowWrap: 'anywhere',
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {shop.data.pickup_instructions}
+                  </p>
+                )}
             </section>
 
             {/* TOTALS */}
@@ -1188,10 +1230,10 @@ function CartContents({ slug }: { slug: string }) {
             </section>
 
             {/* ACTION BUTTON */}
-            {diningType === 'takeaway' ? (
+            {diningType !== 'dine-in' || !!tableToken ? (
               <button
                 type="button"
-                disabled={busy || !valid || !shop.data?.accepting_orders}
+                disabled={busy || !valid || tableToken === null || !shop.data?.accepting_orders}
                 onClick={() => {
                   setError(null);
                   quote.mutate();
@@ -1224,6 +1266,11 @@ function CartContents({ slug }: { slug: string }) {
                 >
                   <UtensilsCrossed size={17} aria-hidden="true" />
                   {ui.dineInDemo}
+                </button>
+
+                <button type="button" disabled style={{ ...action, opacity: 0.6 }}>
+                  {t('storefront.reviewItemsAndLatestTotal')}
+                  <ArrowRight size={17} aria-hidden="true" />
                 </button>
 
                 <p
@@ -1267,10 +1314,12 @@ function CartContents({ slug }: { slug: string }) {
             {quote.error && <ShopError error={quote.error} />}
 
             {error != null && <ShopError error={error} />}
+
           </aside>
         </div>
       )}
     </div>
+    </>
   );
 }
 

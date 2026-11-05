@@ -21,7 +21,9 @@ const queueQuery = `SELECT doc.id::text,ticket.queue_number,doc.number,
  OR (ticket.order_id IS NULL AND doc.created_at >= $3 AND doc.created_at < $4))
  AND doc.status IN ('PENDING','PREPARING','READY')
  AND storefront_order_live(doc.organization_id,doc.id)
- AND EXISTS(SELECT 1 FROM online_payment_attempts payment WHERE payment.organization_id=doc.organization_id AND payment.order_id=doc.id AND payment.state='PAID')
+ AND EXISTS(SELECT 1 FROM online_payment_attempts payment WHERE payment.organization_id=doc.organization_id AND payment.order_id=doc.id AND payment.state='PAID' AND NOT payment.stock_hold_released)
+ AND NOT EXISTS(SELECT 1 FROM online_refund_intents refund WHERE refund.organization_id=doc.organization_id AND refund.order_id=doc.id AND refund.state IN ('REQUESTED','PENDING','REQUIRES_ACTION','SUCCEEDED'))
+ AND NOT EXISTS(SELECT 1 FROM online_payment_reconciliations recon WHERE recon.organization_id=doc.organization_id AND recon.order_id=doc.id AND recon.action='FULFILLMENT_REVIEW')
  ORDER BY COALESCE(ticket.issued_at,doc.created_at),doc.id`
 
 func queueNumber(number *int64, legacy string) string {

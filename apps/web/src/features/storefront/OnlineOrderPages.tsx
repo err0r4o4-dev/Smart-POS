@@ -637,7 +637,9 @@ export function OnlineOrdersPage() {
             })),
           ]}
         />
-        {orders.isFetching && <Loading>{t('storefront.loadingOrders')}</Loading>}
+        {orders.isFetching && (
+          <Loading>{t('storefront.loadingOrders')}</Loading>
+        )}
         {orders.error && (
           <ShopError error={orders.error} retry={() => void orders.refetch()} />
         )}
@@ -656,7 +658,9 @@ export function OnlineOrdersPage() {
                 </span>
                 <div>
                   <h2>
-                    <Link to={`/online-orders/${order.id}`}>{order.number}</Link>
+                    <Link to={`/online-orders/${order.id}`}>
+                      {order.number}
+                    </Link>
                   </h2>
                   <p>
                     {order.customer_name} · {order.contact_phone}
@@ -704,10 +708,9 @@ export function OnlineOrderPage() {
 
   const { orderId = '' } = useParams();
   const scope = useScope();
-  const order = useShopQuery<OnlineOrder>(
-    `/online-orders/${orderId}`,
-    !!orderId,
-  );
+  const order = useShopQuery<
+    OnlineOrder & { fulfillment?: 'PICKUP' | 'DELIVERY' }
+  >(`/online-orders/${orderId}`, !!orderId);
   const command = useCommand();
   return (
     <div className="catalog-page online-admin">
@@ -753,10 +756,10 @@ function OrderActions({
   order,
   command,
 }: {
-  order: OnlineOrder;
+  order: OnlineOrder & { fulfillment?: 'PICKUP' | 'DELIVERY' };
   command: Command;
 }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const [message, setMessage] = useState('');
   const scope = useScope();
@@ -805,6 +808,8 @@ function OrderActions({
                 }
                 disabled={
                   command.isPending ||
+                  (['PREPARING', 'READY'].includes(action.status) &&
+                    order.payment_status !== 'PAID_AT_STORE') ||
                   (['REJECTED', 'CANCELLED'].includes(action.status) &&
                     !message.trim())
                 }
@@ -825,21 +830,43 @@ function OrderActions({
           </div>
         </>
       )}
-      {order.status === 'READY' && scope.tenant.can('pos.checkout') && (
-        <>
-          <Link className="button" to={`/pos?online_order=${order.id}`}>
-            {order.cart_id
-              ? t('storefront.returnToThisOrderSPosCart')
-              : t('storefront.customerPickupOpenInPos')}
-          </Link>
-          <p>{t('storefront.staffMustOpenAShiftAtThe')}</p>
-          {order.cart_id && (
-            <p className="notice">
-              {t('storefront.thisOrderIsAlreadyInPosTo')}
-            </p>
-          )}
-        </>
-      )}
+      {order.status === 'READY' &&
+        order.payment_status === 'PAID_AT_STORE' &&
+        order.fulfillment === 'PICKUP' &&
+        !order.cart_id &&
+        scope.tenant.can('online_orders.manage') &&
+        scope.tenant.can('pos.cart.manage') &&
+        scope.tenant.can('pos.checkout') && (
+          <Button
+            disabled={command.isPending}
+            onClick={() =>
+              command.mutate({
+                path: `/online-orders/${order.id}/settle-prepaid`,
+                body: { revision: order.revision },
+              })
+            }
+          >
+            {language === 'th' ? 'ส่งมอบและปิดยอด' : 'Hand over and settle'}
+          </Button>
+        )}
+      {order.status === 'READY' &&
+        order.payment_status === 'UNPAID' &&
+        order.fulfillment === 'PICKUP' &&
+        scope.tenant.can('pos.checkout') && (
+          <>
+            <Link className="button" to={`/pos?online_order=${order.id}`}>
+              {order.cart_id
+                ? t('storefront.returnToThisOrderSPosCart')
+                : t('storefront.customerPickupOpenInPos')}
+            </Link>
+            <p>{t('storefront.staffMustOpenAShiftAtThe')}</p>
+            {order.cart_id && (
+              <p className="notice">
+                {t('storefront.thisOrderIsAlreadyInPosTo')}
+              </p>
+            )}
+          </>
+        )}
     </section>
   );
 }

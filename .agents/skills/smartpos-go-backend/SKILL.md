@@ -43,8 +43,8 @@ another project's Go version, framework, ORM, or package layout.
   endpoint/DTO changes. Internal AI does not become a public browser backend.
 - Do not refactor adjacent modules, introduce an ORM, change auth mechanisms,
   start services, or migrate merely to make implementation convenient.
-- Secure implementation is required. A separate audit or Reviewer is not
-  automatically authorized by touching authentication code.
+- Secure implementation is required. Follow governing independent review
+  requirements for authentication and other affected high-risk boundaries.
 
 ## Verification and output
 

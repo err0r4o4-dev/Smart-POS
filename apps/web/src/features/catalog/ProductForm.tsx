@@ -24,13 +24,11 @@ export function ProductFields({
   value,
   change,
   categories,
-  brands,
   archive,
 }: {
   value: ProductInput;
   change: (value: ProductInput) => void;
   categories: Taxonomy[];
-  brands: Taxonomy[];
   archive: boolean;
 }) {
   const { t } = useLanguage();
@@ -53,12 +51,6 @@ export function ProductFields({
         value={value.category_id}
         items={categories}
         change={(category_id) => change({ ...value, category_id })}
-      />
-      <TaxonomySelect
-        label={t('catalog.productBrand')}
-        value={value.brand_id}
-        items={brands}
-        change={(brand_id) => change({ ...value, brand_id })}
       />
       <label className="tenant-field catalog-wide">
         {t('catalog.description')}

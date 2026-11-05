@@ -42,8 +42,8 @@ vi.mock('../../lib/catalog-api', async (original) => ({
   uploadCatalog: mocks.upload,
 }));
 const unit = { id: 'unit-a', name: 'Can', status: 'ACTIVE' } as Taxonomy;
-function mount(element: React.ReactNode) {
-  return render(<MemoryRouter>{element}</MemoryRouter>);
+function mount(element: React.ReactNode, path = '/') {
+  return render(<MemoryRouter initialEntries={[path]}>{element}</MemoryRouter>);
 }
 beforeEach(() => {
   vi.clearAllMocks();
@@ -53,6 +53,58 @@ beforeEach(() => {
     data: { items: [], total: 0 },
     isPending: false,
   });
+});
+it('keeps restaurant menu navigation without retired retail tools', () => {
+  mount(<ProductsPage />, '/manage/products');
+  for (const path of [
+    '/brands',
+    '/products/import',
+    '/products/labels',
+    '/inventory/balances',
+  ]) {
+    expect(
+      document.querySelector(`a[href="/manage${path}"]`),
+    ).not.toBeInTheDocument();
+  }
+  expect(
+    document.querySelector('a[href="/manage/restaurant/recipes"]'),
+  ).toBeVisible();
+  expect(
+    document.querySelector('a[href="/manage/restaurant/quick-stock"]'),
+  ).toBeVisible();
+});
+it('keeps management-only recipe and ingredient shortcuts out of staff catalog pages', () => {
+  mount(<ProductsPage />, '/work/products');
+  expect(
+    document.querySelector('a[href="/manage/restaurant/recipes"]'),
+  ).not.toBeInTheDocument();
+  expect(
+    document.querySelector('a[href="/manage/restaurant/quick-stock"]'),
+  ).not.toBeInTheDocument();
+});
+it('removes brand and barcode merchandising controls from restaurant menu management', () => {
+  mount(<ProductsPage />, '/manage/products');
+  expect(screen.queryByLabelText('กรองแบรนด์')).not.toBeInTheDocument();
+  expect(screen.queryByText('แบรนด์')).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('columnheader', { name: /บาร์โค้ด|แบรนด์/ }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByRole('heading', { level: 1, name: 'เมนูและวัตถุดิบ' }),
+  ).toBeVisible();
+});
+it('does not require retail brands when editing restaurant menu data', () => {
+  mount(<ProductEditorPage />);
+  expect(screen.queryByLabelText('แบรนด์สินค้า')).not.toBeInTheDocument();
+});
+it('omits the ingredient shortcut without stock read permission', () => {
+  mocks.can.mockImplementation(
+    (permission: string) => permission !== 'inventory.read',
+  );
+  mount(<ProductsPage />, '/manage/products');
+  expect(
+    document.querySelector('a[href="/manage/restaurant/quick-stock"]'),
+  ).not.toBeInTheDocument();
 });
 it.each(['-1', '0.001', '1e2', 'NaN', '01', '10000000000000000'])(
   'rejects non-exact cost price %s',

@@ -46,9 +46,17 @@ const restaurantPaths = [
 
 const storefrontPaths = [
   '/api/v1/storefronts',
-  ...['', '/products', '/quote', '/orders', '/track'].map(
-    (suffix) => '/api/v1/storefronts/{slug}' + suffix,
-  ),
+  ...[
+    '',
+    '/products',
+    '/quote',
+    '/orders',
+    '/track',
+    '/payment/checkout',
+    '/payment/recover',
+    '/payment/status',
+  ].map((suffix) => '/api/v1/storefronts/{slug}' + suffix),
+  '/api/v1/storefront-payments/stripe/webhook',
   ...[
     '/storefront',
     '/storefront/products',
@@ -57,6 +65,7 @@ const storefrontPaths = [
     '/online-orders/{orderId}',
     '/online-orders/{orderId}/status',
     '/online-orders/{orderId}/pos-cart',
+    '/online-orders/{orderId}/settle-prepaid',
   ].map((suffix) => '/api/v1/organizations/{id}' + suffix),
 ];
 const catalogPaths = [
@@ -378,6 +387,73 @@ for (const path of [...storefrontPaths, ...restaurantPaths]) {
   }
 }
 const guestCreate = api.paths['/api/v1/storefronts/{slug}/orders'].post;
+const prepaidSettlement =
+  api.paths['/api/v1/organizations/{id}/online-orders/{orderId}/settle-prepaid']
+    .post;
+assert.deepEqual(prepaidSettlement.security, [{ sessionCookie: [] }]);
+assert.ok(
+  prepaidSettlement.parameters.some(
+    (parameter) => parameter.$ref === '#/components/parameters/CSRF',
+  ),
+);
+assert.equal(
+  prepaidSettlement.requestBody.content['application/json'].schema.$ref,
+  '#/components/schemas/OnlineOrderImportInput',
+);
+assert.equal(
+  prepaidSettlement.responses['200'].content['application/json'].schema
+    .properties.data.$ref,
+  '#/components/schemas/POSCheckout',
+);
+assert.deepEqual(prepaidSettlement.responses['409'], {
+  description: 'Revision, payment, shift, stock, price or fulfillment conflict',
+  content: {
+    'application/json': {
+      schema: { $ref: '#/components/schemas/StorefrontError' },
+    },
+  },
+});
+assert.ok(
+  api.components.schemas.POSCheckout.properties.method.enum.includes(
+    'ONLINE_STRIPE',
+  ),
+);
+assert.ok(
+  !api.components.schemas.POSCheckout.required.includes('credit_amount'),
+);
+for (const suffix of ['checkout', 'recover', 'status']) {
+  const operation =
+    api.paths[`/api/v1/storefronts/{slug}/payment/${suffix}`].post;
+  assert.equal(
+    operation.requestBody.content['application/json'].schema.$ref,
+    '#/components/schemas/StorefrontTrackingInput',
+  );
+  assert.equal(
+    operation.responses['200'].content['application/json'].schema.$ref,
+    suffix === 'status'
+      ? '#/components/schemas/PublicPaymentAttemptEnvelope'
+      : '#/components/schemas/PublicCustomerCheckoutEnvelope',
+  );
+}
+const paymentWebhook =
+  api.paths['/api/v1/storefront-payments/stripe/webhook'].post;
+assert.deepEqual(paymentWebhook.security, []);
+assert.ok(
+  paymentWebhook.parameters.some(
+    (parameter) => parameter.name === 'Stripe-Signature' && parameter.required,
+  ),
+);
+assert.deepEqual(
+  Object.keys(api.components.schemas.PublicPaymentAttempt.properties).sort(),
+  ['amount_minor', 'currency', 'state'],
+);
+assert.deepEqual(
+  Object.keys(
+    api.components.schemas.PublicCustomerCheckoutEnvelope.properties.data
+      .properties,
+  ).sort(),
+  ['attempt', 'url'],
+);
 assert.ok(
   guestCreate.parameters.some(
     (parameter) => parameter.name === 'Idempotency-Key' && parameter.required,

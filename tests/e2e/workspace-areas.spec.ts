@@ -34,7 +34,7 @@ async function mockTeam(page: Page, role: Role | null, permissions?: string[]) {
     id: 'workspace-shop',
     name: 'ร้านทดสอบพื้นที่',
     code: 'WORKSPACE',
-    business_type: 'retail',
+    business_type: 'restaurant',
     contact_email: '',
     contact_phone: '',
     address: '',
@@ -145,7 +145,7 @@ for (const role of [
       await expect(
         page.getByRole('heading', {
           level: 1,
-          name: management ? 'ภาพรวมร้าน' : 'งานของฉัน',
+          name: management ? 'ภาพรวม' : 'งานของฉัน',
         }),
       ).toBeVisible();
       await expect(page.locator('.management-shell')).toHaveAttribute(
@@ -315,7 +315,7 @@ for (const width of [375, 1440]) {
     await page.goto('/work');
     await page
       .getByRole('main')
-      .getByRole('link', { name: 'ข้อมูลสินค้า', exact: true })
+      .getByRole('link', { name: 'เมนูอาหาร', exact: true })
       .click();
     await expect(page).toHaveURL(/\/work\/products$/);
     await expect(page.locator('[data-workspace="staff"]')).toBeVisible();
@@ -358,7 +358,10 @@ for (const width of [375, 1440]) {
 test('management module links stay under manage', async ({ page }) => {
   await mockTeam(page, 'OWNER');
   await page.goto('/manage/dashboard');
-  await page.getByRole('link', { name: 'จัดการสินค้า', exact: true }).click();
+  await page
+    .getByRole('main')
+    .getByRole('link', { name: 'เมนูอาหาร', exact: true })
+    .click();
   await expect(page).toHaveURL(/\/manage\/products$/);
   await expect(page.locator('[data-workspace="management"]')).toBeVisible();
   await page.locator('.catalog-nav a[href="/manage/categories"]').click();
@@ -390,6 +393,83 @@ for (const [role, prefix] of [
     await expect(page).toHaveURL(/\/work$/);
   });
 }
+
+for (const width of [320, 768, 1440]) {
+  test(`restaurant-only dashboard and menu at ${width}px`, async ({
+    page,
+  }, testInfo) => {
+    await mockTeam(page, 'OWNER');
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/manage/dashboard');
+    const main = page.getByRole('main');
+    await expect(
+      main.getByRole('heading', { level: 1, name: 'ภาพรวม', exact: true }),
+    ).toBeVisible();
+    await expect(
+      main.getByRole('link', { name: 'สูตรอาหาร', exact: true }),
+    ).toBeVisible();
+    await expect(
+      main.getByRole('link', { name: 'ออเดอร์และคิว', exact: true }),
+    ).toBeVisible();
+    await expect(main.getByText('SAL-28a6e1f3')).toHaveCount(0);
+    for (const path of [
+      '/suppliers',
+      '/purchasing',
+      '/customers',
+      '/loyalty',
+      '/pricing',
+      '/inventory/balances',
+    ]) {
+      await expect(page.locator(`a[href^="/manage${path}"]`)).toHaveCount(0);
+    }
+    await expect(page.locator('body')).toHaveJSProperty('scrollWidth', width);
+    await page.screenshot({
+      path: testInfo.outputPath('restaurant-dashboard.png'),
+      fullPage: true,
+    });
+    await main.getByRole('link', { name: 'เมนูอาหาร', exact: true }).click();
+    await expect(page).toHaveURL(/\/manage\/products$/);
+    await expect(
+      page.locator('.catalog-nav a[href="/manage/restaurant/recipes"]'),
+    ).toBeVisible();
+    await expect(
+      page.locator(
+        'a[href="/manage/products/import"], a[href="/manage/products/labels"], a[href="/manage/brands"]',
+      ),
+    ).toHaveCount(0);
+    await expect(page.locator('body')).toHaveJSProperty('scrollWidth', width);
+    await page.screenshot({
+      path: testInfo.outputPath('restaurant-menu.png'),
+      fullPage: true,
+    });
+  });
+}
+
+test('restaurant-only retired direct URLs cannot fall through to item IDs', async ({
+  page,
+}) => {
+  const requests = await mockTeam(page, 'OWNER');
+  for (const prefix of ['', '/manage', '/work']) {
+    for (const path of [
+      '/suppliers',
+      '/purchasing/orders',
+      '/inventory/balances',
+      '/products/import',
+      '/products/labels',
+      '/sales/voids',
+    ]) {
+      await page.goto(prefix + path);
+      await expect(page.getByText('404 · NOT FOUND')).toBeVisible();
+    }
+  }
+  expect(
+    requests.filter((path) =>
+      /\/(products\/(import|labels)|sales\/voids|suppliers|purchasing|inventory\/balances)/.test(
+        path,
+      ),
+    ),
+  ).toEqual([]);
+});
 
 test('work does not expose administration namespaces and retains permission denial', async ({
   page,

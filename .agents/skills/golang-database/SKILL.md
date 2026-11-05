@@ -16,6 +16,6 @@ Read the actual driver, repositories, service boundaries and database policies. 
 - Preserve NULL semantics and exact decimal/money/quantity representations; do not round through binary floating point.
 - Keep dependent reads/writes in the existing transaction boundary. Preserve organization/branch scope, lock order, idempotency, audit and immutable history.
 - Do not hold business transactions open while calling optional AI/network services.
-- Migration execution, service startup, destructive fixtures and schema changes need their own requested scope and approval. Database tests need a confirmed isolated target.
+- Migration execution, service startup, fixtures and schema changes must be in scope. Authorized local isolated work needs no redundant approval; remote and production actions remain subject to governing approval gates. Database tests need a confirmed isolated target.
 
 Read [transactions](references/transactions.md) or [scanning](references/scanning.md) when relevant. Validate rollback, conflict and tenant boundaries using existing test seams; unit tests are not proof of database acceptance.

@@ -13,6 +13,7 @@ function fixture(context) {
   context.after(() => fs.rmSync(root, { recursive: true, force: true }));
   fs.mkdirSync(path.join(root, '.agents/skills/example'), { recursive: true });
   fs.mkdirSync(path.join(root, '.agents/skill-support'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.claude/skills/example'), { recursive: true });
   fs.writeFileSync(
     path.join(root, '.agents/skill-support/sources.json'),
     JSON.stringify({ version: 1, skills: [], snapshots: [] }),
@@ -20,6 +21,10 @@ function fixture(context) {
   fs.writeFileSync(
     path.join(root, '.agents/skills/example/SKILL.md'),
     '---\nname: example\ndescription: Inspect examples when requested.\n---\n\n# Example\n',
+  );
+  fs.writeFileSync(
+    path.join(root, '.claude/skills/example/SKILL.md'),
+    '---\nname: example\ndescription: Inspect examples when requested.\n---\n\nRead `.agents/skills/example/SKILL.md`.\n',
   );
   return root;
 }
@@ -144,4 +149,143 @@ test('detects a provenance record pointing at an absent skill', (context) => {
     }),
   );
   assert.ok(hasCode(validateSkills(root), 'missing-source-skill'));
+});
+
+test('requires an adapter for each canonical skill', (context) => {
+  const root = fixture(context);
+  fs.unlinkSync(path.join(root, '.claude/skills/example/SKILL.md'));
+  assert.ok(hasCode(validateSkills(root), 'missing-adapter'));
+});
+
+test('rejects an adapter with no canonical skill', (context) => {
+  const root = fixture(context);
+  fs.mkdirSync(path.join(root, '.claude/skills/orphan'));
+  fs.writeFileSync(
+    path.join(root, '.claude/skills/orphan/SKILL.md'),
+    '---\nname: orphan\ndescription: Orphan.\n---\n',
+  );
+  assert.ok(hasCode(validateSkills(root), 'orphan-adapter'));
+});
+
+test('rejects an adapter pointing to a different canonical skill', (context) => {
+  const root = fixture(context);
+  fs.writeFileSync(
+    path.join(root, '.claude/skills/example/SKILL.md'),
+    '---\nname: example\ndescription: Inspect examples when requested.\n---\n\nRead `.agents/skills/other/SKILL.md`.\n',
+  );
+  assert.ok(hasCode(validateSkills(root), 'invalid-adapter-pointer'));
+});
+
+test('does not accept the correct pointer inside a fenced code block', (context) => {
+  const root = fixture(context);
+  fs.writeFileSync(
+    path.join(root, '.claude/skills/example/SKILL.md'),
+    '---\nname: example\ndescription: Inspect examples when requested.\n---\n\n```text\n`.agents/skills/example/SKILL.md`\n```\n',
+  );
+  assert.ok(hasCode(validateSkills(root), 'invalid-adapter-pointer'));
+});
+
+test('does not accept the correct pointer inside a tilde fenced code block', (context) => {
+  const root = fixture(context);
+  fs.writeFileSync(
+    path.join(root, '.claude/skills/example/SKILL.md'),
+    '---\nname: example\ndescription: Inspect examples when requested.\n---\n\n~~~text\n`.agents/skills/example/SKILL.md`\n~~~\n',
+  );
+  assert.ok(hasCode(validateSkills(root), 'invalid-adapter-pointer'));
+});
+
+test('keeps indented fences open after a shorter closing marker', (context) => {
+  const root = fixture(context);
+  for (const marker of ['`', '~']) {
+    fs.writeFileSync(
+      path.join(root, '.claude/skills/example/SKILL.md'),
+      `---\nname: example\ndescription: Inspect examples when requested.\n---\n\n   ${marker.repeat(4)}text\n  ${marker.repeat(3)}\n\`.agents/skills/example/SKILL.md\`\n ${marker.repeat(4)}\n`,
+    );
+    assert.ok(hasCode(validateSkills(root), 'invalid-adapter-pointer'), marker);
+  }
+});
+
+test('keeps fences open after a different marker or trailing text', (context) => {
+  const root = fixture(context);
+  for (const [opening, closing] of [
+    ['~~~', '```'],
+    ['```', '~~~'],
+    ['~~~', '~~~text'],
+    ['```', '```text'],
+  ]) {
+    fs.writeFileSync(
+      path.join(root, '.claude/skills/example/SKILL.md'),
+      `---\nname: example\ndescription: Inspect examples when requested.\n---\n\n${opening}text\n${closing}\n\`.agents/skills/example/SKILL.md\`\n`,
+    );
+    assert.ok(
+      hasCode(validateSkills(root), 'invalid-adapter-pointer'),
+      `${opening}/${closing}`,
+    );
+  }
+});
+
+test('accepts an active pointer after an indented longer closing fence', (context) => {
+  const root = fixture(context);
+  for (const marker of ['`', '~']) {
+    fs.writeFileSync(
+      path.join(root, '.claude/skills/example/SKILL.md'),
+      `---\nname: example\ndescription: Inspect examples when requested.\n---\n\n ${marker.repeat(3)}text\n\`.agents/skills/other/SKILL.md\`\n   ${marker.repeat(4)} \t\nRead \`.agents/skills/example/SKILL.md\`.\n`,
+    );
+    assert.deepEqual(validateSkills(root), [], marker);
+  }
+});
+
+test('rejects a wrong pointer even when the correct path is also mentioned', (context) => {
+  const root = fixture(context);
+  fs.writeFileSync(
+    path.join(root, '.claude/skills/example/SKILL.md'),
+    '---\nname: example\ndescription: Inspect examples when requested.\n---\n\nRead `.agents/skills/other/SKILL.md`; expected `.agents/skills/example/SKILL.md`.\n',
+  );
+  assert.ok(hasCode(validateSkills(root), 'invalid-adapter-pointer'));
+});
+
+test('rejects malformed and non-mapping adapter YAML', (context) => {
+  const root = fixture(context);
+  const adapter = path.join(root, '.claude/skills/example/SKILL.md');
+  for (const yaml of ['name: [invalid', 'null', 'example', '- example']) {
+    fs.writeFileSync(
+      adapter,
+      `---\n${yaml}\n---\n\nRead \`.agents/skills/example/SKILL.md\`.\n`,
+    );
+    assert.ok(hasCode(validateSkills(root), 'invalid-frontmatter'), yaml);
+  }
+});
+
+test('rejects invalid and mismatched adapter names', (context) => {
+  const root = fixture(context);
+  const adapter = path.join(root, '.claude/skills/example/SKILL.md');
+  for (const name of ['INVALID', 'other', 'null']) {
+    fs.writeFileSync(
+      adapter,
+      `---\nname: ${name}\ndescription: Inspect examples when requested.\n---\n\nRead \`.agents/skills/example/SKILL.md\`.\n`,
+    );
+    assert.ok(
+      validateSkills(root).some(
+        (issue) =>
+          ['invalid-name', 'name-folder-mismatch'].includes(issue.code) &&
+          issue.path.startsWith('.claude/'),
+      ),
+      name,
+    );
+  }
+});
+
+test('rejects missing or changed adapter descriptions', (context) => {
+  const root = fixture(context);
+  const adapter = path.join(root, '.claude/skills/example/SKILL.md');
+  for (const [description, code] of [
+    ['null', 'invalid-description'],
+    ['Different description.', 'adapter-description-mismatch'],
+  ]) {
+    fs.writeFileSync(
+      adapter,
+      `---\nname: example\ndescription: ${description}\n---\n\nRead \`.agents/skills/example/SKILL.md\`.\n`,
+    );
+    assert.ok(hasCode(validateSkills(root), code), description);
+  }
 });

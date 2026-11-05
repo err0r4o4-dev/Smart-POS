@@ -1,51 +1,61 @@
 # SmartPOS Repository Skills
 
-This is a repository-local, Pinto-style foundation catalog, not a global installation or a verbatim copy of Pinto's policies. It adds 21 foundation skills while retaining all 11 existing smartpos-* skills unchanged.
+This repository catalog has 21 foundation skills and 11 SmartPOS skills, for 32
+canonical skills. Source history is recorded below and does not define current
+execution policy.
 
 ## Loading and authority
 
 - Select by the task and affected boundary. Read only selected SKILL.md files and their relevant references, not the entire catalog.
-- Keep one Main agent unless the user explicitly authorizes delegation. Imported examples never grant tool permissions or authorization to install, train, migrate, commit, deploy or read production data.
+- Follow applicable delegation and independent review requirements. Imported examples and skills never grant authorization or tool permissions.
 - Read-only requests remain read-only, including tracker/artifact creation and unsolicited fixes.
 - Project-specific ownership and business invariants remain in AGENTS.md and the relevant smartpos-* guidance. Generic examples do not override them.
 - Frontend guidance preserves Apple-inspired web/Cupertino-style adaptive mobile direction, SmartPOS yellow, canonical runtime tokens, local Thai/Latin fonts, Lucide and existing shared controls. It does not migrate the app to Next.js or change its design system.
 - Existing global skills can be used when available but are neither modified nor duplicated here. No global configuration, provider, model or permission changes are part of this setup.
 
-## Foundation catalog
+## Task routing
 
-| Area                 | Skills                                                                            | Scope                                                                                             |
-| -------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| Workflow             | tdd, diagnose, triage, handoff                                                    | Test-first implementation, evidence-based diagnosis, prioritization and requested status transfer |
-| Frontend             | react-best-practices, web-design-guidelines, typescript-quality, frontend-testing | React client performance, accessibility/interaction, typed boundaries and component tests         |
-| Go                   | golang-code-style, golang-error-handling, golang-context, golang-concurrency      | Idiomatic affected code, error identity, deadlines and bounded coordination                       |
-| Database/testing     | golang-database, golang-testing                                                   | SQL/pgx patterns and observable Go/HTTP/integration behavior                                      |
-| Operations/contracts | golang-observability, golang-performance, golang-swagger                          | Existing logs/metrics, measured optimization and manual OpenAPI maintenance                       |
-| Python/AI            | python-fastapi, python-testing, ai-data-preparation, ai-evaluation                | Internal HTTP schemas, service tests, temporal preparation and authorized forecast evaluation     |
+| Task                                                       | Primary skill                                     | Add for the affected concern                                                                                                                                                                                                                                                                             |
+| ---------------------------------------------------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Orientation or unclear ownership                           | `smartpos-project-context`                        | Owning area after tracing the flow                                                                                                                                                                                                                                                                       |
+| React pages, forms, API clients, navigation                | `smartpos-frontend`                               | `react-best-practices`, `typescript-quality`, `frontend-testing`                                                                                                                                                                                                                                         |
+| UI accessibility, forms, keyboard and interaction review   | `web-design-guidelines`                           | `smartpos-ui-guidelines` for requested visual changes                                                                                                                                                                                                                                                    |
+| Styling and Apple-inspired visual hierarchy                | `smartpos-ui-guidelines`                          | `smartpos-frontend`, `web-design-guidelines`                                                                                                                                                                                                                                                             |
+| Adaptive browser/device/input behavior                     | `smartpos-cross-platform-design`                  | `smartpos-ui-verification` for rendered evidence                                                                                                                                                                                                                                                         |
+| Component and interaction tests                            | `frontend-testing`                                | `smartpos-ui-verification` for browser appearance/interactions                                                                                                                                                                                                                                           |
+| Go handlers/services/business behavior                     | `smartpos-go-backend`                             | Relevant Go foundation skill                                                                                                                                                                                                                                                                             |
+| SQL, pgx and transactions                                  | `golang-database`                                 | `smartpos-go-database` for tenant, retail and migration invariants                                                                                                                                                                                                                                       |
+| Go tests and HTTP behavior checks                          | `golang-testing`                                  | `smartpos-go-testing` for project checks and isolated integration                                                                                                                                                                                                                                        |
+| Error classification/wrapping                              | `golang-error-handling`                           | Owning backend/API contract skill                                                                                                                                                                                                                                                                        |
+| Deadlines, cancellation and request lifecycle              | `golang-context`                                  | `golang-concurrency` when concurrent work is affected                                                                                                                                                                                                                                                    |
+| Idiomatic Go and formatting                                | `golang-code-style`                               | Owning skill                                                                                                                                                                                                                                                                                             |
+| Go logs and metrics                                        | `golang-observability`                            | Owning service skill                                                                                                                                                                                                                                                                                     |
+| Measured Go performance work                               | `golang-performance`                              | `golang-concurrency` or `golang-database` for the bottleneck                                                                                                                                                                                                                                             |
+| Public HTTP contract changes                               | `smartpos-api-contract`                           | `golang-swagger` for manual OpenAPI edits and affected consumers                                                                                                                                                                                                                                         |
+| FastAPI schemas and internal endpoints                     | `python-fastapi`                                  | `smartpos-ai-service` for Go-to-AI ownership/integration                                                                                                                                                                                                                                                 |
+| Python service tests                                       | `python-testing`                                  | Owning AI/service skill                                                                                                                                                                                                                                                                                  |
+| Forecast data preparation                                  | `ai-data-preparation`                             | `smartpos-ai-evaluation` for units, cutoff and tenant scope                                                                                                                                                                                                                                              |
+| Forecast backtesting/quality                               | `ai-evaluation`                                   | `smartpos-ai-evaluation`, `python-testing` when relevant                                                                                                                                                                                                                                                 |
+| Behavior-changing implementation requiring test-first work | `tdd`                                             | Owning implementation/testing skill                                                                                                                                                                                                                                                                      |
+| Bugs and regressions                                       | `superpowers:systematic-debugging` when available | `diagnosing-bugs` as requested for hard bugs or performance: build and minimize a deterministic, red-capable loop; its bundled HITL template is optional when human interaction is needed. Use as a standalone fallback if the plugin is unavailable. Combine overlapping steps without duplicate loops. |
+| Multiple reports and scope/priorities                      | `triage`                                          | Apply the debugging routing above to an issue under investigation                                                                                                                                                                                                                                        |
+| Explicit status or context transfer                        | `handoff`                                         | Actual task evidence                                                                                                                                                                                                                                                                                     |
 
-The 11 retained project skills cover orientation, frontend ownership, Apple UI, adaptive layouts, rendered verification, Go ownership, persistence, Go verification, public contracts, internal AI integration and retail forecast semantics. Use them when a task needs those constraints; do not load every foundation plus every project skill.
-
-Global frontend-engineering, backend-engineering, api-contract-change, devops-engineering, testing-verification and visual-ui-verification are optional existing capabilities, not required dependencies. On a machine without them, use repository guidance and the actual owning code/scripts.
-
-## Task flow
-
-1. Inspect the task, applicable rules, actual implementation and existing diff.
-2. Classify read-only versus implementation and resolve material ambiguity.
-3. Select the owning skill and only relevant specialists.
-4. For implementation, add a scoped task section to the existing root TODO.md.
-5. For behavior changes, use one failing test -> minimum implementation -> passing tests -> scoped refactor, repeated in vertical slices.
-6. Use appropriate document/config checks instead of artificial application tests where no runtime behavior changes.
-7. Verify, inspect the final diff and report actual evidence. Preserve failed/blocked items.
-8. Remove only the completed task section. Never delete the tracked roadmap, another task's work or tests.
+For Docker/CI/environment work, use the global `devops-engineering` skill if
+available; otherwise inspect the owning configuration and scripts. Global skills
+are optional and do not replace project boundaries.
 
 ## Sources and adaptations
 
 [Source records](../skill-support/sources.json) distinguish local-authored entrypoints from adapted upstream workflows and preserved imported reference snapshots. They record source locations, Pinto lockfile hashes as provenance only, exact downloaded GitHub commits where known and source/installed content hashes.
+Adaptation descriptions record the source and history of a skill; they do not set execution policy. Follow the applicable instructions and governing task for delegation, review and authorization, including when legacy metadata says "No automatic delegation".
 
 This is intentionally not an installer-generated skills-lock.json: entrypoints were adapted for Codex and SmartPOS, so upstream installer hashes would falsely imply untouched packages. There is no background updater or installer command in this catalog.
 
 - Go references and TDD examples were copied from the user-selected Pinto snapshot. Its upstream lock metadata identifies samber/cc-skills-golang and mattpocock/skills; that metadata is not proof of the exact Git commit of those local files.
 - React references were fetched from a pinned vercel-labs/agent-skills commit. Only reviewed client-side examples were selected; Next.js/server-action/SWR instructions were not imported as runtime requirements.
-- Workflow entrypoints were rewritten to avoid compulsory sub-agents, issue-tracker mutations, unnecessary approval questions and destructive TODO cleanup.
+- `diagnosing-bugs` was installed unchanged from the GitHub `mattpocock/skills` repository at commit `4ae2317ddb22b046e26455e4f9c9b3aaaf62212d`, including `SKILL.md`, `agents/openai.yaml` and `scripts/hitl-loop.template.sh`. The existing Matt Pocock MIT notice applies.
+- Workflow entrypoints were adapted for repository scope, applicable delegation and authorization, and preservation of tracker records.
 - golang-swagger uses manual contract editing, not swag generation or annotation scaffolding. Python/AI and the remaining frontend entrypoints are locally authored, not advertised as community packages.
 - Imported references are examples, not execution authority. Installation, destructive fixtures, logger migrations, production instructions and external skill mentions in them require their own explicit scope; existing repository policy wins.
 - [Samber MIT notice](../skill-support/licenses/samber-MIT.txt), [Matt Pocock MIT notice](../skill-support/licenses/mattpocock-MIT.txt), and [Vercel declaration/terms](../skill-support/licenses/vercel-react-MIT.md) preserve available source licensing information.
@@ -59,8 +69,8 @@ node --test .agents/skill-support/validate.test.mjs
 node .agents/skill-support/validate.mjs
 ```
 
-The validator checks YAML manifests, local names, relative Markdown references, source records and imported snapshot hashes. Its tests use disposable temporary fixtures. These checks are not a full Markdown parser, browser tests, database acceptance or proof of model routing.
+The validator checks YAML manifests, local names, relative Markdown references, source records, imported snapshot hashes and Claude adapter parity, descriptions and canonical pointers. Its tests use disposable temporary fixtures. These checks are not a full Markdown parser, browser tests, database acceptance or proof of model routing.
 
-[Behavioral scenarios](../skill-support/evals/scenarios.json) are an offline forward-evaluation plan, not measured results. Running them through another model/agent or writing artifacts needs the applicable authorization; no such evaluation is auto-run by the validator.
+[Behavioral scenarios](../skill-support/evals/scenarios.json) are an offline forward-evaluation plan, not measured results. Running them through another model or agent, or writing artifacts, follows the governing task and applicable execution permissions; the validator does not run them automatically.
 
 Use the skill selector to inspect available names in a fresh session if the current session's initial list has not refreshed. File/metadata checks do not prove that a running host has reloaded its skill list.

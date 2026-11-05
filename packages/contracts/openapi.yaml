@@ -170,6 +170,89 @@ paths:
           $ref: '#/components/responses/PaymentSandboxFailure'
         '503':
           $ref: '#/components/responses/PaymentSandboxFailure'
+  /api/v1/organizations/{id}/online-orders/{orderId}/settle-prepaid:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+      - name: orderId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: settlePrepaidOnlineOrder
+      security:
+        - sessionCookie: []
+      description: Requires online_orders.manage, pos.cart.manage and pos.checkout, branch access, an own open shift and an eligible READY order with verified paid funds and an unreleased hold. Replays with the same revision return the existing checkout. Delivery remains subject to shipment rules.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OnlineOrderImportInput' }
+      responses:
+        '200':
+          description: Completed prepaid checkout or matching replay
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/POSCheckout' }
+        '400':
+          {
+            description: Invalid input,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: '#/components/schemas/StorefrontError' } },
+              },
+          }
+        '401':
+          {
+            description: Session required,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: '#/components/schemas/StorefrontError' } },
+              },
+          }
+        '403':
+          {
+            description: Permission or CSRF denied,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: '#/components/schemas/StorefrontError' } },
+              },
+          }
+        '404':
+          {
+            description: Order not accessible,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: '#/components/schemas/StorefrontError' } },
+              },
+          }
+        '409':
+          {
+            description: 'Revision, payment, shift, stock, price or fulfillment conflict',
+            content:
+              {
+                application/json:
+                  { schema: { $ref: '#/components/schemas/StorefrontError' } },
+              },
+          }
+        '503':
+          {
+            description: Dependency unavailable,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: '#/components/schemas/StorefrontError' } },
+              },
+          }
   /api/v1/organizations/{id}/online-orders/{orderId}/pos-cart:
     parameters:
       - $ref: '#/components/parameters/OrganizationID'
@@ -712,6 +795,309 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/StorefrontSettingsInput'
+  /api/v1/storefronts/{slug}/payment/checkout:
+    parameters:
+      - {
+          name: slug,
+          in: path,
+          required: true,
+          schema: { type: string, pattern: '^[a-z][a-z0-9-]{2,49}$' },
+        }
+    post:
+      operationId: createCustomerCheckout
+      security: []
+      description: Requires an allowed Origin and tracking token; limited to 20 requests per IP per hour. Provider dispatch is idempotent and recovery may be required after an uncertain response.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StorefrontTrackingInput' }
+      responses:
+        '200':
+          description: Checkout result
+          content:
+            application/json:
+              schema:
+                { $ref: '#/components/schemas/PublicCustomerCheckoutEnvelope' }
+        '400':
+          {
+            description: Invalid input,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: '#/components/schemas/StorefrontError' } },
+              },
+          }
+        '403':
+          {
+            description: Origin denied,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: '#/components/schemas/StorefrontError' } },
+              },
+          }
+        '404':
+          {
+            description: Order not accessible,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: '#/components/schemas/StorefrontError' } },
+              },
+          }
+        '409':
+          {
+            description: Payment state conflict,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: '#/components/schemas/StorefrontError' } },
+              },
+          }
+        '429':
+          {
+            description: Rate limited,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: '#/components/schemas/StorefrontError' } },
+              },
+          }
+        '503':
+          {
+            description: Dependency unavailable,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: '#/components/schemas/StorefrontError' } },
+              },
+          }
+  /api/v1/storefronts/{slug}/payment/recover:
+    parameters:
+      - {
+          name: slug,
+          in: path,
+          required: true,
+          schema: { type: string, pattern: '^[a-z][a-z0-9-]{2,49}$' },
+        }
+    post:
+      operationId: recoverCustomerCheckout
+      security: []
+      description: Requires an allowed Origin and tracking token; limited to 120 requests per IP per minute. Retrieves an existing provider session.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StorefrontTrackingInput' }
+      responses:
+        '200':
+          description: Checkout result
+          content:
+            application/json:
+              schema:
+                { $ref: '#/components/schemas/PublicCustomerCheckoutEnvelope' }
+        '400':
+          {
+            description: Invalid input,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: '#/components/schemas/StorefrontError' } },
+              },
+          }
+        '403':
+          {
+            description: Origin denied,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: '#/components/schemas/StorefrontError' } },
+              },
+          }
+        '404':
+          {
+            description: Order not accessible,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: '#/components/schemas/StorefrontError' } },
+              },
+          }
+        '409':
+          {
+            description: Payment state conflict,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: '#/components/schemas/StorefrontError' } },
+              },
+          }
+        '429':
+          {
+            description: Rate limited,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: '#/components/schemas/StorefrontError' } },
+              },
+          }
+        '503':
+          {
+            description: Dependency unavailable,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: '#/components/schemas/StorefrontError' } },
+              },
+          }
+  /api/v1/storefronts/{slug}/payment/status:
+    parameters:
+      - {
+          name: slug,
+          in: path,
+          required: true,
+          schema: { type: string, pattern: '^[a-z][a-z0-9-]{2,49}$' },
+        }
+    post:
+      operationId: customerPaymentStatus
+      security: []
+      description: Requires an allowed Origin and tracking token; limited to 120 requests per IP per minute. The token is accepted only in the JSON body.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StorefrontTrackingInput' }
+      responses:
+        '200':
+          description: Current payment status
+          content:
+            application/json:
+              schema:
+                { $ref: '#/components/schemas/PublicPaymentAttemptEnvelope' }
+        '400':
+          {
+            description: Invalid input,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: '#/components/schemas/StorefrontError' } },
+              },
+          }
+        '403':
+          {
+            description: Origin denied,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: '#/components/schemas/StorefrontError' } },
+              },
+          }
+        '404':
+          {
+            description: Order or payment not accessible,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: '#/components/schemas/StorefrontError' } },
+              },
+          }
+        '409':
+          {
+            description: Payment state conflict,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: '#/components/schemas/StorefrontError' } },
+              },
+          }
+        '429':
+          {
+            description: Rate limited,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: '#/components/schemas/StorefrontError' } },
+              },
+          }
+        '503':
+          {
+            description: Dependency unavailable,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: '#/components/schemas/StorefrontError' } },
+              },
+          }
+  /api/v1/storefront-payments/stripe/webhook:
+    post:
+      operationId: acceptCustomerPaymentWebhook
+      security: []
+      description: Stripe-signed raw event, limited to 65536 bytes. No browser session or Origin is required. Duplicate accepted events return the same acknowledgement.
+      parameters:
+        - {
+            name: Stripe-Signature,
+            in: header,
+            required: true,
+            schema: { type: string },
+          }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200':
+          description: Verified event accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    additionalProperties: false
+                    required: [received]
+                    properties:
+                      received: { type: boolean, const: true }
+        '400':
+          {
+            description: Invalid signature or payload,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: '#/components/schemas/StorefrontError' } },
+              },
+          }
+        '404':
+          {
+            description: Event target not accessible,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: '#/components/schemas/StorefrontError' } },
+              },
+          }
+        '409':
+          {
+            description: Event conflict,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: '#/components/schemas/StorefrontError' } },
+              },
+          }
+        '503':
+          {
+            description: Dependency unavailable,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: '#/components/schemas/StorefrontError' } },
+              },
+          }
   /api/v1/storefronts/{slug}/track:
     parameters:
       - name: slug
@@ -19007,6 +19393,33 @@ components:
           type: string
           pattern: ^[a-f0-9]{64}$
           writeOnly: true
+    PublicPaymentAttempt:
+      type: object
+      additionalProperties: false
+      required: [state, amount_minor, currency]
+      properties:
+        state:
+          { type: string, enum: [REQUESTED, OPEN, PROCESSING, EXPIRED, PAID] }
+        amount_minor: { type: integer, format: int64 }
+        currency: { type: string }
+    PublicPaymentAttemptEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data: { $ref: '#/components/schemas/PublicPaymentAttempt' }
+    PublicCustomerCheckoutEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [attempt]
+          properties:
+            attempt: { $ref: '#/components/schemas/PublicPaymentAttempt' }
+            url: { type: string, format: uri }
     StorefrontTrackingInput:
       type: object
       additionalProperties: false
@@ -23989,7 +24402,6 @@ components:
         - failure_code
         - sale_id
         - items
-        - credit_amount
       properties:
         customer_id:
           type:
@@ -24034,6 +24446,7 @@ components:
             - CASH
             - QR_MANUAL
             - BANK_TRANSFER_MANUAL
+            - ONLINE_STRIPE
             - EXCHANGE_CREDIT
             - NONE
         total:

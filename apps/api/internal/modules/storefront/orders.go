@@ -36,7 +36,11 @@ func readOrder(ctx context.Context, tx pgx.Tx, org, id string, public bool) (Ord
 	if err = tx.QueryRow(ctx, `SELECT doc.fulfillment,doc.shipping_fee::text,(doc.estimated_total-doc.shipping_fee)::text,doc.delivery_address,COALESCE(table_map.table_code,'') FROM online_orders doc LEFT JOIN restaurant_order_tables table_map ON table_map.organization_id=doc.organization_id AND table_map.order_id=doc.id WHERE doc.organization_id=$1 AND doc.id=$2`, org, id).Scan(&result.Fulfillment, &result.ShippingFee, &result.Subtotal, &result.DeliveryAddress, &result.TableCode); err != nil {
 		return result, dbError(err)
 	}
-	if result.Status == "COMPLETED" {
+	var paymentState string
+	err = tx.QueryRow(ctx, "SELECT state FROM online_payment_attempts WHERE organization_id=$1 AND order_id=$2", org, id).Scan(&paymentState)
+	if err == nil && paymentState == "PAID" {
+		result.PaymentStatus = "PAID_AT_STORE"
+	} else if result.Status == "COMPLETED" {
 		result.PaymentStatus = "PAID_AT_STORE"
 	}
 	rows, err := tx.Query(ctx, `SELECT variant_id::text,product_name,variant_name,sku,unit,quantity::text,unit_price::text,line_total::text FROM online_order_items WHERE organization_id=$1 AND order_id=$2 ORDER BY variant_id`, org, id)
@@ -262,6 +266,25 @@ func (service *Service) Transition(ctx context.Context, user, org, id string, in
 		return Order{}, ErrInput
 	}
 	if input.Status == "PREPARING" || input.Status == "READY" {
+		var paymentState string
+		var holdReleased bool
+		err = tx.QueryRow(ctx, "SELECT state, stock_hold_released FROM online_payment_attempts WHERE organization_id=$1 AND order_id=$2", org, id).Scan(&paymentState, &holdReleased)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return current, ErrConflict
+		} else if err != nil {
+			return current, dbError(err)
+		}
+		if paymentState != "PAID" || holdReleased {
+			return current, ErrConflict
+		}
+		var blocked bool
+		err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM online_refund_intents WHERE organization_id=$1 AND order_id=$2 AND state IN ('REQUESTED','PENDING','REQUIRES_ACTION','SUCCEEDED')) OR EXISTS(SELECT 1 FROM online_payment_reconciliations WHERE organization_id=$1 AND order_id=$2 AND action='FULFILLMENT_REVIEW')", org, id).Scan(&blocked)
+		if err != nil {
+			return current, dbError(err)
+		}
+		if blocked {
+			return current, ErrConflict
+		}
 		shop := Settings{TerminalID: current.TerminalID, BranchID: current.BranchID}
 		if err = tx.QueryRow(ctx, "SELECT stock_location_id::text FROM online_orders WHERE organization_id=$1 AND id=$2", org, id).Scan(&shop.LocationID); err != nil {
 			return current, err

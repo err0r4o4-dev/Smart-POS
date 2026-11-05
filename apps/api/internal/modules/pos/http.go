@@ -71,8 +71,23 @@ func writeEndpoint[Input any](status int, run func(context.Context, string, stri
 	})
 }
 func resourceID(request *http.Request) string { return chi.URLParam(request, "resourceId") }
+
+type prepaidSettler interface {
+	SettlePrepaidOnlineOrder(context.Context, string, string, string, OnlineOrderInput) (Checkout, error)
+}
+
+func settlePrepaidEndpoint(service prepaidSettler) http.HandlerFunc {
+	return writeEndpoint(200, func(ctx context.Context, user, org string, request *http.Request, input OnlineOrderInput) (any, error) {
+		if input.Revision <= 0 {
+			return nil, ErrInput
+		}
+		return service.SettlePrepaidOnlineOrder(ctx, user, org, chi.URLParam(request, "orderId"), input)
+	})
+}
+
 func (handler Handler) TenantRoutes(router chi.Router) {
 	service := handler.Service
+	router.Post("/online-orders/{orderId}/settle-prepaid", settlePrepaidEndpoint(service))
 	router.Post("/online-orders/{orderId}/pos-cart", writeEndpoint(200, func(ctx context.Context, user, org string, request *http.Request, input OnlineOrderInput) (any, error) {
 		return service.ImportOnlineOrder(ctx, user, org, chi.URLParam(request, "orderId"), input)
 	}))

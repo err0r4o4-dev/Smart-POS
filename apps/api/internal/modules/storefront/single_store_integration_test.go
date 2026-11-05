@@ -39,7 +39,11 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 	if err != nil || configuration.ConnConfig.Host != "127.0.0.1" || configuration.ConnConfig.Port != 15514 || configuration.ConnConfig.Database != "smartpos_single_store_acceptance" {
 		t.Fatal("refusing an unconfirmed isolated database target")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+	deadline := 45 * time.Second
+	if os.Getenv("SMARTPOS_RESTAURANT_BROWSER") == "1" {
+		deadline = 4 * time.Minute
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), deadline)
 	defer cancel()
 	pool, err := database.Open(ctx, dsn)
 	if err != nil {
@@ -309,6 +313,13 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 	t.Run("atomic online reservation foundation", func(t *testing.T) {
 		reservationAcceptance(t, ctx, multi, owner.ID, first.Organization.ID, firstShop)
 	})
+	t.Run("recipe ingredient reservation and deduction", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "ae111111-1111-4111-8111-111111111111", createInput("INGREDIENT"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		ingredientReservationAcceptance(t, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "ingredient-fixture"), first.Organization.ID, guest.ID)
+	})
 	t.Run("unpublished pinned store does not fall back to another store", func(t *testing.T) {
 		_, problem := (&storefront.Service{Organization: multi}).SaveSettings(ctx, owner.ID, first.Organization.ID, storefront.SettingsInput{Slug: firstShop.Slug, Name: firstShop.Name, TerminalID: firstShop.TerminalID, Revision: firstShop.Revision})
 		if problem != nil {
@@ -340,6 +351,22 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 		}
 		restaurantQueueAcceptance(testContext, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "queue-fixture"), first.Organization.ID)
 	})
+	t.Run("recipe browse availability", func(testContext *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "ab444444-4444-4444-8444-444444444444", createInput("BROWSE_RECIPE"))
+		if problem != nil {
+			testContext.Fatal(problem)
+		}
+		catalogBrowseAcceptance(testContext, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "browse-recipe-fixture"), first.Organization.ID, guest.ID)
+	})
+	if os.Getenv("SMARTPOS_RESTAURANT_BROWSER") == "1" {
+		t.Run("real restaurant browser lifecycle", func(testContext *testing.T) {
+			state, problem := multi.Create(ctx, owner.ID, "ab555555-5555-4555-8555-555555555555", createInput("BROWSER_RECIPE"))
+			if problem != nil {
+				testContext.Fatal(problem)
+			}
+			restaurantBrowserAcceptance(testContext, ctx, multi, accounts, owner.ID, owner.Email, state.Organization.ID, seedShop(state, "browser-restaurant"))
+		})
+	}
 	t.Run("restaurant queue schema isolation", func(testContext *testing.T) {
 		state, problem := multi.Create(ctx, owner.ID, "9d111111-1111-4111-8111-111111111111", createInput("QUEUE_SCHEMA"))
 		if problem != nil {

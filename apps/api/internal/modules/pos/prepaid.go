@@ -21,10 +21,10 @@ func (service *Service) SettlePrepaidOnlineOrder(ctx context.Context, user, org,
 	if !uuidPattern.MatchString(id) || input.Revision <= 0 {
 		return Checkout{}, ErrInput
 	}
-	var status, branch, terminalID, location, total string
+	var status, branch, terminalID, location, total, shippingFee string
 	var revision int64
 	var cartID *string
-	err = tx.QueryRow(ctx, `SELECT status,branch_id::text,terminal_id::text,stock_location_id::text,estimated_total::text,revision,cart_id::text FROM online_orders WHERE organization_id=$1 AND id=$2 FOR UPDATE`, org, id).Scan(&status, &branch, &terminalID, &location, &total, &revision, &cartID)
+	err = tx.QueryRow(ctx, `SELECT status,branch_id::text,terminal_id::text,stock_location_id::text,estimated_total::text,shipping_fee::text,revision,cart_id::text FROM online_orders WHERE organization_id=$1 AND id=$2 FOR UPDATE`, org, id).Scan(&status, &branch, &terminalID, &location, &total, &shippingFee, &revision, &cartID)
 	if err != nil {
 		return Checkout{}, dbError(err)
 	}
@@ -107,7 +107,19 @@ func (service *Service) SettlePrepaidOnlineOrder(ctx context.Context, user, org,
 			return Checkout{}, ErrStock
 		}
 	}
-	if current.ReviewRequired || current.Total != total || current.Pricing.Discount != "0.00" {
+	cartTotalScaled, problem := scaled(current.Total, 2)
+	if problem != nil {
+		return Checkout{}, ErrPrice
+	}
+	shippingScaled, problem := scaled(shippingFee, 2)
+	if problem != nil {
+		return Checkout{}, ErrPrice
+	}
+	expectedTotalScaled, problem := scaled(total, 2)
+	if problem != nil {
+		return Checkout{}, ErrPrice
+	}
+	if current.ReviewRequired || (cartTotalScaled+shippingScaled != expectedTotalScaled) || current.Pricing.Discount != "0.00" {
 		return Checkout{}, ErrPrice
 	}
 	items, err := json.Marshal(current.Items)

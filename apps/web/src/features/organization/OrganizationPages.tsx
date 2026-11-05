@@ -29,6 +29,7 @@ import { Button, Card, Loading, Tag } from '../../components/ui/primitives';
 import { StandardPageHeader } from '../../components/ui/StandardPage';
 import './setup.css';
 import { SettingsPage } from './SettingsPage';
+import { StorefrontSettingsPage } from './StorefrontSettingsPage';
 import {
   organizationRequest,
   type OrganizationInput,
@@ -751,7 +752,7 @@ function ReadinessReview({ items, form, ready }: { items: SetupReadinessItem[]; 
   ];
   return <div className="setup-review"><div className={`setup-readiness-banner ${ready ? 'is-ready' : ''}`}><span>{ready ? <CheckCircle2 size={22} aria-hidden="true" /> : <CircleAlert size={22} aria-hidden="true" />}</span><div><strong>{ready ? 'ร้านพร้อมเปิดใช้งาน' : 'ยังตั้งค่าไม่ครบ'}</strong><p>{ready ? 'ข้อมูลสำคัญครบแล้ว ตรวจสอบรายการด้านล่างก่อนเปิดร้าน' : 'แก้ไขรายการที่ยังไม่พร้อม แล้วกลับมาที่หน้านี้อีกครั้ง'}</p></div></div><div className="setup-checklist" aria-label="รายการตรวจความพร้อม">{checks.map((check) => <div className={`setup-check ${check.done ? 'is-done' : ''}`} key={check.key}><span>{check.done ? <Check size={16} aria-hidden="true" /> : <CircleAlert size={16} aria-hidden="true" />}</span><div><strong>{check.label}</strong><small>{check.done ? check.detail : items.find((item) => item.key === check.key)?.reason}</small></div><Tag tone={check.done ? 'success' : 'amber'}>{check.done ? 'พร้อม' : 'ต้องแก้ไข'}</Tag></div>)}</div><p className="setup-review-note"><LayoutGrid size={16} aria-hidden="true" /> หลังเปิดใช้งาน คุณยังแก้ไขรายละเอียดร้าน เมนู และการตั้งค่าได้จากแดชบอร์ด</p></div>;
 }
-export { SettingsPage };
+export { SettingsPage, StorefrontSettingsPage };
 
 export function StorePage() {
   return <SettingsPage />;

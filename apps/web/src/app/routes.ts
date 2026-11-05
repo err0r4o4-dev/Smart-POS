@@ -18,6 +18,7 @@ export const paths = {
   setup: '/setup',
   settings: '/settings',
   store: '/settings/store',
+  storefrontSettings: '/settings/storefront',
   branches: '/settings/branches',
   help: '/help',
   forbidden: '/403',

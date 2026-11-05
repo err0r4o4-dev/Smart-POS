@@ -132,6 +132,11 @@ export const SettingsPage = lazy(() =>
     default: module.SettingsPage,
   })),
 );
+export const StorefrontSettingsPage = lazy(() =>
+  import('../features/organization/OrganizationPages').then((module) => ({
+    default: module.StorefrontSettingsPage,
+  })),
+);
 export const AccountPage = lazy(() =>
   import('../features/auth/AuthPages').then((module) => ({
     default: module.AccountPage,

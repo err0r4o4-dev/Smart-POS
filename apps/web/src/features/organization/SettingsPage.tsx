@@ -1,4 +1,5 @@
 import { useState, useRef, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Check,
   CheckCircle2,
@@ -108,9 +109,6 @@ export function SettingsPage({
   const [posTerminal, setPosTerminal] = useState('DEMO-POS-01');
   const [receiptPrinter, setReceiptPrinter] = useState('use_connected');
 
-  // Online Store
-  const [isOnlineStoreOpen, setIsOnlineStoreOpen] = useState(false);
-
   // Feedback notifications
   const [saveStatus, setSaveStatus] = useState<
     'idle' | 'saving' | 'saved' | 'error'
@@ -217,16 +215,13 @@ export function SettingsPage({
         description="รายละเอียดการตั้งค่าร้านอาหาร"
         actions={
           <div className="settings-heading-actions">
-            <button
-              type="button"
+            <Link
+              to="/settings/storefront"
               className="settings-btn-secondary"
-              onClick={() => setIsOnlineStoreOpen(!isOnlineStoreOpen)}
             >
               <Store size={17} aria-hidden="true" />
-              <span>
-                {isOnlineStoreOpen ? 'ปิดร้านออนไลน์' : 'เปิดร้านออนไลน์'}
-              </span>
-            </button>
+              <span>ตั้งค่าหน้าร้านออนไลน์</span>
+            </Link>
             <button
               type="button"
               className="settings-btn-primary"
@@ -833,6 +828,36 @@ export function SettingsPage({
                   </div>
                 </div>
               </div>
+            </div>
+          </section>
+
+          {/* 6. หน้าร้านออนไลน์ */}
+          <section className="settings-card" aria-labelledby="storefront-card-title">
+            <header className="settings-card-header">
+              <div className="settings-card-icon" aria-hidden="true">
+                <Store size={18} />
+              </div>
+              <div>
+                <h2 id="storefront-card-title" className="settings-card-title">
+                  หน้าร้านออนไลน์
+                </h2>
+                <p className="settings-card-subtitle">
+                  ตั้งค่าหน้าร้านสำหรับรับออเดอร์ออนไลน์ (ซื้อกลับบ้าน / เดลิเวอรี)
+                </p>
+              </div>
+            </header>
+            <div className="settings-card-body">
+              <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
+                จัดการการเปิด-ปิดหน้าร้านออนไลน์ กำหนดชื่อและลิงก์ร้าน สีธีม ช่องทางรับออเดอร์ เวลาทำการ และดาวน์โหลด QR Code สำหรับลูกค้า
+              </p>
+              <Link
+                to="/settings/storefront"
+                className="settings-btn-secondary"
+                style={{ display: 'inline-flex' }}
+              >
+                <Store size={16} aria-hidden="true" />
+                <span>ไปยังหน้าตั้งค่าหน้าร้านออนไลน์</span>
+              </Link>
             </div>
           </section>
         </div>

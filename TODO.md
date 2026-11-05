@@ -207,6 +207,18 @@ Preserve existing tests and contracts.
     1. P1: Recipe ingredient reservation gap identified.
     2. P1: Paid-only kitchen enforcement gap identified -> implemented and verified in queueQuery and Transition.
     3. P1: Delivery shipping fee settlement mismatch identified -> implemented and verified in SettlePrepaidOnlineOrder.
+
+# Online storefront settings (2026-11-06)
+
+Approved scope: Add a dedicated "หน้าร้านออนไลน์" (Online Storefront Settings) page at `/settings/storefront` matching the VELOPOS UI design with a responsive 2-column layout, and add a navigation button from the main `/settings` page.
+Includes Storefront Enable/Disable toggle, Details (store name, slug URL with .velopos.com suffix, description with char counter), Order Channels (Takeaway, Delivery, Dine-in), Storefront Appearance (6 theme colors, logo/cover upload), Online Order Hours (store hours vs custom online hours), and Store Link & QR Code display (copy URL and download QR code).
+Preserve existing tests and contracts.
+
+- [x] 1. Route setup and navigation button in SettingsPage (/settings -> /settings/storefront)
+- [x] 2. Implement StorefrontSettingsPage component with all 6 cards and actions
+- [x] 3. Implement storefront-settings.css with responsive 2-column styling matching mockup
+- [x] 4. Unit tests covering all StorefrontSettingsPage interactions and SettingsPage navigation
+- [/] 5. Run typecheck, lint, and full test suite verification (waiting for classifier to run terminal commands)
     4. P1: Runtime CustomerPayments wiring gap identified -> implemented and verified in router.go, main.go, and storefront.Service.
     5. P2: Order tracking payment status reporting identified -> implemented and verified in readOrder.
     6. P2: Payment recovery edge cases identified.

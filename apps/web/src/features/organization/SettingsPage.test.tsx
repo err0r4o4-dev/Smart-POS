@@ -84,8 +84,8 @@ it('renders the complete settings layout matching the mockup', () => {
     screen.getByText('รายละเอียดการตั้งค่าร้านอาหาร'),
   ).toBeInTheDocument();
   expect(
-    screen.getByRole('button', { name: 'เปิดร้านออนไลน์' }),
-  ).toBeInTheDocument();
+    screen.getByRole('link', { name: /ตั้งค่าหน้าร้านออนไลน์/ }),
+  ).toHaveAttribute('href', '/settings/storefront');
   expect(
     screen.getByRole('button', { name: 'บันทึกการเปลี่ยนแปลง' }),
   ).toBeInTheDocument();

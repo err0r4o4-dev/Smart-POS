@@ -26,6 +26,7 @@ import {
   SaleDetailsPage,
   SetupPage,
   SettingsPage,
+  StorefrontSettingsPage,
   AccountPage,
   ForgotPasswordPage,
   LoginPage,
@@ -261,8 +262,8 @@ const routes: RouteObject[] = [
                     element: <Navigate to={paths.settings} replace />,
                   },
                   {
-                    path: '/settings/storefront',
-                    element: <Navigate to={paths.settings} replace />,
+                    path: paths.storefrontSettings,
+                    element: <StorefrontSettingsPage />,
                   },
                   {
                     path: '/restaurant/settings',

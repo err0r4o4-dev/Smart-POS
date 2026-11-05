@@ -6,7 +6,11 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { ApiError } from '../../lib/api';
 import { OnlineOrderPage, StorefrontSettingsPage } from './OnlineOrderPages';
 
-const mocks = vi.hoisted(() => ({ manage: true, request: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  manage: true,
+  denied: [] as string[],
+  request: vi.fn(),
+}));
 vi.mock('../../app/AuthProvider', () => ({
   useAuth: () => ({
     state: { session: { user: { id: 'user' }, csrf_token: 'csrf' } },
@@ -17,7 +21,8 @@ vi.mock('../../app/OrganizationProvider', () => ({
     context: { organization: { id: 'org', name: 'ร้านทดสอบ' } },
     branchID: 'branch',
     can: (permission: string) =>
-      permission === 'online_orders.read' || mocks.manage,
+      permission === 'online_orders.read' ||
+      (mocks.manage && !mocks.denied.includes(permission)),
   }),
 }));
 vi.mock('../../lib/pos-api', async (original) => ({
@@ -86,6 +91,7 @@ function view(settings = false) {
 }
 beforeEach(() => {
   mocks.manage = true;
+  mocks.denied = [];
   mocks.request.mockReset();
   mocks.request.mockImplementation(async (_org: string, path: string) =>
     path.startsWith('/pos/terminals') ? { items: [terminal] } : order,
@@ -102,7 +108,9 @@ it('allows initial store setup when settings do not exist', async () => {
   );
   view(true);
   const save = await screen.findByRole('button', { name: 'บันทึกการตั้งค่า' });
-  expect(screen.getAllByText(/ออเดอร์ใหม่กันจำนวนสินค้าจนหมดอายุ/)[0]).toBeVisible();
+  expect(
+    screen.getAllByText(/ออเดอร์ใหม่กันจำนวนสินค้าจนหมดอายุ/)[0],
+  ).toBeVisible();
   expect(save).toBeEnabled();
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   fireEvent.change(screen.getByLabelText(/ชื่อใน URL/), {
@@ -293,8 +301,35 @@ it('keeps read-only staff without mutation controls', async () => {
     screen.queryByRole('button', { name: 'เริ่มเตรียมสินค้า' }),
   ).not.toBeInTheDocument();
 });
+it.each([
+  ['PENDING', 'เริ่มเตรียมสินค้า'],
+  ['PREPARING', 'แจ้งพร้อมรับสินค้า'],
+])('requires verified payment before advancing %s', async (status, label) => {
+  mocks.request.mockResolvedValue({ ...order, status });
+  view();
+  const advance = await screen.findByRole('button', { name: label });
+  expect(advance).toBeDisabled();
+  fireEvent.change(screen.getByLabelText('ข้อความถึงลูกค้า (ลูกค้ามองเห็น)'), {
+    target: { value: 'ขอยกเลิก' },
+  });
+  expect(screen.getByRole('button', { name: 'ยกเลิกออเดอร์' })).toBeEnabled();
+});
+it('allows preparing an order with verified payment', async () => {
+  mocks.request.mockResolvedValue({
+    ...order,
+    payment_status: 'PAID_AT_STORE',
+  });
+  view();
+  expect(
+    await screen.findByRole('button', { name: 'เริ่มเตรียมสินค้า' }),
+  ).toBeEnabled();
+});
 it('sends READY orders to POS in the current staff workspace', async () => {
-  mocks.request.mockResolvedValue({ ...order, status: 'READY' });
+  mocks.request.mockResolvedValue({
+    ...order,
+    status: 'READY',
+    fulfillment: 'PICKUP',
+  });
   view();
   expect(
     await screen.findByRole('link', { name: 'ลูกค้ามารับ · เปิดเข้า POS' }),
@@ -303,3 +338,127 @@ it('sends READY orders to POS in the current staff workspace', async () => {
     screen.queryByRole('button', { name: /สำเร็จ/ }),
   ).not.toBeInTheDocument();
 });
+
+const paidPickup = {
+  ...order,
+  status: 'READY',
+  payment_status: 'PAID_AT_STORE',
+  fulfillment: 'PICKUP',
+  revision: 4,
+};
+it.each([
+  ['paid pickup', paidPickup],
+  [
+    'unpaid delivery',
+    { ...paidPickup, payment_status: 'UNPAID', fulfillment: 'DELIVERY' },
+  ],
+  [
+    'unknown fulfillment',
+    { ...paidPickup, payment_status: 'UNPAID', fulfillment: undefined },
+  ],
+])('hides the legacy POS link for %s', async (_name, fixture) => {
+  mocks.request.mockResolvedValue(fixture);
+  view();
+  await screen.findByText('WEB-TEST');
+  expect(screen.queryByRole('link', { name: /POS/ })).not.toBeInTheDocument();
+});
+it('settles a paid pickup using its revision and refreshes the order', async () => {
+  let settled = false;
+  mocks.request.mockImplementation(async (_org: string, path: string) => {
+    if (path.endsWith('/settle-prepaid')) {
+      settled = true;
+      return {};
+    }
+    return settled
+      ? { ...paidPickup, status: 'COMPLETED', revision: 5 }
+      : paidPickup;
+  });
+  view();
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'ส่งมอบและปิดยอด' }),
+  );
+  await waitFor(() =>
+    expect(mocks.request).toHaveBeenCalledWith(
+      'org',
+      '/online-orders/order/settle-prepaid',
+      expect.objectContaining({
+        method: 'POST',
+        csrf: 'csrf',
+        body: { revision: 4 },
+      }),
+    ),
+  );
+  expect(await screen.findByText('สำเร็จ')).toBeVisible();
+  expect(
+    screen.queryByRole('button', { name: 'ส่งมอบและปิดยอด' }),
+  ).not.toBeInTheDocument();
+});
+it('shows a settlement failure and allows retry after refreshing the order', async () => {
+  mocks.request.mockImplementation(async (_org: string, path: string) => {
+    if (path.endsWith('/settle-prepaid'))
+      throw new ApiError(409, 'กรุณาเปิดกะก่อน');
+    return paidPickup;
+  });
+  view();
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'ส่งมอบและปิดยอด' }),
+  );
+  expect(await screen.findByRole('alert')).toHaveTextContent('กรุณาเปิดกะก่อน');
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: 'ส่งมอบและปิดยอด' }),
+    ).toBeEnabled(),
+  );
+  expect(
+    mocks.request.mock.calls.filter(
+      ([, path]) => path === '/online-orders/order',
+    ).length,
+  ).toBeGreaterThan(1);
+});
+it('prevents duplicate settlement while the request is pending', async () => {
+  let finish!: (value: unknown) => void;
+  const pending = new Promise((resolve) => {
+    finish = resolve;
+  });
+  mocks.request.mockImplementation(async (_org: string, path: string) =>
+    path.endsWith('/settle-prepaid') ? pending : paidPickup,
+  );
+  view();
+  const settle = await screen.findByRole('button', { name: 'ส่งมอบและปิดยอด' });
+  fireEvent.click(settle);
+  await waitFor(() => expect(settle).toBeDisabled());
+  fireEvent.click(settle);
+  expect(
+    mocks.request.mock.calls.filter(([, path]) =>
+      path.endsWith('/settle-prepaid'),
+    ),
+  ).toHaveLength(1);
+  finish({});
+  await waitFor(() => expect(settle).toBeEnabled());
+});
+it.each([
+  ['unpaid', { payment_status: 'UNPAID' }],
+  ['delivery', { fulfillment: 'DELIVERY' }],
+  ['unknown fulfillment', { fulfillment: undefined }],
+  ['not ready', { status: 'PREPARING' }],
+  ['linked cart', { cart_id: 'cart' }],
+])('does not offer settlement for %s', async (_name, overrides) => {
+  mocks.request.mockResolvedValue({ ...paidPickup, ...overrides });
+  view();
+  await screen.findByText('WEB-TEST');
+  expect(
+    screen.queryByRole('button', { name: 'ส่งมอบและปิดยอด' }),
+  ).not.toBeInTheDocument();
+});
+it.each(['online_orders.manage', 'pos.cart.manage', 'pos.checkout'])(
+  'requires %s to offer settlement',
+  async (permission) => {
+    mocks.denied = [permission];
+    mocks.request.mockResolvedValue(paidPickup);
+    view();
+    await screen.findByText('WEB-TEST');
+    expect(
+      screen.queryByRole('button', { name: 'ส่งมอบและปิดยอด' }),
+    ).not.toBeInTheDocument();
+  },
+);

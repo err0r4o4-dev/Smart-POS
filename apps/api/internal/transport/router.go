@@ -27,7 +27,7 @@ type Readiness interface{ Ready(context.Context) error }
 
 type Options struct {
 	PaymentSandbox            *stripe.Client
-	CustomerPayments          *stripe.CustomerClient
+	CustomerPayments          storefront.CustomerPaymentGateway
 	SingleStoreOrganizationID string
 }
 

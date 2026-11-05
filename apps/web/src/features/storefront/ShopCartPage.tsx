@@ -131,15 +131,16 @@ export function ShopCartPage() {
 }
 
 function CartContents({ slug }: { slug: string }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const tableToken = readTableToken(searchParams.toString());
   const shopPath = location.pathname.replace(/\/cart$/, '') + location.search;
 
-  const [diningType, setDiningType] = useState<'takeaway' | 'dine-in'>(
-    'takeaway',
-  );
+  const [diningType, setDiningType] = useState<
+    'takeaway' | 'dine-in' | 'delivery'
+  >(tableToken ? 'dine-in' : 'takeaway');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
   const [selectedTable, setSelectedTable] = useState('');
   const exampleTables = [
     'A1',
@@ -183,24 +184,32 @@ function CartContents({ slug }: { slug: string }) {
   const shop = useQuery({
     queryKey: ['storefront', slug, 'settings'],
     queryFn: ({ signal }) =>
-      storefrontRequest<ShopSettings>(`/${slug}`, { signal }),
+      storefrontRequest<ShopSettings & { delivery_enabled?: boolean }>(
+        `/${slug}`,
+        { signal },
+      ),
     retry: false,
   });
 
   // Existing quote request.
   const quote = useMutation({
     mutationFn: () =>
-      storefrontRequest<ShopQuote>(`/${slug}/quote`, {
-        body: {
-          ...(tableToken
-            ? { fulfillment: 'PICKUP', table_token: tableToken }
-            : {}),
-          items: cart.items.map(({ variant_id, quantity }) => ({
-            variant_id,
-            quantity,
-          })),
+      storefrontRequest<ShopQuote & { shipping_fee?: string }>(
+        `/${slug}/quote`,
+        {
+          body: {
+            ...(tableToken
+              ? { fulfillment: 'PICKUP', table_token: tableToken }
+              : diningType === 'delivery'
+                ? { fulfillment: 'DELIVERY' }
+                : {}),
+            items: cart.items.map(({ variant_id, quantity }) => ({
+              variant_id,
+              quantity,
+            })),
+          },
         },
-      }),
+      ),
   });
 
   const trackingPath = `/shop/${slug}/track/${identity.key}#access=${identity.token}`;
@@ -270,7 +279,7 @@ function CartContents({ slug }: { slug: string }) {
     onError: (problem) => setError(problem),
   });
 
-  const send = (input: ShopOrderInput) => {
+  const send = (input: ShopOrderInput & { delivery_address?: string }) => {
     if (submission.isPending) return;
 
     try {
@@ -559,7 +568,9 @@ function CartContents({ slug }: { slug: string }) {
                   onClick={() => {
                     setDiningType('takeaway');
                     setSelectedTable('');
+                    quote.reset();
                   }}
+                  disabled={busy || !!tableToken}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -587,7 +598,11 @@ function CartContents({ slug }: { slug: string }) {
                 <button
                   type="button"
                   aria-pressed={diningType === 'dine-in'}
-                  onClick={() => setDiningType('dine-in')}
+                  onClick={() => {
+                    setDiningType('dine-in');
+                    quote.reset();
+                  }}
+                  disabled={busy}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -611,90 +626,107 @@ function CartContents({ slug }: { slug: string }) {
                   <UtensilsCrossed size={17} aria-hidden="true" />
                   ทานที่ร้าน
                 </button>
+                {!tableToken && shop.data?.delivery_enabled && (
+                  <button
+                    type="button"
+                    aria-pressed={diningType === 'delivery'}
+                    disabled={busy}
+                    onClick={() => {
+                      setDiningType('delivery');
+                      quote.reset();
+                    }}
+                    className="button button-secondary"
+                  >
+                    จัดส่ง
+                  </button>
+                )}
               </div>
             </section>
 
             {/* TABLE PREVIEW - NOT CONNECTED TO API */}
 
-            <section
-              style={{
-                padding: 12,
-                marginBottom: 12,
-                background: theme.pale,
-                borderRadius: 10,
-              }}
-            >
-              <div
+            {!tableToken && (
+              <section
                 style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: 12,
+                  padding: 12,
+                  marginBottom: 12,
+                  background: theme.pale,
+                  borderRadius: 10,
                 }}
               >
-                <UtensilsCrossed size={20} aria-hidden="true" />
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 12,
+                  }}
+                >
+                  <UtensilsCrossed size={20} aria-hidden="true" />
 
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <label
-                    htmlFor="shop-cart-table"
-                    style={{
-                      display: 'block',
-                      marginBottom: 7,
-                      fontSize: 14,
-                      fontWeight: 700,
-                    }}
-                  >
-                    โต๊ะ
-                  </label>
-
-                  <select
-                    id="shop-cart-table"
-                    value={selectedTable}
-                    disabled={diningType !== 'dine-in'}
-                    onChange={(event) => setSelectedTable(event.target.value)}
-                    style={{
-                      width: '100%',
-                      minHeight: 43,
-                      padding: '10px 12px',
-                      border: '1px solid #E9EBF0',
-                      borderRadius: 8,
-                      background:
-                        diningType === 'dine-in' ? '#FFFFFF' : '#F7F8FA',
-                      color: diningType === 'dine-in' ? theme.navy : '#9BA3B1',
-                      fontSize: 13,
-                      cursor:
-                        diningType === 'dine-in' ? 'pointer' : 'not-allowed',
-                    }}
-                  >
-                    <option value="">
-                      {diningType === 'dine-in'
-                        ? 'กรุณาเลือกโต๊ะ (ตัวอย่าง)'
-                        : 'เลือกทานที่ร้านก่อน'}
-                    </option>
-
-                    {exampleTables.map((table) => (
-                      <option key={table} value={table}>
-                        โต๊ะ {table}
-                      </option>
-                    ))}
-                  </select>
-
-                  {diningType === 'dine-in' && (
-                    <p
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <label
+                      htmlFor="shop-cart-table"
                       style={{
-                        margin: '8px 0 0',
-                        color: '#8B6A22',
-                        fontSize: 12,
-                        lineHeight: 1.5,
+                        display: 'block',
+                        marginBottom: 7,
+                        fontSize: 14,
+                        fontWeight: 700,
                       }}
                     >
-                      {selectedTable
-                        ? `เลือกโต๊ะ ${selectedTable} แล้ว (ตัวอย่าง UI)`
-                        : 'หมายเลขโต๊ะเป็นข้อมูลตัวอย่าง ยังไม่เชื่อมระบบร้าน'}
-                    </p>
-                  )}
+                      โต๊ะ
+                    </label>
+
+                    <select
+                      id="shop-cart-table"
+                      value={selectedTable}
+                      disabled={diningType !== 'dine-in'}
+                      onChange={(event) => setSelectedTable(event.target.value)}
+                      style={{
+                        width: '100%',
+                        minHeight: 43,
+                        padding: '10px 12px',
+                        border: '1px solid #E9EBF0',
+                        borderRadius: 8,
+                        background:
+                          diningType === 'dine-in' ? '#FFFFFF' : '#F7F8FA',
+                        color:
+                          diningType === 'dine-in' ? theme.navy : '#9BA3B1',
+                        fontSize: 13,
+                        cursor:
+                          diningType === 'dine-in' ? 'pointer' : 'not-allowed',
+                      }}
+                    >
+                      <option value="">
+                        {diningType === 'dine-in'
+                          ? 'กรุณาเลือกโต๊ะ (ตัวอย่าง)'
+                          : 'เลือกทานที่ร้านก่อน'}
+                      </option>
+
+                      {exampleTables.map((table) => (
+                        <option key={table} value={table}>
+                          โต๊ะ {table}
+                        </option>
+                      ))}
+                    </select>
+
+                    {diningType === 'dine-in' && (
+                      <p
+                        style={{
+                          margin: '8px 0 0',
+                          color: '#8B6A22',
+                          fontSize: 12,
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        {selectedTable
+                          ? `เลือกโต๊ะ ${selectedTable} แล้ว (ตัวอย่าง UI)`
+                          : 'หมายเลขโต๊ะเป็นข้อมูลตัวอย่าง ยังไม่เชื่อมระบบร้าน'}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </section>
+              </section>
+            )}
 
             {/* PAYMENT */}
             <section
@@ -732,22 +764,28 @@ function CartContents({ slug }: { slug: string }) {
                   }}
                 />
 
-                <span>{t('storefront.pickUpAndPayInStore')}</span>
+                <span>
+                  {language === 'th'
+                    ? 'ตรวจสอบการชำระเงินหลังส่งออเดอร์'
+                    : 'Check payment after submitting the order'}
+                </span>
               </div>
 
-              {shop.data?.pickup_instructions && (
-                <p
-                  style={{
-                    margin: '9px 0 0 30px',
-                    color: theme.muted,
-                    fontSize: 12,
-                    overflowWrap: 'anywhere',
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {shop.data.pickup_instructions}
-                </p>
-              )}
+              {diningType === 'takeaway' &&
+                !tableToken &&
+                shop.data?.pickup_instructions && (
+                  <p
+                    style={{
+                      margin: '9px 0 0 30px',
+                      color: theme.muted,
+                      fontSize: 12,
+                      overflowWrap: 'anywhere',
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {shop.data.pickup_instructions}
+                  </p>
+                )}
             </section>
 
             {/* TOTALS */}
@@ -823,7 +861,7 @@ function CartContents({ slug }: { slug: string }) {
             {/* REVIEW BUTTON */}
             {/* REVIEW BUTTON */}
 
-            {diningType === 'dine-in' && (
+            {diningType === 'dine-in' && !tableToken && (
               <button
                 type="button"
                 disabled={!selectedTable}
@@ -863,7 +901,7 @@ function CartContents({ slug }: { slug: string }) {
                 !valid ||
                 tableToken === null ||
                 !shop.data?.accepting_orders ||
-                diningType === 'dine-in'
+                (diningType === 'dine-in' && !tableToken)
               }
               onClick={() => {
                 setError(null);
@@ -884,14 +922,16 @@ function CartContents({ slug }: { slug: string }) {
                 fontSize: 13,
                 fontWeight: 800,
                 cursor:
-                  busy || diningType === 'dine-in' ? 'not-allowed' : 'pointer',
+                  busy || (diningType === 'dine-in' && !tableToken)
+                    ? 'not-allowed'
+                    : 'pointer',
               }}
             >
               {t('storefront.reviewItemsAndLatestTotal')}
               <ArrowRight size={17} aria-hidden="true" />
             </button>
 
-            {diningType === 'dine-in' && (
+            {diningType === 'dine-in' && !tableToken && (
               <p
                 role="status"
                 style={{
@@ -927,7 +967,7 @@ function CartContents({ slug }: { slug: string }) {
 
             {/* ORIGINAL CHECKOUT FORM */}
 
-            {quote.data && diningType === 'takeaway' && (
+            {quote.data && (diningType !== 'dine-in' || !!tableToken) && (
               <form
                 style={{
                   display: 'flex',
@@ -951,7 +991,12 @@ function CartContents({ slug }: { slug: string }) {
                     quote_id: quote.data.quote_id,
                     ...(tableToken
                       ? { fulfillment: 'PICKUP', table_token: tableToken }
-                      : {}),
+                      : diningType === 'delivery'
+                        ? {
+                            fulfillment: 'DELIVERY',
+                            delivery_address: deliveryAddress.trim(),
+                          }
+                        : {}),
                     access_token: identity.token,
                   });
                 }}
@@ -962,6 +1007,9 @@ function CartContents({ slug }: { slug: string }) {
                     {t('storefront.latestTotal')}{' '}
                     {moneyText(quote.data.estimated_total)}
                   </h3>
+                  {diningType === 'delivery' && quote.data.shipping_fee && (
+                    <p>ค่าจัดส่ง ฿{moneyText(quote.data.shipping_fee)}</p>
+                  )}
 
                   {quote.data.items.map((line) => (
                     <p key={line.variant_id}>
@@ -1011,6 +1059,21 @@ function CartContents({ slug }: { slug: string }) {
                   />
                 </label>
 
+                {diningType === 'delivery' && (
+                  <label>
+                    ที่อยู่จัดส่ง
+                    <input
+                      required
+                      maxLength={2000}
+                      style={formInputStyle}
+                      value={deliveryAddress}
+                      onChange={(event) =>
+                        setDeliveryAddress(event.target.value)
+                      }
+                    />
+                  </label>
+                )}
+
                 <label>
                   {t('storefront.noteToStore')}
                   <input
@@ -1045,7 +1108,11 @@ function CartContents({ slug }: { slug: string }) {
 
                 <Button
                   type="submit"
-                  disabled={busy || !shop.data?.accepting_orders}
+                  disabled={
+                    busy ||
+                    !shop.data?.accepting_orders ||
+                    (diningType === 'delivery' && !deliveryAddress.trim())
+                  }
                 >
                   {t('storefront.submitOrderUnpaid')}
                 </Button>

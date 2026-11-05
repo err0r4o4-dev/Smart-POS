@@ -1,8 +1,8 @@
-Out-of-scope source observation: storefront/orders.go handles a missing payment
-attempt by setting hasPayment=false, so the payment/hold/refund/reconciliation
-checks in that transition branch are skipped. This differs from the historical
-completed paid-only claim below. No application fix or runtime reproduction was
-performed in this skill/rules task; follow-up acceptance remains separate.
+Historical source observation (superseded by the restaurant flow continuation):
+storefront/orders.go handled a missing payment attempt by setting hasPayment=false,
+so the payment/hold/refund/reconciliation checks in that transition branch were
+skipped. No application fix or runtime reproduction was performed in that
+skill/rules task; follow-up acceptance remains separate.
 
 # Project policy alignment (2026-11-05)
 
@@ -17,15 +17,15 @@ Recovery: reverse only this task's hunks; preserve the existing roadmap and edit
 
 - [x] Reconcile the approved draft, instruction scope, Git status and file hashes.
 - [x] Inspect baseline policy-consumer decisions: backend ownership, auth/tenant
-  review, local versus production DB authority, read-only diagnosis and trackers.
+      review, local versus production DB authority, read-only diagnosis and trackers.
   - Baseline: the consuming agent chose the governing-policy actions but identified
     conflicting Main-only, separate review approval and mandatory TODO cleanup
     rules. This is conflict evidence, not an observed runtime delegation failure.
   - Before edits: skill validator tests passed 10/10 and skill validation passed.
 - [x] Update AGENTS.md, CLAUDE.md, .agents/skills/README.md,
-  .agents/skills/diagnose/SKILL.md and diagnose adaptation metadata in sources.json.
+      .agents/skills/diagnose/SKILL.md and diagnose adaptation metadata in sources.json.
 - [x] Repeat policy-consumer scenarios and run local skill validation, references,
-  scoped formatting/provenance checks and git diff --check.
+      scoped formatting/provenance checks and git diff --check.
 - [x] Resolve independent review findings and retain verified acceptance evidence.
   - PASS: node --test .agents/skill-support/validate.test.mjs (10/10),
     node .agents/skill-support/validate.mjs, scoped existing Prettier --check for
@@ -60,7 +60,7 @@ No commits, branch changes, provider requests, deployments or primary DB changes
 
 - [x] Inspect current branch, dependencies and current acceptance gaps.
   - Branch remains feature/fix-flow-system. Existing recipe-aware POS/inventory engines still have live callers; no backend or database changes made.
-  - Forecast remains FORECAST_NOT_CONFIGURED; storefront customer payment gateway is not wired in transport/router.go.
+  - At that checkpoint, forecast remained FORECAST_NOT_CONFIGURED and the storefront customer payment gateway was not wired in transport/router.go. The later continuation wired the gateway.
 - [x] Define and run failing tests for restaurant-only navigation/routes.
   - RED/GREEN logs: .local/restaurant-consolidation/red-scope.log and scope-iteration.log; current full frontend suite passes.
 - [ ] Consolidate restaurant workspaces and remove unused retail screens.
@@ -68,27 +68,38 @@ No commits, branch changes, provider requests, deployments or primary DB changes
   - Deleted nine orphan purchasing/pricing/adjustment screen files. Historical sales/adjustment/return data remains visible without retired action links.
   - Retired URLs are tombstoned in bare/manage/work namespaces; positive tests preserve restaurant, quality, sales/refund and public cart/tracking routes.
   - Partial: POS/shift/checkout remain until shared restaurant order/payment replacement passes; additional unmounted legacy source and live backend modules are not yet retired.
-- [x] Complete shared ordering/payment and paid-only kitchen acceptance.
+- [ ] Complete shared ordering/payment and paid-only kitchen acceptance.
+  - Current continuation: public customer payment routes, paid-before-kitchen guards and the staff prepaid settlement action have been implemented. The isolated QR and pickup browser flows passed with a simulated provider; full acceptance remains open.
   - Wired CustomerPayments into transport.Options, cmd/server/main.go, and storefront.Service.
   - Kitchen queue (restaurant.Service.Queue) query strictly requires verified PAID payment attempt with hold not released, and excludes active refund intents and fulfillment review reconciliations.
   - Transition in storefront/orders.go strictly enforces verified payment before orders can enter PREPARING or READY.
   - readOrder accurately reflects payment_status as paid when online payment attempt is PAID.
   - pos.SettlePrepaidOnlineOrder accounts for frozen shipping fees in total validation (cartTotal + shippingFee == expectedTotal).
-  - PASS: go test ./... -count=1 (18 Go packages pass), go vet ./... pass, unit tests added in queue_test.go and online_orders_test.go.
+  - Historical offline evidence: go test ./... -count=1 and go vet ./... passed; unit tests added in queue_test.go and online_orders_test.go. These checks alone do not establish full payment or kitchen acceptance.
 - [ ] Complete ingredient reservation/consumption and restaurant recovery.
-  - Active continuation HND-20261105-004600 (2026-11-05): ingredient snapshot/reservation/deduction only; no forecast or UI changes.
+  - Historical continuation HND-20261105-004600 (2026-11-05): ingredient snapshot/reservation/deduction only. The later restaurant flow continuation extends into browse, payment and UI.
   - [x] Inspect order, recipe, quality, payment and sale transaction boundaries.
   - [x] Add failing reservation/snapshot/settlement regression coverage.
     - RED/GREEN: frozen-recipe Go tests first failed compilation before their resolver existed; schema readiness failed at 27 before RequiredVersion 28. Review regressions reproduced ambiguous order/cart lookup, missing SQL source boundaries and per-movement whole-order expansion, then passed after fixes. SQL source checks are not SQL execution.
   - [/] Implement immutable order ingredient snapshots and atomic reservation/consumption.
-    - Draft migration 28 snapshots recipe ingredients/direct stock, preserves exact quantities and RLS, aggregates shared holds and enforces matching sale operations. POS settlement reads frozen snapshots; order/cart exclusion paths are distinct. Live orders must be drained/reconciled before upgrade; no existing data was migrated.
-    - Existing adjacent gap confirmed against HEAD by reviewer: catalog_browse.go still bases menu availability on physical menu stock. This continuation does not change the browse/UI flow or establish end-to-end storefront acceptance.
-  - [?] Verify shortage, release, retry, concurrency and tenant boundaries on an isolated database.
-    - BLOCKED: SMARTPOS_SINGLE_STORE_TEST_DSN is absent; Docker/PostgreSQL tools are unavailable on PATH and the usual local install paths. Guarded TestSingleStoreIsolatedDatabase run SKIPPED. No primary database connection or migration was attempted.
-    - Integration cases compile but have not executed: shared shortage/rollback, competing holds, release, frozen/deactivated recipes, direct item gaining a recipe, mixed recipe/direct settlement, operation mismatch, denied/foreign access, and concurrent settlement retry. Actual migration 27-to-28 refusal/preservation and SQL/RLS/concurrency acceptance remain required.
+    - Migration 28 snapshots recipe ingredients/direct stock, preserves exact quantities and RLS, aggregates shared holds and enforces matching sale operations. POS settlement reads frozen snapshots; order/cart exclusion paths are distinct. Live orders must be drained/reconciled before upgrade; primary data was not migrated.
+    - Historical browse gap against HEAD is superseded by recipe-aware browse changes and isolated database coverage below.
+  - [x] Verify shortage, release, retry, concurrency and tenant boundaries on an isolated database.
+    - PASS (2026-11-05): .local/restaurant-flow-20261105/live-return-final.log records the isolated SQL suite passing, including recipe browse, ingredient reservations, shortage, RLS, concurrency, refund and prepaid settlement cases. The earlier unavailable-tool/DSN blocker and skipped run are historical.
+    - PASS: migration 28 refused live orders atomically, dirty version 28 recovery on a disposable clone returned to 27, and the 27-to-28 upgrade preserved historical orders and reran unchanged.
+    - PASS: migration 29 adds the three customer payment rate-limit scopes required after browser checkout returned 503 against the migration 14 whitelist; migration 28 remains unchanged. Isolated checks covered scope insert/update, unknown-scope rejection, existing auth and order history, down refusal and dirty-version recovery, down/up and unchanged rerun.
+    - PASS at the earlier live-schema29 snapshot: actual QR and pickup browser flows (2 passed); delivery was skipped. Staff handover observed 0.200 ingredient deducted, the hold released, one sale and safe replay. The provider was simulated. Task-owned database fixtures and network were cleaned up; no primary database was used.
+    - Historical FAIL in live-final.log: both browser cases failed when aborted provider navigation caused a Chrome error page to interrupt the local return. This did not establish an application failure. The subsequent live-return-final.log passed using synthetic provider HTML.
+    - PASS in live-return-final.log: migrations 28 and 29, isolated SQL groups and actual checkout, recover and status rate-limit middleware tests passed. Real browser QR and pickup flows passed (2); delivery was skipped (1). Synthetic provider HTML, local return and tracking restoration passed, with exactly 0.200 kg deducted, one sale and movement, and replay. The provider was simulated; no real Stripe call or primary database was used. Task-owned database fixtures and network were cleaned up.
+    - BLOCKED: complete delivery flow needs a shipment service and an unanswered product decision on the shipment step. Migration 22 prohibits POS posting before shipment; do not bypass it. Real provider acceptance remains unverified.
+    - PASS at the recorded snapshot: frontend build, .local/restaurant-flow-20261105/build-final.log. tests-final.log records 54 frontend files / 392 tests, contracts 18 modules / 120 documented routes, 10 log tests and 5 dev-stack tests. Typecheck and lint exited 0; lint reported 0 errors and 5 warnings (typecheck-final.log and lint-final.log).
+    - PASS at the schema29 snapshot: go test ./... -count=1 covers 18 packages, including one with no test files; go vet ./... and go build ./... exited 0. Evidence: .local/restaurant-flow-20261105/{go-schema29,go-vet-schema29,go-build-schema29}.log. Race detection was not run: CGO_ENABLED=0 and gcc/clang were not on PATH.
+    - PASS: independent reviewer Dirac re-reviewed the current reviewed scope, verified the OpenAPI 409 quote and rate-limit middleware test fixes and provider boundary, and inspected live-return-final.log. No unresolved P1/P2/P3 findings in that scope; delivery and real provider acceptance remain open.
+    - PASS: fresh root npm run test (tests-return-final.log): 54 frontend files / 392 tests, contracts 18 modules / 120 documented routes, 10 log tests and 5 dev-stack tests. A separate contracts:check also passed (contracts-return-final.log). Main reported scoped gofmt -l on changed/new Go files produced no output, git diff --check passed, and node --check passed for the browser spec and harness.
+    - Focused mocked browser checks passed 10 cases; the live QR/pickup result above is separate. The earlier full workspace browser run (21 passed / 11 failed) remains unresolved and is not established as pre-existing.
   - [x] Run focused/full Go checks and authorized independent source review; retain unresolved gates.
     - PASS (2026-11-05): go test ./... -count=1; go vet ./...; go build ./... from apps/api; npm run contracts:check (18 modules / 120 routes); scoped gofmt check; git diff --check. Logs: .local/ingredient-reservation/. Go suite success includes skipped isolated DB acceptance.
-    - PASS: independent reviewer rechecked the final scalar requirement helper/guard, resolved all four original source findings and found no new source blocker. Its latest static migration regressions and diff check passed. This is source review, not SQL acceptance; migration/RLS/transactions/concurrency and isolated deferred-mismatch coverage remain BLOCKED. Race detector not run because CGO_ENABLED=0; release readiness remains unverified.
+    - Historical source review: independent reviewer rechecked the scalar requirement helper/guard, resolved four original source findings and found no new source blocker. The later isolated SQL run and current continuation review are recorded above. Race detector was not run in that earlier continuation because CGO_ENABLED=0; release readiness remains unverified.
   - [ ] Clean up only this continuation checklist after acceptance passes.
 - [ ] Retire orphan retail API/contracts after replacement acceptance.
 - [ ] Implement reports, bounded forecast/backtesting and manager feedback.
@@ -112,6 +123,7 @@ No commits, branch changes, provider requests, deployments or primary DB changes
 - [ ] Remove only this task section after all acceptance gates pass.
 
 Execution decisions:
+
 - Use the current branch, already based on restaurant commit 440bafd; no merge or branch switch.
 - Use this existing tracker instead of creating additional plan/ledger files.
 - Do not drop historical tables or remove the payment/stock engine while callers remain.
@@ -170,6 +182,7 @@ Execution decisions:
 # Task: Recreate Login Design Matching User Screenshot Reference
 
 ## Objective
+
 - Match the exact visual layout from user screenshot:
   1. Left Column (`auth-split-visual`): Warm beige/cream background, Brand logo at top, Thai slogan "จัดการร้านให้ง่ายขึ้น" with subtle yellow hand-drawn underline accent, sub-headline, and 3D retail POS counter illustration (Monitor + thermal receipt printer + receipt paper + potted plant + shop canopy in background).
   2. Right Column (`auth-split-form`): Clean white panel with top toolbar (Back link "<- กลับหน้าหลัก", Language switcher pill), centered modern rounded Card containing:
@@ -180,11 +193,13 @@ Execution decisions:
      - Bottom row: "ลืมรหัสผ่าน?" on left, "สร้างบัญชี" on right.
 
 ## Scope & Affected Components
+
 - `apps/web/src/layouts/AuthLayout.tsx`
 - `apps/web/src/features/auth/AuthPages.tsx`
 - `apps/web/src/styles/global.css`
 
 ## Implementation Checklist
+
 - [ ] Phase 1: Form & Component Updates
   - [ ] Update `apps/web/src/layouts/AuthLayout.tsx` to support the two-column split screen with the POS illustration on the left
   - [ ] Update `apps/web/src/features/auth/AuthPages.tsx` login form elements and labels to match the clean rounded design

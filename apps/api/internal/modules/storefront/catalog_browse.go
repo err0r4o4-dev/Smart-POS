@@ -110,8 +110,9 @@ const catalogBrowseSQL = `WITH listed AS (
  SELECT variant.id::text AS variant_id, product.name AS product_name, variant.name AS variant_name, variant.sku,
  unit.name AS unit, unit.unit_type, COALESCE(category.id::text,'uncategorized') AS category_id,
  COALESCE(category.name,'ไม่มีหมวดหมู่') AS category_name, COALESCE(variant.attributes->>'storefront_image_url','') AS image_url,
- effective.price, greatest(0.000,storefront_sellable_quantity($1,$4,variant.id)-storefront_reserved_quantity($1,$4,variant.id)) AS available_quantity,
- (unit.status='ACTIVE' AND variant.currency='THB' AND effective.price>0) AS saleable
+ effective.price, CASE WHEN recipe.id IS NULL THEN greatest(0.000,storefront_sellable_quantity($1,$4,variant.id)-storefront_reserved_quantity($1,$4,variant.id))
+ ELSE recipe_stock.capacity END AS available_quantity,
+ (unit.status='ACTIVE' AND variant.currency='THB' AND effective.price>0 AND (recipe.id IS NULL OR recipe_stock.saleable)) AS saleable
  FROM product_variants variant
  JOIN products product ON product.organization_id=variant.organization_id AND product.id=variant.product_id
  JOIN units unit ON unit.organization_id=variant.organization_id AND unit.id=variant.unit_id
@@ -125,6 +126,22 @@ const catalogBrowseSQL = `WITH listed AS (
   ORDER BY (list.branch_id IS NOT NULL) DESC,list.priority DESC,list.id LIMIT 1
  ) price_list ON true
  CROSS JOIN LATERAL (SELECT COALESCE(price_list.price,variant.selling_price) AS price) effective
+ LEFT JOIN restaurant_recipes recipe ON recipe.organization_id=variant.organization_id AND recipe.branch_id=$3::uuid AND recipe.menu_variant_id=variant.id AND recipe.status='ACTIVE'
+ LEFT JOIN LATERAL (
+  SELECT least(999999999999999.999, COALESCE(min(CASE WHEN state.healthy THEN state.capacity ELSE 0.000 END),0.000))::numeric(18,3) AS capacity,
+   count(*)>0 AND COALESCE(bool_and(state.healthy AND state.capacity>=1.000),false) AS saleable
+  FROM restaurant_recipe_items item
+  JOIN product_variants ingredient ON ingredient.organization_id=item.organization_id AND ingredient.id=item.ingredient_variant_id
+  JOIN products ingredient_product ON ingredient_product.organization_id=ingredient.organization_id AND ingredient_product.id=ingredient.product_id
+  JOIN units ingredient_unit ON ingredient_unit.organization_id=ingredient.organization_id AND ingredient_unit.id=ingredient.unit_id
+  CROSS JOIN LATERAL (SELECT
+   ingredient.status='ACTIVE' AND ingredient_product.status='ACTIVE' AND ingredient_unit.status='ACTIVE'
+    AND NOT EXISTS (SELECT 1 FROM quality_recalls recall WHERE recall.organization_id=$1 AND recall.variant_id=item.ingredient_variant_id AND recall.batch_id IS NULL) AS healthy,
+   div(greatest(0.000,least(COALESCE((SELECT quantity FROM quality_stock_balances balance WHERE balance.organization_id=$1 AND balance.location_id=$4 AND balance.variant_id=item.ingredient_variant_id AND balance.batch_id IS NULL),0.000),
+    storefront_sellable_quantity($1,$4,item.ingredient_variant_id)-storefront_reserved_quantity($1,$4,item.ingredient_variant_id))) * 1000, item.quantity) / 1000 AS capacity
+  ) state
+  WHERE item.organization_id=variant.organization_id AND item.recipe_id=recipe.id
+ ) recipe_stock ON recipe.id IS NOT NULL
  WHERE variant.organization_id=$1 AND product.status='ACTIVE' AND variant.status='ACTIVE'
  AND ($2='' OR product.name ILIKE '%'||$2||'%' OR variant.name ILIKE '%'||$2||'%' OR variant.sku ILIKE '%'||$2||'%')
 ), matching AS (

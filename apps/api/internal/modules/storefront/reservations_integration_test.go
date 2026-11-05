@@ -6,13 +6,38 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"smartpos/api/internal/modules/inventory"
 	"smartpos/api/internal/modules/organization"
 	"smartpos/api/internal/modules/pos"
 	"smartpos/api/internal/modules/storefront"
+	"smartpos/api/internal/platform/stripe"
 )
+
+func payReservationFixture(test *testing.T, ctx context.Context, service *storefront.Service, slug, token string, order storefront.Order) {
+	test.Helper()
+	gateway, err := stripe.NewSandbox("sk_test_synthetic", "http://localhost:8088")
+	if err != nil {
+		test.Fatal(err)
+	}
+	client, err := stripe.NewCustomerClient(gateway, persistenceSigningSecret, true)
+	if err != nil {
+		test.Fatal(err)
+	}
+	service.CustomerPayments = client
+	attempt, err := service.BeginCustomerPayment(ctx, slug, storefront.TrackingInput{OrderID: order.ID, AccessToken: token})
+	if err != nil {
+		test.Fatal(err)
+	}
+	id := strings.ReplaceAll(order.ID, "-", "")
+	body := paymentFixtureEvent(test, "evt_"+id, "checkout.session.completed", paymentFixtureSession(attempt, "cs_test_"+id, "complete", "paid"))
+	now := time.Now()
+	if _, err = service.AcceptCustomerWebhook(ctx, body, paymentSignature(body, now), now); err != nil {
+		test.Fatal(err)
+	}
+}
 
 func reservationAcceptance(test *testing.T, ctx context.Context, organizations *organization.Service, owner, org string, shop storefront.Settings) {
 	test.Helper()
@@ -22,7 +47,7 @@ func reservationAcceptance(test *testing.T, ctx context.Context, organizations *
 	}
 	defer tx.Rollback(ctx)
 	var unit, product, variant, operation string
-	if err = tx.QueryRow(ctx, `INSERT INTO units(organization_id,code,name,unit_type) VALUES($1,'RESERVE','Synthetic units','COUNT') RETURNING id::text`, org).Scan(&unit); err != nil {
+	if err = tx.QueryRow(ctx, `INSERT INTO units(organization_id,code,name,unit_type) VALUES($1,'RESERVE','Synthetic reservation units','COUNT') RETURNING id::text`, org).Scan(&unit); err != nil {
 		test.Fatal(err)
 	}
 	if err = tx.QueryRow(ctx, `INSERT INTO products(organization_id,name,created_by,updated_by) VALUES($1,'Synthetic reservation product',$2,$2) RETURNING id::text`, org, owner).Scan(&product); err != nil {
@@ -243,6 +268,7 @@ func reservationAcceptance(test *testing.T, ctx context.Context, organizations *
 		if problem != nil {
 			test.Fatal(problem)
 		}
+		payReservationFixture(test, ctx, service, shop.Slug, input.AccessToken, next)
 		for _, status := range []string{"PREPARING", "READY"} {
 			next, problem = service.Transition(ctx, owner, org, next.ID, storefront.TransitionInput{Revision: next.Revision, Status: status})
 			if problem != nil {
@@ -253,24 +279,16 @@ func reservationAcceptance(test *testing.T, ctx context.Context, organizations *
 		if _, problem = point.OpenShift(ctx, owner, org, "b1111111-1111-4111-8111-111111111111", pos.ShiftInput{TerminalID: shop.TerminalID, OpeningCash: "0.00"}); problem != nil {
 			test.Fatal(problem)
 		}
-		cart, problem := point.ImportOnlineOrder(ctx, owner, org, next.ID, pos.OnlineOrderInput{Revision: next.Revision})
-		if problem != nil || cart.ReviewRequired || len(cart.Items) != 1 || cart.Items[0].Available != "3.000" {
-			test.Fatalf("linked cart availability: %+v error %v", cart.Items, problem)
+		if _, problem = point.ImportOnlineOrder(ctx, owner, org, next.ID, pos.OnlineOrderInput{Revision: next.Revision}); !errors.Is(problem, pos.ErrConflict) {
+			test.Fatalf("legacy collection accepted paid order: %v", problem)
 		}
-		checkout, problem := point.PrepareCheckout(ctx, owner, org, "b2222222-2222-4222-8222-222222222222", pos.CheckoutInput{CartID: cart.ID, Revision: cart.Revision, Method: "CASH", ExpectedTotal: cart.Total, Received: cart.Total, PricingRevision: cart.Pricing.Revision})
-		if problem != nil {
-			test.Fatal(problem)
+		checkout, problem := point.SettlePrepaidOnlineOrder(ctx, owner, org, next.ID, pos.OnlineOrderInput{Revision: next.Revision})
+		if problem != nil || checkout.Status != "COMPLETED" || checkout.Method != "ONLINE_STRIPE" {
+			test.Fatalf("reserved prepaid settlement: %+v error %v", checkout, problem)
 		}
-		checkout, problem = point.ConfirmPayment(ctx, owner, org, checkout.ID, "b3333333-3333-4333-8333-333333333333", pos.ConfirmationInput{Acknowledged: true})
-		if problem != nil {
-			test.Fatal(problem)
-		}
-		checkout, problem = point.CompleteCheckout(ctx, owner, org, checkout.ID)
-		if problem != nil || checkout.Status != "COMPLETED" {
-			test.Fatalf("reserved settlement: %s error %v", checkout.Status, problem)
-		}
-		if _, problem = point.CompleteCheckout(ctx, owner, org, checkout.ID); problem != nil {
-			test.Fatalf("settlement replay: %v", problem)
+		replay, problem := point.SettlePrepaidOnlineOrder(ctx, owner, org, next.ID, pos.OnlineOrderInput{Revision: next.Revision})
+		if problem != nil || replay.ID != checkout.ID || replay.SaleID != checkout.SaleID {
+			test.Fatalf("settlement replay: %+v error %v", replay, problem)
 		}
 		tracked, problem := service.Track(ctx, shop.Slug, storefront.TrackingInput{OrderID: next.ID, AccessToken: input.AccessToken})
 		if problem != nil || tracked.Status != "COMPLETED" || tracked.PaymentStatus != "PAID_AT_STORE" {
@@ -328,6 +346,7 @@ func reservationAcceptance(test *testing.T, ctx context.Context, organizations *
 		if problem != nil {
 			test.Fatal(problem)
 		}
+		payReservationFixture(test, ctx, service, shop.Slug, request.AccessToken, next)
 		write, _, problem := organizations.Authorized(ctx, owner, org, "quality.read")
 		if problem != nil {
 			test.Fatal(problem)
@@ -352,8 +371,58 @@ func reservationAcceptance(test *testing.T, ctx context.Context, organizations *
 		if _, problem = service.Transition(ctx, owner, org, next.ID, storefront.TransitionInput{Revision: next.Revision, Status: "PREPARING"}); !errors.Is(problem, storefront.ErrStock) {
 			test.Fatalf("recalled reservation is not fulfillment authority: %v", problem)
 		}
-		if _, problem = service.Transition(ctx, owner, org, next.ID, storefront.TransitionInput{Revision: next.Revision, Status: "CANCELLED", Message: "Synthetic recall cancellation"}); problem != nil {
+		if _, problem = service.Transition(ctx, owner, org, next.ID, storefront.TransitionInput{Revision: next.Revision, Status: "CANCELLED", Message: "Synthetic recall cancellation"}); !errors.Is(problem, storefront.ErrConflict) {
+			test.Fatalf("paid recall cancelled without refund: %v", problem)
+		}
+		gateway := &refundGatewayFixture{CustomerClient: service.CustomerPayments.(*stripe.CustomerClient)}
+		gateway.createRefund = func(_ context.Context, charge stripe.CustomerRefundCharge) (stripe.CustomerRefund, error) {
+			return stripe.CustomerRefund{ID: "re_reservationRecall", Object: "refund", Status: "succeeded", AmountMinor: charge.AmountMinor, Currency: "thb", PaymentIntent: charge.PaymentIntent, Metadata: map[string]string{"smartpos_purpose": stripe.CustomerRefundPurpose, "organization_id": org, "order_id": next.ID, "refund_id": charge.RefundID}}, nil
+		}
+		service.CustomerPayments = gateway
+		refund, problem := service.CancelPaidCustomerOrder(ctx, owner, org, next.ID, "c5555555-5555-4555-8555-555555555555")
+		if problem != nil || refund.State != "SUCCEEDED" {
+			test.Fatalf("refund recalled order: %+v %v", refund, problem)
+		}
+	})
+	test.Run("historical pre-payment READY order remains compatible with cash settlement", func(test *testing.T) {
+		historicalVariant := seedSourceProduct(test, ctx, organizations, owner, org, shop.BranchID, shop.LocationID, shop.LocationID)
+		write, _, problem := organizations.Authorized(ctx, owner, org, "storefront.manage")
+		if problem != nil {
 			test.Fatal(problem)
 		}
+		defer write.Rollback(ctx)
+		historicalID := "c6666666-6666-4666-8666-666666666666"
+		_, problem = write.Exec(ctx, `INSERT INTO online_orders(id,organization_id,branch_id,terminal_id,stock_location_id,status,customer_name,contact_phone,store_name,store_phone,estimated_total,access_hash,request_fingerprint,expires_at) SELECT $3,organization_id,branch_id,terminal_id,stock_location_id,'READY',customer_name,contact_phone,store_name,store_phone,estimated_total,access_hash,request_fingerprint,statement_timestamp()+interval '1 hour' FROM online_orders WHERE organization_id=$1 AND id=$2`, org, order.ID, historicalID)
+		if problem != nil {
+			test.Fatal(problem)
+		}
+		_, problem = write.Exec(ctx, `INSERT INTO online_order_items(organization_id,order_id,variant_id,product_name,variant_name,sku,unit,quantity,unit_price,line_total) SELECT organization_id,$3,$4,product_name,variant_name,sku,unit,quantity,unit_price,line_total FROM online_order_items WHERE organization_id=$1 AND order_id=$2`, org, order.ID, historicalID, historicalVariant)
+		if problem != nil {
+			test.Fatal(problem)
+		}
+		if problem = write.Commit(ctx); problem != nil {
+			test.Fatal(problem)
+		}
+		point := &pos.Service{Organization: organizations}
+		cart, problem := point.ImportOnlineOrder(ctx, owner, org, historicalID, pos.OnlineOrderInput{Revision: 1})
+		if problem != nil || cart.ReviewRequired || len(cart.Items) != 1 || cart.Items[0].Available != "3.000" {
+			test.Fatalf("historical linked cart: %+v %v", cart, problem)
+		}
+		checkout, problem := point.PrepareCheckout(ctx, owner, org, "b2222222-2222-4222-8222-222222222222", pos.CheckoutInput{CartID: cart.ID, Revision: cart.Revision, Method: "CASH", ExpectedTotal: cart.Total, Received: cart.Total, PricingRevision: cart.Pricing.Revision})
+		if problem != nil {
+			test.Fatal(problem)
+		}
+		checkout, problem = point.ConfirmPayment(ctx, owner, org, checkout.ID, "b3333333-3333-4333-8333-333333333333", pos.ConfirmationInput{Acknowledged: true})
+		if problem != nil {
+			test.Fatal(problem)
+		}
+		checkout, problem = point.CompleteCheckout(ctx, owner, org, checkout.ID)
+		if problem != nil || checkout.Status != "COMPLETED" || checkout.Method != "CASH" {
+			test.Fatalf("historical cash settlement: %+v %v", checkout, problem)
+		}
+		if _, problem = point.CompleteCheckout(ctx, owner, org, checkout.ID); problem != nil {
+			test.Fatalf("historical settlement replay: %v", problem)
+		}
+		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, shop.LocationID, historicalVariant, "1.000", "0.000", "1.000")
 	})
 }

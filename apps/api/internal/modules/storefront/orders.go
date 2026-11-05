@@ -268,25 +268,22 @@ func (service *Service) Transition(ctx context.Context, user, org, id string, in
 	if input.Status == "PREPARING" || input.Status == "READY" {
 		var paymentState string
 		var holdReleased bool
-		hasPayment := true
 		err = tx.QueryRow(ctx, "SELECT state, stock_hold_released FROM online_payment_attempts WHERE organization_id=$1 AND order_id=$2", org, id).Scan(&paymentState, &holdReleased)
 		if errors.Is(err, pgx.ErrNoRows) {
-			hasPayment = false
+			return current, ErrConflict
 		} else if err != nil {
 			return current, dbError(err)
 		}
-		if hasPayment && (paymentState != "PAID" || holdReleased) {
+		if paymentState != "PAID" || holdReleased {
 			return current, ErrConflict
 		}
-		if hasPayment {
-			var blocked bool
-			err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM online_refund_intents WHERE organization_id=$1 AND order_id=$2 AND state IN ('REQUESTED','PENDING','REQUIRES_ACTION','SUCCEEDED')) OR EXISTS(SELECT 1 FROM online_payment_reconciliations WHERE organization_id=$1 AND order_id=$2 AND action='FULFILLMENT_REVIEW')", org, id).Scan(&blocked)
-			if err != nil {
-				return current, dbError(err)
-			}
-			if blocked {
-				return current, ErrConflict
-			}
+		var blocked bool
+		err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM online_refund_intents WHERE organization_id=$1 AND order_id=$2 AND state IN ('REQUESTED','PENDING','REQUIRES_ACTION','SUCCEEDED')) OR EXISTS(SELECT 1 FROM online_payment_reconciliations WHERE organization_id=$1 AND order_id=$2 AND action='FULFILLMENT_REVIEW')", org, id).Scan(&blocked)
+		if err != nil {
+			return current, dbError(err)
+		}
+		if blocked {
+			return current, ErrConflict
 		}
 		shop := Settings{TerminalID: current.TerminalID, BranchID: current.BranchID}
 		if err = tx.QueryRow(ctx, "SELECT stock_location_id::text FROM online_orders WHERE organization_id=$1 AND id=$2", org, id).Scan(&shop.LocationID); err != nil {

@@ -172,6 +172,9 @@ func ingredientReservationAcceptance(test *testing.T, ctx context.Context, organ
 		if problem != nil {
 			current.Fatal(problem)
 		}
+		if _, problem = service.Transition(ctx, owner, org, order.ID, storefront.TransitionInput{Revision: order.Revision, Status: "PREPARING"}); !errors.Is(problem, storefront.ErrConflict) {
+			current.Fatalf("delivery without payment entered preparation: %v", problem)
+		}
 		assertStock(current, "1.000", "0.600")
 		if _, problem = service.Transition(ctx, owner, org, order.ID, storefront.TransitionInput{Revision: order.Revision, Status: "REJECTED", Message: "Synthetic delivery rejection"}); problem != nil {
 			current.Fatal(problem)
@@ -186,6 +189,9 @@ func ingredientReservationAcceptance(test *testing.T, ctx context.Context, organ
 	order, err := service.CreateOrder(ctx, shop.Slug, "ae555555-5555-4555-8555-555555555555", input)
 	if err != nil {
 		test.Fatal(err)
+	}
+	if _, err = service.Transition(ctx, owner, org, order.ID, storefront.TransitionInput{Revision: order.Revision, Status: "PREPARING"}); !errors.Is(err, storefront.ErrConflict) {
+		test.Fatalf("dine-in order without payment entered preparation: %v", err)
 	}
 	test.Run("dine in retry holds only once and snapshots are tenant protected", func(current *testing.T) {
 		replay, problem := service.CreateOrder(ctx, shop.Slug, order.ID, input)
@@ -354,7 +360,8 @@ func ingredientReservationAcceptance(test *testing.T, ctx context.Context, organ
 		if problem != nil {
 			current.Fatal(problem)
 		}
-		body := paymentFixtureEvent(current, "evt_"+key, "checkout.session.completed", paymentFixtureSession(attempt, "cs_test_"+key, "complete", "paid"))
+		providerKey := strings.ReplaceAll(key, "-", "")
+		body := paymentFixtureEvent(current, "evt_"+providerKey, "checkout.session.completed", paymentFixtureSession(attempt, "cs_test_"+providerKey, "complete", "paid"))
 		now := time.Now()
 		if _, problem = service.AcceptCustomerWebhook(ctx, body, paymentSignature(body, now), now); problem != nil {
 			current.Fatal(problem)
@@ -371,11 +378,11 @@ func ingredientReservationAcceptance(test *testing.T, ctx context.Context, organ
 		}
 		return checkout
 	}
-	test.Run("delivery menu and direct ingredient share one settlement movement", func(current *testing.T) {
+	test.Run("pickup menu and direct ingredient share one settlement movement", func(current *testing.T) {
 		if _, problem := restaurantService.SaveRecipe(ctx, owner, org, recipes[1].ID, "", restaurant.RecipeInput{BranchID: shop.BranchID, MenuVariantID: menus[1], Revision: recipes[1].Revision, Status: "ACTIVE", Items: []restaurant.RecipeIngredientInput{{IngredientVariantID: ingredient, Quantity: "0.200"}}}); problem != nil {
 			current.Fatal(problem)
 		}
-		input := request([]storefront.ItemInput{{VariantID: menus[1], Quantity: "1.000"}, {VariantID: ingredient, Quantity: "0.100"}}, "DELIVERY", "")
+		input := request([]storefront.ItemInput{{VariantID: menus[1], Quantity: "1.000"}, {VariantID: ingredient, Quantity: "0.100"}}, "PICKUP", "")
 		checkout := settle(current, "ae999999-9999-4999-8999-999999999999", input)
 		assertStock(current, "0.100", "0.000")
 		read := begin(org)
@@ -425,5 +432,75 @@ func ingredientReservationAcceptance(test *testing.T, ctx context.Context, organ
 		if problem := read.QueryRow(ctx, `SELECT count(*),sum(-quantity_delta)::text,(SELECT quantity::text FROM stock_balances WHERE organization_id=$1 AND location_id=$3 AND variant_id=$4) FROM stock_movements WHERE organization_id=$1 AND sale_id=$2 AND variant_id=$4`, org, checkout.SaleID, shop.LocationID, direct).Scan(&count, &quantity, &balance); problem != nil || count != 1 || quantity != "1.000" || balance != "0.000" {
 			current.Fatalf("direct snapshot settlement: %d %s %s %v", count, quantity, balance, problem)
 		}
+	})
+	test.Run("delivery settlement requires shipment and retains paid hold", func(current *testing.T) {
+		write := begin(org)
+		defer write.Rollback(ctx)
+		var operation string
+		if problem := write.QueryRow(ctx, `INSERT INTO inventory_operations(organization_id,actor_id,operation,idempotency_key,fingerprint) VALUES($1,$2,'ingredient.delivery-guard',gen_random_uuid(),$3) RETURNING id::text`, org, owner, strings.Repeat("0", 64)).Scan(&operation); problem != nil {
+			current.Fatal(problem)
+		}
+		if _, problem := write.Exec(ctx, `INSERT INTO stock_movements(organization_id,branch_id,location_id,variant_id,movement_type,quantity_delta,operation_id,reason_code,performed_by) VALUES($1,$2,$3,$4,'ADJUSTMENT_IN',0.200,$5,'SYNTHETIC_DELIVERY_GUARD',$6)`, org, shop.BranchID, shop.LocationID, ingredient, operation, owner); problem != nil {
+			current.Fatal(problem)
+		}
+		if _, problem := write.Exec(ctx, `UPDATE inventory_operations SET result='{}' WHERE organization_id=$1 AND id=$2`, org, operation); problem != nil {
+			current.Fatal(problem)
+		}
+		if problem := write.Commit(ctx); problem != nil {
+			current.Fatal(problem)
+		}
+		items := []storefront.ItemInput{{VariantID: menus[1], Quantity: "1.000"}, {VariantID: ingredient, Quantity: "0.100"}}
+		quote, problem := service.Quote(ctx, shop.Slug, storefront.QuoteInput{Items: items, Fulfillment: "DELIVERY"})
+		if problem != nil {
+			current.Fatal(problem)
+		}
+		input := storefront.OrderInput{Items: items, QuoteID: quote.ID, Fulfillment: "DELIVERY", DeliveryAddress: "Synthetic delivery address", CustomerName: "Synthetic recipe buyer", ContactPhone: "0800000000", AccessToken: strings.Repeat("a", 64)}
+		next, problem := service.CreateOrder(ctx, shop.Slug, "aecccccc-cccc-4ccc-8ccc-cccccccccccc", input)
+		if problem != nil {
+			current.Fatal(problem)
+		}
+		attempt, problem := service.BeginCustomerPayment(ctx, shop.Slug, storefront.TrackingInput{OrderID: next.ID, AccessToken: input.AccessToken})
+		if problem != nil {
+			current.Fatal(problem)
+		}
+		body := paymentFixtureEvent(current, "evt_ingredientDeliveryGuard", "checkout.session.completed", paymentFixtureSession(attempt, "cs_test_ingredientDeliveryGuard", "complete", "paid"))
+		now := time.Now()
+		if _, problem = service.AcceptCustomerWebhook(ctx, body, paymentSignature(body, now), now); problem != nil {
+			current.Fatal(problem)
+		}
+		for _, status := range []string{"PREPARING", "READY"} {
+			next, problem = service.Transition(ctx, owner, org, next.ID, storefront.TransitionInput{Revision: next.Revision, Status: status})
+			if problem != nil {
+				current.Fatal(problem)
+			}
+		}
+		assertStock(current, "0.300", "0.300")
+		type effects struct{ carts, checkouts, sales, movements int }
+		readEffects := func() effects {
+			current.Helper()
+			read := begin(org)
+			defer read.Rollback(ctx)
+			var result effects
+			if problem := read.QueryRow(ctx, `SELECT (SELECT count(*) FROM pos_carts WHERE organization_id=$1),(SELECT count(*) FROM pos_checkouts WHERE organization_id=$1),(SELECT count(*) FROM sales WHERE organization_id=$1),(SELECT count(*) FROM stock_movements WHERE organization_id=$1)`, org).Scan(&result.carts, &result.checkouts, &result.sales, &result.movements); problem != nil {
+				current.Fatal(problem)
+			}
+			return result
+		}
+		before := readEffects()
+		if _, problem = point.SettlePrepaidOnlineOrder(ctx, owner, org, next.ID, pos.OnlineOrderInput{Revision: next.Revision}); !errors.Is(problem, pos.ErrConflict) {
+			current.Fatalf("delivery bypassed shipment guard: %v", problem)
+		}
+		if after := readEffects(); after != before {
+			current.Fatalf("delivery failure changed transaction effects: before=%+v after=%+v", before, after)
+		}
+		read := begin(org)
+		defer read.Rollback(ctx)
+		var status, paymentState string
+		var released, unlinked bool
+		if problem = read.QueryRow(ctx, `SELECT doc.status,attempt.state,attempt.stock_hold_released,doc.cart_id IS NULL AND doc.sale_id IS NULL FROM online_orders doc JOIN online_payment_attempts attempt ON attempt.organization_id=doc.organization_id AND attempt.order_id=doc.id WHERE doc.organization_id=$1 AND doc.id=$2`, org, next.ID).Scan(&status, &paymentState, &released, &unlinked); problem != nil || status != "READY" || paymentState != "PAID" || released || !unlinked {
+			current.Fatalf("delivery hold changed: status=%s payment=%s released=%v unlinked=%v error=%v", status, paymentState, released, unlinked, problem)
+		}
+		read.Rollback(ctx)
+		assertStock(current, "0.300", "0.300")
 	})
 }

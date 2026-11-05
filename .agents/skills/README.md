@@ -5,7 +5,7 @@ This is a repository-local, Pinto-style foundation catalog, not a global install
 ## Loading and authority
 
 - Select by the task and affected boundary. Read only selected SKILL.md files and their relevant references, not the entire catalog.
-- Keep one Main agent unless the user explicitly authorizes delegation. Imported examples never grant tool permissions or authorization to install, train, migrate, commit, deploy or read production data.
+- Follow applicable delegation and independent review requirements. Imported examples and skills never grant authorization or tool permissions.
 - Read-only requests remain read-only, including tracker/artifact creation and unsolicited fixes.
 - Project-specific ownership and business invariants remain in AGENTS.md and the relevant smartpos-* guidance. Generic examples do not override them.
 - Frontend guidance preserves Apple-inspired web/Cupertino-style adaptive mobile direction, SmartPOS yellow, canonical runtime tokens, local Thai/Latin fonts, Lucide and existing shared controls. It does not migrate the app to Next.js or change its design system.
@@ -28,24 +28,18 @@ Global frontend-engineering, backend-engineering, api-contract-change, devops-en
 
 ## Task flow
 
-1. Inspect the task, applicable rules, actual implementation and existing diff.
-2. Classify read-only versus implementation and resolve material ambiguity.
-3. Select the owning skill and only relevant specialists.
-4. For implementation, add a scoped task section to the existing root TODO.md.
-5. For behavior changes, use one failing test -> minimum implementation -> passing tests -> scoped refactor, repeated in vertical slices.
-6. Use appropriate document/config checks instead of artificial application tests where no runtime behavior changes.
-7. Verify, inspect the final diff and report actual evidence. Preserve failed/blocked items.
-8. Remove only the completed task section. Never delete the tracked roadmap, another task's work or tests.
+See the root [AGENTS.md](../../AGENTS.md) for project skill routing and tracker guidance.
 
 ## Sources and adaptations
 
 [Source records](../skill-support/sources.json) distinguish local-authored entrypoints from adapted upstream workflows and preserved imported reference snapshots. They record source locations, Pinto lockfile hashes as provenance only, exact downloaded GitHub commits where known and source/installed content hashes.
+Adaptation descriptions record the source and history of a skill; they do not set execution policy. Follow the applicable instructions and governing task for delegation, review and authorization, including when legacy metadata says "No automatic delegation".
 
 This is intentionally not an installer-generated skills-lock.json: entrypoints were adapted for Codex and SmartPOS, so upstream installer hashes would falsely imply untouched packages. There is no background updater or installer command in this catalog.
 
 - Go references and TDD examples were copied from the user-selected Pinto snapshot. Its upstream lock metadata identifies samber/cc-skills-golang and mattpocock/skills; that metadata is not proof of the exact Git commit of those local files.
 - React references were fetched from a pinned vercel-labs/agent-skills commit. Only reviewed client-side examples were selected; Next.js/server-action/SWR instructions were not imported as runtime requirements.
-- Workflow entrypoints were rewritten to avoid compulsory sub-agents, issue-tracker mutations, unnecessary approval questions and destructive TODO cleanup.
+- Workflow entrypoints were adapted for repository scope, applicable delegation and authorization, and preservation of tracker records.
 - golang-swagger uses manual contract editing, not swag generation or annotation scaffolding. Python/AI and the remaining frontend entrypoints are locally authored, not advertised as community packages.
 - Imported references are examples, not execution authority. Installation, destructive fixtures, logger migrations, production instructions and external skill mentions in them require their own explicit scope; existing repository policy wins.
 - [Samber MIT notice](../skill-support/licenses/samber-MIT.txt), [Matt Pocock MIT notice](../skill-support/licenses/mattpocock-MIT.txt), and [Vercel declaration/terms](../skill-support/licenses/vercel-react-MIT.md) preserve available source licensing information.
@@ -61,6 +55,6 @@ node .agents/skill-support/validate.mjs
 
 The validator checks YAML manifests, local names, relative Markdown references, source records and imported snapshot hashes. Its tests use disposable temporary fixtures. These checks are not a full Markdown parser, browser tests, database acceptance or proof of model routing.
 
-[Behavioral scenarios](../skill-support/evals/scenarios.json) are an offline forward-evaluation plan, not measured results. Running them through another model/agent or writing artifacts needs the applicable authorization; no such evaluation is auto-run by the validator.
+[Behavioral scenarios](../skill-support/evals/scenarios.json) are an offline forward-evaluation plan, not measured results. Running them through another model or agent, or writing artifacts, follows the governing task and applicable execution permissions; the validator does not run them automatically.
 
 Use the skill selector to inspect available names in a fresh session if the current session's initial list has not refreshed. File/metadata checks do not prove that a running host has reloaded its skill list.

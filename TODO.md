@@ -1,3 +1,48 @@
+# Project policy alignment (2026-11-05)
+
+Scope: align the five project instruction/skill-policy files with governing
+engineering policies without copying global rules or a machine-specific global
+inheritance sentence/path. Preserve SmartPOS constraints and unrelated work.
+Size: Medium. Risk: High (delegation, authorization and review requirements).
+Main owns this section and validation; documentation-engineer owns the five
+policy files; an independent code-reviewer checks the final policy diff.
+No runtime, global configuration, database, commit, push or deployment changes.
+Recovery: reverse only this task's hunks; preserve the existing roadmap and edits.
+
+- [x] Reconcile the approved draft, instruction scope, Git status and file hashes.
+- [x] Inspect baseline policy-consumer decisions: backend ownership, auth/tenant
+  review, local versus production DB authority, read-only diagnosis and trackers.
+  - Baseline: the consuming agent chose the governing-policy actions but identified
+    conflicting Main-only, separate review approval and mandatory TODO cleanup
+    rules. This is conflict evidence, not an observed runtime delegation failure.
+  - Before edits: skill validator tests passed 10/10 and skill validation passed.
+- [x] Update AGENTS.md, CLAUDE.md, .agents/skills/README.md,
+  .agents/skills/diagnose/SKILL.md and diagnose adaptation metadata in sources.json.
+- [x] Repeat policy-consumer scenarios and run local skill validation, references,
+  scoped formatting/provenance checks and git diff --check.
+- [x] Resolve independent review findings and retain verified acceptance evidence.
+  - PASS: node --test .agents/skill-support/validate.test.mjs (10/10),
+    node .agents/skill-support/validate.mjs, scoped existing Prettier --check for
+    the five policy files, and git diff --check.
+  - PASS: independent code-reviewer re-reviewed the actual five-file policy diff.
+    Its initial P2 duplication finding was fixed by removing generic root workflow
+    and replacing CLAUDE/README task lists with the project guide reference.
+  - PASS: five fresh policy-consumer decisions preserve backend specialist use,
+    mandatory high-risk review, local/production authority, read-only diagnosis,
+    and proportionate tracker handling. These interpretations are not measured
+    runtime delegation or proof that a host has reloaded instructions.
+  - PASS: source identities and snapshot hashes are unchanged; only diagnose
+    adaptation wording changed. Architecture/map, retail invariants and UI/AI
+    boundaries match baseline. The forbidden inheritance sentence/path is absent.
+  - PASS: original TODO remainder and all 12 unrelated changed/untracked files
+    match preservation hashes; global AGENTS.md is unchanged.
+  - Resolved check/tool failures: Windows multiline patch transport and an
+    incorrect executable path failed before writes; supported Node/apply_patch
+    transport succeeded. A CLAUDE trailing blank line was corrected. A comparison
+    helper initially used the old routing heading; corrected boundaries passed.
+  - No application, browser or database tests: policy-only scope. No new tests
+    that merely grep prose, no runtime edits, no commit, push or deployment.
+
 # Restaurant-only consolidation (2026-11-04)
 
 Approved scope: execute the restaurant-only plan on feature/fix-flow-system.
@@ -25,6 +70,20 @@ No commits, branch changes, provider requests, deployments or primary DB changes
   - pos.SettlePrepaidOnlineOrder accounts for frozen shipping fees in total validation (cartTotal + shippingFee == expectedTotal).
   - PASS: go test ./... -count=1 (18 Go packages pass), go vet ./... pass, unit tests added in queue_test.go and online_orders_test.go.
 - [ ] Complete ingredient reservation/consumption and restaurant recovery.
+  - Active continuation HND-20261105-004600 (2026-11-05): ingredient snapshot/reservation/deduction only; no forecast or UI changes.
+  - [x] Inspect order, recipe, quality, payment and sale transaction boundaries.
+  - [x] Add failing reservation/snapshot/settlement regression coverage.
+    - RED/GREEN: frozen-recipe Go tests first failed compilation before their resolver existed; schema readiness failed at 27 before RequiredVersion 28. Review regressions reproduced ambiguous order/cart lookup, missing SQL source boundaries and per-movement whole-order expansion, then passed after fixes. SQL source checks are not SQL execution.
+  - [/] Implement immutable order ingredient snapshots and atomic reservation/consumption.
+    - Draft migration 28 snapshots recipe ingredients/direct stock, preserves exact quantities and RLS, aggregates shared holds and enforces matching sale operations. POS settlement reads frozen snapshots; order/cart exclusion paths are distinct. Live orders must be drained/reconciled before upgrade; no existing data was migrated.
+    - Existing adjacent gap confirmed against HEAD by reviewer: catalog_browse.go still bases menu availability on physical menu stock. This continuation does not change the browse/UI flow or establish end-to-end storefront acceptance.
+  - [?] Verify shortage, release, retry, concurrency and tenant boundaries on an isolated database.
+    - BLOCKED: SMARTPOS_SINGLE_STORE_TEST_DSN is absent; Docker/PostgreSQL tools are unavailable on PATH and the usual local install paths. Guarded TestSingleStoreIsolatedDatabase run SKIPPED. No primary database connection or migration was attempted.
+    - Integration cases compile but have not executed: shared shortage/rollback, competing holds, release, frozen/deactivated recipes, direct item gaining a recipe, mixed recipe/direct settlement, operation mismatch, denied/foreign access, and concurrent settlement retry. Actual migration 27-to-28 refusal/preservation and SQL/RLS/concurrency acceptance remain required.
+  - [x] Run focused/full Go checks and authorized independent source review; retain unresolved gates.
+    - PASS (2026-11-05): go test ./... -count=1; go vet ./...; go build ./... from apps/api; npm run contracts:check (18 modules / 120 routes); scoped gofmt check; git diff --check. Logs: .local/ingredient-reservation/. Go suite success includes skipped isolated DB acceptance.
+    - PASS: independent reviewer rechecked the final scalar requirement helper/guard, resolved all four original source findings and found no new source blocker. Its latest static migration regressions and diff check passed. This is source review, not SQL acceptance; migration/RLS/transactions/concurrency and isolated deferred-mismatch coverage remain BLOCKED. Race detector not run because CGO_ENABLED=0; release readiness remains unverified.
+  - [ ] Clean up only this continuation checklist after acceptance passes.
 - [ ] Retire orphan retail API/contracts after replacement acceptance.
 - [ ] Implement reports, bounded forecast/backtesting and manager feedback.
 - [ ] Run focused and full applicable checks, browser and isolated DB acceptance.

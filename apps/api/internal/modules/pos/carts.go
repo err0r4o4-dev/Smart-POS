@@ -72,7 +72,7 @@ func readCart(ctx context.Context, tx pgx.Tx, actor organization.Member, user, o
 		}
 		value.BatchID = input.batch
 		value.BatchVerified = input.batch != nil
-		recipe, hasRecipe, err := readActiveSaleRecipe(ctx, tx, org, item.BranchID, value.VariantID)
+		recipe, hasRecipe, err := readSaleRecipe(ctx, tx, org, item.BranchID, id, value.VariantID)
 		if err != nil {
 			return item, err
 		}

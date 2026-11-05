@@ -28,7 +28,7 @@
       "adaptations": [
         "Concise task-specific routing",
         "Repository scope and permission precedence",
-        "No automatic delegation, installation or external mutation"
+        "Delegation follows applicable policy; no automatic installation or external mutation"
       ]
     },
     {

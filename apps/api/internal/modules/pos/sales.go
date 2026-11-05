@@ -43,7 +43,7 @@ func settle(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org
 	if err = validateReward(ctx, tx, actor, org, item); err != nil {
 		return "", err
 	}
-	movements, err := effectiveSaleMovements(ctx, tx, org, item.BranchID, item.Items)
+	movements, err := effectiveSaleMovements(ctx, tx, org, item.BranchID, item.CartID, item.Items)
 	if err != nil {
 		return "", err
 	}
@@ -52,7 +52,7 @@ func settle(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org
 		if err != nil {
 			return "", err
 		}
-		_, hasRecipe, err := readActiveSaleRecipe(ctx, tx, org, item.BranchID, snapshot.VariantID)
+		_, hasRecipe, err := readSaleRecipe(ctx, tx, org, item.BranchID, item.CartID, snapshot.VariantID)
 		if err != nil {
 			return "", err
 		}

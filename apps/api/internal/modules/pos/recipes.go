@@ -27,6 +27,51 @@ type saleMovementAccumulator struct {
 	hasRecipe bool
 }
 
+func readSaleRecipe(ctx context.Context, tx pgx.Tx, org, branch, cart, menuVariant string) (saleRecipe, bool, error) {
+	return readReservedRecipe(ctx, tx, org, branch, cart, menuVariant, false)
+}
+
+func readOrderRecipe(ctx context.Context, tx pgx.Tx, org, branch, order, menuVariant string) (saleRecipe, bool, error) {
+	return readReservedRecipe(ctx, tx, org, branch, order, menuVariant, true)
+}
+
+func readReservedRecipe(ctx context.Context, tx pgx.Tx, org, branch, document, menuVariant string, byOrder bool) (saleRecipe, bool, error) {
+	if document == "" {
+		return readActiveSaleRecipe(ctx, tx, org, branch, menuVariant)
+	}
+	identity := "doc.cart_id=$3::uuid"
+	if byOrder {
+		identity = "doc.id=$3::uuid"
+	}
+	rows, err := tx.Query(ctx, `SELECT snapshot.stock_variant_id::text,snapshot.quantity::text,snapshot.recipe_id IS NOT NULL
+ FROM online_order_stock_items snapshot JOIN online_orders doc ON doc.organization_id=snapshot.organization_id AND doc.id=snapshot.order_id
+ WHERE snapshot.organization_id=$1 AND doc.branch_id=$2 AND `+identity+`
+ AND snapshot.menu_variant_id=$4 ORDER BY snapshot.stock_variant_id`, org, branch, document, menuVariant)
+	if err != nil {
+		return saleRecipe{}, false, dbError(err)
+	}
+	recipe := saleRecipe{Items: []saleRecipeItem{}}
+	found, hasRecipe := false, false
+	for rows.Next() {
+		var item saleRecipeItem
+		if err = rows.Scan(&item.IngredientVariantID, &item.Quantity, &hasRecipe); err != nil {
+			rows.Close()
+			return saleRecipe{}, false, dbError(err)
+		}
+		found = true
+		recipe.Items = append(recipe.Items, item)
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return saleRecipe{}, false, dbError(err)
+	}
+	if found {
+		return recipe, hasRecipe, nil
+	}
+	return readActiveSaleRecipe(ctx, tx, org, branch, menuVariant)
+}
+
 func readActiveSaleRecipe(ctx context.Context, tx pgx.Tx, org, branch, menuVariant string) (saleRecipe, bool, error) {
 	var recipeID string
 	err := tx.QueryRow(ctx, `SELECT id::text FROM restaurant_recipes WHERE organization_id=$1 AND branch_id=$2 AND menu_variant_id=$3 AND status='ACTIVE' FOR SHARE`, org, branch, menuVariant).Scan(&recipeID)
@@ -82,6 +127,10 @@ func formatScaled(amount int64) string {
 }
 
 func recipeCapacity(ctx context.Context, tx pgx.Tx, org, location, cart, quantity string, recipe saleRecipe) (string, bool, error) {
+	return reservedRecipeCapacity(ctx, tx, org, location, cart, quantity, recipe, false)
+}
+
+func reservedRecipeCapacity(ctx context.Context, tx pgx.Tx, org, location, document, quantity string, recipe saleRecipe, byOrder bool) (string, bool, error) {
 	capacity := new(big.Int).SetInt64(maxDecimal)
 	for _, ingredient := range recipe.Items {
 		perDish, err := scaled(ingredient.Quantity, 3)
@@ -97,7 +146,11 @@ func recipeCapacity(ctx context.Context, tx pgx.Tx, org, location, cart, quantit
 		}
 		availableText := "0.000"
 		saleable := true
-		if err := inventory.QualityAvailabilityForCart(ctx, tx, org, location, ingredient.IngredientVariantID, nil, cart, &availableText, &saleable); err != nil {
+		availability := inventory.QualityAvailabilityForCart
+		if byOrder {
+			availability = inventory.QualityAvailabilityForOrder
+		}
+		if err := availability(ctx, tx, org, location, ingredient.IngredientVariantID, nil, document, &availableText, &saleable); err != nil {
 			return "0.000", false, dbError(err)
 		}
 		if !saleable {
@@ -126,10 +179,10 @@ func recipeCapacity(ctx context.Context, tx pgx.Tx, org, location, cart, quantit
 	return formatScaled(capacity.Int64()), capacity.Cmp(big.NewInt(requested)) >= 0, nil
 }
 
-func effectiveSaleMovements(ctx context.Context, tx pgx.Tx, org, branch string, items []CartItem) ([]inventory.Item, error) {
+func effectiveSaleMovements(ctx context.Context, tx pgx.Tx, org, branch, cart string, items []CartItem) ([]inventory.Item, error) {
 	accumulated := map[string]*saleMovementAccumulator{}
 	for _, item := range items {
-		recipe, hasRecipe, err := readActiveSaleRecipe(ctx, tx, org, branch, item.VariantID)
+		recipe, hasRecipe, err := readSaleRecipe(ctx, tx, org, branch, cart, item.VariantID)
 		if err != nil {
 			return nil, err
 		}
@@ -195,7 +248,7 @@ func effectiveSaleMovements(ctx context.Context, tx pgx.Tx, org, branch string, 
 	return result, nil
 }
 func RecipeAvailability(ctx context.Context, tx pgx.Tx, org, branch, location, cart, variant, quantity string) (string, bool, bool, error) {
-	recipe, hasRecipe, err := readActiveSaleRecipe(ctx, tx, org, branch, variant)
+	recipe, hasRecipe, err := readSaleRecipe(ctx, tx, org, branch, cart, variant)
 	if err != nil {
 		return "", false, false, err
 	}
@@ -203,5 +256,17 @@ func RecipeAvailability(ctx context.Context, tx pgx.Tx, org, branch, location, c
 		return "", false, true, nil
 	}
 	available, saleable, err := recipeCapacity(ctx, tx, org, location, cart, quantity, recipe)
+	return available, true, saleable, err
+}
+
+func RecipeAvailabilityForOrder(ctx context.Context, tx pgx.Tx, org, branch, location, order, variant, quantity string) (string, bool, bool, error) {
+	recipe, hasRecipe, err := readOrderRecipe(ctx, tx, org, branch, order, variant)
+	if err != nil {
+		return "", false, false, err
+	}
+	if !hasRecipe {
+		return "", false, true, nil
+	}
+	available, saleable, err := reservedRecipeCapacity(ctx, tx, org, location, order, quantity, recipe, true)
 	return available, true, saleable, err
 }

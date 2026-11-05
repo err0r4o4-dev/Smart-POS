@@ -18,4 +18,4 @@ Establish the requested outcome: explanation only or an authorized fix. Do not s
 5. For an authorized fix, add a focused regression test and repair the root cause with the smallest change.
 6. Re-run the targeted check and verify affected boundaries; report unrelated findings without fixing them.
 
-Work with one Main agent unless the user explicitly authorizes delegation. Do not add logging infrastructure, install debugging tools or alter production as an automatic diagnosis step. State uncertainty and blockers instead of guessing a root cause.
+Follow applicable delegation and review requirements. Do not add logging infrastructure, install debugging tools or alter production as an automatic diagnosis step. State uncertainty and blockers instead of guessing a root cause.

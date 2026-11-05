@@ -5,24 +5,14 @@
 These instructions apply to SmartPOS, a retail management application. Do not
 import unrelated KineGuide, LostLink, or Pinto business rules, frameworks, team
 requirements, or release policies from reference projects or broader directory
-guides. Report conflicts without editing parent guides. Higher-priority
-instructions and actual execution permissions always apply.
+guides. Report conflicts without editing parent guides. These project instructions
+supplement applicable operating policy and do not override its delegation, review,
+or authorization requirements. Actual execution permissions apply.
 
 - Respond in Thai unless another language is requested; preserve technical names.
-- Inspect, explain, analyze, review-only, and show-flow requests are read-only.
-- Inspect applicable instructions, actual stack, affected code, and Git diff
-  before editing. Preserve unrelated tracked and untracked work.
-- Implement only the requested scope; report unrelated defects without fixing them.
-- Use one Main agent by default. Workers or Reviewers require explicit user
-  authorization; a skill or role name does not authorize delegation.
-- Do not change models, providers, agent configuration, execution rules, sandbox
-  permissions, global skills, or global tool configuration unless explicitly requested.
-- Do not commit, create branches, push, rewrite history, deploy, install dependencies,
-  migrate, reset databases, or delete data without applicable scope and approval.
-- For requested implementation, maintain a task checklist in root `TODO.md` using
-  the lifecycle below. Preserve the existing roadmap and unrelated task sections.
-  Read-only requests do not create or update trackers. Do not create other rule
-  or tracker files as routine workflow support.
+- Authorized local migrations and cleanup may use task-owned disposable databases;
+  protect primary and retained databases. Remote and production changes require
+  applicable approval.
 
 Project-wide guidance lives here; applicable nested instructions refine it.
 `CLAUDE.md` describes Claude execution, not a second business policy. Skills provide
@@ -73,39 +63,14 @@ Browser / React -> public Go API -> PostgreSQL
 | `docs`                           | Architecture, business flows, database policy, development evidence |
 | `infra`                          | Existing infrastructure configuration                               |
 
-## Workflow and skill routing
-
-1. Identify outcome, allowed writes, read-only references, and risks.
-2. Inspect affected implementation, callers, contracts, tests, and user changes.
-3. Select skills by the requested behavior and actual affected boundaries. Use one
-   primary skill and add specialists only when needed; do not load the whole library
-   or impose a fixed skill count on cross-domain work.
-4. Define observable acceptance and maintain the implementation checklist below.
-   Ask only about material ambiguity that inspection cannot resolve.
-5. For behavior changes, work in test-first vertical slices: one relevant failing
-   test, minimum implementation, then refactor with tests passing. Use existing
-   test seams; documentation-only work uses document checks rather than app tests.
-6. Run appropriate authorized checks, review the diff, report actual results, and
-   clean up only the completed task's checklist.
+## Tracker and skill routing
 
 ### TODO lifecycle
 
-- Before implementation edits, create a task section in the existing root
-  `TODO.md`. If the file does not exist, create a task-only file. Include inspection,
-  acceptance/test design, tests or appropriate document/config checks,
-  implementation, verification, and cleanup.
-- Work from the first unchecked item in the current task section. Mark `[x]`
-  only after that item actually completes; never mark blocked or failed checks done.
-- Record failed commands, blockers, and checks not run beneath their relevant
-  unchecked items. Keep the section when required work remains incomplete.
-- After acceptance and verification succeed, remove only the section created for
-  that task if it has no unrelated user additions. Never delete the tracked roadmap,
-  another task section, or tests. Delete a task-only file only if this task created
-  it, it contains no user additions, and deletion is authorized.
-- Read-only explanations, inspections, reviews, and show-flow requests do not
-  create checklists or authorize implementation, tests with side effects, or fixes.
-- This project-local workflow does not change global guidance, execution policy,
-  models, providers, tool permissions, or the requirement for approval where needed.
+- Use the existing `TODO.md` for meaningful sequencing, dependencies, interruptions,
+  or acceptance tracking. Small bounded changes need no task section.
+- Preserve existing records and unrelated work. Record blockers and failed checks;
+  mark work verified only after implementation, required checks, and review pass.
 
 ### Foundation skills and selective loading
 
@@ -113,8 +78,8 @@ Repository skills live under `.agents/skills/<name>/SKILL.md`. Their description
 identify when they apply; read the full entrypoint only when selected, and read
 linked references only for the relevant mode. Skills are instructions, not services
 that run in the background. Their scripts and example commands are not auto-run.
-They never authorize dependency installation, production access, delegation,
-commits, migrations, or deployment.
+They do not themselves authorize installation, production access, delegation,
+commits, migrations, or deployment; follow the governing task and execution policy.
 
 The foundation catalog and source/adaptation records are in
 `.agents/skills/README.md` and `.agents/skill-support/sources.json`. Existing
@@ -171,22 +136,13 @@ scope when applying generic guidance.
 
 ## Safety and verification
 
-- Never expose credentials, secrets, session/CSRF tokens, or private data. Do not
-  print environment files or credential stores merely for context.
 - Preserve backend authorization, organization/branch scope, and transaction
   context. Do not weaken checks or use another tenant's data as a fixture.
 - Database/integration checks need a confirmed isolated target. Inspect scripts
   for service startup, migrations, and persistent fixture writes first. Never use
-  the primary database or reset volumes as a verification shortcut.
-- Never delete, skip, weaken, or bypass tests to obtain a pass.
+  the primary or a retained database, or reset retained volumes, as a verification
+  shortcut. Authorized cleanup may target task-owned disposable databases and volumes.
 - Discover commands from project scripts. Frontend gates include `npm run typecheck`,
   `npm run lint`, `npm run test`, and `npm run build`. `npm run contracts:check`
   checks contract inventory; `npm run e2e` needs the appropriate running environment.
-- Documentation-only changes need metadata, references, formatting, and diff
-  checks, not artificial application tests. Scope formatting to changed files;
-  do not run repository-wide auto-fix for a small task.
 - Builds are not browser evidence; unit tests are not database acceptance.
-  Ordinary secure coding is required, but security-review and work-pattern-analysis
-  require explicit authorization and are not automatic audits.
-- Distinguish passed, failed, not run, and blocked. Historical reports are not
-  checks performed in the current task. Report paths, results, and limitations.

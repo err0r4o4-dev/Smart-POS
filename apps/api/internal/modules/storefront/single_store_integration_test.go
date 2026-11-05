@@ -309,6 +309,13 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 	t.Run("atomic online reservation foundation", func(t *testing.T) {
 		reservationAcceptance(t, ctx, multi, owner.ID, first.Organization.ID, firstShop)
 	})
+	t.Run("recipe ingredient reservation and deduction", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "ae111111-1111-4111-8111-111111111111", createInput("INGREDIENT"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		ingredientReservationAcceptance(t, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "ingredient-fixture"), first.Organization.ID, guest.ID)
+	})
 	t.Run("unpublished pinned store does not fall back to another store", func(t *testing.T) {
 		_, problem := (&storefront.Service{Organization: multi}).SaveSettings(ctx, owner.ID, first.Organization.ID, storefront.SettingsInput{Slug: firstShop.Slug, Name: firstShop.Name, TerminalID: firstShop.TerminalID, Revision: firstShop.Revision})
 		if problem != nil {

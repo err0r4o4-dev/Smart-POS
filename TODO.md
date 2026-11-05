@@ -1,3 +1,9 @@
+# Fix TS6133 unused Building2 import in OrganizationPages.tsx (2026-11-06)
+
+- [x] 1. Remove unused `Building2` import from `apps/web/src/features/organization/OrganizationPages.tsx`
+- [ ] 2. Verify typecheck and web build succeed
+- [ ] 3. Remove this temporary task section
+
 # Restaurant Setup UI Redesign (/setup) (2026-11-06)
 
 Approved scope: Redesign `/setup` page UI to match the user's VELOPOS screenshot reference.

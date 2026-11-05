@@ -58,3 +58,8 @@ are in `apps/web/src/styles/tokens.css`.
   startup and cleanup effects first. Static checks and unit tests are not database
   acceptance, and a build is not browser evidence. Historical results do not
   establish current readiness; consult current code, `TODO.md` and fresh evidence.
+
+## Task lifecycle & TODO.md
+
+- Track active scope, execution steps and verification items in `TODO.md` during work.
+- **Task closure**: When a task is completed and verified, close the task by deleting that task's section from `TODO.md`. Do not leave completed task sections lingering in `TODO.md`.

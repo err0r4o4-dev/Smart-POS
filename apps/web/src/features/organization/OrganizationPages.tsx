@@ -5,7 +5,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Banknote,
-  Building2,
   Check,
   CheckCircle2,
   ChevronDown,

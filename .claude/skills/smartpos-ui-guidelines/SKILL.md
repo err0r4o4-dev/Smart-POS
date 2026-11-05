@@ -1,18 +1,25 @@
 ---
 name: smartpos-ui-guidelines
-description: Design or adjust SmartPOS Apple-inspired web UI and adaptive Cupertino-style mobile layouts using existing tokens, local fonts, and Lucide. Use for visual changes or Apple-style requests; read the canonical UI skill and do not perform an unsolicited redesign.
+description: Design or adjust SmartPOS Apple-inspired web UI, adaptive
+  Cupertino-style mobile layouts, visual hierarchy, and shared controls while
+  preserving runtime tokens, local fonts, Lucide icons, and efficient retail
+  workflows. Use for visual changes or Apple-style design requests, not
+  backend-only work or an unsolicited redesign.
 ---
 
 # smartpos-ui-guidelines Claude Adapter
 
-Read `.agents/skills/smartpos-ui-guidelines/SKILL.md` completely before using
-this skill. That repository-root-relative file is the canonical workflow,
-reference map, verification guidance, and output contract.
+Read `.agents/skills/smartpos-ui-guidelines/SKILL.md` completely before using this skill.
+That repository-root-relative file is the canonical workflow, reference map,
+verification guidance, and output contract.
 
-Follow applicable `AGENTS.md`, `CLAUDE.md`, the current task scope, and actual
-execution permissions. Load only references relevant to the task.
+Resolve bundled scripts and references relative to the canonical skill directory;
+project application, database, and documentation paths are repository-root relative.
 
-This adapter does not duplicate or redefine canonical policy. It does not grant
-permission to edit files, run mutating checks, install tools, delegate, or perform
-an audit. If the canonical file is unavailable, report the missing path instead
-of inventing a replacement workflow.
+Follow applicable AGENTS.md, CLAUDE.md, the current task scope, and actual execution
+permissions. Skills never grant authorization or override required checks,
+independent review, or host controls. Load only task-relevant references, combine
+overlapping procedures without duplicate loops, and do not run examples automatically.
+
+This adapter contains no independent workflow. If the canonical file is unavailable,
+report its missing path instead of inventing a replacement.

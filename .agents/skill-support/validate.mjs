@@ -13,6 +13,31 @@ function walk(directory) {
   });
 }
 
+function withoutFencedCode(content) {
+  let opening;
+  return content
+    .split('\n')
+    .filter((line) => {
+      const marker = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
+      if (opening) {
+        if (
+          marker &&
+          marker[1][0] === opening[0] &&
+          marker[1].length >= opening.length &&
+          /^[ \t]*$/.test(marker[2])
+        )
+          opening = undefined;
+        return false;
+      }
+      if (marker && (marker[1][0] === '~' || !marker[2].includes('`'))) {
+        opening = marker[1];
+        return false;
+      }
+      return true;
+    })
+    .join('\n');
+}
+
 export function validateSkills(repositoryRoot) {
   const root = path.resolve(repositoryRoot);
   const issues = [];
@@ -24,10 +49,14 @@ export function validateSkills(repositoryRoot) {
       detail,
     });
   const files = walk(path.join(root, '.agents/skills'));
-
-  for (const filename of files.filter(
+  const canonical = files.filter((file) => path.basename(file) === 'SKILL.md');
+  const adapters = walk(path.join(root, '.claude/skills')).filter(
     (file) => path.basename(file) === 'SKILL.md',
-  )) {
+  );
+  const canonicalMetadata = new Map();
+
+  for (const filename of [...canonical, ...adapters]) {
+    const isAdapter = adapters.includes(filename);
     const content = fs.readFileSync(filename, 'utf8').replaceAll('\r\n', '\n');
     const frontmatter = content.match(/^---\n([\s\S]*?)\n---(?:\n|$)/);
     if (!frontmatter) {
@@ -58,9 +87,9 @@ export function validateSkills(repositoryRoot) {
         'Expected a short hyphen-case skill name.',
       );
     } else {
-      if (names.has(metadata.name))
+      if (!isAdapter && names.has(metadata.name))
         addIssue('duplicate-name', filename, metadata.name);
-      names.add(metadata.name);
+      if (!isAdapter) names.add(metadata.name);
       if (path.basename(path.dirname(filename)) !== metadata.name)
         addIssue('name-folder-mismatch', filename, metadata.name);
     }
@@ -73,6 +102,53 @@ export function validateSkills(repositoryRoot) {
         filename,
         'A nonempty description is required.',
       );
+    if (!isAdapter) canonicalMetadata.set(filename, metadata);
+  }
+
+  const canonicalSet = new Set(canonical);
+  const adapterSet = new Set(adapters);
+  for (const filename of canonical) {
+    const name = path.basename(path.dirname(filename));
+    const adapter = path.join(root, '.claude/skills', name, 'SKILL.md');
+    if (!adapterSet.has(adapter)) {
+      addIssue('missing-adapter', adapter, name);
+      continue;
+    }
+    const content = fs.readFileSync(adapter, 'utf8').replaceAll('\r\n', '\n');
+    const frontmatter = content.match(/^---\n([\s\S]*?)\n---(?:\n|$)/);
+    if (!frontmatter) continue;
+    let metadata;
+    try {
+      metadata = YAML.parse(frontmatter[1]);
+    } catch {
+      continue;
+    }
+    const source = canonicalMetadata.get(filename);
+    if (
+      source &&
+      typeof source.description === 'string' &&
+      typeof metadata?.description === 'string' &&
+      metadata.description.trim() &&
+      metadata.description !== source.description
+    )
+      addIssue('adapter-description-mismatch', adapter, name);
+    const body = withoutFencedCode(
+      content.slice(frontmatter[0].length),
+    ).replace(/<!--[\s\S]*?-->/g, '');
+    const pointers = [
+      ...body.matchAll(/`(\.agents\/skills\/[^`\n]+\/SKILL\.md)`/g),
+    ].map((match) => match[1]);
+    const expected = `.agents/skills/${name}/SKILL.md`;
+    if (
+      !pointers.includes(expected) ||
+      pointers.some((pointer) => pointer !== expected)
+    )
+      addIssue('invalid-adapter-pointer', adapter, name);
+  }
+  for (const adapter of adapters) {
+    const name = path.basename(path.dirname(adapter));
+    const filename = path.join(root, '.agents/skills', name, 'SKILL.md');
+    if (!canonicalSet.has(filename)) addIssue('orphan-adapter', adapter, name);
   }
 
   for (const filename of files.filter((file) => file.endsWith('.md'))) {
@@ -173,7 +249,7 @@ if (
   for (const issue of issues) console.error(JSON.stringify(issue));
   if (!issues.length)
     console.log(
-      'Skill manifests, local references and imported-source integrity passed. Behavioral evaluations are not executed by this check.',
+      'Skill manifests, Claude adapter parity, local references and imported-source integrity passed. Behavioral evaluations are not executed by this check.',
     );
   process.exitCode = issues.length ? 1 : 0;
 }

@@ -17,19 +17,17 @@
       "origin": "local-authored"
     },
     {
-      "name": "diagnose",
-      "origin": "adapted-from-pinto",
+      "name": "diagnosing-bugs",
+      "origin": "github-snapshot",
+      "installedOn": "2026-11-05",
       "source": {
         "repository": "mattpocock/skills",
-        "origin": "skills/engineering/diagnose/SKILL.md",
-        "pintoLockHash": "15939a26f86edec2d4862042b8564e5a062cb81d04e047a0cea6305c8830b5f5",
-        "manifestSha256": "dd1506e36aa87c8c462a08fe139033dca4eed6673fc62527acb20e00f55da6b1"
+        "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+        "origin": "skills/engineering/diagnosing-bugs/SKILL.md",
+        "sha256": "849198df88cdb65fd0d97236604c1fca7ff2f22d2f705f9724a800d0266b118d",
+        "license": ".agents/skill-support/licenses/mattpocock-MIT.txt"
       },
-      "adaptations": [
-        "Concise task-specific routing",
-        "Repository scope and permission precedence",
-        "Delegation follows applicable policy; no automatic installation or external mutation"
-      ]
+      "adaptations": []
     },
     {
       "name": "frontend-testing",
@@ -538,6 +536,40 @@
         "origin": ".agents/skills/golang-observability/references/alerting.md",
         "sha256": "bc74da7ef601806b508b9550ffa6afc7e5c790a395661c7ba0ed7f52631885ab"
       }
+    },
+    {
+      "path": ".agents/skills/diagnosing-bugs/SKILL.md",
+      "sha256LF": "849198df88cdb65fd0d97236604c1fca7ff2f22d2f705f9724a800d0266b118d",
+      "source": {
+        "type": "github-snapshot",
+        "repository": "mattpocock/skills",
+        "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+        "origin": "skills/engineering/diagnosing-bugs/SKILL.md",
+        "sha256": "849198df88cdb65fd0d97236604c1fca7ff2f22d2f705f9724a800d0266b118d"
+      }
+    },
+    {
+      "path": ".agents/skills/diagnosing-bugs/agents/openai.yaml",
+      "sha256LF": "3e430dbe4334a87597488c060cb3dc3786bb00c9182877d6f5ec41f62490e90b",
+      "source": {
+        "type": "github-snapshot",
+        "repository": "mattpocock/skills",
+        "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+        "origin": "skills/engineering/diagnosing-bugs/agents/openai.yaml",
+        "sha256": "3e430dbe4334a87597488c060cb3dc3786bb00c9182877d6f5ec41f62490e90b"
+      }
+    },
+    {
+      "path": ".agents/skills/diagnosing-bugs/scripts/hitl-loop.template.sh",
+      "sha256LF": "35103539fc36873eea36074769ad454f9379d6fc8b2dc0e26ce987fd3bfe5503",
+      "source": {
+        "type": "github-snapshot",
+        "repository": "mattpocock/skills",
+        "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+        "origin": "skills/engineering/diagnosing-bugs/scripts/hitl-loop.template.sh",
+        "sha256": "35103539fc36873eea36074769ad454f9379d6fc8b2dc0e26ce987fd3bfe5503"
+      }
     }
-  ]
+  ],
+  "lastUpdatedOn": "2026-11-05"
 }

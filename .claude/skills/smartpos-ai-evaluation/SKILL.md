@@ -1,18 +1,25 @@
 ---
 name: smartpos-ai-evaluation
-description: Plan or perform scoped SmartPOS forecast backtesting, baseline comparisons, and data-quality evaluation. Use for forecast-quality work; read the canonical skill, not for health checks alone or unauthorized training, production data access, or business actions.
+description: Plan or perform scoped offline evaluation of SmartPOS demand
+  forecasts, deterministic baselines, data preparation, and supported
+  uncertainty. Use for forecast-quality changes or backtesting requests; not
+  health/schema checks alone, autonomous business actions, or authorization for
+  production data access, model training, or paid inference.
 ---
 
 # smartpos-ai-evaluation Claude Adapter
 
-Read `.agents/skills/smartpos-ai-evaluation/SKILL.md` completely before using this
-skill. That repository-root-relative file is the canonical evaluation workflow,
-data boundaries, verification guidance, and output contract.
+Read `.agents/skills/smartpos-ai-evaluation/SKILL.md` completely before using this skill.
+That repository-root-relative file is the canonical workflow, reference map,
+verification guidance, and output contract.
 
-Follow applicable `AGENTS.md`, `CLAUDE.md`, the current task scope, and actual
-execution permissions. Load only references relevant to the task.
+Resolve bundled scripts and references relative to the canonical skill directory;
+project application, database, and documentation paths are repository-root relative.
 
-This adapter does not duplicate or redefine canonical policy. It does not grant
-permission to train models, access production data, call paid services, install
-tools, change providers, deploy, delegate, or perform an audit. If the canonical
-file is unavailable, report the missing path instead of inventing a workflow.
+Follow applicable AGENTS.md, CLAUDE.md, the current task scope, and actual execution
+permissions. Skills never grant authorization or override required checks,
+independent review, or host controls. Load only task-relevant references, combine
+overlapping procedures without duplicate loops, and do not run examples automatically.
+
+This adapter contains no independent workflow. If the canonical file is unavailable,
+report its missing path instead of inventing a replacement.

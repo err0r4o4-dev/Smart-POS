@@ -1,15 +1,14 @@
 # SmartPOS Claude Execution Guide
 
-Use the project `AGENTS.md` for SmartPOS guidance and skill routing. This file
-describes Claude discovery and adapters.
-
-## Shared skills and discovery adapters
-
-Canonical workflows live in `.agents/skills`. Corresponding
-`.claude/skills/<name>/SKILL.md` adapters direct Claude to the canonical file. Do
-not duplicate workflow bodies or define independent policy in adapters. Paths in
-canonical skills are repository-root relative unless explicitly stated otherwise.
+Use `AGENTS.md` for project rules and `.agents/skills/README.md` for task-to-skill
+routing. Canonical workflows live in `.agents/skills`. The 32 corresponding
+`.claude/skills/<name>/SKILL.md` adapters point to those canonical files. Do not
+duplicate workflow bodies or policy in adapters.
+Resolve a skill's bundled `scripts/` and `references/` from its canonical skill
+directory. Project application, database and documentation paths are relative to
+the repository root unless explicitly stated otherwise. For example,
+`scripts/hitl-loop.template.sh` in `diagnosing-bugs` is under that skill's directory.
+Bundled scripts are not run or installed automatically.
 
 If automatic discovery is unavailable, use the canonical path explicitly. Do not
-install tools or change configuration just to enable discovery. Project skills
-must not depend on LostLink/Pinto folders, personal skills, or a particular MCP.
+install tools or change configuration just to enable discovery.

@@ -1,3 +1,9 @@
+Out-of-scope source observation: storefront/orders.go handles a missing payment
+attempt by setting hasPayment=false, so the payment/hold/refund/reconciliation
+checks in that transition branch are skipped. This differs from the historical
+completed paid-only claim below. No application fix or runtime reproduction was
+performed in this skill/rules task; follow-up acceptance remains separate.
+
 # Project policy alignment (2026-11-05)
 
 Scope: align the five project instruction/skill-policy files with governing

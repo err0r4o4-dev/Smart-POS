@@ -103,11 +103,12 @@
     {
       "id": "failed-test",
       "prompt": "แก้ bug frontend แต่ regression test ยังไม่ผ่าน",
-      "candidatePrimarySkill": "diagnose",
-      "candidateAdditionalSkills": ["frontend-testing"],
+      "candidatePrimarySkill": "superpowers:systematic-debugging",
+      "candidateAdditionalSkills": ["diagnosing-bugs", "frontend-testing"],
       "expectedBehavior": [
         "Keep tests and unresolved task checklist",
-        "Report failed check rather than mark complete"
+        "Report failed check rather than mark complete",
+        "Use systematic-debugging by default when available; combine requested diagnosing-bugs steps without duplicate loops"
       ],
       "status": "not-run"
     },
@@ -117,8 +118,8 @@
       "candidatePrimarySkill": "handoff",
       "candidateAdditionalSkills": [],
       "expectedBehavior": [
-        "Remove only the completed task section without unrelated additions",
-        "Retain the tracked roadmap and tests"
+        "Mark verified work complete and preserve completed task history",
+        "Retain unrelated roadmap, unresolved items, and tests"
       ],
       "status": "not-run"
     },

@@ -79,6 +79,24 @@ func (service *Service) Authorized(ctx context.Context, userID, orgID, permissio
 	return service.authorized(ctx, userID, orgID, permission)
 }
 
+// RequireVerified keeps setup and organization creation behind the account
+// verification boundary while leaving login and account recovery available.
+// The caller owns the transaction and must roll it back or commit it.
+func RequireVerified(ctx context.Context, tx pgx.Tx, userID string) error {
+	var verified bool
+	err := tx.QueryRow(ctx, "SELECT email_verified_at IS NOT NULL FROM users WHERE id=$1 AND status='ACTIVE'", userID).Scan(&verified)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrDenied
+	}
+	if err != nil {
+		return err
+	}
+	if !verified {
+		return ErrDenied
+	}
+	return nil
+}
+
 func RecordAudit(ctx context.Context, tx pgx.Tx, orgID, actor, event, object string) error {
 	return audit(ctx, tx, orgID, actor, event, object, nil)
 }
@@ -251,6 +269,9 @@ func (service *Service) Create(ctx context.Context, userID, key string, input Cr
 		return Context{}, err
 	}
 	defer tx.Rollback(ctx)
+	if err = RequireVerified(ctx, tx, userID); err != nil {
+		return Context{}, err
+	}
 	if _, err = tx.Exec(ctx, "SELECT pg_advisory_xact_lock(hashtextextended($1,0))", userID+key); err != nil {
 		return Context{}, err
 	}

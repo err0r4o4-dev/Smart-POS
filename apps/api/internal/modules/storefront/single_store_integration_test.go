@@ -22,9 +22,16 @@ import (
 	"smartpos/api/internal/transport"
 )
 
-type singleStoreMailbox struct{ tokens map[string]string }
+type singleStoreMailbox struct {
+	tokens             map[string]string
+	verificationTokens map[string]string
+}
 
 func (mailbox *singleStoreMailbox) SendReset(context.Context, string, string) error { return nil }
+func (mailbox *singleStoreMailbox) SendEmailVerification(_ context.Context, email, token string) error {
+	mailbox.verificationTokens[email] = token
+	return nil
+}
 func (mailbox *singleStoreMailbox) SendInvitation(_ context.Context, email, token string) error {
 	mailbox.tokens[email] = token
 	return nil
@@ -64,7 +71,7 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 	if err = (database.Checker{Pool: pool}).Ready(ctx); err != nil {
 		t.Fatal("official schema migrations are required")
 	}
-	mailbox := &singleStoreMailbox{tokens: map[string]string{}}
+	mailbox := &singleStoreMailbox{tokens: map[string]string{}, verificationTokens: map[string]string{}}
 	accounts, err := identity.NewService(ctx, pool, mailbox, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Hour)
 	if err != nil {
 		t.Fatal(err)
@@ -76,6 +83,19 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 	guest, err := accounts.Register(ctx, "single-store-staff@example.test", "Synthetic-staff-password-2026", "Synthetic staff")
 	if err != nil {
 		t.Fatal(err)
+	}
+	for _, profile := range []identity.Profile{owner, guest} {
+		token := mailbox.verificationTokens[profile.Email]
+		if token == "" {
+			t.Fatalf("verification token missing for %s", profile.Email)
+		}
+		result, verifyErr := accounts.VerifyEmail(ctx, token)
+		if verifyErr != nil {
+			t.Fatal(verifyErr)
+		}
+		if !result.Verified || !result.User.EmailVerified || result.User.ID != profile.ID {
+			t.Fatalf("verification failed for %s", profile.Email)
+		}
 	}
 	multi := &organization.Service{Pool: pool, Mailer: mailbox}
 	createInput := func(code string) organization.CreateInput {

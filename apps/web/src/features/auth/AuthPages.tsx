@@ -9,6 +9,7 @@ import { forgotPassword, register, resetPassword } from '../../lib/api';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
 import { paths } from '../../app/routes';
+import { ResendVerification } from './VerificationFlow';
 
 function ErrorMessage({ message }: { message: string }) {
   const { localize } = useLanguage();
@@ -65,7 +66,9 @@ function PasswordField({
 }
 
 export function safeReturnTo(value: string | null) {
-  return value === '/account' ? value : paths.workspace;
+  return value === '/account' || value === paths.setup
+    ? value
+    : paths.workspace;
 }
 
 export function LoginPage() {
@@ -156,7 +159,7 @@ export function LoginPage() {
 }
 
 export function RegisterPage() {
-  const { t, localize } = useLanguage();
+  const { t, localize, language } = useLanguage();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -164,7 +167,7 @@ export function RegisterPage() {
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
   const [pending, setPending] = useState(false);
-  const navigate = useNavigate();
+  const [registered, setRegistered] = useState(false);
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (password !== confirm) {
@@ -175,7 +178,7 @@ export function RegisterPage() {
     setPending(true);
     try {
       await register(email, password, name);
-      navigate('/login?registered=1', { replace: true });
+      setRegistered(true);
     } catch (failure) {
       setError(
         failure instanceof Error
@@ -186,11 +189,30 @@ export function RegisterPage() {
       setPending(false);
     }
   };
+  if (registered)
+    return (
+      <AuthLayout>
+        <h2>{language === 'en' ? 'Verify your email' : 'ยืนยันอีเมล'}</h2>
+        <p>
+          {language === 'en'
+            ? 'Your account was created. Verify your email before setting up your store.'
+            : 'สร้างบัญชีแล้ว กรุณายืนยันอีเมลก่อนตั้งค่าร้าน'}
+        </p>
+        <ResendVerification initialEmail={email} />
+        <p>
+          <Link to="/login">{t('auth.alreadyHaveAnAccountSignIn')}</Link>
+        </p>
+      </AuthLayout>
+    );
   return (
     <AuthLayout>
       <Tag tone="amber">{t('auth.createAccount2')}</Tag>
       <h2>{t('auth.getStarted')}</h2>
-      <p>{t('auth.organizationSetupFollowsInAFuturePhase')}</p>
+      <p>
+        {language === 'en'
+          ? 'Create an account and verify your email to set up your store.'
+          : 'สร้างบัญชีและยืนยันอีเมลเพื่อตั้งค่าร้าน'}
+      </p>
       <form onSubmit={submit}>
         <fieldset disabled={pending}>
           <label htmlFor="display-name">{t('auth.displayName')}</label>

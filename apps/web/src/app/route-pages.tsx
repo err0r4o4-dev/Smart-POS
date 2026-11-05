@@ -42,11 +42,6 @@ export const OnlineOrderPage = lazy(() =>
     default: module.OnlineOrderPage,
   })),
 );
-export const StorefrontSettingsPage = lazy(() =>
-  import('../features/storefront/OnlineOrderPages').then((module) => ({
-    default: module.StorefrontSettingsPage,
-  })),
-);
 export const DashboardPage = lazy(() =>
   import('../features/dashboard/DashboardPage').then((module) => ({
     default: module.DashboardPage,
@@ -132,14 +127,9 @@ export const SetupPage = lazy(() =>
     default: module.SetupPage,
   })),
 );
-export const StorePage = lazy(() =>
+export const SettingsPage = lazy(() =>
   import('../features/organization/OrganizationPages').then((module) => ({
-    default: module.StorePage,
-  })),
-);
-export const BranchesPage = lazy(() =>
-  import('../features/organization/OrganizationPages').then((module) => ({
-    default: module.BranchesPage,
+    default: module.SettingsPage,
   })),
 );
 export const AccountPage = lazy(() =>

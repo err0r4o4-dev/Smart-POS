@@ -1,0 +1,64 @@
+import { expect, test } from '@playwright/test';
+
+for (const width of [320, 768, 1440]) {
+  test(`restaurant setup layout at ${width}px with mocked API`, async ({ page, baseURL }, testInfo) => {
+    const origin = new URL(baseURL!).origin;
+    await page.setViewportSize({ width, height: 900 });
+    await page.route('**/*', async (route) => {
+      const url = new URL(route.request().url());
+      if (url.origin !== origin) return route.abort();
+      if (!url.pathname.startsWith('/api/')) return route.continue();
+      const organization = { id: 'org', name: 'ร้านตัวอย่าง', code: 'SHOP', business_type: 'RESTAURANT', status: 'ACTIVE' };
+      let data: unknown;
+      if (url.pathname === '/api/v1/auth/me') data = { user: { id: 'user', email: 'owner@example.test', display_name: 'Owner', status: 'ACTIVE', email_verified: true }, csrf_token: 'mock-csrf' };
+      else if (url.pathname === '/api/v1/organizations') data = [organization];
+      else if (url.pathname === '/api/v1/organizations/org/context') data = { organization, membership: { role: 'OWNER', status: 'ACTIVE', branch_ids: ['branch'], permissions: [] }, branches: [{ id: 'branch', organization_id: 'org', name: 'สาขาหลัก', code: 'MAIN', status: 'ACTIVE', is_main: true }], permissions: [] };
+      else if (url.pathname === '/api/v1/organizations/org/restaurant/setup') data = { organization_id: 'org', branch_id: 'branch', current_step: 'profile', ready: false, completed: false, steps: [], readiness: { ready: false, incomplete: [] }, profile: { organization: { ...organization, contact_email: '', contact_phone: '', address: '' }, branch: { name: 'สาขาหลัก', code: 'MAIN', address: '', phone: '', email: '' }, service_modes: { dine_in: true, takeaway: true, delivery: false } } };
+      else return route.fulfill({ status: 404, json: { error: { message: 'Unexpected mock request' } } });
+      return route.fulfill({ json: { data } });
+    });
+    await page.goto('/setup');
+    await expect(page.getByLabel('ชื่อร้าน')).toHaveValue('ร้านตัวอย่าง');
+    await expect(page.getByRole('button', { name: /บันทึกและถัดไป/ })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath(`setup-${width}.png`), fullPage: true });
+  });
+}
+
+test('issued table secrets can be copied and downloaded from the mocked response', async ({ page, context, baseURL }, testInfo) => {
+  const origin = new URL(baseURL!).origin;
+  await page.setViewportSize({ width: 320, height: 900 });
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  const organization = { id: 'org', name: 'ร้านตัวอย่าง', code: 'SHOP', business_type: 'RESTAURANT', status: 'ACTIVE' };
+  const setup = { organization_id: 'org', branch_id: 'branch', current_step: 'tables', ready: false, completed: false, steps: [], readiness: { ready: false, incomplete: [] }, tables: { zones: [{ code: 'Z1', name: 'โซน' }], tables: [{ code: 'T1', name: 'โต๊ะ', zone: 'โซน', seats: 4 }], qr_enabled: true } };
+  await page.route('**/*', async (route) => {
+    const url = new URL(route.request().url());
+    if (url.origin !== origin) return route.abort();
+    if (!url.pathname.startsWith('/api/')) return route.continue();
+    let data: unknown;
+    if (url.pathname === '/api/v1/auth/me') data = { user: { id: 'user', email: 'owner@example.test', display_name: 'Owner', status: 'ACTIVE', email_verified: true }, csrf_token: 'mock-csrf' };
+    else if (url.pathname === '/api/v1/organizations') data = [organization];
+    else if (url.pathname === '/api/v1/organizations/org/context') data = { organization, membership: { role: 'OWNER', status: 'ACTIVE', branch_ids: ['branch'], permissions: [] }, branches: [{ id: 'branch', organization_id: 'org', name: 'สาขาหลัก', code: 'MAIN', status: 'ACTIVE', is_main: true }], permissions: [] };
+    else if (url.pathname === '/api/v1/organizations/org/restaurant/setup') data = setup;
+    else if (url.pathname === '/api/v1/organizations/org/restaurant/setup/tables' && route.request().method() === 'PUT') data = { ...setup, issued_table_qr_tokens: [{ table_id: 'table-1', code: 'T1', qr_token: 'synthetic-secret' }] };
+    else return route.fulfill({ status: 404, json: { error: { message: 'Unexpected mock request' } } });
+    return route.fulfill({ json: { data } });
+  });
+  await page.goto('/setup');
+  await expect(page.getByLabel('ชื่อโต๊ะแรก')).toHaveValue('โต๊ะ');
+  await page.getByRole('button', { name: /บันทึกและถัดไป/ }).click();
+  await expect(page.getByLabel('รหัสลับโต๊ะ')).toHaveValue(/synthetic-secret/);
+  await page.getByRole('button', { name: /คัดลอกรหัสลับ/ }).click();
+  await expect(page.getByRole('status')).toHaveText('คัดลอกแล้ว');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('synthetic-secret');
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: /ดาวน์โหลดรหัสลับ/ }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toBe('table-qr-secrets.json');
+  const stream = await file.createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+  expect(JSON.parse(Buffer.concat(chunks).toString('utf8'))).toEqual([{ table_id: 'table-1', code: 'T1', qr_token: 'synthetic-secret' }]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath('issued-secret-320.png'), fullPage: true });
+});

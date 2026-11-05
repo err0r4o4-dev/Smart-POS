@@ -144,7 +144,7 @@ function SandboxPanel({
         actions={
           <Link
             className="button button-secondary sales-export-btn"
-            to="/settings/storefront"
+            to="/settings"
           >
             <ArrowLeft size={15} aria-hidden="true" />
             <span>{t('storefront.backToStorefrontSettings')}</span>

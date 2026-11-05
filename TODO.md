@@ -186,6 +186,21 @@ No commits, branch changes, provider requests, deployments or primary DB changes
   - FAIL: full workspace-areas Playwright run, 21 passed / 11 failed; public entrance, customer disabled-order button, navigation/redirect and POS header expectations need triage. Not established as pre-existing.
   - NOT RUN: Go/database/real payment/whole-flow acceptance; no backend changes or confirmed isolated database target in this slice.
   - Evidence: .local/restaurant-consolidation/{full-tests,typecheck,lint,build,browser,browser-full}.log.
+
+# Restaurant settings redesign (2026-11-05)
+
+Approved scope: Redesign the settings page to match the VELOPOS restaurant settings design mockup.
+Includes Store Info (name, type, logo, phone, email, address, description, photos),
+Service Modes (dine-in/takeaway/delivery), Operating Hours & daily reporting cycle,
+Payment Channels (cash, credit/debit, QR PromptPay, e-wallet, others),
+Tables & QR Ordering toggle cards, and POS Hardware Devices (terminals and printers).
+Preserve existing tests and contracts.
+
+- [x] 1. Create SettingsPage component with 2-column layout matching the mockup
+- [x] 2. Create settings.css for pixel-perfect typography, tokens, badges, and layout
+- [x] 3. Wire settings routes (/settings, /settings/store, /restaurant/settings)
+- [x] 4. Add unit tests for SettingsPage covering rendering, field updates, and interactions
+- [x] 5. Verify all frontend tests pass and visual integrity is preserved
 - [x] Obtain authorized independent review for payment, permissions and data integrity.
   - User explicitly authorized independent review agent ("อนุญาตให้ใช้ independent reviewer agent").
   - Independent review agent (Copernicus) completed architectural and safety review:

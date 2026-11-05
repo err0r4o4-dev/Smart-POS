@@ -40,6 +40,7 @@ it('assigns every grouped operational module to exactly one group', () => {
         navigation.some((item) => item.to === path),
       ),
       '/manage/dashboard',
+      '/manage/help',
     ].sort(),
   ).toEqual(navigation.map((item) => item.to).sort());
 });
@@ -238,3 +239,20 @@ it('opens the current group when permissions finish loading even if previously c
     'true',
   );
 });
+
+it('renders /help outside groups and excludes /setup and /account from management menu', () => {
+  renderMenu('/manage/dashboard');
+  expect(
+    screen.queryByRole('link', { name: 'ตั้งค่าร้าน' }),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: 'บัญชี' })).not.toBeInTheDocument();
+
+  // Collapse all groups
+  const buttons = screen.getAllByRole('button');
+  for (const button of buttons) {
+    fireEvent.click(button);
+  }
+  // Help remains visible because it is outside groups
+  expect(screen.getByRole('link', { name: 'คู่มือ' })).toBeVisible();
+});
+

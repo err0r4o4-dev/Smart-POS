@@ -21,3 +21,7 @@ it.each([
     expect(safeReturnTo(destination)).toBe('/workspace');
   },
 );
+
+it('returns to setup after signing in from verification', () => {
+  expect(safeReturnTo('/setup')).toBe('/setup');
+});

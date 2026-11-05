@@ -7,7 +7,6 @@ import {
   PaymentSandboxPage,
   OnlineOrdersPage,
   OnlineOrderPage,
-  StorefrontSettingsPage,
   RestaurantPage,
   DashboardPage,
   HelpPage,
@@ -26,8 +25,7 @@ import {
   SalesPage,
   SaleDetailsPage,
   SetupPage,
-  StorePage,
-  BranchesPage,
+  SettingsPage,
   AccountPage,
   ForgotPasswordPage,
   LoginPage,
@@ -142,10 +140,8 @@ const routes: RouteObject[] = [
               ...(
                 [
                   ['recipes', 'catalog.read'],
-                  ['tables', 'online_orders.manage'],
                   ['quick-stock', 'inventory.read'],
                   ['forecast', 'sales.read'],
-                  ['settings', 'storefront.manage'],
                 ] as const
               ).map(([view, permission]) => ({
                 element: (
@@ -169,10 +165,6 @@ const routes: RouteObject[] = [
                   />
                 ),
                 children: [
-                  {
-                    path: '/settings/storefront',
-                    element: <StorefrontSettingsPage />,
-                  },
                   {
                     path: '/settings/storefront/payments',
                     element: <PaymentSandboxPage />,
@@ -259,8 +251,27 @@ const routes: RouteObject[] = [
               {
                 element: <OrganizationGate roles={managementRoles} />,
                 children: [
-                  { path: paths.store, element: <StorePage /> },
-                  { path: paths.branches, element: <BranchesPage /> },
+                  { path: paths.settings, element: <SettingsPage /> },
+                  {
+                    path: paths.store,
+                    element: <Navigate to={paths.settings} replace />,
+                  },
+                  {
+                    path: paths.branches,
+                    element: <Navigate to={paths.settings} replace />,
+                  },
+                  {
+                    path: '/settings/storefront',
+                    element: <Navigate to={paths.settings} replace />,
+                  },
+                  {
+                    path: '/restaurant/settings',
+                    element: <Navigate to={paths.settings} replace />,
+                  },
+                  {
+                    path: '/restaurant/tables',
+                    element: <Navigate to={paths.settings} replace />,
+                  },
                 ],
               },
             ],

@@ -142,7 +142,7 @@ function Harness({ path }: { path: string }) {
               </Route>
               <Route element={<OrganizationGate roles={managementRoles} />}>
                 <Route
-                  path="/manage/settings/store"
+                  path="/manage/settings"
                   element={<h1>Private store settings</h1>}
                 />
               </Route>
@@ -241,7 +241,7 @@ it.each<Role>(['MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'PURCHASING_STAFF'])(
   'denies management settings on a direct link for %s',
   (role) => {
     selectRole(role, allPermissions);
-    renderWorkspace('/manage/settings/store');
+    renderWorkspace('/manage/settings');
     expect(screen.getByRole('heading', { name: 'Forbidden' })).toBeVisible();
     expect(
       screen.queryByText('Private store settings'),
@@ -366,7 +366,7 @@ it('filters restaurant dashboard shortcuts by permission without fabricating rep
 it.each([
   '/manage/dashboard',
   '/manage/products/item-1',
-  '/manage/settings/store',
+  '/manage/settings',
   '/work',
   '/work/products/item-1',
   '/account',

@@ -27,6 +27,8 @@ func dbError(err error) error {
 			return ErrConflict
 		case "23503", "22P02", "22003":
 			return ErrInput
+		case "42P01":
+			return ErrSetupUnavailable
 		case "42501":
 			return organization.ErrDenied
 		}

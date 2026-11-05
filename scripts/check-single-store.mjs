@@ -278,7 +278,7 @@ COMMIT;`,
   );
   let migratorRefusal = '';
   try {
-    run('docker', migrationArgs(upgradeDatabase, 'up'));
+    run('docker', migrationArgs(upgradeDatabase, 'goto', '29'));
   } catch (error) {
     migratorRefusal = error.message;
   }
@@ -391,7 +391,7 @@ COMMIT;`,
   console.log(
     'RED: version 28 rejects customer payment rate-limit scopes with SQLSTATE 23514.',
   );
-  run('docker', migrationArgs(upgradeDatabase, 'up'));
+  run('docker', migrationArgs(upgradeDatabase, 'goto', '29'));
   if (
     sql(upgradeDatabase, 'SELECT version,dirty FROM schema_migrations') !==
       '29|f' ||
@@ -500,14 +500,18 @@ COMMIT;`,
     throw new Error(
       'Migration 29 down failed to restore the version 28 scope whitelist.',
     );
-  run('docker', migrationArgs(upgradeDatabase, 'up'));
+  run('docker', migrationArgs(upgradeDatabase, 'goto', '29'));
   sql(upgradeDatabase, `BEGIN; ${paymentScopesSQL} ROLLBACK;`);
-  const finalRerun = spawnSync('docker', migrationArgs(upgradeDatabase, 'up'), {
-    cwd: root,
-    encoding: 'utf8',
-    timeout: 120_000,
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
+  const finalRerun = spawnSync(
+    'docker',
+    migrationArgs(upgradeDatabase, 'goto', '29'),
+    {
+      cwd: root,
+      encoding: 'utf8',
+      timeout: 120_000,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    },
+  );
   if (
     finalRerun.status !== 0 ||
     !/no change/i.test(`${finalRerun.stdout}\n${finalRerun.stderr}`) ||

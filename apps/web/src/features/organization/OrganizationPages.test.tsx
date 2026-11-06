@@ -1,5 +1,5 @@
 import { render } from '../../test/render';
-import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
@@ -393,9 +393,23 @@ async function completeServicesAndTables() {
   await screen.findByText('ขั้นตอนที่ 4 จาก 7');
 }
 
-it('renders six steps and keeps the first step blocked by honest validation', () => {
+it('renders seven accessible steps and keeps the first step blocked by validation', () => {
   renderSetup();
 
+  const progress = screen.getByRole('complementary', { name: 'ความคืบหน้าการตั้งค่า' });
+  const steps = within(progress).getAllByRole('listitem');
+  expect(steps).toHaveLength(7);
+  const names = ['ข้อมูลร้าน', 'รูปแบบบริการ', 'พื้นที่และโต๊ะ', 'เมนู', 'การชำระเงิน', 'การสั่งซื้อ', 'ตรวจสอบความพร้อม'];
+  steps.forEach((item, index) => {
+    const button = within(item).getByRole('button', { name: new RegExp(names[index]) });
+    if (index === 0) {
+      expect(button).toHaveAttribute('aria-current', 'step');
+      expect(button).toBeEnabled();
+    } else {
+      expect(button).not.toHaveAttribute('aria-current');
+      expect(button).toBeDisabled();
+    }
+  });
   expect(screen.getByText('ขั้นตอนที่ 1 จาก 7')).toBeInTheDocument();
   expect(screen.getAllByText('ข้อมูลร้าน').length).toBeGreaterThan(0);
   expect(screen.getByRole('button', { name: /บันทึกและถัดไป/ })).toBeEnabled();
@@ -412,9 +426,39 @@ it('supports forward and backward navigation while preserving values', async () 
   await completeProfile();
 
   expect(screen.getByLabelText('ทานที่ร้าน')).toBeChecked();
+  const progress = screen.getByRole('complementary', { name: 'ความคืบหน้าการตั้งค่า' });
+  expect(within(progress).getByRole('button', { name: /รูปแบบบริการ/ })).toHaveAttribute('aria-current', 'step');
   fireEvent.click(screen.getByRole('button', { name: /ย้อนกลับ/ }));
+  expect(screen.getByLabelText('ชื่อร้าน')).toHaveValue('ร้านตัวอย่าง');
+  fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
+  await screen.findByLabelText('ทานที่ร้าน');
+  fireEvent.click(within(progress).getByRole('button', { name: /ข้อมูลร้าน/ }));
 
   expect(screen.getByLabelText('ชื่อร้าน')).toHaveValue('ร้านตัวอย่าง');
+  expect(within(progress).getByRole('button', { name: /ข้อมูลร้าน/ })).toHaveAttribute('aria-current', 'step');
+});
+
+it('disables editing and navigation while saving a step', async () => {
+  mocks.context = { organization: { id: 'org-1' }, membership: { role: 'OWNER' } };
+  let finishSave!: (value: unknown) => void;
+  mocks.request.mockImplementation((path: string, options?: { method?: string }) =>
+    options?.method === 'PUT' && path.endsWith('/profile')
+      ? new Promise((resolve) => { finishSave = resolve; })
+      : Promise.resolve({ ...setupState }));
+  renderSetup();
+  await waitFor(() => expect(screen.getByLabelText('ชื่อร้าน')).toBeEnabled());
+  fireEvent.change(screen.getByLabelText('ชื่อร้าน'), { target: { value: 'ร้านตัวอย่าง' } });
+  fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
+
+  expect(await screen.findByRole('button', { name: /กำลังบันทึก/ })).toBeDisabled();
+  expect(screen.getByLabelText('ชื่อร้าน')).toBeDisabled();
+  expect(screen.getByRole('button', { name: /ย้อนกลับ/ })).toBeDisabled();
+  const progress = screen.getByRole('complementary', { name: 'ความคืบหน้าการตั้งค่า' });
+  expect(within(progress).getAllByRole('button').every((button) => button.hasAttribute('disabled'))).toBe(true);
+  expect(mocks.request.mock.calls.filter(([path, options]) => path.endsWith('/profile') && options?.method === 'PUT')).toHaveLength(1);
+
+  await act(async () => { finishSave({ ...setupState }); });
+  expect(await screen.findByLabelText('ทานที่ร้าน')).toBeEnabled();
 });
 
 it('shows card payments as unavailable instead of allowing false completion', async () => {

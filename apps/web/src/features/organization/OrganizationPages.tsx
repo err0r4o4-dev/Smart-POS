@@ -824,7 +824,8 @@ function ScopedSetupPage() {
         requestContext = nextContext;
       }
       const stepKey = (['profile', 'services', 'tables', 'menu', 'payments', 'orders'] as const)[step];
-      const { description: _desc, ...cleanOrg } = form.profile.organization;
+      const cleanOrg = { ...form.profile.organization };
+      delete cleanOrg.description;
       const stepPayload = stepKey === 'profile'
         ? { ...form.profile, organization: cleanOrg, service_modes: form.services.service_modes }
         : form[stepKey];
@@ -865,7 +866,7 @@ function ScopedSetupPage() {
           <div className="setup-header-brand-group">
             <div className="setup-logo-badge" aria-hidden="true">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M4 4L12 20L20 4H15L12 12.5L9 4H4Z" fill="white" />
+                <path d="M4 4L12 20L20 4H15L12 12.5L9 4H4Z" fill="currentColor" />
               </svg>
             </div>
             <span className="setup-brand-name">VELOPOS</span>
@@ -943,16 +944,6 @@ function ScopedSetupPage() {
                     <p className="setup-card-subtitle">{setupMeta[step].cardSubtitle}</p>
                   </div>
                 </div>
-                <div className="setup-decorative-badge" aria-hidden="true">
-                  <div className="setup-sparkles">
-                    <span className="sparkle sparkle-1" />
-                    <span className="sparkle sparkle-2" />
-                    <span className="sparkle sparkle-3" />
-                  </div>
-                  <div className="setup-decorative-circle">
-                    <Store size={26} strokeWidth={1.8} />
-                  </div>
-                </div>
               </div>
 
               {setupQuery.isPending && orgID && <Loading>กำลังโหลดความคืบหน้าที่บันทึกไว้…</Loading>}
@@ -990,7 +981,7 @@ function ScopedSetupPage() {
                   <div className="setup-actions">
                     <Button
                       type="button"
-                      className="setup-btn-back"
+                      className="button-secondary setup-btn-back"
                       onClick={() => { setError(''); setStep((current) => Math.max(0, current - 1) as SetupStepIndex); }}
                       disabled={step === 0 || pending}
                     >

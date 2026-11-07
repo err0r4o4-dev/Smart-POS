@@ -36,7 +36,12 @@ BEGIN
   END;
 END $$;
 
-CREATE ROLE smartpos_phase0_verification NOLOGIN;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'smartpos_phase0_verification') THEN
+    CREATE ROLE smartpos_phase0_verification NOLOGIN;
+  END IF;
+END $$;
 GRANT SELECT, INSERT ON organizations, branches TO smartpos_phase0_verification;
 GRANT SELECT ON organization_memberships TO smartpos_phase0_verification;
 SET LOCAL ROLE smartpos_phase0_verification;
@@ -66,4 +71,5 @@ BEGIN
 END $$;
 
 RESET ROLE;
+DROP ROLE IF EXISTS smartpos_phase0_verification;
 ROLLBACK;

@@ -1,4 +1,33 @@
 services:
+  api:
+    build:
+      target: development
+    init: true
+    develop:
+      watch:
+        - action: sync
+          path: ./apps/api
+          target: /src
+          initial_sync: true
+          ignore:
+            - '.cache/'
+            - '.env*'
+            - 'server'
+            - '*.exe'
+            - Dockerfile
+            - go.mod
+            - go.sum
+            - scripts/dev-watch.sh
+        - action: sync+restart
+          path: ./apps/api/scripts/dev-watch.sh
+          target: /src/scripts/dev-watch.sh
+          initial_sync: true
+        - action: rebuild
+          path: ./apps/api/Dockerfile
+        - action: rebuild
+          path: ./apps/api/go.mod
+        - action: rebuild
+          path: ./apps/api/go.sum
   web:
     build:
       target: development

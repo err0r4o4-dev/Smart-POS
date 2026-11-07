@@ -4,6 +4,17 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 
+FROM base AS development
+RUN addgroup -S app && adduser -S app -G app \
+  && mkdir -p /tmp/go-build \
+  && chown -R app:app /src /tmp/go-build \
+  && chmod -R a+rX /go
+USER app
+ENV GOCACHE=/tmp/go-build CGO_ENABLED=0
+RUN go build -o /tmp/smartpos-server ./cmd/server
+EXPOSE 8080
+CMD ["sh", "/src/scripts/dev-watch.sh"]
+
 FROM base AS check
 RUN apk add --no-cache build-base
 CMD ["sh", "-c", "test -z \"$(gofmt -l .)\" && go vet ./... && go test -race ./... && go build ./cmd/server"]

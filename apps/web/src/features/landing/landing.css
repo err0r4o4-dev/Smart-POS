@@ -132,7 +132,7 @@
       var(--primary-subtle) 0,
       transparent 50%
     ),
-    linear-gradient(115deg, var(--surface), var(--secondary)), var(--canvas);
+    var(--canvas-background, var(--canvas));
   border-bottom: 1px solid var(--border);
 }
 .landing-hero-inner {
@@ -238,14 +238,15 @@
   padding: 24px;
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
-  background: var(--secondary);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
 }
 .landing-step-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
-  color: var(--primary-strong);
+  color: var(--text-primary);
 }
 .landing-step-number {
   font-size: 30px;
@@ -312,7 +313,7 @@
   margin-bottom: 16px;
   border-radius: 50%;
   background: var(--primary-soft);
-  color: var(--primary-strong);
+  color: var(--text-primary);
 }
 .landing-footer {
   padding-block: 32px;
@@ -485,12 +486,12 @@
   color: var(--primary-strong);
 }
 .landing-product-blue {
-  background: #edf2fb;
-  color: #526a99;
+  background: var(--primary-subtle);
+  color: var(--text-primary);
 }
 .landing-product-pink {
-  background: #f8eef0;
-  color: #a26f7d;
+  background: var(--primary-soft);
+  color: var(--text-primary);
 }
 .landing-pos-product small {
   display: block;
@@ -522,7 +523,7 @@
   flex-direction: column;
   min-width: 0;
   padding: 20px 12px;
-  background: #fafbfc;
+  background: var(--primary-subtle);
   border-left: 1px solid var(--border);
 }
 .landing-pos-cart-title {

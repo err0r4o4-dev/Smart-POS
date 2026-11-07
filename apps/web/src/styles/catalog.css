@@ -162,13 +162,13 @@
 }
 .catalog-table th {
   color: var(--text-strong);
-  background: var(--secondary);
+  background: var(--primary-subtle);
   font-size: 12px;
   font-weight: 650;
   white-space: nowrap;
 }
 .catalog-table tbody tr:hover td {
-  background: rgba(244, 197, 66, 0.04);
+  background: var(--primary-subtle);
 }
 .catalog-table small {
   display: block;
@@ -193,7 +193,7 @@
   overflow-wrap: anywhere;
 }
 .catalog-page table.record-table th {
-  background: var(--secondary);
+  background: var(--primary-subtle);
   color: var(--text-strong);
   font-size: 12px;
   font-weight: 650;

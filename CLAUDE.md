@@ -12,3 +12,9 @@ Bundled scripts are not run or installed automatically.
 
 If automatic discovery is unavailable, use the canonical path explicitly. Do not
 install tools or change configuration just to enable discovery.
+
+## Task Lifecycle & TODO.md Management (กฎการจัดการงานใน TODO.md)
+
+- **Task Tracking**: When planning or executing tasks, create or safely extend `TODO.md` with a clearly scoped checklist for the active task.
+- **Task Closure & Cleanup (การปิดงาน)**: When work on a task is finished and verified, **close the task by deleting that task's section from `TODO.md`** (เมื่อเสร็จงาน ให้ปิดงานโดยการลบแท็ก/ส่วนงานของงานนั้นออกจาก `TODO.md` เสมอ).
+- **No Stale Task Retention**: Do not leave completed or historic task blocks accumulating in `TODO.md`. Delete `TODO.md` entirely if it only contained the completed task and has no other active or pre-existing tasks.

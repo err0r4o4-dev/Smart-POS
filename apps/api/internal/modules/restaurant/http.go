@@ -15,7 +15,9 @@ import (
 	"time"
 )
 
-type Handler struct{ Service *Service }
+type Handler struct {
+	Service *Service
+}
 
 func decode(request *http.Request, input any) error {
 	media, _, err := mime.ParseMediaType(request.Header.Get("Content-Type"))
@@ -59,6 +61,69 @@ func endpoint(run func(context.Context, string, string, *http.Request) (any, err
 
 func (handler Handler) TenantRoutes(router chi.Router) {
 	service := handler.Service
+	router.Get("/restaurant/setup", endpoint(func(ctx context.Context, user, org string, request *http.Request) (any, error) {
+		branch := request.URL.Query().Get("branch_id")
+		if branch == "" {
+			return nil, ErrInput
+		}
+		return service.Setup(ctx, user, org, branch)
+	}))
+	router.Put("/restaurant/setup/profile", endpoint(func(ctx context.Context, user, org string, request *http.Request) (any, error) {
+		var input SetupProfileInput
+		if err := decode(request, &input); err != nil {
+			return nil, err
+		}
+		return service.SaveProfile(ctx, user, org, request.Header.Get("Idempotency-Key"), input)
+	}))
+	router.Put("/restaurant/setup/services", endpoint(func(ctx context.Context, user, org string, request *http.Request) (any, error) {
+		var input SetupServicesInput
+		if err := decode(request, &input); err != nil {
+			return nil, err
+		}
+		return service.SaveServices(ctx, user, org, request.Header.Get("Idempotency-Key"), input)
+	}))
+	router.Put("/restaurant/setup/tables", endpoint(func(ctx context.Context, user, org string, request *http.Request) (any, error) {
+		var input SetupTablesInput
+		if err := decode(request, &input); err != nil {
+			return nil, err
+		}
+		return service.SaveTables(ctx, user, org, request.Header.Get("Idempotency-Key"), input)
+	}))
+	router.Put("/restaurant/setup/menu", endpoint(func(ctx context.Context, user, org string, request *http.Request) (any, error) {
+		var input SetupMenuInput
+		if err := decode(request, &input); err != nil {
+			return nil, err
+		}
+		return service.SaveMenu(ctx, user, org, request.Header.Get("Idempotency-Key"), input)
+	}))
+	router.Put("/restaurant/setup/payments", endpoint(func(ctx context.Context, user, org string, request *http.Request) (any, error) {
+		var input SetupPaymentsInput
+		if err := decode(request, &input); err != nil {
+			return nil, err
+		}
+		return service.SavePayments(ctx, user, org, request.Header.Get("Idempotency-Key"), input)
+	}))
+	router.Put("/restaurant/setup/orders", endpoint(func(ctx context.Context, user, org string, request *http.Request) (any, error) {
+		var input SetupOrdersInput
+		if err := decode(request, &input); err != nil {
+			return nil, err
+		}
+		return service.SaveOrders(ctx, user, org, request.Header.Get("Idempotency-Key"), input)
+	}))
+	router.Post("/restaurant/setup/complete", endpoint(func(ctx context.Context, user, org string, request *http.Request) (any, error) {
+		var input SetupCompleteInput
+		if request.Header.Get("Content-Type") != "" {
+			if err := decode(request, &input); err != nil {
+				return nil, err
+			}
+		} else {
+			input.BranchID = request.URL.Query().Get("branch_id")
+		}
+		if err := input.Validate(); err != nil {
+			return nil, err
+		}
+		return service.Complete(ctx, user, org, input.BranchID, request.Header.Get("Idempotency-Key"))
+	}))
 	router.Get("/restaurant/settings", endpoint(func(ctx context.Context, user, org string, request *http.Request) (any, error) {
 		return service.Settings(ctx, user, org, request.URL.Query().Get("branch_id"))
 	}))

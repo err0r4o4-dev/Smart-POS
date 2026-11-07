@@ -13,11 +13,12 @@ import (
 )
 
 type Profile struct {
-	ID          string `json:"id"`
-	Email       string `json:"email"`
-	DisplayName string `json:"display_name"`
-	Status      string `json:"status"`
-	Onboarding  string `json:"onboarding"`
+	ID            string `json:"id"`
+	Email         string `json:"email"`
+	DisplayName   string `json:"display_name"`
+	Status        string `json:"status"`
+	EmailVerified bool   `json:"email_verified"`
+	Onboarding    string `json:"onboarding"`
 }
 
 type Session struct {
@@ -30,13 +31,18 @@ type Mailer interface {
 	SendReset(context.Context, string, string) error
 }
 
+type VerificationMailer interface {
+	SendEmailVerification(context.Context, string, string) error
+}
+
 type Service struct {
-	Pool          *pgxpool.Pool
-	Mailer        Mailer
-	Logger        *slog.Logger
-	SessionTTL    time.Duration
-	DummyHash     string
-	resetRequests chan string
+	Pool                 *pgxpool.Pool
+	Mailer               Mailer
+	Logger               *slog.Logger
+	SessionTTL           time.Duration
+	DummyHash            string
+	resetRequests        chan string
+	verificationRequests chan string
 }
 
 func NewService(ctx context.Context, pool *pgxpool.Pool, mailer Mailer, logger *slog.Logger, ttl time.Duration) (*Service, error) {
@@ -44,8 +50,9 @@ func NewService(ctx context.Context, pool *pgxpool.Pool, mailer Mailer, logger *
 	if err != nil {
 		return nil, err
 	}
-	service := &Service{Pool: pool, Mailer: mailer, Logger: logger, SessionTTL: ttl, DummyHash: dummy, resetRequests: make(chan string, 64)}
+	service := &Service{Pool: pool, Mailer: mailer, Logger: logger, SessionTTL: ttl, DummyHash: dummy, resetRequests: make(chan string, 64), verificationRequests: make(chan string, 64)}
 	go service.processResetRequests(ctx)
+	go service.processVerificationRequests(ctx)
 	return service, nil
 }
 
@@ -63,7 +70,8 @@ func (service *Service) Register(ctx context.Context, email, password, displayNa
 		return Profile{}, err
 	}
 	defer tx.Rollback(ctx)
-	profile := Profile{Email: normalized, DisplayName: displayName, Status: "ACTIVE", Onboarding: "PENDING_ORGANIZATION"}
+	profile := Profile{Email: normalized, DisplayName: displayName, Status: "ACTIVE", EmailVerified: false, Onboarding: "PENDING_ORGANIZATION"}
+	verificationToken := ""
 	err = tx.QueryRow(ctx, "INSERT INTO users (email, email_normalized, password_hash, display_name) VALUES ($1,$2,$3,$4) RETURNING id", normalized, normalized, hash, displayName).Scan(&profile.ID)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
@@ -75,8 +83,28 @@ func (service *Service) Register(ctx context.Context, email, password, displayNa
 	if _, err = tx.Exec(ctx, "INSERT INTO auth_audit_events (user_id,event_type) VALUES ($1,'REGISTER')", profile.ID); err != nil {
 		return Profile{}, err
 	}
+	if _, ok := service.Mailer.(VerificationMailer); ok {
+		var tokenHash [32]byte
+		var tokenErr error
+		verificationToken, tokenHash, tokenErr = RandomToken()
+		if tokenErr != nil {
+			return Profile{}, tokenErr
+		}
+		if _, err = tx.Exec(ctx, "INSERT INTO email_verification_tokens (user_id,token_hash,expires_at) VALUES ($1,$2,now()+interval '24 hours')", profile.ID, tokenHash[:]); err != nil {
+			return Profile{}, verificationDatabaseError(err)
+		}
+	}
 	if err = tx.Commit(ctx); err != nil {
 		return Profile{}, err
+	}
+	if verificationToken != "" {
+		if mailer, ok := service.Mailer.(VerificationMailer); ok {
+			if err = mailer.SendEmailVerification(ctx, normalized, verificationToken); err != nil {
+				if service.Logger != nil {
+					service.Logger.Error("registration verification delivery failed")
+				}
+			}
+		}
 	}
 	return profile, nil
 }
@@ -88,7 +116,7 @@ func (service *Service) Login(ctx context.Context, email, password string) (Prof
 	}
 	profile := Profile{Onboarding: "PENDING_ORGANIZATION"}
 	var hash string
-	err = service.Pool.QueryRow(ctx, "SELECT id,email,display_name,status,password_hash FROM users WHERE email_normalized=$1", normalized).Scan(&profile.ID, &profile.Email, &profile.DisplayName, &profile.Status, &hash)
+	err = service.Pool.QueryRow(ctx, "SELECT id,email,display_name,status,password_hash,email_verified_at IS NOT NULL FROM users WHERE email_normalized=$1", normalized).Scan(&profile.ID, &profile.Email, &profile.DisplayName, &profile.Status, &hash, &profile.EmailVerified)
 	if errors.Is(err, pgx.ErrNoRows) {
 		hash = service.DummyHash
 	} else if err != nil {
@@ -136,7 +164,7 @@ func (service *Service) Current(ctx context.Context, token string) (Session, err
 	var session Session
 	session.User.Onboarding = "PENDING_ORGANIZATION"
 	var csrfHash []byte
-	err = service.Pool.QueryRow(ctx, `SELECT u.id,u.email,u.display_name,u.status,s.csrf_hash FROM auth_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>now() AND u.status='ACTIVE'`, tokenHash[:]).Scan(&session.User.ID, &session.User.Email, &session.User.DisplayName, &session.User.Status, &csrfHash)
+	err = service.Pool.QueryRow(ctx, `SELECT u.id,u.email,u.display_name,u.status,u.email_verified_at IS NOT NULL,s.csrf_hash FROM auth_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>now() AND u.status='ACTIVE'`, tokenHash[:]).Scan(&session.User.ID, &session.User.Email, &session.User.DisplayName, &session.User.Status, &session.User.EmailVerified, &csrfHash)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Session{}, ErrInvalidToken
 	}
@@ -287,4 +315,137 @@ func (service *Service) Allow(ctx context.Context, scope, key string, limit int,
 	var attempts int
 	err := service.Pool.QueryRow(ctx, `INSERT INTO auth_rate_limits (scope,key_hash,attempts,window_end) VALUES ($1,$2,1,now()+$3::interval) ON CONFLICT (scope,key_hash) DO UPDATE SET attempts=CASE WHEN auth_rate_limits.window_end<now() THEN 1 ELSE auth_rate_limits.attempts+1 END, window_end=CASE WHEN auth_rate_limits.window_end<now() THEN now()+$3::interval ELSE auth_rate_limits.window_end END RETURNING attempts`, scope, hash[:], window).Scan(&attempts)
 	return attempts <= limit, err
+}
+
+func (service *Service) VerifyEmail(ctx context.Context, token string) (VerificationResult, error) {
+	hash, err := TokenHash(token)
+	if err != nil {
+		return VerificationResult{}, ErrInvalidToken
+	}
+	if service.Pool == nil {
+		return VerificationResult{}, ErrVerificationUnavailable
+	}
+	tx, err := service.Pool.Begin(ctx)
+	if err != nil {
+		return VerificationResult{}, verificationDatabaseError(err)
+	}
+	defer tx.Rollback(ctx)
+	var userID string
+	err = tx.QueryRow(ctx, `SELECT user_id FROM email_verification_tokens WHERE token_hash=$1 AND used_at IS NULL AND expires_at>now()`, hash[:]).Scan(&userID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return VerificationResult{}, ErrInvalidToken
+	}
+	if err != nil {
+		return VerificationResult{}, verificationDatabaseError(err)
+	}
+	var lockedUserID string
+	err = tx.QueryRow(ctx, `SELECT id FROM users WHERE id=$1 AND status='ACTIVE' FOR UPDATE`, userID).Scan(&lockedUserID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return VerificationResult{}, ErrInvalidToken
+	}
+	if err != nil {
+		return VerificationResult{}, verificationDatabaseError(err)
+	}
+	err = tx.QueryRow(ctx, `UPDATE email_verification_tokens SET used_at=now() WHERE token_hash=$1 AND user_id=$2 AND used_at IS NULL AND expires_at>now() RETURNING user_id`, hash[:], userID).Scan(&userID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return VerificationResult{}, ErrInvalidToken
+	}
+	if err != nil {
+		return VerificationResult{}, verificationDatabaseError(err)
+	}
+	var result VerificationResult
+	result.Verified = true
+	err = tx.QueryRow(ctx, `UPDATE users SET email_verified_at=COALESCE(email_verified_at,now()),updated_at=now() WHERE id=$1 AND status='ACTIVE' RETURNING id,email,display_name,status,email_verified_at IS NOT NULL`, userID).Scan(&result.User.ID, &result.User.Email, &result.User.DisplayName, &result.User.Status, &result.User.EmailVerified)
+	if err != nil {
+		return VerificationResult{}, verificationDatabaseError(err)
+	}
+	result.User.Onboarding = "PENDING_ORGANIZATION"
+	if _, err = tx.Exec(ctx, `INSERT INTO auth_audit_events (user_id,event_type,metadata) VALUES ($1,'REGISTER','{"action":"EMAIL_VERIFIED"}'::jsonb)`, userID); err != nil {
+		return VerificationResult{}, verificationDatabaseError(err)
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return VerificationResult{}, verificationDatabaseError(err)
+	}
+	return result, nil
+}
+
+func (service *Service) ResendEmailVerification(ctx context.Context, email string) error {
+	normalized, err := NormalizeEmail(email)
+	if err != nil {
+		return ErrInvalidInput
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	select {
+	case service.verificationRequests <- normalized:
+	default:
+		if service.Logger != nil {
+			service.Logger.Error("email verification delivery queue full")
+		}
+	}
+	return nil
+}
+
+func (service *Service) processVerificationRequests(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case email := <-service.verificationRequests:
+			deliveryCtx, cancel := context.WithTimeout(ctx, 12*time.Second)
+			if err := service.issueEmailVerification(deliveryCtx, email); err != nil && service.Logger != nil {
+				service.Logger.Error("email verification processing failed")
+			}
+			cancel()
+		}
+	}
+}
+
+func (service *Service) issueEmailVerification(ctx context.Context, normalized string) error {
+	if service.Pool == nil {
+		return ErrVerificationUnavailable
+	}
+	mailer, ok := service.Mailer.(VerificationMailer)
+	if !ok {
+		return ErrVerificationUnavailable
+	}
+	token, hash, err := RandomToken()
+	if err != nil {
+		return err
+	}
+	tx, err := service.Pool.Begin(ctx)
+	if err != nil {
+		return verificationDatabaseError(err)
+	}
+	defer tx.Rollback(ctx)
+	var userID string
+	err = tx.QueryRow(ctx, "SELECT id FROM users WHERE email_normalized=$1 AND status='ACTIVE' AND email_verified_at IS NULL FOR UPDATE", normalized).Scan(&userID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return verificationDatabaseError(err)
+	}
+	if _, err = tx.Exec(ctx, "UPDATE email_verification_tokens SET used_at=now() WHERE user_id=$1 AND used_at IS NULL", userID); err != nil {
+		return verificationDatabaseError(err)
+	}
+	if _, err = tx.Exec(ctx, "INSERT INTO email_verification_tokens (user_id,token_hash,expires_at) VALUES ($1,$2,now()+interval '24 hours')", userID, hash[:]); err != nil {
+		return verificationDatabaseError(err)
+	}
+	if _, err = tx.Exec(ctx, `INSERT INTO auth_audit_events (user_id,event_type,metadata) VALUES ($1,'RESET_REQUEST','{"action":"EMAIL_VERIFICATION_RESEND"}'::jsonb)`, userID); err != nil {
+		return verificationDatabaseError(err)
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return verificationDatabaseError(err)
+	}
+	return mailer.SendEmailVerification(ctx, normalized, token)
+}
+
+func verificationDatabaseError(err error) error {
+	var problem *pgconn.PgError
+	if errors.As(err, &problem) && problem.Code == "42P01" {
+		return ErrVerificationUnavailable
+	}
+	return err
 }

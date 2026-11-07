@@ -67,7 +67,7 @@ it('removes retail-only tools from both workspaces while retaining restaurant wo
     expect(links).toContain(prefix + '/sales/refunds');
   }
   expect(links).toContain('/manage/restaurant/recipes');
-  expect(links).toContain('/manage/restaurant/tables');
+  expect(links).not.toContain('/manage/restaurant/tables');
   expect(links).toContain('/manage/restaurant/quick-stock');
   expect(links).not.toContain('/manage/restaurant/forecast');
 });

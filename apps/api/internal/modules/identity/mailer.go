@@ -27,6 +27,12 @@ func (mailer SMTPMailer) SendReset(ctx context.Context, to, token string) error 
 	return mailer.send(ctx, to, "Reset your SmartPOS password", body)
 }
 
+func (mailer SMTPMailer) SendEmailVerification(ctx context.Context, to, token string) error {
+	link := mailer.Origin + "/setup#verify=" + url.QueryEscape(token)
+	body := "Verify your SmartPOS email address within 24 hours.\r\n\r\n" + link + "\r\n\r\nIf you did not create this account, you can ignore this email.\r\n"
+	return mailer.send(ctx, to, "Verify your SmartPOS email address", body)
+}
+
 func (mailer SMTPMailer) SendInvitation(ctx context.Context, to, token string) error {
 	link := mailer.Origin + "/setup#invitation=" + url.QueryEscape(token)
 	return mailer.send(ctx, to, "SmartPOS organization invitation", "Sign in with this email to accept your invitation within 48 hours.\r\n\r\n"+link+"\r\n")

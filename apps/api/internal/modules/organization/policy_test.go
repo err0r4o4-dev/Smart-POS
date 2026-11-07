@@ -1,6 +1,9 @@
 package organization
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 func TestInventoryPolicy(t *testing.T) {
 	for _, role := range Roles {
@@ -9,6 +12,36 @@ func TestInventoryPolicy(t *testing.T) {
 				t.Errorf("%s %s: got %t, want %t", role, permission, got, want)
 			}
 		}
+	}
+}
+
+func TestCreateDefaultsAndStrictUpdates(testContext *testing.T) {
+	input := CreateInput{OrganizationInput: OrganizationInput{Name: "Cafe", BusinessType: "RESTAURANT"}}
+	if err := input.validateCreate(); err != nil {
+		testContext.Fatalf("minimal creation rejected: %v", err)
+	}
+	if input.Code != "" || input.Branch.Name != "สาขาหลัก" || input.Branch.Code != "MAIN" || input.Branch.Status != "ACTIVE" {
+		testContext.Fatalf("unexpected creation defaults: %+v", input)
+	}
+	first, _ := json.Marshal(input)
+	again := CreateInput{OrganizationInput: OrganizationInput{Name: "Cafe", BusinessType: "RESTAURANT"}}
+	if err := again.validateCreate(); err != nil {
+		testContext.Fatal(err)
+	}
+	second, _ := json.Marshal(again)
+	if string(first) != string(second) {
+		testContext.Fatal("creation fingerprint input changed across retries")
+	}
+	if input.OrganizationInput.validate() == nil {
+		testContext.Fatal("normal update accepted missing code")
+	}
+	branch := BranchInput{}
+	if branch.validate() == nil {
+		testContext.Fatal("normal branch update accepted missing fields")
+	}
+	legacy := CreateInput{OrganizationInput: OrganizationInput{Name: "Cafe", Code: "custom", BusinessType: "RESTAURANT"}, Branch: BranchInput{Name: "Original", Code: "old"}}
+	if err := legacy.validateCreate(); err != nil || legacy.Code != "CUSTOM" || legacy.Branch.Name != "Original" || legacy.Branch.Code != "OLD" {
+		testContext.Fatalf("legacy input changed: %+v, %v", legacy, err)
 	}
 }
 

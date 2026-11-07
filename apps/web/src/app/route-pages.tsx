@@ -132,14 +132,9 @@ export const SetupPage = lazy(() =>
     default: module.SetupPage,
   })),
 );
-export const StorePage = lazy(() =>
+export const SettingsPage = lazy(() =>
   import('../features/organization/OrganizationPages').then((module) => ({
-    default: module.StorePage,
-  })),
-);
-export const BranchesPage = lazy(() =>
-  import('../features/organization/OrganizationPages').then((module) => ({
-    default: module.BranchesPage,
+    default: module.SettingsPage,
   })),
 );
 export const AccountPage = lazy(() =>

@@ -1,10 +1,9 @@
-import { useState, type FormEvent } from 'react';
 import { CookingPot } from 'lucide-react';
 import { Button, Card } from '../../components/ui/primitives';
 import { StandardPageHeader } from '../../components/ui/StandardPage';
 import { WorkspaceLink } from '../../app/WorkspaceNavigation';
-import { Field, Table } from '../inventory/InventoryUI';
-import { QueryState, CommandState } from './RestaurantUI';
+import { Table } from '../inventory/InventoryUI';
+import { QueryState } from './RestaurantUI';
 import {
   useRestaurantCommand,
   useRestaurantQuery,
@@ -12,6 +11,7 @@ import {
 } from './restaurant-hooks';
 import { RecipesScreen } from './RecipesScreen';
 import { QuickStockScreen, TablesScreen } from './StockAndTables';
+import { SettingsPage } from '../organization/SettingsPage';
 import './restaurant.css';
 
 export interface RestaurantSettings {
@@ -51,10 +51,12 @@ export function RestaurantPage({ view }: { view: RestaurantView }) {
   ]);
   return (
     <div className="restaurant-page">
-      <StandardPageHeader
-        icon={<CookingPot size={22} />}
-        title={titles[view]}
-      />
+      {view !== 'settings' && (
+        <StandardPageHeader
+          icon={<CookingPot size={22} />}
+          title={titles[view]}
+        />
+      )}
       {!scope.branch ? (
         <p role="status">เลือกสาขาก่อนจัดการร้านอาหาร</p>
       ) : !scope.can(permissions[view]) ? (
@@ -79,71 +81,32 @@ function SettingsScreen() {
     `/restaurant/settings?branch_id=${scope.branch}`,
     'storefront.manage',
   );
-  return (
-    <>
-      <QueryState query={query} />
-      {query.data && !query.error ? (
-        <SettingsForm key={query.data.revision} settings={query.data} />
-      ) : null}
-    </>
-  );
-}
-function SettingsForm({ settings }: { settings: RestaurantSettings }) {
-  const [closing, setClosing] = useState(settings.closing_time);
   const command = useRestaurantCommand<RestaurantSettings>(
     '/restaurant/settings',
     'PATCH',
   );
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    command.run({
-      branch_id: settings.branch_id,
-      closing_time: closing,
-      timezone: settings.timezone,
-      revision: settings.revision,
-    });
-  };
   return (
-    <Card className="catalog-panel">
-      <h2>เวลาปิดร้านและรอบวัน</h2>
-      <p>
-        เปลี่ยนรอบตามเวลาปิดร้านที่ตั้งไว้ ไม่ล้างสต็อก ไม่ลบประวัติ
-        และไม่ต้องรีเซ็ตตอน 00:00
-      </p>
-      <p>เขตเวลา: {settings.timezone}</p>
-      <p>
-        รอบปัจจุบัน:{' '}
-        <time dateTime={settings.period.start}>
-          {new Date(settings.period.start).toLocaleString('th-TH', {
-            timeZone: settings.timezone,
-          })}
-        </time>{' '}
-        ถึง{' '}
-        <time dateTime={settings.period.end}>
-          {new Date(settings.period.end).toLocaleString('th-TH', {
-            timeZone: settings.timezone,
-          })}
-        </time>
-      </p>
-      <form onSubmit={submit} className="restaurant-form">
-        <fieldset disabled={command.locked}>
-          <Field label="เวลาปิดรอบวัน">
-            <input
-              type="time"
-              required
-              value={closing}
-              onChange={(event) => setClosing(event.target.value)}
-            />
-          </Field>
-        </fieldset>
-        <CommandState command={command} />
-        <Button type="submit" disabled={command.isPending}>
-          บันทึกเวลาปิดร้าน
-        </Button>
-      </form>
-    </Card>
+    <>
+      <QueryState query={query} />
+      {query.data && !query.error ? (
+        <SettingsPage
+          key={query.data.revision}
+          initialSettings={query.data}
+          branchId={scope.branch}
+          onSaveHours={(closing) => {
+            command.run({
+              branch_id: query.data!.branch_id,
+              closing_time: closing,
+              timezone: query.data!.timezone,
+              revision: query.data!.revision,
+            });
+          }}
+        />
+      ) : null}
+    </>
   );
 }
+
 interface QueueItem {
   order_id: string;
   queue_number: string;

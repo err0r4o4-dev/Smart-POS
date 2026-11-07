@@ -220,6 +220,12 @@ export const storefront = defineMessages({
     publishedStores: 'ร้านที่เผยแพร่',
     loadingStorefronts: 'กำลังโหลดหน้าร้าน…',
     noPublishedStoresYet: 'ยังไม่มีร้านที่เปิดเผยแพร่',
+    searchStores: 'ค้นหาร้าน',
+    searchStoresPlaceholder: 'พิมพ์ชื่อร้านอาหารหรือคาเฟ่',
+    acceptingOrders: 'กำลังรับออเดอร์',
+    notAcceptingOrders: 'ปิดรับออเดอร์ชั่วคราว',
+    viewStore: 'ดูหน้าร้าน',
+    noMatchingStores: 'ไม่พบร้านที่ตรงกับคำค้น',
     onceStoresSetUpTheirStorefrontsAnd:
       'เมื่อร้านตั้งค่าหน้าร้านและเผยแพร่สินค้าแล้ว คุณจะเลือกซื้อได้ที่นี่',
     openedValue0InPosReviewTheTotal:
@@ -459,6 +465,12 @@ export const storefront = defineMessages({
     publishedStores: 'Published stores',
     loadingStorefronts: 'Loading storefronts…',
     noPublishedStoresYet: 'No published stores yet',
+    searchStores: 'Search stores',
+    searchStoresPlaceholder: 'Search by store name',
+    acceptingOrders: 'Accepting orders',
+    notAcceptingOrders: 'Orders temporarily closed',
+    viewStore: 'View store',
+    noMatchingStores: 'No stores match your search',
     onceStoresSetUpTheirStorefrontsAnd:
       'Once stores set up their storefronts and publish products, you can shop here.',
     openedValue0InPosReviewTheTotal:

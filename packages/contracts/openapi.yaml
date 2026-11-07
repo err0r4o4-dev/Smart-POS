@@ -3459,7 +3459,7 @@ paths:
     post:
       operationId: createOrganization
       security: [{ sessionCookie: [] }]
-      description: Atomically creates organization, OWNER membership, active main branch, default THB/Asia-Bangkok configuration and audit. Replaying the same per-user key/payload returns the same context; different payload returns 409. Disabled with 403 in single-store mode, including retries; use an existing explicitly configured organization, not first-user ownership.
+      description: Atomically creates organization, OWNER membership, active main branch, default THB/Asia-Bangkok configuration and audit. If organization code is omitted, the server generates it; if branch is omitted, the main branch is named สาขาหลัก with code MAIN. Explicit organization code and branch remain supported. Replaying the same per-user key/payload returns the same context; different payload returns 409. Disabled with 403 in single-store mode, including retries; use an existing explicitly configured organization, not first-user ownership.
       parameters:
         - { $ref: '#/components/parameters/CSRF' }
         - {
@@ -3472,15 +3472,7 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              allOf:
-                - { $ref: '#/components/schemas/OrganizationInput' }
-                - {
-                    type: object,
-                    required: [branch],
-                    properties:
-                      { branch: { $ref: '#/components/schemas/BranchInput' } },
-                  }
+            schema: { $ref: '#/components/schemas/OrganizationCreateInput' }
       responses:
         '201': { $ref: '#/components/responses/OrganizationContext' }
         '400': { $ref: '#/components/responses/InvalidInput' }
@@ -3720,6 +3712,46 @@ paths:
               schema: { $ref: '#/components/schemas/SessionResponse' }
         '401': { $ref: '#/components/responses/AuthError' }
         '429': { $ref: '#/components/responses/AuthError' }
+  /api/v1/auth/email/verify:
+    post:
+      operationId: verifyEmail
+      security: []
+      description: Atomically consumes a single-use, expiring email verification token and returns the refreshed account onboarding state. Requires allowed Origin and JSON. Invalid, expired and reused tokens are indistinguishable.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailVerificationInput'
+      responses:
+        '200':
+          description: Email verified and account state refreshed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmailVerificationResponse' }
+        '400': { $ref: '#/components/responses/InvalidInput' }
+        '429': { $ref: '#/components/responses/AuthError' }
+        '503': { $ref: '#/components/responses/AuthError' }
+  /api/v1/auth/email/resend:
+    post:
+      operationId: resendEmailVerification
+      security: []
+      description: Rate-limited generic response for an email verification resend. It never confirms whether an email belongs to an account. Requires allowed Origin and JSON.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailVerificationResendInput'
+      responses:
+        '202':
+          description: Generic resend request accepted.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageResponse' }
+        '400': { $ref: '#/components/responses/InvalidInput' }
+        '429': { $ref: '#/components/responses/AuthError' }
+        '503': { $ref: '#/components/responses/AuthError' }
   /api/v1/auth/me:
     get:
       operationId: currentUser
@@ -17810,6 +17842,248 @@ paths:
           $ref: '#/components/responses/InventoryMediaType'
         '503':
           $ref: '#/components/responses/InventoryUnavailable'
+  /api/v1/organizations/{id}/restaurant/setup:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    get:
+      operationId: getRestaurantSetup
+      security:
+        - sessionCookie: []
+      description: Owner-only, verified-account setup progress and server-authoritative readiness for one active branch. The branch is tenant-scoped and no setup data is returned for a foreign organization.
+      parameters:
+        - name: branch_id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Current setup progress and readiness reasons.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/RestaurantSetupState' }
+        '400': { $ref: '#/components/responses/InvalidInput' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '404': { $ref: '#/components/responses/AuthError' }
+        '409': { $ref: '#/components/responses/AuthError' }
+        '503': { $ref: '#/components/responses/AuthError' }
+  /api/v1/organizations/{id}/restaurant/setup/profile:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    put:
+      operationId: saveRestaurantSetupProfile
+      security:
+        - sessionCookie: []
+      description: Owner-only verified setup step. Saves the restaurant profile and enabled service modes atomically when migration 000030 is installed.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RestaurantSetupProfileInput' }
+      responses:
+        '200':
+          description: Updated setup progress.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/RestaurantSetupState' }
+        '400': { $ref: '#/components/responses/InvalidInput' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '404': { $ref: '#/components/responses/AuthError' }
+        '409': { $ref: '#/components/responses/AuthError' }
+        '503': { $ref: '#/components/responses/AuthError' }
+  /api/v1/organizations/{id}/restaurant/setup/services:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    put:
+      operationId: saveRestaurantSetupServices
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RestaurantSetupServicesInput' }
+      responses:
+        '200':
+          description: Updated setup progress.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/RestaurantSetupState' }
+        '400': { $ref: '#/components/responses/InvalidInput' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '404': { $ref: '#/components/responses/AuthError' }
+        '409': { $ref: '#/components/responses/AuthError' }
+        '503': { $ref: '#/components/responses/AuthError' }
+  /api/v1/organizations/{id}/restaurant/setup/tables:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    put:
+      operationId: saveRestaurantSetupTables
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RestaurantSetupTablesInput' }
+      responses:
+        '200':
+          description: Updated setup progress.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/RestaurantSetupState' }
+        '400': { $ref: '#/components/responses/InvalidInput' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '404': { $ref: '#/components/responses/AuthError' }
+        '409': { $ref: '#/components/responses/AuthError' }
+        '503': { $ref: '#/components/responses/AuthError' }
+  /api/v1/organizations/{id}/restaurant/setup/menu:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    put:
+      operationId: saveRestaurantSetupMenu
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RestaurantSetupMenuInput' }
+      responses:
+        '200':
+          description: Updated setup progress.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/RestaurantSetupState' }
+        '400': { $ref: '#/components/responses/InvalidInput' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '404': { $ref: '#/components/responses/AuthError' }
+        '409': { $ref: '#/components/responses/AuthError' }
+        '503': { $ref: '#/components/responses/AuthError' }
+  /api/v1/organizations/{id}/restaurant/setup/payments:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    put:
+      operationId: saveRestaurantSetupPayments
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RestaurantSetupPaymentsInput' }
+      responses:
+        '200':
+          description: Updated setup progress.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/RestaurantSetupState' }
+        '400': { $ref: '#/components/responses/InvalidInput' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '404': { $ref: '#/components/responses/AuthError' }
+        '409': { $ref: '#/components/responses/AuthError' }
+        '503': { $ref: '#/components/responses/AuthError' }
+  /api/v1/organizations/{id}/restaurant/setup/orders:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    put:
+      operationId: saveRestaurantSetupOrders
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RestaurantSetupOrdersInput' }
+      responses:
+        '200':
+          description: Updated setup progress.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/RestaurantSetupState' }
+        '400': { $ref: '#/components/responses/InvalidInput' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '404': { $ref: '#/components/responses/AuthError' }
+        '409': { $ref: '#/components/responses/AuthError' }
+        '503': { $ref: '#/components/responses/AuthError' }
+  /api/v1/organizations/{id}/restaurant/setup/complete:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationID'
+    post:
+      operationId: completeRestaurantSetup
+      security: [{ sessionCookie: [] }]
+      description: Owner-only verified completion. The server validates all prerequisites, starts the 30-day trial and records audit state in one transaction. Missing menu, payment or order prerequisites return conflict and never fabricate readiness.
+      parameters:
+        - $ref: '#/components/parameters/CSRF'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RestaurantSetupCompleteInput' }
+      responses:
+        '200':
+          description: Dashboard-ready setup state.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/RestaurantSetupState' }
+        '400': { $ref: '#/components/responses/InvalidInput' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '404': { $ref: '#/components/responses/AuthError' }
+        '409': { $ref: '#/components/responses/AuthError' }
+        '503': { $ref: '#/components/responses/AuthError' }
   /api/v1/organizations/{id}/restaurant/settings:
     parameters:
       - $ref: '#/components/parameters/OrganizationID'
@@ -18204,6 +18478,13 @@ components:
         required: true,
         schema: { type: string },
       }
+    IdempotencyKey:
+      {
+        in: header,
+        name: Idempotency-Key,
+        required: true,
+        schema: { type: string, format: uuid },
+      }
   securitySchemes:
     sessionCookie:
       type: apiKey
@@ -18313,6 +18594,236 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
   schemas:
+    EmailVerificationInput:
+      type: object
+      additionalProperties: false
+      required: [token]
+      properties:
+        token: { type: string, writeOnly: true }
+    EmailVerificationResendInput:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email: { type: string, format: email }
+    EmailVerificationResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [user, verified]
+          properties:
+            user: { $ref: '#/components/schemas/User' }
+            verified: { type: boolean, const: true }
+    MessageResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [message]
+          properties:
+            message: { type: string }
+    RestaurantSetupStep:
+      type: object
+      additionalProperties: false
+      required: [key, status, complete, ready, reasons]
+      properties:
+        key: { type: string, enum: [profile, services, tables, menu, payments, orders] }
+        status: { type: string, enum: [PENDING, COMPLETE] }
+        complete: { type: boolean }
+        ready: { type: boolean }
+        reasons: { type: array, items: { type: string } }
+        reason: { type: string }
+        completed_at: { type: string, format: date-time }
+    RestaurantSetupState:
+      type: object
+      additionalProperties: false
+      required: [organization_id, branch_id, current_step, complete, ready, completed, readiness, steps, profile, services, tables, menu, payments, orders]
+      properties:
+        organization_id: { type: string, format: uuid }
+        branch_id: { type: string, format: uuid }
+        current_step: { type: string, enum: [profile, services, tables, menu, payments, orders, review] }
+        complete: { type: boolean }
+        ready: { type: boolean }
+        completed: { type: boolean }
+        readiness:
+          type: object
+          required: [ready, incomplete]
+          properties:
+            ready: { type: boolean }
+            incomplete:
+              type: array
+              items:
+                type: object
+                required: [key, label, reason]
+                properties:
+                  key: { type: string }
+                  label: { type: string }
+                  reason: { type: string }
+        capabilities:
+          type: object
+          properties:
+            cardPayments: { type: boolean, const: false }
+        steps: { type: array, items: { $ref: '#/components/schemas/RestaurantSetupStep' } }
+        profile: { type: object, additionalProperties: true }
+        services: { $ref: '#/components/schemas/RestaurantServiceModes' }
+        tables: { type: object, additionalProperties: true }
+        menu: { type: object, additionalProperties: true }
+        payments: { type: object, additionalProperties: true }
+        orders: { type: object, additionalProperties: true }
+        issued_table_qr_tokens:
+          type: array
+          description: Returned only by an authorized table setup mutation that issues or rotates table bearer tokens, including its exact actor-scoped idempotent replay. Omitted from setup reads and audit events. A later rotation invalidates earlier tokens, including tokens in an older replay. Treat these values as secrets; do not log them or persist them in browser storage.
+          items: { $ref: '#/components/schemas/RestaurantIssuedTableQRToken' }
+    RestaurantIssuedTableQRToken:
+      type: object
+      additionalProperties: false
+      required: [table_id, code, qr_token]
+      properties:
+        table_id: { type: string, format: uuid }
+        code: { type: string }
+        qr_token: { type: string, writeOnly: false, description: Secret table bearer token issued by this mutation. }
+    RestaurantServiceModes:
+      type: object
+      additionalProperties: false
+      required: [dine_in, takeaway, delivery]
+      properties:
+        dine_in: { type: boolean, default: true }
+        takeaway: { type: boolean, default: true }
+        delivery: { type: boolean, default: false }
+    RestaurantSetupProfileInput:
+      type: object
+      additionalProperties: false
+      description: Accepts flat organization fields or a nested organization. When organization is supplied, its fields take precedence. Omitting organization code preserves the existing code; omitting branch preserves the existing branch.
+      anyOf:
+        - required: [name, business_type]
+        - required: [organization]
+      properties:
+        branch_id: { type: string, format: uuid }
+        name: { type: string, minLength: 1, maxLength: 200 }
+        code: { type: string }
+        business_type: { type: string, const: RESTAURANT }
+        contact_email: { type: string, format: email }
+        contact_phone: { type: string, maxLength: 50 }
+        address: { type: string, maxLength: 500 }
+        service_modes: { $ref: '#/components/schemas/RestaurantServiceModes' }
+        organization:
+          type: object
+          additionalProperties: false
+          required: [name, business_type]
+          properties:
+            name: { type: string, minLength: 1, maxLength: 200 }
+            code: { type: string }
+            business_type: { type: string, const: RESTAURANT }
+            contact_email: { type: string }
+            contact_phone: { type: string }
+            address: { type: string }
+        branch:
+          type: object
+          additionalProperties: false
+          description: When supplied, name and code are required. Address, phone and email replace the existing branch contact fields.
+          required: [name, code]
+          properties:
+            name: { type: string, minLength: 1, maxLength: 200 }
+            code:
+              {
+                type: string,
+                minLength: 1,
+                maxLength: 50,
+                pattern: '^[A-Z0-9][A-Z0-9_-]{0,49}$',
+                description: Send the code trimmed and uppercase.,
+              }
+            address: { type: string }
+            phone: { type: string }
+            email: { type: string }
+            status: { type: string }
+    RestaurantSetupServicesInput:
+      type: object
+      additionalProperties: false
+      required: [branch_id, service_modes]
+      properties:
+        branch_id: { type: string, format: uuid }
+        service_modes: { $ref: '#/components/schemas/RestaurantServiceModes' }
+    RestaurantSetupZoneInput:
+      type: object
+      additionalProperties: false
+      required: [code, name]
+      properties:
+        code: { type: string, pattern: '^[A-Z0-9][A-Z0-9_-]{0,39}$' }
+        name: { type: string, minLength: 1, maxLength: 100 }
+    RestaurantSetupTableInput:
+      type: object
+      additionalProperties: false
+      required: [code, name, seats, zone_code]
+      properties:
+        code: { type: string, pattern: '^[A-Z0-9][A-Z0-9_-]{0,39}$' }
+        name: { type: string, minLength: 1, maxLength: 100 }
+        seats: { type: integer, minimum: 1, maximum: 100 }
+        zone_code: { type: string }
+    RestaurantSetupTablesInput:
+      type: object
+      additionalProperties: false
+      required: [branch_id, zones, tables, generate_qr]
+      properties:
+        branch_id: { type: string, format: uuid }
+        zones: { type: array, maxItems: 100, items: { $ref: '#/components/schemas/RestaurantSetupZoneInput' } }
+        tables: { type: array, maxItems: 500, items: { $ref: '#/components/schemas/RestaurantSetupTableInput' } }
+        generate_qr: { type: boolean }
+    RestaurantSetupCategoryInput:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+    RestaurantSetupMenuItemInput:
+      type: object
+      additionalProperties: false
+      required: [category, name, price]
+      properties:
+        category: { type: string }
+        name: { type: string, minLength: 1, maxLength: 200 }
+        price: { type: string, pattern: '^[0-9]{1,16}(\.[0-9]{1,2})?$' }
+    RestaurantSetupMenuInput:
+      type: object
+      additionalProperties: false
+      required: [branch_id, categories, items]
+      properties:
+        branch_id: { type: string, format: uuid }
+        categories: { type: array, minItems: 1, maxItems: 100, items: { $ref: '#/components/schemas/RestaurantSetupCategoryInput' } }
+        items: { type: array, minItems: 1, maxItems: 500, items: { $ref: '#/components/schemas/RestaurantSetupMenuItemInput' } }
+    RestaurantSetupPaymentsInput:
+      type: object
+      additionalProperties: false
+      required: [branch_id, cash, promptpay, bank_transfer, card]
+      properties:
+        branch_id: { type: string, format: uuid }
+        cash: { type: boolean, default: true }
+        promptpay: { type: boolean, const: false, description: Unavailable until a merchant identifier can be persisted. }
+        bank_transfer: { type: boolean }
+        card: { type: boolean, const: false }
+    RestaurantSetupOrdersInput:
+      type: object
+      additionalProperties: false
+      required: [branch_id, qr_ordering, kitchen_queue, auto_confirm, vat_rate, service_charge_rate]
+      properties:
+        branch_id: { type: string, format: uuid }
+        qr_ordering: { type: boolean, default: true }
+        kitchen_queue: { type: boolean, default: true }
+        auto_confirm: { type: boolean, default: false }
+        vat_rate: { type: string, pattern: '^[0-9]{1,16}(\.[0-9]{1,2})?$' }
+        service_charge_rate: { type: string, pattern: '^[0-9]{1,16}(\.[0-9]{1,2})?$' }
+    RestaurantSetupCompleteInput:
+      type: object
+      additionalProperties: false
+      required: [branch_id]
+      properties:
+        branch_id: { type: string, format: uuid }
     RestaurantPeriod:
       type: object
       additionalProperties: false
@@ -22611,6 +23122,34 @@ components:
             - $ref: '#/components/schemas/CatalogImportResult'
             - type: 'null'
     Role: { type: string, enum: [OWNER] }
+    OrganizationCreateInput:
+      type: object
+      additionalProperties: false
+      required: [name, business_type]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        code:
+          {
+            type: string,
+            maxLength: 50,
+            description: Optional; generated by the server when omitted. Explicit codes are normalized to uppercase ASCII letters/digits/underscore/hyphen.,
+          }
+        business_type: { type: string, minLength: 1, maxLength: 80 }
+        contact_email: { type: string, maxLength: 254, default: '' }
+        contact_phone: { type: string, maxLength: 30, default: '' }
+        address: { type: string, maxLength: 1000, default: '' }
+        branch:
+          type: object
+          additionalProperties: false
+          description: Missing or empty name and code default to สาขาหลัก and MAIN.
+          properties:
+            name: { type: string, maxLength: 200 }
+            code: { $ref: '#/components/schemas/BranchInput/properties/code' }
+            address:
+              { $ref: '#/components/schemas/BranchInput/properties/address' }
+            phone: { $ref: '#/components/schemas/BranchInput/properties/phone' }
+            email: { $ref: '#/components/schemas/BranchInput/properties/email' }
+            status: { type: string, enum: ['', ACTIVE] }
     OrganizationInput:
       type: object
       required: [name, code, business_type]
@@ -22724,12 +23263,13 @@ components:
     User:
       type: object
       additionalProperties: false
-      required: [id, email, display_name, status, onboarding]
+      required: [id, email, display_name, status, email_verified, onboarding]
       properties:
         id: { type: string, format: uuid }
         email: { type: string, format: email }
         display_name: { type: string }
         status: { type: string, enum: [ACTIVE, DISABLED] }
+        email_verified: { type: boolean }
         onboarding: { type: string, const: PENDING_ORGANIZATION }
     UserResponse:
       type: object

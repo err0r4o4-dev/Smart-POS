@@ -16,7 +16,9 @@ export const paths = {
   suppliers: '/suppliers',
   purchasing: '/purchasing/orders',
   setup: '/setup',
+  settings: '/settings',
   store: '/settings/store',
+  storefrontSettings: '/settings/storefront',
   branches: '/settings/branches',
   help: '/help',
   forbidden: '/403',
@@ -38,34 +40,16 @@ const managementItems: NavigationItem[] = [
     permission: 'catalog.read',
   },
   {
-    to: '/restaurant/tables',
-    label: 'โต๊ะอาหาร',
-    icon: 'dashboard',
-    permission: 'online_orders.manage',
-  },
-  {
     to: '/restaurant/queue',
     label: 'หน้าจอคิวอาหาร',
     icon: 'pos',
     permission: 'online_orders.read',
   },
   {
-    to: '/restaurant/settings',
-    label: 'เวลาปิดร้าน',
-    icon: 'dashboard',
-    permission: 'storefront.manage',
-  },
-  {
     to: '/restaurant/quick-stock',
     label: 'เพิ่ม / ตรวจนับวัตถุดิบ',
     icon: 'dashboard',
     permission: 'inventory.read',
-  },
-  {
-    to: '/settings/storefront',
-    label: 'หน้าร้านออนไลน์',
-    icon: 'dashboard',
-    permission: 'storefront.manage',
   },
   {
     to: '/online-orders',
@@ -109,21 +93,13 @@ const managementItems: NavigationItem[] = [
     icon: 'dashboard',
     permission: 'catalog.read',
   },
-  { to: paths.setup, label: 'ตั้งค่าร้าน', icon: 'auth' },
   {
-    to: paths.store,
-    label: 'องค์กร',
+    to: paths.settings,
+    label: 'การตั้งค่า',
     icon: 'dashboard',
     permission: 'organization.read',
   },
-  {
-    to: paths.branches,
-    label: 'สาขา',
-    icon: 'dashboard',
-    permission: 'branch.read',
-  },
   { to: paths.dashboard, label: 'ภาพรวม', icon: 'dashboard' },
-  { to: paths.account, label: 'บัญชี', icon: 'auth' },
   { to: paths.help, label: 'คู่มือ', icon: 'help' },
 ];
 
@@ -169,16 +145,7 @@ const managementGroups: NavigationGroup[] = [
   {
     id: 'settings',
     label: 'ตั้งค่าร้าน',
-    paths: [
-      paths.setup,
-      paths.store,
-      '/settings/storefront',
-      '/restaurant/settings',
-      '/restaurant/tables',
-      paths.branches,
-      paths.account,
-      paths.help,
-    ],
+    paths: [paths.settings],
   },
 ];
 

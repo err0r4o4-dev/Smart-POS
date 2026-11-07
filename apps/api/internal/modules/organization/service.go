@@ -7,6 +7,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"strings"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -77,6 +79,24 @@ type auditKey struct{}
 
 func (service *Service) Authorized(ctx context.Context, userID, orgID, permission string) (pgx.Tx, Member, error) {
 	return service.authorized(ctx, userID, orgID, permission)
+}
+
+// RequireVerified keeps setup and organization creation behind the account
+// verification boundary while leaving login and account recovery available.
+// The caller owns the transaction and must roll it back or commit it.
+func RequireVerified(ctx context.Context, tx pgx.Tx, userID string) error {
+	var verified bool
+	err := tx.QueryRow(ctx, "SELECT email_verified_at IS NOT NULL FROM users WHERE id=$1 AND status='ACTIVE'", userID).Scan(&verified)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrDenied
+	}
+	if err != nil {
+		return err
+	}
+	if !verified {
+		return ErrDenied
+	}
+	return nil
 }
 
 func RecordAudit(ctx context.Context, tx pgx.Tx, orgID, actor, event, object string) error {
@@ -237,7 +257,7 @@ func (service *Service) Create(ctx context.Context, userID, key string, input Cr
 	if service.SingleStoreOrganizationID != "" {
 		return Context{}, ErrDenied
 	}
-	if !uuidPattern.MatchString(key) || input.validate() != nil || input.Branch.validate() != nil || input.Branch.Status != "ACTIVE" {
+	if !uuidPattern.MatchString(key) || input.validateCreate() != nil {
 		return Context{}, ErrInput
 	}
 	encoded, _ := json.Marshal(input)
@@ -251,6 +271,9 @@ func (service *Service) Create(ctx context.Context, userID, key string, input Cr
 		return Context{}, err
 	}
 	defer tx.Rollback(ctx)
+	if err = RequireVerified(ctx, tx, userID); err != nil {
+		return Context{}, err
+	}
 	if _, err = tx.Exec(ctx, "SELECT pg_advisory_xact_lock(hashtextextended($1,0))", userID+key); err != nil {
 		return Context{}, err
 	}
@@ -266,6 +289,9 @@ func (service *Service) Create(ctx context.Context, userID, key string, input Cr
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return Context{}, err
+	}
+	if input.Code == "" {
+		input.Code = "ORG_" + strings.ToUpper(strings.ReplaceAll(orgID, "-", ""))
 	}
 	_, err = tx.Exec(ctx, "INSERT INTO organizations(id,name,code,business_type,contact_email,contact_phone,address,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8)", orgID, input.Name, input.Code, input.BusinessType, input.ContactEmail, input.ContactPhone, input.Address, userID)
 	if err != nil {

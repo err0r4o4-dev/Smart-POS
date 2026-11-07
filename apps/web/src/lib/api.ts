@@ -28,6 +28,7 @@ export interface AuthUser {
   email: string;
   display_name: string;
   status: 'ACTIVE' | 'DISABLED';
+  email_verified?: boolean;
   onboarding: 'PENDING_ORGANIZATION';
 }
 
@@ -162,4 +163,14 @@ export function resetPassword(token: string, password: string) {
 
 export function logout(csrf: string) {
   return authRequest<{ revoked: boolean }>('logout', {}, csrf);
+}
+
+export function verifyEmail(token: string) {
+  return authRequest<{ verified: boolean; user: AuthUser }>('email/verify', {
+    token,
+  });
+}
+
+export function resendVerification(email: string) {
+  return authRequest<{ message: string }>('email/resend', { email });
 }

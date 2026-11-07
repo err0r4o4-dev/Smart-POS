@@ -72,6 +72,14 @@ const restaurantPaths = [
   '/queue',
   '/forecast',
   '/quick-stock',
+  '/setup',
+  '/setup/profile',
+  '/setup/services',
+  '/setup/tables',
+  '/setup/menu',
+  '/setup/payments',
+  '/setup/orders',
+  '/setup/complete',
 ].map((path) => '/api/v1/organizations/{id}/restaurant' + path);
 
 const storefrontPaths = [
@@ -294,6 +302,8 @@ assert.deepEqual(
     '/api/v1/auth/me',
     '/api/v1/auth/register',
     '/api/v1/auth/reset-password',
+    '/api/v1/auth/email/verify',
+    '/api/v1/auth/email/resend',
     '/api/v1/organizations',
     '/api/v1/organizations/{id}',
     '/api/v1/organizations/{id}/audit',

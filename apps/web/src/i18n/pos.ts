@@ -75,7 +75,8 @@ export const pos = defineMessages({
     quantityMustBeGreaterThan0With:
       'จำนวนต้องมากกว่า 0 ไม่เกิน 1,000,000 มีทศนิยมไม่เกิน 3 ตำแหน่ง และหน่วยชิ้นหรือแพ็กต้องเป็นจำนวนเต็ม',
     shoppingCart: 'ตะกร้าสินค้า',
-    cartPolicyRefresh: 'ข้อมูลนโยบายสต็อกของตะกร้าไม่ถูกต้อง กรุณาโหลดตะกร้าใหม่',
+    cartPolicyRefresh:
+      'ข้อมูลนโยบายสต็อกของตะกร้าไม่ถูกต้อง กรุณาโหลดตะกร้าใหม่',
     refreshCart: 'โหลดตะกร้าใหม่',
     yourCartIsEmpty: 'ยังไม่มีสินค้าในตะกร้า',
     delete: 'ลบ',
@@ -328,7 +329,8 @@ export const pos = defineMessages({
     quantityMustBeGreaterThan0With:
       'Quantity must be greater than 0 and at most 1,000,000, with up to 3 decimal places. Piece and pack quantities must be whole numbers.',
     shoppingCart: 'Shopping cart',
-    cartPolicyRefresh: 'The cart stock policy is missing or inconsistent. Reload the cart.',
+    cartPolicyRefresh:
+      'The cart stock policy is missing or inconsistent. Reload the cart.',
     refreshCart: 'Reload cart',
     yourCartIsEmpty: 'Your cart is empty',
     delete: 'Delete',

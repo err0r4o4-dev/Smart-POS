@@ -191,7 +191,11 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
               <House size={15} />
             </span>
             <span>{areaTitle}</span>
-            <ChevronRight size={15} className="breadcrumb-separator" aria-hidden="true" />
+            <ChevronRight
+              size={15}
+              className="breadcrumb-separator"
+              aria-hidden="true"
+            />
             <strong>{pageTitle}</strong>
           </div>
           <div className="topbar-right">

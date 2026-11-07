@@ -1,5 +1,9 @@
 import { isValidElement } from 'react';
-import { createMemoryRouter, matchRoutes, RouterProvider } from 'react-router-dom';
+import {
+  createMemoryRouter,
+  matchRoutes,
+  RouterProvider,
+} from 'react-router-dom';
 import { screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import { render } from '../test/render';
@@ -64,14 +68,24 @@ it.each(['', '/manage', '/work'])(
   },
 );
 
-it.each(['', '/manage', '/work'].flatMap((prefix) =>
-  ['/restaurant/recipes', '/restaurant/quick-stock', '/restaurant/forecast',
-    '/inventory/batches', '/inventory/expiry', '/inventory/write-offs', '/inventory/recalls']
-    .map((path) => prefix + path),
-))('renders not found without requests for retired URL %s', async (path) => {
+it.each(
+  ['', '/manage', '/work'].flatMap((prefix) =>
+    [
+      '/restaurant/recipes',
+      '/restaurant/quick-stock',
+      '/restaurant/forecast',
+      '/inventory/batches',
+      '/inventory/expiry',
+      '/inventory/write-offs',
+      '/inventory/recalls',
+    ].map((path) => prefix + path),
+  ),
+)('renders not found without requests for retired URL %s', async (path) => {
   const fetchSpy = vi.spyOn(globalThis, 'fetch');
   try {
-    const memoryRouter = createMemoryRouter(router.routes, { initialEntries: [path] });
+    const memoryRouter = createMemoryRouter(router.routes, {
+      initialEntries: [path],
+    });
     render(<RouterProvider router={memoryRouter} />);
     expect(await screen.findByText('404 · NOT FOUND')).toBeVisible();
     expect(fetchSpy).not.toHaveBeenCalled();

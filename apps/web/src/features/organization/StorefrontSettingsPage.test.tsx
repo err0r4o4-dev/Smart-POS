@@ -76,15 +76,17 @@ it('renders the complete storefront settings layout matching the mockup', () => 
   expect(
     screen.getByRole('heading', { name: 'รายละเอียดหน้าร้านออนไลน์' }),
   ).toBeInTheDocument();
-  expect(
-    screen.getByLabelText(/ชื่อหน้าร้าน \(แสดงบนเว็บ\)/),
-  ).toHaveValue('VELO Cafe & Restaurant');
-  expect(screen.getByLabelText(/ลิงก์หน้าร้าน \(URL\)/)).toHaveValue('velocafe');
+  expect(screen.getByLabelText(/ชื่อหน้าร้าน \(แสดงบนเว็บ\)/)).toHaveValue(
+    'VELO Cafe & Restaurant',
+  );
+  expect(screen.getByLabelText(/ลิงก์หน้าร้าน \(URL\)/)).toHaveValue(
+    'velocafe',
+  );
   expect(screen.getByText('.velopos.com')).toBeInTheDocument();
   expect(screen.getByLabelText(/คำอธิบายร้าน/)).toHaveValue(
     'ร้านอาหารและคาเฟ่ อาหารไทย เครื่องดื่ม และเบเกอรี่',
   );
-  expect(screen.getByText(/43 \/ 200/)).toBeInTheDocument();
+  expect(screen.getByText(/50 \/ 200/)).toBeInTheDocument();
 
   // Card 3: ช่องทางรับออเดอร์
   expect(
@@ -93,12 +95,14 @@ it('renders the complete storefront settings layout matching the mockup', () => 
   expect(
     screen.getByRole('checkbox', { name: /ซื้อกลับบ้าน/ }),
   ).toHaveAttribute('aria-checked', 'true');
-  expect(
-    screen.getByRole('checkbox', { name: /เดลิเวอรี/ }),
-  ).toHaveAttribute('aria-checked', 'true');
-  expect(
-    screen.getByRole('checkbox', { name: /ทานที่ร้าน/ }),
-  ).toHaveAttribute('aria-checked', 'false');
+  expect(screen.getByRole('checkbox', { name: /เดลิเวอรี/ })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  expect(screen.getByRole('checkbox', { name: /ทานที่ร้าน/ })).toHaveAttribute(
+    'aria-checked',
+    'false',
+  );
 
   // Card 4: การแสดงผลหน้าร้าน
   expect(
@@ -135,16 +139,14 @@ it('renders the complete storefront settings layout matching the mockup', () => 
     screen.getByRole('heading', { name: 'ลิงก์และ QR' }),
   ).toBeInTheDocument();
   expect(screen.getByText('https://velocafe.velopos.com')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'คัดลอกลิงก์' })).toBeInTheDocument();
+  expect(
+    screen.getByRole('button', { name: 'คัดลอกลิงก์' }),
+  ).toBeInTheDocument();
   expect(
     screen.getByRole('heading', { name: 'QR หน้าร้านออนไลน์' }),
   ).toBeInTheDocument();
-  expect(
-    screen.getByText('ให้ลูกค้าสแกนเพื่อสั่งอาหาร'),
-  ).toBeInTheDocument();
-  expect(
-    screen.getByRole('button', { name: 'ดาวน์โหลด' }),
-  ).toBeInTheDocument();
+  expect(screen.getByText('ให้ลูกค้าสแกนเพื่อสั่งอาหาร')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'ดาวน์โหลด' })).toBeInTheDocument();
 });
 
 it('toggles the storefront enable switch', () => {
@@ -241,7 +243,9 @@ it('handles copy link action', async () => {
 
   expect(writeTextMock).toHaveBeenCalledWith('https://velocafe.velopos.com');
   await waitFor(() => {
-    expect(screen.getByRole('button', { name: 'คัดลอกแล้ว' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'คัดลอกแล้ว' }),
+    ).toBeInTheDocument();
   });
 });
 

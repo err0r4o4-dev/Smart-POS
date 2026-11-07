@@ -11,12 +11,10 @@ export const dashboard = defineMessages({
     oneConsideredArchitectureReadyForWhatComes:
       'สถาปัตยกรรมที่พร้อมสำหรับขั้นตอนต่อไป',
     exploreTheFoundation: 'สำรวจรากฐานระบบ',
-    developmentWorkspaceNoLiveRetailData:
-      'พื้นที่พัฒนา · ไม่มีข้อมูลร้านจริง',
+    developmentWorkspaceNoLiveRetailData: 'พื้นที่พัฒนา · ไม่มีข้อมูลร้านจริง',
     inventory: 'สินค้าคงคลัง',
     intelligence: 'ระบบอัจฉริยะ',
-    architectureScopeNotBusinessMetrics:
-      'ข้อมูลโครงสร้างระบบ ไม่ใช่ยอดธุรกิจ',
+    architectureScopeNotBusinessMetrics: 'ข้อมูลโครงสร้างระบบ ไม่ใช่ยอดธุรกิจ',
     connectedByClearBoundaries: 'เชื่อมต่อกันด้วยขอบเขตที่ชัดเจน',
     documentedNotYetImplemented: 'มีเอกสาร แต่ยังไม่พัฒนา',
     phase0: 'เฟส 0',

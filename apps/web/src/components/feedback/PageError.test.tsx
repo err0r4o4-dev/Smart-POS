@@ -25,9 +25,7 @@ it('offers recovery without claiming a failed render rolled back a transaction',
       /No transaction was submitted|Internal diagnostic details/,
     ),
   ).not.toBeInTheDocument();
-  expect(
-    screen.getByRole('button', { name: 'โหลดใหม่' }),
-  ).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'โหลดใหม่' })).toBeEnabled();
 });
 
 it('handles a route render failure with the same actionable fallback', async () => {

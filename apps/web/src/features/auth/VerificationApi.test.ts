@@ -3,12 +3,10 @@ import { resendVerification, verifyEmail } from '../../lib/api';
 
 afterEach(() => vi.unstubAllGlobals());
 it('posts verification and resend using same-origin JSON transport', async () => {
-  const fetcher = vi
-    .fn()
-    .mockResolvedValue({
-      ok: true,
-      json: async () => ({ data: { verified: true } }),
-    });
+  const fetcher = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({ data: { verified: true } }),
+  });
   vi.stubGlobal('fetch', fetcher);
   await verifyEmail('synthetic-token');
   await resendVerification('person@example.test');

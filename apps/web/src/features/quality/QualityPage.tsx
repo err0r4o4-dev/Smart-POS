@@ -95,9 +95,7 @@ function QualityWorkspace({ view }: { view: View }) {
         icon={<Award size={24} />}
         eyebrow="BATCH / LOT / EXPIRY"
         title={t(titles[view])}
-        description={t(
-          'quality.theStockLedgerIsAuthoritativeAggregateTracked',
-        )}
+        description={t('quality.theStockLedgerIsAuthoritativeAggregateTracked')}
       />
       <nav className="catalog-nav" aria-label={t('quality.qualityNavigation')}>
         {Object.entries(titles).map(([name, label]) => (

@@ -36,7 +36,7 @@ func TestPrepaidOnlineOrderDeliveryFeeMath(t *testing.T) {
 		if err1 != nil || err2 != nil || err3 != nil {
 			t.Fatalf("unexpected scaling error: %v %v %v", err1, err2, err3)
 		}
-		matches := (cartScaled + shippingScaled == expectedScaled)
+		matches := (cartScaled+shippingScaled == expectedScaled)
 		if matches != tc.match {
 			t.Fatalf("expected match=%v for cart=%s, ship=%s, total=%s", tc.match, tc.cartTotal, tc.shippingFee, tc.expectedTotal)
 		}

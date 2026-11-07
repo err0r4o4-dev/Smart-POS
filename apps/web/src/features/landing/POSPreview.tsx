@@ -97,7 +97,9 @@ export function POSPreview() {
           <span className="landing-pos-brand">
             <ShoppingBasket size={19} /> VELO POS
           </span>
-          <span className="landing-pos-label">{t('landing.posPreviewLabel')}</span>
+          <span className="landing-pos-label">
+            {t('landing.posPreviewLabel')}
+          </span>
         </div>
         <div className="landing-pos-content">
           <div className="landing-pos-products">

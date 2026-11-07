@@ -33,6 +33,7 @@
 ### Task 1: Route Setup and Navigation from Settings Page
 
 **Files:**
+
 - Modify: `apps/web/src/app/routes.ts`
 - Modify: `apps/web/src/app/router.tsx`
 - Modify: `apps/web/src/app/route-pages.tsx`
@@ -41,6 +42,7 @@
 - Test: `apps/web/src/features/organization/SettingsPage.test.tsx`
 
 **Interfaces:**
+
 - Consumes: `paths.settings` from `apps/web/src/app/routes.ts`
 - Produces: `paths.storefrontSettings = '/settings/storefront'` and export `StorefrontSettingsPage`
 
@@ -72,17 +74,20 @@ Verify no extraneous edits or regressions in existing routes.
 ### Task 2: Implement StorefrontSettingsPage Component
 
 **Files:**
+
 - Create: `apps/web/src/features/organization/StorefrontSettingsPage.tsx`
 - Modify: `apps/web/src/features/organization/OrganizationPages.tsx` (re-export `StorefrontSettingsPage`)
 - Create: `apps/web/src/features/organization/StorefrontSettingsPage.test.tsx`
 
 **Interfaces:**
+
 - Produces: `StorefrontSettingsPage: React.FC`
 - Props: `{ initialSettings?: Partial<StorefrontConfig> }`
 
 - [ ] **Step 1: Write comprehensive failing tests in `StorefrontSettingsPage.test.tsx`**
 
 Test scenarios:
+
 1. Renders page header with title "หน้าร้านออนไลน์" and subtitle "ตั้งค่าหน้าร้านสำหรับรับออเดอร์ออนไลน์ (ซื้อกลับบ้าน / เดลิเวอรี)".
 2. Renders toggle card "เปิดใช้งานหน้าร้านออนไลน์" with accessible role="switch" / toggle state.
 3. Renders store details fields:
@@ -111,6 +116,7 @@ Verify test fails as `StorefrontSettingsPage` is not yet created.
 - [ ] **Step 3: Implement `StorefrontSettingsPage.tsx`**
 
 Create `StorefrontSettingsPage.tsx` with:
+
 - State hooks for `isEnabled`, `storeName`, `slug`, `description`, `channels` (takeaway, delivery, dineIn), `themeColor`, `logoUrl`, `hoursMode`, `copyStatus`, `saveStatus`.
 - Computed `fullUrl = `https://${slug}.velopos.com``.
 - Crisp inline SVG QR code representing `fullUrl` with download helper.
@@ -126,15 +132,18 @@ Verify all tests in `StorefrontSettingsPage.test.tsx` pass.
 ### Task 3: Implement Dedicated Styles in `storefront-settings.css`
 
 **Files:**
+
 - Create: `apps/web/src/features/organization/storefront-settings.css`
 - Modify: `apps/web/src/features/organization/StorefrontSettingsPage.tsx` (import `./storefront-settings.css`)
 
 **Interfaces:**
+
 - Produces: CSS classes matching the exact design tokens and responsive grid.
 
 - [ ] **Step 1: Write CSS rules for all UI elements**
 
 Include:
+
 - `.storefront-settings-page`: max-width 1280px, responsive padding.
 - `.storefront-grid`: 2 columns (left: 1.2fr, right: 0.9fr), gap 20px, collapsing to 1 column at <= 1024px.
 - Toggle switch component: iOS/Material style rounded switch with `#facc15` active background, smooth transition.
@@ -155,6 +164,7 @@ Check layout at desktop (> 1024px), tablet (768px), and mobile (375px). Ensure n
 ### Task 4: Integration Verification and Cross-Component Checks
 
 **Files:**
+
 - Verify: `apps/web/src/features/organization/SettingsPage.test.tsx`
 - Verify: `apps/web/src/features/organization/StorefrontSettingsPage.test.tsx`
 - Verify: Type check and lint checks

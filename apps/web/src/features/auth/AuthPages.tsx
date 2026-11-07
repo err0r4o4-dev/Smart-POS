@@ -191,74 +191,110 @@ export function RegisterPage() {
   };
   if (registered)
     return (
-      <AuthLayout>
-        <h2>{language === 'en' ? 'Verify your email' : 'ยืนยันอีเมล'}</h2>
-        <p>
-          {language === 'en'
-            ? 'Your account was created. Verify your email before setting up your store.'
-            : 'สร้างบัญชีแล้ว กรุณายืนยันอีเมลก่อนตั้งค่าร้าน'}
-        </p>
-        <ResendVerification initialEmail={email} />
-        <p>
+      <LoginLayout titleId="verify-title">
+        <div className="auth-header-card">
+          <Tag tone="amber">{t('auth.createAccount2')}</Tag>
+          <h2 id="verify-title">
+            {language === 'en' ? 'Verify your email' : 'ยืนยันอีเมล'}
+          </h2>
+          <p>
+            {language === 'en'
+              ? 'Your account was created. Verify your email before setting up your store.'
+              : 'สร้างบัญชีแล้ว กรุณายืนยันอีเมลก่อนตั้งค่าร้าน'}
+          </p>
+        </div>
+        <div className="auth-form-body">
+          <ResendVerification initialEmail={email} />
+        </div>
+        <div className="auth-links auth-links-single">
           <Link to="/login">{t('auth.alreadyHaveAnAccountSignIn')}</Link>
-        </p>
-      </AuthLayout>
+        </div>
+      </LoginLayout>
     );
   return (
-    <AuthLayout>
-      <Tag tone="amber">{t('auth.createAccount2')}</Tag>
-      <h2>{t('auth.getStarted')}</h2>
-      <p>
-        {language === 'en'
-          ? 'Create an account and verify your email to set up your store.'
-          : 'สร้างบัญชีและยืนยันอีเมลเพื่อตั้งค่าร้าน'}
-      </p>
-      <form onSubmit={submit}>
+    <LoginLayout titleId="register-title">
+      <div className="auth-header-card">
+        <Tag tone="amber">{t('auth.createAccount2')}</Tag>
+        <h2 id="register-title">{t('auth.getStarted')}</h2>
+        <p>
+          {language === 'en'
+            ? 'Create an account and verify your email to set up your store.'
+            : 'สร้างบัญชีและยืนยันอีเมลเพื่อตั้งค่าร้าน'}
+        </p>
+      </div>
+      <form onSubmit={submit} className="auth-form-body">
         <fieldset disabled={pending}>
-          <label htmlFor="display-name">{t('auth.displayName')}</label>
-          <input
-            id="display-name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            autoComplete="name"
-            required
-            maxLength={100}
-          />
-          <label htmlFor="email">{t('auth.emailAddress')}</label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            autoComplete="email"
-            required
-            maxLength={254}
-          />
+          <div className="auth-field-group">
+            <label htmlFor="display-name">{t('auth.displayName')}</label>
+            <div className="auth-input-wrapper">
+              <input
+                id="display-name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                autoComplete="name"
+                required
+                maxLength={100}
+                placeholder={t('auth.displayName')}
+              />
+            </div>
+          </div>
+          <div className="auth-field-group">
+            <label htmlFor="email">{t('auth.emailAddress')}</label>
+            <div className="auth-input-wrapper">
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                autoComplete="email"
+                required
+                maxLength={254}
+                placeholder="name@company.com"
+              />
+            </div>
+          </div>
           <PasswordField
             value={password}
             onChange={setPassword}
             autoComplete="new-password"
           />
-          <small>{t('auth.useAtLeast12CharactersMaximum128')}</small>
-          <label htmlFor="confirm-password">{t('auth.confirmPassword')}</label>
-          <input
-            id="confirm-password"
-            type="password"
-            value={confirm}
-            onChange={(event) => setConfirm(event.target.value)}
-            autoComplete="new-password"
-            required
-          />
+          <small className="auth-password-hint">
+            {t('auth.useAtLeast12CharactersMaximum128')}
+          </small>
+          <div className="auth-field-group">
+            <label htmlFor="confirm-password">
+              {t('auth.confirmPassword')}
+            </label>
+            <div className="auth-input-wrapper">
+              <input
+                id="confirm-password"
+                type="password"
+                value={confirm}
+                onChange={(event) => setConfirm(event.target.value)}
+                autoComplete="new-password"
+                required
+                placeholder={t('auth.confirmPassword')}
+              />
+            </div>
+          </div>
           <ErrorMessage message={localize(error ?? '')} />
-          <Button type="submit">
-            {pending ? t('auth.creatingAccount') : t('auth.createAccount')}
+          <Button type="submit" className="auth-submit-btn">
+            {pending ? (
+              <>
+                <Loading /> {t('auth.creatingAccount')}
+              </>
+            ) : (
+              t('auth.createAccount')
+            )}
           </Button>
         </fieldset>
       </form>
-      <p className="auth-links">
-        <Link to="/login">{t('auth.alreadyHaveAnAccountSignIn')}</Link>
-      </p>
-    </AuthLayout>
+      <div className="auth-links auth-links-single">
+        <div className="auth-link-register-prompt">
+          <Link to="/login">{t('auth.alreadyHaveAnAccountSignIn')}</Link>
+        </div>
+      </div>
+    </LoginLayout>
   );
 }
 

@@ -133,9 +133,7 @@ it('retries failed location options as well as the main inventory list', async (
     'โหลดตัวเลือกสถานที่เก็บไม่สำเร็จ',
   );
   unavailable = false;
-  fireEvent.click(
-    screen.getByRole('button', { name: 'ลองโหลดใหม่' }),
-  );
+  fireEvent.click(screen.getByRole('button', { name: 'ลองโหลดใหม่' }));
   await waitFor(() =>
     expect(screen.queryByRole('alert')).not.toBeInTheDocument(),
   );

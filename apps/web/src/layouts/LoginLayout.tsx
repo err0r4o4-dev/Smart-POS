@@ -18,7 +18,7 @@ export function LoginLayout({
   return (
     <main id="main-content" className="login-shell">
       <section className="login-visual" aria-labelledby="login-visual-title">
-        <div className="login-visual-brand">
+        <div className="login-visual-brand auth-story">
           <Brand />
         </div>
         <div className="login-visual-copy">

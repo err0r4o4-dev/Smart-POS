@@ -180,6 +180,6 @@ test('content stays usable without IntersectionObserver', async ({ page }) => {
     page.getByRole('heading', { name: 'ตั้งค่าร้านและสาขา' }),
   ).toBeVisible();
   await expect(
-    page.getByRole('heading', { name: 'กำหนดสิทธิ์ให้เหมาะกับทีม' }),
+    page.getByRole('heading', { name: 'พื้นที่สำหรับเจ้าของร้าน' }),
   ).toBeVisible();
 });

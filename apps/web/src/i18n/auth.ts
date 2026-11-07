@@ -1,6 +1,12 @@
 import { defineMessages } from './defineMessages';
 export const auth = defineMessages({
   th: {
+    storeSimplified: 'จัดการร้านให้ง่ายขึ้น',
+    storeSummary:
+      'ครบทุกการจัดการร้านค้า ตั้งแต่สินค้า สต็อก ไปจนถึงการขาย และรายงานยอดขาย',
+    storeIllustration:
+      'เครื่องขายหน้าร้าน เครื่องพิมพ์ใบเสร็จ และต้นไม้บนเคาน์เตอร์ร้านค้า',
+    backToHome: 'กลับหน้าหลัก',
     password: 'รหัสผ่าน',
     hidePassword: 'ซ่อนรหัสผ่าน',
     showPassword: 'แสดงรหัสผ่าน',
@@ -60,6 +66,12 @@ export const auth = defineMessages({
     account: 'บัญชี',
   },
   en: {
+    storeSimplified: 'Run your store, simply.',
+    storeSummary:
+      'Everything for your store, from products and inventory to sales and reporting.',
+    storeIllustration:
+      'Point-of-sale terminal, receipt printer and plant on a shop counter',
+    backToHome: 'Back to home',
     password: 'Password',
     hidePassword: 'Hide password',
     showPassword: 'Show password',

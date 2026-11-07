@@ -134,3 +134,12 @@ Additional Phase 0 routes outside the 106 business inventory: / redirects to /da
 ## Inventory access and deferred valuation
 
 Ten Phase 2 Inventory routes above are implemented; /inventory/valuation stays Planned because no accounting costing method exists. Read pages require inventory.read, movement history additionally requires inventory.audit.read at the API, and each mutation checks its own inventory permission. Lists/details/actions are branch-scoped; destination transfer participants can inspect that transfer without reading arbitrary source balances. Owner has organization-wide scope; Manager remains assigned-active-branch scoped. There is no fake inventory data or business dashboard/checkout implementation.
+
+## Restaurant Routes
+
+- `/restaurant/recipes` - Implemented recipe ingredient management per serving; does not auto-deduct ingredients on sale yet
+- `/restaurant/tables` - Implemented table metadata only; dine-in QR ordering and customer token consumer are not enabled
+- `/restaurant/queue` - Implemented authenticated staff/management queue for live paid online orders; uses per-business-period queue sequence, no public board token
+- `/restaurant/settings` - Implemented branch closing-time and timezone settings with half-open daily reporting window; never resets stock
+- `/restaurant/forecast` - Implemented honest unavailable status (`FORECAST_NOT_CONFIGURED`) until evaluated forecasting is connected
+- `/restaurant/quick-stock` - Implemented non-batch quick stock increase/decrease/count using the existing inventory ledger without PO/receiving

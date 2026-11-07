@@ -20,6 +20,7 @@ export function OrderDetails({
           {localize(orderStatusLabels[order.status])}
         </Tag>
       </div>
+      {order.table_code && <p>โต๊ะ {order.table_code}</p>}
       <p>
         {order.payment_status === 'PAID_AT_STORE'
           ? t('storefront.paidAndSaleSavedInStore')

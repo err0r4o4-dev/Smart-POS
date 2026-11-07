@@ -35,6 +35,42 @@ export interface NavigationItem {
 }
 const managementItems: NavigationItem[] = [
   {
+    to: '/restaurant/recipes',
+    label: 'สูตรอาหาร',
+    icon: 'dashboard',
+    permission: 'catalog.read',
+  },
+  {
+    to: '/restaurant/tables',
+    label: 'โต๊ะอาหาร',
+    icon: 'dashboard',
+    permission: 'online_orders.manage',
+  },
+  {
+    to: '/restaurant/queue',
+    label: 'หน้าจอคิวอาหาร',
+    icon: 'pos',
+    permission: 'online_orders.read',
+  },
+  {
+    to: '/restaurant/settings',
+    label: 'เวลาปิดร้าน',
+    icon: 'dashboard',
+    permission: 'storefront.manage',
+  },
+  {
+    to: '/restaurant/quick-stock',
+    label: 'เพิ่ม / ตรวจนับวัตถุดิบ',
+    icon: 'dashboard',
+    permission: 'inventory.read',
+  },
+  {
+    to: '/restaurant/forecast',
+    label: 'พยากรณ์ (ยังไม่พร้อม)',
+    icon: 'dashboard',
+    permission: 'sales.read',
+  },
+  {
     to: '/settings/storefront',
     label: 'หน้าร้านออนไลน์',
     icon: 'dashboard',
@@ -42,13 +78,13 @@ const managementItems: NavigationItem[] = [
   },
   {
     to: '/online-orders',
-    label: 'ออเดอร์ออนไลน์',
+    label: 'ออเดอร์และคิว',
     icon: 'pos',
     permission: 'online_orders.read',
   },
   {
     to: '/inventory/batches',
-    label: 'Batch/Expiry/Quality',
+    label: 'ของเสีย / หมดอายุ',
     icon: 'dashboard',
     permission: 'quality.read',
   },
@@ -66,7 +102,7 @@ const managementItems: NavigationItem[] = [
   },
   {
     to: '/pricing',
-    label: 'ราคา / Pricing',
+    label: 'ราคาเมนู',
     icon: 'dashboard',
     permission: 'pricing.read',
   },
@@ -108,13 +144,13 @@ const managementItems: NavigationItem[] = [
   },
   {
     to: '/pos',
-    label: 'ขายหน้าร้าน',
+    label: 'รับออเดอร์หน้าร้าน',
     icon: 'pos',
     permission: 'pos.access',
   },
   {
     to: '/sales',
-    label: 'รายการขาย',
+    label: 'ยอดขาย',
     icon: 'dashboard',
     permission: 'sales.read',
   },
@@ -126,7 +162,7 @@ const managementItems: NavigationItem[] = [
   },
   {
     to: paths.inventory,
-    label: 'สต็อก',
+    label: 'วัตถุดิบ',
     icon: 'dashboard',
     permission: 'inventory.read',
   },
@@ -144,7 +180,7 @@ const managementItems: NavigationItem[] = [
   },
   {
     to: paths.products,
-    label: 'สินค้า',
+    label: 'เมนูอาหาร',
     icon: 'dashboard',
     permission: 'catalog.read',
   },
@@ -178,11 +214,17 @@ const managementItems: NavigationItem[] = [
   { to: paths.help, label: 'คู่มือ', icon: 'help' },
 ];
 
-export const navigation: NavigationItem[] = managementItems.map((item) => ({
-  ...item,
-  to: workspacePath(item.to, 'management'),
-  roles: managementRoles,
-}));
+const restaurantManagementItems = managementItems.filter(
+  (item) => item.to !== paths.suppliers && item.to !== paths.purchasing,
+);
+
+export const navigation: NavigationItem[] = restaurantManagementItems.map(
+  (item) => ({
+    ...item,
+    to: workspacePath(item.to, 'management'),
+    roles: managementRoles,
+  }),
+);
 
 const staffItems: NavigationItem[] = [
   { to: paths.staff, label: 'งานของฉัน', icon: 'dashboard' },
@@ -192,14 +234,19 @@ const staffItems: NavigationItem[] = [
     icon: 'pos',
     permission: 'pos.register.open',
   },
-  { to: '/pos', label: 'ขายหน้าร้าน', icon: 'pos', permission: 'pos.access' },
+  {
+    to: '/pos',
+    label: 'รับออเดอร์หน้าร้าน',
+    icon: 'pos',
+    permission: 'pos.access',
+  },
   {
     to: '/pos/register/close',
     label: 'ปิดกะ',
     icon: 'pos',
     permission: 'pos.register.close',
   },
-  ...managementItems.filter((item) =>
+  ...restaurantManagementItems.filter((item) =>
     [
       '/sales',
       '/receipts',
@@ -213,6 +260,7 @@ const staffItems: NavigationItem[] = [
       '/purchasing/orders',
       '/customers',
       '/online-orders',
+      '/restaurant/queue',
       '/loyalty',
     ].includes(item.to),
   ),
@@ -247,17 +295,28 @@ export interface NavigationGroup {
 const managementGroups: NavigationGroup[] = [
   {
     id: 'sales',
-    label: 'การขาย',
-    paths: ['/pos', '/online-orders', '/sales', '/receipts'],
+    label: 'การขายและคิว',
+    paths: ['/pos', '/online-orders', '/restaurant/queue'],
+  },
+  {
+    id: 'menu',
+    label: 'เมนูและโปรโมชัน',
+    paths: [
+      paths.products,
+      '/restaurant/recipes',
+      '/pricing',
+      '/promotions',
+      '/discount-approvals',
+    ],
   },
   {
     id: 'inventory',
-    label: 'สินค้าและสต็อก',
+    label: 'วัตถุดิบ',
     paths: [
       paths.inventory,
       '/inventory/batches',
-      paths.purchasing,
-      paths.suppliers,
+      '/restaurant/quick-stock',
+      '/restaurant/forecast',
     ],
   },
   {
@@ -266,22 +325,26 @@ const managementGroups: NavigationGroup[] = [
     paths: ['/customers', '/loyalty'],
   },
   {
-    id: 'pricing',
-    label: 'ราคาและโปรโมชัน',
-    paths: ['/pricing', '/promotions', '/discount-approvals'],
-  },
-  {
-    id: 'returns',
+    id: 'reports',
     label: 'รายงาน',
-    paths: ['/pos/returns', '/pos/exchanges', '/sales/voids', '/sales/refunds'],
+    paths: [
+      '/sales',
+      '/receipts',
+      '/sales/refunds',
+      '/sales/voids',
+      '/pos/returns',
+      '/pos/exchanges',
+    ],
   },
   {
     id: 'settings',
-    label: 'ตั้งค่า',
+    label: 'ตั้งค่าร้าน',
     paths: [
       paths.setup,
       paths.store,
       '/settings/storefront',
+      '/restaurant/settings',
+      '/restaurant/tables',
       paths.branches,
       paths.employees,
       paths.roles,
@@ -294,30 +357,31 @@ const managementGroups: NavigationGroup[] = [
 const staffGroups: NavigationGroup[] = [
   {
     id: 'staff-sales',
-    label: 'งานขาย',
+    label: 'งานขายและคิว',
     paths: [
       '/pos/register/open',
+      '/restaurant/queue',
       '/online-orders',
       '/pos',
       '/pos/register/close',
-      '/sales',
-      '/receipts',
     ],
   },
   {
-    id: 'staff-returns',
-    label: 'คืนสินค้าและเงิน',
-    paths: ['/pos/returns', '/pos/exchanges', '/sales/voids', '/sales/refunds'],
+    id: 'staff-reports',
+    label: 'ยอดขายและการแก้ไข',
+    paths: [
+      '/sales',
+      '/receipts',
+      '/pos/returns',
+      '/pos/exchanges',
+      '/sales/voids',
+      '/sales/refunds',
+    ],
   },
   {
-    id: 'staff-stock',
-    label: 'งานสินค้า',
+    id: 'staff-menu',
+    label: 'เมนูและวัตถุดิบ',
     paths: ['/products', '/inventory', '/inventory/batches'],
-  },
-  {
-    id: 'staff-purchasing',
-    label: 'งานจัดซื้อ',
-    paths: ['/suppliers', '/purchasing/orders'],
   },
   {
     id: 'staff-customers',
@@ -325,7 +389,6 @@ const staffGroups: NavigationGroup[] = [
     paths: ['/customers', '/loyalty'],
   },
 ];
-
 export const navigationGroups: NavigationGroup[] = managementGroups.map(
   (group) => ({
     ...group,

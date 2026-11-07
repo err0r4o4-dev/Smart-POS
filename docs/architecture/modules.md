@@ -254,3 +254,8 @@ Current status supersedes older introductory scope: Phase0–4 and Phase5.1–5.
 - Tests: keyboard, semantic errors, no dead links.
 - Implementation phase: 0.
 - Current status: help, 403 and 404 implemented; support planned.
+
+## Restaurant Operations (6 pages)
+
+- Purpose: Manage branch closing-time cutoff, per-serving recipes, non-batch quick stock without purchasing, table metadata, authenticated paid online queue, and explicit forecast unavailability. Dine-in QR ordering, recipe-based sale deduction, recipe-based sale deduction and AI forecasting remain pending; queue numbers now follow the configured business period.
+- Pages: `/restaurant/recipes`, `/restaurant/tables`, `/restaurant/queue`, `/restaurant/settings`, `/restaurant/forecast`, `/restaurant/quick-stock`.

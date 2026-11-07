@@ -86,6 +86,10 @@ export const shared = defineMessages({
     pricingAndPromotionsGroup: 'ราคาและโปรโมชัน',
     reportsAndAnalyticsGroup: 'รายงาน',
     systemSettingsGroup: 'ตั้งค่า',
+    operationsSection: 'การขายและหน้าร้าน',
+    managementSection: 'จัดการร้าน',
+    settingsSection: 'ตั้งค่าระบบ',
+    onlineStorefrontMenu: 'หน้าร้านออนไลน์',
   },
   en: {
     storeOwner: 'Store owner',
@@ -177,5 +181,9 @@ export const shared = defineMessages({
     pricingAndPromotionsGroup: 'Pricing and promotions',
     reportsAndAnalyticsGroup: 'Reports',
     systemSettingsGroup: 'Settings',
+    operationsSection: 'Sales and storefront',
+    managementSection: 'Store management',
+    settingsSection: 'System settings',
+    onlineStorefrontMenu: 'Online storefront',
   },
 });

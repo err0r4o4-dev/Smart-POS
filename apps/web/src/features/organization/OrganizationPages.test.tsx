@@ -613,3 +613,26 @@ it.each(['MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'PURCHASING_STAFF'])(
     expect(screen.getByText('บัญชี')).toBeInTheDocument();
   },
 );
+
+it('renders standalone VELOPOS hero panel and form layout without backoffice sidebar', () => {
+  mocks.role = null;
+  renderSetup();
+
+  expect(document.querySelector('aside.sidebar')).not.toBeInTheDocument();
+  const hero = screen.getByRole('complementary', { name: 'จุดเด่นและบริการ VELOPOS' });
+  expect(within(hero).getByText(/ตั้งค่าร้านอาหารของคุณ/)).toBeVisible();
+  expect(within(hero).getByText(/เริ่มใช้งาน VELOPOS/)).toBeVisible();
+  expect(within(hero).getByText('ตั้งค่าร้านง่าย')).toBeVisible();
+  expect(within(hero).getByText('รองรับการสั่งซื้อหลายรูปแบบ')).toBeVisible();
+  expect(within(hero).getByText('ดูรายงานและยอดขาย')).toBeVisible();
+
+  expect(screen.getByPlaceholderText('เช่น ร้านอาหารของคุณ')).toBeVisible();
+  expect(screen.getByPlaceholderText('เช่น contact@velocafe.com')).toBeVisible();
+  expect(screen.getByPlaceholderText('เช่น 061-507-1665')).toBeVisible();
+  expect(screen.getByPlaceholderText('เช่น 123 ถ.สุขุมวิท แขวงคลองตัน เขตวัฒนา กรุงเทพฯ 10110')).toBeVisible();
+  expect(screen.getByPlaceholderText('เช่น ร้านอาหารและคาเฟ่ อาหารไทย เครื่องดื่ม และเบเกอรี่')).toBeVisible();
+  expect(document.querySelector('.setup-select-overlay')).toHaveTextContent('ร้านอาหาร (Restaurant)');
+  expect(screen.getByText(/คุณสามารถแก้ไขข้อมูลเหล่านี้ได้ในภายหลัง เช่น ชื่อร้าน ที่อยู่ รูปภาพ และคำอธิบายร้าน/)).toBeVisible();
+  expect(screen.getByText('ถัดไป')).toBeVisible();
+});
+

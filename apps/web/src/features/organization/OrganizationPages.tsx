@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Banknote,
+  BarChart3,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -26,7 +27,8 @@ import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavig
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
-import { Button, Card, Loading, Tag } from '../../components/ui/primitives';
+import { Brand, Button, Card, Loading, Tag } from '../../components/ui/primitives';
+import { LanguageSwitcher } from '../../components/ui/LanguageSwitcher';
 import { StandardPageHeader } from '../../components/ui/StandardPage';
 import './setup.css';
 import { SettingsPage } from './SettingsPage';
@@ -321,38 +323,45 @@ function SetupInput({
   );
 }
 
-function SetupSelectOrInput({
+function SetupSelect({
   label,
   value,
   onChange,
   required = false,
-  placeholder,
   options,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   required?: boolean;
-  placeholder?: string;
   options: Array<{ value: string; label: string }>;
 }) {
+  const [open, setOpen] = useState(false);
+  const matchedOption = options.find((opt) => opt.value === value);
   return (
-    <label className="tenant-field setup-field">
-      <span className="setup-field-label">
+    <div className="tenant-field setup-field">
+      <label htmlFor="setup-business-type-input" className="setup-field-label">
         {label}
         {required && <span className="setup-required" aria-hidden="true"> *</span>}
-      </span>
+      </label>
       <div className="setup-select-wrapper">
         <input
+          id="setup-business-type-input"
           aria-label={label}
           value={value}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
           onChange={(event) => onChange(event.target.value)}
           required={required}
           type="text"
-          placeholder={placeholder}
           list="setup-business-types"
-          className="setup-select-input"
+          className={`setup-select-element ${!open && matchedOption ? 'has-display-overlay' : ''}`}
         />
+        {!open && matchedOption && (
+          <span className="setup-select-overlay" aria-hidden="true">
+            {matchedOption.label}
+          </span>
+        )}
         <ChevronDown size={18} className="setup-chevron-icon" aria-hidden="true" />
         <datalist id="setup-business-types">
           {options.map((opt) => (
@@ -361,8 +370,87 @@ function SetupSelectOrInput({
             </option>
           ))}
         </datalist>
+        {open && (
+          <ul className="setup-select-dropdown" role="listbox" aria-label={label}>
+            {options.map((opt) => (
+              <li key={opt.value} role="option" aria-selected={opt.value === value}>
+                <button
+                  type="button"
+                  className={`setup-select-option ${opt.value === value ? 'is-selected' : ''}`}
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    onChange(opt.value);
+                    setOpen(false);
+                  }}
+                >
+                  {opt.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
-    </label>
+    </div>
+  );
+}
+
+function SetupHeroPanel() {
+  return (
+    <aside className="setup-hero-card" aria-label="จุดเด่นและบริการ VELOPOS">
+      <div className="setup-hero-header">
+        <div className="setup-hero-title">
+          ตั้งค่าร้านอาหารของคุณ<br />
+          <span>เริ่มใช้งาน VELOPOS</span>
+        </div>
+        <p className="setup-hero-subtitle">
+          ระบบ POS ร้านอาหารครบวงจร<br />
+          จัดการเมนู ออเดอร์ โต๊ะ และการขาย<br />
+          ในที่เดียว
+        </p>
+      </div>
+
+      <div className="setup-hero-visual" aria-hidden="true">
+        <img
+          src="/images/auth-pos-reference.png"
+          alt=""
+          className="setup-hero-img"
+          width={520}
+          height={260}
+        />
+      </div>
+
+      <div className="setup-hero-highlights">
+        <div className="setup-hero-feature">
+          <div className="setup-feature-icon">
+            <Store size={20} strokeWidth={2} aria-hidden="true" />
+          </div>
+          <div className="setup-feature-text">
+            <strong>ตั้งค่าร้านง่าย</strong>
+            <p>พร้อมใช้งานภายในไม่กี่นาที</p>
+          </div>
+        </div>
+
+        <div className="setup-hero-feature">
+          <div className="setup-feature-icon">
+            <LayoutGrid size={20} strokeWidth={2} aria-hidden="true" />
+          </div>
+          <div className="setup-feature-text">
+            <strong>รองรับการสั่งซื้อหลายรูปแบบ</strong>
+            <p>สั่งล่วงหน้า, สั่งที่โต๊ะ (QR), และหน้าร้านออนไลน์</p>
+          </div>
+        </div>
+
+        <div className="setup-hero-feature">
+          <div className="setup-feature-icon">
+            <BarChart3 size={20} strokeWidth={2} aria-hidden="true" />
+          </div>
+          <div className="setup-feature-text">
+            <strong>ดูรายงานและยอดขาย</strong>
+            <p>ช่วยให้คุณบริหารร้านได้อย่างมีประสิทธิภาพ</p>
+          </div>
+        </div>
+      </div>
+    </aside>
   );
 }
 
@@ -439,17 +527,16 @@ function SetupStepFields({
           />
         </div>
         <div className="setup-form-grid">
-          <SetupSelectOrInput
+          <SetupSelect
             label="ประเภทร้าน"
             value={profile.organization.business_type}
-            placeholder="เช่น RESTAURANT"
             required
             options={[
-              { value: 'RESTAURANT', label: 'RESTAURANT' },
-              { value: 'CAFE', label: 'CAFE' },
-              { value: 'BAKERY', label: 'BAKERY' },
-              { value: 'FAST_FOOD', label: 'FAST_FOOD' },
-              { value: 'BAR', label: 'BAR' },
+              { value: 'RESTAURANT', label: 'ร้านอาหาร (Restaurant)' },
+              { value: 'CAFE', label: 'คาเฟ่ (Cafe)' },
+              { value: 'BAKERY', label: 'เบเกอรี่ (Bakery)' },
+              { value: 'FAST_FOOD', label: 'ฟาสต์ฟู้ด (Fast Food)' },
+              { value: 'BAR', label: 'บาร์ (Bar)' },
             ]}
             onChange={(business_type) =>
               update('profile', {
@@ -486,7 +573,7 @@ function SetupStepFields({
           <SetupInput
             label="ที่อยู่ร้าน"
             value={profile.organization.address}
-            placeholder="เช่น 123 ถ.สุขุมวิท ต.คลองตัน อ.คลองตัน จ.กรุงเทพฯ 26120"
+            placeholder="เช่น 123 ถ.สุขุมวิท แขวงคลองตัน เขตวัฒนา กรุงเทพฯ 10110"
             onChange={(address) =>
               update('profile', {
                 ...profile,
@@ -513,7 +600,7 @@ function SetupStepFields({
             <Info size={18} aria-hidden="true" />
           </div>
           <p>
-            คุณสามารถแก้ไขข้อมูลเหล่านี้ได้ในภายหลัง เช่น ชื่อร้าน ที่อยู่ อีเมล หรือข้อมูลสาขา ผ่านการตั้งค่าร้านค้าในระบบ
+            คุณสามารถแก้ไขข้อมูลเหล่านี้ได้ในภายหลัง เช่น ชื่อร้าน ที่อยู่ รูปภาพ และคำอธิบายร้าน
           </p>
         </div>
       </div>
@@ -691,24 +778,36 @@ function ScopedSetupPage() {
   }, [step]);
 
   if (state.status === 'loading')
-    return <Loading>{t('organization.checkingAccount')}</Loading>;
+    return (
+      <main className="setup-page-wrapper">
+        <Loading>{t('organization.checkingAccount')}</Loading>
+      </main>
+    );
   if (state.status !== 'authenticated')
     return (
-      <Card className="tenant-page">
-        <h1>{t('organization.setUpStore')}</h1>
-        <p>{t('organization.signInWithTheRecipientSEmail')}</p>
-        <Link className="button" to="/login?returnTo=%2Fsetup">{t('auth.signIn')}</Link>
-        <Link className="button button-secondary" to="/register">{t('organization.registerAccount')}</Link>
-      </Card>
+      <main className="setup-page-wrapper">
+        <Card className="tenant-page">
+          <h1>{t('organization.setUpStore')}</h1>
+          <p>{t('organization.signInWithTheRecipientSEmail')}</p>
+          <Link className="button" to="/login?returnTo=%2Fsetup">{t('auth.signIn')}</Link>
+          <Link className="button button-secondary" to="/register">{t('organization.registerAccount')}</Link>
+        </Card>
+      </main>
     );
   if (tenant.loading)
-    return <Loading>{t('organization.checkingStoreModeAndAccess')}</Loading>;
+    return (
+      <main className="setup-page-wrapper">
+        <Loading>{t('organization.checkingStoreModeAndAccess')}</Loading>
+      </main>
+    );
   if (tenant.error)
     return (
-      <div className="tenant-page">
-        <ErrorMessage message={localize(tenant.error)} />
-        <Button onClick={() => void tenant.refresh()}>{t('organization.refreshPermissions')}</Button>
-      </div>
+      <main className="setup-page-wrapper">
+        <div className="tenant-page">
+          <ErrorMessage message={localize(tenant.error)} />
+          <Button onClick={() => void tenant.refresh()}>{t('organization.refreshPermissions')}</Button>
+        </div>
+      </main>
     );
   if (
     (tenant.context && tenant.context.membership.role !== 'OWNER') ||
@@ -861,14 +960,17 @@ function ScopedSetupPage() {
 
   return (
     <div className="setup-page-wrapper">
+      <header className="setup-topbar">
+        <div className="setup-topbar-brand">
+          <Brand />
+        </div>
+        <div className="setup-topbar-actions">
+          <LanguageSwitcher />
+        </div>
+      </header>
+
       <main className="setup-page" aria-labelledby="setup-title">
-        <header>
-          <StandardPageHeader
-            icon={<Store size={26} />}
-            title={<span id="setup-title">เริ่มต้นใช้งานร้านอาหาร</span>}
-            description="ตั้งค่าร้านอาหารครั้งแรกเพื่อเริ่มใช้งานร้านของคุณ"
-          />
-        </header>
+        <h1 id="setup-title" className="visually-hidden">เริ่มต้นใช้งานร้านอาหาร</h1>
 
         {tenant.organizations.length > 0 && !tenant.context && (
           <Card className="setup-existing-card">
@@ -881,50 +983,34 @@ function ScopedSetupPage() {
         {setupQuery.error && <ErrorMessage message={setupQuery.error.message} />}
 
         <div className="setup-layout">
-          <aside className="card setup-rail" aria-label="ความคืบหน้าการตั้งค่า">
-            <div className="setup-rail-header">
-              <h2 className="setup-rail-title">ขั้นตอนตั้งค่าร้าน</h2>
-              <p className="setup-rail-subtitle">ตั้งค่า 7 ขั้นตอน เพื่อเริ่มใช้งานร้านอาหาร</p>
-            </div>
-            <div className="setup-stepper-container">
-              <div className="setup-stepper-line" aria-hidden="true" />
-              <ol className="setup-stepper-list">
-                {setupMeta.map((item, index) => {
-                  const StepIcon = item.icon;
-                  const complete = index < step || Boolean(serverState?.steps?.find((entry) => entry.key === item.key)?.complete);
-                  const isActive = index === step;
-                  return (
-                    <li key={item.key} className={`setup-step-item ${isActive ? 'is-active' : ''} ${complete ? 'is-complete' : ''}`}>
-                      <button
-                        type="button"
-                        onClick={() => index <= step && setStep(index as SetupStepIndex)}
-                        disabled={pending || index > step}
-                        aria-current={isActive ? 'step' : undefined}
-                        className="setup-step-button"
-                      >
-                        <span className="setup-step-circle">
-                          {complete && !isActive ? <Check size={14} strokeWidth={3} aria-hidden="true" /> : index + 1}
-                        </span>
-                        <span className="setup-step-icon" aria-hidden="true">
-                          <StepIcon size={22} strokeWidth={1.8} />
-                        </span>
-                        <div className="setup-step-text">
-                          <strong className="setup-step-name">{item.label}</strong>
-                          <small className="setup-step-desc">{item.sidebarSubtitle}</small>
-                        </div>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ol>
-            </div>
+          <SetupHeroPanel />
+
+          <aside className="visually-hidden" aria-label="ความคืบหน้าการตั้งค่า">
+            <ol>
+              {setupMeta.map((item, index) => {
+                const complete = index < step || Boolean(serverState?.steps?.find((entry) => entry.key === item.key)?.complete);
+                const isActive = index === step;
+                return (
+                  <li key={item.key}>
+                    <button
+                      type="button"
+                      onClick={() => index <= step && setStep(index as SetupStepIndex)}
+                      disabled={pending || index > step}
+                      aria-current={isActive ? 'step' : undefined}
+                    >
+                      <span>{complete && !isActive ? '✓' : index + 1}</span>{' '}
+                      <strong>{item.label}</strong>{' '}
+                      <small>{item.sidebarSubtitle}</small>
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
           </aside>
 
           <section className="setup-main">
             <Card className="setup-card">
-              <div className="setup-card-top-row">
-                <span className="setup-step-pill">ขั้นตอนที่ {step + 1} จาก 7</span>
-              </div>
+              <span className="visually-hidden">ขั้นตอนที่ {step + 1} จาก 7</span>
               <div className="setup-card-heading">
                 <div className="setup-card-heading-left">
                   <span className="setup-card-icon-squircle" aria-hidden="true">
@@ -986,9 +1072,10 @@ function ScopedSetupPage() {
                     <Button
                       type="submit"
                       className="setup-btn-next"
+                      aria-label={pending ? 'กำลังบันทึก…' : step === 6 ? 'เปิดใช้งานร้าน' : 'บันทึกและถัดไป'}
                       disabled={pending || (Boolean(setupContext) && setupQuery.isPending) || (step === 6 && !isReady)}
                     >
-                      {pending ? 'กำลังบันทึก…' : step === 6 ? 'เปิดใช้งานร้าน' : 'บันทึกและถัดไป'}
+                      <span>{pending ? 'กำลังบันทึก…' : step === 6 ? 'เปิดใช้งานร้าน' : 'ถัดไป'}</span>
                       {step === 6 ? <CheckCircle2 size={16} aria-hidden="true" /> : <ArrowRight size={16} aria-hidden="true" />}
                     </Button>
                   </div>

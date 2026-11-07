@@ -205,9 +205,9 @@ for (const width of widths) {
     await page.goto('/setup');
     const name = page.getByLabel('ชื่อร้าน', { exact: true });
     await expect(name).toHaveValue(organization.name);
-    await expect(page.locator('.topbar')).toBeVisible();
-    await expect(page.locator('.breadcrumb strong')).toBeVisible();
-    await expect(page.locator('.topbar .language-switcher')).toBeVisible();
+    await expect(page.locator('aside.sidebar')).toHaveCount(0);
+    await expect(page.locator('.setup-topbar')).toBeVisible();
+    await expect(page.locator('.setup-topbar .language-switcher')).toBeVisible();
     await expect(
       page.getByRole('button', { name: /บันทึกและถัดไป/ }),
     ).toBeVisible();
@@ -222,7 +222,7 @@ for (const width of widths) {
     await screenshot(page, testInfo, `setup-${width}.png`);
     await expectWarmTokens(page);
     await expect
-      .soft(page.locator('.content'))
+      .soft(page.locator('.setup-page-wrapper'))
       .toHaveCSS('background-image', /gradient/);
     await expect
       .soft(page.locator('.setup-card'))

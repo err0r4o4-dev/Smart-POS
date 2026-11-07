@@ -87,8 +87,9 @@ for (const width of [320, 768, 1440]) {
     });
     await page.goto('/setup');
     await expect(page.getByLabel('ชื่อร้าน')).toHaveValue('ร้านตัวอย่าง');
-    await expect(page.locator('.sales-page-heading').getByRole('heading', { level: 1 })).toHaveText('เริ่มต้นใช้งานร้านอาหาร');
-    await expect(page.locator('.content')).toHaveCSS('background-image', /radial-gradient/);
+    await expect(page.locator('aside.sidebar')).toHaveCount(0);
+    await expect(page.getByRole('heading', { level: 1, name: 'เริ่มต้นใช้งานร้านอาหาร' })).toHaveCount(1);
+    await expect(page.locator('.setup-page-wrapper')).toHaveCSS('background-image', /radial-gradient/);
     await expect(page.locator('.setup-card')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
     const progress = page.getByRole('complementary', { name: 'ความคืบหน้าการตั้งค่า' });
     await expect(progress.getByRole('listitem')).toHaveCount(7);

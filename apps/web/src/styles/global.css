@@ -507,13 +507,13 @@ ul {
   display: flex;
   align-items: center;
   gap: 11px;
-  min-height: 46px;
-  padding: 10px 13px;
-  border-radius: 15px;
+  min-height: 42px;
+  padding: 8px 13px;
+  border-radius: 13px;
   border: 1px solid transparent;
   font-size: 13px;
   color: var(--text-primary);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   font-weight: 500;
   transition:
     background 0.15s,
@@ -533,54 +533,45 @@ ul {
 .nav-item.active > svg {
   color: var(--primary-strong);
 }
-.nav-group {
-  margin: 4px 0;
+.nav-section {
+  margin: 12px 0 4px;
 }
-.nav-group-toggle {
+.nav-section:first-of-type {
+  margin-top: 10px;
+}
+.nav-section-footer {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.nav-section-title {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  width: 100%;
-  min-height: 42px;
-  padding: 9px 12px;
-  border: 0;
-  border-radius: 12px;
-  background: transparent;
-  color: var(--text-strong);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  text-align: start;
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    color 0.15s;
-}
-.nav-group-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 11px;
-  min-width: 0;
-}
-.nav-group-toggle:hover {
-  background: var(--canvas);
-  color: var(--text-primary);
-}
-.nav-group-toggle.active {
-  color: var(--primary-strong);
+  gap: 7px;
+  padding: 5px 12px 4px;
+  font-size: 11px;
   font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  user-select: none;
 }
-.nav-group-toggle > svg {
+.nav-section-title > svg {
+  color: var(--primary-strong);
+  opacity: 0.85;
   flex-shrink: 0;
-  transition: transform 0.15s;
 }
-.nav-group-toggle[aria-expanded='true'] > svg {
-  transform: rotate(180deg);
+.nav-section-title.active {
+  color: var(--primary-strong);
 }
-.nav-group-items {
-  margin: 2px 0 8px 6px;
-  padding-left: 6px;
+.nav-section-items {
+  display: flex;
+  flex-direction: column;
+}
+@media (max-width: 900px) {
+  .mobile-dialog .nav-item {
+    min-height: 44px;
+  }
 }
 .nav-item > span {
   min-width: 0;

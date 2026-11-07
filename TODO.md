@@ -45,19 +45,21 @@ database, external assets, new dependencies, publication or deployment changes.
 - [ ] 2. Verify typecheck and web build succeed
 - [ ] 3. Remove this temporary task section
 
-# Restaurant Setup UI Redesign (/setup) (2026-11-06)
+# Standalone Restaurant Setup Redesign (/setup) without Sidebar Navigation (2026-11-08)
 
-Approved scope: Redesign `/setup` page UI to match the user's VELOPOS screenshot reference.
-Includes VELOPOS branding header bar with top warm glow, 2-column layout with left 7-step vertical stepper card,
-right step card with step pill badge ("ขั้นตอนที่ 1 จาก 7"), icon squircle and decorative illustration,
-exact field layout and placeholders for Step 1 ("ข้อมูลร้าน"), info notice callout, and action buttons.
+Approved scope: Redesign `/setup` page UI to match the user's standalone mockup reference (Image 2), completely decoupled from the sidebar menu / workspace navigation.
+Includes moving `/setup` out of `RoleWorkspaceLayout` in `router.tsx`, 2-column layout with left hero panel (title "ตั้งค่าร้านอาหารของคุณ / เริ่มใช้งาน VELOPOS", subtitle, POS illustration, 3 value propositions: "ตั้งค่าร้านง่าย", "รองรับการสั่งซื้อหลายรูปแบบ", "ดูรายงานและยอดขาย"), and right step card (icon squircle, "ข้อมูลร้าน", exact form fields, placeholders, info notice callout, "ย้อนกลับ" and "ถัดไป →" buttons).
 Preserve all functional logic, step validations, API contracts, and tests.
 
-- [x] 1. Update `setup.css` with exact layout, color tokens, typography, stepper styles, decorative badges, and responsive behavior
-- [x] 2. Update `OrganizationPages.tsx` to implement VELOPOS header bar, 7-step stepper rail, exact form fields and placeholders, and card layout
-- [x] 3. Update `OrganizationPages.test.tsx` to reflect the 7-step count ("ขั้นตอนที่ 1 จาก 7")
-- [/] 4. Run tests, typecheck, and lint verification
-- [ ] 5. Verify visual integrity and responsive behavior (320px, 768px, 1440px)
+- [x] 1. Move `/setup` route outside `RoleWorkspaceLayout` in `router.tsx` to remove the sidebar menu
+- [x] 2. Update `OrganizationPages.tsx` with left hero panel and right step card layout matching Image 2
+- [x] 3. Update `setup.css` with standalone ambient shell, 2-column split layout, typography, squircles, and responsive styling
+- [x] 4. Reconcile `OrganizationPages.test.tsx`, `tests/e2e/restaurant-setup.spec.ts`, and `tests/e2e/warm-gold-theme.spec.ts` for standalone `/setup`
+- [/] 5. Run tests, typecheck, lint, and build verification
+  PASS: `npm run test --workspace @smartpos/web -- src/features/organization/OrganizationPages.test.tsx src/features/workspace/WorkspacePages.test.tsx src/app/` (13 files / 165 tests passed); IDE TypeScript/ESLint diagnostics reported 0 errors / 0 warnings on all modified files.
+  BLOCKED (host classifier temporarily unavailable): `npm run typecheck`, `npm run lint`, `npm run build`.
+- [ ] 6. Verify visual integrity and responsive behavior in Playwright (320px, 768px, 1440px) once classifier recovers
+- [ ] 7. Clean up completed task section from TODO.md upon full verification
 
 # Onboarding simplification (2026-11-06)
 

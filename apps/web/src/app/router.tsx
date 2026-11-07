@@ -105,12 +105,12 @@ const routes: RouteObject[] = [
   {
     element: <OrganizationWorkspaceProvider />,
     children: [
+      { path: paths.setup, element: <SetupPage /> },
       {
         element: <RoleWorkspaceLayout />,
         children: [
           { path: paths.system, element: <DashboardPage /> },
           { path: paths.help, element: <HelpPage /> },
-          { path: paths.setup, element: <SetupPage /> },
           {
             element: <RequireSession />,
             children: [

@@ -33,11 +33,12 @@ export interface NavigationItem {
   roles?: Role[];
 }
 const managementItems: NavigationItem[] = [
+  { to: paths.dashboard, label: 'ภาพรวม', icon: 'dashboard' },
   {
-    to: '/restaurant/queue',
-    label: 'หน้าจอคิวอาหาร',
+    to: '/pos',
+    label: 'รับออเดอร์หน้าร้าน',
     icon: 'pos',
-    permission: 'online_orders.read',
+    permission: 'pos.access',
   },
   {
     to: '/online-orders',
@@ -46,16 +47,16 @@ const managementItems: NavigationItem[] = [
     permission: 'online_orders.read',
   },
   {
-    to: '/sales/refunds',
-    label: 'คืนเงิน',
-    icon: 'dashboard',
-    permission: 'refunds.read',
+    to: '/restaurant/queue',
+    label: 'หน้าจอคิวอาหาร',
+    icon: 'pos',
+    permission: 'online_orders.read',
   },
   {
-    to: '/pos',
-    label: 'รับออเดอร์หน้าร้าน',
-    icon: 'pos',
-    permission: 'pos.access',
+    to: paths.products,
+    label: 'เมนูอาหาร',
+    icon: 'dashboard',
+    permission: 'catalog.read',
   },
   {
     to: '/sales',
@@ -70,10 +71,10 @@ const managementItems: NavigationItem[] = [
     permission: 'receipts.read',
   },
   {
-    to: paths.products,
-    label: 'เมนูอาหาร',
+    to: '/sales/refunds',
+    label: 'คืนเงิน',
     icon: 'dashboard',
-    permission: 'catalog.read',
+    permission: 'refunds.read',
   },
   {
     to: paths.settings,
@@ -81,7 +82,12 @@ const managementItems: NavigationItem[] = [
     icon: 'dashboard',
     permission: 'organization.read',
   },
-  { to: paths.dashboard, label: 'ภาพรวม', icon: 'dashboard' },
+  {
+    to: paths.storefrontSettings,
+    label: 'หน้าร้านออนไลน์',
+    icon: 'dashboard',
+    permission: 'storefront.manage',
+  },
   { to: paths.help, label: 'คู่มือ', icon: 'help' },
 ];
 
@@ -105,24 +111,19 @@ export interface NavigationGroup {
 
 const managementGroups: NavigationGroup[] = [
   {
-    id: 'sales',
-    label: 'การขายและคิว',
+    id: 'operations',
+    label: 'การขายและหน้าร้าน',
     paths: ['/pos', '/online-orders', '/restaurant/queue'],
   },
   {
-    id: 'menu',
-    label: 'เมนูอาหาร',
-    paths: [paths.products],
-  },
-  {
-    id: 'reports',
-    label: 'รายงาน',
-    paths: ['/sales', '/receipts', '/sales/refunds'],
+    id: 'management',
+    label: 'จัดการร้าน',
+    paths: [paths.products, '/sales', '/receipts', '/sales/refunds'],
   },
   {
     id: 'settings',
-    label: 'ตั้งค่าร้าน',
-    paths: [paths.settings],
+    label: 'ตั้งค่าระบบ',
+    paths: [paths.settings, paths.storefrontSettings],
   },
 ];
 

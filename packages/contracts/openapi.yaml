@@ -18156,113 +18156,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/RestaurantSettingsInput'
-  /api/v1/organizations/{id}/restaurant/recipes:
-    parameters:
-      - $ref: '#/components/parameters/OrganizationID'
-    get:
-      operationId: listRestaurantRecipes
-      security:
-        - sessionCookie: []
-      description: catalog.read. Branch-scoped recipes with catalog ingredient units.
-      responses:
-        '200':
-          description: Authorized restaurant data.
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: false
-                required:
-                  - data
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/RestaurantRecipe'
-        '400': *a1
-        '401': *a1
-        '403': *a1
-        '404': *a1
-        '409': *a1
-        '503': *a1
-      parameters:
-        - *a2
-    post:
-      operationId: createRestaurantRecipe
-      security:
-        - sessionCookie: []
-      description: catalog.update. Durable actor-scoped key/payload replay in the same transaction. Revision must be zero. Active catalog variants only; menu uses COUNT/PACKAGING, no nested recipes, positive ingredient quantity, whole COUNT/PACKAGING. Saving does not consume stock.
-      responses:
-        '200':
-          description: Authorized restaurant data.
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: false
-                required:
-                  - data
-                properties:
-                  data:
-                    $ref: '#/components/schemas/RestaurantRecipe'
-        '400': *a1
-        '401': *a1
-        '403': *a1
-        '404': *a1
-        '409': *a1
-        '503': *a1
-      parameters:
-        - $ref: '#/components/parameters/CSRF'
-        - &a4
-          name: Idempotency-Key
-          in: header
-          required: true
-          schema: *a3
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RestaurantRecipeInput'
-  /api/v1/organizations/{id}/restaurant/recipes/{recipeId}:
-    parameters:
-      - $ref: '#/components/parameters/OrganizationID'
-      - name: recipeId
-        in: path
-        required: true
-        schema: *a3
-    put:
-      operationId: updateRestaurantRecipe
-      security:
-        - sessionCookie: []
-      description: catalog.update. Requires current positive revision. Atomic ingredient replacement; stale revisions conflict. Does not consume stock.
-      responses:
-        '200':
-          description: Authorized restaurant data.
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: false
-                required:
-                  - data
-                properties:
-                  data:
-                    $ref: '#/components/schemas/RestaurantRecipe'
-        '400': *a1
-        '401': *a1
-        '403': *a1
-        '404': *a1
-        '409': *a1
-        '503': *a1
-      parameters:
-        - $ref: '#/components/parameters/CSRF'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RestaurantRecipeInput'
   /api/v1/organizations/{id}/restaurant/tables:
     parameters:
       - $ref: '#/components/parameters/OrganizationID'
@@ -18320,7 +18213,11 @@ paths:
         '503': *a1
       parameters:
         - $ref: '#/components/parameters/CSRF'
-        - *a4
+        - &a4
+          name: Idempotency-Key
+          in: header
+          required: true
+          schema: *a3
       requestBody:
         required: true
         content:
@@ -18397,71 +18294,6 @@ paths:
         '503': *a1
       parameters:
         - *a2
-  /api/v1/organizations/{id}/restaurant/forecast:
-    parameters:
-      - $ref: '#/components/parameters/OrganizationID'
-    get:
-      operationId: getRestaurantForecastStatus
-      security:
-        - sessionCookie: []
-      description: sales.read. Explicit unavailable status until a real evaluated forecasting service is integrated; never fabricated demand or automatic inventory actions.
-      responses:
-        '200':
-          description: Authorized restaurant data.
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: false
-                required:
-                  - data
-                properties:
-                  data:
-                    $ref: '#/components/schemas/RestaurantForecastStatus'
-        '400': *a1
-        '401': *a1
-        '403': *a1
-        '404': *a1
-        '409': *a1
-        '503': *a1
-      parameters:
-        - *a2
-  /api/v1/organizations/{id}/restaurant/quick-stock:
-    parameters:
-      - $ref: '#/components/parameters/OrganizationID'
-    post:
-      operationId: postRestaurantQuickStock
-      security:
-        - sessionCookie: []
-      description: inventory.adjustment.post AND inventory.adjustment.create AND inventory.adjustment.approve. Durable actor-scoped key/payload replay. Existing ledger and audit in one transaction, no purchase/receipt document. Correction requires current balance_version and allows zero target; increase/decrease must be positive. Whole COUNT/PACKAGING, exact three decimals for WEIGHT/VOLUME. Nonzero batch-tracked stock must use existing batch-aware adjustments.
-      responses:
-        '200':
-          description: Authorized restaurant data.
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: false
-                required:
-                  - data
-                properties:
-                  data:
-                    $ref: '#/components/schemas/RestaurantQuickStockResult'
-        '400': *a1
-        '401': *a1
-        '403': *a1
-        '404': *a1
-        '409': *a1
-        '503': *a1
-      parameters:
-        - $ref: '#/components/parameters/CSRF'
-        - *a4
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RestaurantQuickStockInput'
 components:
   parameters:
     OrganizationID:
@@ -18881,88 +18713,6 @@ components:
           type: integer
           format: int64
           minimum: 0
-    RestaurantRecipeIngredientInput:
-      type: object
-      additionalProperties: false
-      required:
-        - ingredient_variant_id
-        - quantity
-      properties:
-        ingredient_variant_id: *a2
-        quantity: &a3
-          type: string
-          pattern: ^[0-9]{1,15}(\.[0-9]{1,3})?$
-          description: Exact quantity in the catalog unit, at most three decimals. No floating point or implicit grams/kilograms conversion.
-    RestaurantRecipeIngredient:
-      type: object
-      additionalProperties: false
-      required:
-        - ingredient_variant_id
-        - ingredient_name
-        - quantity
-        - unit
-      properties:
-        ingredient_variant_id: *a2
-        ingredient_name:
-          type: string
-        quantity: *a3
-        unit:
-          type: string
-    RestaurantRecipeInput:
-      type: object
-      additionalProperties: false
-      required:
-        - branch_id
-        - menu_variant_id
-        - items
-      properties:
-        branch_id: *a2
-        menu_variant_id: *a2
-        status: &a4
-          type: string
-          enum:
-            - ACTIVE
-            - INACTIVE
-        revision:
-          type: integer
-          format: int64
-          minimum: 0
-        items:
-          type: array
-          minItems: 1
-          maxItems: 100
-          items:
-            $ref: '#/components/schemas/RestaurantRecipeIngredientInput'
-    RestaurantRecipe:
-      type: object
-      additionalProperties: false
-      required:
-        - id
-        - branch_id
-        - menu_variant_id
-        - menu_name
-        - status
-        - revision
-        - items
-        - created_at
-        - updated_at
-      properties:
-        id: *a2
-        branch_id: *a2
-        menu_variant_id: *a2
-        menu_name:
-          type: string
-        status: *a4
-        revision:
-          type: integer
-          format: int64
-          minimum: 1
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/RestaurantRecipeIngredient'
-        created_at: *a1
-        updated_at: *a1
     RestaurantTableInput:
       type: object
       additionalProperties: false
@@ -18984,7 +18734,11 @@ components:
           type: integer
           minimum: 1
           maximum: 100
-        status: *a4
+        status: &a4
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
         revision:
           type: integer
           format: int64
@@ -19059,67 +18813,6 @@ components:
           type: string
           const: ''
         created_at: *a1
-    RestaurantForecastStatus:
-      type: object
-      additionalProperties: false
-      required:
-        - status
-        - reason
-        - items
-      properties:
-        status:
-          type: string
-          const: unavailable
-        reason:
-          type: string
-          const: FORECAST_NOT_CONFIGURED
-        items:
-          type: array
-          maxItems: 0
-          items: false
-    RestaurantQuickStockInput:
-      type: object
-      additionalProperties: false
-      required:
-        - branch_id
-        - location_id
-        - variant_id
-        - action
-        - quantity
-        - reason
-      properties:
-        branch_id: *a2
-        location_id: *a2
-        variant_id: *a2
-        action:
-          type: string
-          enum:
-            - INCREASE
-            - DECREASE
-            - CORRECTION
-        quantity: *a3
-        reason:
-          type: string
-          minLength: 1
-          maxLength: 100
-        balance_version:
-          type: integer
-          format: int64
-          minimum: 0
-    RestaurantQuickStockResult:
-      type: object
-      additionalProperties: false
-      required:
-        - operation_id
-        - new_balance
-        - balance_version
-      properties:
-        operation_id: *a2
-        new_balance: *a3
-        balance_version:
-          type: integer
-          format: int64
-          minimum: 0
     PaymentSandboxStatus:
       type: object
       additionalProperties: false
@@ -19306,6 +18999,7 @@ components:
       type: object
       additionalProperties: false
       required:
+        - stock_policy
         - variant_id
         - product_name
         - variant_name
@@ -19319,6 +19013,8 @@ components:
         - category_id
         - category_name
       properties:
+        stock_policy:
+          $ref: '#/components/schemas/StockPolicy'
         variant_id:
           type: string
           format: uuid
@@ -19340,8 +19036,10 @@ components:
         unit_price:
           $ref: '#/components/schemas/POSMoney'
         available:
-          $ref: '#/components/schemas/InventoryQuantity'
-          description: Saleable quality quantity at the configured source, minus live online reservations; a quote or browser cart does not reserve stock.
+          anyOf:
+            - $ref: '#/components/schemas/InventoryQuantity'
+            - type: 'null'
+          description: Actual available quantity for TRACKED items; null for MENU_ONLY items, whose eligibility does not depend on stock.
         saleable:
           type: boolean
         published:
@@ -19392,6 +19090,7 @@ components:
       type: object
       additionalProperties: false
       required:
+        - stock_policy
         - variant_id
         - product_name
         - variant_name
@@ -19403,6 +19102,8 @@ components:
         - saleable
         - published
       properties:
+        stock_policy:
+          $ref: '#/components/schemas/StockPolicy'
         variant_id:
           type: string
           format: uuid
@@ -19424,8 +19125,10 @@ components:
         unit_price:
           $ref: '#/components/schemas/POSMoney'
         available:
-          $ref: '#/components/schemas/InventoryQuantity'
-          description: Saleable quality quantity at the configured source, minus live online reservations; a quote or browser cart does not reserve stock.
+          anyOf:
+            - $ref: '#/components/schemas/InventoryQuantity'
+            - type: 'null'
+          description: Actual available quantity for TRACKED items; null for MENU_ONLY items, whose eligibility does not depend on stock.
         saleable:
           type: boolean
         published:
@@ -19727,6 +19430,7 @@ components:
       type: object
       additionalProperties: false
       required:
+        - stock_policy
         - id
         - number
         - status
@@ -19747,6 +19451,8 @@ components:
         - branch_id
         - terminal_id
       properties:
+        stock_policy:
+          $ref: '#/components/schemas/StockPolicy'
         table_code:
           type: string
         fulfillment:
@@ -20620,6 +20326,8 @@ components:
     ReturnableSale:
       type: object
       properties:
+        stock_policy:
+          $ref: '#/components/schemas/StockPolicy'
         id: &a1
           type: string
           format: uuid
@@ -20666,6 +20374,7 @@ components:
         - branch_id
         - grand_total
         - items
+        - stock_policy
     CustomerRefundPage:
       type: object
       properties:
@@ -24273,6 +23982,15 @@ components:
         revision:
           type: integer
           minimum: 1
+    StockPolicy:
+      type: string
+      enum:
+        - TRACKED
+        - MENU_ONLY
+      readOnly: true
+      description: Immutable server-selected stock policy. Legacy transactions remain
+        TRACKED; new restaurant carts and orders use MENU_ONLY. Linked orders govern
+        settlement. Historical stock snapshots are retained.
     POSMoney:
       type: string
       pattern: ^[0-9]{1,16}(\.[0-9]{1,2})?$
@@ -24341,6 +24059,7 @@ components:
     POSItem:
       type: object
       required:
+        - stock_policy
         - variant_id
         - product_name
         - variant_name
@@ -24360,6 +24079,8 @@ components:
         - price_changed
         - saleable
       properties:
+        stock_policy:
+          $ref: '#/components/schemas/StockPolicy'
         batch_id:
           type:
             - string
@@ -24393,7 +24114,11 @@ components:
         unit_status: *a1
         quantity: &a2
           $ref: '#/components/schemas/InventoryQuantity'
-        available: *a2
+        available:
+          anyOf:
+            - $ref: '#/components/schemas/InventoryQuantity'
+            - type: 'null'
+          description: Actual available quantity for TRACKED items; null for MENU_ONLY items, whose eligibility does not depend on stock.
         line_total: *a3
         previous_price: *a1
         price_changed:
@@ -24411,6 +24136,7 @@ components:
     POSCart:
       type: object
       required:
+        - stock_policy
         - id
         - branch_id
         - terminal_id
@@ -24421,6 +24147,8 @@ components:
         - total
         - review_required
       properties:
+        stock_policy:
+          $ref: '#/components/schemas/StockPolicy'
         online_order:
           $ref: '#/components/schemas/OnlineOrderLink'
         customer_id:
@@ -24835,6 +24563,7 @@ components:
     POSSale:
       type: object
       required:
+        - stock_policy
         - id
         - organization_id
         - branch_id
@@ -24864,6 +24593,8 @@ components:
         - movements
         - audit
       properties:
+        stock_policy:
+          $ref: '#/components/schemas/StockPolicy'
         customer_id:
           type:
             - string

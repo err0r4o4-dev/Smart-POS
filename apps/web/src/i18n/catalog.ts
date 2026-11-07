@@ -1,9 +1,9 @@
 import { defineMessages } from './defineMessages';
 export const catalog = defineMessages({
   th: {
-    restaurantItems: 'เมนูและวัตถุดิบ',
+    restaurantItems: 'เมนูอาหาร',
     recipes: 'สูตรอาหาร',
-    searchRestaurantItems: 'ค้นหาชื่อเมนู / วัตถุดิบ / SKU',
+    searchRestaurantItems: 'ค้นหาชื่อเมนู / SKU',
     barcodeError: 'บาร์โค้ดผิดพลาด',
     barcode: 'บาร์โค้ด ·',
     primary: 'หลัก',
@@ -29,7 +29,7 @@ export const catalog = defineMessages({
     createProduct: 'สร้างสินค้าใหม่',
     archived: 'ไม่พร้อมขาย',
     manageProducts: 'จัดการสินค้า',
-    sharedOrganizationCatalog: 'แค็ตตาล็อกร่วมขององค์กร •',
+    sharedOrganizationCatalog: 'แค็ตตาล็อกร่วมขององค์กร',
     viewBranchStock: 'ดูสต็อกตามสาขา',
     catalog: 'แค็ตตาล็อก',
     sku: 'สินค้า',
@@ -230,9 +230,9 @@ export const catalog = defineMessages({
     barcodeLabelsPrintPreview: 'ฉลากบาร์โค้ด / ตัวอย่างก่อนพิมพ์',
   },
   en: {
-    restaurantItems: 'Menu and ingredients',
+    restaurantItems: 'Menu',
     recipes: 'Recipes',
-    searchRestaurantItems: 'Search menu / ingredients / SKU',
+    searchRestaurantItems: 'Search menu / SKU',
     barcodeError: 'Barcode error',
     barcode: 'Barcode ·',
     primary: 'Primary',
@@ -259,7 +259,7 @@ export const catalog = defineMessages({
     createProduct: 'Create product',
     archived: 'archived',
     manageProducts: 'Manage products',
-    sharedOrganizationCatalog: 'Shared organization catalog •',
+    sharedOrganizationCatalog: 'Shared organization catalog',
     viewBranchStock: 'View branch stock',
     catalog: 'Catalog',
     sku: 'SKU',

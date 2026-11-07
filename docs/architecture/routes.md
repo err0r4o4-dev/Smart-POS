@@ -144,9 +144,10 @@ Ten Phase 2 Inventory routes above are implemented; /inventory/valuation stays P
 
 ## Restaurant Routes
 
-- `/restaurant/recipes` - Implemented recipe ingredient management per serving; does not auto-deduct ingredients on sale yet
 - `/restaurant/tables` - Implemented table metadata only; dine-in QR ordering and customer token consumer are not enabled
 - `/restaurant/queue` - Implemented authenticated staff/management queue for live paid online orders; uses per-business-period queue sequence, no public board token
 - `/restaurant/settings` - Implemented branch closing-time and timezone settings with half-open daily reporting window; never resets stock
-- `/restaurant/forecast` - Implemented honest unavailable status (`FORECAST_NOT_CONFIGURED`) until evaluated forecasting is connected
-- `/restaurant/quick-stock` - Implemented non-batch quick stock increase/decrease/count using the existing inventory ledger without PO/receiving
+
+Ingredient management, recipes, quick stock and ingredient forecasting are retired
+from active web routes and restaurant APIs. Historical stock and recipe records
+remain for existing transaction recovery; their retention is not an active UI.

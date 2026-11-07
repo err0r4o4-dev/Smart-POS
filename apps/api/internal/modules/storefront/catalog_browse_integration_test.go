@@ -119,11 +119,11 @@ func catalogAcceptance(test *testing.T, ctx context.Context, organizations *orga
 	})
 	test.Run("availability search uncategorized and foreign scope preserve boundaries", func(test *testing.T) {
 		result, problem := service.BrowseProducts(ctx, shop.Slug, storefront.CatalogQuery{Page: 1, Availability: "available"})
-		if problem != nil || result.Total != 1 || result.Items[0].VariantID != first || result.Items[0].Available != "3.000" {
+		if problem != nil || result.Total != 27 || len(result.Items) != 24 || result.Items[0].Available != nil || result.Items[0].StockPolicy != "MENU_ONLY" {
 			test.Fatalf("availability: %+v, %v", result, problem)
 		}
 		result, problem = service.BrowseProducts(ctx, shop.Slug, storefront.CatalogQuery{Page: 1, Availability: "unavailable"})
-		if problem != nil || result.Total != 26 {
+		if problem != nil || result.Total != 0 {
 			test.Fatalf("unavailable: %+v, %v", result, problem)
 		}
 		result, problem = service.BrowseProducts(ctx, shop.Slug, storefront.CatalogQuery{Page: 1, CategoryID: "uncategorized", Search: "CAT-27"})

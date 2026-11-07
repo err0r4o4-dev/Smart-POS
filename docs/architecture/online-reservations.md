@@ -1,5 +1,18 @@
 # Online reservation foundation
 
+## Ingredient retirement (2026-11-07)
+
+Schema 32 retains the tracked reservation foundation below for historical
+transactions. New server-created restaurant orders use immutable `MENU_ONLY`
+policy, create no stock snapshots, and contribute no stock requirements or
+reservations. A missing snapshot on a `TRACKED` order keeps its historical
+direct-stock fallback; it never changes policy. Existing paid holds are not
+bulk-released. Payment confirmation, cancellation, refund reconciliation and
+paid-only kitchen predicates remain mandatory. See [POS policy](pos.md).
+
+This is the implementation boundary, not evidence of migration or database
+acceptance. Do not apply the migration to primary or retained data as a test.
+
 ## Ingredient snapshot continuation (2026-11-05)
 
 Migration `000028_online_ingredient_reservations.up.sql` and its Go consumers are a local draft. Database execution and stock-flow acceptance remain unverified. The API now requires clean schema 28; do not roll out these binaries against schema 27.

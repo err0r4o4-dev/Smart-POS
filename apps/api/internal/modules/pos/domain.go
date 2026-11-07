@@ -85,17 +85,19 @@ type CartItem struct {
 	BatchID       *string `json:"batch_id,omitempty"`
 	BatchVerified bool    `json:"batch_verified,omitempty"`
 	catalog.SaleVariant
-	Quantity        string `json:"quantity"`
-	LineTotal       string `json:"line_total"`
-	Available       string `json:"available"`
-	PreviousPrice   string `json:"previous_price"`
-	PriceChanged    bool   `json:"price_changed"`
-	Saleable        bool   `json:"saleable"`
-	GrossTotal      string `json:"gross_total"`
-	DiscountTotal   string `json:"discount_total"`
-	PricingRevision string `json:"pricing_revision"`
+	Quantity        string  `json:"quantity"`
+	LineTotal       string  `json:"line_total"`
+	Available       *string `json:"available"`
+	StockPolicy     string  `json:"stock_policy"`
+	PreviousPrice   string  `json:"previous_price"`
+	PriceChanged    bool    `json:"price_changed"`
+	Saleable        bool    `json:"saleable"`
+	GrossTotal      string  `json:"gross_total"`
+	DiscountTotal   string  `json:"discount_total"`
+	PricingRevision string  `json:"pricing_revision"`
 }
 type Cart struct {
+	StockPolicy           string               `json:"stock_policy"`
 	OnlineOrder           *OnlineOrderLink     `json:"online_order,omitempty"`
 	CustomerID            *string              `json:"customer_id"`
 	Customer              *customers.Selection `json:"customer"`

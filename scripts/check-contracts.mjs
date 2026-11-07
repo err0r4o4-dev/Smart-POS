@@ -12,15 +12,24 @@ assert.ok(
   ),
   'Employee and role management must not be part of the active route inventory',
 );
-const expected = [6, 4, 9, 6, 9, 11, 7, 8, 5, 5, 4, 6, 7, 2, 10, 4, 8, 6];
+const expected = [6, 4, 9, 6, 9, 11, 7, 8, 5, 5, 4, 6, 7, 2, 10, 4, 8, 3];
 assert.equal(modules.length, 18);
 assert.deepEqual(
   modules.map((item) => item.routes.length),
   expected,
 );
 const routes = modules.flatMap((item) => item.routes);
-assert.equal(routes.length, 117);
-assert.equal(new Set(routes).size, 117);
+assert.equal(routes.length, 114);
+assert.equal(new Set(routes).size, 114);
+for (const route of [
+  '/restaurant/recipes',
+  '/restaurant/quick-stock',
+  '/restaurant/forecast',
+])
+  assert.ok(
+    !routes.includes(route),
+    `Retired ingredient route remains: ${route}`,
+  );
 const routeDocs = readFileSync('docs/architecture/routes.md', 'utf8');
 const moduleDocs = readFileSync('docs/architecture/modules.md', 'utf8');
 for (const item of modules) {
@@ -32,7 +41,64 @@ for (const item of modules) {
     assert.ok(routeDocs.includes('`' + route + '`'), `Missing route ${route}`);
 }
 const api = YAML.parse(readFileSync('packages/contracts/openapi.yaml', 'utf8'));
+const retiredIngredientPaths = [
+  '/recipes',
+  '/recipes/{recipeId}',
+  '/quick-stock',
+  '/forecast',
+].map((suffix) => '/api/v1/organizations/{id}/restaurant' + suffix);
+for (const path of retiredIngredientPaths)
+  assert.ok(!api.paths[path], `Retired ingredient API remains: ${path}`);
+for (const schema of [
+  'RestaurantRecipeIngredientInput',
+  'RestaurantRecipeIngredient',
+  'RestaurantRecipeInput',
+  'RestaurantRecipe',
+  'RestaurantForecastStatus',
+  'RestaurantQuickStockInput',
+  'RestaurantQuickStockResult',
+])
+  assert.ok(
+    !api.components.schemas[schema],
+    `Retired ingredient schema remains: ${schema}`,
+  );
 assert.deepEqual(api.components.schemas.Role.enum, ['OWNER']);
+assert.deepEqual(api.components.schemas.StockPolicy?.enum, [
+  'TRACKED',
+  'MENU_ONLY',
+]);
+for (const name of [
+  'POSItem',
+  'POSCart',
+  'StorefrontProduct',
+  'StorefrontCatalogProduct',
+  'OnlineOrder',
+  'POSSale',
+  'ReturnableSale',
+]) {
+  const schema = api.components.schemas[name];
+  assert.ok(
+    schema.required.includes('stock_policy'),
+    `${name} must expose its stock policy`,
+  );
+  assert.equal(
+    schema.properties.stock_policy.$ref,
+    '#/components/schemas/StockPolicy',
+  );
+}
+for (const name of ['POSItem', 'StorefrontProduct', 'StorefrontCatalogProduct'])
+  assert.ok(
+    api.components.schemas[name].properties.available.anyOf.some(
+      (item) => item.type === 'null',
+    ),
+    `${name} must allow a null menu-only balance`,
+  );
+for (const name of ['POSCartInput', 'StorefrontOrderInput'])
+  assert.equal(
+    api.components.schemas[name].properties.stock_policy,
+    undefined,
+    `${name} must not accept client stock policy`,
+  );
 const retiredEmployeePaths = [
   '/api/v1/invitations/accept',
   ...[
@@ -65,13 +131,9 @@ const sandboxPaths = [
 );
 const restaurantPaths = [
   '/settings',
-  '/recipes',
-  '/recipes/{recipeId}',
   '/tables',
   '/tables/{tableId}',
   '/queue',
-  '/forecast',
-  '/quick-stock',
   '/setup',
   '/setup/profile',
   '/setup/services',
@@ -991,5 +1053,5 @@ assert.ok(
   'Internal AI must not publish a host port',
 );
 console.log(
-  'PASS: 18 modules, 117 unique documented routes, owner-only access, Stripe sandbox/storefront/POS contracts and service health wiring',
+  'PASS: 18 modules, 114 unique documented routes, owner-only access, Stripe sandbox/storefront/POS contracts and service health wiring',
 );

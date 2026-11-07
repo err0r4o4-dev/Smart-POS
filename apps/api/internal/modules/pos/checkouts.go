@@ -35,6 +35,20 @@ func checkout(ctx context.Context, tx pgx.Tx, actor organization.Member, user, o
 	}
 	err = json.Unmarshal(items, &item.Items)
 	if err == nil {
+		var policy string
+		err = tx.QueryRow(ctx, `SELECT COALESCE((SELECT doc.stock_policy FROM online_orders doc WHERE doc.organization_id=cart.organization_id AND doc.cart_id=cart.id),cart.stock_policy) FROM pos_carts cart WHERE cart.organization_id=$1 AND cart.id=$2`, org, item.CartID).Scan(&policy)
+		if err != nil {
+			return item, dbError(err)
+		}
+		if policy != "TRACKED" && policy != "MENU_ONLY" {
+			return item, ErrConflict
+		}
+		for index := range item.Items {
+			item.Items[index].StockPolicy = policy
+			if policy == "MENU_ONLY" {
+				item.Items[index].Available = nil
+			}
+		}
 		var data []byte
 		err = tx.QueryRow(ctx, "SELECT pricing_snapshot FROM pos_checkouts WHERE organization_id=$1 AND id=$2", org, id).Scan(&data)
 		if err == nil {
@@ -162,9 +176,11 @@ func (service *Service) PrepareCheckout(ctx context.Context, user, org, key stri
 			return Checkout{}, ErrConflict
 		}
 		requested, _ := scaled(item.Quantity, 3)
-		available, _ := scaled(item.Available, 3)
-		if available < requested {
-			return Checkout{}, ErrStock
+		if item.Available != nil {
+			available, _ := scaled(*item.Available, 3)
+			if available < requested {
+				return Checkout{}, ErrStock
+			}
 		}
 	}
 	change, err := payment(input.Method, cart.Total, input.Received)

@@ -17,6 +17,7 @@ const product = {
   unit_type: 'COUNT',
   unit_price: '19.99',
   available: '5.000',
+  stock_policy: 'TRACKED',
   saleable: true,
   published: true,
 };
@@ -218,6 +219,31 @@ it('validates quantity against available stock including the existing cart', asy
   expect(
     JSON.parse(localStorage.getItem('shop-cart:test-shop')!)[0].quantity,
   ).toBe('5.000');
+  expect(screen.getByRole('button', { name: 'เพิ่มลงตะกร้า' })).toBeDisabled();
+});
+
+it('allows a menu-only item without displaying a stock balance', async () => {
+  fetchMock.mockImplementation(async (url: string) => {
+    if (url.includes('/products?')) return response({ items: [{ ...product, stock_policy: 'MENU_ONLY', available: null }], total: 1, page: 1, page_size: 24 });
+    return response(settings);
+  });
+  view('/shop/test-shop');
+  await screen.findByRole('heading', { name: 'กาแฟ' });
+  const input = screen.getByRole('spinbutton', { name: 'จำนวน กาแฟ' });
+  expect(input).toBeEnabled();
+  expect(screen.queryByText(/คงเหลือ 0/)).not.toBeInTheDocument();
+  fireEvent.change(input, { target: { value: '2' } });
+  fireEvent.click(screen.getByRole('button', { name: 'เพิ่มลงตะกร้า' }));
+  expect(JSON.parse(localStorage.getItem('shop-cart:test-shop')!)[0].quantity).toBe('2.000');
+});
+
+it.each([undefined, 'FUTURE'])('disables storefront products with a missing or unknown policy %s', async (policy) => {
+  fetchMock.mockImplementation(async (url: string) => {
+    if (url.includes('/products?')) return response({ items: [{ ...product, stock_policy: policy }], total: 1, page: 1, page_size: 24 });
+    return response(settings);
+  });
+  view('/shop/test-shop');
+  await screen.findByRole('heading', { name: 'กาแฟ' });
   expect(screen.getByRole('button', { name: 'เพิ่มลงตะกร้า' })).toBeDisabled();
 });
 
@@ -487,7 +513,7 @@ it('retries an uncertain order with the same body, token and idempotency key', a
   });
   expect(
     screen.getByRole('checkbox', {
-      name: /ฉันเข้าใจว่าระบบกันสินค้าหลังส่งออเดอร์สำเร็จ/,
+      name: /ฉันเข้าใจว่ารายการที่ติดตามสต็อกจะถูกกันหลังส่งออเดอร์สำเร็จ/,
     }),
   ).toBeRequired();
   fireEvent.change(screen.getByLabelText('เบอร์ติดต่อ'), {

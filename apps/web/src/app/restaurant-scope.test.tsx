@@ -1,13 +1,14 @@
 import { isValidElement } from 'react';
-import { matchRoutes } from 'react-router-dom';
-import { expect, it } from 'vitest';
+import { createMemoryRouter, matchRoutes, RouterProvider } from 'react-router-dom';
+import { screen } from '@testing-library/react';
+import { expect, it, vi } from 'vitest';
+import { render } from '../test/render';
 import { navigation } from './routes';
 import { router } from './router';
 import {
   SystemPage,
   RestaurantPage,
   OnlineOrdersPage,
-  QualityPage,
   ShopCartPage,
   ShopTrackingPage,
   ProductsPage,
@@ -21,6 +22,14 @@ const removedPaths = [
   '/purchasing/orders/new',
   '/shelves',
   '/inventory',
+  '/inventory/batches',
+  '/inventory/expiry',
+  '/inventory/write-offs',
+  '/inventory/recalls',
+  '/restaurant/recipes',
+  '/restaurant/recipes/old',
+  '/restaurant/quick-stock',
+  '/restaurant/forecast',
   '/inventory/balances',
   '/inventory/locations',
   '/inventory/movements',
@@ -55,6 +64,23 @@ it.each(['', '/manage', '/work'])(
   },
 );
 
+it.each(['', '/manage', '/work'].flatMap((prefix) =>
+  ['/restaurant/recipes', '/restaurant/quick-stock', '/restaurant/forecast',
+    '/inventory/batches', '/inventory/expiry', '/inventory/write-offs', '/inventory/recalls']
+    .map((path) => prefix + path),
+))('renders not found without requests for retired URL %s', async (path) => {
+  const fetchSpy = vi.spyOn(globalThis, 'fetch');
+  try {
+    const memoryRouter = createMemoryRouter(router.routes, { initialEntries: [path] });
+    render(<RouterProvider router={memoryRouter} />);
+    expect(await screen.findByText('404 · NOT FOUND')).toBeVisible();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    memoryRouter.dispose();
+  } finally {
+    fetchSpy.mockRestore();
+  }
+});
+
 it('removes retail-only tools from both workspaces while retaining restaurant work', () => {
   const links = navigation.map((item) => item.to);
   for (const prefix of ['/manage']) {
@@ -66,9 +92,9 @@ it('removes retail-only tools from both workspaces while retaining restaurant wo
     expect(links).toContain(prefix + '/sales');
     expect(links).toContain(prefix + '/sales/refunds');
   }
-  expect(links).toContain('/manage/restaurant/recipes');
+  expect(links).not.toContain('/manage/restaurant/recipes');
   expect(links).not.toContain('/manage/restaurant/tables');
-  expect(links).toContain('/manage/restaurant/quick-stock');
+  expect(links).not.toContain('/manage/restaurant/quick-stock');
   expect(links).not.toContain('/manage/restaurant/forecast');
 });
 
@@ -78,8 +104,6 @@ it.each(['/manage'])(
     for (const [path, component] of [
       ['/restaurant/queue', RestaurantPage],
       ['/online-orders', OnlineOrdersPage],
-      ['/inventory/batches', QualityPage],
-      ['/inventory/write-offs', QualityPage],
       ['/products', ProductsPage],
       ['/sales', SalesPage],
       ['/sales/refunds', ReturnsPage],

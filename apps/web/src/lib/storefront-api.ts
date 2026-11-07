@@ -1,5 +1,5 @@
 import { ApiError } from './api';
-import { exactDecimal } from './pos-api';
+import { exactDecimal, type StockPolicy } from './pos-api';
 import { responseStoreMode, type StoreMode } from './store-mode';
 
 export interface ShopSummary {
@@ -26,7 +26,8 @@ export interface ShopProduct {
   unit: string;
   unit_type: string;
   unit_price: string;
-  available: string;
+  available: string | null;
+  stock_policy: StockPolicy;
   saleable: boolean;
   published: boolean;
   category_id?: string;
@@ -73,6 +74,7 @@ export type OrderStatus =
   | 'CANCELLED'
   | 'EXPIRED';
 export interface OnlineOrder {
+  readonly stock_policy: StockPolicy;
   table_code?: string;
   id: string;
   number: string;

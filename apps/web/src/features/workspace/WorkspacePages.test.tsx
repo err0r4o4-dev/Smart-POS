@@ -198,13 +198,8 @@ it.each<Role>(['OWNER'])(
       'href',
       '/manage/online-orders',
     );
-    expect(main.getByRole('link', { name: 'สูตรอาหาร' })).toHaveAttribute(
-      'href',
-      '/manage/restaurant/recipes',
-    );
-    expect(
-      main.getByRole('link', { name: 'เพิ่ม / ตรวจนับวัตถุดิบ' }),
-    ).toBeVisible();
+    expect(main.queryByRole('link', { name: 'สูตรอาหาร' })).not.toBeInTheDocument();
+    expect(main.queryByRole('link', { name: 'เพิ่ม / ตรวจนับวัตถุดิบ' })).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText('ค้นหาเมนูหรือสินค้า…')).toBeVisible();
     expect(screen.getByRole('button', { name: 'การแจ้งเตือน' })).toBeVisible();
     expect(screen.queryByText('SAL-28a6e1f3')).not.toBeInTheDocument();
@@ -351,7 +346,7 @@ it('filters restaurant dashboard shortcuts by permission without fabricating rep
   renderWorkspace('/manage/dashboard');
   const main = within(screen.getByRole('main'));
   expect(main.getByRole('link', { name: 'เมนูอาหาร' })).toBeVisible();
-  expect(main.getByRole('link', { name: 'สูตรอาหาร' })).toBeVisible();
+  expect(main.queryByRole('link', { name: 'สูตรอาหาร' })).not.toBeInTheDocument();
   expect(
     main.queryByRole('link', { name: 'ออเดอร์และคิว' }),
   ).not.toBeInTheDocument();

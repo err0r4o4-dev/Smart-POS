@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { setTimeout } from 'node:timers/promises';
+import { assertIntegrationTestsRan } from './single-store-test-output.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const apiRoot = fileURLToPath(new URL('../apps/api/', import.meta.url));
@@ -528,8 +529,48 @@ COMMIT;`,
   console.log(
     'PASS: migration 29 down-to-28/up-to-29 and no-change rerun preserve existing auth rows and order history.',
   );
+  run('docker', migrationArgs(upgradeDatabase, 'goto', '31'));
+  const policyUpgradeFingerprint = `SELECT
+    (SELECT count(*) FROM online_orders)::text || ':' ||
+    (SELECT count(*) FROM pos_carts)::text || ':' ||
+    (SELECT count(*) FROM sales)::text || ':' ||
+    (SELECT count(*) FROM online_order_stock_items)::text || ':' ||
+    (SELECT count(*) FROM stock_movements)::text`;
+  const beforePolicyUpgrade = sql(upgradeDatabase, policyUpgradeFingerprint);
+  run('docker', migrationArgs(upgradeDatabase, 'up'));
+  if (
+    sql(upgradeDatabase, 'SELECT version,dirty FROM schema_migrations') !==
+    '32|f'
+  )
+    throw new Error('Expected clean schema 32 after policy upgrade.');
+  if (sql(upgradeDatabase, policyUpgradeFingerprint) !== beforePolicyUpgrade)
+    throw new Error(
+      'Policy upgrade changed historical transaction or stock counts.',
+    );
+  if (
+    sql(
+      upgradeDatabase,
+      `SELECT
+    (SELECT count(*) FROM online_orders WHERE stock_policy<>'TRACKED') +
+    (SELECT count(*) FROM pos_carts WHERE stock_policy<>'TRACKED') +
+    (SELECT count(*) FROM sales WHERE stock_policy<>'TRACKED')`,
+    ) !== '0'
+  )
+    throw new Error(
+      'Policy upgrade did not preserve TRACKED historical defaults.',
+    );
+  console.log(
+    'PASS: schema 31-to-32 upgrade preserves historical counts and TRACKED policies.',
+  );
   run('docker', migrationArgs(database, 'up'));
   run('docker', migrationArgs(database, 'up'));
+  sql(
+    database,
+    readFileSync(
+      new URL('../database/menu-only-policy-check.sql', import.meta.url),
+      'utf8',
+    ),
+  );
   console.log(
     'PASS: official migrations and no-change rerun applied only to new task-owned tmpfs PostgreSQL.',
   );
@@ -546,6 +587,9 @@ COMMIT;`,
     '-c',
     "CREATE TABLE single_store_acceptance_marker(marker text NOT NULL); INSERT INTO single_store_acceptance_marker VALUES ('ephemeral-single-store'); GRANT SELECT ON single_store_acceptance_marker TO smartpos_runtime;",
   ]);
+  const testPattern = process.env.SMARTPOS_SINGLE_STORE_TEST_PATTERN ??
+    '^(TestSingleStoreIsolatedDatabase|TestCustomerPaymentRateLimitScopesIsolatedDatabase)$';
+  console.log(`SCOPE: Go integration test pattern ${testPattern}`);
   const testOutput = run(
     'go',
     [
@@ -554,7 +598,7 @@ COMMIT;`,
       '-v',
       './internal/modules/storefront',
       '-run',
-      '^(TestSingleStoreIsolatedDatabase|TestCustomerPaymentRateLimitScopesIsolatedDatabase)$',
+      testPattern,
     ],
     {
       cwd: apiRoot,
@@ -567,6 +611,8 @@ COMMIT;`,
     },
   );
   console.log(redact(testOutput));
+  assertIntegrationTestsRan(testOutput);
+  console.log('PASS: selected integration acceptance cases completed without skips.');
 } catch (error) {
   console.error(redact(error.message));
   process.exitCode = 1;

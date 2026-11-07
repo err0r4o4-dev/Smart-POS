@@ -17,6 +17,11 @@ export interface POSTerminal {
   status: string;
   revision: number;
 }
+export type StockPolicy = 'TRACKED' | 'MENU_ONLY';
+export function isKnownStockPolicy(policy: unknown): policy is StockPolicy {
+  return policy === 'TRACKED' || policy === 'MENU_ONLY';
+}
+export const MAX_LINE_QUANTITY = 1_000_000_000n;
 export interface POSItem {
   batch_id?: string | null;
   batch_verified?: boolean;
@@ -30,7 +35,8 @@ export interface POSItem {
   unit_price: string;
   quantity: string;
   line_total: string;
-  available: string;
+  available: string | null;
+  stock_policy: StockPolicy;
   product_status: string;
   variant_status: string;
   unit_status: string;
@@ -39,6 +45,7 @@ export interface POSItem {
   previous_price: string;
 }
 export interface POSCart {
+  readonly stock_policy: StockPolicy;
   online_order?: { id: string; number: string; estimated_total: string };
   customer_id?: string | null;
   customer?: CustomerSelection | null;
@@ -53,6 +60,11 @@ export interface POSCart {
   total: string;
   review_required: boolean;
   pricing?: PricingQuote;
+}
+export function hasValidCartStockPolicy(cart: POSCart): boolean {
+  return isKnownStockPolicy(cart.stock_policy) && cart.items.every(
+    (item) => isKnownStockPolicy(item.stock_policy) && item.stock_policy === cart.stock_policy,
+  );
 }
 export interface CartSummary {
   id: string;
@@ -114,6 +126,7 @@ export interface SaleSummary {
   receipt_number: string;
 }
 export interface POSSale extends SaleSummary {
+  readonly stock_policy: StockPolicy;
   customer_id?: string | null;
   customer_code_snapshot?: string;
   store_name: string;

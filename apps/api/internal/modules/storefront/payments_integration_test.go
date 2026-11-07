@@ -88,8 +88,8 @@ func paymentPersistenceAcceptance(test *testing.T, ctx context.Context, organiza
 		if problem != nil {
 			test.Fatal(problem)
 		}
-		input := storefront.OrderInput{Items: items, QuoteID: quote.ID, CustomerName: "Synthetic payment buyer", ContactPhone: "0800000000", AccessToken: strings.Repeat("f", 64)}
-		order, problem := service.CreateOrder(ctx, shop.Slug, key, input)
+		input := storefront.OrderInput{Items: items, QuoteID: quote.ID, Fulfillment: "PICKUP", CustomerName: "Synthetic payment buyer", ContactPhone: "0800000000", AccessToken: strings.Repeat("f", 64)}
+		order, problem := createLegacyHoldFixture(ctx, organizations, owner, org, shop, key, input, quote)
 		if problem != nil {
 			test.Fatal(problem)
 		}

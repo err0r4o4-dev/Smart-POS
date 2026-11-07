@@ -2,7 +2,7 @@ import { defineMessages } from './defineMessages';
 export const pos = defineMessages({
   th: {
     saleCompletedAndStockPostedPrintingDoes:
-      'ขายสำเร็จและตัดสต็อกแล้ว การพิมพ์ไม่มีผลต่อรายการขาย',
+      'ขายสำเร็จแล้ว การพิมพ์ไม่มีผลต่อรายการขาย',
     checkout: 'ชำระเงิน',
     walkIn: 'ลูกค้าทั่วไป',
     finalPricesComeFromTheServerPricing:
@@ -27,12 +27,12 @@ export const pos = defineMessages({
     confirmActualFundsReceived: 'ยืนยันรับเงินจริง',
     cancelBeforeReceivingFunds: 'ยกเลิกก่อนรับเงิน',
     zeroNetTotalNoFundsAreCollected:
-      'ยอดสุทธิศูนย์ ไม่มีการรับเงิน กรุณาบันทึกขายและตัดสต็อก',
+      'ยอดสุทธิศูนย์ ไม่มีการรับเงิน กรุณาบันทึกการขาย',
     fundsConfirmedTheSaleIsNotCompleted:
       'ยืนยันเงินแล้ว แต่ยังไม่ใช่การขายสำเร็จ',
     paymentEvidenceRemainsReviewItAndDo:
       '— หลักฐานเงินยังอยู่ ต้องตรวจสอบ ห้ามเรียกเก็บเงินซ้ำ',
-    saveSaleAndPostStock: 'บันทึกขายและตัดสต็อก',
+    saveSaleAndPostStock: 'บันทึกการขาย',
     retrySavingTheSameSale: 'ลองบันทึกขายเดิมอีกครั้ง',
     reviewPendingPayments: 'ตรวจสอบรายการเงินค้าง',
     saleCompleted: 'ขายสำเร็จ',
@@ -73,8 +73,10 @@ export const pos = defineMessages({
     itemsUseSearchToNarrowResults: 'รายการ — ใช้คำค้นเพื่อจำกัดผลลัพธ์',
     goToCheckout: 'ไปชำระเงิน',
     quantityMustBeGreaterThan0With:
-      'จำนวนต้องมากกว่า 0 และมีทศนิยมไม่เกิน 3 ตำแหน่ง',
+      'จำนวนต้องมากกว่า 0 ไม่เกิน 1,000,000 มีทศนิยมไม่เกิน 3 ตำแหน่ง และหน่วยชิ้นหรือแพ็กต้องเป็นจำนวนเต็ม',
     shoppingCart: 'ตะกร้าสินค้า',
+    cartPolicyRefresh: 'ข้อมูลนโยบายสต็อกของตะกร้าไม่ถูกต้อง กรุณาโหลดตะกร้าใหม่',
+    refreshCart: 'โหลดตะกร้าใหม่',
     yourCartIsEmpty: 'ยังไม่มีสินค้าในตะกร้า',
     delete: 'ลบ',
     priceChangedFrom: 'ราคาเปลี่ยนจาก',
@@ -252,7 +254,7 @@ export const pos = defineMessages({
   },
   en: {
     saleCompletedAndStockPostedPrintingDoes:
-      'Sale completed and stock posted. Printing does not affect the sale.',
+      'Sale completed. Printing does not affect the sale.',
     checkout: 'Checkout',
     walkIn: 'Walk-in',
     finalPricesComeFromTheServerPricing:
@@ -278,12 +280,12 @@ export const pos = defineMessages({
     confirmActualFundsReceived: 'Confirm actual funds received',
     cancelBeforeReceivingFunds: 'Cancel before receiving funds',
     zeroNetTotalNoFundsAreCollected:
-      'Zero net total. No funds are collected. Save the sale and post stock.',
+      'Zero net total. No funds are collected. Save the sale.',
     fundsConfirmedTheSaleIsNotCompleted:
       'Funds confirmed; the sale is not completed yet',
     paymentEvidenceRemainsReviewItAndDo:
       '— Payment evidence remains. Review it and do not charge again.',
-    saveSaleAndPostStock: 'Save sale and post stock',
+    saveSaleAndPostStock: 'Save sale',
     retrySavingTheSameSale: 'Retry saving the same sale',
     reviewPendingPayments: 'Review pending payments',
     saleCompleted: 'Sale completed',
@@ -324,8 +326,10 @@ export const pos = defineMessages({
     itemsUseSearchToNarrowResults: 'items — use search to narrow results',
     goToCheckout: 'Go to checkout',
     quantityMustBeGreaterThan0With:
-      'Quantity must be greater than 0 with no more than 3 decimal places',
+      'Quantity must be greater than 0 and at most 1,000,000, with up to 3 decimal places. Piece and pack quantities must be whole numbers.',
     shoppingCart: 'Shopping cart',
+    cartPolicyRefresh: 'The cart stock policy is missing or inconsistent. Reload the cart.',
+    refreshCart: 'Reload cart',
     yourCartIsEmpty: 'Your cart is empty',
     delete: 'Delete',
     priceChangedFrom: 'Price changed from',

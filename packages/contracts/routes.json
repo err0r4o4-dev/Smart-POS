@@ -221,12 +221,9 @@
     "name": "Restaurant Operations",
     "phase": 6,
     "routes": [
-      "/restaurant/recipes",
       "/restaurant/tables",
       "/restaurant/queue",
-      "/restaurant/settings",
-      "/restaurant/forecast",
-      "/restaurant/quick-stock"
+      "/restaurant/settings"
     ]
   }
 ]

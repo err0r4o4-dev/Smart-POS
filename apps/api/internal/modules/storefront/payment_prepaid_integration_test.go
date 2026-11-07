@@ -201,7 +201,7 @@ func paymentPrepaidAcceptance(test *testing.T, ctx context.Context, organization
 		var sales, payments, receipts, movements int
 		var cash, expected, status string
 		problem = tx.QueryRow(ctx, `SELECT (SELECT count(*) FROM sales WHERE organization_id=$1),(SELECT count(*) FROM sale_payments WHERE organization_id=$1),(SELECT count(*) FROM receipts WHERE organization_id=$1),(SELECT count(*) FROM stock_movements WHERE organization_id=$1 AND movement_type='SALE'),cash_sales::text,expected_cash::text,(SELECT status FROM online_orders WHERE organization_id=$1 AND id=$2) FROM register_shifts WHERE organization_id=$1 AND status='OPEN'`, org, order.ID).Scan(&sales, &payments, &receipts, &movements, &cash, &expected, &status)
-		if problem != nil || sales != 1 || payments != 1 || receipts != 1 || movements != 1 || cash != "0.00" || expected != "0.00" || status != "COMPLETED" {
+		if problem != nil || sales != 1 || payments != 1 || receipts != 1 || movements != 0 || cash != "0.00" || expected != "0.00" || status != "COMPLETED" {
 			test.Fatalf("prepaid atomic effects: %d %d %d %d %s %s %s error %v", sales, payments, receipts, movements, cash, expected, status, problem)
 		}
 	})
@@ -270,7 +270,7 @@ func paymentPrepaidAcceptance(test *testing.T, ctx context.Context, organization
 		var sales, carts, movements int
 		var quantity, ledger string
 		problem = tx.QueryRow(ctx, `SELECT doc.cart_id IS NULL AND doc.sale_id IS NULL,attempt.stock_hold_released,(SELECT count(*) FROM sales WHERE organization_id=$1),(SELECT count(*) FROM pos_carts WHERE organization_id=$1),(SELECT count(*) FROM stock_movements WHERE organization_id=$1 AND movement_type='SALE'),(SELECT quantity::text FROM stock_balances WHERE organization_id=$1 AND location_id=$3 AND variant_id=$4),(SELECT sum(quantity_delta)::text FROM stock_movements WHERE organization_id=$1 AND location_id=$3 AND variant_id=$4) FROM online_orders doc JOIN online_payment_attempts attempt ON attempt.organization_id=doc.organization_id AND attempt.order_id=doc.id WHERE doc.organization_id=$1 AND doc.id=$2`, org, next.ID, shop.LocationID, variant).Scan(&untouched, &held, &sales, &carts, &movements, &quantity, &ledger)
-		if problem != nil || !untouched || held != released || sales != 1 || carts != 1 || movements != 1 || quantity != "2.000" || ledger != quantity {
+		if problem != nil || !untouched || held != released || sales != 1 || carts != 1 || movements != 0 || quantity != "3.000" || ledger != quantity {
 			test.Fatalf("failed fulfillment posted or lost stock: %v %v %d %d %d %s %s error %v", untouched, held, sales, carts, movements, quantity, ledger, problem)
 		}
 	}

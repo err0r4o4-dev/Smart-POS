@@ -2,6 +2,9 @@ package storefront_test
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -16,6 +19,53 @@ import (
 	"smartpos/api/internal/modules/storefront"
 	"smartpos/api/internal/platform/stripe"
 )
+
+// createLegacyIngredientFixture preserves the fulfillment and table snapshots of a tracked order.
+func createLegacyIngredientFixture(ctx context.Context, organizations *organization.Service, owner, org string, service *storefront.Service, shop storefront.Settings, key string, input storefront.OrderInput, tableID string) (storefront.Order, error) {
+	quote, err := service.Quote(ctx, shop.Slug, storefront.QuoteInput{Items: input.Items, Fulfillment: input.Fulfillment, TableToken: input.TableToken})
+	if err != nil {
+		return storefront.Order{}, err
+	}
+	if input.Fulfillment == "PICKUP" && tableID == "" {
+		return createLegacyHoldFixture(ctx, organizations, owner, org, shop, key, input, quote)
+	}
+	tx, _, err := organizations.Authorized(ctx, owner, org, "storefront.manage")
+	if err != nil {
+		return storefront.Order{}, err
+	}
+	defer tx.Rollback(ctx)
+	encoded, err := json.Marshal(input)
+	if err != nil {
+		return storefront.Order{}, err
+	}
+	fingerprint := sha256.Sum256(encoded)
+	token := sha256.Sum256([]byte(input.AccessToken))
+	terminal := shop.TerminalID
+	if shop.OnlineTerminalID != "" {
+		terminal = shop.OnlineTerminalID
+	}
+	_, err = tx.Exec(ctx, `INSERT INTO online_orders(id,organization_id,branch_id,terminal_id,stock_location_id,customer_name,contact_phone,customer_note,pickup_instructions,store_name,store_phone,estimated_total,access_hash,request_fingerprint,fulfillment,shipping_fee,delivery_address,stock_policy) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,'TRACKED')`, key, org, shop.BranchID, terminal, shop.LocationID, input.CustomerName, input.ContactPhone, input.CustomerNote, shop.PickupInstructions, shop.Name, shop.ContactPhone, quote.Total, hex.EncodeToString(token[:]), hex.EncodeToString(fingerprint[:]), input.Fulfillment, quote.ShippingFee, input.DeliveryAddress)
+	if err != nil {
+		return storefront.Order{}, err
+	}
+	if tableID != "" {
+		if _, err = tx.Exec(ctx, `INSERT INTO restaurant_order_tables(organization_id,order_id,table_id,table_code) VALUES($1,$2,$3,$4)`, org, key, tableID, quote.TableCode); err != nil {
+			return storefront.Order{}, err
+		}
+	}
+	for _, line := range quote.Items {
+		if _, err = tx.Exec(ctx, `INSERT INTO online_order_items(organization_id,order_id,variant_id,product_name,variant_name,sku,unit,quantity,unit_price,line_total) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, org, key, line.VariantID, line.ProductName, line.VariantName, line.SKU, line.Unit, line.Quantity, line.UnitPrice, line.LineTotal); err != nil {
+			return storefront.Order{}, err
+		}
+	}
+	if _, err = tx.Exec(ctx, `INSERT INTO online_order_events(organization_id,order_id,status) VALUES($1,$2,'PENDING')`, org, key); err != nil {
+		return storefront.Order{}, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return storefront.Order{}, err
+	}
+	return service.Track(ctx, shop.Slug, storefront.TrackingInput{OrderID: key, AccessToken: input.AccessToken})
+}
 
 func ingredientReservationAcceptance(test *testing.T, ctx context.Context, organizations *organization.Service, owner, org string, shop storefront.Settings, foreignOrg, unauthorizedUser string) {
 	test.Helper()
@@ -118,7 +168,9 @@ func ingredientReservationAcceptance(test *testing.T, ctx context.Context, organ
 	}
 	test.Run("shared ingredient shortage rolls back the whole order", func(current *testing.T) {
 		input := request([]storefront.ItemInput{{VariantID: menus[0], Quantity: "1.000"}, {VariantID: menus[1], Quantity: "1.000"}}, "PICKUP", "")
-		if _, problem := service.CreateOrder(ctx, shop.Slug, "ae222222-2222-4222-8222-222222222222", input); !errors.Is(problem, storefront.ErrConflict) {
+		_, problem := createLegacyIngredientFixture(ctx, organizations, owner, org, service, shop, "ae222222-2222-4222-8222-222222222222", input, "")
+		var databaseProblem *pgconn.PgError
+		if !errors.As(problem, &databaseProblem) || databaseProblem.Code != "23514" || databaseProblem.Message != "insufficient stock for reservation" {
 			current.Fatalf("shared ingredient overcommit: %v", problem)
 		}
 		read := begin(org)
@@ -141,7 +193,7 @@ func ingredientReservationAcceptance(test *testing.T, ctx context.Context, organ
 		for index, input := range inputs {
 			go func(index int, input storefront.OrderInput) {
 				<-start
-				order, problem := service.CreateOrder(ctx, shop.Slug, fmt.Sprintf("ae333333-3333-4333-8333-%012d", index+1), input)
+				order, problem := createLegacyIngredientFixture(ctx, organizations, owner, org, service, shop, fmt.Sprintf("ae333333-3333-4333-8333-%012d", index+1), input, "")
 				results <- outcome{order, problem}
 			}(index, input)
 		}
@@ -153,8 +205,11 @@ func ingredientReservationAcceptance(test *testing.T, ctx context.Context, organ
 			if result.problem == nil {
 				succeeded++
 				winner = result.order
-			} else if !errors.Is(result.problem, storefront.ErrStock) && !errors.Is(result.problem, storefront.ErrConflict) {
-				current.Fatal(result.problem)
+			} else {
+				var databaseProblem *pgconn.PgError
+				if !errors.As(result.problem, &databaseProblem) || databaseProblem.Code != "23514" || databaseProblem.Message != "insufficient stock for reservation" {
+					current.Fatal(result.problem)
+				}
 			}
 		}
 		if succeeded != 1 {
@@ -168,7 +223,7 @@ func ingredientReservationAcceptance(test *testing.T, ctx context.Context, organ
 	})
 	test.Run("delivery rejection releases ingredients without stock movements", func(current *testing.T) {
 		input := request([]storefront.ItemInput{{VariantID: menus[0], Quantity: "1.000"}}, "DELIVERY", "")
-		order, problem := service.CreateOrder(ctx, shop.Slug, "ae888888-8888-4888-8888-888888888888", input)
+		order, problem := createLegacyIngredientFixture(ctx, organizations, owner, org, service, shop, "ae888888-8888-4888-8888-888888888888", input, "")
 		if problem != nil {
 			current.Fatal(problem)
 		}
@@ -186,7 +241,7 @@ func ingredientReservationAcceptance(test *testing.T, ctx context.Context, organ
 		test.Fatal(err)
 	}
 	input := request([]storefront.ItemInput{{VariantID: menus[0], Quantity: "1.000"}}, "PICKUP", table.QRToken)
-	order, err := service.CreateOrder(ctx, shop.Slug, "ae555555-5555-4555-8555-555555555555", input)
+	order, err := createLegacyIngredientFixture(ctx, organizations, owner, org, service, shop, "ae555555-5555-4555-8555-555555555555", input, table.ID)
 	if err != nil {
 		test.Fatal(err)
 	}
@@ -238,7 +293,7 @@ func ingredientReservationAcceptance(test *testing.T, ctx context.Context, organ
 	}
 	assertStock(test, "1.000", "0.600")
 	otherInput := request([]storefront.ItemInput{{VariantID: ingredient, Quantity: "0.400"}}, "PICKUP", "")
-	other, err := service.CreateOrder(ctx, shop.Slug, "ae666666-6666-4666-8666-666666666666", otherInput)
+	other, err := createLegacyIngredientFixture(ctx, organizations, owner, org, service, shop, "ae666666-6666-4666-8666-666666666666", otherInput, "")
 	if err != nil {
 		test.Fatal(err)
 	}
@@ -352,7 +407,12 @@ func ingredientReservationAcceptance(test *testing.T, ctx context.Context, organ
 	assertStock(test, "0.400", "0.000")
 	settle := func(current *testing.T, key string, input storefront.OrderInput) pos.Checkout {
 		current.Helper()
-		next, problem := service.CreateOrder(ctx, shop.Slug, key, input)
+		next, problem := service.Track(ctx, shop.Slug, storefront.TrackingInput{OrderID: key, AccessToken: input.AccessToken})
+		if errors.Is(problem, storefront.ErrNotFound) {
+			next, problem = createLegacyIngredientFixture(ctx, organizations, owner, org, service, shop, key, input, "")
+		} else if problem == nil {
+			next, problem = service.CreateOrder(ctx, shop.Slug, key, input)
+		}
 		if problem != nil {
 			current.Fatal(problem)
 		}
@@ -417,7 +477,7 @@ func ingredientReservationAcceptance(test *testing.T, ctx context.Context, organ
 		}
 		input := request([]storefront.ItemInput{{VariantID: direct, Quantity: "1.000"}}, "PICKUP", "")
 		key := "aebbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
-		if _, problem := service.CreateOrder(ctx, shop.Slug, key, input); problem != nil {
+		if _, problem := createLegacyIngredientFixture(ctx, organizations, owner, org, service, shop, key, input, ""); problem != nil {
 			current.Fatal(problem)
 		}
 		if _, problem := restaurantService.SaveRecipe(ctx, owner, org, "", "aeaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", restaurant.RecipeInput{BranchID: shop.BranchID, MenuVariantID: direct, Status: "ACTIVE", Items: []restaurant.RecipeIngredientInput{{IngredientVariantID: ingredient, Quantity: "0.100"}}}); problem != nil {
@@ -455,7 +515,7 @@ func ingredientReservationAcceptance(test *testing.T, ctx context.Context, organ
 			current.Fatal(problem)
 		}
 		input := storefront.OrderInput{Items: items, QuoteID: quote.ID, Fulfillment: "DELIVERY", DeliveryAddress: "Synthetic delivery address", CustomerName: "Synthetic recipe buyer", ContactPhone: "0800000000", AccessToken: strings.Repeat("a", 64)}
-		next, problem := service.CreateOrder(ctx, shop.Slug, "aecccccc-cccc-4ccc-8ccc-cccccccccccc", input)
+		next, problem := createLegacyIngredientFixture(ctx, organizations, owner, org, service, shop, "aecccccc-cccc-4ccc-8ccc-cccccccccccc", input, "")
 		if problem != nil {
 			current.Fatal(problem)
 		}

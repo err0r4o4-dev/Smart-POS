@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+	"smartpos/api/internal/modules/catalog"
 )
 
 type frozenIngredient struct {
@@ -93,6 +94,24 @@ func TestOrderDirectStockDoesNotAdoptLaterRecipe(test *testing.T) {
 	_, exists, err := readSaleRecipe(context.Background(), tx, "org", "branch", "cart", "menu")
 	if err != nil || exists {
 		test.Fatalf("direct snapshot must remain direct: exists=%v, err=%v", exists, err)
+	}
+}
+
+type noRecipeRow struct{}
+
+func (noRecipeRow) Scan(...any) error { return pgx.ErrNoRows }
+
+type missingSnapshotTx struct{ frozenRecipeTx }
+
+func (tx missingSnapshotTx) QueryRow(_ context.Context, _ string, _ ...any) pgx.Row {
+	return noRecipeRow{}
+}
+
+func TestMissingTrackedSnapshotFallsBackToDirectStock(test *testing.T) {
+	tx := missingSnapshotTx{frozenRecipeTx: frozenRecipeTx{items: map[string][]frozenIngredient{}}}
+	movements, err := effectiveSaleMovements(context.Background(), tx, "org", "branch", "legacy-cart", []CartItem{{SaleVariant: catalog.SaleVariant{VariantID: "menu"}, Quantity: "2.000"}})
+	if err != nil || len(movements) != 1 || movements[0].VariantID != "menu" || movements[0].Quantity != "2.000" {
+		test.Fatalf("missing legacy snapshot direct movement: %+v %v", movements, err)
 	}
 }
 

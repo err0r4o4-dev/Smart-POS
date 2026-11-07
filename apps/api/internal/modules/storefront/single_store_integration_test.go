@@ -319,6 +319,13 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 		}
 		paymentPrepaidAcceptance(t, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "prepaid-fixture"), first.Organization.ID, guest.ID)
 	})
+	t.Run("menu-only zero-stock sales", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "bf111111-1111-4111-8111-111111111111", createInput("MENU_ONLY"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		menuOnlyAcceptance(t, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "menu-only-fixture"), first.Organization.ID, guest.ID)
+	})
 	t.Run("staff customer payment reconciliation", func(t *testing.T) {
 		state, problem := multi.Create(ctx, owner.ID, "6a111111-1111-4111-8111-111111111111", createInput("RECONCILE"))
 		if problem != nil {

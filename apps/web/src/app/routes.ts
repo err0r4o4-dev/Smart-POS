@@ -34,34 +34,16 @@ export interface NavigationItem {
 }
 const managementItems: NavigationItem[] = [
   {
-    to: '/restaurant/recipes',
-    label: 'สูตรอาหาร',
-    icon: 'dashboard',
-    permission: 'catalog.read',
-  },
-  {
     to: '/restaurant/queue',
     label: 'หน้าจอคิวอาหาร',
     icon: 'pos',
     permission: 'online_orders.read',
   },
   {
-    to: '/restaurant/quick-stock',
-    label: 'เพิ่ม / ตรวจนับวัตถุดิบ',
-    icon: 'dashboard',
-    permission: 'inventory.read',
-  },
-  {
     to: '/online-orders',
     label: 'ออเดอร์และคิว',
     icon: 'pos',
     permission: 'online_orders.read',
-  },
-  {
-    to: '/inventory/batches',
-    label: 'ของเสีย / หมดอายุ',
-    icon: 'dashboard',
-    permission: 'quality.read',
   },
   {
     to: '/sales/refunds',
@@ -129,13 +111,8 @@ const managementGroups: NavigationGroup[] = [
   },
   {
     id: 'menu',
-    label: 'เมนูและสูตรอาหาร',
-    paths: [paths.products, '/restaurant/recipes'],
-  },
-  {
-    id: 'inventory',
-    label: 'วัตถุดิบ',
-    paths: ['/inventory/batches', '/restaurant/quick-stock'],
+    label: 'เมนูอาหาร',
+    paths: [paths.products],
   },
   {
     id: 'reports',

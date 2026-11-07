@@ -56,16 +56,17 @@ type SettingsInput struct {
 	Revision           int64  `json:"revision"`
 }
 type Product struct {
-	VariantID   string `json:"variant_id"`
-	ProductName string `json:"product_name"`
-	VariantName string `json:"variant_name"`
-	SKU         string `json:"sku"`
-	Unit        string `json:"unit"`
-	UnitType    string `json:"unit_type"`
-	UnitPrice   string `json:"unit_price"`
-	Available   string `json:"available"`
-	Saleable    bool   `json:"saleable"`
-	Published   bool   `json:"published"`
+	VariantID   string  `json:"variant_id"`
+	ProductName string  `json:"product_name"`
+	VariantName string  `json:"variant_name"`
+	SKU         string  `json:"sku"`
+	Unit        string  `json:"unit"`
+	UnitType    string  `json:"unit_type"`
+	UnitPrice   string  `json:"unit_price"`
+	Available   *string `json:"available"`
+	StockPolicy string  `json:"stock_policy"`
+	Saleable    bool    `json:"saleable"`
+	Published   bool    `json:"published"`
 }
 type Page[T any] struct {
 	Items    []T `json:"items"`
@@ -119,6 +120,7 @@ type Event struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 type Order struct {
+	StockPolicy        string    `json:"stock_policy"`
 	Fulfillment        string    `json:"fulfillment"`
 	TableCode          string    `json:"table_code,omitempty"`
 	DeliveryAddress    string    `json:"delivery_address,omitempty"`

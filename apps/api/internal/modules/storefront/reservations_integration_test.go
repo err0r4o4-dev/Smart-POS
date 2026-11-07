@@ -39,6 +39,20 @@ func payReservationFixture(test *testing.T, ctx context.Context, service *storef
 	}
 }
 
+func assertTrackedAvailability(test *testing.T, ctx context.Context, organizations *organization.Service, owner, org, location, variant, held, available string) {
+	test.Helper()
+	tx, _, err := organizations.Authorized(ctx, owner, org, "inventory.read")
+	if err != nil {
+		test.Fatal(err)
+	}
+	defer tx.Rollback(ctx)
+	var gotHeld, gotAvailable string
+	err = tx.QueryRow(ctx, `SELECT storefront_reserved_quantity($1,$2,$3)::text,(storefront_sellable_quantity($1,$2,$3)-storefront_reserved_quantity($1,$2,$3))::numeric(18,3)::text`, org, location, variant).Scan(&gotHeld, &gotAvailable)
+	if err != nil || gotHeld != held || gotAvailable != available {
+		test.Fatalf("tracked availability held=%s available=%s error=%v; want %s/%s", gotHeld, gotAvailable, err, held, available)
+	}
+}
+
 func reservationAcceptance(test *testing.T, ctx context.Context, organizations *organization.Service, owner, org string, shop storefront.Settings) {
 	test.Helper()
 	tx, _, err := organizations.Authorized(ctx, owner, org, "storefront.manage")
@@ -77,9 +91,9 @@ func reservationAcceptance(test *testing.T, ctx context.Context, organizations *
 	if err != nil {
 		test.Fatal(err)
 	}
-	input := storefront.OrderInput{Items: items, QuoteID: quote.ID, CustomerName: "Synthetic buyer", ContactPhone: "0800000000", AccessToken: strings.Repeat("a", 64)}
+	input := storefront.OrderInput{Items: items, QuoteID: quote.ID, Fulfillment: "PICKUP", CustomerName: "Synthetic buyer", ContactPhone: "0800000000", AccessToken: strings.Repeat("a", 64)}
 	key := "a1111111-1111-4111-8111-111111111111"
-	order, err := service.CreateOrder(ctx, shop.Slug, key, input)
+	order, err := createLegacyHoldFixture(ctx, organizations, owner, org, shop, key, input, quote)
 	if err != nil {
 		test.Fatal(err)
 	}
@@ -89,13 +103,16 @@ func reservationAcceptance(test *testing.T, ctx context.Context, organizations *
 			test.Fatalf("reservation replay: %v", problem)
 		}
 		products, problem := service.Products(ctx, "", "", shop.Slug, "", 1)
-		if problem != nil || len(products.Items) != 1 || products.Items[0].Available != "1.000" {
-			test.Fatalf("expected one unreserved unit, got %+v, error %v", products.Items, problem)
+		if problem != nil || len(products.Items) != 1 || products.Items[0].StockPolicy != "MENU_ONLY" || products.Items[0].Available != nil {
+			test.Fatalf("public menu availability: %+v, error %v", products.Items, problem)
 		}
+		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, shop.LocationID, variant, "3.000", "2.000", "1.000")
+		assertTrackedAvailability(test, ctx, organizations, owner, org, shop.LocationID, variant, "2.000", "1.000")
 	})
 	test.Run("another order cannot spend held stock", func(test *testing.T) {
-		_, problem := service.CreateOrder(ctx, shop.Slug, "a2222222-2222-4222-8222-222222222222", input)
-		if !errors.Is(problem, storefront.ErrStock) {
+		_, problem := createLegacyHoldFixture(ctx, organizations, owner, org, shop, "a2222222-2222-4222-8222-222222222222", input, quote)
+		var databaseError *pgconn.PgError
+		if !errors.As(problem, &databaseError) || databaseError.Code != "23514" || databaseError.Message != "insufficient stock for reservation" {
 			test.Fatalf("competing order must reject reserved stock, got %v", problem)
 		}
 	})
@@ -181,9 +198,11 @@ func reservationAcceptance(test *testing.T, ctx context.Context, organizations *
 			test.Fatalf("cancel reservation: %v", problem)
 		}
 		products, problem := service.Products(ctx, "", "", shop.Slug, "", 1)
-		if problem != nil || len(products.Items) != 1 || products.Items[0].Available != "3.000" {
+		if problem != nil || len(products.Items) != 1 || products.Items[0].StockPolicy != "MENU_ONLY" || products.Items[0].Available != nil {
 			test.Fatalf("released availability: %+v, error %v", products.Items, problem)
 		}
+		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, shop.LocationID, variant, "3.000", "0.000", "3.000")
+		assertTrackedAvailability(test, ctx, organizations, owner, org, shop.LocationID, variant, "0.000", "3.000")
 		read, _, problem := organizations.Authorized(ctx, owner, org, "inventory.read")
 		if problem != nil {
 			test.Fatal(problem)
@@ -208,7 +227,7 @@ func reservationAcceptance(test *testing.T, ctx context.Context, organizations *
 				request := input
 				request.Items = append([]storefront.ItemInput(nil), input.Items...)
 				<-start
-				next, problem := service.CreateOrder(ctx, shop.Slug, key, request)
+				next, problem := createLegacyHoldFixture(ctx, organizations, owner, org, shop, key, request, quote)
 				results <- outcome{next, problem}
 			}(nextKey)
 		}
@@ -220,8 +239,11 @@ func reservationAcceptance(test *testing.T, ctx context.Context, organizations *
 			if result.err == nil {
 				successes++
 				accepted = result.order
-			} else if !errors.Is(result.err, storefront.ErrStock) {
-				test.Fatalf("unexpected concurrent failure: %v", result.err)
+			} else {
+				var databaseError *pgconn.PgError
+				if !errors.As(result.err, &databaseError) || databaseError.Code != "23514" || databaseError.Message != "insufficient stock for reservation" {
+					test.Fatalf("unexpected concurrent failure: %v", result.err)
+				}
 			}
 		}
 		if successes != 1 {
@@ -259,12 +281,14 @@ func reservationAcceptance(test *testing.T, ctx context.Context, organizations *
 			test.Fatalf("expired replay: %s error %v", replay.Status, problem)
 		}
 		products, problem := service.Products(ctx, "", "", shop.Slug, "", 1)
-		if problem != nil || len(products.Items) != 1 || products.Items[0].Available != "3.000" {
+		if problem != nil || len(products.Items) != 1 || products.Items[0].StockPolicy != "MENU_ONLY" || products.Items[0].Available != nil {
 			test.Fatalf("expired availability: %+v error %v", products.Items, problem)
 		}
+		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, shop.LocationID, variant, "3.000", "0.000", "3.000")
+		assertTrackedAvailability(test, ctx, organizations, owner, org, shop.LocationID, variant, "0.000", "3.000")
 	})
 	test.Run("linked POS can consume its own reservation exactly once", func(test *testing.T) {
-		next, problem := service.CreateOrder(ctx, shop.Slug, "a6666666-6666-4666-8666-666666666666", input)
+		next, problem := createLegacyHoldFixture(ctx, organizations, owner, org, shop, "a6666666-6666-4666-8666-666666666666", input, quote)
 		if problem != nil {
 			test.Fatal(problem)
 		}
@@ -295,9 +319,11 @@ func reservationAcceptance(test *testing.T, ctx context.Context, organizations *
 			test.Fatalf("completed reserved order: %+v error %v", tracked, problem)
 		}
 		products, problem := service.Products(ctx, "", "", shop.Slug, "", 1)
-		if problem != nil || len(products.Items) != 1 || products.Items[0].Available != "1.000" {
+		if problem != nil || len(products.Items) != 1 || products.Items[0].StockPolicy != "MENU_ONLY" || products.Items[0].Available != nil {
 			test.Fatalf("settled availability: %+v error %v", products.Items, problem)
 		}
+		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, shop.LocationID, variant, "1.000", "0.000", "1.000")
+		assertTrackedAvailability(test, ctx, organizations, owner, org, shop.LocationID, variant, "0.000", "1.000")
 	})
 	test.Run("linked expired order remains held until its cart is reconciled", func(test *testing.T) {
 		point := &pos.Service{Organization: organizations}
@@ -323,16 +349,20 @@ func reservationAcceptance(test *testing.T, ctx context.Context, organizations *
 			test.Fatal(problem)
 		}
 		products, problem := service.Products(ctx, "", "", shop.Slug, "", 1)
-		if problem != nil || len(products.Items) != 1 || products.Items[0].Available != "0.000" {
+		if problem != nil || len(products.Items) != 1 || products.Items[0].StockPolicy != "MENU_ONLY" || products.Items[0].Available != nil {
 			test.Fatalf("linked expiry must retain hold: %+v error %v", products.Items, problem)
 		}
+		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, shop.LocationID, variant, "1.000", "1.000", "0.000")
+		assertTrackedAvailability(test, ctx, organizations, owner, org, shop.LocationID, variant, "1.000", "0.000")
 		if _, problem = point.UpdateCart(ctx, owner, org, cart.ID, "cancel", pos.CartInput{Revision: cart.Revision}); problem != nil {
 			test.Fatal(problem)
 		}
 		products, problem = service.Products(ctx, "", "", shop.Slug, "", 1)
-		if problem != nil || len(products.Items) != 1 || products.Items[0].Available != "1.000" {
+		if problem != nil || len(products.Items) != 1 || products.Items[0].StockPolicy != "MENU_ONLY" || products.Items[0].Available != nil {
 			test.Fatalf("reconciled expiry must release hold: %+v error %v", products.Items, problem)
 		}
+		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, shop.LocationID, variant, "1.000", "0.000", "1.000")
+		assertTrackedAvailability(test, ctx, organizations, owner, org, shop.LocationID, variant, "0.000", "1.000")
 	})
 	test.Run("recall overrides a reservation without blocking disposal of unsafe stock", func(test *testing.T) {
 		request := input
@@ -342,7 +372,7 @@ func reservationAcceptance(test *testing.T, ctx context.Context, organizations *
 			test.Fatal(problem)
 		}
 		request.QuoteID = quote.ID
-		next, problem := service.CreateOrder(ctx, shop.Slug, "c4444444-4444-4444-8444-444444444444", request)
+		next, problem := createLegacyHoldFixture(ctx, organizations, owner, org, shop, "c4444444-4444-4444-8444-444444444444", request, quote)
 		if problem != nil {
 			test.Fatal(problem)
 		}
@@ -405,7 +435,7 @@ func reservationAcceptance(test *testing.T, ctx context.Context, organizations *
 		}
 		point := &pos.Service{Organization: organizations}
 		cart, problem := point.ImportOnlineOrder(ctx, owner, org, historicalID, pos.OnlineOrderInput{Revision: 1})
-		if problem != nil || cart.ReviewRequired || len(cart.Items) != 1 || cart.Items[0].Available != "3.000" {
+		if problem != nil || cart.ReviewRequired || len(cart.Items) != 1 || stockAvailability(cart.Items[0].Available) != "3.000" {
 			test.Fatalf("historical linked cart: %+v %v", cart, problem)
 		}
 		checkout, problem := point.PrepareCheckout(ctx, owner, org, "b2222222-2222-4222-8222-222222222222", pos.CheckoutInput{CartID: cart.ID, Revision: cart.Revision, Method: "CASH", ExpectedTotal: cart.Total, Received: cart.Total, PricingRevision: cart.Pricing.Revision})

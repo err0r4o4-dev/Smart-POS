@@ -123,6 +123,10 @@ func (service *Service) Create(ctx context.Context, user, org, key string, input
 
 func createDocument(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org, branch string, input CreateInput) (string, error) {
 	var err error
+	var policy string
+	if err = tx.QueryRow(ctx, "SELECT stock_policy FROM sales WHERE organization_id=$1 AND id=$2", org, input.SaleID).Scan(&policy); err != nil {
+		return "", dbError(err)
+	}
 	var id string
 	err = tx.QueryRow(ctx, "INSERT INTO customer_returns(organization_id,branch_id,original_sale_id,reason,amount,created_by) VALUES($1,$2,$3,$4,0,$5) RETURNING id::text", org, branch, input.SaleID, input.Reason, user).Scan(&id)
 	if err != nil {
@@ -131,6 +135,12 @@ func createDocument(ctx context.Context, tx pgx.Tx, actor organization.Member, u
 	seen := map[string]bool{}
 	total := new(big.Int)
 	for _, line := range input.Items {
+		if policy == "MENU_ONLY" {
+			line.Disposition = "NO_STOCK_RETURN"
+			line.Destination = nil
+			line.BatchID = nil
+			line.BatchVerified = false
+		}
 		if line.BatchID != nil && (!uuidPattern.MatchString(*line.BatchID) || !line.BatchVerified || line.Disposition == "NO_STOCK_RETURN") {
 			return "", ErrInput
 		}

@@ -17,7 +17,6 @@ import {
   TaxonomyPage,
   ReturnsPage,
   POSWorkspace,
-  QualityPage,
   POSTerminalPage,
   HeldCartsPage,
   CheckoutPage,
@@ -63,6 +62,12 @@ const retiredRetailPaths = [
   '/shelves/*',
   '/inventory',
   '/inventory/*',
+  '/restaurant/recipes',
+  '/restaurant/recipes/*',
+  '/restaurant/quick-stock',
+  '/restaurant/quick-stock/*',
+  '/restaurant/forecast',
+  '/restaurant/forecast/*',
   '/loyalty',
   '/loyalty/*',
   '/customers',
@@ -138,26 +143,6 @@ const routes: RouteObject[] = [
                   },
                 ],
               },
-              ...(
-                [
-                  ['recipes', 'catalog.read'],
-                  ['quick-stock', 'inventory.read'],
-                  ['forecast', 'sales.read'],
-                ] as const
-              ).map(([view, permission]) => ({
-                element: (
-                  <OrganizationGate
-                    permission={permission}
-                    roles={managementRoles}
-                  />
-                ),
-                children: [
-                  {
-                    path: `/restaurant/${view}`,
-                    element: <RestaurantPage view={view} />,
-                  },
-                ],
-              })),
               {
                 element: (
                   <OrganizationGate
@@ -173,24 +158,6 @@ const routes: RouteObject[] = [
                 ],
               },
               { path: paths.account, element: <AccountPage /> },
-              {
-                element: <OrganizationGate permission="quality.read" />,
-                children: [
-                  { path: '/inventory/batches', element: <QualityPage /> },
-                  {
-                    path: '/inventory/expiry',
-                    element: <QualityPage view="expiry" />,
-                  },
-                  {
-                    path: '/inventory/write-offs',
-                    element: <QualityPage view="write-offs" />,
-                  },
-                  {
-                    path: '/inventory/recalls',
-                    element: <QualityPage view="recalls" />,
-                  },
-                ],
-              },
               {
                 element: <OrganizationGate permission="refunds.read" />,
                 children: [

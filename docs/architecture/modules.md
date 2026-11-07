@@ -252,7 +252,7 @@ Phase 1B previously implemented `/employees`, `/employees/:id` and `/roles` for 
 - Implementation phase: 0.
 - Current status: help, 403 and 404 implemented; support planned.
 
-## Restaurant Operations (6 pages)
+## Restaurant Operations (3 pages)
 
-- Purpose: Manage branch closing-time cutoff, per-serving recipes, non-batch quick stock without purchasing, table metadata, authenticated paid online queue, and explicit forecast unavailability. Dine-in QR ordering, recipe-based sale deduction, recipe-based sale deduction and AI forecasting remain pending; queue numbers now follow the configured business period.
-- Pages: `/restaurant/recipes`, `/restaurant/tables`, `/restaurant/queue`, `/restaurant/settings`, `/restaurant/forecast`, `/restaurant/quick-stock`.
+- Purpose: Manage branch closing-time cutoff, table metadata and the authenticated paid online queue. Ingredient/recipe management and ingredient forecasting are retired. Historical transaction and stock records remain available to backend recovery paths.
+- Pages: `/restaurant/tables`, `/restaurant/queue`, `/restaurant/settings`.

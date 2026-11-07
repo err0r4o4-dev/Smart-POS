@@ -112,7 +112,8 @@ func ownShift(ctx context.Context, tx pgx.Tx, org, terminalID, user string) (str
 	return id, dbError(err)
 }
 func variant(ctx context.Context, tx pgx.Tx, org, location, id, quantity, oldPrice string) (CartItem, error) {
-	item := CartItem{Quantity: quantity, PreviousPrice: oldPrice}
+	available := ""
+	item := CartItem{Quantity: quantity, PreviousPrice: oldPrice, Available: &available, StockPolicy: "TRACKED"}
 	value, err := catalog.ReadSaleVariant(ctx, tx, org, id)
 	if err != nil {
 		return item, dbError(err)
@@ -136,6 +137,11 @@ func variant(ctx context.Context, tx pgx.Tx, org, location, id, quantity, oldPri
 	}
 	price, priceErr := scaled(value.UnitPrice, 2)
 	item.Saleable = value.ProductStatus == "ACTIVE" && value.VariantStatus == "ACTIVE" && value.UnitStatus == "ACTIVE" && value.Currency == "THB" && priceErr == nil && price > 0
+	var recalled bool
+	if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM quality_recalls WHERE organization_id=$1 AND variant_id=$2 AND batch_id IS NULL)", org, id).Scan(&recalled); err != nil {
+		return item, dbError(err)
+	}
+	item.Saleable = item.Saleable && !recalled
 	err = tx.QueryRow(ctx, "SELECT greatest(0.000,storefront_sellable_quantity($1,$2,$3)-storefront_reserved_quantity($1,$2,$3))::text", org, location, id).Scan(&item.Available)
 	if err != nil {
 		return item, err

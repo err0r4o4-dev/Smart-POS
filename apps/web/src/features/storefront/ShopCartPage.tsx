@@ -16,7 +16,7 @@ import {
   UtensilsCrossed,
 } from 'lucide-react';
 import { Button, Card, Loading } from '../../components/ui/primitives';
-import { exactDecimal, moneyText } from '../../lib/pos-api';
+import { exactDecimal, MAX_LINE_QUANTITY, moneyText } from '../../lib/pos-api';
 import {
   centsText,
   estimatedLine,
@@ -506,7 +506,7 @@ function CartContents({ slug }: { slug: string }) {
 
       return (
         units !== null &&
-        units > 0n &&
+        units > 0n && units <= MAX_LINE_QUANTITY &&
         (!['COUNT', 'PACKAGING'].includes(item.unit_type) ||
           units % 1000n === 0n)
       );
@@ -1454,7 +1454,7 @@ function CartLineItem({
   const lineTotal = estimatedLine(item.unit_price, item.quantity);
 
   const changeBy = (delta: bigint) => {
-    if (amount === null || amount + delta * step <= 0n) {
+    if (amount === null || amount + delta * step <= 0n || amount + delta * step > MAX_LINE_QUANTITY) {
       return;
     }
 
@@ -1477,7 +1477,7 @@ function CartLineItem({
 
     const parsed = exactDecimal(isCount ? `${input}.000` : input, 3);
 
-    if (parsed !== null && parsed > 0n) {
+    if (parsed !== null && parsed > 0n && parsed <= MAX_LINE_QUANTITY) {
       onUpdateQuantity(quantityText(parsed));
     }
   };
@@ -1735,7 +1735,7 @@ function CartLineItem({
 
             <button
               type="button"
-              disabled={busy || amount === null}
+              disabled={busy || amount === null || amount + step > MAX_LINE_QUANTITY}
               onClick={() => changeBy(1n)}
               aria-label={`${ui.increase}: ${item.product_name}`}
               style={{
@@ -1743,7 +1743,7 @@ function CartLineItem({
                 border: 0,
                 background: '#F5F7FA',
                 color: palette.navy,
-                cursor: busy || amount === null ? 'not-allowed' : 'pointer',
+                cursor: busy || amount === null || amount + step > MAX_LINE_QUANTITY ? 'not-allowed' : 'pointer',
               }}
             >
               <Plus size={17} aria-hidden="true" />

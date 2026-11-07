@@ -63,7 +63,7 @@ func catalogBrowseAcceptance(test *testing.T, ctx context.Context, organizations
 			test.Fatal(problem)
 		}
 		result, problem := service.BrowseProducts(ctx, shop.Slug, storefront.CatalogQuery{Page: 1, Search: "BROWSE-MENU", Availability: "available"})
-		if problem != nil || result.Total != 1 || len(result.Items) != 1 || result.Items[0].VariantID != menu || result.Items[0].Available != "1.666" || !result.Items[0].Saleable || len(result.Categories) != 1 || result.Categories[0].ID != food || result.Categories[0].Count != 1 {
+		if problem != nil || result.Total != 1 || len(result.Items) != 1 || result.Items[0].VariantID != menu || result.Items[0].Available != nil || result.Items[0].StockPolicy != "MENU_ONLY" || !result.Items[0].Saleable || len(result.Categories) != 1 || result.Categories[0].ID != food || result.Categories[0].Count != 1 {
 			test.Fatalf("recipe availability and facet: %+v, %v", result, problem)
 		}
 		test.Run("pagination facets and shared ingredient holds", func(test *testing.T) {
@@ -103,12 +103,12 @@ func catalogBrowseAcceptance(test *testing.T, ctx context.Context, organizations
 			if problem != nil {
 				test.Fatal(problem)
 			}
-			page, problem = service.BrowseProducts(ctx, shop.Slug, storefront.CatalogQuery{Page: 2, Search: "BROWSE-MENU", Availability: "unavailable"})
+			page, problem = service.BrowseProducts(ctx, shop.Slug, storefront.CatalogQuery{Page: 2, Search: "BROWSE-MENU", Availability: "available"})
 			if problem != nil || page.Total != 26 || len(page.Items) != 2 || len(page.Categories) != 1 || page.Categories[0].Count != 26 {
 				test.Fatalf("held ingredient filtering: %+v, %v", page, problem)
 			}
 			for _, item := range page.Items {
-				if item.Available != "0.666" || item.Saleable {
+				if item.Available != nil || !item.Saleable || item.StockPolicy != "MENU_ONLY" {
 					test.Fatalf("held shared ingredient: %+v", item)
 				}
 			}
@@ -157,11 +157,11 @@ func catalogBrowseAcceptance(test *testing.T, ctx context.Context, organizations
 				test.Fatal(problem)
 			}
 			page, problem := service.BrowseProducts(ctx, shop.Slug, storefront.CatalogQuery{Page: 1, Search: "BROWSE-DIRECT", Availability: "available"})
-			if problem != nil || page.Total != 1 || len(page.Items) != 1 || page.Items[0].Available != "2.000" || !page.Items[0].Saleable {
+			if problem != nil || page.Total != 1 || len(page.Items) != 1 || page.Items[0].Available != nil || !page.Items[0].Saleable {
 				test.Fatalf("inactive recipe direct stock: %+v, %v", page, problem)
 			}
-			page, problem = service.BrowseProducts(ctx, shop.Slug, storefront.CatalogQuery{Page: 1, Search: "BROWSE-EMPTY", Availability: "unavailable"})
-			if problem != nil || page.Total != 1 || len(page.Items) != 1 || page.Items[0].Available != "0.000" || page.Items[0].Saleable {
+			page, problem = service.BrowseProducts(ctx, shop.Slug, storefront.CatalogQuery{Page: 1, Search: "BROWSE-EMPTY", Availability: "available"})
+			if problem != nil || page.Total != 1 || len(page.Items) != 1 || page.Items[0].Available != nil || !page.Items[0].Saleable {
 				test.Fatalf("empty recipe: %+v, %v", page, problem)
 			}
 		})
@@ -179,8 +179,8 @@ func catalogBrowseAcceptance(test *testing.T, ctx context.Context, organizations
 					test.Fatal(problem)
 				}
 				if strings.Contains(query, "'INACTIVE'") {
-					page, err := service.BrowseProducts(ctx, shop.Slug, storefront.CatalogQuery{Page: 1, Search: "BROWSE-MENU", Availability: "unavailable"})
-					if err != nil || page.Total != 26 || len(page.Items) != 24 || page.Items[0].Available != "0.000" || page.Items[0].Saleable {
+					page, err := service.BrowseProducts(ctx, shop.Slug, storefront.CatalogQuery{Page: 1, Search: "BROWSE-MENU", Availability: "available"})
+					if err != nil || page.Total != 26 || len(page.Items) != 24 || page.Items[0].Available != nil || !page.Items[0].Saleable {
 						test.Fatalf("inactive ingredient: %+v, %v", page, err)
 					}
 				}
@@ -196,8 +196,8 @@ func catalogBrowseAcceptance(test *testing.T, ctx context.Context, organizations
 			if problem = write.Commit(ctx); problem != nil {
 				test.Fatal(problem)
 			}
-			page, problem := service.BrowseProducts(ctx, shop.Slug, storefront.CatalogQuery{Page: 1, Search: "BROWSE-MENU", Availability: "unavailable"})
-			if problem != nil || page.Total != 26 || len(page.Items) != 24 || page.Items[0].Available != "0.000" || page.Items[0].Saleable {
+			page, problem := service.BrowseProducts(ctx, shop.Slug, storefront.CatalogQuery{Page: 1, Search: "BROWSE-MENU", Availability: "available"})
+			if problem != nil || page.Total != 26 || len(page.Items) != 24 || page.Items[0].Available != nil || !page.Items[0].Saleable {
 				test.Fatalf("recalled ingredient: %+v, %v", page, problem)
 			}
 		})

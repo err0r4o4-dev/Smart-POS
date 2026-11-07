@@ -48,11 +48,11 @@ func (service *Service) ImportOnlineOrder(ctx context.Context, user, org, id str
 	if !uuidPattern.MatchString(id) {
 		return Cart{}, ErrInput
 	}
-	var status, branch, terminalID, location string
+	var status, branch, terminalID, location, policy string
 	var revision int64
 	var expires time.Time
 	var cartID *string
-	err = tx.QueryRow(ctx, "SELECT status,branch_id::text,terminal_id::text,stock_location_id::text,revision,expires_at,cart_id::text FROM online_orders WHERE organization_id=$1 AND id=$2 FOR UPDATE", org, id).Scan(&status, &branch, &terminalID, &location, &revision, &expires, &cartID)
+	err = tx.QueryRow(ctx, "SELECT status,branch_id::text,terminal_id::text,stock_location_id::text,revision,expires_at,cart_id::text,stock_policy FROM online_orders WHERE organization_id=$1 AND id=$2 FOR UPDATE", org, id).Scan(&status, &branch, &terminalID, &location, &revision, &expires, &cartID, &policy)
 	if err != nil {
 		return Cart{}, dbError(err)
 	}
@@ -127,7 +127,7 @@ func (service *Service) ImportOnlineOrder(ctx context.Context, user, org, id str
 		return Cart{}, ErrInput
 	}
 	var next string
-	if err = tx.QueryRow(ctx, "INSERT INTO pos_carts(organization_id,branch_id,terminal_id,cashier_id,create_key) VALUES($1,$2,$3,$4,gen_random_uuid()) RETURNING id::text", org, branch, terminalID, user).Scan(&next); err != nil {
+	if err = tx.QueryRow(ctx, "INSERT INTO pos_carts(organization_id,branch_id,terminal_id,cashier_id,create_key,stock_policy) VALUES($1,$2,$3,$4,gen_random_uuid(),$5) RETURNING id::text", org, branch, terminalID, user, policy).Scan(&next); err != nil {
 		return Cart{}, dbError(err)
 	}
 	for _, inputItem := range items {

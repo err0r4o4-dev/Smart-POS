@@ -13,6 +13,7 @@ import {
   posRequest,
   moneyText,
   exactDecimal,
+  hasValidCartStockPolicy,
   paymentLabels,
   type POSPage,
   type POSCheckout,
@@ -106,8 +107,9 @@ export function CheckoutPage() {
           item.status,
         ),
     );
+  const invalidCartPolicy = !!pos.cart && !hasValidCartStockPolicy(pos.cart);
   const prepare = async () => {
-    if (!pos.cart || pending.isPending || pending.isError) return;
+    if (!pos.cart || invalidCartPolicy || pending.isPending || pending.isError) return;
     setRequestLocked(true);
     if (!request.current)
       request.current = {
@@ -183,6 +185,7 @@ export function CheckoutPage() {
         <p>{t('pos.finalPricesComeFromTheServerPricing')}</p>
         {!checkout ? (
           <>
+            {invalidCartPolicy && <div role="alert"><p>{t('pos.cartPolicyRefresh')}</p><Button onClick={() => void pos.refresh()}>{t('pos.refreshCart')}</Button></div>}
             <strong className="pos-total">
               {t('pos.total')} {moneyText(payable)} {t('loyalty.thb')}
             </strong>
@@ -287,6 +290,7 @@ export function CheckoutPage() {
             <Button
               disabled={
                 pos.busy ||
+                invalidCartPolicy ||
                 pending.isPending ||
                 pending.isError ||
                 !pos.cart?.items.length ||

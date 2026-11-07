@@ -244,6 +244,7 @@ describe('SalesPage standardized design and behavior', () => {
   it('renders standardized SaleDetailsPage with receipt reprint controls and linked actions', async () => {
     const detailedSale: POSSale = {
       ...sampleSales[0],
+      stock_policy: 'TRACKED',
       store_name: 'yam',
       store_address: 'กรุงเทพฯ',
       currency: 'THB',

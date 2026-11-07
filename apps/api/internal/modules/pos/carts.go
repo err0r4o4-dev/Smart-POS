@@ -14,12 +14,15 @@ func cartHeader(ctx context.Context, tx pgx.Tx, actor organization.Member, user,
 	if !uuidPattern.MatchString(id) {
 		return item, ErrInput
 	}
-	err := tx.QueryRow(ctx, "SELECT id::text,branch_id::text,terminal_id::text,cashier_id::text,status,revision,pricing_revision,customer_id::text FROM pos_carts WHERE organization_id=$1 AND id=$2 FOR UPDATE", org, id).Scan(&item.ID, &item.BranchID, &item.TerminalID, &item.CashierID, &item.Status, &item.Revision, &item.StoredPricingRevision, &item.CustomerID)
+	err := tx.QueryRow(ctx, "SELECT cart.id::text,cart.branch_id::text,cart.terminal_id::text,cart.cashier_id::text,cart.status,cart.revision,cart.pricing_revision,cart.customer_id::text,COALESCE((SELECT doc.stock_policy FROM online_orders doc WHERE doc.organization_id=cart.organization_id AND doc.cart_id=cart.id),cart.stock_policy) FROM pos_carts cart WHERE cart.organization_id=$1 AND cart.id=$2 FOR UPDATE", org, id).Scan(&item.ID, &item.BranchID, &item.TerminalID, &item.CashierID, &item.Status, &item.Revision, &item.StoredPricingRevision, &item.CustomerID, &item.StockPolicy)
 	if err != nil {
 		return item, dbError(err)
 	}
 	if item.CashierID != user {
 		return item, organization.ErrDenied
+	}
+	if item.StockPolicy != "TRACKED" && item.StockPolicy != "MENU_ONLY" {
+		return item, ErrConflict
 	}
 	return item, scope(ctx, tx, actor, org, item.BranchID, false)
 }
@@ -72,19 +75,24 @@ func readCart(ctx context.Context, tx pgx.Tx, actor organization.Member, user, o
 		}
 		value.BatchID = input.batch
 		value.BatchVerified = input.batch != nil
-		recipe, hasRecipe, err := readSaleRecipe(ctx, tx, org, item.BranchID, id, value.VariantID)
-		if err != nil {
-			return item, err
-		}
-		if hasRecipe {
-			var recipeSaleable bool
-			value.Available, recipeSaleable, err = recipeCapacity(ctx, tx, org, stockLocation, id, value.Quantity, recipe)
+		value.StockPolicy = item.StockPolicy
+		if item.StockPolicy == "MENU_ONLY" {
+			value.Available = nil
+		} else {
+			recipe, hasRecipe, err := readSaleRecipe(ctx, tx, org, item.BranchID, id, value.VariantID)
 			if err != nil {
 				return item, err
 			}
-			value.Saleable = value.Saleable && recipeSaleable
-		} else if err = inventory.QualityAvailabilityForCart(ctx, tx, org, stockLocation, value.VariantID, input.batch, id, &value.Available, &value.Saleable); err != nil {
-			return item, dbError(err)
+			if hasRecipe {
+				var recipeSaleable bool
+				*value.Available, recipeSaleable, err = recipeCapacity(ctx, tx, org, stockLocation, id, value.Quantity, recipe)
+				if err != nil {
+					return item, err
+				}
+				value.Saleable = value.Saleable && recipeSaleable
+			} else if err = inventory.QualityAvailabilityForCart(ctx, tx, org, stockLocation, value.VariantID, input.batch, id, value.Available, &value.Saleable); err != nil {
+				return item, dbError(err)
+			}
 		}
 		amount, _ := scaled(value.LineTotal, 2)
 		if total > maxDecimal-amount {
@@ -92,8 +100,12 @@ func readCart(ctx context.Context, tx pgx.Tx, actor organization.Member, user, o
 		}
 		total += amount
 		requested, _ := scaled(value.Quantity, 3)
-		available, _ := scaled(value.Available, 3)
-		if value.PriceChanged || !value.Saleable || available < requested {
+		short := false
+		if value.Available != nil {
+			available, _ := scaled(*value.Available, 3)
+			short = available < requested
+		}
+		if value.PriceChanged || !value.Saleable || short {
 			item.ReviewRequired = true
 		}
 		item.Items = append(item.Items, value)
@@ -157,7 +169,7 @@ func (service *Service) CreateCart(ctx context.Context, user, org, key string, i
 	if _, err = ownShift(ctx, tx, org, value.ID, user); err != nil {
 		return Cart{}, err
 	}
-	err = tx.QueryRow(ctx, "INSERT INTO pos_carts(organization_id,branch_id,terminal_id,cashier_id,create_key) VALUES($1,$2,$3,$4,$5) RETURNING id::text", org, value.BranchID, value.ID, user, key).Scan(&id)
+	err = tx.QueryRow(ctx, "INSERT INTO pos_carts(organization_id,branch_id,terminal_id,cashier_id,create_key,stock_policy) VALUES($1,$2,$3,$4,$5,'MENU_ONLY') RETURNING id::text", org, value.BranchID, value.ID, user, key).Scan(&id)
 	if err != nil {
 		return Cart{}, dbError(err)
 	}
@@ -204,6 +216,9 @@ func (service *Service) UpdateCart(ctx context.Context, user, org, id, action st
 			return current, err
 		}
 		for _, inputItem := range input.Items {
+			if current.StockPolicy == "MENU_ONLY" && (inputItem.BatchID != nil || inputItem.BatchVerified) {
+				return current, ErrInput
+			}
 			if inputItem.BatchID != nil && (!uuidPattern.MatchString(*inputItem.BatchID) || !inputItem.BatchVerified) {
 				return current, ErrInput
 			}

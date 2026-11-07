@@ -1,7 +1,5 @@
 import { useLanguage } from '../../app/language';
 import type { ReactNode } from 'react';
-import { useLocation } from 'react-router-dom';
-import { businessArea } from '../../app/workspace-paths';
 import {
   ChevronLeft,
   ChevronRight,
@@ -13,20 +11,6 @@ import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { Button, Loading } from '../../components/ui/primitives';
 import { StandardPageHeader } from '../../components/ui/StandardPage';
 import type { CatalogStatus, Taxonomy } from '../../lib/catalog-api';
-import { useCatalog } from './catalog-hooks';
-export function CatalogStockLink() {
-  const { t } = useLanguage();
-  const { pathname } = useLocation();
-  const catalog = useCatalog();
-  if (
-    businessArea(pathname) !== 'management' ||
-    !catalog.tenant.can('inventory.read')
-  )
-    return null;
-  return (
-    <Link to="/restaurant/quick-stock">{t('catalog.viewBranchStock')}</Link>
-  );
-}
 export function CatalogHeader({
   title,
   icon,
@@ -43,18 +27,13 @@ export function CatalogHeader({
       icon={icon ?? <Package size={24} />}
       eyebrow={t('catalog.manageProducts')}
       title={title}
-      description={
-        <>
-          {t('catalog.sharedOrganizationCatalog')} <CatalogStockLink />
-        </>
-      }
+      description={t('catalog.sharedOrganizationCatalog')}
       actions={children}
     />
   );
 }
 export function CatalogNav() {
   const { t } = useLanguage();
-  const { pathname } = useLocation();
 
   return (
     <nav className="catalog-nav" aria-label={t('catalog.catalog')}>
@@ -66,12 +45,6 @@ export function CatalogNav() {
         <Layers size={15} aria-hidden="true" />
         <span>{t('catalog.categories')}</span>
       </Link>
-      {businessArea(pathname) === 'management' && (
-        <Link to="/restaurant/recipes">
-          <Layers size={15} aria-hidden="true" />
-          <span>{t('catalog.recipes')}</span>
-        </Link>
-      )}
       <Link to="/units">
         <Ruler size={15} aria-hidden="true" />
         <span>{t('catalog.units')}</span>

@@ -40,7 +40,7 @@ it('assigns every grouped operational module to exactly one group', () => {
         navigation.some((item) => item.to === path),
       ),
       '/manage/dashboard',
-      '/manage/help',
+      '/help',
     ].sort(),
   ).toEqual(navigation.map((item) => item.to).sort());
 });
@@ -48,7 +48,7 @@ it('assigns every grouped operational module to exactly one group', () => {
 it('expands all menu groups by default when no saved state exists', () => {
   renderMenu('/manage/dashboard');
   const buttons = screen.getAllByRole('button');
-  expect(buttons).toHaveLength(5);
+  expect(buttons).toHaveLength(4);
   for (const button of buttons) {
     expect(button).toHaveAttribute('aria-expanded', 'true');
   }
@@ -70,7 +70,7 @@ it('toggles groups independently and remembers collapsed/expanded state across r
   expect(
     screen.queryByRole('link', { name: 'ข้อมูลองค์กร' }),
   ).not.toBeInTheDocument();
-  expect(screen.getByRole('link', { name: 'สูตรอาหาร' })).toBeVisible();
+  expect(screen.getByRole('link', { name: 'เมนูอาหาร' })).toBeVisible();
 
   firstRender.unmount();
 
@@ -84,7 +84,7 @@ it('toggles groups independently and remembers collapsed/expanded state across r
     'false',
   );
   expect(
-    screen.getByRole('button', { name: 'เมนูและสูตรอาหาร' }),
+    screen.getByRole('button', { name: 'เมนูอาหาร' }),
   ).toHaveAttribute('aria-expanded', 'true');
 
   fireEvent.click(screen.getByRole('button', { name: 'การขายและคิว' }));
@@ -174,8 +174,8 @@ it('opens a collapsed destination group on in-app navigation while preserving ot
     const navigate = useNavigate();
     return (
       <>
-        <button onClick={() => void navigate('/manage/restaurant/quick-stock')}>
-          Visit inventory
+        <button onClick={() => void navigate('/manage/products')}>
+          Visit menu
         </button>
         <NavigationMenu items={navigation} access={owner} />
       </>
@@ -186,15 +186,15 @@ it('opens a collapsed destination group on in-app navigation while preserving ot
       <Harness />
     </MemoryRouter>,
   );
-  fireEvent.click(screen.getByRole('button', { name: 'วัตถุดิบ' }));
+  fireEvent.click(screen.getByRole('button', { name: 'เมนูอาหาร' }));
   fireEvent.click(screen.getByRole('button', { name: 'ตั้งค่าร้าน' }));
-  expect(screen.getByRole('button', { name: 'วัตถุดิบ' })).toHaveAttribute(
+  expect(screen.getByRole('button', { name: 'เมนูอาหาร' })).toHaveAttribute(
     'aria-expanded',
     'false',
   );
 
-  fireEvent.click(screen.getByRole('button', { name: 'Visit inventory' }));
-  expect(screen.getByRole('button', { name: 'วัตถุดิบ' })).toHaveAttribute(
+  fireEvent.click(screen.getByRole('button', { name: 'Visit menu' }));
+  expect(screen.getByRole('button', { name: 'เมนูอาหาร' })).toHaveAttribute(
     'aria-expanded',
     'true',
   );
@@ -221,20 +221,20 @@ it('does not expose removed shelf, replenishment, or purchasing navigation links
 
 it('opens the current group when permissions finish loading even if previously collapsed elsewhere', () => {
   const prior = renderMenu('/manage/dashboard');
-  fireEvent.click(screen.getByRole('button', { name: 'วัตถุดิบ' }));
+  fireEvent.click(screen.getByRole('button', { name: 'เมนูอาหาร' }));
   prior.unmount();
 
   const view = render(
-    <MemoryRouter initialEntries={['/manage/restaurant/quick-stock']}>
+    <MemoryRouter initialEntries={['/manage/products']}>
       <NavigationMenu items={navigation} access={{ authenticated: false }} />
     </MemoryRouter>,
   );
   view.rerender(
-    <MemoryRouter initialEntries={['/manage/restaurant/quick-stock']}>
+    <MemoryRouter initialEntries={['/manage/products']}>
       <NavigationMenu items={navigation} access={owner} />
     </MemoryRouter>,
   );
-  expect(screen.getByRole('button', { name: 'วัตถุดิบ' })).toHaveAttribute(
+  expect(screen.getByRole('button', { name: 'เมนูอาหาร' })).toHaveAttribute(
     'aria-expanded',
     'true',
   );

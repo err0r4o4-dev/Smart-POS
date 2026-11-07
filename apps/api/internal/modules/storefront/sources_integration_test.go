@@ -51,7 +51,7 @@ func sourceAcceptance(test *testing.T, ctx context.Context, organizations *organ
 	if err != nil {
 		test.Fatal(err)
 	}
-	request := storefront.OrderInput{Items: items, QuoteID: frontQuote.ID, CustomerName: "Synthetic source buyer", ContactPhone: "0800000000", AccessToken: strings.Repeat("d", 64)}
+	request := storefront.OrderInput{Items: items, QuoteID: frontQuote.ID, Fulfillment: "PICKUP", CustomerName: "Synthetic source buyer", ContactPhone: "0800000000", AccessToken: strings.Repeat("d", 64)}
 	legacy, err := service.CreateOrder(ctx, shop.Slug, "d2222222-2222-4222-8222-222222222222", request)
 	if err != nil {
 		test.Fatal(err)
@@ -120,7 +120,7 @@ func sourceAcceptance(test *testing.T, ctx context.Context, organizations *organ
 		test.Fatal(err)
 	}
 	request.QuoteID = quote.ID
-	order, err := service.CreateOrder(ctx, shop.Slug, "d4444444-4444-4444-8444-444444444444", request)
+	order, err := createLegacyHoldFixture(ctx, organizations, owner, org, configured, "d4444444-4444-4444-8444-444444444444", request, quote)
 	if err != nil {
 		test.Fatal(err)
 	}
@@ -131,8 +131,9 @@ func sourceAcceptance(test *testing.T, ctx context.Context, organizations *organ
 		}
 		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, shop.LocationID, variant, "7.000", "0.000", "7.000")
 		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, backLocation, variant, "3.000", "2.000", "1.000")
+		assertTrackedAvailability(test, ctx, organizations, owner, org, backLocation, variant, "2.000", "1.000")
 		products, problem := service.Products(ctx, "", "", shop.Slug, "", 1)
-		if problem != nil || len(products.Items) != 1 || products.Items[0].Available != "1.000" {
+		if problem != nil || len(products.Items) != 1 || products.Items[0].StockPolicy != "MENU_ONLY" || products.Items[0].Available != nil {
 			test.Fatalf("online warehouse availability: %+v error %v", products.Items, problem)
 		}
 		internal, problem := service.Order(ctx, owner, org, order.ID)
@@ -141,9 +142,20 @@ func sourceAcceptance(test *testing.T, ctx context.Context, organizations *organ
 		}
 	})
 	test.Run("backroom shortage never falls back to front stock and live switch is denied", func(test *testing.T) {
-		if _, problem := service.Quote(ctx, shop.Slug, storefront.QuoteInput{Items: items}); !errors.Is(problem, storefront.ErrStock) {
-			test.Fatalf("front stock was used as fallback: %v", problem)
+		if _, problem := service.Quote(ctx, shop.Slug, storefront.QuoteInput{Items: items}); problem != nil {
+			test.Fatalf("menu-only quote must not depend on historical stock holds: %v", problem)
 		}
+		if _, problem := createLegacyHoldFixture(ctx, organizations, owner, org, configured, "d9999999-9999-4999-8999-999999999999", request, quote); problem == nil {
+			test.Fatal("back source allowed an overcommitted historical reservation")
+		} else {
+			var databaseError *pgconn.PgError
+			if !errors.As(problem, &databaseError) || databaseError.Code != "23514" || databaseError.Message != "insufficient stock for reservation" {
+				test.Fatalf("unexpected back source reservation error: %v", problem)
+			}
+		}
+		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, shop.LocationID, variant, "7.000", "0.000", "7.000")
+		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, backLocation, variant, "3.000", "2.000", "1.000")
+		assertTrackedAvailability(test, ctx, organizations, owner, org, backLocation, variant, "2.000", "1.000")
 		changed := input
 		changed.OnlineTerminalID = ""
 		if _, problem := service.SaveSettings(ctx, owner, org, changed); !errors.Is(problem, storefront.ErrConflict) {
@@ -158,7 +170,7 @@ func sourceAcceptance(test *testing.T, ctx context.Context, organizations *organ
 		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, shop.LocationID, variant, "7.000", "0.000", "7.000")
 		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, backLocation, variant, "3.000", "0.000", "3.000")
 	})
-	order, err = service.CreateOrder(ctx, shop.Slug, "d8888888-8888-4888-8888-888888888888", request)
+	order, err = createLegacyHoldFixture(ctx, organizations, owner, org, configured, "d8888888-8888-4888-8888-888888888888", request, quote)
 	if err != nil {
 		test.Fatal(err)
 	}

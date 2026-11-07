@@ -9,8 +9,7 @@ import {
   useRestaurantQuery,
   useRestaurantScope,
 } from './restaurant-hooks';
-import { RecipesScreen } from './RecipesScreen';
-import { QuickStockScreen, TablesScreen } from './StockAndTables';
+import { TablesScreen } from './StockAndTables';
 import { SettingsPage } from '../organization/SettingsPage';
 import './restaurant.css';
 
@@ -22,22 +21,16 @@ export interface RestaurantSettings {
   period: { start: string; end: string };
 }
 export type RestaurantView =
-  'settings' | 'recipes' | 'tables' | 'queue' | 'forecast' | 'quick-stock';
+  'settings' | 'tables' | 'queue';
 const titles: Record<RestaurantView, string> = {
   settings: 'ตั้งค่ารอบวันร้านอาหาร',
-  recipes: 'สูตรอาหารต่อหนึ่งจาน',
   tables: 'โต๊ะอาหาร',
   queue: 'หน้าจอคิวอาหาร',
-  forecast: 'พยากรณ์วัตถุดิบ',
-  'quick-stock': 'เพิ่มและตรวจนับวัตถุดิบ',
 };
 const permissions: Record<RestaurantView, string> = {
   settings: 'storefront.manage',
-  recipes: 'catalog.read',
   tables: 'online_orders.manage',
   queue: 'online_orders.read',
-  forecast: 'sales.read',
-  'quick-stock': 'inventory.read',
 };
 
 export function RestaurantPage({ view }: { view: RestaurantView }) {
@@ -69,11 +62,8 @@ export function RestaurantPage({ view }: { view: RestaurantView }) {
 }
 function RestaurantContent({ view }: { view: RestaurantView }) {
   if (view === 'settings') return <SettingsScreen />;
-  if (view === 'recipes') return <RecipesScreen />;
-  if (view === 'quick-stock') return <QuickStockScreen />;
   if (view === 'tables') return <TablesScreen />;
-  if (view === 'queue') return <QueueScreen />;
-  return <ForecastScreen />;
+  return <QueueScreen />;
 }
 function SettingsScreen() {
   const scope = useRestaurantScope();
@@ -169,31 +159,6 @@ function QueueScreen() {
       <WorkspaceLink to="/online-orders">
         จัดการออเดอร์และสถานะอาหาร
       </WorkspaceLink>
-    </Card>
-  );
-}
-function ForecastScreen() {
-  const scope = useRestaurantScope();
-  const query = useRestaurantQuery<{
-    status: string;
-    reason: string;
-    items: unknown[];
-  }>(`/restaurant/forecast?branch_id=${scope.branch}`, 'sales.read');
-  return (
-    <Card className="catalog-panel">
-      <QueryState query={query} />
-      {query.data && !query.error ? (
-        <>
-          <h2>ยังไม่มีระบบพยากรณ์ที่พร้อมใช้งาน</h2>
-          <p>
-            ต้องเชื่อมยอดขายจริง สูตรอาหาร และรอบเวลาปิดร้านก่อน
-            ระบบยังไม่แสดงตัวเลขคาดการณ์ และไม่เพิ่มหรือตัดสต็อกอัตโนมัติ
-          </p>
-          <WorkspaceLink to="/restaurant/recipes">
-            จัดเตรียมสูตรอาหาร
-          </WorkspaceLink>
-        </>
-      ) : null}
     </Card>
   );
 }

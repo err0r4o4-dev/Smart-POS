@@ -134,23 +134,6 @@ func (handler Handler) TenantRoutes(router chi.Router) {
 		}
 		return service.SaveSettings(ctx, user, org, input)
 	}))
-	router.Get("/restaurant/recipes", endpoint(func(ctx context.Context, user, org string, request *http.Request) (any, error) {
-		return service.Recipes(ctx, user, org, request.URL.Query().Get("branch_id"))
-	}))
-	router.Post("/restaurant/recipes", endpoint(func(ctx context.Context, user, org string, request *http.Request) (any, error) {
-		var input RecipeInput
-		if err := decode(request, &input); err != nil {
-			return nil, err
-		}
-		return service.SaveRecipe(ctx, user, org, "", request.Header.Get("Idempotency-Key"), input)
-	}))
-	router.Put("/restaurant/recipes/{recipeId}", endpoint(func(ctx context.Context, user, org string, request *http.Request) (any, error) {
-		var input RecipeInput
-		if err := decode(request, &input); err != nil {
-			return nil, err
-		}
-		return service.SaveRecipe(ctx, user, org, chi.URLParam(request, "recipeId"), "", input)
-	}))
 	router.Get("/restaurant/tables", endpoint(func(ctx context.Context, user, org string, request *http.Request) (any, error) {
 		return service.Tables(ctx, user, org, request.URL.Query().Get("branch_id"))
 	}))
@@ -170,16 +153,5 @@ func (handler Handler) TenantRoutes(router chi.Router) {
 	}))
 	router.Get("/restaurant/queue", endpoint(func(ctx context.Context, user, org string, request *http.Request) (any, error) {
 		return service.Queue(ctx, user, org, request.URL.Query().Get("branch_id"))
-	}))
-	router.Get("/restaurant/forecast", endpoint(func(ctx context.Context, user, org string, request *http.Request) (any, error) {
-		return service.ForecastStatus(ctx, user, org, request.URL.Query().Get("branch_id"))
-	}))
-	router.Post("/restaurant/quick-stock", endpoint(func(ctx context.Context, user, org string, request *http.Request) (any, error) {
-		var input inventory.QuickStockInput
-		if err := decode(request, &input); err != nil {
-			return nil, err
-		}
-		stock := inventory.Service{Organization: service.Organization}
-		return stock.QuickStock(ctx, user, org, request.Header.Get("Idempotency-Key"), input)
 	}))
 }

@@ -33,7 +33,7 @@ func readOrder(ctx context.Context, tx pgx.Tx, org, id string, public bool) (Ord
 	if err != nil {
 		return result, dbError(err)
 	}
-	if err = tx.QueryRow(ctx, `SELECT doc.fulfillment,doc.shipping_fee::text,(doc.estimated_total-doc.shipping_fee)::text,doc.delivery_address,COALESCE(table_map.table_code,'') FROM online_orders doc LEFT JOIN restaurant_order_tables table_map ON table_map.organization_id=doc.organization_id AND table_map.order_id=doc.id WHERE doc.organization_id=$1 AND doc.id=$2`, org, id).Scan(&result.Fulfillment, &result.ShippingFee, &result.Subtotal, &result.DeliveryAddress, &result.TableCode); err != nil {
+	if err = tx.QueryRow(ctx, `SELECT doc.fulfillment,doc.shipping_fee::text,(doc.estimated_total-doc.shipping_fee)::text,doc.delivery_address,COALESCE(table_map.table_code,''),doc.stock_policy FROM online_orders doc LEFT JOIN restaurant_order_tables table_map ON table_map.organization_id=doc.organization_id AND table_map.order_id=doc.id WHERE doc.organization_id=$1 AND doc.id=$2`, org, id).Scan(&result.Fulfillment, &result.ShippingFee, &result.Subtotal, &result.DeliveryAddress, &result.TableCode, &result.StockPolicy); err != nil {
 		return result, dbError(err)
 	}
 	var paymentState string
@@ -121,7 +121,7 @@ func (service *Service) CreateOrder(ctx context.Context, slug, key string, input
 	if quote.ID != input.QuoteID {
 		return Order{}, ErrQuote
 	}
-	_, err = tx.Exec(ctx, `INSERT INTO online_orders(id,organization_id,branch_id,terminal_id,stock_location_id,customer_name,contact_phone,customer_note,pickup_instructions,store_name,store_phone,estimated_total,access_hash,request_fingerprint,fulfillment,shipping_fee,delivery_address) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`, key, org, shop.BranchID, shop.orderTerminalID(), shop.LocationID, input.CustomerName, input.ContactPhone, input.CustomerNote, shop.PickupInstructions, shop.Name, shop.ContactPhone, quote.Total, accessHash(input.AccessToken), fingerprint, input.Fulfillment, quote.ShippingFee, input.DeliveryAddress)
+	_, err = tx.Exec(ctx, `INSERT INTO online_orders(id,organization_id,branch_id,terminal_id,stock_location_id,customer_name,contact_phone,customer_note,pickup_instructions,store_name,store_phone,estimated_total,access_hash,request_fingerprint,fulfillment,shipping_fee,delivery_address,stock_policy) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,'MENU_ONLY')`, key, org, shop.BranchID, shop.orderTerminalID(), shop.LocationID, input.CustomerName, input.ContactPhone, input.CustomerNote, shop.PickupInstructions, shop.Name, shop.ContactPhone, quote.Total, accessHash(input.AccessToken), fingerprint, input.Fulfillment, quote.ShippingFee, input.DeliveryAddress)
 	if err != nil {
 		return Order{}, dbError(err)
 	}
@@ -297,9 +297,11 @@ func (service *Service) Transition(ctx context.Context, user, org, id string, in
 			if err != nil {
 				return current, err
 			}
-			var enough bool
-			if err = tx.QueryRow(ctx, "SELECT $1::numeric>=$2::numeric", value.Available, line.Quantity).Scan(&enough); err != nil {
-				return current, err
+			enough := true
+			if value.Available != nil {
+				if err = tx.QueryRow(ctx, "SELECT $1::numeric>=$2::numeric", *value.Available, line.Quantity).Scan(&enough); err != nil {
+					return current, err
+				}
 			}
 			if !value.Saleable || !enough {
 				return current, ErrStock

@@ -23,21 +23,42 @@ func productForOrder(ctx context.Context, tx pgx.Tx, org string, shop Settings, 
 		}
 		return Product{}, err
 	}
-	result := Product{VariantID: id, ProductName: value.ProductName, VariantName: value.VariantName, SKU: value.SKU, Unit: value.Unit, UnitType: value.UnitType, Available: "0.000"}
+	result := Product{VariantID: id, ProductName: value.ProductName, VariantName: value.VariantName, SKU: value.SKU, Unit: value.Unit, UnitType: value.UnitType, StockPolicy: "MENU_ONLY"}
+	if order != "" {
+		if err = tx.QueryRow(ctx, "SELECT stock_policy FROM online_orders WHERE organization_id=$1 AND id=$2", org, order).Scan(&result.StockPolicy); err != nil {
+			return result, dbError(err)
+		}
+	}
 	result.UnitPrice, _, _, err = pricing.EffectivePrice(ctx, tx, org, shop.BranchID, id, value.UnitPrice)
 	if err != nil {
 		return result, err
 	}
 	_, priceError := pos.EstimateOnlineLine(result.UnitPrice, "1.000", result.UnitType)
 	result.Saleable = value.ProductStatus == "ACTIVE" && value.VariantStatus == "ACTIVE" && value.UnitStatus == "ACTIVE" && value.Currency == "THB" && priceError == nil
-	err = tx.QueryRow(ctx, `SELECT COALESCE((SELECT published FROM storefront_products WHERE organization_id=$1 AND variant_id=$2),false),greatest(0.000,storefront_sellable_quantity($1,$3,$2)-storefront_reserved_quantity_for_order($1,$3,$2,nullif($4,'')::uuid))::text`, org, id, shop.LocationID, order).Scan(&result.Published, &result.Available)
+	var recalled bool
+	if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM quality_recalls WHERE organization_id=$1 AND variant_id=$2 AND batch_id IS NULL)", org, id).Scan(&recalled); err != nil {
+		return result, dbError(err)
+	}
+	result.Saleable = result.Saleable && !recalled
+	err = tx.QueryRow(ctx, `SELECT COALESCE((SELECT published FROM storefront_products WHERE organization_id=$1 AND variant_id=$2),false)`, org, id).Scan(&result.Published)
 	if err != nil {
+		return result, dbError(err)
+	}
+	if result.StockPolicy == "MENU_ONLY" {
+		return result, nil
+	}
+	if result.StockPolicy != "TRACKED" {
+		return result, ErrConflict
+	}
+	available := "0.000"
+	result.Available = &available
+	if err = tx.QueryRow(ctx, `SELECT greatest(0.000,storefront_sellable_quantity($1,$3,$2)-storefront_reserved_quantity_for_order($1,$3,$2,nullif($4,'')::uuid))::text`, org, id, shop.LocationID, order).Scan(result.Available); err != nil {
 		return result, dbError(err)
 	}
 	if recipeAvailable, hasRecipe, recipeSaleable, problem := pos.RecipeAvailabilityForOrder(ctx, tx, org, shop.BranchID, shop.LocationID, order, id, "1.000"); problem != nil {
 		return result, problem
 	} else if hasRecipe {
-		result.Available = recipeAvailable
+		*result.Available = recipeAvailable
 		result.Saleable = result.Saleable && recipeSaleable
 	}
 	return result, nil
@@ -172,25 +193,12 @@ func quote(ctx context.Context, tx pgx.Tx, org string, shop Settings, items []It
 		if err != nil {
 			return result, err
 		}
-		if recipeAvailable, hasRecipe, recipeSaleable, problem := pos.RecipeAvailability(ctx, tx, org, shop.BranchID, shop.LocationID, "", input.VariantID, input.Quantity); problem != nil {
-			return result, problem
-		} else if hasRecipe {
-			value.Available = recipeAvailable
-			value.Saleable = value.Saleable && recipeSaleable
-		}
 		if !value.Published || !value.Saleable {
 			return result, ErrStock
 		}
 		amount, err := pos.EstimateOnlineLine(value.UnitPrice, input.Quantity, value.UnitType)
 		if err != nil {
 			return result, ErrInput
-		}
-		var enough bool
-		if err = tx.QueryRow(ctx, "SELECT $1::numeric>=$2::numeric", value.Available, input.Quantity).Scan(&enough); err != nil {
-			return result, dbError(err)
-		}
-		if !enough {
-			return result, ErrStock
 		}
 		if total > 999999999999999999-amount {
 			return result, ErrInput

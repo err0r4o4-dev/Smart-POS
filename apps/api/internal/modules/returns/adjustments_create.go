@@ -20,6 +20,10 @@ func quoteAdjustment(ctx context.Context, tx pgx.Tx, actor organization.Member, 
 		return quote, err
 	}
 	quote.Branch = branch
+	var policy string
+	if err = tx.QueryRow(ctx, "SELECT stock_policy FROM sales WHERE organization_id=$1 AND id=$2", org, input.SaleID).Scan(&policy); err != nil {
+		return quote, dbError(err)
+	}
 	if err = inventory.BranchScope(ctx, tx, actor, org, branch, true); err != nil {
 		return quote, dbError(err)
 	}
@@ -36,6 +40,10 @@ func quoteAdjustment(ctx context.Context, tx pgx.Tx, actor organization.Member, 
 	total := new(big.Int)
 	seen := map[string]bool{}
 	for _, line := range input.Items {
+		if policy == "MENU_ONLY" {
+			line.Disposition = "NO_STOCK_RETURN"
+			line.Destination = nil
+		}
 		if !uuidPattern.MatchString(line.SaleItemID) || seen[line.SaleItemID] {
 			return quote, ErrInput
 		}
@@ -71,7 +79,7 @@ func quoteAdjustment(ctx context.Context, tx pgx.Tx, actor organization.Member, 
 	}
 	quote.ReturnCredit = fixed(total, 2)
 	if kind == "EXCHANGE" {
-		pricing, err := pos.QuoteExchange(ctx, tx, actor, user, org, input.TerminalID, input.Replacements)
+		pricing, err := pos.QuoteExchange(ctx, tx, actor, user, org, input.TerminalID, "MENU_ONLY", input.Replacements)
 		if err != nil {
 			return quote, adjustmentError(err)
 		}

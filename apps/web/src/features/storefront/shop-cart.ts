@@ -1,6 +1,6 @@
 ﻿import { useMemo, useSyncExternalStore } from 'react';
 import type { ShopProduct } from '../../lib/storefront-api';
-import { exactDecimal } from '../../lib/pos-api';
+import { exactDecimal, isKnownStockPolicy, MAX_LINE_QUANTITY } from '../../lib/pos-api';
 
 export type CartEntry = Pick<
   ShopProduct,
@@ -107,8 +107,9 @@ export function useShopCart(slug?: string) {
       const total =
         units + (existing ? (exactDecimal(existing.quantity, 3) ?? 0n) : 0n);
       if (
-        !product.saleable ||
-        total > (exactDecimal(product.available, 3) ?? 0n)
+        !product.saleable || !isKnownStockPolicy(product.stock_policy) || total > MAX_LINE_QUANTITY ||
+        (product.stock_policy !== 'MENU_ONLY' &&
+          total > (exactDecimal(product.available ?? '', 3) ?? 0n))
       )
         return false;
       const next = existing

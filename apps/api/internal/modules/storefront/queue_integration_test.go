@@ -104,7 +104,7 @@ func restaurantQueueAcceptance(test *testing.T, ctx context.Context, organizatio
 		if actual := readTickets(test); len(actual) != 3 || actual[first.ID] != 1 {
 			test.Fatalf("replay changed tickets: %+v", actual)
 		}
-		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, shop.LocationID, variant, "3.000", "3.000", "0.000")
+		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, shop.LocationID, variant, "3.000", "0.000", "3.000")
 	})
 	test.Run("rollback removes counter advance and ticket with the parent order", func(test *testing.T) {
 		tx, _, problem := organizations.Authorized(ctx, owner, org, "storefront.manage")

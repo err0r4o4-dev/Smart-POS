@@ -286,7 +286,7 @@ export function StorefrontSettingsPage() {
                   </p>
                   <small>
                     ฿{moneyText(item.unit_price)} / {item.unit}{' '}
-                    {t('storefront.stock')} {item.available}
+                    {item.stock_policy !== 'MENU_ONLY' && <>{t('storefront.stock')} {item.available ?? '—'}</>}
                   </small>
                 </div>
                 <Tag tone={item.published ? 'success' : 'neutral'}>

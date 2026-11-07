@@ -45,7 +45,6 @@ import {
   CatalogHeader,
   CatalogLoading,
   CatalogNav,
-  CatalogStockLink,
   TaxonomySelect,
   Pagination,
 } from './CatalogUI';
@@ -384,7 +383,6 @@ export function ProductDetailsPage() {
                 </p>
               </div>
             </div>
-            <CatalogStockLink />
           </Card>
           {query.data.variants.map((variant) => (
             <div key={variant.id}>

@@ -68,10 +68,10 @@ it('keeps restaurant menu navigation without retired retail tools', () => {
   }
   expect(
     document.querySelector('a[href="/manage/restaurant/recipes"]'),
-  ).toBeVisible();
+  ).not.toBeInTheDocument();
   expect(
     document.querySelector('a[href="/manage/restaurant/quick-stock"]'),
-  ).toBeVisible();
+  ).not.toBeInTheDocument();
 });
 it('keeps management-only recipe and ingredient shortcuts out of staff catalog pages', () => {
   mount(<ProductsPage />, '/work/products');
@@ -90,7 +90,7 @@ it('removes brand and barcode merchandising controls from restaurant menu manage
     screen.queryByRole('columnheader', { name: /บาร์โค้ด|แบรนด์/ }),
   ).not.toBeInTheDocument();
   expect(
-    screen.getByRole('heading', { level: 1, name: 'เมนูและวัตถุดิบ' }),
+    screen.getByRole('heading', { level: 1, name: 'เมนูอาหาร' }),
   ).toBeVisible();
 });
 it('does not require retail brands when editing restaurant menu data', () => {

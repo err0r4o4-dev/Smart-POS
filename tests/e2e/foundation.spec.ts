@@ -49,7 +49,7 @@ test('mobile navigation supports keyboard, dismissal and real routes', async ({
 }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('/help/system');
-  await page.getByRole('button', { name: 'Open navigation' }).click();
+  await page.getByRole('button', { name: /Open navigation|เปิดเมนู/ }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await page.keyboard.press('Shift+Tab');
   expect(
@@ -60,12 +60,12 @@ test('mobile navigation supports keyboard, dismissal and real routes', async ({
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(
-    page.getByRole('button', { name: 'Open navigation' }),
+    page.getByRole('button', { name: /Open navigation|เปิดเมนู/ }),
   ).toBeFocused();
-  await page.getByRole('button', { name: 'Open navigation' }).click();
+  await page.getByRole('button', { name: /Open navigation|เปิดเมนู/ }).click();
   await page
-    .getByRole('navigation', { name: 'Mobile navigation' })
-    .getByRole('link', { name: 'คู่มือการใช้งาน', exact: true })
+    .getByRole('navigation', { name: /Mobile navigation|เมนูบนมือถือ/ })
+    .getByRole('link', { name: /คู่มือการใช้งาน|Help/, exact: true })
     .click();
   await expect(page).toHaveURL(/\/help$/);
   await expect(

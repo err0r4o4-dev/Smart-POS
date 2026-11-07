@@ -71,5 +71,12 @@ BEGIN
 END $$;
 
 RESET ROLE;
-DROP ROLE IF EXISTS smartpos_phase0_verification;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'smartpos_phase0_verification') THEN
+    EXECUTE 'REVOKE ALL ON organizations, branches, organization_memberships FROM smartpos_phase0_verification';
+    EXECUTE 'DROP OWNED BY smartpos_phase0_verification';
+    EXECUTE 'DROP ROLE smartpos_phase0_verification';
+  END IF;
+END $$;
 ROLLBACK;

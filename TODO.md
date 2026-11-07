@@ -1,4 +1,4 @@
-﻿# Task: Recreate Login Design Matching User Screenshot Reference
+# Task: Recreate Login Design Matching User Screenshot Reference
 
 ## Objective
 - Match the exact visual layout from user screenshot:

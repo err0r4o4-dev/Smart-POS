@@ -269,6 +269,18 @@
   border: 0;
 }
 
+.login-card .auth-links.auth-links-single {
+  justify-content: center;
+}
+
+.login-card .auth-password-hint {
+  display: block;
+  margin-top: -10px;
+  color: var(--text-strong);
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
 .login-card .auth-links a {
   display: inline-flex;
   align-items: center;

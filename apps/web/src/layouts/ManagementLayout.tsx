@@ -7,6 +7,7 @@ import {
   Bell,
   ChevronDown,
   ChevronRight,
+  CircleHelp,
   House,
   Menu,
   Search,
@@ -190,7 +191,7 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
               <House size={15} />
             </span>
             <span>{areaTitle}</span>
-            <span>/</span>
+            <ChevronRight size={15} className="breadcrumb-separator" aria-hidden="true" />
             <strong>{pageTitle}</strong>
           </div>
           <div className="topbar-right">
@@ -226,6 +227,13 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
               </>
             )}
             <NavLink
+              to={paths.help}
+              className="icon-button topbar-help"
+              aria-label={t('landing.help')}
+            >
+              <CircleHelp size={20} aria-hidden="true" />
+            </NavLink>
+            <NavLink
               to={state.status === 'authenticated' ? '/account' : '/login'}
               className="avatar"
               aria-label={
@@ -254,10 +262,12 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
         <main id="main-content" className="content">
           <Outlet />
         </main>
-        <footer className="footer">
-          SmartPOS · {areaTitle}
-          <span>{t('shell.theCustomerStorefrontIsSeparateFromThe')}</span>
-        </footer>
+        {area === 'management' && (
+          <footer className="footer">
+            SmartPOS · {areaTitle}
+            <span>{t('shell.theCustomerStorefrontIsSeparateFromThe')}</span>
+          </footer>
+        )}
       </div>
       {
         <dialog

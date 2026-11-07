@@ -1,3 +1,44 @@
+# Warm Gold application-wide UI (2026-11-07)
+
+Approved scope: Apply the supplied white/cream/gold reference across the web UI,
+including shared tokens, backgrounds, navigation, headers, controls, operational
+pages, storefront, landing and authentication. Preserve existing user changes,
+business behavior, routes, permissions, local fonts and Lucide icons. No API,
+database, external assets, new dependencies, publication or deployment changes.
+
+- [x] Inspect shared styles, layouts, page families and safe browser fixtures.
+- [x] Implement shared Warm Gold tokens, shell, headers and controls.
+- [x] Align operational and public page families with the shared visual system.
+- [/] Run focused/full web tests, typecheck, lint and build; record failures.
+  Final typecheck/build/contracts PASS; lint has 0 errors / 7 warnings.
+  Focused web tests: 71 passed. Final full web tests: 472 passed / 4 failed,
+  matching the four baseline failures in NavigationMenu, SettingsPage (2),
+  and StorefrontSettingsPage. Logs: `.local/warm-gold/*-final.log`,
+  `.local/warm-gold/unit-baseline.log`, `.local/warm-gold/contracts.log`.
+  Broader public browser suite: 28 passed / 6 failed. Four failures expect
+  obsolete copy in unchanged landing components/translations; two press Tab
+  before React mounts the links. Readiness-aware keyboard cases pass in the
+  new suite; current and HEAD CSS show the same readiness dependency.
+  Evidence: `.local/warm-gold/public-browser.log`. Do not claim a full-suite pass.
+- [x] Verify mocked browser states at mobile, tablet and desktop widths.
+  Final Playwright: 55 passed (49 theme + 6 setup cases). Setup, dashboard,
+  settings, products, kitchen queue and POS checked at 320/768/901/1024/1440;
+  landing, login, registration, recovery and empty shop at 320/768/1440.
+  Keyboard focus, mobile navigation, reduced motion, theme tokens and overflow
+  checked. Header and 50px shop overflow regressions reproduced RED then GREEN.
+  Screenshots inspected: setup mobile, settings desktop, POS mobile/tablet,
+  landing desktop and fixed shop mobile. APIs synthetic; no business writes.
+  Log: `.local/warm-gold/browser-final.log`; images: `test-results/warm-gold-final`.
+  Limits: Chromium 156/Windows viewport emulation, not real devices/Safari/Firefox,
+  screen readers, populated sale/cart states or database-backed acceptance.
+- [x] Complete independent review and resolve task-related findings.
+  Independent reviewer found no task-related findings, including the final
+  mobile hero-selector fix. Differential check verified 50px to 0px overflow;
+  320/767/768/1440 checks passed. Final `git diff --check` passed.
+- [?] Full-suite acceptance remains open on the recorded assertion/readiness
+  failures; unrelated test/copy maintenance is not included in this UI change.
+- [ ] Remove this task section only after required acceptance passes.
+
 # Fix TS6133 unused Building2 import in OrganizationPages.tsx (2026-11-06)
 
 - [x] 1. Remove unused `Building2` import from `apps/web/src/features/organization/OrganizationPages.tsx`

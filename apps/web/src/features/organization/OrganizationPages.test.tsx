@@ -393,6 +393,16 @@ async function completeServicesAndTables() {
   await screen.findByText('ขั้นตอนที่ 4 จาก 7');
 }
 
+it('keeps setup within one named main region with a clear page heading', () => {
+  renderSetup();
+
+  const main = screen.getByRole('main', { name: 'เริ่มต้นใช้งานร้านอาหาร' });
+  expect(within(main).getAllByRole('heading', { level: 1 })).toHaveLength(1);
+  expect(within(main).getByRole('heading', { level: 1, name: 'เริ่มต้นใช้งานร้านอาหาร' })).toBeVisible();
+  expect(within(main).getByRole('heading', { level: 2, name: 'ข้อมูลร้าน' })).toBeVisible();
+  expect(within(main).getByLabelText('ชื่อร้าน')).toBeVisible();
+});
+
 it('renders seven accessible steps and keeps the first step blocked by validation', () => {
   renderSetup();
 

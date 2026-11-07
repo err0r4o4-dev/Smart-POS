@@ -87,6 +87,19 @@ for (const width of [320, 768, 1440]) {
     });
     await page.goto('/setup');
     await expect(page.getByLabel('ชื่อร้าน')).toHaveValue('ร้านตัวอย่าง');
+    await expect(page.locator('.sales-page-heading').getByRole('heading', { level: 1 })).toHaveText('เริ่มต้นใช้งานร้านอาหาร');
+    await expect(page.locator('.content')).toHaveCSS('background-image', /radial-gradient/);
+    await expect(page.locator('.setup-card')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+    const progress = page.getByRole('complementary', { name: 'ความคืบหน้าการตั้งค่า' });
+    await expect(progress.getByRole('listitem')).toHaveCount(7);
+    if (width <= 768) {
+      const bounds = await progress.boundingBox();
+      expect(bounds?.height).toBeLessThan(300);
+    }
+    await progress.getByRole('button', { name: /1 ข้อมูลร้าน/ }).focus();
+    await page.keyboard.press('Tab');
+    await expect(page.getByLabel('ชื่อร้าน')).toBeFocused();
+    await expect(page.getByLabel('ชื่อร้าน')).toHaveCSS('outline-style', 'solid');
     await expect(page.getByRole('button', { name: /บันทึกและถัดไป/ })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: testInfo.outputPath(`setup-${width}.png`), fullPage: true });

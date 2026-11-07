@@ -302,7 +302,7 @@ function SetupInput({
   step?: string;
 }) {
   return (
-    <label className="setup-field">
+    <label className="tenant-field setup-field">
       <span className="setup-field-label">
         {label}
         {required && <span className="setup-required" aria-hidden="true"> *</span>}
@@ -337,7 +337,7 @@ function SetupSelectOrInput({
   options: Array<{ value: string; label: string }>;
 }) {
   return (
-    <label className="setup-field">
+    <label className="tenant-field setup-field">
       <span className="setup-field-label">
         {label}
         {required && <span className="setup-required" aria-hidden="true"> *</span>}
@@ -428,7 +428,7 @@ function SetupStepFields({
           <SetupInput
             label="ชื่อร้าน"
             value={profile.organization.name}
-            placeholder="เช่น VELO Cafe & Restaurant"
+            placeholder="เช่น ร้านอาหารของคุณ"
             required
             onChange={(name) =>
               update('profile', {
@@ -862,20 +862,12 @@ function ScopedSetupPage() {
   return (
     <div className="setup-page-wrapper">
       <main className="setup-page" aria-labelledby="setup-title">
-        <header className="setup-header-bar">
-          <div className="setup-header-brand-group">
-            <div className="setup-logo-badge" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M4 4L12 20L20 4H15L12 12.5L9 4H4Z" fill="currentColor" />
-              </svg>
-            </div>
-            <span className="setup-brand-name">VELOPOS</span>
-          </div>
-          <div className="setup-header-divider" aria-hidden="true" />
-          <div className="setup-header-titles">
-            <h1 id="setup-title" className="setup-header-title">เริ่มต้นใช้งานร้านอาหาร</h1>
-            <p className="setup-header-subtitle">ตั้งค่าร้านอาหารครั้งแรก เพื่อให้ VELOPOS พร้อมใช้งานกับร้านของคุณ</p>
-          </div>
+        <header>
+          <StandardPageHeader
+            icon={<Store size={26} />}
+            title={<span id="setup-title">เริ่มต้นใช้งานร้านอาหาร</span>}
+            description="ตั้งค่าร้านอาหารครั้งแรกเพื่อเริ่มใช้งานร้านของคุณ"
+          />
         </header>
 
         {tenant.organizations.length > 0 && !tenant.context && (
@@ -889,15 +881,16 @@ function ScopedSetupPage() {
         {setupQuery.error && <ErrorMessage message={setupQuery.error.message} />}
 
         <div className="setup-layout">
-          <aside className="setup-rail" aria-label="ความคืบหน้าการตั้งค่า">
+          <aside className="card setup-rail" aria-label="ความคืบหน้าการตั้งค่า">
             <div className="setup-rail-header">
               <h2 className="setup-rail-title">ขั้นตอนตั้งค่าร้าน</h2>
-              <p className="setup-rail-subtitle">ตั้งค่า 7 ขั้นตอน เพื่อเริ่มใช้งานร้านอาหารกับ VELOPOS</p>
+              <p className="setup-rail-subtitle">ตั้งค่า 7 ขั้นตอน เพื่อเริ่มใช้งานร้านอาหาร</p>
             </div>
             <div className="setup-stepper-container">
               <div className="setup-stepper-line" aria-hidden="true" />
               <ol className="setup-stepper-list">
                 {setupMeta.map((item, index) => {
+                  const StepIcon = item.icon;
                   const complete = index < step || Boolean(serverState?.steps?.find((entry) => entry.key === item.key)?.complete);
                   const isActive = index === step;
                   return (
@@ -911,6 +904,9 @@ function ScopedSetupPage() {
                       >
                         <span className="setup-step-circle">
                           {complete && !isActive ? <Check size={14} strokeWidth={3} aria-hidden="true" /> : index + 1}
+                        </span>
+                        <span className="setup-step-icon" aria-hidden="true">
+                          <StepIcon size={22} strokeWidth={1.8} />
                         </span>
                         <div className="setup-step-text">
                           <strong className="setup-step-name">{item.label}</strong>
@@ -969,7 +965,7 @@ function ScopedSetupPage() {
                     <section aria-labelledby="issued-table-tokens">
                       <h3 id="issued-table-tokens">รหัสลับ QR โต๊ะที่ออกให้</h3>
                       <p>เก็บรหัสลับนี้อย่างปลอดภัย คัดลอกหรือดาวน์โหลดก่อนออกจากหน้านี้ รหัสจากการส่งคำขอเดิมซ้ำอาจใช้ไม่ได้หากมีการหมุนเวียนภายหลัง</p>
-                      <label className="setup-field"><span>รหัสลับโต๊ะ</span><textarea readOnly rows={5} value={JSON.stringify(issuedTokens, null, 2)} /></label>
+                      <label className="tenant-field setup-field"><span>รหัสลับโต๊ะ</span><textarea readOnly rows={5} value={JSON.stringify(issuedTokens, null, 2)} /></label>
                       <div className="tenant-actions">
                         <Button className="button-secondary" onClick={() => { void (async () => { try { await navigator.clipboard.writeText(JSON.stringify(issuedTokens, null, 2)); if (activeRef.current) setCopyStatus('คัดลอกแล้ว'); } catch { if (activeRef.current) setCopyStatus('คัดลอกไม่สำเร็จ กรุณาเลือกข้อความเพื่อคัดลอก'); } })(); }}>คัดลอกรหัสลับ</Button>
                         <Button className="button-secondary" onClick={downloadIssuedTokens}>ดาวน์โหลดรหัสลับ</Button>

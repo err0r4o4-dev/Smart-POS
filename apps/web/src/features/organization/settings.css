@@ -18,9 +18,9 @@
   gap: 8px;
   padding: 10px 18px;
   border-radius: 12px;
-  border: 1.5px solid #fde047;
-  background: #fefce8;
-  color: #854d0e;
+  border: 1.5px solid var(--primary-border);
+  background: var(--primary-subtle);
+  color: var(--primary-strong);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -29,8 +29,8 @@
 }
 
 .settings-btn-secondary:hover {
-  background: #fef9c3;
-  border-color: #facc15;
+  background: var(--primary-soft);
+  border-color: var(--primary);
 }
 
 .settings-btn-primary {
@@ -40,8 +40,8 @@
   padding: 10px 22px;
   border-radius: 12px;
   border: none;
-  background: #facc15;
-  color: #1e293b;
+  background: var(--primary);
+  color: var(--text-primary);
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
@@ -50,7 +50,7 @@
 }
 
 .settings-btn-primary:hover {
-  background: #eab308;
+  background: var(--primary-hover);
 }
 
 .settings-btn-primary:disabled {
@@ -103,12 +103,11 @@
 }
 
 .settings-card {
-  background: #ffffff;
-  border: 1px solid #edf2f7;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 18px;
   padding: 22px 24px;
-  box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.04),
-    0 1px 4px -1px rgba(15, 23, 42, 0.02);
+  box-shadow: var(--shadow-card);
   min-width: 0;
 }
 
@@ -123,8 +122,8 @@
   width: 38px;
   height: 38px;
   border-radius: 11px;
-  background: #fef3c7;
-  color: #b45309;
+  background: var(--primary-soft);
+  color: var(--text-primary);
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -134,14 +133,14 @@
   margin: 0;
   font-size: 16px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text-primary);
   line-height: 1.3;
 }
 
 .settings-card-subtitle {
   margin: 2px 0 0;
   font-size: 13px;
-  color: #64748b;
+  color: var(--text-secondary);
   line-height: 1.3;
 }
 
@@ -173,7 +172,7 @@
 .settings-label {
   font-size: 13px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -190,16 +189,16 @@
   border-radius: 10px;
   border: 1px solid #cbd5e1;
   font-size: 14px;
-  color: #0f172a;
-  background: #ffffff;
+  color: var(--text-primary);
+  background: var(--surface);
   transition: border-color 0.15s, box-shadow 0.15s;
   box-sizing: border-box;
 }
 
 .settings-input:focus,
 .settings-textarea:focus {
-  border-color: #facc15;
-  outline: 2px solid rgba(250, 204, 21, 0.25);
+  border-color: var(--primary);
+  outline: 2px solid var(--primary-strong);
 }
 
 .settings-textarea {
@@ -207,8 +206,8 @@
   padding: 10px 14px;
   border-radius: 10px;
   border: 1px solid #cbd5e1;
-  background: #ffffff;
-  color: #0f172a;
+  background: var(--surface);
+  color: var(--text-primary);
   font-family: inherit;
   font-size: 14px;
   resize: vertical;
@@ -222,19 +221,19 @@
   align-items: center;
   border: 1px solid #cbd5e1;
   border-radius: 10px;
-  background: #ffffff;
+  background: var(--surface);
   padding: 0 14px;
   height: 42px;
   transition: border-color 0.15s;
 }
 
 .settings-select-wrapper:focus-within {
-  border-color: #facc15;
-  box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.25);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-strong);
 }
 
 .settings-select-icon {
-  color: #475569;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   margin-right: 10px;
@@ -246,7 +245,7 @@
   border: none;
   background: transparent;
   font-size: 14px;
-  color: #0f172a;
+  color: var(--text-primary);
   appearance: none;
   outline: none;
   cursor: pointer;
@@ -257,7 +256,7 @@
   position: absolute;
   right: 14px;
   pointer-events: none;
-  color: #64748b;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
 }
@@ -276,13 +275,13 @@
   width: 68px;
   height: 68px;
   border-radius: 16px;
-  background: linear-gradient(135deg, #facc15, #eab308);
-  color: #ffffff;
+  background: var(--primary-soft);
+  color: var(--text-primary);
   font-size: 38px;
   font-weight: 800;
   display: grid;
   place-items: center;
-  box-shadow: 0 4px 12px rgba(234, 179, 8, 0.25);
+  box-shadow: var(--shadow-control);
   overflow: hidden;
 }
 
@@ -298,18 +297,18 @@
   gap: 5px;
   padding: 5px 10px;
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
-  background: #ffffff;
+  border: 1px solid var(--border);
+  background: var(--surface);
   font-size: 11px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--text-primary);
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s ease;
 }
 
 .settings-logo-btn:hover {
-  background: #f8fafc;
+  background: var(--primary-subtle);
   border-color: #cbd5e1;
 }
 
@@ -343,7 +342,7 @@
   height: 72px;
   border-radius: 12px;
   object-fit: cover;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 }
 
@@ -352,8 +351,8 @@
   height: 72px;
   border-radius: 12px;
   border: 2px dashed #cbd5e1;
-  background: #f8fafc;
-  color: #64748b;
+  background: var(--primary-subtle);
+  color: var(--text-secondary);
   font-size: 12px;
   font-weight: 500;
   display: flex;
@@ -366,9 +365,9 @@
 }
 
 .settings-photo-add:hover {
-  border-color: #facc15;
-  color: #854d0e;
-  background: #fefce8;
+  border-color: var(--primary);
+  color: var(--primary-strong);
+  background: var(--primary-subtle);
 }
 
 /* Operating Hours */
@@ -389,12 +388,12 @@
 .settings-hours-title {
   font-size: 14px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text-primary);
 }
 
 .settings-hours-cycle {
   font-size: 13px;
-  color: #475569;
+  color: var(--text-secondary);
 }
 
 .settings-hours-time {
@@ -402,7 +401,7 @@
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: #475569;
+  color: var(--text-secondary);
   font-weight: 500;
 }
 
@@ -420,8 +419,8 @@
   padding: 8px 14px;
   border-radius: 10px;
   border: 1px solid #cbd5e1;
-  background: #ffffff;
-  color: #1e293b;
+  background: var(--surface);
+  color: var(--text-primary);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -430,7 +429,7 @@
 }
 
 .settings-hours-btn:hover {
-  background: #f8fafc;
+  background: var(--primary-subtle);
   border-color: #94a3b8;
 }
 
@@ -458,7 +457,7 @@
   gap: 8px;
   cursor: pointer;
   font-size: 14px;
-  color: #1e293b;
+  color: var(--text-primary);
   font-weight: 500;
   background: none;
   border: none;
@@ -473,8 +472,8 @@
   display: grid;
   place-items: center;
   border: 1.5px solid #cbd5e1;
-  background: #ffffff;
-  color: #ffffff;
+  background: var(--surface);
+  color: var(--surface);
   flex-shrink: 0;
   transition: all 0.15s ease;
 }
@@ -503,19 +502,19 @@
   gap: 10px;
   padding: 12px 18px;
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  background: #ffffff;
+  border: 1px solid var(--border);
+  background: var(--surface);
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
-  color: #1e293b;
+  color: var(--text-primary);
   transition: all 0.15s ease;
   user-select: none;
 }
 
 .settings-pill-card:hover {
   border-color: #cbd5e1;
-  background: #f8fafc;
+  background: var(--primary-subtle);
 }
 
 /* Devices */

@@ -1,10 +1,8 @@
-import { useId } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   BarChart3,
   BookOpen,
   CookingPot,
-  Globe,
   House,
   LayoutDashboard,
   Play,
@@ -34,24 +32,16 @@ const icons = {
 };
 
 const pathIcons: Record<string, LucideIcon> = {
-  '/manage/dashboard': House,
-  '/manage/pos': Play,
-  '/manage/online-orders': ShoppingCart,
-  '/manage/restaurant/queue': CookingPot,
-  '/manage/products': Utensils,
-  '/manage/sales': BarChart3,
-  '/manage/receipts': Receipt,
-  '/manage/sales/refunds': RotateCcw,
-  '/manage/settings': Settings,
-  '/manage/settings/storefront': Globe,
-  '/manage/help': BookOpen,
+  '/dashboard': House,
+  '/pos': Play,
+  '/orders': ShoppingCart,
+  '/kitchen': CookingPot,
+  '/menu': Utensils,
+  '/sales': BarChart3,
+  '/receipts': Receipt,
+  '/refunds': RotateCcw,
+  '/settings': Settings,
   '/help': BookOpen,
-};
-
-const groupIcons: Record<string, LucideIcon> = {
-  operations: ShoppingCart,
-  management: Utensils,
-  settings: Settings,
 };
 
 interface NavigationMenuProps {
@@ -71,7 +61,6 @@ export function NavigationMenu({
 }: NavigationMenuProps) {
   const { pathname } = useLocation();
   const { localize } = useLanguage();
-  const sectionPrefix = useId();
 
   const visibleItems = items.filter((item) =>
     canAccess(access, item.permission, item.roles),
@@ -98,58 +87,48 @@ export function NavigationMenu({
     );
   };
 
+  if (groups.length === 0) {
+    return <>{visibleItems.map(renderLink)}</>;
+  }
+
   const ungroupedTopItems = visibleItems.filter((item) => item.to === homePath);
-  const renderedGroups = groups
-    .map((group) => ({
-      group,
-      groupItems: group.paths.flatMap((path) =>
-        visibleItems.filter((item) => item.to === path),
-      ),
-    }))
-    .filter(({ groupItems }) => groupItems.length > 0);
   const ungroupedBottomItems = visibleItems.filter(
     (item) =>
       item.to !== homePath &&
       !groups.some((group) => group.paths.includes(item.to)),
   );
 
+  const nonSettingsGroups = groups.filter((group) => group.id !== 'settings');
+  const settingsGroup = groups.find((group) => group.id === 'settings');
+  const settingsItems = settingsGroup
+    ? settingsGroup.paths.flatMap((path) =>
+        visibleItems.filter((item) => item.to === path),
+      )
+    : [];
+
+  const zones = [
+    ...nonSettingsGroups.map((group, index) => {
+      const groupItems = group.paths.flatMap((path) =>
+        visibleItems.filter((item) => item.to === path),
+      );
+      return {
+        id: group.id,
+        items: index === 0 ? [...ungroupedTopItems, ...groupItems] : groupItems,
+      };
+    }),
+    {
+      id: 'settings-and-support',
+      items: [...settingsItems, ...ungroupedBottomItems],
+    },
+  ].filter((zone) => zone.items.length > 0);
+
   return (
     <>
-      {ungroupedTopItems.map(renderLink)}
-      {renderedGroups.map(({ group, groupItems }) => {
-        const isActive = groupItems.some((item) => item.to === activeItem?.to);
-        const titleID = sectionPrefix + '-' + group.id;
-        const GroupIcon = groupIcons[group.id];
-        return (
-          <div
-            className="nav-section"
-            key={group.id}
-            role="group"
-            aria-labelledby={titleID}
-          >
-            <div
-              id={titleID}
-              className={'nav-section-title' + (isActive ? ' active' : '')}
-            >
-              {GroupIcon && <GroupIcon size={14} aria-hidden="true" />}
-              <span>{localize(group.label ?? '')}</span>
-            </div>
-            <div className="nav-section-items">
-              {groupItems.map(renderLink)}
-            </div>
-          </div>
-        );
-      })}
-      {ungroupedBottomItems.length > 0 &&
-        (renderedGroups.length > 0 ? (
-          <div className="nav-section nav-section-footer">
-            <div className="nav-section-items">
-              {ungroupedBottomItems.map(renderLink)}
-            </div>
-          </div>
-        ) : (
-          ungroupedBottomItems.map(renderLink)
-        ))}
+      {zones.map((zone) => (
+        <div className="nav-zone" key={zone.id}>
+          {zone.items.map(renderLink)}
+        </div>
+      ))}
     </>
   );
 }

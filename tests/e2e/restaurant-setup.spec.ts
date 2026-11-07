@@ -88,14 +88,20 @@ for (const width of [320, 768, 1440]) {
     await page.goto('/setup');
     await expect(page.getByLabel('ชื่อร้าน')).toHaveValue('ร้านตัวอย่าง');
     await expect(page.locator('aside.sidebar')).toHaveCount(0);
+    await expect(page.locator('.setup-topbar .workspace-area-link')).toHaveCount(0);
+    await expect(page.locator('.setup-topbar .tag')).toHaveCount(0);
+    await expect(page.locator('.setup-topbar .language-switcher')).toBeVisible();
     await expect(page.getByRole('heading', { level: 1, name: 'เริ่มต้นใช้งานร้านอาหาร' })).toHaveCount(1);
     await expect(page.locator('.setup-page-wrapper')).toHaveCSS('background-image', /radial-gradient/);
     await expect(page.locator('.setup-card')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
     const progress = page.getByRole('complementary', { name: 'ความคืบหน้าการตั้งค่า' });
+    await expect(progress).toHaveClass(/setup-top-stepper/);
     await expect(progress.getByRole('listitem')).toHaveCount(7);
+    const progressBox = await progress.boundingBox();
+    const layoutBox = await page.locator('.setup-layout').boundingBox();
+    expect(progressBox?.y ?? 0).toBeLessThan(layoutBox?.y ?? 0);
     if (width <= 768) {
-      const bounds = await progress.boundingBox();
-      expect(bounds?.height).toBeLessThan(300);
+      expect(progressBox?.height).toBeLessThan(300);
     }
     await progress.getByRole('button', { name: /1 ข้อมูลร้าน/ }).focus();
     await page.keyboard.press('Tab');

@@ -9,26 +9,27 @@ function Harness() {
   const location = useLocation();
   return (
     <>
-      <WorkspaceLink to="/products/item?search=abc#details">
-        Product
+      <WorkspaceLink to="/menu">Menu list</WorkspaceLink>
+      <WorkspaceLink to="/menu/item?search=abc#details">
+        Menu item
       </WorkspaceLink>
       <WorkspaceLink
         to={{
-          pathname: '/inventory/balances',
-          search: '?branch=1',
-          hash: '#table',
+          pathname: '/orders',
+          search: '?status=PENDING',
+          hash: '#list',
         }}
       >
-        Stock
+        Orders
       </WorkspaceLink>
-      <WorkspaceLink to="/manage/dashboard">Switch area</WorkspaceLink>
-      <button onClick={() => void navigate('/products/item/edit?mode=1#form')}>
+      <WorkspaceLink to="/dashboard">Overview</WorkspaceLink>
+      <button onClick={() => void navigate('/menu/item/edit?mode=1#form')}>
         Edit
       </button>
       <button
         onClick={() =>
           void navigate({
-            pathname: '/products/item',
+            pathname: '/menu/item',
             search: '?saved=1',
             hash: '#details',
           })
@@ -44,53 +45,38 @@ function Harness() {
   );
 }
 
-it.each(['/manage'])(
-  'keeps links and programmatic navigation within %s',
-  (prefix) => {
-    render(
-      <MemoryRouter initialEntries={[prefix + '/products']}>
-        <Harness />
-      </MemoryRouter>,
-    );
-    expect(screen.getByRole('link', { name: 'Product' })).toHaveAttribute(
-      'href',
-      prefix + '/products/item?search=abc#details',
-    );
-    expect(screen.getByRole('link', { name: 'Stock' })).toHaveAttribute(
-      'href',
-      prefix + '/inventory/balances?branch=1#table',
-    );
-    expect(screen.getByRole('link', { name: 'Switch area' })).toHaveAttribute(
-      'href',
-      '/manage/dashboard',
-    );
-    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
-    expect(screen.getByLabelText('Location')).toHaveTextContent(
-      prefix + '/products/item/edit?mode=1#form',
-    );
-    fireEvent.click(screen.getByRole('button', { name: 'Save destination' }));
-    expect(screen.getByLabelText('Location')).toHaveTextContent(
-      prefix + '/products/item?saved=1#details',
-    );
-    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
-    expect(screen.getByLabelText('Location')).toHaveTextContent(
-      prefix + '/products/item/edit?mode=1#form',
-    );
-  },
-);
-
-it('does not generate staff workspace links or navigations from a retired work location', () => {
+it('navigates directly using clean root paths and marks exact active link', () => {
   render(
-    <MemoryRouter initialEntries={['/work/products']}>
+    <MemoryRouter initialEntries={['/menu']}>
       <Harness />
     </MemoryRouter>,
   );
-  expect(screen.getByRole('link', { name: 'Product' })).toHaveAttribute(
+  expect(screen.getByRole('link', { name: 'Menu list' })).toHaveAttribute(
+    'data-active',
+    'true',
+  );
+  expect(screen.getByRole('link', { name: 'Menu item' })).toHaveAttribute(
     'href',
-    '/products/item?search=abc#details',
+    '/menu/item?search=abc#details',
+  );
+  expect(screen.getByRole('link', { name: 'Orders' })).toHaveAttribute(
+    'href',
+    '/orders?status=PENDING#list',
+  );
+  expect(screen.getByRole('link', { name: 'Overview' })).toHaveAttribute(
+    'href',
+    '/dashboard',
   );
   fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
   expect(screen.getByLabelText('Location')).toHaveTextContent(
-    '/products/item/edit?mode=1#form',
+    '/menu/item/edit?mode=1#form',
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Save destination' }));
+  expect(screen.getByLabelText('Location')).toHaveTextContent(
+    '/menu/item?saved=1#details',
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+  expect(screen.getByLabelText('Location')).toHaveTextContent(
+    '/menu/item/edit?mode=1#form',
   );
 });

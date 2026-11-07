@@ -156,7 +156,7 @@ function QueueScreen() {
           </Table>
         )
       ) : null}
-      <WorkspaceLink to="/online-orders">
+      <WorkspaceLink to="/orders">
         จัดการออเดอร์และสถานะอาหาร
       </WorkspaceLink>
     </Card>

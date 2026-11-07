@@ -55,7 +55,7 @@ beforeEach(() => {
   });
 });
 it('keeps restaurant menu navigation without retired retail tools', () => {
-  mount(<ProductsPage />, '/manage/products');
+  mount(<ProductsPage />, '/menu');
   for (const path of [
     '/brands',
     '/products/import',
@@ -63,27 +63,27 @@ it('keeps restaurant menu navigation without retired retail tools', () => {
     '/inventory/balances',
   ]) {
     expect(
-      document.querySelector(`a[href="/manage${path}"]`),
+      document.querySelector(`a[href="${path}"]`),
     ).not.toBeInTheDocument();
   }
   expect(
-    document.querySelector('a[href="/manage/restaurant/recipes"]'),
+    document.querySelector('a[href="/restaurant/recipes"]'),
   ).not.toBeInTheDocument();
   expect(
-    document.querySelector('a[href="/manage/restaurant/quick-stock"]'),
+    document.querySelector('a[href="/restaurant/quick-stock"]'),
   ).not.toBeInTheDocument();
 });
 it('keeps management-only recipe and ingredient shortcuts out of staff catalog pages', () => {
   mount(<ProductsPage />, '/work/products');
   expect(
-    document.querySelector('a[href="/manage/restaurant/recipes"]'),
+    document.querySelector('a[href="/restaurant/recipes"]'),
   ).not.toBeInTheDocument();
   expect(
-    document.querySelector('a[href="/manage/restaurant/quick-stock"]'),
+    document.querySelector('a[href="/restaurant/quick-stock"]'),
   ).not.toBeInTheDocument();
 });
 it('removes brand and barcode merchandising controls from restaurant menu management', () => {
-  mount(<ProductsPage />, '/manage/products');
+  mount(<ProductsPage />, '/menu');
   expect(screen.queryByLabelText('กรองแบรนด์')).not.toBeInTheDocument();
   expect(screen.queryByText('แบรนด์')).not.toBeInTheDocument();
   expect(
@@ -101,9 +101,9 @@ it('omits the ingredient shortcut without stock read permission', () => {
   mocks.can.mockImplementation(
     (permission: string) => permission !== 'inventory.read',
   );
-  mount(<ProductsPage />, '/manage/products');
+  mount(<ProductsPage />, '/menu');
   expect(
-    document.querySelector('a[href="/manage/restaurant/quick-stock"]'),
+    document.querySelector('a[href="/restaurant/quick-stock"]'),
   ).not.toBeInTheDocument();
 });
 it.each(['-1', '0.001', '1e2', 'NaN', '01', '10000000000000000'])(
@@ -184,7 +184,7 @@ it('renders back / return link pointing to products list in LabelsPage', () => {
   });
   expect(backLinks.length).toBe(1);
   expect(backLinks[0]).toBeVisible();
-  expect(backLinks[0]).toHaveAttribute('href', '/products');
+  expect(backLinks[0]).toHaveAttribute('href', '/menu');
 });
 
 it('renders organized sections for product selection and print settings in LabelsPage', () => {
@@ -211,7 +211,7 @@ it('renders back / return link pointing to products list in ImportPage', () => {
   mount(<ImportPage />);
   const backLink = screen.getByRole('link', { name: /ย้อนกลับ \/ กลับรายการ/ });
   expect(backLink).toBeVisible();
-  expect(backLink).toHaveAttribute('href', '/products');
+  expect(backLink).toHaveAttribute('href', '/menu');
   expect(backLink).toHaveClass('button', 'button-secondary');
 });
 
@@ -219,7 +219,7 @@ it('renders back / return link pointing to products list in ProductEditorPage', 
   mount(<ProductEditorPage />);
   const backLink = screen.getByRole('link', { name: /ย้อนกลับ \/ กลับรายการ/ });
   expect(backLink).toBeVisible();
-  expect(backLink).toHaveAttribute('href', '/products');
+  expect(backLink).toHaveAttribute('href', '/menu');
   expect(backLink).toHaveClass('button', 'button-secondary');
 });
 
@@ -291,7 +291,7 @@ it('shows unknown barcode actions without fabricating a product', async () => {
   );
   expect(screen.getByRole('link', { name: 'สร้างสินค้าใหม่' })).toHaveAttribute(
     'href',
-    '/products/new?barcode=00123',
+    '/menu/new?barcode=00123',
   );
   expect(screen.getByLabelText('บาร์โค้ด')).toHaveFocus();
 });

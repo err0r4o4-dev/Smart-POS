@@ -32,7 +32,13 @@ export function WorkspaceAreaGate() {
           retry={() => void tenant.refresh()}
         />
       );
-    if (!tenant.context) return <Navigate to={paths.account} replace />;
+    if (!tenant.context)
+      return (
+        <Navigate
+          to={tenant.storeMode === 'multi' ? paths.setup : paths.forbidden}
+          replace
+        />
+      );
     if (!isManagementRole(tenant.context.membership.role))
       return <Navigate to={paths.forbidden} replace />;
   }
@@ -54,7 +60,13 @@ export function LegacyWorkspaceRedirect({ path }: { path: string }) {
         retry={() => void tenant.refresh()}
       />
     );
-  if (!tenant.context) return <Navigate to={paths.account} replace />;
+  if (!tenant.context)
+    return (
+      <Navigate
+        to={tenant.storeMode === 'multi' ? paths.setup : paths.forbidden}
+        replace
+      />
+    );
   if (!isManagementRole(tenant.context.membership.role))
     return <Navigate to={paths.forbidden} replace />;
   const destination =

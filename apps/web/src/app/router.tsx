@@ -8,7 +8,6 @@ import {
   OnlineOrdersPage,
   OnlineOrderPage,
   RestaurantPage,
-  DashboardPage,
   HelpPage,
   SystemPage,
   ProductsPage,
@@ -26,7 +25,6 @@ import {
   SetupPage,
   SettingsPage,
   StorefrontSettingsPage,
-  AccountPage,
   ForgotPasswordPage,
   LoginPage,
   RegisterPage,
@@ -38,10 +36,10 @@ import {
   createBrowserRouter,
   Navigate,
   Outlet,
+  useLocation,
+  useParams,
   type RouteObject,
 } from 'react-router-dom';
-import { scopeWorkspaceRoutes } from './workspace-routes';
-import { LegacyWorkspaceRedirect } from '../features/workspace/WorkspaceRouting';
 import { RoleWorkspaceLayout } from '../layouts/RoleWorkspaceLayout';
 import { StorefrontLayout } from '../layouts/StorefrontLayout';
 import {
@@ -53,42 +51,21 @@ import { managementRoles } from './access';
 import { paths } from './routes';
 import { RequireSession } from './ProtectedRoute';
 
-const retiredRetailPaths = [
-  '/suppliers',
-  '/suppliers/*',
-  '/purchasing',
-  '/purchasing/*',
-  '/shelves',
-  '/shelves/*',
-  '/inventory',
-  '/inventory/*',
-  '/restaurant/recipes',
-  '/restaurant/recipes/*',
-  '/restaurant/quick-stock',
-  '/restaurant/quick-stock/*',
-  '/restaurant/forecast',
-  '/restaurant/forecast/*',
-  '/loyalty',
-  '/loyalty/*',
-  '/customers',
-  '/customers/*',
-  '/pricing',
-  '/pricing/*',
-  '/promotions',
-  '/promotions/*',
-  '/discount-approvals',
-  '/discount-approvals/*',
-  '/brands',
-  '/brands/*',
-  '/products/import',
-  '/products/labels',
-  '/pos/exchanges',
-  '/pos/exchanges/*',
-  '/pos/returns',
-  '/pos/returns/*',
-  '/sales/voids',
-  '/sales/voids/*',
-];
+function CustomerOrderRedirect() {
+  const { slug = '', orderId = '' } = useParams();
+  const { search, hash } = useLocation();
+  return (
+    <Navigate
+      to={`/shop/${encodeURIComponent(slug)}/orders/${encodeURIComponent(orderId)}${search}${hash}`}
+      replace
+    />
+  );
+}
+
+function PaymentSandboxRedirect() {
+  const { search, hash } = useLocation();
+  return <Navigate to={`${paths.paymentSettings}${search}${hash}`} replace />;
+}
 
 const routes: RouteObject[] = [
   { path: '/', element: <LandingPage /> },
@@ -99,9 +76,14 @@ const routes: RouteObject[] = [
       { index: true, element: <StorefrontPage /> },
       { path: ':slug', element: <StorefrontPage /> },
       { path: ':slug/cart', element: <ShopCartPage /> },
-      { path: ':slug/track/:orderId', element: <ShopTrackingPage /> },
+      { path: ':slug/orders/:orderId', element: <ShopTrackingPage /> },
+      { path: ':slug/track/:orderId', element: <CustomerOrderRedirect /> },
     ],
   },
+  { path: '/sales/voids', element: <SystemPage /> },
+  { path: '/sales/voids/*', element: <SystemPage /> },
+  { path: '/sales/refunds', element: <SystemPage /> },
+  { path: '/sales/refunds/*', element: <SystemPage /> },
   {
     element: <OrganizationWorkspaceProvider />,
     children: [
@@ -109,20 +91,11 @@ const routes: RouteObject[] = [
       {
         element: <RoleWorkspaceLayout />,
         children: [
-          { path: paths.system, element: <DashboardPage /> },
           { path: paths.help, element: <HelpPage /> },
           {
             element: <RequireSession />,
             children: [
               { path: paths.workspace, element: <WorkspaceEntryPage /> },
-              {
-                path: '/dashboard',
-                element: <LegacyWorkspaceRedirect path="/dashboard" />,
-              },
-              {
-                path: '/manage',
-                element: <Navigate to={paths.dashboard} replace />,
-              },
               {
                 element: <OrganizationGate />,
                 children: [
@@ -133,12 +106,12 @@ const routes: RouteObject[] = [
                 element: <OrganizationGate permission="online_orders.read" />,
                 children: [
                   {
-                    path: '/restaurant/queue',
+                    path: paths.kitchen,
                     element: <RestaurantPage view="queue" />,
                   },
-                  { path: '/online-orders', element: <OnlineOrdersPage /> },
+                  { path: paths.orders, element: <OnlineOrdersPage /> },
                   {
-                    path: '/online-orders/:orderId',
+                    path: '/orders/:orderId',
                     element: <OnlineOrderPage />,
                   },
                 ],
@@ -152,21 +125,24 @@ const routes: RouteObject[] = [
                 ),
                 children: [
                   {
-                    path: '/settings/storefront/payments',
+                    path: paths.paymentSettings,
                     element: <PaymentSandboxPage />,
+                  },
+                  {
+                    path: '/manage/settings/storefront/payments',
+                    element: <PaymentSandboxRedirect />,
                   },
                 ],
               },
-              { path: paths.account, element: <AccountPage /> },
               {
                 element: <OrganizationGate permission="refunds.read" />,
                 children: [
                   {
-                    path: '/sales/refunds',
+                    path: paths.refunds,
                     element: <ReturnsPage refunds />,
                   },
                   {
-                    path: '/sales/refunds/:code',
+                    path: '/refunds/:code',
                     element: <ReturnsPage refunds />,
                   },
                 ],
@@ -174,29 +150,29 @@ const routes: RouteObject[] = [
               {
                 element: <OrganizationGate permission="sales.read" />,
                 children: [
-                  { path: '/sales', element: <SalesPage /> },
+                  { path: paths.sales, element: <SalesPage /> },
                   { path: '/sales/:id', element: <SaleDetailsPage /> },
                 ],
               },
               {
                 element: <OrganizationGate permission="receipts.read" />,
                 children: [
-                  { path: '/receipts', element: <SalesPage receipts /> },
+                  { path: paths.receipts, element: <SalesPage receipts /> },
                 ],
               },
               {
                 element: <OrganizationGate permission="catalog.read" />,
                 children: [
-                  { path: '/products', element: <ProductsPage /> },
-                  { path: '/products/:id', element: <ProductDetailsPage /> },
+                  { path: paths.menu, element: <ProductsPage /> },
+                  { path: '/menu/:id', element: <ProductDetailsPage /> },
                   {
-                    path: '/categories',
+                    path: paths.menuCategories,
                     element: (
                       <TaxonomyPage key="categories" kind="categories" />
                     ),
                   },
                   {
-                    path: '/units',
+                    path: paths.menuUnits,
                     element: <TaxonomyPage key="units" kind="units" />,
                   },
                 ],
@@ -204,14 +180,14 @@ const routes: RouteObject[] = [
               {
                 element: <OrganizationGate permission="catalog.create" />,
                 children: [
-                  { path: '/products/new', element: <ProductEditorPage /> },
+                  { path: '/menu/new', element: <ProductEditorPage /> },
                 ],
               },
               {
                 element: <OrganizationGate permission="catalog.update" />,
                 children: [
                   {
-                    path: '/products/:id/edit',
+                    path: '/menu/:id/edit',
                     element: <ProductEditorPage edit />,
                   },
                 ],
@@ -221,24 +197,8 @@ const routes: RouteObject[] = [
                 children: [
                   { path: paths.settings, element: <SettingsPage /> },
                   {
-                    path: paths.store,
-                    element: <Navigate to={paths.settings} replace />,
-                  },
-                  {
-                    path: paths.branches,
-                    element: <Navigate to={paths.settings} replace />,
-                  },
-                  {
                     path: paths.storefrontSettings,
                     element: <StorefrontSettingsPage />,
-                  },
-                  {
-                    path: '/restaurant/settings',
-                    element: <Navigate to={paths.settings} replace />,
-                  },
-                  {
-                    path: '/restaurant/tables',
-                    element: <Navigate to={paths.settings} replace />,
                   },
                 ],
               },
@@ -255,26 +215,26 @@ const routes: RouteObject[] = [
               {
                 element: <POSWorkspace />,
                 children: [
-                  { path: '/pos', element: <POSTerminalPage /> },
+                  { path: paths.pos, element: <POSTerminalPage /> },
                   { path: '/pos/held-carts', element: <HeldCartsPage /> },
                   { path: '/pos/checkout', element: <CheckoutPage /> },
                   {
-                    path: '/pos/register/open',
+                    path: '/pos/shifts',
+                    element: <POSRegisterPage key="shifts" section="shifts" />,
+                  },
+                  {
+                    path: '/pos/shifts/open',
                     element: <POSRegisterPage key="open" section="open" />,
                   },
                   {
-                    path: '/pos/register/close',
+                    path: '/pos/shifts/close',
                     element: <POSRegisterPage key="close" section="close" />,
                   },
                   {
-                    path: '/pos/register/history',
+                    path: '/pos/shifts/history',
                     element: (
                       <POSRegisterPage key="history" section="history" />
                     ),
-                  },
-                  {
-                    path: '/pos/shifts',
-                    element: <POSRegisterPage key="shifts" section="shifts" />,
                   },
                 ],
               },
@@ -301,14 +261,6 @@ export const router = createBrowserRouter([
       </Suspense>
     ),
     errorElement: <PageError />,
-    children: [
-      ...['', '/manage'].flatMap((prefix) =>
-        retiredRetailPaths.map((path) => ({
-          path: prefix + path,
-          element: <SystemPage />,
-        })),
-      ),
-      ...scopeWorkspaceRoutes(routes),
-    ],
+    children: routes,
   },
 ]);

@@ -32,7 +32,7 @@ const attempt = {
   currency: 'thb',
   stock_hold_released: false,
 };
-function view(path = `/shop/shop/track/order#access=${token}`) {
+function view(path = `/shop/shop/orders/order#access=${token}`) {
   return render(
     <QueryClientProvider
       client={
@@ -47,7 +47,7 @@ function view(path = `/shop/shop/track/order#access=${token}`) {
       <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route
-            path="/shop/:slug/track/:orderId"
+            path="/shop/:slug/orders/:orderId"
             element={<ShopTrackingPage />}
           />
         </Routes>
@@ -76,7 +76,7 @@ it('restores the tracking token after checkout returns without its fragment', as
   expect(link.getAttribute('href')).not.toContain(token);
   first.unmount();
   request.mockClear();
-  view('/shop/shop/track/order?payment_return=1');
+  view('/shop/shop/orders/order?payment_return=1');
   await waitFor(() =>
     expect(request).toHaveBeenCalledWith(
       '/shop/track',
@@ -91,37 +91,37 @@ it.each([
   [
     'expired',
     { slug: 'shop', orderId: 'order', token, savedAt: Date.now() - 3600001 },
-    '/shop/shop/track/order?payment_return=1',
+    '/shop/shop/orders/order?payment_return=1',
   ],
   [
     'future',
     { slug: 'shop', orderId: 'order', token, savedAt: Date.now() + 3600000 },
-    '/shop/shop/track/order?payment_return=1',
+    '/shop/shop/orders/order?payment_return=1',
   ],
   [
     'mismatched shop',
     { slug: 'other', orderId: 'order', token, savedAt: Date.now() },
-    '/shop/shop/track/order?payment_return=1',
+    '/shop/shop/orders/order?payment_return=1',
   ],
   [
     'mismatched order',
     { slug: 'shop', orderId: 'other', token, savedAt: Date.now() },
-    '/shop/shop/track/order?payment_return=1',
+    '/shop/shop/orders/order?payment_return=1',
   ],
   [
     'missing return marker',
     { slug: 'shop', orderId: 'order', token, savedAt: Date.now() },
-    '/shop/shop/track/order',
+    '/shop/shop/orders/order',
   ],
   [
     'duplicate return marker',
     { slug: 'shop', orderId: 'order', token, savedAt: Date.now() },
-    '/shop/shop/track/order?payment_return=1&payment_return=1',
+    '/shop/shop/orders/order?payment_return=1&payment_return=1',
   ],
   [
     'invalid token',
     { slug: 'shop', orderId: 'order', token: 'bad', savedAt: Date.now() },
-    '/shop/shop/track/order?payment_return=1',
+    '/shop/shop/orders/order?payment_return=1',
   ],
 ])('rejects %s return state', async (_name, saved, path) => {
   sessionStorage.setItem(

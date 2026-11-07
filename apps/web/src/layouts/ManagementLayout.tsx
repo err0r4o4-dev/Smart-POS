@@ -1,4 +1,5 @@
 import { LanguageSwitcher } from '../components/ui/LanguageSwitcher';
+import { AccountMenu } from '../components/ui/AccountMenu';
 import { useLanguage } from '../app/language';
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
@@ -72,11 +73,6 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
               icon: 'help' as const,
             },
             {
-              to: paths.system,
-              label: t('shell.systemStatus'),
-              icon: 'help' as const,
-            },
-            {
               to: paths.login,
               label: t('shell.storeTeamSignIn'),
               icon: 'auth' as const,
@@ -105,7 +101,10 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
           location.pathname.startsWith(item.to + '/'),
       )
       .sort((left, right) => right.to.length - left.to.length)[0]?.label ??
-    (location.pathname === paths.system ? t('shell.systemStatus') : areaTitle);
+    (location.pathname === paths.settings ||
+    location.pathname.startsWith(paths.settings + '/')
+      ? t('auth.settings')
+      : areaTitle);
   useEffect(() => {
     if (open) dialog.current?.showModal();
     else dialog.current?.close();
@@ -164,7 +163,7 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
         </nav>
         {area === 'management' ? (
           <NavLink
-            to="/manage/sales"
+            to={paths.sales}
             className="sidebar-note sidebar-report-card"
           >
             <span className="sidebar-report-icon" aria-hidden="true">
@@ -233,19 +232,7 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
             >
               <CircleHelp size={20} aria-hidden="true" />
             </NavLink>
-            <NavLink
-              to={state.status === 'authenticated' ? '/account' : '/login'}
-              className="avatar"
-              aria-label={
-                state.status === 'authenticated'
-                  ? t('auth.yourAccount')
-                  : t('auth.signIn')
-              }
-            >
-              {state.status === 'authenticated'
-                ? state.session.user.display_name.slice(0, 1).toUpperCase()
-                : '—'}
-            </NavLink>
+            <AccountMenu />
           </div>
           <button
             ref={menuButton}

@@ -50,9 +50,9 @@ function setup() {
   const tree = () => (
     <StrictMode>
       <QueryClientProvider client={client}>
-        <MemoryRouter initialEntries={['/manage/pos']}>
+        <MemoryRouter initialEntries={['/pos']}>
           <Routes>
-            <Route path="/manage/pos" element={<POSWorkspace />}>
+            <Route path="/pos" element={<POSWorkspace />}>
               <Route index element={<Probe />} />
             </Route>
           </Routes>

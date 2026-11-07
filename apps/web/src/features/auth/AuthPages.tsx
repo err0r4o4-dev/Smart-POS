@@ -7,7 +7,6 @@ import { AuthLayout } from '../../layouts/AuthLayout';
 import { LoginLayout } from '../../layouts/LoginLayout';
 import { forgotPassword, register, resetPassword } from '../../lib/api';
 import { useAuth } from '../../app/AuthProvider';
-import { useOrganization } from '../../app/OrganizationProvider';
 import { paths } from '../../app/routes';
 import { ResendVerification } from './VerificationFlow';
 
@@ -66,9 +65,7 @@ function PasswordField({
 }
 
 export function safeReturnTo(value: string | null) {
-  return value === '/account' || value === paths.setup
-    ? value
-    : paths.workspace;
+  return value === paths.setup ? value : paths.workspace;
 }
 
 export function LoginPage() {
@@ -398,85 +395,5 @@ export function ResetPasswordPage() {
         <Link to="/login">{t('auth.backToSignIn')}</Link>
       </p>
     </AuthLayout>
-  );
-}
-
-export function AccountPage() {
-  const { t, localize, labelCode } = useLanguage();
-
-  const tenant = useOrganization();
-  const { state, signOut } = useAuth();
-  const [error, setError] = useState('');
-  const [pending, setPending] = useState(false);
-  const navigate = useNavigate();
-  if (state.status !== 'authenticated') return <Loading />;
-  const logout = async () => {
-    setPending(true);
-    setError('');
-    try {
-      await signOut();
-      navigate('/login', { replace: true });
-    } catch (failure) {
-      setError(
-        failure instanceof Error
-          ? failure.message
-          : t('auth.logoutUnavailable'),
-      );
-    } finally {
-      setPending(false);
-    }
-  };
-  return (
-    <div>
-      <section className="card account-card">
-        <Tag tone="amber">{t('auth.account')}</Tag>
-        <h1>{t('auth.yourAccount')}</h1>
-        <dl>
-          <dt>{t('auth.displayName')}</dt>
-          <dd>{state.session.user.display_name}</dd>
-          <dt>{t('auth.email')}</dt>
-          <dd>{state.session.user.email}</dd>
-          <dt>{t('auth.status')}</dt>
-          <dd>{labelCode(state.session.user.status)}</dd>
-        </dl>
-        {tenant.context?.membership.role === 'OWNER' ? (
-          <p>
-            <Link to={paths.dashboard}>
-              {t('auth.openYourRoleBasedWorkspace')}
-            </Link>
-            {' · '}
-            <Link to="/setup">{t('organization.setUpStore')}</Link>
-          </p>
-        ) : !tenant.loading && !tenant.error ? (
-          <div role="status">
-            <p>
-              {t(
-                !tenant.context && tenant.storeMode === 'multi'
-                  ? 'auth.noOwnedStore'
-                  : 'auth.ownerOnlyAccess',
-              )}
-            </p>
-            {!tenant.context && tenant.storeMode === 'multi' && (
-              <p>
-                <Link to="/setup">{t('organization.setUpStore')}</Link>
-              </p>
-            )}
-          </div>
-        ) : tenant.error ? (
-          <p role="alert">
-            {localize(tenant.error)}{' '}
-            <Button onClick={() => void tenant.refresh()}>
-              {t('organization.refreshPermissions')}
-            </Button>
-          </p>
-        ) : (
-          <Loading />
-        )}
-        <ErrorMessage message={localize(error ?? '')} />
-        <Button onClick={() => void logout()} disabled={pending}>
-          {pending ? t('auth.signingOut') : t('auth.signOut')}
-        </Button>
-      </section>
-    </div>
   );
 }

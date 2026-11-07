@@ -328,7 +328,7 @@ function CartContents({ slug }: { slug: string }) {
       ),
   });
 
-  const trackingPath = `/shop/${slug}/track/${identity.key}#access=${identity.token}`;
+  const trackingPath = `/shop/${slug}/orders/${identity.key}#access=${identity.token}`;
 
   const submission = useMutation({
     mutationFn: (input: ShopOrderInput) =>

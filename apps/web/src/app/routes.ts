@@ -1,25 +1,26 @@
 import { managementRoles, type Role } from './access';
-import { workspacePath } from './workspace-paths';
 
 export const paths = {
   workspace: '/workspace',
   shop: '/shop',
-  system: '/help/system',
-  dashboard: '/manage/dashboard',
+  dashboard: '/dashboard',
+  pos: '/pos',
+  orders: '/orders',
+  kitchen: '/kitchen',
+  menu: '/menu',
+  menuCategories: '/menu/categories',
+  menuUnits: '/menu/units',
+  sales: '/sales',
+  receipts: '/receipts',
+  refunds: '/refunds',
   login: '/login',
   register: '/register',
   forgotPassword: '/forgot-password',
   resetPassword: '/reset-password',
-  account: '/account',
-  products: '/products',
-  inventory: '/inventory',
-  suppliers: '/suppliers',
-  purchasing: '/purchasing/orders',
   setup: '/setup',
   settings: '/settings',
-  store: '/settings/store',
   storefrontSettings: '/settings/storefront',
-  branches: '/settings/branches',
+  paymentSettings: '/settings/payments',
   help: '/help',
   forbidden: '/403',
   notFound: '/404',
@@ -32,74 +33,61 @@ export interface NavigationItem {
   permission?: string;
   roles?: Role[];
 }
+
 const managementItems: NavigationItem[] = [
   { to: paths.dashboard, label: 'ภาพรวม', icon: 'dashboard' },
   {
-    to: '/pos',
+    to: paths.pos,
     label: 'รับออเดอร์หน้าร้าน',
     icon: 'pos',
     permission: 'pos.access',
   },
   {
-    to: '/online-orders',
+    to: paths.orders,
     label: 'ออเดอร์และคิว',
     icon: 'pos',
     permission: 'online_orders.read',
   },
   {
-    to: '/restaurant/queue',
+    to: paths.kitchen,
     label: 'หน้าจอคิวอาหาร',
     icon: 'pos',
     permission: 'online_orders.read',
   },
   {
-    to: paths.products,
+    to: paths.menu,
     label: 'เมนูอาหาร',
     icon: 'dashboard',
     permission: 'catalog.read',
   },
   {
-    to: '/sales',
+    to: paths.sales,
     label: 'ยอดขาย',
     icon: 'dashboard',
     permission: 'sales.read',
   },
   {
-    to: '/receipts',
+    to: paths.receipts,
     label: 'ใบเสร็จ',
     icon: 'dashboard',
     permission: 'receipts.read',
   },
   {
-    to: '/sales/refunds',
+    to: paths.refunds,
     label: 'คืนเงิน',
     icon: 'dashboard',
     permission: 'refunds.read',
-  },
-  {
-    to: paths.settings,
-    label: 'การตั้งค่า',
-    icon: 'dashboard',
-    permission: 'organization.read',
-  },
-  {
-    to: paths.storefrontSettings,
-    label: 'หน้าร้านออนไลน์',
-    icon: 'dashboard',
-    permission: 'storefront.manage',
   },
   { to: paths.help, label: 'คู่มือ', icon: 'help' },
 ];
 
 export const navigation: NavigationItem[] = managementItems.map((item) => ({
   ...item,
-  to: workspacePath(item.to, 'management'),
   roles: managementRoles,
 }));
 
 export const accountNavigation: NavigationItem[] = [
   { to: paths.workspace, label: 'เข้าพื้นที่ทำงาน', icon: 'dashboard' },
-  { to: paths.account, label: 'บัญชี', icon: 'auth' },
   { to: paths.help, label: 'คู่มือ', icon: 'help' },
 ];
 
@@ -109,27 +97,20 @@ export interface NavigationGroup {
   paths: string[];
 }
 
-const managementGroups: NavigationGroup[] = [
+export const navigationGroups: NavigationGroup[] = [
   {
     id: 'operations',
     label: 'การขายและหน้าร้าน',
-    paths: ['/pos', '/online-orders', '/restaurant/queue'],
+    paths: [paths.pos, paths.orders, paths.kitchen],
   },
   {
     id: 'management',
     label: 'จัดการร้าน',
-    paths: [paths.products, '/sales', '/receipts', '/sales/refunds'],
+    paths: [paths.menu, paths.sales, paths.receipts, paths.refunds],
   },
   {
     id: 'settings',
     label: 'ตั้งค่าระบบ',
-    paths: [paths.settings, paths.storefrontSettings],
+    paths: [],
   },
 ];
-
-export const navigationGroups: NavigationGroup[] = managementGroups.map(
-  (group) => ({
-    ...group,
-    paths: group.paths.map((path) => workspacePath(path, 'management')),
-  }),
-);

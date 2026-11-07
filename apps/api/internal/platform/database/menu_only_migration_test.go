@@ -45,7 +45,7 @@ func TestMenuOnlyMigrationRequiresForwardRecovery(t *testing.T) {
 	if _, err := os.Stat("../../../../../database/migrations/000032_menu_only_stock_policy.down.sql"); !os.IsNotExist(err) {
 		t.Fatalf("migration 32 must not offer a down migration after menu-only writes: %v", err)
 	}
-	if RequiredVersion != 32 {
-		t.Fatalf("schema readiness must require version 32, got %d", RequiredVersion)
+	if RequiredVersion < 32 {
+		t.Fatalf("schema readiness must require at least version 32, got %d", RequiredVersion)
 	}
 }

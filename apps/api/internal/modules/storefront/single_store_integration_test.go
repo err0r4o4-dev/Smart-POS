@@ -138,6 +138,64 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 	seedShop(second, "second-fixture")
 	single := &organization.Service{Pool: pool, Mailer: mailbox, SingleStoreOrganizationID: first.Organization.ID}
 	shop := &storefront.Service{Organization: single}
+	t.Run("directory shop types preserve public projection visibility and rollback", func(t *testing.T) {
+		publicDirectory := &storefront.Service{Organization: multi}
+		result, problem := publicDirectory.Directory(ctx)
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		var entries []map[string]any
+		if problem = json.Unmarshal(result, &entries); problem != nil || len(entries) != 2 {
+			t.Fatalf("multi-store directory: %v", problem)
+		}
+		for _, entry := range entries {
+			if len(entry) != 4 || entry["business_type"] != "RETAIL" || entry["name"] == nil || entry["accepting_orders"] != true || (entry["slug"] != firstShop.Slug && entry["slug"] != "second-fixture") {
+				t.Fatal("unexpected public directory projection")
+			}
+		}
+		tx, _, problem := multi.Authorized(ctx, owner.ID, first.Organization.ID, "storefront.manage")
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		defer tx.Rollback(ctx)
+		if _, problem = tx.Exec(ctx, "UPDATE organizations SET business_type='CAFE' WHERE id=$1", first.Organization.ID); problem != nil {
+			t.Fatal(problem)
+		}
+		if problem = tx.QueryRow(ctx, "SELECT storefront_directory()").Scan(&result); problem != nil {
+			t.Fatal(problem)
+		}
+		if problem = json.Unmarshal(result, &entries); problem != nil || len(entries) != 2 || entries[0]["slug"] != firstShop.Slug || entries[0]["business_type"] != "CAFE" || entries[1]["business_type"] != "RETAIL" {
+			t.Fatalf("shop type metadata or ordering: %v", problem)
+		}
+		for _, mutation := range []string{
+			"UPDATE storefronts SET published=false WHERE organization_id=$1",
+			"UPDATE storefronts SET published=true WHERE organization_id=$1;",
+			"UPDATE organizations SET status='INACTIVE' WHERE id=$1",
+		} {
+			if _, problem = tx.Exec(ctx, mutation, first.Organization.ID); problem != nil {
+				t.Fatal(problem)
+			}
+			if strings.Contains(mutation, "published=true") {
+				continue
+			}
+			if problem = tx.QueryRow(ctx, "SELECT storefront_directory()").Scan(&result); problem != nil {
+				t.Fatal(problem)
+			}
+			if problem = json.Unmarshal(result, &entries); problem != nil || len(entries) != 1 || entries[0]["slug"] != "second-fixture" {
+				t.Fatalf("unpublished or inactive store exposed: %v", problem)
+			}
+		}
+		if problem = tx.Rollback(ctx); problem != nil {
+			t.Fatal(problem)
+		}
+		result, problem = shop.Directory(ctx)
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		if problem = json.Unmarshal(result, &entries); problem != nil || len(entries) != 1 || entries[0]["business_type"] != "RETAIL" {
+			t.Fatalf("directory fixture rollback failed: %v", problem)
+		}
+	})
 	t.Run("real HTTP exposes mode and enforces scope auth csrf and creation denial", func(t *testing.T) {
 		origin := "http://localhost:18088"
 		logger := slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -251,7 +309,7 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 			t.Fatal(problem)
 		}
 		var entries []map[string]any
-		if problem = json.Unmarshal(result, &entries); problem != nil || len(entries) != 1 || entries[0]["slug"] != firstShop.Slug || len(entries[0]) != 3 {
+		if problem = json.Unmarshal(result, &entries); problem != nil || len(entries) != 1 || entries[0]["slug"] != firstShop.Slug || len(entries[0]) != 4 || entries[0]["business_type"] != first.Organization.BusinessType {
 			t.Fatalf("unsafe public directory: %v", problem)
 		}
 		if _, problem = shop.PublicSettings(ctx, "second-fixture"); !errors.Is(problem, storefront.ErrNotFound) {

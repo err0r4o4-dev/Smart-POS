@@ -119,7 +119,7 @@ function renderSetup(initialEntries = ['/setup']) {
       <MemoryRouter initialEntries={initialEntries}>
         <Routes>
           <Route path="/setup" element={<SetupPage />} />
-          <Route path="/manage/dashboard" element={<h1>แดชบอร์ด</h1>} />
+          <Route path="/dashboard" element={<h1>แดชบอร์ด</h1>} />
           <Route path="/account" element={<h1>บัญชี</h1>} />
         </Routes>
       </MemoryRouter>
@@ -619,6 +619,26 @@ it('renders standalone VELOPOS hero panel and form layout without backoffice sid
   renderSetup();
 
   expect(document.querySelector('aside.sidebar')).not.toBeInTheDocument();
+  const topbar = document.querySelector('header.topbar.setup-topbar');
+  expect(topbar).toBeInTheDocument();
+  expect(document.querySelector('.topbar .breadcrumb strong')).toHaveTextContent('เริ่มต้นใช้งานร้านอาหาร');
+  expect(topbar?.querySelector('.workspace-area-link')).not.toBeInTheDocument();
+  expect(topbar?.querySelector('.tag')).not.toBeInTheDocument();
+  expect(within(topbar as HTMLElement).queryByText('ดูหน้าร้าน')).not.toBeInTheDocument();
+  expect(within(topbar as HTMLElement).queryByText('เจ้าของร้าน')).not.toBeInTheDocument();
+
+  const stepper = screen.getByRole('complementary', { name: 'ความคืบหน้าการตั้งค่า' });
+  expect(stepper).toHaveClass('setup-top-stepper');
+  expect(stepper).not.toHaveClass('visually-hidden');
+  expect(stepper.querySelector('.setup-top-stepper-line')).toBeInTheDocument();
+  const badges = Array.from(stepper.querySelectorAll('.setup-top-step-badge')).map((el) => el.textContent?.trim());
+  expect(badges).toEqual(['1', '2', '3', '4', '5', '6', '7']);
+  const layout = document.querySelector('.setup-layout');
+  expect(layout).not.toBeNull();
+  expect(stepper.compareDocumentPosition(layout!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(within(stepper).getByText('ตั้งค่าข้อมูลพื้นฐาน')).toBeVisible();
+  expect(within(stepper).getByText('ตรวจทานและเริ่มใช้งาน')).toBeVisible();
+
   const hero = screen.getByRole('complementary', { name: 'จุดเด่นและบริการ VELOPOS' });
   expect(within(hero).getByText(/ตั้งค่าร้านอาหารของคุณ/)).toBeVisible();
   expect(within(hero).getByText(/เริ่มใช้งาน VELOPOS/)).toBeVisible();

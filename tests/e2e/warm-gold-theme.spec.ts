@@ -206,8 +206,9 @@ for (const width of widths) {
     const name = page.getByLabel('ชื่อร้าน', { exact: true });
     await expect(name).toHaveValue(organization.name);
     await expect(page.locator('aside.sidebar')).toHaveCount(0);
-    await expect(page.locator('.setup-topbar')).toBeVisible();
-    await expect(page.locator('.setup-topbar .language-switcher')).toBeVisible();
+    await expect(page.locator('.topbar')).toBeVisible();
+    await expect(page.locator('.breadcrumb strong')).toBeVisible();
+    await expect(page.locator('.topbar .language-switcher')).toBeVisible();
     await expect(
       page.getByRole('button', { name: /บันทึกและถัดไป/ }),
     ).toBeVisible();

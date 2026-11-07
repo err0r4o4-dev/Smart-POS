@@ -6,22 +6,25 @@ import {
   ArrowRight,
   Banknote,
   BarChart3,
+  Bell,
   Check,
   CheckCircle2,
   ChevronDown,
+  ChevronRight,
   CircleAlert,
+  CircleHelp,
   CreditCard,
   GitBranch,
+  House,
   Info,
   LayoutGrid,
-  ListChecks,
-  MapPinned,
   QrCode,
-  ReceiptText,
+  ShoppingBag,
   Store,
   Utensils,
   WalletCards,
 } from 'lucide-react';
+import { paths } from '../../app/routes';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavigate';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -29,6 +32,7 @@ import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
 import { Brand, Button, Card, Loading, Tag } from '../../components/ui/primitives';
 import { LanguageSwitcher } from '../../components/ui/LanguageSwitcher';
+import { AccountMenu } from '../../components/ui/AccountMenu';
 import { StandardPageHeader } from '../../components/ui/StandardPage';
 import './setup.css';
 import { SettingsPage } from './SettingsPage';
@@ -217,11 +221,42 @@ const createSetupForm = (): SetupFormState => ({
   orders: { qr_ordering: true, kitchen_queue: true, auto_confirm: false, vat_percent: '0', service_charge_percent: '0' },
 });
 
+function DiningTableIcon({
+  size = 24,
+  strokeWidth = 2,
+}: {
+  size?: number;
+  strokeWidth?: number;
+}) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3.5 6v12" />
+      <path d="M3.5 13h4.5v5" />
+      <path d="M20.5 6v12" />
+      <path d="M20.5 13H16v5" />
+      <path d="M8.5 9.5h7" />
+      <path d="M12 9.5V18" />
+      <path d="M10 18h4" />
+    </svg>
+  );
+}
+
 const setupMeta = [
   {
     key: 'profile',
     label: 'ข้อมูลร้าน',
-    sidebarSubtitle: 'ตั้งค่าข้อมูลพื้นฐานของร้าน',
+    sidebarSubtitle: 'ตั้งค่าข้อมูลพื้นฐาน',
     cardSubtitle: 'กรอกข้อมูลพื้นฐานของร้านอาหาร เพื่อเริ่มใช้งานระบบ',
     description: 'กรอกข้อมูลพื้นฐานของร้านอาหาร เพื่อเริ่มใช้งานระบบ',
     icon: Store,
@@ -232,7 +267,7 @@ const setupMeta = [
     sidebarSubtitle: 'เลือกรูปแบบการให้บริการ',
     cardSubtitle: 'เลือกรูปแบบการให้บริการ',
     description: 'เลือกช่องทางบริการของร้าน',
-    icon: Store,
+    icon: Bell,
   },
   {
     key: 'tables',
@@ -240,7 +275,7 @@ const setupMeta = [
     sidebarSubtitle: 'จัดการพื้นที่และโต๊ะ',
     cardSubtitle: 'จัดการพื้นที่และโต๊ะ',
     description: 'จัดโซน โต๊ะ และ QR สำหรับหน้าร้าน',
-    icon: MapPinned,
+    icon: DiningTableIcon,
   },
   {
     key: 'menu',
@@ -256,7 +291,7 @@ const setupMeta = [
     sidebarSubtitle: 'ตั้งค่าวิธีการรับชำระ',
     cardSubtitle: 'ตั้งค่าวิธีการรับชำระ',
     description: 'เลือกช่องทางรับชำระที่ใช้งานจริง',
-    icon: WalletCards,
+    icon: CreditCard,
   },
   {
     key: 'orders',
@@ -264,15 +299,15 @@ const setupMeta = [
     sidebarSubtitle: 'ตั้งค่าช่องทางการสั่งซื้อ',
     cardSubtitle: 'ตั้งค่าช่องทางการสั่งซื้อ',
     description: 'กำหนด QR คิวครัว และค่าธรรมเนียม',
-    icon: ReceiptText,
+    icon: ShoppingBag,
   },
   {
     key: 'review',
     label: 'ตรวจสอบความพร้อม',
-    sidebarSubtitle: 'ตรวจทานข้อมูลก่อนเริ่มใช้งาน',
+    sidebarSubtitle: 'ตรวจทานและเริ่มใช้งาน',
     cardSubtitle: 'ตรวจทานข้อมูลก่อนเริ่มใช้งาน',
     description: 'ตรวจรายการก่อนเปิดใช้งานร้าน',
-    icon: ListChecks,
+    icon: CheckCircle2,
   },
 ] as const;
 
@@ -814,7 +849,7 @@ function ScopedSetupPage() {
     (!tenant.context && tenant.storeMode !== 'multi')
   ) return <Navigate to="/account" replace />;
   if (setupQuery.data?.complete)
-    return <Navigate to="/manage/dashboard" replace />;
+    return <Navigate to="/dashboard" replace />;
 
   const localIncomplete = localReadiness(form);
   const readinessItems = serverState?.readiness?.incomplete ?? localIncomplete;
@@ -887,7 +922,7 @@ function ScopedSetupPage() {
         }
         await tenant.refresh();
         if (!activeRef.current) return;
-        navigate(result.dashboard || '/manage/dashboard', { replace: true });
+        navigate(result.dashboard || '/dashboard', { replace: true });
       } catch (failure) {
         setError(failure instanceof Error ? failure.message : 'เปิดใช้งานร้านไม่สำเร็จ กรุณาลองใหม่');
       } finally {
@@ -960,12 +995,39 @@ function ScopedSetupPage() {
 
   return (
     <div className="setup-page-wrapper">
-      <header className="setup-topbar">
-        <div className="setup-topbar-brand">
-          <Brand />
+      <header className="topbar setup-topbar">
+        <div className="setup-topbar-left">
+          <Link
+            to="/"
+            className="setup-topbar-brand"
+            aria-label={`VELO SmartPOS · ${t('shell.accountAndAccess')}`}
+          >
+            <Brand />
+          </Link>
+          <span className="setup-topbar-divider" aria-hidden="true" />
+          <div className="breadcrumb">
+            <span className="breadcrumb-home" aria-hidden="true">
+              <House size={15} />
+            </span>
+            <span>{t('shell.accountAndAccess')}</span>
+            <ChevronRight
+              size={15}
+              className="breadcrumb-separator"
+              aria-hidden="true"
+            />
+            <strong>เริ่มต้นใช้งานร้านอาหาร</strong>
+          </div>
         </div>
-        <div className="setup-topbar-actions">
+        <div className="topbar-right setup-topbar-actions">
           <LanguageSwitcher />
+          <Link
+            to={paths.help}
+            className="icon-button topbar-help"
+            aria-label={t('landing.help')}
+          >
+            <CircleHelp size={20} aria-hidden="true" />
+          </Link>
+          <AccountMenu />
         </div>
       </header>
 
@@ -982,31 +1044,56 @@ function ScopedSetupPage() {
         )}
         {setupQuery.error && <ErrorMessage message={setupQuery.error.message} />}
 
+        <aside className="setup-top-stepper" aria-label="ความคืบหน้าการตั้งค่า">
+          <div className="setup-top-stepper-line" aria-hidden="true">
+            <div
+              className="setup-top-stepper-line-fill"
+              style={{ width: `${(step / (setupMeta.length - 1)) * 100}%` }}
+            />
+          </div>
+          <ol className="setup-top-stepper-list">
+            {setupMeta.map((item, index) => {
+              const StepIcon = item.icon;
+              const complete =
+                index < step ||
+                Boolean(
+                  serverState?.steps?.find((entry) => entry.key === item.key)
+                    ?.complete,
+                );
+              const isActive = index === step;
+              return (
+                <li
+                  key={item.key}
+                  className={`setup-top-step-item ${isActive ? 'is-active' : ''} ${complete ? 'is-complete' : ''}`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => index <= step && setStep(index as SetupStepIndex)}
+                    disabled={pending || index > step}
+                    aria-current={isActive ? 'step' : undefined}
+                    className="setup-top-step-button"
+                  >
+                    <span className="setup-top-step-media">
+                      <span className="setup-top-step-badge">{index + 1} </span>
+                      <span className="setup-top-step-icon" aria-hidden="true">
+                        <StepIcon size={20} strokeWidth={1.9} />
+                      </span>
+                    </span>
+                    <span className="setup-top-step-copy">
+                      <strong className="setup-top-step-title">{item.label}</strong>{' '}
+                      <small className="setup-top-step-subtitle">
+                        {item.sidebarSubtitle}
+                      </small>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        </aside>
+
         <div className="setup-layout">
           <SetupHeroPanel />
-
-          <aside className="visually-hidden" aria-label="ความคืบหน้าการตั้งค่า">
-            <ol>
-              {setupMeta.map((item, index) => {
-                const complete = index < step || Boolean(serverState?.steps?.find((entry) => entry.key === item.key)?.complete);
-                const isActive = index === step;
-                return (
-                  <li key={item.key}>
-                    <button
-                      type="button"
-                      onClick={() => index <= step && setStep(index as SetupStepIndex)}
-                      disabled={pending || index > step}
-                      aria-current={isActive ? 'step' : undefined}
-                    >
-                      <span>{complete && !isActive ? '✓' : index + 1}</span>{' '}
-                      <strong>{item.label}</strong>{' '}
-                      <small>{item.sidebarSubtitle}</small>
-                    </button>
-                  </li>
-                );
-              })}
-            </ol>
-          </aside>
 
           <section className="setup-main">
             <Card className="setup-card">

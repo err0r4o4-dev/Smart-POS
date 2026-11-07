@@ -1,3 +1,31 @@
+# Shop directory business-type toolbar (2026-11-08)
+
+Scope: Move category toggle, heading, search and layout controls into the results
+toolbar. Filter real published shops by saved business type, not product category.
+Add only business_type to directory responses; preserve visibility, tenant scope,
+sorting, limits and function grants. No database execution without a confirmed
+isolated disposable target. Rollback: migration 33 down restores directory shape;
+no stored data is changed.
+
+- [/] Add regression tests and implement API metadata plus migration 33.
+- [ ] Implement responsive toolbar and accessible shop-type filters.
+- [ ] Run focused Go/web tests, contracts, typecheck, build and browser checks.
+- [ ] Obtain authorized independent scoped review and address findings.
+- [?] Database upgrade, runtime isolation and rollback acceptance require a confirmed isolated target.
+- [ ] Remove this section only after all required acceptance passes.
+
+# Storeless account onboarding redirect (2026-11-08)
+
+Scope: Redirect authenticated multi-store users without an organization from
+`/account` to `/setup`. Preserve loading/error handling, existing memberships,
+single-store restrictions, authentication and server-side authorization.
+
+- [x] Reproduce account landing with focused routing regression tests.
+  RED: direct `/account` routing test fails because Account remains visible.
+- [x] Add the onboarding redirect without changing access checks.
+- [/] Run focused regression tests, web tests and typecheck; review the diff.
+- [ ] Remove this section after verification passes.
+
 # Warm Gold application-wide UI (2026-11-07)
 
 Approved scope: Apply the supplied white/cream/gold reference across the web UI,
@@ -54,12 +82,14 @@ Preserve all functional logic, step validations, API contracts, and tests.
 - [x] 1. Move `/setup` route outside `RoleWorkspaceLayout` in `router.tsx` to remove the sidebar menu
 - [x] 2. Update `OrganizationPages.tsx` with left hero panel and right step card layout matching Image 2
 - [x] 3. Update `setup.css` with standalone ambient shell, 2-column split layout, typography, squircles, and responsive styling
-- [x] 4. Reconcile `OrganizationPages.test.tsx`, `tests/e2e/restaurant-setup.spec.ts`, and `tests/e2e/warm-gold-theme.spec.ts` for standalone `/setup`
-- [/] 5. Run tests, typecheck, lint, and build verification
-  PASS: `npm run test --workspace @smartpos/web -- src/features/organization/OrganizationPages.test.tsx src/features/workspace/WorkspacePages.test.tsx src/app/` (13 files / 165 tests passed); IDE TypeScript/ESLint diagnostics reported 0 errors / 0 warnings on all modified files.
-  BLOCKED (host classifier temporarily unavailable): `npm run typecheck`, `npm run lint`, `npm run build`.
-- [ ] 6. Verify visual integrity and responsive behavior in Playwright (320px, 768px, 1440px) once classifier recovers
-- [ ] 7. Clean up completed task section from TODO.md upon full verification
+- [x] 4. Add centered 7-step horizontal stepper bar above `.setup-layout` matching Image 3, with standard `.topbar` header, step number badges (`1`–`7`), and horizontal connecting line (TDD)
+- [x] 5. Reconcile `OrganizationPages.test.tsx`, `tests/e2e/restaurant-setup.spec.ts`, and `tests/e2e/warm-gold-theme.spec.ts` for standalone `/setup` with top stepper
+- [x] Header follow-up: remove storefront link and role badge from `/setup` only; retain shared language, help and AccountMenu controls. Preserve other workspace headers.
+  Fresh verification: 46 setup unit tests passed; 3 mocked Playwright layout cases passed at 320/768/1440px, including header absence assertions, keyboard focus and page overflow. Inspected desktop and mobile screenshots; removed sticky positioning after mobile capture showed the header covering content. Browser evidence uses synthetic APIs, not live database acceptance.
+- [/] 6. Run tests, typecheck, lint, and build verification
+  PASS: focused setup Vitest (46 tests), `npm run typecheck`, `npm run build`, and `git diff --check`. `npm run lint` completed with 0 errors / 9 warnings in other files. No blanket IDE-diagnostics pass is claimed. Broader earlier acceptance remains separate.
+- [ ] 7. Complete broader visual acceptance; header layout checks at 320/768/1440px passed as recorded above
+- [ ] 8. Clean up completed task section from TODO.md upon full verification
 
 # Onboarding simplification (2026-11-06)
 
@@ -403,3 +433,4 @@ Execution decisions:
   - [ ] Run `vitest run AuthPages`
   - [ ] Run `npm run build`
   - [ ] Cleanup TODO.md
+

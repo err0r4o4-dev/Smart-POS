@@ -90,6 +90,7 @@ export const shared = defineMessages({
     managementSection: 'จัดการร้าน',
     settingsSection: 'ตั้งค่าระบบ',
     onlineStorefrontMenu: 'หน้าร้านออนไลน์',
+    storeSettingsMenu: 'การตั้งค่า',
   },
   en: {
     storeOwner: 'Store owner',
@@ -185,5 +186,6 @@ export const shared = defineMessages({
     managementSection: 'Store management',
     settingsSection: 'System settings',
     onlineStorefrontMenu: 'Online storefront',
+    storeSettingsMenu: 'Settings',
   },
 });

@@ -71,17 +71,17 @@ function view(settings = false) {
       <MemoryRouter
         initialEntries={[
           settings
-            ? '/manage/settings/storefront'
-            : '/manage/online-orders/order',
+            ? '/settings/storefront'
+            : '/orders/order',
         ]}
       >
         <Routes>
           <Route
-            path="/manage/settings/storefront"
+            path="/settings/storefront"
             element={<StorefrontSettingsPage />}
           />
           <Route
-            path="/manage/online-orders/:orderId"
+            path="/orders/:orderId"
             element={<OnlineOrderPage />}
           />
         </Routes>
@@ -333,7 +333,7 @@ it('sends READY orders to POS in the management workspace', async () => {
   view();
   expect(
     await screen.findByRole('link', { name: 'ลูกค้ามารับ · เปิดเข้า POS' }),
-  ).toHaveAttribute('href', '/manage/pos?online_order=order');
+  ).toHaveAttribute('href', '/pos?online_order=order');
   expect(
     screen.queryByRole('button', { name: /สำเร็จ/ }),
   ).not.toBeInTheDocument();

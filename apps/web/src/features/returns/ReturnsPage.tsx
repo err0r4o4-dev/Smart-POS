@@ -97,7 +97,7 @@ function RefundPage({ code }: { code: string }) {
         description={code}
       />
       <nav className="catalog-nav">
-        <Link to="/sales/refunds">{text.refundList}</Link>
+        <Link to="/refunds">{text.refundList}</Link>
       </nav>
       <CatalogError error={command.error} />
       {!isID && lookup.isPending && <Loading>{text.loading}</Loading>}
@@ -139,8 +139,7 @@ function ReturnsWorkspace({ refunds }: { refunds: boolean }) {
       />
       <nav className="catalog-nav">
         <Link to="/sales">{text.back}</Link>
-        <Link to="/pos/returns">{text.returns}</Link>
-        <Link to="/sales/refunds">{text.refunds}</Link>
+        <Link to="/refunds">{text.refunds}</Link>
       </nav>
       <CatalogError error={command.error} />
       {!refunds && tenant.can('returns.create') && (
@@ -175,7 +174,7 @@ function ReturnsWorkspace({ refunds }: { refunds: boolean }) {
                     {refunds && !('number' in item) ? (
                       <Link
                         className="button button-secondary"
-                        to={`/sales/refunds/${encodeURIComponent(item.return_number || item.id)}`}
+                        to={`/refunds/${encodeURIComponent(item.return_number || item.id)}`}
                       >
                         {item.return_number || item.id}
                       </Link>
@@ -605,7 +604,7 @@ function ReturnPanel({
             <Button className="button-secondary" onClick={() => window.print()}>
               {text.print}
             </Button>
-            {doc.refund_id && <Link to="/sales/refunds">{text.refunds}</Link>}
+            {doc.refund_id && <Link to="/refunds">{text.refunds}</Link>}
           </div>
         </>
       )}

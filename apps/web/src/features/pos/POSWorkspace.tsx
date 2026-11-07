@@ -53,14 +53,14 @@ export function POSWorkspace() {
             {t('pos.heldCarts')} <span className="shortcut-badge">F4</span>
           </Link>
           <Link to="/pos/checkout">{t('pos.checkout')}</Link>
-          <Link to="/pos/register/open">{t('pos.openShift')}</Link>
-          <Link to="/pos/register/close">{t('pos.closeShift')}</Link>
-          <Link to="/pos/register/history">{t('pos.shiftHistory')}</Link>
+          <Link to="/pos/shifts/open">{t('pos.openShift')}</Link>
+          <Link to="/pos/shifts/close">{t('pos.closeShift')}</Link>
+          <Link to="/pos/shifts/history">{t('pos.shiftHistory')}</Link>
           <Link to="/pos/shifts">{t('pos.paymentReview')}</Link>
           <Link to="/sales">{t('pos.salesHistory')}</Link>
           <Link to="/receipts">{t('pos.receipts')}</Link>
           {tenant.can('online_orders.read') && (
-            <Link to="/online-orders">{t('pos.onlineOrders')}</Link>
+            <Link to="/orders">{t('pos.onlineOrders')}</Link>
           )}
         </nav>
         <main id="main-content">

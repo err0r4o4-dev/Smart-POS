@@ -1,6 +1,10 @@
 ﻿import { useMemo, useSyncExternalStore } from 'react';
 import type { ShopProduct } from '../../lib/storefront-api';
-import { exactDecimal, isKnownStockPolicy, MAX_LINE_QUANTITY } from '../../lib/pos-api';
+import {
+  exactDecimal,
+  isKnownStockPolicy,
+  MAX_LINE_QUANTITY,
+} from '../../lib/pos-api';
 
 export type CartEntry = Pick<
   ShopProduct,
@@ -41,7 +45,9 @@ function readCart(value: string): CartEntry[] {
           'unit_type',
           'unit_price',
           'quantity',
-        ].every((key) => typeof (item as Record<string, unknown>)[key] === 'string') &&
+        ].every(
+          (key) => typeof (item as Record<string, unknown>)[key] === 'string',
+        ) &&
         ((item as Record<string, unknown>).image_url === undefined ||
           typeof (item as Record<string, unknown>).image_url === 'string') &&
         exactDecimal((item as CartEntry).quantity, 3) !== null &&
@@ -107,7 +113,9 @@ export function useShopCart(slug?: string) {
       const total =
         units + (existing ? (exactDecimal(existing.quantity, 3) ?? 0n) : 0n);
       if (
-        !product.saleable || !isKnownStockPolicy(product.stock_policy) || total > MAX_LINE_QUANTITY ||
+        !product.saleable ||
+        !isKnownStockPolicy(product.stock_policy) ||
+        total > MAX_LINE_QUANTITY ||
         (product.stock_policy !== 'MENU_ONLY' &&
           total > (exactDecimal(product.available ?? '', 3) ?? 0n))
       )

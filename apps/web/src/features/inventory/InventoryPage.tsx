@@ -3,11 +3,7 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Boxes,
-  History,
-  MapPin,
-} from 'lucide-react';
+import { Boxes, History, MapPin } from 'lucide-react';
 import { useInventoryCommand } from './inventory-hooks';
 import { QueryFeedback } from '../../components/feedback/QueryFeedback';
 import { useOrganization } from '../../app/OrganizationProvider';
@@ -109,13 +105,7 @@ export function InventoryPage({ section }: { section: string }) {
     />
   );
 }
-function InventoryScreen({
-  section,
-  id,
-}: {
-  section: string;
-  id?: string;
-}) {
+function InventoryScreen({ section, id }: { section: string; id?: string }) {
   const { t, localize, labelCode } = useLanguage();
 
   const tenant = useOrganization();

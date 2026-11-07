@@ -31,8 +31,7 @@ export const workspace = defineMessages({
       'สิทธิ์ของคุณกำหนดโดยร้าน เปลี่ยนจากเมนูไม่ได้',
     myAccount: 'บัญชี',
     checkingManagementWorkspace: 'กำลังตรวจสอบพื้นที่จัดการร้าน…',
-    overviewSubtitle:
-      'สรุปยอดขาย สต็อก และงานของร้าน {store} ({branch})',
+    overviewSubtitle: 'สรุปยอดขาย สต็อก และงานของร้าน {store} ({branch})',
     mainBranch: 'สาขาหลัก',
     selectPeriod: 'เลือกช่วงเวลา',
     period7Days: 'ช่วงเวลา: 7 วันล่าสุด',
@@ -88,8 +87,7 @@ export const workspace = defineMessages({
       'No tasks are available for your role. Contact the store owner.',
     managementArea: 'Store management',
     storeOverview: 'Overview',
-    manageYourStoreWithinYourPermissions:
-      '· Work within your permissions',
+    manageYourStoreWithinYourPermissions: '· Work within your permissions',
     storeAndTeamInformationTogether: 'Store and team information',
     customerAndStaffAreasAreSeparateFrom:
       'Customer and staff areas are separate from store management. Switching areas does not change your role.',
@@ -114,8 +112,7 @@ export const workspace = defineMessages({
       'Your role is assigned by the store. You cannot change it yourself from the menu.',
     myAccount: 'Account',
     checkingManagementWorkspace: 'Checking management workspace…',
-    overviewSubtitle:
-      'Sales, stock, and work summary for {store} ({branch})',
+    overviewSubtitle: 'Sales, stock, and work summary for {store} ({branch})',
     mainBranch: 'Main branch',
     selectPeriod: 'Select period',
     period7Days: 'Period: Last 7 days',

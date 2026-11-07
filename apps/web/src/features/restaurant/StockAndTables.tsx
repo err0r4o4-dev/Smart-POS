@@ -4,7 +4,11 @@ import { Button, Card } from '../../components/ui/primitives';
 import type { ShopSettings } from '../../lib/storefront-api';
 import { Field, Table } from '../inventory/InventoryUI';
 import { CommandState, QueryState } from './RestaurantUI';
-import { useRestaurantCommand, useRestaurantQuery, useRestaurantScope } from './restaurant-hooks';
+import {
+  useRestaurantCommand,
+  useRestaurantQuery,
+  useRestaurantScope,
+} from './restaurant-hooks';
 
 interface DiningTable {
   id: string;

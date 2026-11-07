@@ -83,9 +83,10 @@ it('toggles groups independently and remembers collapsed/expanded state across r
     'aria-expanded',
     'false',
   );
-  expect(
-    screen.getByRole('button', { name: 'เมนูอาหาร' }),
-  ).toHaveAttribute('aria-expanded', 'true');
+  expect(screen.getByRole('button', { name: 'เมนูอาหาร' })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
 
   fireEvent.click(screen.getByRole('button', { name: 'การขายและคิว' }));
   refreshed.unmount();
@@ -255,4 +256,3 @@ it('renders /help outside groups and excludes /setup and /account from managemen
   // Help remains visible because it is outside groups
   expect(screen.getByRole('link', { name: 'คู่มือ' })).toBeVisible();
 });
-

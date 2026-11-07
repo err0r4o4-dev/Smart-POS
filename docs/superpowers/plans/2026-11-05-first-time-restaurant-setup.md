@@ -45,12 +45,14 @@
 ### Task 1: Add setup and verification schema
 
 **Files:**
+
 - Create: `database/migrations/000030_first_time_restaurant_setup.up.sql`
 - Create: `database/migrations/000030_first_time_restaurant_setup.down.sql`
 - Modify: `apps/api/internal/platform/database/database.go`
 - Test: `apps/api/internal/platform/database/setup_migration_test.go`
 
 **Interfaces:**
+
 - Produces tables and constraints for email verification tokens, setup state, restaurant setup settings, service modes, zones, table-zone links, payment settings, tax/service-charge settings, and trial state.
 - Keeps all organization/branch foreign keys, uniqueness, status checks, and RLS policies tenant-scoped.
 
@@ -62,6 +64,7 @@
 ### Task 2: Implement email verification
 
 **Files:**
+
 - Modify: `apps/api/internal/modules/identity/service.go`
 - Modify: `apps/api/internal/modules/identity/http.go`
 - Modify: `apps/api/internal/modules/identity/mailer.go`
@@ -71,6 +74,7 @@
 - Modify: `packages/contracts/routes.json`
 
 **Interfaces:**
+
 - Add `POST /api/v1/auth/email/verify` and `POST /api/v1/auth/email/resend`.
 - Verification response returns the established envelope and refreshed auth/onboarding state.
 - Resend is rate-limited and never confirms whether an email exists.
@@ -84,6 +88,7 @@
 ### Task 3: Add setup aggregate and restaurant settings API
 
 **Files:**
+
 - Create/modify: `apps/api/internal/modules/restaurant/setup.go`
 - Modify: `apps/api/internal/modules/restaurant/http.go`
 - Modify: `apps/api/internal/modules/restaurant/service.go`
@@ -94,6 +99,7 @@
 - Modify: `packages/contracts/routes.json`
 
 **Interfaces:**
+
 - `GET /api/v1/organizations/{id}/restaurant/setup` returns saved six-step state and readiness reasons.
 - `PUT /api/v1/organizations/{id}/restaurant/setup/profile` saves restaurant profile.
 - `PUT /api/v1/organizations/{id}/restaurant/setup/services` saves dine-in, takeaway, and delivery modes.
@@ -113,6 +119,7 @@
 ### Task 4: Add frontend API adapter and six-step wizard
 
 **Files:**
+
 - Modify: `apps/web/src/features/organization/OrganizationPages.tsx`
 - Create: `apps/web/src/features/organization/setup-api.ts`
 - Create: `apps/web/src/features/organization/setup.css`
@@ -120,6 +127,7 @@
 - Modify: `apps/web/src/app/AuthProvider*` only if onboarding state requires it
 
 **Interfaces:**
+
 - `SetupWizard` renders six real steps and consumes typed setup/readiness responses.
 - Each step has `back`, `next`, retry, field validation, and persisted server progress.
 - Unsupported capabilities show unavailable/disabled state, never fake completion.
@@ -133,12 +141,14 @@
 ### Task 5: Add readiness review and dashboard transition
 
 **Files:**
+
 - Modify: `apps/web/src/features/organization/OrganizationPages.tsx`
 - Modify: `apps/web/src/features/organization/setup-api.ts`
 - Modify: `apps/web/src/features/workspace/WorkspaceRouting.tsx` or the owning guard only if required
 - Test: `apps/web/src/features/organization/OrganizationPages.test.tsx`
 
 **Interfaces:**
+
 - Review screen shows exact incomplete prerequisites.
 - Complete setup calls the server completion endpoint once, handles conflict/retry, then routes to the existing dashboard.
 - Existing organizations bypass setup without changing workspace navigation behavior.
@@ -150,6 +160,7 @@
 ### Task 6: Preserve order snapshots and enforce kitchen safety
 
 **Files:**
+
 - Modify: `apps/api/internal/modules/pos/*`
 - Modify: `apps/api/internal/modules/storefront/*`
 - Modify: `apps/api/internal/modules/restaurant/queue.go`
@@ -157,6 +168,7 @@
 - Create/modify: additive migration only if snapshot columns are absent
 
 **Interfaces:**
+
 - Orders capture selected service mode, modifier prices, VAT, service charge, payment method, and setup revision at creation.
 - Kitchen queue continues requiring `PAID` payment and unreleased stock hold, excluding active refund and fulfillment review states.
 
@@ -171,6 +183,7 @@ Current gap: modifiers, real tax/service-charge pricing, SQL and refund reconcil
 ### Task 7: Full verification and independent review
 
 **Files:**
+
 - No source changes unless verification exposes a task-owned defect.
 
 - [ ] Run `go test ./... -count=1`, `go vet ./...`, and `go build ./...` from `apps/api` against the final integrated changes. Previous checked results are historical.

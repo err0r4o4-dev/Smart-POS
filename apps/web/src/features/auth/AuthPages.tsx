@@ -194,7 +194,9 @@ export function RegisterPage() {
       <LoginLayout titleId="verify-title">
         <div className="auth-header-card">
           <Tag tone="amber">{t('auth.createAccount2')}</Tag>
-          <h2 id="verify-title">{language === 'en' ? 'Verify your email' : 'ยืนยันอีเมล'}</h2>
+          <h2 id="verify-title">
+            {language === 'en' ? 'Verify your email' : 'ยืนยันอีเมล'}
+          </h2>
           <p>
             {language === 'en'
               ? 'Your account was created. Verify your email before setting up your store.'

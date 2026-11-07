@@ -32,8 +32,8 @@ function ShopEntry() {
 
   const visibleShops = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
-    return (shops.data ?? []).filter((shop) =>
-      !query || shop.name.toLocaleLowerCase().includes(query),
+    return (shops.data ?? []).filter(
+      (shop) => !query || shop.name.toLocaleLowerCase().includes(query),
     );
   }, [search, shops.data]);
   return (

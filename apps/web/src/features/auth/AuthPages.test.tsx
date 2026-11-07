@@ -127,9 +127,9 @@ it('renders the register page in the split layout and validates mismatched passw
   expect(
     within(registerPanel).getByLabelText('Password', { exact: true }),
   ).toHaveValue('');
-  expect(
-    within(registerPanel).getByLabelText('Confirm password'),
-  ).toHaveValue('');
+  expect(within(registerPanel).getByLabelText('Confirm password')).toHaveValue(
+    '',
+  );
   expect(
     within(registerPanel).getByRole('link', {
       name: 'Already have an account? Sign in',

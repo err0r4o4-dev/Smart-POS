@@ -62,8 +62,13 @@ export interface POSCart {
   pricing?: PricingQuote;
 }
 export function hasValidCartStockPolicy(cart: POSCart): boolean {
-  return isKnownStockPolicy(cart.stock_policy) && cart.items.every(
-    (item) => isKnownStockPolicy(item.stock_policy) && item.stock_policy === cart.stock_policy,
+  return (
+    isKnownStockPolicy(cart.stock_policy) &&
+    cart.items.every(
+      (item) =>
+        isKnownStockPolicy(item.stock_policy) &&
+        item.stock_policy === cart.stock_policy,
+    )
   );
 }
 export interface CartSummary {

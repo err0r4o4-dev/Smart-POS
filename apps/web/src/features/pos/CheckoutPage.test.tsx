@@ -5,7 +5,13 @@ import { MemoryRouter } from 'react-router-dom';
 import { expect, it, vi } from 'vitest';
 import { CheckoutPage } from './CheckoutPage';
 
-const mocks = vi.hoisted(() => ({ request: vi.fn(), mutate: vi.fn(), refresh: vi.fn(), policy: 'MENU_ONLY' as string | undefined, itemPolicy: 'MENU_ONLY' as string | undefined }));
+const mocks = vi.hoisted(() => ({
+  request: vi.fn(),
+  mutate: vi.fn(),
+  refresh: vi.fn(),
+  policy: 'MENU_ONLY' as string | undefined,
+  itemPolicy: 'MENU_ONLY' as string | undefined,
+}));
 vi.mock('./POSContext', () => ({
   usePOS: () => ({
     user: 'user',
@@ -64,9 +70,7 @@ it('keeps cash input and blocks a new checkout until pending server state can be
   );
   expect(prepare).toBeDisabled();
   expect(mocks.mutate).not.toHaveBeenCalled();
-  fireEvent.click(
-    screen.getByRole('button', { name: 'ลองโหลดใหม่' }),
-  );
+  fireEvent.click(screen.getByRole('button', { name: 'ลองโหลดใหม่' }));
   await waitFor(() => expect(prepare).toBeEnabled());
   expect(screen.getByLabelText('เงินรับ')).toHaveValue('10.00');
   fireEvent.click(prepare);
@@ -86,32 +90,95 @@ it('keeps cash input and blocks a new checkout until pending server state can be
   );
 });
 
-it.each([[undefined, 'MENU_ONLY'], ['UNKNOWN', 'MENU_ONLY'], ['MENU_ONLY', undefined], ['MENU_ONLY', 'TRACKED']])('blocks direct checkout with invalid cart %s or item %s policy', async (policy, itemPolicy) => {
-  mocks.policy = policy;
-  mocks.itemPolicy = itemPolicy;
-  mocks.mutate.mockReset();
-  mocks.request.mockResolvedValue({ items: [], total: 0 });
-  render(<QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false}}})}><MemoryRouter><CheckoutPage /></MemoryRouter></QueryClientProvider>);
-  expect(await screen.findByRole('alert')).toHaveTextContent(/โหลดตะกร้าใหม่/);
-  expect(screen.getByRole('button', { name: 'ตรวจสอบยอดและเตรียมชำระเงิน' })).toBeDisabled();
-  expect(mocks.mutate).not.toHaveBeenCalled();
-  mocks.policy = 'MENU_ONLY';
-  mocks.itemPolicy = 'MENU_ONLY';
-});
+it.each([
+  [undefined, 'MENU_ONLY'],
+  ['UNKNOWN', 'MENU_ONLY'],
+  ['MENU_ONLY', undefined],
+  ['MENU_ONLY', 'TRACKED'],
+])(
+  'blocks direct checkout with invalid cart %s or item %s policy',
+  async (policy, itemPolicy) => {
+    mocks.policy = policy;
+    mocks.itemPolicy = itemPolicy;
+    mocks.mutate.mockReset();
+    mocks.request.mockResolvedValue({ items: [], total: 0 });
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <MemoryRouter>
+          <CheckoutPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /โหลดตะกร้าใหม่/,
+    );
+    expect(
+      screen.getByRole('button', { name: 'ตรวจสอบยอดและเตรียมชำระเงิน' }),
+    ).toBeDisabled();
+    expect(mocks.mutate).not.toHaveBeenCalled();
+    mocks.policy = 'MENU_ONLY';
+    mocks.itemPolicy = 'MENU_ONLY';
+  },
+);
 
 it.each([
   ['AWAITING_PAYMENT', 'ยืนยันรับเงินจริง', '/pos/payments/payment/confirm'],
   ['CONFIRMED', 'บันทึกการขาย', '/pos/checkouts/payment/complete'],
-  ['RECONCILIATION_REQUIRED', 'ลองบันทึกขายเดิมอีกครั้ง', '/pos/checkouts/payment/complete'],
-])('allows existing %s payment recovery when cart policy is missing', async (status, button, path) => {
-  mocks.policy = undefined;
-  mocks.mutate.mockReset();
-  mocks.request.mockResolvedValue({ items: [{ id: 'payment', cart_id: 'cart', status, method: 'CASH', total: '10.00', received: '10.00', change: '0.00' }], total: 1 });
-  render(<QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false}}})}><MemoryRouter><CheckoutPage /></MemoryRouter></QueryClientProvider>);
-  const action = await screen.findByRole('button', {name: button});
-  if (status === 'AWAITING_PAYMENT') fireEvent.click(screen.getByRole('checkbox', {name: 'ฉันตรวจสอบแล้วว่าได้รับเงินจริง'}));
-  expect(action).toBeEnabled();
-  fireEvent.click(action);
-  await waitFor(() => expect(mocks.mutate).toHaveBeenCalledWith(path, expect.any(Object), ...(status === 'AWAITING_PAYMENT' ? ['POST', expect.any(String)] : [])));
-  mocks.policy = 'MENU_ONLY';
-});
+  [
+    'RECONCILIATION_REQUIRED',
+    'ลองบันทึกขายเดิมอีกครั้ง',
+    '/pos/checkouts/payment/complete',
+  ],
+])(
+  'allows existing %s payment recovery when cart policy is missing',
+  async (status, button, path) => {
+    mocks.policy = undefined;
+    mocks.mutate.mockReset();
+    mocks.request.mockResolvedValue({
+      items: [
+        {
+          id: 'payment',
+          cart_id: 'cart',
+          status,
+          method: 'CASH',
+          total: '10.00',
+          received: '10.00',
+          change: '0.00',
+        },
+      ],
+      total: 1,
+    });
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <MemoryRouter>
+          <CheckoutPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const action = await screen.findByRole('button', { name: button });
+    if (status === 'AWAITING_PAYMENT')
+      fireEvent.click(
+        screen.getByRole('checkbox', {
+          name: 'ฉันตรวจสอบแล้วว่าได้รับเงินจริง',
+        }),
+      );
+    expect(action).toBeEnabled();
+    fireEvent.click(action);
+    await waitFor(() =>
+      expect(mocks.mutate).toHaveBeenCalledWith(
+        path,
+        expect.any(Object),
+        ...(status === 'AWAITING_PAYMENT' ? ['POST', expect.any(String)] : []),
+      ),
+    );
+    mocks.policy = 'MENU_ONLY';
+  },
+);

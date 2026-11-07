@@ -119,7 +119,9 @@
   background: transparent;
   text-align: left;
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.15s ease;
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease;
   font: inherit;
 }
 
@@ -272,7 +274,9 @@
   border-radius: var(--radius-control);
   background: var(--brand-soft-gradient);
   border: 1px solid var(--primary-border);
-  box-shadow: inset 0 1px 0 #fff, var(--shadow-control);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    var(--shadow-control);
   color: var(--primary-strong);
   display: flex;
   align-items: center;
@@ -346,7 +350,9 @@
   font: inherit;
   font-size: 13px;
   font-weight: 400;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .setup-field textarea {

@@ -310,7 +310,9 @@ function ReturnLines({
   const isMenuOnly = sale.stock_policy === 'MENU_ONLY';
   const isValidPolicy = isKnownStockPolicy(sale.stock_policy);
   const locations = useReturnsQuery<POSPage<Location>>(
-    isTracked ? `/inventory/locations?branch_id=${sale.branch_id}&page_size=100` : '',
+    isTracked
+      ? `/inventory/locations?branch_id=${sale.branch_id}&page_size=100`
+      : '',
   );
   async function submit(event: FormEvent) {
     if (!isValidPolicy) return;
@@ -413,22 +415,22 @@ function ReturnLines({
               </Field>
               {isTracked && (
                 <Field label={`${text.disposition} ${item.sku}`}>
-                <select
-                  value={disposition}
-                  onChange={(event) => {
-                    setDispositions({
-                      ...dispositions,
-                      [item.id]: event.target.value as StockDisposition,
-                    });
-                    setDestinations({ ...destinations, [item.id]: '' });
-                  }}
-                >
-                  <option value="RESTOCK_SELLABLE">{text.sellable}</option>
-                  <option value="QUARANTINE">{text.quarantine}</option>
-                  <option value="DAMAGED">{text.damaged}</option>
-                  <option value="NO_STOCK_RETURN">{text.noStock}</option>
-                </select>
-              </Field>
+                  <select
+                    value={disposition}
+                    onChange={(event) => {
+                      setDispositions({
+                        ...dispositions,
+                        [item.id]: event.target.value as StockDisposition,
+                      });
+                      setDestinations({ ...destinations, [item.id]: '' });
+                    }}
+                  >
+                    <option value="RESTOCK_SELLABLE">{text.sellable}</option>
+                    <option value="QUARANTINE">{text.quarantine}</option>
+                    <option value="DAMAGED">{text.damaged}</option>
+                    <option value="NO_STOCK_RETURN">{text.noStock}</option>
+                  </select>
+                </Field>
               )}
               {isTracked && disposition !== 'NO_STOCK_RETURN' && (
                 <Field label={`${text.destination} ${item.sku}`}>
@@ -472,7 +474,10 @@ function ReturnLines({
         />
       </Field>
       {invalid && <p role="alert">{text.invalid}</p>}
-      <Button type="submit" disabled={command.busy || (isTracked && !locations.data)}>
+      <Button
+        type="submit"
+        disabled={command.busy || (isTracked && !locations.data)}
+      >
         {text.create}
       </Button>
     </form>

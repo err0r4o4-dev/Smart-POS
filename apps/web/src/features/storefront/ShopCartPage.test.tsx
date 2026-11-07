@@ -179,7 +179,9 @@ it('shows delivery fee copy without the pickup-only disclaimer', async () => {
     screen.queryByText(/ไม่มีค่าจัดส่ง เพราะรับที่ร้านเท่านั้น/),
   ).not.toBeInTheDocument();
   expect(
-    screen.getByText('ยอดรวมรวมค่าจัดส่งแล้ว ยังไม่รวมส่วนลด/รางวัลที่อาจใช้ได้ที่ POS'),
+    screen.getByText(
+      'ยอดรวมรวมค่าจัดส่งแล้ว ยังไม่รวมส่วนลด/รางวัลที่อาจใช้ได้ที่ POS',
+    ),
   ).toBeVisible();
 });
 

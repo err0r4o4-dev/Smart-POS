@@ -21,14 +21,20 @@ describe('prohibited wording rules', () => {
   it('does not include the prohibited token in user-facing frontend source files', () => {
     const srcRoot = dirname(fileURLToPath(import.meta.url));
     const prohibitedToken = ['d', 'e', 'm', 'o'].join('');
-    const sourceFiles = findFiles(srcRoot, (file) =>
-      /\.(tsx?|css)$/.test(file) && !file.includes('.test.') && !file.includes('node_modules'),
+    const sourceFiles = findFiles(
+      srcRoot,
+      (file) =>
+        /\.(tsx?|css)$/.test(file) &&
+        !file.includes('.test.') &&
+        !file.includes('node_modules'),
     );
     const violations: { file: string; match: string }[] = [];
 
     for (const file of sourceFiles) {
       const content = readFileSync(file, 'utf8');
-      const matches = content.match(new RegExp(`\\b${prohibitedToken}\\b`, 'i'));
+      const matches = content.match(
+        new RegExp(`\\b${prohibitedToken}\\b`, 'i'),
+      );
       if (matches) {
         violations.push({ file, match: matches[0] });
       }

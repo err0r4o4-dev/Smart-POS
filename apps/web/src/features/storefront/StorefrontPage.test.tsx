@@ -87,20 +87,26 @@ it('renders a storefront directory with one or more published shops', async () =
   fetchMock.mockResolvedValue({
     ...response([
       { slug: settings.slug, name: settings.name, accepting_orders: true },
-      { slug: 'closed-shop', name: 'ร้านปิดรับออเดอร์', accepting_orders: false },
+      {
+        slug: 'closed-shop',
+        name: 'ร้านปิดรับออเดอร์',
+        accepting_orders: false,
+      },
     ]),
     headers: new Headers({ 'X-SmartPOS-Store-Mode': 'multi' }),
   });
   view('/shop');
-  expect(await screen.findByRole('heading', { name: settings.name })).toBeVisible();
+  expect(
+    await screen.findByRole('heading', { name: settings.name }),
+  ).toBeVisible();
   expect(screen.getByText('ร้านปิดรับออเดอร์')).toBeVisible();
   expect(screen.getByText('กำลังรับออเดอร์')).toBeVisible();
   expect(screen.getByText('ปิดรับออเดอร์ชั่วคราว')).toBeVisible();
-  expect(screen.getAllByRole('link', { name: 'ดูหน้าร้าน' })[0]).toHaveAttribute(
-    'href',
-    `/shop/${settings.slug}`,
-  );
-});it('does not fall back to another store when the configured store is unpublished', async () => {
+  expect(
+    screen.getAllByRole('link', { name: 'ดูหน้าร้าน' })[0],
+  ).toHaveAttribute('href', `/shop/${settings.slug}`);
+});
+it('does not fall back to another store when the configured store is unpublished', async () => {
   fetchMock.mockResolvedValue({
     ...response([]),
     headers: new Headers({ 'X-SmartPOS-Store-Mode': 'single' }),
@@ -224,7 +230,13 @@ it('validates quantity against available stock including the existing cart', asy
 
 it('allows a menu-only item without displaying a stock balance', async () => {
   fetchMock.mockImplementation(async (url: string) => {
-    if (url.includes('/products?')) return response({ items: [{ ...product, stock_policy: 'MENU_ONLY', available: null }], total: 1, page: 1, page_size: 24 });
+    if (url.includes('/products?'))
+      return response({
+        items: [{ ...product, stock_policy: 'MENU_ONLY', available: null }],
+        total: 1,
+        page: 1,
+        page_size: 24,
+      });
     return response(settings);
   });
   view('/shop/test-shop');
@@ -234,18 +246,31 @@ it('allows a menu-only item without displaying a stock balance', async () => {
   expect(screen.queryByText(/คงเหลือ 0/)).not.toBeInTheDocument();
   fireEvent.change(input, { target: { value: '2' } });
   fireEvent.click(screen.getByRole('button', { name: 'เพิ่มลงตะกร้า' }));
-  expect(JSON.parse(localStorage.getItem('shop-cart:test-shop')!)[0].quantity).toBe('2.000');
+  expect(
+    JSON.parse(localStorage.getItem('shop-cart:test-shop')!)[0].quantity,
+  ).toBe('2.000');
 });
 
-it.each([undefined, 'FUTURE'])('disables storefront products with a missing or unknown policy %s', async (policy) => {
-  fetchMock.mockImplementation(async (url: string) => {
-    if (url.includes('/products?')) return response({ items: [{ ...product, stock_policy: policy }], total: 1, page: 1, page_size: 24 });
-    return response(settings);
-  });
-  view('/shop/test-shop');
-  await screen.findByRole('heading', { name: 'กาแฟ' });
-  expect(screen.getByRole('button', { name: 'เพิ่มลงตะกร้า' })).toBeDisabled();
-});
+it.each([undefined, 'FUTURE'])(
+  'disables storefront products with a missing or unknown policy %s',
+  async (policy) => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes('/products?'))
+        return response({
+          items: [{ ...product, stock_policy: policy }],
+          total: 1,
+          page: 1,
+          page_size: 24,
+        });
+      return response(settings);
+    });
+    view('/shop/test-shop');
+    await screen.findByRole('heading', { name: 'กาแฟ' });
+    expect(
+      screen.getByRole('button', { name: 'เพิ่มลงตะกร้า' }),
+    ).toBeDisabled();
+  },
+);
 
 it('requests category, price and sort without an availability filter and resets pagination', async () => {
   const category = '22222222-2222-4222-8222-222222222222';

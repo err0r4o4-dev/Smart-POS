@@ -293,7 +293,9 @@
   font-size: 14px;
   color: var(--text-primary);
   background: var(--surface);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
   box-sizing: border-box;
 }
 
@@ -314,7 +316,9 @@
   border-radius: 12px;
   background: var(--surface);
   overflow: hidden;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .storefront-url-group:focus-within {
@@ -448,7 +452,9 @@
   border: 2px solid #ffffff;
   cursor: pointer;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
   position: relative;
   padding: 0;
 }
@@ -458,7 +464,9 @@
 }
 
 .storefront-color-swatch.active {
-  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #eab308;
+  box-shadow:
+    0 0 0 2px #ffffff,
+    0 0 0 4px #eab308;
   transform: scale(1.05);
 }
 

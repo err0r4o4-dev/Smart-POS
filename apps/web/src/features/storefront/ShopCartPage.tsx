@@ -1,6 +1,12 @@
 ﻿import { useLanguage } from '../../app/language';
 import { useEffect, useState, type CSSProperties, type FormEvent } from 'react';
-import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   ArrowLeft,
@@ -272,7 +278,9 @@ function CartContents({ slug }: { slug: string }) {
   const shopPath = location.pathname.replace(/\/cart$/, '') + location.search;
   const navigate = useNavigate();
   const cart = useShopCart(slug);
-  const [diningType, setDiningType] = useState<'takeaway' | 'dine-in' | 'delivery'>(tableToken ? 'dine-in' : 'takeaway');
+  const [diningType, setDiningType] = useState<
+    'takeaway' | 'dine-in' | 'delivery'
+  >(tableToken ? 'dine-in' : 'takeaway');
   const [deliveryAddress, setDeliveryAddress] = useState('');
 
   const [selectedTable, setSelectedTable] = useState('');
@@ -427,7 +435,8 @@ function CartContents({ slug }: { slug: string }) {
     }
   };
 
-  const checkoutOpen = (diningType !== 'dine-in' || !!tableToken) && !!quote.data;
+  const checkoutOpen =
+    (diningType !== 'dine-in' || !!tableToken) && !!quote.data;
 
   useEffect(() => {
     if (checkoutOpen) {
@@ -506,7 +515,8 @@ function CartContents({ slug }: { slug: string }) {
 
       return (
         units !== null &&
-        units > 0n && units <= MAX_LINE_QUANTITY &&
+        units > 0n &&
+        units <= MAX_LINE_QUANTITY &&
         (!['COUNT', 'PACKAGING'].includes(item.unit_type) ||
           units % 1000n === 0n)
       );
@@ -543,7 +553,10 @@ function CartContents({ slug }: { slug: string }) {
       ...(tableToken
         ? { fulfillment: 'PICKUP', table_token: tableToken }
         : diningType === 'delivery'
-          ? { fulfillment: 'DELIVERY', delivery_address: deliveryAddress.trim() }
+          ? {
+              fulfillment: 'DELIVERY',
+              delivery_address: deliveryAddress.trim(),
+            }
           : {}),
       access_token: identity.token,
     });
@@ -551,774 +564,819 @@ function CartContents({ slug }: { slug: string }) {
 
   // PAGE 2: CHECKOUT
   const checkout = checkoutOpen ? (
-      <div style={page}>
-        <PageHeader
-          heading={ui.checkout}
-          backText={ui.backCart}
-          onBack={resetReview}
-        />
-
-        <Steps active={2} language={language} />
-
-        <p
-          style={{
-            margin: '6px 0 18px',
-            fontSize: 14,
-            color: palette.muted,
-          }}
-        >
-          {ui.checkoutHint}
-        </p>
-
-        {shop.error && (
-          <ShopError error={shop.error} retry={() => void shop.refetch()} />
-        )}
-
-        {error != null && <ShopError error={error} />}
-
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns:
-              'repeat(auto-fit, minmax(min(100%, 360px), 1fr))',
-            gap: 18,
-            alignItems: 'start',
-          }}
-        >
-          {/* VERIFIED ORDER */}
-          <section
-            style={{
-              ...card,
-              padding: 'clamp(16px, 2vw, 24px)',
-            }}
-          >
-            <h2 style={title}>
-              <ShoppingBag size={21} aria-hidden="true" />
-              {ui.orderItems}
-            </h2>
-
-            {quote.data.items.map((item) => (
-              <div
-                key={item.variant_id}
-                style={{
-                  borderBottom: `1px solid ${palette.border}`,
-                  padding: '12px 0',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    gap: 12,
-                    alignItems: 'start',
-                  }}
-                >
-                  <div style={{ minWidth: 0 }}>
-                    <strong style={{ overflowWrap: 'anywhere' }}>
-                      {item.product_name}
-                    </strong>
-
-                    <div
-                      style={{
-                        fontSize: 13,
-                        color: palette.muted,
-                        marginTop: 3,
-                      }}
-                    >
-                      {item.variant_name} · {displayQuantity(item.quantity)}{' '}
-                      {item.unit}
-                    </div>
-                  </div>
-
-                  <strong
-                    style={{
-                      color: palette.price,
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    ฿{moneyText(item.line_total)}
-                  </strong>
-                </div>
-              </div>
-            ))}
-
-            <div
-              style={{
-                ...pale,
-                marginTop: 18,
-                marginBottom: 0,
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: 8,
-              }}
-            >
-              <strong>{ui.priceReviewed}</strong>
-
-              <h3
-                style={{
-                  color: palette.price,
-                  fontSize: 24,
-                  margin: 0,
-                }}
-              >
-                ฿{moneyText(quote.data.estimated_total)}
-              </h3>
-            </div>
-
-            <p
-              style={{
-                margin: '11px 0 0',
-                fontSize: 12,
-                color: palette.muted,
-              }}
-            >
-              {diningType === 'delivery'
-                ? language === 'th'
-                  ? 'ยอดรวมรวมค่าจัดส่งแล้ว ยังไม่รวมส่วนลด/รางวัลที่อาจใช้ได้ที่ POS'
-                  : 'Total includes the quoted shipping fee. Excludes discounts / rewards that may apply at POS.'
-                : t('storefront.excludesDiscountsRewardsThatMayApplyAt')}
-            </p>
-
-            <p
-              style={{
-                margin: '12px 0 0',
-                fontSize: 13,
-                color: palette.muted,
-              }}
-            >
-              <Check
-                size={16}
-                aria-hidden="true"
-                style={{
-                  verticalAlign: 'middle',
-                  marginRight: 6,
-                }}
-              />
-              {language === 'th' ? 'ตรวจสอบการชำระเงินหลังส่งออเดอร์' : 'Check payment after submitting the order'}
-            </p>
-            {quote.data.table_code && <p>โต๊ะ {quote.data.table_code}</p>}
-            {diningType === 'delivery' && quote.data.shipping_fee && (
-              <p>ค่าจัดส่ง ฿{moneyText(quote.data.shipping_fee)}</p>
-            )}
-          </section>
-
-          {/* CUSTOMER FORM */}
-          <form
-            onSubmit={submitOrder}
-            style={{
-              ...card,
-              padding: 'clamp(16px, 2vw, 24px)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 18,
-            }}
-          >
-            <h2 style={{ ...title, marginBottom: 0 }}>{ui.customer}</h2>
-
-            <label style={{ fontSize: 14, fontWeight: 600 }}>
-              {t('storefront.pickupRecipientName')}
-              <input
-                style={control}
-                required
-                maxLength={200}
-                autoComplete="name"
-                value={customer.customer_name}
-                onChange={(event) =>
-                  setCustomer({
-                    ...customer,
-                    customer_name: event.target.value,
-                  })
-                }
-              />
-            </label>
-
-            <label style={{ fontSize: 14, fontWeight: 600 }}>
-              {t('storefront.contactPhone')}
-              <input
-                style={control}
-                required
-                type="tel"
-                minLength={3}
-                maxLength={30}
-                autoComplete="tel"
-                value={customer.contact_phone}
-                onChange={(event) =>
-                  setCustomer({
-                    ...customer,
-                    contact_phone: event.target.value,
-                  })
-                }
-              />
-            </label>
-
-            {diningType === 'delivery' && (
-              <label style={{ fontSize: 14, fontWeight: 600 }}>
-                {language === 'th' ? 'ที่อยู่จัดส่ง' : 'Delivery address'}
-                <input required maxLength={2000} style={control} value={deliveryAddress} onChange={(event) => setDeliveryAddress(event.target.value)} />
-              </label>
-            )}
-
-            <label style={{ fontSize: 14, fontWeight: 600 }}>
-              {t('storefront.noteToStore')}
-              <textarea
-                rows={3}
-                maxLength={1000}
-                style={{
-                  ...control,
-                  resize: 'vertical',
-                }}
-                value={customer.customer_note}
-                onChange={(event) =>
-                  setCustomer({
-                    ...customer,
-                    customer_note: event.target.value,
-                  })
-                }
-              />
-            </label>
-
-            <label
-              className="shop-consent"
-              style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: 10,
-                fontSize: 13,
-                fontWeight: 400,
-                lineHeight: 1.65,
-              }}
-            >
-              <input
-                type="checkbox"
-                required
-                style={{
-                  marginTop: 4,
-                  flexShrink: 0,
-                }}
-              />
-              {t('storefront.iUnderstandStockIsReservedAfterSuccessful')}
-            </label>
-
-            <p
-              style={{
-                margin: 0,
-                fontSize: 12,
-                lineHeight: 1.6,
-                color: palette.muted,
-              }}
-            >
-              {t('storefront.theStoreUsesYourNameAndPhone')}
-            </p>
-
-            <button
-              type="submit"
-              disabled={busy || !shop.data?.accepting_orders || (diningType === 'delivery' && !deliveryAddress.trim())}
-              style={{
-                ...action,
-                opacity: busy || !shop.data?.accepting_orders ? 0.6 : 1,
-                cursor:
-                  busy || !shop.data?.accepting_orders
-                    ? 'not-allowed'
-                    : 'pointer',
-              }}
-            >
-              {t('storefront.submitOrderUnpaid')}
-              <ArrowRight size={18} aria-hidden="true" />
-            </button>
-
-            {shop.data && !shop.data.accepting_orders && (
-              <p role="status">
-                {t('storefront.theStoreHasTemporarilyPausedOrders')}
-              </p>
-            )}
-
-            <button
-              type="button"
-              onClick={resetReview}
-              style={{
-                ...secondary,
-                width: '100%',
-              }}
-            >
-              <ArrowLeft size={16} aria-hidden="true" />
-              {ui.backCart}
-            </button>
-          </form>
-        </div>
-      </div>
-    ) : null;
-
-  // PAGE 1: CART
-  return (
-    <>
-    {checkout}
-    <div style={page} hidden={checkoutOpen}>
+    <div style={page}>
       <PageHeader
-        heading={t('pos.shoppingCart')}
-        backText={t('storefront.chooseMoreProducts')}
-        to={shopPath}
+        heading={ui.checkout}
+        backText={ui.backCart}
+        onBack={resetReview}
       />
 
-      <Steps active={1} language={language} />
+      <Steps active={2} language={language} />
 
-      {tableToken === null && (
-        <p role="alert">ลิงก์โต๊ะไม่ถูกต้อง กรุณาสแกน QR ที่โต๊ะอีกครั้ง</p>
-      )}
-
-      {shop.isPending && (
-        <Loading>{t('storefront.checkingStoreStatus')}</Loading>
-      )}
+      <p
+        style={{
+          margin: '6px 0 18px',
+          fontSize: 14,
+          color: palette.muted,
+        }}
+      >
+        {ui.checkoutHint}
+      </p>
 
       {shop.error && (
         <ShopError error={shop.error} retry={() => void shop.refetch()} />
       )}
 
-      {/* CART NOTICE */}
+      {error != null && <ShopError error={error} />}
+
       <div
-        role="note"
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 13,
-          margin: '15px 0 20px',
-          padding: '12px 15px',
-          background: palette.pale,
-          border: '1px solid #F0E0AA',
-          borderRadius: 11,
+          display: 'grid',
+          gridTemplateColumns:
+            'repeat(auto-fit, minmax(min(100%, 360px), 1fr))',
+          gap: 18,
+          alignItems: 'start',
         }}
       >
-        <span
-          style={{
-            display: 'inline-flex',
-            width: 38,
-            height: 38,
-            flexShrink: 0,
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: '50%',
-            background: palette.yellow,
-          }}
-        >
-          <ShoppingCart size={20} aria-hidden="true" />
-        </span>
-
-        <span
-          style={{
-            color: '#55472B',
-            fontSize: 13,
-          }}
-        >
-          {t('storefront.cartItemsAreNotReservedStockIs')}
-        </span>
-      </div>
-
-      {cart.items.length === 0 ? (
-        <div
+        {/* VERIFIED ORDER */}
+        <section
           style={{
             ...card,
-            padding: '50px 20px',
-            minHeight: 230,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 12,
-            textAlign: 'center',
+            padding: 'clamp(16px, 2vw, 24px)',
           }}
         >
-          <ShoppingCart size={38} color={palette.muted} aria-hidden="true" />
+          <h2 style={title}>
+            <ShoppingBag size={21} aria-hidden="true" />
+            {ui.orderItems}
+          </h2>
 
-          <h2 style={{ margin: 0 }}>{t('storefront.yourCartIsEmpty')}</h2>
-
-          <Link to={shopPath} style={secondary}>
-            {t('storefront.backToProducts')}
-          </Link>
-        </div>
-      ) : (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: 18,
-            flexWrap: 'wrap',
-          }}
-        >
-          {/* PRODUCTS */}
-          <section
-            aria-label={t('storefront.cartItems')}
-            style={{
-              display: 'flex',
-              flex: '2 1 530px',
-              flexDirection: 'column',
-              gap: 16,
-              minWidth: 0,
-            }}
-          >
-            {cart.items.map((item) => (
-              <CartLineItem
-                key={item.variant_id}
-                item={item}
-                busy={busy}
-                onUpdateQuantity={(quantity) => {
-                  cart.update(
-                    cart.items.map((entry) =>
-                      entry.variant_id === item.variant_id
-                        ? { ...entry, quantity }
-                        : entry,
-                    ),
-                  );
-
-                  resetReview();
-                }}
-                onRemove={() => {
-                  cart.update(
-                    cart.items.filter(
-                      (entry) => entry.variant_id !== item.variant_id,
-                    ),
-                  );
-
-                  resetReview();
-                }}
-              />
-            ))}
-          </section>
-
-          {/* ORDER SUMMARY */}
-          <aside
-            style={{
-              ...card,
-              flex: '1 1 320px',
-              minWidth: 0,
-              padding: 'clamp(14px, 1.5vw, 20px)',
-            }}
-          >
-            {/* DINING OPTION */}
-            <section style={{ marginBottom: 15 }}>
-              <h2 style={title}>
-                <UtensilsCrossed size={21} aria-hidden="true" />
-                {ui.dining}
-              </h2>
-
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                  gap: 9,
-                }}
-              >
-                {(['takeaway', 'dine-in'] as const).map((mode) => (
-                  <button
-                    type="button"
-                    key={mode}
-                    aria-pressed={diningType === mode}
-                    disabled={busy || (mode === 'takeaway' && !!tableToken)}
-                    onClick={() => selectDining(mode)}
-                    style={{
-                      ...action,
-                      minWidth: 0,
-                      minHeight: 44,
-                      fontSize: 13,
-                      padding: '8px 6px',
-                      border: `1px solid ${
-                        diningType === mode ? palette.yellow : palette.border
-                      }`,
-                      background:
-                        diningType === mode ? palette.yellow : '#F7F8FA',
-                      color: diningType === mode ? palette.navy : palette.muted,
-                    }}
-                  >
-                    {mode === 'takeaway' ? (
-                      <ShoppingBag size={17} aria-hidden="true" />
-                    ) : (
-                      <UtensilsCrossed size={17} aria-hidden="true" />
-                    )}
-                    {mode === 'takeaway' ? ui.takeaway : ui.dineIn}
-                  </button>
-                ))}
-                {!tableToken && shop.data?.delivery_enabled && (
-                  <button type="button" aria-pressed={diningType === 'delivery'} disabled={busy} onClick={() => selectDining('delivery')} style={{ ...action, minWidth: 0, minHeight: 44, fontSize: 13, padding: '8px 6px', border: `1px solid ${diningType === 'delivery' ? palette.yellow : palette.border}`, background: diningType === 'delivery' ? palette.yellow : '#F7F8FA' }}>
-                    {language === 'th' ? 'จัดส่ง' : 'Delivery'}
-                  </button>
-                )}
-              </div>
-            </section>
-
-            {/* TABLE SELECTION */}
-            {!tableToken && <section style={pale}>
-              <label
-                htmlFor="shop-cart-table"
-                style={{
-                  ...title,
-                  fontSize: 15,
-                  marginBottom: 8,
-                }}
-              >
-                <UtensilsCrossed size={19} aria-hidden="true" />
-                {ui.table}
-              </label>
-
-              <select
-                id="shop-cart-table"
-                value={selectedTable}
-                disabled={diningType !== 'dine-in'}
-                onChange={(event) => {
-                  setSelectedTable(event.target.value);
-                  setDemoTable(null);
-                }}
-                style={{
-                  ...control,
-                  color: diningType === 'dine-in' ? palette.navy : '#9CA4B2',
-                  background: diningType === 'dine-in' ? '#FFFFFF' : '#F7F8FA',
-                  cursor: diningType === 'dine-in' ? 'pointer' : 'not-allowed',
-                }}
-              >
-                <option value="">
-                  {diningType === 'dine-in' ? ui.tableChoose : ui.tableFirst}
-                </option>
-
-                {tables.map((table) => (
-                  <option key={table} value={table}>
-                    {ui.table} {table}
-                  </option>
-                ))}
-              </select>
-
-              {diningType === 'dine-in' && (
-                <p
-                  style={{
-                    margin: '8px 0 0',
-                    fontSize: 12,
-                    color: '#85651D',
-                  }}
-                >
-                  {selectedTable
-                    ? `${ui.tableSelected}: ${selectedTable} (${
-                        language === 'th' ? 'ตัวอย่าง UI' : 'UI demo'
-                      })`
-                    : ui.tableDemo}
-                </p>
-              )}
-            </section>}
-
-            {/* PAYMENT */}
-            <section style={pale}>
-              <h2 style={title}>
-                <CreditCard size={20} aria-hidden="true" />
-                {ui.payment}
-              </h2>
-
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: 10,
-                  fontSize: 13,
-                  color: '#505A6C',
-                }}
-              >
-                <span
-                  style={{
-                    display: 'block',
-                    width: 20,
-                    height: 20,
-                    borderRadius: '50%',
-                    flexShrink: 0,
-                    border: `4px solid ${palette.yellow}`,
-                    background: palette.navy,
-                    boxShadow: 'inset 0 0 0 3px white',
-                  }}
-                />
-
-                <span>
-                  {language === 'th'
-                    ? 'ตรวจสอบการชำระเงินหลังส่งออเดอร์'
-                    : 'Check payment after submitting the order'}
-                </span>
-              </div>
-
-              {diningType === 'takeaway' &&
-                !tableToken &&
-                shop.data?.pickup_instructions && (
-                  <p
-                    style={{
-                      margin: '9px 0 0 30px',
-                      color: palette.muted,
-                      fontSize: 12,
-                      overflowWrap: 'anywhere',
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    {shop.data.pickup_instructions}
-                  </p>
-                )}
-            </section>
-
-            {/* TOTALS */}
-            <section
+          {quote.data.items.map((item) => (
+            <div
+              key={item.variant_id}
               style={{
-                borderTop: `1px solid ${palette.border}`,
-                paddingTop: 14,
-                marginBottom: 14,
+                borderBottom: `1px solid ${palette.border}`,
+                padding: '12px 0',
               }}
             >
-              <h2 style={title}>{ui.summary}</h2>
-
               <div
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
-                  gap: 8,
-                  fontSize: 13,
-                  marginBottom: 10,
-                  color: palette.muted,
+                  gap: 12,
+                  alignItems: 'start',
                 }}
               >
-                <span>
-                  {ui.items} ({cart.items.length})
-                </span>
+                <div style={{ minWidth: 0 }}>
+                  <strong style={{ overflowWrap: 'anywhere' }}>
+                    {item.product_name}
+                  </strong>
 
-                <span
-                  style={{
-                    whiteSpace: 'nowrap',
-                    color: palette.navy,
-                  }}
-                >
-                  ฿{moneyText(centsText(estimated))}
-                </span>
-              </div>
-
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  gap: 8,
-                  fontSize: 13,
-                  marginBottom: 12,
-                  color: palette.muted,
-                }}
-              >
-                <span>{ui.discount}</span>
-                <span>—</span>
-              </div>
-
-              <div
-                style={{
-                  ...pale,
-                  marginBottom: 0,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: 8,
-                  alignItems: 'center',
-                }}
-              >
-                <strong style={{ fontSize: 13 }}>
-                  {t('storefront.estimatedCartTotal')}
-                </strong>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: palette.muted,
+                      marginTop: 3,
+                    }}
+                  >
+                    {item.variant_name} · {displayQuantity(item.quantity)}{' '}
+                    {item.unit}
+                  </div>
+                </div>
 
                 <strong
                   style={{
                     color: palette.price,
-                    fontSize: 23,
+                    whiteSpace: 'nowrap',
                   }}
                 >
-                  ฿{moneyText(centsText(estimated))}
+                  ฿{moneyText(item.line_total)}
                 </strong>
               </div>
+            </div>
+          ))}
+
+          <div
+            style={{
+              ...pale,
+              marginTop: 18,
+              marginBottom: 0,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 8,
+            }}
+          >
+            <strong>{ui.priceReviewed}</strong>
+
+            <h3
+              style={{
+                color: palette.price,
+                fontSize: 24,
+                margin: 0,
+              }}
+            >
+              ฿{moneyText(quote.data.estimated_total)}
+            </h3>
+          </div>
+
+          <p
+            style={{
+              margin: '11px 0 0',
+              fontSize: 12,
+              color: palette.muted,
+            }}
+          >
+            {diningType === 'delivery'
+              ? language === 'th'
+                ? 'ยอดรวมรวมค่าจัดส่งแล้ว ยังไม่รวมส่วนลด/รางวัลที่อาจใช้ได้ที่ POS'
+                : 'Total includes the quoted shipping fee. Excludes discounts / rewards that may apply at POS.'
+              : t('storefront.excludesDiscountsRewardsThatMayApplyAt')}
+          </p>
+
+          <p
+            style={{
+              margin: '12px 0 0',
+              fontSize: 13,
+              color: palette.muted,
+            }}
+          >
+            <Check
+              size={16}
+              aria-hidden="true"
+              style={{
+                verticalAlign: 'middle',
+                marginRight: 6,
+              }}
+            />
+            {language === 'th'
+              ? 'ตรวจสอบการชำระเงินหลังส่งออเดอร์'
+              : 'Check payment after submitting the order'}
+          </p>
+          {quote.data.table_code && <p>โต๊ะ {quote.data.table_code}</p>}
+          {diningType === 'delivery' && quote.data.shipping_fee && (
+            <p>ค่าจัดส่ง ฿{moneyText(quote.data.shipping_fee)}</p>
+          )}
+        </section>
+
+        {/* CUSTOMER FORM */}
+        <form
+          onSubmit={submitOrder}
+          style={{
+            ...card,
+            padding: 'clamp(16px, 2vw, 24px)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 18,
+          }}
+        >
+          <h2 style={{ ...title, marginBottom: 0 }}>{ui.customer}</h2>
+
+          <label style={{ fontSize: 14, fontWeight: 600 }}>
+            {t('storefront.pickupRecipientName')}
+            <input
+              style={control}
+              required
+              maxLength={200}
+              autoComplete="name"
+              value={customer.customer_name}
+              onChange={(event) =>
+                setCustomer({
+                  ...customer,
+                  customer_name: event.target.value,
+                })
+              }
+            />
+          </label>
+
+          <label style={{ fontSize: 14, fontWeight: 600 }}>
+            {t('storefront.contactPhone')}
+            <input
+              style={control}
+              required
+              type="tel"
+              minLength={3}
+              maxLength={30}
+              autoComplete="tel"
+              value={customer.contact_phone}
+              onChange={(event) =>
+                setCustomer({
+                  ...customer,
+                  contact_phone: event.target.value,
+                })
+              }
+            />
+          </label>
+
+          {diningType === 'delivery' && (
+            <label style={{ fontSize: 14, fontWeight: 600 }}>
+              {language === 'th' ? 'ที่อยู่จัดส่ง' : 'Delivery address'}
+              <input
+                required
+                maxLength={2000}
+                style={control}
+                value={deliveryAddress}
+                onChange={(event) => setDeliveryAddress(event.target.value)}
+              />
+            </label>
+          )}
+
+          <label style={{ fontSize: 14, fontWeight: 600 }}>
+            {t('storefront.noteToStore')}
+            <textarea
+              rows={3}
+              maxLength={1000}
+              style={{
+                ...control,
+                resize: 'vertical',
+              }}
+              value={customer.customer_note}
+              onChange={(event) =>
+                setCustomer({
+                  ...customer,
+                  customer_note: event.target.value,
+                })
+              }
+            />
+          </label>
+
+          <label
+            className="shop-consent"
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 10,
+              fontSize: 13,
+              fontWeight: 400,
+              lineHeight: 1.65,
+            }}
+          >
+            <input
+              type="checkbox"
+              required
+              style={{
+                marginTop: 4,
+                flexShrink: 0,
+              }}
+            />
+            {t('storefront.iUnderstandStockIsReservedAfterSuccessful')}
+          </label>
+
+          <p
+            style={{
+              margin: 0,
+              fontSize: 12,
+              lineHeight: 1.6,
+              color: palette.muted,
+            }}
+          >
+            {t('storefront.theStoreUsesYourNameAndPhone')}
+          </p>
+
+          <button
+            type="submit"
+            disabled={
+              busy ||
+              !shop.data?.accepting_orders ||
+              (diningType === 'delivery' && !deliveryAddress.trim())
+            }
+            style={{
+              ...action,
+              opacity: busy || !shop.data?.accepting_orders ? 0.6 : 1,
+              cursor:
+                busy || !shop.data?.accepting_orders
+                  ? 'not-allowed'
+                  : 'pointer',
+            }}
+          >
+            {t('storefront.submitOrderUnpaid')}
+            <ArrowRight size={18} aria-hidden="true" />
+          </button>
+
+          {shop.data && !shop.data.accepting_orders && (
+            <p role="status">
+              {t('storefront.theStoreHasTemporarilyPausedOrders')}
+            </p>
+          )}
+
+          <button
+            type="button"
+            onClick={resetReview}
+            style={{
+              ...secondary,
+              width: '100%',
+            }}
+          >
+            <ArrowLeft size={16} aria-hidden="true" />
+            {ui.backCart}
+          </button>
+        </form>
+      </div>
+    </div>
+  ) : null;
+
+  // PAGE 1: CART
+  return (
+    <>
+      {checkout}
+      <div style={page} hidden={checkoutOpen}>
+        <PageHeader
+          heading={t('pos.shoppingCart')}
+          backText={t('storefront.chooseMoreProducts')}
+          to={shopPath}
+        />
+
+        <Steps active={1} language={language} />
+
+        {tableToken === null && (
+          <p role="alert">ลิงก์โต๊ะไม่ถูกต้อง กรุณาสแกน QR ที่โต๊ะอีกครั้ง</p>
+        )}
+
+        {shop.isPending && (
+          <Loading>{t('storefront.checkingStoreStatus')}</Loading>
+        )}
+
+        {shop.error && (
+          <ShopError error={shop.error} retry={() => void shop.refetch()} />
+        )}
+
+        {/* CART NOTICE */}
+        <div
+          role="note"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 13,
+            margin: '15px 0 20px',
+            padding: '12px 15px',
+            background: palette.pale,
+            border: '1px solid #F0E0AA',
+            borderRadius: 11,
+          }}
+        >
+          <span
+            style={{
+              display: 'inline-flex',
+              width: 38,
+              height: 38,
+              flexShrink: 0,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '50%',
+              background: palette.yellow,
+            }}
+          >
+            <ShoppingCart size={20} aria-hidden="true" />
+          </span>
+
+          <span
+            style={{
+              color: '#55472B',
+              fontSize: 13,
+            }}
+          >
+            {t('storefront.cartItemsAreNotReservedStockIs')}
+          </span>
+        </div>
+
+        {cart.items.length === 0 ? (
+          <div
+            style={{
+              ...card,
+              padding: '50px 20px',
+              minHeight: 230,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 12,
+              textAlign: 'center',
+            }}
+          >
+            <ShoppingCart size={38} color={palette.muted} aria-hidden="true" />
+
+            <h2 style={{ margin: 0 }}>{t('storefront.yourCartIsEmpty')}</h2>
+
+            <Link to={shopPath} style={secondary}>
+              {t('storefront.backToProducts')}
+            </Link>
+          </div>
+        ) : (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 18,
+              flexWrap: 'wrap',
+            }}
+          >
+            {/* PRODUCTS */}
+            <section
+              aria-label={t('storefront.cartItems')}
+              style={{
+                display: 'flex',
+                flex: '2 1 530px',
+                flexDirection: 'column',
+                gap: 16,
+                minWidth: 0,
+              }}
+            >
+              {cart.items.map((item) => (
+                <CartLineItem
+                  key={item.variant_id}
+                  item={item}
+                  busy={busy}
+                  onUpdateQuantity={(quantity) => {
+                    cart.update(
+                      cart.items.map((entry) =>
+                        entry.variant_id === item.variant_id
+                          ? { ...entry, quantity }
+                          : entry,
+                      ),
+                    );
+
+                    resetReview();
+                  }}
+                  onRemove={() => {
+                    cart.update(
+                      cart.items.filter(
+                        (entry) => entry.variant_id !== item.variant_id,
+                      ),
+                    );
+
+                    resetReview();
+                  }}
+                />
+              ))}
             </section>
 
-            {/* ACTION BUTTON */}
-            {diningType !== 'dine-in' || !!tableToken ? (
-              <button
-                type="button"
-                disabled={busy || !valid || tableToken === null || !shop.data?.accepting_orders}
-                onClick={() => {
-                  setError(null);
-                  quote.mutate();
-                }}
-                style={{
-                  ...action,
-                  opacity:
-                    busy || !valid || !shop.data?.accepting_orders ? 0.6 : 1,
-                }}
-              >
-                {quote.isPending
-                  ? ui.orderWaiting
-                  : t('storefront.reviewItemsAndLatestTotal')}
-                <ArrowRight size={17} aria-hidden="true" />
-              </button>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  disabled={busy || !valid || !selectedTable}
-                  onClick={() => setDemoTable(selectedTable)}
+            {/* ORDER SUMMARY */}
+            <aside
+              style={{
+                ...card,
+                flex: '1 1 320px',
+                minWidth: 0,
+                padding: 'clamp(14px, 1.5vw, 20px)',
+              }}
+            >
+              {/* DINING OPTION */}
+              <section style={{ marginBottom: 15 }}>
+                <h2 style={title}>
+                  <UtensilsCrossed size={21} aria-hidden="true" />
+                  {ui.dining}
+                </h2>
+
+                <div
                   style={{
-                    ...action,
-                    opacity: busy || !valid || !selectedTable ? 0.6 : 1,
-                    cursor:
-                      busy || !valid || !selectedTable
-                        ? 'not-allowed'
-                        : 'pointer',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                    gap: 9,
                   }}
                 >
-                  <UtensilsCrossed size={17} aria-hidden="true" />
-                  {ui.dineInDemo}
-                </button>
+                  {(['takeaway', 'dine-in'] as const).map((mode) => (
+                    <button
+                      type="button"
+                      key={mode}
+                      aria-pressed={diningType === mode}
+                      disabled={busy || (mode === 'takeaway' && !!tableToken)}
+                      onClick={() => selectDining(mode)}
+                      style={{
+                        ...action,
+                        minWidth: 0,
+                        minHeight: 44,
+                        fontSize: 13,
+                        padding: '8px 6px',
+                        border: `1px solid ${
+                          diningType === mode ? palette.yellow : palette.border
+                        }`,
+                        background:
+                          diningType === mode ? palette.yellow : '#F7F8FA',
+                        color:
+                          diningType === mode ? palette.navy : palette.muted,
+                      }}
+                    >
+                      {mode === 'takeaway' ? (
+                        <ShoppingBag size={17} aria-hidden="true" />
+                      ) : (
+                        <UtensilsCrossed size={17} aria-hidden="true" />
+                      )}
+                      {mode === 'takeaway' ? ui.takeaway : ui.dineIn}
+                    </button>
+                  ))}
+                  {!tableToken && shop.data?.delivery_enabled && (
+                    <button
+                      type="button"
+                      aria-pressed={diningType === 'delivery'}
+                      disabled={busy}
+                      onClick={() => selectDining('delivery')}
+                      style={{
+                        ...action,
+                        minWidth: 0,
+                        minHeight: 44,
+                        fontSize: 13,
+                        padding: '8px 6px',
+                        border: `1px solid ${diningType === 'delivery' ? palette.yellow : palette.border}`,
+                        background:
+                          diningType === 'delivery'
+                            ? palette.yellow
+                            : '#F7F8FA',
+                      }}
+                    >
+                      {language === 'th' ? 'จัดส่ง' : 'Delivery'}
+                    </button>
+                  )}
+                </div>
+              </section>
 
-                <button type="button" disabled style={{ ...action, opacity: 0.6 }}>
-                  {t('storefront.reviewItemsAndLatestTotal')}
-                  <ArrowRight size={17} aria-hidden="true" />
-                </button>
-
-                <p
-                  style={{
-                    fontSize: 12,
-                    color: '#825F19',
-                    margin: '10px 0 0',
-                  }}
-                >
-                  {selectedTable ? ui.demoNote : ui.tableRequired}
-                </p>
-
-                {demoTable && (
-                  <p
-                    role="status"
+              {/* TABLE SELECTION */}
+              {!tableToken && (
+                <section style={pale}>
+                  <label
+                    htmlFor="shop-cart-table"
                     style={{
-                      ...pale,
-                      margin: '10px 0 0',
-                      fontSize: 12,
-                      color: '#825F19',
+                      ...title,
+                      fontSize: 15,
+                      marginBottom: 8,
                     }}
                   >
-                    {ui.demoSuccess} {demoTable}. {ui.demoNotSent}.
+                    <UtensilsCrossed size={19} aria-hidden="true" />
+                    {ui.table}
+                  </label>
+
+                  <select
+                    id="shop-cart-table"
+                    value={selectedTable}
+                    disabled={diningType !== 'dine-in'}
+                    onChange={(event) => {
+                      setSelectedTable(event.target.value);
+                      setDemoTable(null);
+                    }}
+                    style={{
+                      ...control,
+                      color:
+                        diningType === 'dine-in' ? palette.navy : '#9CA4B2',
+                      background:
+                        diningType === 'dine-in' ? '#FFFFFF' : '#F7F8FA',
+                      cursor:
+                        diningType === 'dine-in' ? 'pointer' : 'not-allowed',
+                    }}
+                  >
+                    <option value="">
+                      {diningType === 'dine-in'
+                        ? ui.tableChoose
+                        : ui.tableFirst}
+                    </option>
+
+                    {tables.map((table) => (
+                      <option key={table} value={table}>
+                        {ui.table} {table}
+                      </option>
+                    ))}
+                  </select>
+
+                  {diningType === 'dine-in' && (
+                    <p
+                      style={{
+                        margin: '8px 0 0',
+                        fontSize: 12,
+                        color: '#85651D',
+                      }}
+                    >
+                      {selectedTable
+                        ? `${ui.tableSelected}: ${selectedTable} (${
+                            language === 'th' ? 'ตัวอย่าง UI' : 'UI demo'
+                          })`
+                        : ui.tableDemo}
+                    </p>
+                  )}
+                </section>
+              )}
+
+              {/* PAYMENT */}
+              <section style={pale}>
+                <h2 style={title}>
+                  <CreditCard size={20} aria-hidden="true" />
+                  {ui.payment}
+                </h2>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 10,
+                    fontSize: 13,
+                    color: '#505A6C',
+                  }}
+                >
+                  <span
+                    style={{
+                      display: 'block',
+                      width: 20,
+                      height: 20,
+                      borderRadius: '50%',
+                      flexShrink: 0,
+                      border: `4px solid ${palette.yellow}`,
+                      background: palette.navy,
+                      boxShadow: 'inset 0 0 0 3px white',
+                    }}
+                  />
+
+                  <span>
+                    {language === 'th'
+                      ? 'ตรวจสอบการชำระเงินหลังส่งออเดอร์'
+                      : 'Check payment after submitting the order'}
+                  </span>
+                </div>
+
+                {diningType === 'takeaway' &&
+                  !tableToken &&
+                  shop.data?.pickup_instructions && (
+                    <p
+                      style={{
+                        margin: '9px 0 0 30px',
+                        color: palette.muted,
+                        fontSize: 12,
+                        overflowWrap: 'anywhere',
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {shop.data.pickup_instructions}
+                    </p>
+                  )}
+              </section>
+
+              {/* TOTALS */}
+              <section
+                style={{
+                  borderTop: `1px solid ${palette.border}`,
+                  paddingTop: 14,
+                  marginBottom: 14,
+                }}
+              >
+                <h2 style={title}>{ui.summary}</h2>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                    fontSize: 13,
+                    marginBottom: 10,
+                    color: palette.muted,
+                  }}
+                >
+                  <span>
+                    {ui.items} ({cart.items.length})
+                  </span>
+
+                  <span
+                    style={{
+                      whiteSpace: 'nowrap',
+                      color: palette.navy,
+                    }}
+                  >
+                    ฿{moneyText(centsText(estimated))}
+                  </span>
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                    fontSize: 13,
+                    marginBottom: 12,
+                    color: palette.muted,
+                  }}
+                >
+                  <span>{ui.discount}</span>
+                  <span>—</span>
+                </div>
+
+                <div
+                  style={{
+                    ...pale,
+                    marginBottom: 0,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: 8,
+                    alignItems: 'center',
+                  }}
+                >
+                  <strong style={{ fontSize: 13 }}>
+                    {t('storefront.estimatedCartTotal')}
+                  </strong>
+
+                  <strong
+                    style={{
+                      color: palette.price,
+                      fontSize: 23,
+                    }}
+                  >
+                    ฿{moneyText(centsText(estimated))}
+                  </strong>
+                </div>
+              </section>
+
+              {/* ACTION BUTTON */}
+              {diningType !== 'dine-in' || !!tableToken ? (
+                <button
+                  type="button"
+                  disabled={
+                    busy ||
+                    !valid ||
+                    tableToken === null ||
+                    !shop.data?.accepting_orders
+                  }
+                  onClick={() => {
+                    setError(null);
+                    quote.mutate();
+                  }}
+                  style={{
+                    ...action,
+                    opacity:
+                      busy || !valid || !shop.data?.accepting_orders ? 0.6 : 1,
+                  }}
+                >
+                  {quote.isPending
+                    ? ui.orderWaiting
+                    : t('storefront.reviewItemsAndLatestTotal')}
+                  <ArrowRight size={17} aria-hidden="true" />
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    disabled={busy || !valid || !selectedTable}
+                    onClick={() => setDemoTable(selectedTable)}
+                    style={{
+                      ...action,
+                      opacity: busy || !valid || !selectedTable ? 0.6 : 1,
+                      cursor:
+                        busy || !valid || !selectedTable
+                          ? 'not-allowed'
+                          : 'pointer',
+                    }}
+                  >
+                    <UtensilsCrossed size={17} aria-hidden="true" />
+                    {ui.dineInDemo}
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled
+                    style={{ ...action, opacity: 0.6 }}
+                  >
+                    {t('storefront.reviewItemsAndLatestTotal')}
+                    <ArrowRight size={17} aria-hidden="true" />
+                  </button>
+
+                  <p
+                    style={{
+                      fontSize: 12,
+                      color: '#825F19',
+                      margin: '10px 0 0',
+                    }}
+                  >
+                    {selectedTable ? ui.demoNote : ui.tableRequired}
                   </p>
-                )}
-              </>
-            )}
 
-            {shop.data && !shop.data.accepting_orders && (
-              <p role="status">
-                {t('storefront.theStoreHasTemporarilyPausedOrders')}
-              </p>
-            )}
+                  {demoTable && (
+                    <p
+                      role="status"
+                      style={{
+                        ...pale,
+                        margin: '10px 0 0',
+                        fontSize: 12,
+                        color: '#825F19',
+                      }}
+                    >
+                      {ui.demoSuccess} {demoTable}. {ui.demoNotSent}.
+                    </p>
+                  )}
+                </>
+              )}
 
-            {!valid && (
-              <p role="alert">
-                {t('storefront.enterValidQuantitiesPiecePackProductsRequire')}
-              </p>
-            )}
+              {shop.data && !shop.data.accepting_orders && (
+                <p role="status">
+                  {t('storefront.theStoreHasTemporarilyPausedOrders')}
+                </p>
+              )}
 
-            {quote.error && <ShopError error={quote.error} />}
+              {!valid && (
+                <p role="alert">
+                  {t('storefront.enterValidQuantitiesPiecePackProductsRequire')}
+                </p>
+              )}
 
-            {error != null && <ShopError error={error} />}
+              {quote.error && <ShopError error={quote.error} />}
 
-          </aside>
-        </div>
-      )}
-    </div>
+              {error != null && <ShopError error={error} />}
+            </aside>
+          </div>
+        )}
+      </div>
     </>
   );
 }
@@ -1454,7 +1512,11 @@ function CartLineItem({
   const lineTotal = estimatedLine(item.unit_price, item.quantity);
 
   const changeBy = (delta: bigint) => {
-    if (amount === null || amount + delta * step <= 0n || amount + delta * step > MAX_LINE_QUANTITY) {
+    if (
+      amount === null ||
+      amount + delta * step <= 0n ||
+      amount + delta * step > MAX_LINE_QUANTITY
+    ) {
       return;
     }
 
@@ -1735,7 +1797,9 @@ function CartLineItem({
 
             <button
               type="button"
-              disabled={busy || amount === null || amount + step > MAX_LINE_QUANTITY}
+              disabled={
+                busy || amount === null || amount + step > MAX_LINE_QUANTITY
+              }
               onClick={() => changeBy(1n)}
               aria-label={`${ui.increase}: ${item.product_name}`}
               style={{
@@ -1743,7 +1807,10 @@ function CartLineItem({
                 border: 0,
                 background: '#F5F7FA',
                 color: palette.navy,
-                cursor: busy || amount === null || amount + step > MAX_LINE_QUANTITY ? 'not-allowed' : 'pointer',
+                cursor:
+                  busy || amount === null || amount + step > MAX_LINE_QUANTITY
+                    ? 'not-allowed'
+                    : 'pointer',
               }}
             >
               <Plus size={17} aria-hidden="true" />

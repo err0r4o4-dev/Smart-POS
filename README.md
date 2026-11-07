@@ -174,7 +174,7 @@ Open **http://localhost:8088** and check [readiness](#api-and-health-checks). Ma
 
 Review schema, backups and migration impact before approving an upgrade. API/web from this revision require **clean schema 14**. The migration and matching API/web must roll out together; prior verification did not upgrade the persistent primary stack automatically. See [storefront rollout](docs/architecture/storefront.md) and [migrations](#database-migrations).
 
-### Frontend auto-update through the gateway
+### Live auto-update through the gateway (web + API)
 
 With an already-running local stack, use Docker Compose 2.32 or newer:
 
@@ -183,15 +183,20 @@ npm run stack:dev
 ```
 
 Keep this terminal open and visit **http://localhost:8088**. The development
-override runs Vite instead of the built SPA. Compose Watch syncs React, CSS,
-public assets and the route inventory into the container; Vite updates the browser
-through the gateway WebSocket. Vite config changes sync and restart the web
-container. Package manifests, the lockfile and the web Dockerfile trigger a web
-image rebuild. No host node_modules or environment files are synced.
+override runs Vite for `web` instead of the built SPA and runs a cached Go
+rebuild supervisor for `api`. Compose Watch syncs React, CSS, public assets and
+the route inventory into `web` (updating the browser through the gateway
+WebSocket), and syncs `.go` source into `api` (recompiling incrementally with a
+warm Go build cache and gracefully swapping the `server` process on success while
+staying alive on compile errors). Vite config or `dev-watch.sh` changes sync and
+restart their container. Package manifests, lockfiles, `go.mod`, `go.sum` and
+Dockerfiles trigger an image rebuild for the affected service. No host
+`node_modules`, `.cache`, binaries or `.env*` files are synced.
 
-These commands target only web/caddy with --no-deps: they do not start, migrate,
-rebuild or restart the database, API or AI. Start the required local backend
-separately through the approved setup workflow if it is not already running.
+These commands target only `api`, `web` and `caddy` with `--no-deps`: they do
+not start, migrate, rebuild or restart PostgreSQL, migrations, Mailpit or AI.
+Start the required local database and migrations separately through the approved
+setup workflow if they are not already running.
 
 For detached services with a separate watch terminal:
 
@@ -210,10 +215,11 @@ Development mode is local-only, not a production server. Tests are not run on sa
 Run npm run test:dev-stack for the development config regression checks. Gateway
 or Compose config changes require rerunning stack:dev:up and restarting watch.
 
-To return to the built frontend, stop the watch command first, then run:
+To return to the built frontend and API images, stop the watch command first,
+then run:
 
 ```powershell
-docker compose up --build -d --wait --no-deps web caddy
+docker compose up --build -d --wait --no-deps api web caddy
 ```
 
 ### Optional native development
@@ -280,6 +286,7 @@ Legacy `/dashboard`, `/staff` and unprefixed business bookmarks redirect to cano
 | ----------------------------------- | --------------------------------------------------------------------------------- |
 | `npm run dev`                       | Host Vite frontend; requires an available API                                     |
 | `npm run stack:up`                  | `docker compose up --build -d --wait`; starts services and automatically migrates |
+| `npm run stack:dev`                 | Live Compose Watch for `api`, `web` and `caddy` (`--no-deps`; no DB migration)    |
 | `npm run stack:logs`                | Reads last 100 Compose log lines; sanitize before sharing                         |
 | `npm run stack:down`                | Removes project containers/networks, preserves named data volume; not a reset     |
 | `npm run migrate`                   | Runs migration service; writes schema, requires approved target                   |

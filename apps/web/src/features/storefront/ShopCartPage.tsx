@@ -31,9 +31,113 @@ import {
 import { ShopError } from './StorefrontPage';
 import { useShopCart, type CartEntry } from './shop-cart';
 
-// Page-specific presentation only.
-// Global header/footer, API, and tracking logic stay unchanged.
-const palette = {
+// Responsive layout without a separate CSS file.
+const responsiveCartCSS = `
+  .velopos-cart,
+  .velopos-cart * {
+    box-sizing: border-box;
+  }
+
+  .velopos-cart {
+    width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .velopos-cart img {
+    max-width: 100%;
+  }
+
+  .velopos-cart input,
+  .velopos-cart select,
+  .velopos-cart textarea {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  @media (max-width: 1023px) {
+    .velopos-cart {
+      padding: 18px 16px !important;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .velopos-cart {
+      padding: 14px 12px !important;
+    }
+
+    .velopos-cart > div > section[aria-label],
+    .velopos-cart > div > aside {
+      flex: 1 1 100% !important;
+    }
+
+    .velopos-cart header {
+      flex-direction: column;
+      align-items: stretch !important;
+      gap: 12px !important;
+    }
+
+    .velopos-cart header h1 {
+      font-size: 26px !important;
+    }
+
+    .velopos-cart header a,
+    .velopos-cart header button {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .velopos-cart article {
+      gap: 12px !important;
+    }
+
+    .velopos-cart article > div:first-child {
+      width: 100% !important;
+      height: 190px !important;
+      flex-shrink: 0 !important;
+    }
+
+    .velopos-cart article > div:nth-child(2) {
+      flex: 1 1 100% !important;
+      width: 100%;
+    }
+
+    .velopos-cart article > div:nth-child(2) > div:last-child {
+      justify-content: space-between !important;
+    }
+
+    .velopos-cart aside {
+      width: 100%;
+      max-width: 100%;
+    }
+
+    .velopos-cart input:not([aria-label]),
+    .velopos-cart textarea {
+      font-size: 16px;
+    }
+  }
+
+  @media (max-width: 380px) {
+    .velopos-cart {
+      padding: 10px 8px !important;
+    }
+
+    .velopos-cart article > div:first-child {
+      height: 160px !important;
+    }
+
+    .velopos-cart article {
+      padding: 12px !important;
+    }
+
+    .velopos-cart aside {
+      padding: 12px !important;
+    }
+  }
+`;
+
+// Theme colors.
+const colors = {
   navy: '#111B38',
   muted: '#70798C',
   yellow: '#F8CA49',
@@ -42,7 +146,8 @@ const palette = {
   price: '#A66C13',
 };
 
-const copy = {
+// Thai and English UI text.
+const words = {
   th: {
     cart: 'ตะกร้าสินค้า',
     checkout: 'ยืนยันคำสั่งซื้อ',
@@ -52,30 +157,31 @@ const copy = {
     takeaway: 'ซื้อกลับบ้าน',
     dineIn: 'ทานที่ร้าน',
     table: 'โต๊ะ',
-    tableFirst: 'เลือกทานที่ร้านก่อน',
-    tableChoose: 'เลือกโต๊ะ (ตัวอย่าง)',
-    tableDemo: 'โต๊ะเป็นข้อมูลตัวอย่าง ยังไม่เชื่อมต่อระบบร้าน',
-    tableSelected: 'โต๊ะที่เลือก',
+    selectTable: 'เลือกโต๊ะ (ตัวอย่าง)',
+    tableHint: 'หมายเลขโต๊ะเป็นข้อมูลตัวอย่าง ยังไม่เชื่อมต่อระบบร้าน',
+    selectedTableLabel: 'โต๊ะที่เลือก',
+    pickupHeading: 'รูปแบบการรับสินค้า',
+    pickupHelp: 'รับสินค้าด้วยตนเองที่ร้าน',
     payment: 'วิธีการชำระเงิน',
-    dineInPayment: 'ชำระเงินที่ร้าน (UI ตัวอย่าง)',
+    demoPayment: 'ชำระเงินที่ร้าน (ตัวอย่าง UI)',
     summary: 'สรุปคำสั่งซื้อ',
     items: 'รายการสินค้า',
     discount: 'ส่วนลด',
-    lineTotal: 'ราคารวม',
+    noDiscount: 'ไม่มี',
+    total: 'ราคารวม',
+    remove: 'นำออก',
     added: 'เพิ่มลงตะกร้าแล้ว',
     decrease: 'ลดจำนวน',
     increase: 'เพิ่มจำนวน',
-    dineInDemo: 'สั่งอาหารทานที่ร้าน (ตัวอย่าง)',
-    demoNote: 'โหมดทานที่ร้านเป็นตัวอย่าง UI ยังไม่ส่งออเดอร์จริง',
-    tableRequired: 'กรุณาเลือกโต๊ะก่อน',
-    demoSuccess: 'ทดลองเลือกสั่งอาหารสำหรับโต๊ะ',
-    demoNotSent: 'ยังไม่มีการส่งออเดอร์ไปยังร้าน',
+    demoAction: 'สั่งอาหารทานที่ร้าน (ตัวอย่าง)',
+    demoNote:
+      'การทานที่ร้านเป็นเพียงตัวอย่าง UI ยังไม่ได้เชื่อมต่อการส่งออเดอร์',
+    demoSuccess: 'นี่เป็นเพียงตัวอย่าง ไม่มีการส่งออเดอร์ไปยังร้าน',
     checkoutHint: 'ตรวจสอบยอดล่าสุดและกรอกข้อมูลก่อนส่งคำสั่งซื้อ',
-    priceReviewed: 'ยอดล่าสุดจากระบบร้าน',
-    orderItems: 'รายการที่ตรวจสอบแล้ว',
+    verified: 'รายการสินค้าที่ตรวจสอบแล้ว',
+    latestTotal: 'ยอดล่าสุดจากระบบร้าน',
     customer: 'ข้อมูลผู้รับสินค้า',
-    pickup: 'รับสินค้าและชำระเงินที่ร้าน',
-    orderWaiting: 'กำลังตรวจสอบยอดล่าสุด...',
+    checking: 'กำลังตรวจสอบยอดล่าสุด...',
   },
   en: {
     cart: 'Shopping cart',
@@ -86,41 +192,42 @@ const copy = {
     takeaway: 'Takeaway',
     dineIn: 'Dine in',
     table: 'Table',
-    tableFirst: 'Select dine in first',
-    tableChoose: 'Choose a table (demo)',
-    tableDemo: 'Sample tables only; not connected to the restaurant',
-    tableSelected: 'Selected table',
+    selectTable: 'Choose a table (demo)',
+    tableHint: 'Sample tables only; not connected to the restaurant',
+    selectedTableLabel: 'Selected table',
+    pickupHeading: 'Pickup method',
+    pickupHelp: 'Collect your order at the store',
     payment: 'Payment method',
-    dineInPayment: 'Pay at restaurant (UI demo)',
+    demoPayment: 'Pay in store (UI demo)',
     summary: 'Order summary',
     items: 'Products',
     discount: 'Discount',
-    lineTotal: 'Line total',
+    noDiscount: 'None',
+    total: 'Line total',
+    remove: 'Remove',
     added: 'Added to cart',
     decrease: 'Decrease quantity',
     increase: 'Increase quantity',
-    dineInDemo: 'Dine-in order (demo)',
-    demoNote: 'Dine-in is a UI demo. No real order will be placed.',
-    tableRequired: 'Please choose a table first',
-    demoSuccess: 'Demo order selected for table',
-    demoNotSent: 'No order was sent to the store',
+    demoAction: 'Dine-in order (demo)',
+    demoNote: 'Dine-in is a UI demo and does not submit an order.',
+    demoSuccess: 'Demo only: no order was sent to the store.',
     checkoutHint:
-      'Review the latest total and provide your details before placing an order',
-    priceReviewed: 'Latest total from the store',
-    orderItems: 'Verified items',
+      'Review the latest total and enter pickup details before placing the order',
+    verified: 'Verified order items',
+    latestTotal: 'Latest total from the store',
     customer: 'Pickup details',
-    pickup: 'Pick up and pay at the store',
-    orderWaiting: 'Checking the latest total...',
+    checking: 'Checking the latest total...',
   },
 } as const;
 
 const page: CSSProperties = {
   boxSizing: 'border-box',
   width: '100%',
-  maxWidth: 1360,
+  maxWidth: 1200,
   margin: '0 auto',
-  padding: 'clamp(12px, 1.8vw, 24px) 0 24px',
-  color: palette.navy,
+  padding: 'clamp(16px, 2vw, 28px)',
+  minHeight: 'calc(100dvh - 180px)',
+  color: colors.navy,
   fontFamily: 'inherit',
   lineHeight: 1.5,
 };
@@ -128,58 +235,57 @@ const page: CSSProperties = {
 const card: CSSProperties = {
   boxSizing: 'border-box',
   minWidth: 0,
-  borderRadius: 15,
   background: '#FFFFFF',
   border: '1px solid #EDF0F4',
-  boxShadow: '0 6px 22px rgba(17, 27, 56, .05)',
+  borderRadius: 15,
+  boxShadow: '0 6px 22px rgba(17,27,56,0.05)',
 };
 
-const title: CSSProperties = {
+const heading: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: 9,
-  margin: '0 0 12px',
   fontSize: 17,
   fontWeight: 800,
+  margin: '0 0 12px',
   lineHeight: 1.5,
 };
 
 const pale: CSSProperties = {
-  background: palette.pale,
   borderRadius: 11,
+  background: colors.pale,
   padding: 14,
   marginBottom: 14,
 };
 
-const control: CSSProperties = {
+const field: CSSProperties = {
   boxSizing: 'border-box',
-  minHeight: 44,
   width: '100%',
+  minHeight: 44,
+  marginTop: 6,
   padding: '10px 12px',
-  border: `1px solid ${palette.border}`,
   borderRadius: 9,
   background: '#FFFFFF',
-  color: palette.navy,
+  border: `1px solid ${colors.border}`,
+  color: colors.navy,
   fontFamily: 'inherit',
   fontSize: 14,
-  lineHeight: 1.45,
 };
 
-const action: CSSProperties = {
+const primary: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
   gap: 9,
-  minHeight: 46,
   width: '100%',
+  minHeight: 46,
   padding: '10px 14px',
   border: 0,
   borderRadius: 9,
-  background: palette.yellow,
-  color: palette.navy,
+  background: colors.yellow,
+  color: colors.navy,
   fontFamily: 'inherit',
   fontSize: 14,
-  lineHeight: 1.5,
   fontWeight: 800,
   cursor: 'pointer',
 };
@@ -189,35 +295,20 @@ const secondary: CSSProperties = {
   alignItems: 'center',
   justifyContent: 'center',
   gap: 8,
+  padding: '10px 16px',
   minHeight: 42,
-  padding: '9px 15px',
-  border: '1px solid #EFC94F',
   borderRadius: 10,
   background: '#FFF6D7',
-  color: palette.navy,
+  border: '1px solid #EFC94F',
+  color: colors.navy,
   textDecoration: 'none',
   fontFamily: 'inherit',
   fontSize: 14,
-  lineHeight: 1.5,
   fontWeight: 700,
   cursor: 'pointer',
 };
 
-const tables = [
-  'A1',
-  'A2',
-  'A3',
-  'A4',
-  'A5',
-  'A6',
-  'A7',
-  'A8',
-  'A9',
-  'A10',
-  'A11',
-  'A12',
-];
-
+// Existing order identity.
 interface RequestIdentity {
   key: string;
   token: string;
@@ -248,31 +339,41 @@ function displayQuantity(quantity: string): string {
 
   if (value === null) return quantity;
 
-  const integer = value / 1000n;
   const decimal = value % 1000n;
 
   return decimal === 0n
-    ? integer.toString()
-    : `${integer}.${decimal.toString().padStart(3, '0').replace(/0+$/, '')}`;
+    ? (value / 1000n).toString()
+    : `${value / 1000n}.${decimal
+        .toString()
+        .padStart(3, '0')
+        .replace(/0+$/, '')}`;
 }
 
+// Main page.
 export function ShopCartPage() {
   const { slug = '' } = useParams();
-  return <CartContents key={slug} slug={slug} />;
+
+  return (
+    <>
+      <style>{responsiveCartCSS}</style>
+      <CartContents key={slug} slug={slug} />
+    </>
+  );
 }
 
 function CartContents({ slug }: { slug: string }) {
   const { t, language } = useLanguage();
-  const ui = copy[language];
+  const ui = words[language];
+
   const navigate = useNavigate();
   const cart = useShopCart(slug);
 
-  const [diningType, setDiningType] = useState<'takeaway' | 'dine-in'>(
-    'takeaway',
-  );
+  // Dining mode.
+  const [mode, setMode] = useState<'takeaway' | 'dine-in'>('takeaway');
 
+  // Table selection for dine-in demo.
   const [selectedTable, setSelectedTable] = useState('');
-  const [demoTable, setDemoTable] = useState<string | null>(null);
+  const [demoDone, setDemoDone] = useState(false);
 
   const [identity] = useState<RequestIdentity>(
     () =>
@@ -294,6 +395,7 @@ function CartContents({ slug }: { slug: string }) {
 
   const [error, setError] = useState<unknown>(null);
 
+  // Store settings.
   const shop = useQuery({
     queryKey: ['storefront', slug, 'settings'],
     queryFn: ({ signal }) =>
@@ -301,6 +403,7 @@ function CartContents({ slug }: { slug: string }) {
     retry: false,
   });
 
+  // Real takeaway quote.
   const quote = useMutation({
     mutationFn: () =>
       storefrontRequest<ShopQuote>(`/${slug}/quote`, {
@@ -315,6 +418,7 @@ function CartContents({ slug }: { slug: string }) {
 
   const trackingPath = `/shop/${slug}/track/${identity.key}#access=${identity.token}`;
 
+  // Real takeaway order.
   const submission = useMutation({
     mutationFn: (input: ShopOrderInput) =>
       storefrontRequest<OnlineOrder>(`/${slug}/orders`, {
@@ -396,15 +500,16 @@ function CartContents({ slug }: { slug: string }) {
 
   const resetReview = () => {
     quote.reset();
-    setDemoTable(null);
+    setDemoDone(false);
     setError(null);
   };
 
-  const selectDining = (mode: 'takeaway' | 'dine-in') => {
-    if (mode !== diningType) {
-      setDiningType(mode);
+  const chooseMode = (next: 'takeaway' | 'dine-in') => {
+    if (next !== mode) {
+      setMode(next);
 
-      if (mode === 'takeaway') {
+      // Clear selected table when returning to takeaway.
+      if (next === 'takeaway') {
         setSelectedTable('');
       }
 
@@ -412,7 +517,7 @@ function CartContents({ slug }: { slug: string }) {
     }
   };
 
-  const checkoutOpen = diningType === 'takeaway' && !!quote.data;
+  const checkoutOpen = mode === 'takeaway' && !!quote.data;
 
   useEffect(() => {
     if (checkoutOpen) {
@@ -424,10 +529,10 @@ function CartContents({ slug }: { slug: string }) {
     }
   }, [checkoutOpen]);
 
-  // Existing pending-order recovery.
+  // Pending-order recovery.
   if (pending) {
     return (
-      <div style={page}>
+      <div className="velopos-cart" style={page}>
         <Card className="shop-checkout">
           <h1>
             {submission.isPending
@@ -498,8 +603,7 @@ function CartContents({ slug }: { slug: string }) {
     });
 
   const estimated = cart.items.reduce(
-    (total, item) =>
-      total + (estimatedLine(item.unit_price, item.quantity) ?? 0n),
+    (sum, item) => sum + (estimatedLine(item.unit_price, item.quantity) ?? 0n),
     0n,
   );
 
@@ -509,7 +613,7 @@ function CartContents({ slug }: { slug: string }) {
     if (
       !quote.data ||
       busy ||
-      diningType !== 'takeaway' ||
+      mode !== 'takeaway' ||
       !valid ||
       !shop.data?.accepting_orders
     ) {
@@ -530,20 +634,19 @@ function CartContents({ slug }: { slug: string }) {
   // PAGE 2: CHECKOUT
   if (checkoutOpen) {
     return (
-      <div style={page}>
+      <div className="velopos-cart" style={page}>
         <PageHeader
-          heading={ui.checkout}
+          title={ui.checkout}
           backText={ui.backCart}
           onBack={resetReview}
         />
 
-        <Steps active={2} language={language} />
+        <OrderSteps active={2} language={language} />
 
         <p
           style={{
-            margin: '6px 0 18px',
-            fontSize: 14,
-            color: palette.muted,
+            color: colors.muted,
+            margin: '12px 0 20px',
           }}
         >
           {ui.checkoutHint}
@@ -558,9 +661,8 @@ function CartContents({ slug }: { slug: string }) {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns:
-              'repeat(auto-fit, minmax(min(100%, 360px), 1fr))',
-            gap: 18,
+            gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,390px),1fr))',
+            gap: 20,
             alignItems: 'start',
           }}
         >
@@ -568,110 +670,75 @@ function CartContents({ slug }: { slug: string }) {
           <section
             style={{
               ...card,
-              padding: 'clamp(16px, 2vw, 24px)',
+              padding: 'clamp(16px,2vw,24px)',
             }}
           >
-            <h2 style={title}>
-              <ShoppingBag size={21} aria-hidden="true" />
-              {ui.orderItems}
+            <h2 style={heading}>
+              <ShoppingBag size={20} aria-hidden="true" />
+              {ui.verified}
             </h2>
 
             {quote.data.items.map((item) => (
               <div
                 key={item.variant_id}
                 style={{
-                  borderBottom: `1px solid ${palette.border}`,
-                  padding: '12px 0',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  gap: 12,
+                  padding: '13px 0',
+                  borderBottom: `1px solid ${colors.border}`,
                 }}
               >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    gap: 12,
-                    alignItems: 'start',
-                  }}
-                >
-                  <div style={{ minWidth: 0 }}>
-                    <strong style={{ overflowWrap: 'anywhere' }}>
-                      {item.product_name}
-                    </strong>
+                <div style={{ minWidth: 0 }}>
+                  <strong style={{ overflowWrap: 'anywhere' }}>
+                    {item.product_name}
+                  </strong>
 
-                    <div
-                      style={{
-                        fontSize: 13,
-                        color: palette.muted,
-                        marginTop: 3,
-                      }}
-                    >
-                      {item.variant_name} · {displayQuantity(item.quantity)}{' '}
-                      {item.unit}
-                    </div>
-                  </div>
-
-                  <strong
+                  <p
                     style={{
-                      color: palette.price,
-                      whiteSpace: 'nowrap',
+                      margin: '4px 0 0',
+                      color: colors.muted,
+                      fontSize: 13,
                     }}
                   >
-                    ฿{moneyText(item.line_total)}
-                  </strong>
+                    {item.variant_name} · {displayQuantity(item.quantity)}{' '}
+                    {item.unit}
+                  </p>
                 </div>
+
+                <strong
+                  style={{
+                    whiteSpace: 'nowrap',
+                    color: colors.price,
+                  }}
+                >
+                  ฿{moneyText(item.line_total)}
+                </strong>
               </div>
             ))}
 
             <div
               style={{
                 ...pale,
-                marginTop: 18,
-                marginBottom: 0,
+                margin: '18px 0 0',
                 display: 'flex',
                 justifyContent: 'space-between',
-                alignItems: 'center',
                 flexWrap: 'wrap',
                 gap: 8,
+                alignItems: 'center',
               }}
             >
-              <strong>{ui.priceReviewed}</strong>
+              <strong>{ui.latestTotal}</strong>
 
               <strong
                 style={{
-                  color: palette.price,
+                  color: colors.price,
                   fontSize: 24,
                 }}
               >
                 ฿{moneyText(quote.data.estimated_total)}
               </strong>
             </div>
-
-            <p
-              style={{
-                margin: '11px 0 0',
-                fontSize: 12,
-                color: palette.muted,
-              }}
-            >
-              {t('storefront.excludesDiscountsRewardsThatMayApplyAt')}
-            </p>
-
-            <p
-              style={{
-                margin: '12px 0 0',
-                fontSize: 13,
-                color: palette.muted,
-              }}
-            >
-              <Check
-                size={16}
-                aria-hidden="true"
-                style={{
-                  verticalAlign: 'middle',
-                  marginRight: 6,
-                }}
-              />
-              {ui.pickup}
-            </p>
           </section>
 
           {/* CUSTOMER FORM */}
@@ -679,18 +746,19 @@ function CartContents({ slug }: { slug: string }) {
             onSubmit={submitOrder}
             style={{
               ...card,
-              padding: 'clamp(16px, 2vw, 24px)',
+              padding: 'clamp(16px,2vw,24px)',
               display: 'flex',
               flexDirection: 'column',
-              gap: 18,
+              gap: 17,
             }}
           >
-            <h2 style={{ ...title, marginBottom: 0 }}>{ui.customer}</h2>
+            <h2 style={{ ...heading, margin: 0 }}>{ui.customer}</h2>
 
-            <label style={{ fontSize: 14, fontWeight: 600 }}>
+            <label>
               {t('storefront.pickupRecipientName')}
+
               <input
-                style={control}
+                style={field}
                 required
                 maxLength={200}
                 autoComplete="name"
@@ -704,10 +772,11 @@ function CartContents({ slug }: { slug: string }) {
               />
             </label>
 
-            <label style={{ fontSize: 14, fontWeight: 600 }}>
+            <label>
               {t('storefront.contactPhone')}
+
               <input
-                style={control}
+                style={field}
                 required
                 type="tel"
                 minLength={3}
@@ -723,15 +792,13 @@ function CartContents({ slug }: { slug: string }) {
               />
             </label>
 
-            <label style={{ fontSize: 14, fontWeight: 600 }}>
+            <label>
               {t('storefront.noteToStore')}
+
               <textarea
+                style={{ ...field, resize: 'vertical' }}
                 rows={3}
                 maxLength={1000}
-                style={{
-                  ...control,
-                  resize: 'vertical',
-                }}
                 value={customer.customer_note}
                 onChange={(event) =>
                   setCustomer({
@@ -748,28 +815,24 @@ function CartContents({ slug }: { slug: string }) {
                 display: 'flex',
                 alignItems: 'flex-start',
                 gap: 10,
+                lineHeight: 1.6,
                 fontSize: 13,
-                fontWeight: 400,
-                lineHeight: 1.65,
               }}
             >
               <input
                 type="checkbox"
                 required
-                style={{
-                  marginTop: 4,
-                  flexShrink: 0,
-                }}
+                style={{ marginTop: 4, flexShrink: 0 }}
               />
+
               {t('storefront.iUnderstandStockIsReservedAfterSuccessful')}
             </label>
 
             <p
               style={{
                 margin: 0,
+                color: colors.muted,
                 fontSize: 12,
-                lineHeight: 1.6,
-                color: palette.muted,
               }}
             >
               {t('storefront.theStoreUsesYourNameAndPhone')}
@@ -779,16 +842,12 @@ function CartContents({ slug }: { slug: string }) {
               type="submit"
               disabled={busy || !shop.data?.accepting_orders}
               style={{
-                ...action,
+                ...primary,
                 opacity: busy || !shop.data?.accepting_orders ? 0.6 : 1,
-                cursor:
-                  busy || !shop.data?.accepting_orders
-                    ? 'not-allowed'
-                    : 'pointer',
               }}
             >
               {t('storefront.submitOrderUnpaid')}
-              <ArrowRight size={18} aria-hidden="true" />
+              <ArrowRight size={17} aria-hidden="true" />
             </button>
 
             {shop.data && !shop.data.accepting_orders && (
@@ -800,10 +859,7 @@ function CartContents({ slug }: { slug: string }) {
             <button
               type="button"
               onClick={resetReview}
-              style={{
-                ...secondary,
-                width: '100%',
-              }}
+              style={{ ...secondary, width: '100%' }}
             >
               <ArrowLeft size={16} aria-hidden="true" />
               {ui.backCart}
@@ -816,14 +872,14 @@ function CartContents({ slug }: { slug: string }) {
 
   // PAGE 1: CART
   return (
-    <div style={page}>
+    <div className="velopos-cart" style={page}>
       <PageHeader
-        heading={t('pos.shoppingCart')}
+        title={t('pos.shoppingCart')}
         backText={t('storefront.chooseMoreProducts')}
         to={`/shop/${slug}`}
       />
 
-      <Steps active={1} language={language} />
+      <OrderSteps active={1} language={language} />
 
       {shop.isPending && (
         <Loading>{t('storefront.checkingStoreStatus')}</Loading>
@@ -837,37 +893,30 @@ function CartContents({ slug }: { slug: string }) {
       <div
         role="note"
         style={{
+          ...pale,
+          margin: '16px 0 20px',
+          border: '1px solid #F0E0AA',
           display: 'flex',
           alignItems: 'center',
-          gap: 13,
-          margin: '15px 0 20px',
-          padding: '12px 15px',
-          background: palette.pale,
-          border: '1px solid #F0E0AA',
-          borderRadius: 11,
+          gap: 12,
         }}
       >
         <span
           style={{
             display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             width: 38,
             height: 38,
             flexShrink: 0,
-            alignItems: 'center',
-            justifyContent: 'center',
             borderRadius: '50%',
-            background: palette.yellow,
+            background: colors.yellow,
           }}
         >
           <ShoppingCart size={20} aria-hidden="true" />
         </span>
 
-        <span
-          style={{
-            color: '#55472B',
-            fontSize: 13,
-          }}
-        >
+        <span style={{ color: '#55472B', fontSize: 13 }}>
           {t('storefront.cartItemsAreNotReservedStockIs')}
         </span>
       </div>
@@ -876,17 +925,17 @@ function CartContents({ slug }: { slug: string }) {
         <div
           style={{
             ...card,
-            padding: '50px 20px',
-            minHeight: 230,
+            minHeight: 240,
+            padding: 24,
             display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
+            flexDirection: 'column',
             gap: 12,
             textAlign: 'center',
           }}
         >
-          <ShoppingCart size={38} color={palette.muted} aria-hidden="true" />
+          <ShoppingCart size={38} color={colors.muted} aria-hidden="true" />
 
           <h2 style={{ margin: 0 }}>{t('storefront.yourCartIsEmpty')}</h2>
 
@@ -898,9 +947,9 @@ function CartContents({ slug }: { slug: string }) {
         <div
           style={{
             display: 'flex',
-            alignItems: 'flex-start',
-            gap: 18,
             flexWrap: 'wrap',
+            alignItems: 'flex-start',
+            gap: 20,
           }}
         >
           {/* PRODUCTS */}
@@ -908,10 +957,10 @@ function CartContents({ slug }: { slug: string }) {
             aria-label={t('storefront.cartItems')}
             style={{
               display: 'flex',
-              flex: '2 1 530px',
+              flex: '2 1 400px',
+              minWidth: 0,
               flexDirection: 'column',
               gap: 16,
-              minWidth: 0,
             }}
           >
             {cart.items.map((item) => (
@@ -947,117 +996,159 @@ function CartContents({ slug }: { slug: string }) {
           <aside
             style={{
               ...card,
-              flex: '1 1 320px',
+              flex: '1 1 280px',
               minWidth: 0,
-              padding: 'clamp(14px, 1.5vw, 20px)',
+              padding: 'clamp(14px,1.5vw,20px)',
             }}
           >
             {/* DINING OPTION */}
             <section style={{ marginBottom: 15 }}>
-              <h2 style={title}>
-                <UtensilsCrossed size={21} aria-hidden="true" />
+              <h2 style={heading}>
+                <UtensilsCrossed size={20} aria-hidden="true" />
                 {ui.dining}
               </h2>
 
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                  gridTemplateColumns: 'repeat(2,minmax(0,1fr))',
                   gap: 9,
                 }}
               >
-                {(['takeaway', 'dine-in'] as const).map((mode) => (
+                {(['takeaway', 'dine-in'] as const).map((option) => (
                   <button
+                    key={option}
                     type="button"
-                    key={mode}
-                    aria-pressed={diningType === mode}
                     disabled={busy}
-                    onClick={() => selectDining(mode)}
+                    aria-pressed={mode === option}
+                    onClick={() => chooseMode(option)}
                     style={{
-                      ...action,
-                      minWidth: 0,
-                      minHeight: 44,
-                      fontSize: 13,
+                      ...primary,
                       padding: '8px 6px',
+                      minWidth: 0,
+                      fontSize: 13,
                       border: `1px solid ${
-                        diningType === mode ? palette.yellow : palette.border
+                        mode === option ? colors.yellow : colors.border
                       }`,
-                      background:
-                        diningType === mode ? palette.yellow : '#F7F8FA',
-                      color: diningType === mode ? palette.navy : palette.muted,
+                      background: mode === option ? colors.yellow : '#F7F8FA',
+                      color: mode === option ? colors.navy : colors.muted,
                     }}
                   >
-                    {mode === 'takeaway' ? (
+                    {option === 'takeaway' ? (
                       <ShoppingBag size={17} aria-hidden="true" />
                     ) : (
                       <UtensilsCrossed size={17} aria-hidden="true" />
                     )}
-                    {mode === 'takeaway' ? ui.takeaway : ui.dineIn}
+
+                    {option === 'takeaway' ? ui.takeaway : ui.dineIn}
                   </button>
                 ))}
               </div>
             </section>
 
-            {/* TABLE SELECTION */}
-            <section style={pale}>
-              <label
-                htmlFor="shop-cart-table"
-                style={{
-                  ...title,
-                  fontSize: 15,
-                  marginBottom: 8,
-                }}
-              >
-                <UtensilsCrossed size={19} aria-hidden="true" />
-                {ui.table}
-              </label>
+            {/* TAKEAWAY PICKUP METHOD */}
+            {mode === 'takeaway' && (
+              <section style={pale}>
+                <h2 style={{ ...heading, fontSize: 15 }}>
+                  <ShoppingBag size={19} aria-hidden="true" />
+                  {ui.pickupHeading}
+                </h2>
 
-              <select
-                id="shop-cart-table"
-                value={selectedTable}
-                disabled={diningType !== 'dine-in'}
-                onChange={(event) => {
-                  setSelectedTable(event.target.value);
-                  setDemoTable(null);
-                }}
-                style={{
-                  ...control,
-                  color: diningType === 'dine-in' ? palette.navy : '#9CA4B2',
-                  background: diningType === 'dine-in' ? '#FFFFFF' : '#F7F8FA',
-                  cursor: diningType === 'dine-in' ? 'pointer' : 'not-allowed',
-                }}
-              >
-                <option value="">
-                  {diningType === 'dine-in' ? ui.tableChoose : ui.tableFirst}
-                </option>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '11px 12px',
+                    background: '#FFFFFF',
+                    borderRadius: 9,
+                    border: `1px solid ${colors.border}`,
+                  }}
+                >
+                  <Check size={18} color="#188A52" aria-hidden="true" />
 
-                {tables.map((table) => (
-                  <option key={table} value={table}>
-                    {ui.table} {table}
-                  </option>
-                ))}
-              </select>
+                  <strong style={{ fontSize: 14 }}>{ui.takeaway}</strong>
+                </div>
 
-              {diningType === 'dine-in' && (
                 <p
                   style={{
-                    margin: '8px 0 0',
-                    fontSize: 12,
+                    margin: '9px 0 0',
                     color: '#85651D',
+                    fontSize: 12,
+                  }}
+                >
+                  {ui.pickupHelp}
+                </p>
+              </section>
+            )}
+
+            {/* TABLE SELECTION: DINE-IN DEMO ONLY */}
+            {mode === 'dine-in' && (
+              <section style={pale}>
+                <label
+                  htmlFor="shop-cart-table"
+                  style={{
+                    ...heading,
+                    fontSize: 15,
+                    marginBottom: 8,
+                  }}
+                >
+                  <UtensilsCrossed size={19} aria-hidden="true" />
+                  {ui.table}
+                </label>
+
+                <select
+                  id="shop-cart-table"
+                  value={selectedTable}
+                  onChange={(event) => {
+                    setSelectedTable(event.target.value);
+                    setDemoDone(false);
+                  }}
+                  style={{
+                    ...field,
+                    marginTop: 0,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="">{ui.selectTable}</option>
+
+                  {[
+                    'A1',
+                    'A2',
+                    'A3',
+                    'A4',
+                    'A5',
+                    'A6',
+                    'A7',
+                    'A8',
+                    'A9',
+                    'A10',
+                    'A11',
+                    'A12',
+                  ].map((table) => (
+                    <option key={table} value={table}>
+                      {ui.table} {table}
+                    </option>
+                  ))}
+                </select>
+
+                <p
+                  style={{
+                    margin: '9px 0 0',
+                    color: '#85651D',
+                    fontSize: 12,
                   }}
                 >
                   {selectedTable
-                    ? `${ui.tableSelected}: ${selectedTable} (${
-                        language === 'th' ? 'ตัวอย่าง UI' : 'UI demo'
-                      })`
-                    : ui.tableDemo}
+                    ? `${ui.selectedTableLabel}: ${selectedTable} (Demo)`
+                    : ui.tableHint}
                 </p>
-              )}
-            </section>
+              </section>
+            )}
 
             {/* PAYMENT */}
             <section style={pale}>
-              <h2 style={title}>
+              <h2 style={heading}>
                 <CreditCard size={20} aria-hidden="true" />
                 {ui.payment}
               </h2>
@@ -1072,31 +1163,32 @@ function CartContents({ slug }: { slug: string }) {
                 }}
               >
                 <span
+                  aria-hidden="true"
                   style={{
                     display: 'block',
                     width: 20,
                     height: 20,
                     borderRadius: '50%',
                     flexShrink: 0,
-                    border: `4px solid ${palette.yellow}`,
-                    background: palette.navy,
+                    border: `4px solid ${colors.yellow}`,
+                    background: colors.navy,
                     boxShadow: 'inset 0 0 0 3px white',
                   }}
                 />
 
                 <span>
-                  {diningType === 'takeaway'
+                  {mode === 'takeaway'
                     ? t('storefront.pickUpAndPayInStore')
-                    : ui.dineInPayment}
+                    : ui.demoPayment}
                 </span>
               </div>
 
-              {diningType === 'takeaway' && shop.data?.pickup_instructions && (
+              {mode === 'takeaway' && shop.data?.pickup_instructions && (
                 <p
                   style={{
                     margin: '8px 0 0 30px',
                     fontSize: 12,
-                    color: palette.muted,
+                    color: colors.muted,
                     overflowWrap: 'anywhere',
                   }}
                 >
@@ -1108,21 +1200,21 @@ function CartContents({ slug }: { slug: string }) {
             {/* TOTALS */}
             <section
               style={{
-                borderTop: `1px solid ${palette.border}`,
                 paddingTop: 14,
                 marginBottom: 14,
+                borderTop: `1px solid ${colors.border}`,
               }}
             >
-              <h2 style={title}>{ui.summary}</h2>
+              <h2 style={heading}>{ui.summary}</h2>
 
               <div
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
                   gap: 8,
+                  color: colors.muted,
                   fontSize: 13,
                   marginBottom: 10,
-                  color: palette.muted,
                 }}
               >
                 <span>
@@ -1131,8 +1223,8 @@ function CartContents({ slug }: { slug: string }) {
 
                 <span
                   style={{
+                    color: colors.navy,
                     whiteSpace: 'nowrap',
-                    color: palette.navy,
                   }}
                 >
                   ฿{moneyText(centsText(estimated))}
@@ -1144,13 +1236,13 @@ function CartContents({ slug }: { slug: string }) {
                   display: 'flex',
                   justifyContent: 'space-between',
                   gap: 8,
+                  color: colors.muted,
                   fontSize: 13,
                   marginBottom: 12,
-                  color: palette.muted,
                 }}
               >
                 <span>{ui.discount}</span>
-                <span>—</span>
+                <span>{ui.noDiscount}</span>
               </div>
 
               <div
@@ -1170,8 +1262,8 @@ function CartContents({ slug }: { slug: string }) {
 
                 <strong
                   style={{
-                    color: palette.price,
                     fontSize: 23,
+                    color: colors.price,
                   }}
                 >
                   ฿{moneyText(centsText(estimated))}
@@ -1180,7 +1272,7 @@ function CartContents({ slug }: { slug: string }) {
             </section>
 
             {/* ACTION BUTTON */}
-            {diningType === 'takeaway' ? (
+            {mode === 'takeaway' ? (
               <button
                 type="button"
                 disabled={busy || !valid || !shop.data?.accepting_orders}
@@ -1189,14 +1281,15 @@ function CartContents({ slug }: { slug: string }) {
                   quote.mutate();
                 }}
                 style={{
-                  ...action,
+                  ...primary,
                   opacity:
                     busy || !valid || !shop.data?.accepting_orders ? 0.6 : 1,
                 }}
               >
                 {quote.isPending
-                  ? ui.orderWaiting
+                  ? ui.checking
                   : t('storefront.reviewItemsAndLatestTotal')}
+
                 <ArrowRight size={17} aria-hidden="true" />
               </button>
             ) : (
@@ -1204,9 +1297,9 @@ function CartContents({ slug }: { slug: string }) {
                 <button
                   type="button"
                   disabled={busy || !valid || !selectedTable}
-                  onClick={() => setDemoTable(selectedTable)}
+                  onClick={() => setDemoDone(true)}
                   style={{
-                    ...action,
+                    ...primary,
                     opacity: busy || !valid || !selectedTable ? 0.6 : 1,
                     cursor:
                       busy || !valid || !selectedTable
@@ -1215,7 +1308,7 @@ function CartContents({ slug }: { slug: string }) {
                   }}
                 >
                   <UtensilsCrossed size={17} aria-hidden="true" />
-                  {ui.dineInDemo}
+                  {ui.demoAction}
                 </button>
 
                 <p
@@ -1225,10 +1318,10 @@ function CartContents({ slug }: { slug: string }) {
                     margin: '10px 0 0',
                   }}
                 >
-                  {selectedTable ? ui.demoNote : ui.tableRequired}
+                  {selectedTable ? ui.demoNote : ui.selectTable}
                 </p>
 
-                {demoTable && (
+                {demoDone && (
                   <p
                     role="status"
                     style={{
@@ -1238,7 +1331,7 @@ function CartContents({ slug }: { slug: string }) {
                       color: '#825F19',
                     }}
                   >
-                    {ui.demoSuccess} {demoTable}. {ui.demoNotSent}.
+                    {ui.demoSuccess}
                   </p>
                 )}
               </>
@@ -1257,7 +1350,6 @@ function CartContents({ slug }: { slug: string }) {
             )}
 
             {quote.error && <ShopError error={quote.error} />}
-
             {error != null && <ShopError error={error} />}
           </aside>
         </div>
@@ -1266,76 +1358,77 @@ function CartContents({ slug }: { slug: string }) {
   );
 }
 
+// Shared header within this file.
 function PageHeader({
-  heading,
+  title,
   backText,
   to,
   onBack,
 }: {
-  heading: string;
+  title: string;
   backText: string;
   to?: string;
   onBack?: () => void;
 }) {
-  const content = (
-    <>
-      <ArrowLeft size={17} aria-hidden="true" />
-      {backText}
-    </>
-  );
-
   return (
-    <div
+    <header
       style={{
         display: 'flex',
-        justifyContent: 'space-between',
         alignItems: 'center',
+        justifyContent: 'space-between',
         gap: 14,
         flexWrap: 'wrap',
-        marginBottom: 17,
+        marginBottom: 18,
       }}
     >
       <h1
         style={{
           margin: 0,
-          color: palette.navy,
-          fontSize: 'clamp(26px, 3vw, 34px)',
+          color: colors.navy,
+          fontSize: 'clamp(26px,3vw,34px)',
           lineHeight: 1.25,
           fontWeight: 800,
         }}
       >
-        {heading}
+        {title}
       </h1>
 
       {to ? (
         <Link to={to} style={secondary}>
-          {content}
+          <ArrowLeft size={17} aria-hidden="true" />
+          {backText}
         </Link>
       ) : (
-        <button type="button" style={secondary} onClick={onBack}>
-          {content}
+        <button type="button" onClick={onBack} style={secondary}>
+          <ArrowLeft size={17} aria-hidden="true" />
+          {backText}
         </button>
       )}
-    </div>
+    </header>
   );
 }
 
-function Steps({ active, language }: { active: 1 | 2; language: 'th' | 'en' }) {
-  const labels = copy[language];
+// Three-step indicator for cart and checkout.
+function OrderSteps({
+  active,
+  language,
+}: {
+  active: 1 | 2;
+  language: 'th' | 'en';
+}) {
+  const w = words[language];
 
   return (
     <nav
       aria-label={language === 'th' ? 'ขั้นตอนการสั่งซื้อ' : 'Order steps'}
       style={{
         display: 'flex',
-        alignItems: 'center',
         flexWrap: 'wrap',
-        gap: 9,
-        fontSize: 12,
-        color: palette.muted,
+        gap: 8,
+        margin: '0 0 14px',
       }}
     >
-      {[labels.cart, labels.checkout, labels.tracking].map((label, index) => (
+      {[w.cart, w.checkout, w.tracking].map((label, index) => (
         <span
           key={label}
           aria-current={index + 1 === active ? 'step' : undefined}
@@ -1343,27 +1436,29 @@ function Steps({ active, language }: { active: 1 | 2; language: 'th' | 'en' }) {
             display: 'inline-flex',
             alignItems: 'center',
             gap: 7,
+            background: index + 1 === active ? '#FFF1C3' : '#F3F5F8',
+            color: index + 1 === active ? colors.navy : colors.muted,
+            fontSize: 12,
+            fontWeight: index + 1 === active ? 800 : 500,
             padding: '6px 10px',
             borderRadius: 20,
-            background: index + 1 === active ? '#FFF1C3' : '#F3F5F8',
-            color: index + 1 === active ? palette.navy : palette.muted,
-            fontWeight: index + 1 === active ? 800 : 500,
           }}
         >
           <span
             style={{
-              width: 19,
-              height: 19,
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
+              width: 19,
+              height: 19,
+              background: index + 1 === active ? colors.yellow : '#E3E6ED',
               borderRadius: '50%',
-              background: index + 1 === active ? palette.yellow : '#E3E6ED',
               fontSize: 11,
             }}
           >
             {index + 1}
           </span>
+
           {label}
         </span>
       ))}
@@ -1371,6 +1466,7 @@ function Steps({ active, language }: { active: 1 | 2; language: 'th' | 'en' }) {
   );
 }
 
+// Individual product card.
 function CartLineItem({
   item,
   busy,
@@ -1383,7 +1479,7 @@ function CartLineItem({
   onRemove: () => void;
 }) {
   const { t, language } = useLanguage();
-  const ui = copy[language];
+  const ui = words[language];
 
   const [imageFailed, setImageFailed] = useState(false);
   const [quantityInput, setQuantityInput] = useState(() =>
@@ -1394,6 +1490,7 @@ function CartLineItem({
   const isCount = ['COUNT', 'PACKAGING'].includes(item.unit_type);
   const amount = exactDecimal(item.quantity, 3);
   const step = isCount ? 1000n : 1n;
+
   const lineTotal = estimatedLine(item.unit_price, item.quantity);
 
   const changeBy = (delta: bigint) => {
@@ -1401,11 +1498,11 @@ function CartLineItem({
       return;
     }
 
-    const value = quantityText(amount + delta * step);
+    const next = quantityText(amount + delta * step);
 
     setEditing(false);
-    setQuantityInput(displayQuantity(value));
-    onUpdateQuantity(value);
+    setQuantityInput(displayQuantity(next));
+    onUpdateQuantity(next);
   };
 
   const handleQuantityChange = (input: string) => {
@@ -1416,7 +1513,9 @@ function CartLineItem({
     setEditing(true);
     setQuantityInput(input);
 
-    if (input === '' || input === '.') return;
+    if (input === '' || input === '.') {
+      return;
+    }
 
     const parsed = exactDecimal(isCount ? `${input}.000` : input, 3);
 
@@ -1439,11 +1538,11 @@ function CartLineItem({
       {/* PRODUCT IMAGE */}
       <div
         style={{
-          width: 'clamp(115px, 15vw, 166px)',
-          height: 'clamp(120px, 15vw, 154px)',
+          width: 'clamp(115px,15vw,166px)',
+          height: 'clamp(120px,15vw,154px)',
           flexShrink: 1,
-          borderRadius: 10,
           overflow: 'hidden',
+          borderRadius: 10,
           background: '#F4F5F7',
         }}
       >
@@ -1455,9 +1554,9 @@ function CartLineItem({
             referrerPolicy="no-referrer"
             onError={() => setImageFailed(true)}
             style={{
-              display: 'block',
               width: '100%',
               height: '100%',
+              display: 'block',
               objectFit: 'cover',
             }}
           />
@@ -1465,8 +1564,8 @@ function CartLineItem({
           <div
             style={{
               display: 'flex',
-              justifyContent: 'center',
               alignItems: 'center',
+              justifyContent: 'center',
               width: '100%',
               height: '100%',
               color: '#9CA3AF',
@@ -1480,9 +1579,9 @@ function CartLineItem({
       {/* PRODUCT INFORMATION */}
       <div
         style={{
+          display: 'flex',
           flex: '1 1 210px',
           minWidth: 0,
-          display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
           gap: 12,
@@ -1491,18 +1590,18 @@ function CartLineItem({
         <div
           style={{
             display: 'flex',
-            alignItems: 'flex-start',
             justifyContent: 'space-between',
             gap: 10,
+            alignItems: 'flex-start',
           }}
         >
           <div style={{ flex: 1, minWidth: 0 }}>
             <h2
               style={{
-                margin: '0 0 5px',
-                fontSize: 'clamp(17px, 1.7vw, 20px)',
-                lineHeight: 1.4,
+                fontSize: 'clamp(17px,1.7vw,20px)',
                 fontWeight: 800,
+                lineHeight: 1.4,
+                margin: '0 0 5px',
                 overflowWrap: 'anywhere',
               }}
             >
@@ -1512,7 +1611,7 @@ function CartLineItem({
             <p
               style={{
                 margin: '0 0 7px',
-                color: palette.muted,
+                color: colors.muted,
                 fontSize: 13,
               }}
             >
@@ -1521,7 +1620,7 @@ function CartLineItem({
 
             <div
               style={{
-                color: palette.price,
+                color: colors.price,
                 fontSize: 21,
                 fontWeight: 800,
               }}
@@ -1529,7 +1628,7 @@ function CartLineItem({
               ฿{moneyText(item.unit_price)}{' '}
               <span
                 style={{
-                  color: palette.muted,
+                  color: colors.muted,
                   fontSize: 12,
                   fontWeight: 400,
                 }}
@@ -1544,7 +1643,7 @@ function CartLineItem({
                 alignItems: 'center',
                 gap: 7,
                 margin: '7px 0 0',
-                color: palette.muted,
+                color: colors.muted,
                 fontSize: 12,
               }}
             >
@@ -1567,23 +1666,26 @@ function CartLineItem({
             type="button"
             disabled={busy}
             onClick={onRemove}
-            aria-label={`${t('storefront.remove')} ${item.product_name}`}
+            aria-label={`${ui.remove}: ${item.product_name}`}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: 5,
               flexShrink: 0,
-              padding: 4,
               border: 0,
-              background: 'transparent',
-              fontFamily: 'inherit',
+              borderRadius: 7,
+              padding: '5px 8px',
+              background: '#FFF1F1',
+              color: '#B13E3E',
               fontSize: 12,
-              color: palette.muted,
+              fontFamily: 'inherit',
+              fontWeight: 600,
+              whiteSpace: 'nowrap',
               cursor: busy ? 'not-allowed' : 'pointer',
             }}
           >
             <Trash2 size={16} aria-hidden="true" />
-            {t('storefront.remove')}
+            {ui.remove}
           </button>
         </div>
 
@@ -1591,19 +1693,21 @@ function CartLineItem({
         <div
           style={{
             display: 'flex',
-            alignItems: 'center',
             justifyContent: 'flex-end',
+            alignItems: 'center',
             gap: 14,
             flexWrap: 'wrap',
           }}
         >
           <div
             style={{
-              display: 'inline-flex',
-              minHeight: 42,
-              border: `1px solid ${palette.border}`,
-              borderRadius: 8,
+              display: 'grid',
+              gridTemplateColumns: '39px 54px 39px',
+              height: 42,
+              flexShrink: 0,
               overflow: 'hidden',
+              border: `1px solid ${colors.border}`,
+              borderRadius: 8,
             }}
           >
             <button
@@ -1612,69 +1716,61 @@ function CartLineItem({
               onClick={() => changeBy(-1n)}
               aria-label={`${ui.decrease}: ${item.product_name}`}
               style={{
-                width: 39,
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                minWidth: 0,
+                padding: 0,
                 border: 0,
+                color: colors.navy,
                 background: '#F5F7FA',
-                color: palette.navy,
-                cursor:
-                  busy || amount === null || amount <= step
-                    ? 'not-allowed'
-                    : 'pointer',
+                cursor: busy ? 'not-allowed' : 'pointer',
               }}
             >
               <Minus size={17} aria-hidden="true" />
             </button>
 
-            <label
-              style={{
-                display: 'flex',
-                width: 50,
+            <input
+              type="text"
+              inputMode={isCount ? 'numeric' : 'decimal'}
+              aria-label={`${t('pos.quantity')} ${item.product_name}`}
+              disabled={busy}
+              value={editing ? quantityInput : displayQuantity(item.quantity)}
+              onFocus={() => {
+                setEditing(true);
+                setQuantityInput(displayQuantity(item.quantity));
               }}
-            >
-              <span
-                style={{
-                  position: 'absolute',
-                  width: 1,
-                  height: 1,
-                  overflow: 'hidden',
-                  clipPath: 'inset(50%)',
-                }}
-              >
-                {t('pos.quantity')} {item.product_name}
-              </span>
-
-              <input
-                type="text"
-                inputMode={isCount ? 'numeric' : 'decimal'}
-                disabled={busy}
-                value={editing ? quantityInput : displayQuantity(item.quantity)}
-                onFocus={() => {
-                  setEditing(true);
-                  setQuantityInput(displayQuantity(item.quantity));
-                }}
-                onChange={(event) => handleQuantityChange(event.target.value)}
-                onBlur={() => {
-                  setEditing(false);
-                  setQuantityInput(displayQuantity(item.quantity));
-                }}
-                style={{
-                  boxSizing: 'border-box',
-                  width: '100%',
-                  height: 42,
-                  border: 0,
-                  borderLeft: `1px solid ${palette.border}`,
-                  borderRight: `1px solid ${palette.border}`,
-                  borderRadius: 0,
-                  padding: '0 2px',
-                  background: '#FFFFFF',
-                  color: palette.navy,
-                  fontFamily: 'inherit',
-                  fontSize: 14,
-                  textAlign: 'center',
-                  fontWeight: 700,
-                }}
-              />
-            </label>
+              onChange={(event) => handleQuantityChange(event.target.value)}
+              onBlur={() => {
+                setEditing(false);
+                setQuantityInput(displayQuantity(item.quantity));
+              }}
+              style={{
+                display: 'block',
+                boxSizing: 'border-box',
+                width: '54px',
+                minWidth: 0,
+                maxWidth: 'none',
+                height: '42px',
+                minHeight: 0,
+                margin: 0,
+                padding: 0,
+                appearance: 'none',
+                outlineOffset: -2,
+                border: 0,
+                borderLeft: `1px solid ${colors.border}`,
+                borderRight: `1px solid ${colors.border}`,
+                borderRadius: 0,
+                background: '#FFFFFF',
+                color: colors.navy,
+                fontFamily: 'inherit',
+                lineHeight: '42px',
+                textAlign: 'center',
+                fontSize: 14,
+                fontWeight: 700,
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            />
 
             <button
               type="button"
@@ -1682,40 +1778,45 @@ function CartLineItem({
               onClick={() => changeBy(1n)}
               aria-label={`${ui.increase}: ${item.product_name}`}
               style={{
-                width: 39,
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                minWidth: 0,
+                padding: 0,
                 border: 0,
+                color: colors.navy,
                 background: '#F5F7FA',
-                color: palette.navy,
-                cursor: busy || amount === null ? 'not-allowed' : 'pointer',
+                cursor: busy ? 'not-allowed' : 'pointer',
               }}
             >
               <Plus size={17} aria-hidden="true" />
             </button>
           </div>
 
+          {/* LINE TOTAL */}
           <div
             style={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'flex-end',
-              gap: 2,
               minWidth: 85,
+              gap: 2,
             }}
           >
             <span
               style={{
-                color: palette.muted,
+                color: colors.muted,
                 fontSize: 12,
               }}
             >
-              {ui.lineTotal}
+              {ui.total}
             </span>
 
             <strong
               style={{
                 fontSize: 21,
                 lineHeight: 1.2,
-                color: palette.price,
+                color: colors.price,
                 whiteSpace: 'nowrap',
               }}
             >

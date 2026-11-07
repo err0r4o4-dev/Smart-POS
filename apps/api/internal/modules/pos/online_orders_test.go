@@ -18,3 +18,27 @@ func TestEstimateOnlineLineUsesExactPOSRounding(t *testing.T) {
 		}
 	}
 }
+
+func TestPrepaidOnlineOrderDeliveryFeeMath(t *testing.T) {
+	for _, tc := range []struct {
+		cartTotal, shippingFee, expectedTotal string
+		match                                 bool
+	}{
+		{"100.00", "0.00", "100.00", true},
+		{"100.00", "30.00", "130.00", true},
+		{"10.50", "25.00", "35.50", true},
+		{"100.00", "30.00", "100.00", false},
+		{"100.00", "0.00", "130.00", false},
+	} {
+		cartScaled, err1 := scaled(tc.cartTotal, 2)
+		shippingScaled, err2 := scaled(tc.shippingFee, 2)
+		expectedScaled, err3 := scaled(tc.expectedTotal, 2)
+		if err1 != nil || err2 != nil || err3 != nil {
+			t.Fatalf("unexpected scaling error: %v %v %v", err1, err2, err3)
+		}
+		matches := (cartScaled + shippingScaled == expectedScaled)
+		if matches != tc.match {
+			t.Fatalf("expected match=%v for cart=%s, ship=%s, total=%s", tc.match, tc.cartTotal, tc.shippingFee, tc.expectedTotal)
+		}
+	}
+}

@@ -11,6 +11,7 @@ const product = {
   unit_type: 'COUNT',
   unit_price: '19.99',
   available: '10.000',
+  stock_policy: 'TRACKED' as const,
   saleable: true,
   published: true,
   image_url: 'https://example.com/coke.png',
@@ -31,6 +32,22 @@ it('synchronizes header and catalog snapshots and preserves product image', () =
   expect(second.result.current.items[0].image_url).toBe('https://example.com/coke.png');
   act(() => second.result.current.update([]));
   expect(first.result.current.items).toEqual([]);
+});
+
+it('adds menu-only items without stock but respects quantity bounds and saleability', () => {
+  const cart = renderHook(() => useShopCart('menu-policy'));
+  const menu = { ...product, stock_policy: 'MENU_ONLY' as const, available: null };
+  act(() => {
+    expect(cart.result.current.add(menu, '2')).toBe(true);
+    expect(cart.result.current.add(menu, '1000000')).toBe(false);
+    expect(cart.result.current.add({ ...menu, saleable: false }, '1')).toBe(false);
+    expect(cart.result.current.add({ ...menu, stock_policy: 'TRACKED', available: null }, '1')).toBe(false);
+    expect(cart.result.current.add({ ...menu, stock_policy: 'UNKNOWN' as never }, '1')).toBe(false);
+    expect(cart.result.current.add({ ...menu, stock_policy: undefined as never }, '1')).toBe(false);
+    expect(cart.result.current.add({ ...product, stock_policy: 'UNKNOWN' as never }, '1')).toBe(false);
+    expect(cart.result.current.add({ ...product, stock_policy: undefined as never }, '1')).toBe(false);
+  });
+  expect(cart.result.current.items[0].quantity).toBe('2.000');
 });
 
 it('accepts exact fractional weight but rejects fractional count and excess stock', () => {

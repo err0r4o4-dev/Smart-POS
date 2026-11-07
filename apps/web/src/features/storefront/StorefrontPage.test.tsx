@@ -17,6 +17,7 @@ const product = {
   unit_type: 'COUNT',
   unit_price: '19.99',
   available: '5.000',
+  stock_policy: 'TRACKED',
   saleable: true,
   published: true,
 };
@@ -82,33 +83,24 @@ function view(path: string) {
     </QueryClientProvider>,
   );
 }
-it.each(['single', 'multi', undefined])(
-  'opens the only store directly without a public store selector (mode: %s)',
-  async (mode) => {
-    fetchMock.mockImplementation(async (url: string) => {
-      if (url === '/api/v1/storefronts')
-        return {
-          ...response([
-            {
-              slug: settings.slug,
-              name: settings.name,
-              accepting_orders: true,
-            },
-          ]),
-          headers: new Headers(mode ? { 'X-SmartPOS-Store-Mode': mode } : {}),
-        };
-      if (url.endsWith('/products?search=&page=1'))
-        return response({ items: [product], total: 1, page: 1, page_size: 24 });
-      return response(settings);
-    });
-    view('/shop');
-    expect(await screen.findByText('กาแฟ')).toBeVisible();
-    expect(
-      screen.queryByRole('link', { name: 'ดูสินค้า' }),
-    ).not.toBeInTheDocument();
-  },
-);
-it('does not fall back to another store when the configured store is unpublished', async () => {
+it('renders a storefront directory with one or more published shops', async () => {
+  fetchMock.mockResolvedValue({
+    ...response([
+      { slug: settings.slug, name: settings.name, accepting_orders: true },
+      { slug: 'closed-shop', name: 'ร้านปิดรับออเดอร์', accepting_orders: false },
+    ]),
+    headers: new Headers({ 'X-SmartPOS-Store-Mode': 'multi' }),
+  });
+  view('/shop');
+  expect(await screen.findByRole('heading', { name: settings.name })).toBeVisible();
+  expect(screen.getByText('ร้านปิดรับออเดอร์')).toBeVisible();
+  expect(screen.getByText('กำลังรับออเดอร์')).toBeVisible();
+  expect(screen.getByText('ปิดรับออเดอร์ชั่วคราว')).toBeVisible();
+  expect(screen.getAllByRole('link', { name: 'ดูหน้าร้าน' })[0]).toHaveAttribute(
+    'href',
+    `/shop/${settings.slug}`,
+  );
+});it('does not fall back to another store when the configured store is unpublished', async () => {
   fetchMock.mockResolvedValue({
     ...response([]),
     headers: new Headers({ 'X-SmartPOS-Store-Mode': 'single' }),
@@ -120,25 +112,7 @@ it('does not fall back to another store when the configured store is unpublished
   ).not.toBeInTheDocument();
   expect(fetchMock).toHaveBeenCalledTimes(1);
 });
-it.each(['single', 'multi', undefined])(
-  'rejects multiple shops instead of presenting a selector (mode: %s)',
-  async (mode) => {
-    fetchMock.mockResolvedValue({
-      ...response([
-        { slug: 'first', name: 'First', accepting_orders: true },
-        { slug: 'second', name: 'Second', accepting_orders: true },
-      ]),
-      headers: new Headers(mode ? { 'X-SmartPOS-Store-Mode': mode } : {}),
-    });
-    view('/shop');
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'ตั้งค่าร้านไม่ถูกต้อง',
-    );
-    expect(
-      screen.queryByRole('link', { name: 'ดูสินค้า' }),
-    ).not.toBeInTheDocument();
-  },
-);
+
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
@@ -245,6 +219,31 @@ it('validates quantity against available stock including the existing cart', asy
   expect(
     JSON.parse(localStorage.getItem('shop-cart:test-shop')!)[0].quantity,
   ).toBe('5.000');
+  expect(screen.getByRole('button', { name: 'เพิ่มลงตะกร้า' })).toBeDisabled();
+});
+
+it('allows a menu-only item without displaying a stock balance', async () => {
+  fetchMock.mockImplementation(async (url: string) => {
+    if (url.includes('/products?')) return response({ items: [{ ...product, stock_policy: 'MENU_ONLY', available: null }], total: 1, page: 1, page_size: 24 });
+    return response(settings);
+  });
+  view('/shop/test-shop');
+  await screen.findByRole('heading', { name: 'กาแฟ' });
+  const input = screen.getByRole('spinbutton', { name: 'จำนวน กาแฟ' });
+  expect(input).toBeEnabled();
+  expect(screen.queryByText(/คงเหลือ 0/)).not.toBeInTheDocument();
+  fireEvent.change(input, { target: { value: '2' } });
+  fireEvent.click(screen.getByRole('button', { name: 'เพิ่มลงตะกร้า' }));
+  expect(JSON.parse(localStorage.getItem('shop-cart:test-shop')!)[0].quantity).toBe('2.000');
+});
+
+it.each([undefined, 'FUTURE'])('disables storefront products with a missing or unknown policy %s', async (policy) => {
+  fetchMock.mockImplementation(async (url: string) => {
+    if (url.includes('/products?')) return response({ items: [{ ...product, stock_policy: policy }], total: 1, page: 1, page_size: 24 });
+    return response(settings);
+  });
+  view('/shop/test-shop');
+  await screen.findByRole('heading', { name: 'กาแฟ' });
   expect(screen.getByRole('button', { name: 'เพิ่มลงตะกร้า' })).toBeDisabled();
 });
 
@@ -376,6 +375,86 @@ it('does not invent an empty shop when loading fails', async () => {
     screen.queryByText('ยังไม่มีร้านที่เปิดเผยแพร่'),
   ).not.toBeInTheDocument();
 });
+it('keeps table QR context through cart review and submission', async () => {
+  const tableToken = 'c'.repeat(64);
+  fetchMock.mockImplementation(async (url: string) => {
+    if (url.endsWith('/quote'))
+      return response({ ...quote, table_code: 'T01' });
+    if (url.endsWith('/orders') || url.endsWith('/track'))
+      return response({ ...order, table_code: 'T01' });
+    if (url.includes('/products?'))
+      return response({ items: [product], total: 1, page: 1, page_size: 24 });
+    return response(settings);
+  });
+  localStorage.setItem(
+    'shop-cart:test-shop',
+    JSON.stringify([{ ...product, quantity: '1.000' }]),
+  );
+  view(`/shop/test-shop?table=${tableToken}`);
+  const cartLink = screen.getByRole('link', { name: /ตะกร้า/ });
+  expect(cartLink).toHaveAttribute(
+    'href',
+    `/shop/test-shop/cart?table=${tableToken}`,
+  );
+  fireEvent.click(cartLink);
+  const review = await screen.findByRole('button', {
+    name: 'ตรวจรายการและยอดล่าสุด',
+  });
+  await waitFor(() => expect(review).toBeEnabled());
+  fireEvent.click(review);
+  expect(await screen.findByText('โต๊ะ T01')).toBeVisible();
+  fireEvent.change(screen.getByLabelText('ชื่อผู้รับสินค้า'), {
+    target: { value: 'Synthetic guest' },
+  });
+  fireEvent.change(screen.getByLabelText('เบอร์ติดต่อ'), {
+    target: { value: '0800000000' },
+  });
+  fireEvent.click(screen.getByRole('checkbox'));
+  fireEvent.click(
+    screen.getByRole('button', { name: 'ส่งออเดอร์ · ยังไม่ชำระเงิน' }),
+  );
+  expect(
+    await screen.findByRole('heading', { name: 'ติดตามออเดอร์' }),
+  ).toBeVisible();
+  expect(await screen.findByText('โต๊ะ T01')).toBeVisible();
+  for (const endpoint of ['/quote', '/orders']) {
+    const call = fetchMock.mock.calls.find(([url]) =>
+      String(url).endsWith(endpoint),
+    );
+    expect(JSON.parse(call![1].body)).toEqual(
+      expect.objectContaining({
+        table_token: tableToken,
+        fulfillment: 'PICKUP',
+      }),
+    );
+  }
+});
+
+it.each([
+  'table=invalid',
+  'table=',
+  `table=${'A'.repeat(64)}`,
+  `table=${'a'.repeat(64)}&table=${'b'.repeat(64)}`,
+])(
+  'does not silently change an invalid QR into ordinary pickup: %s',
+  async (search) => {
+    localStorage.setItem(
+      'shop-cart:test-shop',
+      JSON.stringify([{ ...product, quantity: '1.000' }]),
+    );
+    view(`/shop/test-shop/cart?${search}`);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'ลิงก์โต๊ะไม่ถูกต้อง',
+    );
+    expect(
+      screen.getByRole('button', { name: 'ตรวจรายการและยอดล่าสุด' }),
+    ).toBeDisabled();
+    expect(
+      fetchMock.mock.calls.some(([url]) => String(url).endsWith('/quote')),
+    ).toBe(false);
+  },
+);
+
 it('invalidates a reviewed quote after quantity changes', async () => {
   localStorage.setItem(
     'shop-cart:test-shop',
@@ -434,7 +513,7 @@ it('retries an uncertain order with the same body, token and idempotency key', a
   });
   expect(
     screen.getByRole('checkbox', {
-      name: /ฉันเข้าใจว่าระบบกันสินค้าหลังส่งออเดอร์สำเร็จ/,
+      name: /ฉันเข้าใจว่ารายการที่ติดตามสต็อกจะถูกกันหลังส่งออเดอร์สำเร็จ/,
     }),
   ).toBeRequired();
   fireEvent.change(screen.getByLabelText('เบอร์ติดต่อ'), {

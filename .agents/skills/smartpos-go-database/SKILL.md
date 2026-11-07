@@ -40,12 +40,14 @@ schema versions or historical database names in this skill.
   conflict/version checks, and established compensation where applicable. Do not
   rewrite historical records as a convenient correction.
 - Author migrations only within requested schema-change scope. Do not modify
-  previously applied migrations. Writing a migration does not authorize running it.
+  previously applied migrations. Execution must also be in scope and meet the
+  applicable target and authorization requirements.
 - Inspect current migration conventions, trackers, and relevant scripts. Describe
   compatibility, data impact, and irreversible steps when relevant.
-- Never verify against primary data, reset volumes, delete fixtures, or run
-  rollback/migration scripts automatically. Inspect target selection and cleanup
-  because scripts can retain data or start services.
+- Never verify against primary or retained databases or reset their volumes.
+  In-scope cleanup may remove task-owned disposable databases, volumes and
+  fixtures. Inspect target selection and cleanup because scripts can retain data
+  or start services; follow applicable remote and production approval gates.
 - Do not introduce GORM, SQL generators, or another persistence abstraction without
   an approved need. Measure query problems before optimizing.
 

@@ -51,7 +51,7 @@ func sourceAcceptance(test *testing.T, ctx context.Context, organizations *organ
 	if err != nil {
 		test.Fatal(err)
 	}
-	request := storefront.OrderInput{Items: items, QuoteID: frontQuote.ID, CustomerName: "Synthetic source buyer", ContactPhone: "0800000000", AccessToken: strings.Repeat("d", 64)}
+	request := storefront.OrderInput{Items: items, QuoteID: frontQuote.ID, Fulfillment: "PICKUP", CustomerName: "Synthetic source buyer", ContactPhone: "0800000000", AccessToken: strings.Repeat("d", 64)}
 	legacy, err := service.CreateOrder(ctx, shop.Slug, "d2222222-2222-4222-8222-222222222222", request)
 	if err != nil {
 		test.Fatal(err)
@@ -120,7 +120,7 @@ func sourceAcceptance(test *testing.T, ctx context.Context, organizations *organ
 		test.Fatal(err)
 	}
 	request.QuoteID = quote.ID
-	order, err := service.CreateOrder(ctx, shop.Slug, "d4444444-4444-4444-8444-444444444444", request)
+	order, err := createLegacyHoldFixture(ctx, organizations, owner, org, configured, "d4444444-4444-4444-8444-444444444444", request, quote)
 	if err != nil {
 		test.Fatal(err)
 	}
@@ -131,8 +131,9 @@ func sourceAcceptance(test *testing.T, ctx context.Context, organizations *organ
 		}
 		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, shop.LocationID, variant, "7.000", "0.000", "7.000")
 		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, backLocation, variant, "3.000", "2.000", "1.000")
+		assertTrackedAvailability(test, ctx, organizations, owner, org, backLocation, variant, "2.000", "1.000")
 		products, problem := service.Products(ctx, "", "", shop.Slug, "", 1)
-		if problem != nil || len(products.Items) != 1 || products.Items[0].Available != "1.000" {
+		if problem != nil || len(products.Items) != 1 || products.Items[0].StockPolicy != "MENU_ONLY" || products.Items[0].Available != nil {
 			test.Fatalf("online warehouse availability: %+v error %v", products.Items, problem)
 		}
 		internal, problem := service.Order(ctx, owner, org, order.ID)
@@ -141,9 +142,20 @@ func sourceAcceptance(test *testing.T, ctx context.Context, organizations *organ
 		}
 	})
 	test.Run("backroom shortage never falls back to front stock and live switch is denied", func(test *testing.T) {
-		if _, problem := service.Quote(ctx, shop.Slug, storefront.QuoteInput{Items: items}); !errors.Is(problem, storefront.ErrStock) {
-			test.Fatalf("front stock was used as fallback: %v", problem)
+		if _, problem := service.Quote(ctx, shop.Slug, storefront.QuoteInput{Items: items}); problem != nil {
+			test.Fatalf("menu-only quote must not depend on historical stock holds: %v", problem)
 		}
+		if _, problem := createLegacyHoldFixture(ctx, organizations, owner, org, configured, "d9999999-9999-4999-8999-999999999999", request, quote); problem == nil {
+			test.Fatal("back source allowed an overcommitted historical reservation")
+		} else {
+			var databaseError *pgconn.PgError
+			if !errors.As(problem, &databaseError) || databaseError.Code != "23514" || databaseError.Message != "insufficient stock for reservation" {
+				test.Fatalf("unexpected back source reservation error: %v", problem)
+			}
+		}
+		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, shop.LocationID, variant, "7.000", "0.000", "7.000")
+		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, backLocation, variant, "3.000", "2.000", "1.000")
+		assertTrackedAvailability(test, ctx, organizations, owner, org, backLocation, variant, "2.000", "1.000")
 		changed := input
 		changed.OnlineTerminalID = ""
 		if _, problem := service.SaveSettings(ctx, owner, org, changed); !errors.Is(problem, storefront.ErrConflict) {
@@ -158,7 +170,7 @@ func sourceAcceptance(test *testing.T, ctx context.Context, organizations *organ
 		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, shop.LocationID, variant, "7.000", "0.000", "7.000")
 		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, backLocation, variant, "3.000", "0.000", "3.000")
 	})
-	order, err = service.CreateOrder(ctx, shop.Slug, "d8888888-8888-4888-8888-888888888888", request)
+	order, err = createLegacyHoldFixture(ctx, organizations, owner, org, configured, "d8888888-8888-4888-8888-888888888888", request, quote)
 	if err != nil {
 		test.Fatal(err)
 	}
@@ -264,8 +276,9 @@ func assertSourceStock(test *testing.T, ctx context.Context, organizations *orga
 
 func settleBackSource(test *testing.T, ctx context.Context, organizations *organization.Service, owner, org string, service *storefront.Service, shop storefront.Settings, terminal, location, variant string, order storefront.Order) {
 	test.Helper()
-	test.Run("linked POS deducts only the snapshotted warehouse exactly once", func(test *testing.T) {
+	if !test.Run("prepaid POS deducts only the snapshotted warehouse exactly once", func(test *testing.T) {
 		var err error
+		payReservationFixture(test, ctx, service, shop.Slug, strings.Repeat("d", 64), order)
 		for _, status := range []string{"PREPARING", "READY"} {
 			order, err = service.Transition(ctx, owner, org, order.ID, storefront.TransitionInput{Revision: order.Revision, Status: status})
 			if err != nil {
@@ -276,26 +289,20 @@ func settleBackSource(test *testing.T, ctx context.Context, organizations *organ
 		if _, err = point.OpenShift(ctx, owner, org, "d5555555-5555-4555-8555-555555555555", pos.ShiftInput{TerminalID: terminal, OpeningCash: "0.00"}); err != nil {
 			test.Fatal(err)
 		}
-		cart, err := point.ImportOnlineOrder(ctx, owner, org, order.ID, pos.OnlineOrderInput{Revision: order.Revision})
-		if err != nil || cart.ReviewRequired || len(cart.Items) != 1 || cart.Items[0].Available != "3.000" {
-			test.Fatalf("warehouse linked cart: %+v error %v", cart, err)
+		if _, err = point.ImportOnlineOrder(ctx, owner, org, order.ID, pos.OnlineOrderInput{Revision: order.Revision}); !errors.Is(err, pos.ErrConflict) {
+			test.Fatalf("legacy collection accepted paid order: %v", err)
 		}
-		checkout, err := point.PrepareCheckout(ctx, owner, org, "d6666666-6666-4666-8666-666666666666", pos.CheckoutInput{CartID: cart.ID, Revision: cart.Revision, Method: "CASH", ExpectedTotal: cart.Total, Received: cart.Total, PricingRevision: cart.Pricing.Revision})
-		if err != nil {
-			test.Fatal(err)
-		}
-		checkout, err = point.ConfirmPayment(ctx, owner, org, checkout.ID, "d7777777-7777-4777-8777-777777777777", pos.ConfirmationInput{Acknowledged: true})
-		if err != nil {
-			test.Fatal(err)
-		}
-		checkout, err = point.CompleteCheckout(ctx, owner, org, checkout.ID)
-		if err != nil || checkout.Status != "COMPLETED" {
+		checkout, err := point.SettlePrepaidOnlineOrder(ctx, owner, org, order.ID, pos.OnlineOrderInput{Revision: order.Revision})
+		if err != nil || checkout.Status != "COMPLETED" || checkout.Method != "ONLINE_STRIPE" {
 			test.Fatalf("warehouse settlement: %+v error %v", checkout, err)
 		}
-		if _, err = point.CompleteCheckout(ctx, owner, org, checkout.ID); err != nil {
-			test.Fatalf("warehouse settlement replay: %v", err)
+		replay, err := point.SettlePrepaidOnlineOrder(ctx, owner, org, order.ID, pos.OnlineOrderInput{Revision: order.Revision})
+		if err != nil || replay.ID != checkout.ID || replay.SaleID != checkout.SaleID {
+			test.Fatalf("warehouse settlement replay: %+v %v", replay, err)
 		}
 		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, shop.LocationID, variant, "7.000", "0.000", "7.000")
 		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, location, variant, "1.000", "0.000", "1.000")
-	})
+	}) {
+		test.FailNow()
+	}
 }

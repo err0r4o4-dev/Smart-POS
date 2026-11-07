@@ -7,6 +7,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-small);
   background: var(--surface);
+  box-shadow: var(--shadow-control);
 }
 .language-switcher button {
   display: inline-flex;
@@ -27,9 +28,9 @@
   transition: all 0.15s ease;
 }
 .language-switcher button[aria-pressed='true'] {
-  border-color: #fde68a;
-  background: #fef3c7;
-  color: #92400e;
+  border-color: var(--primary-border);
+  background: var(--brand-soft-gradient);
+  color: var(--primary-strong);
   font-weight: 600;
 }
 .language-switcher button[aria-pressed='true']::before {

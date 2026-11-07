@@ -6,7 +6,26 @@ import (
 	"errors"
 	"github.com/jackc/pgx/v5"
 	"smartpos/api/internal/modules/organization"
+	"smartpos/api/internal/modules/restaurant"
 )
+
+func dineInTable(ctx context.Context, tx pgx.Tx, org, branch, token string) (string, string, error) {
+	if token == "" {
+		return "", "", nil
+	}
+	if !tokenPattern.MatchString(token) {
+		return "", "", ErrInput
+	}
+	var id, code string
+	err := tx.QueryRow(ctx, `SELECT id::text,code FROM restaurant_tables WHERE organization_id=$1 AND branch_id=$2 AND status='ACTIVE' AND qr_token_hash=$3 FOR SHARE`, org, branch, accessHash(token)).Scan(&id, &code)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", "", ErrInput
+	}
+	if err != nil {
+		return "", "", dbError(err)
+	}
+	return id, code, nil
+}
 
 func readOrder(ctx context.Context, tx pgx.Tx, org, id string, public bool) (Order, error) {
 	result := Order{Items: []Line{}, Events: []Event{}, PaymentStatus: "UNPAID"}
@@ -14,10 +33,14 @@ func readOrder(ctx context.Context, tx pgx.Tx, org, id string, public bool) (Ord
 	if err != nil {
 		return result, dbError(err)
 	}
-	if err = tx.QueryRow(ctx, "SELECT fulfillment,shipping_fee::text,(estimated_total-shipping_fee)::text,delivery_address FROM online_orders WHERE organization_id=$1 AND id=$2", org, id).Scan(&result.Fulfillment, &result.ShippingFee, &result.Subtotal, &result.DeliveryAddress); err != nil {
+	if err = tx.QueryRow(ctx, `SELECT doc.fulfillment,doc.shipping_fee::text,(doc.estimated_total-doc.shipping_fee)::text,doc.delivery_address,COALESCE(table_map.table_code,''),doc.stock_policy FROM online_orders doc LEFT JOIN restaurant_order_tables table_map ON table_map.organization_id=doc.organization_id AND table_map.order_id=doc.id WHERE doc.organization_id=$1 AND doc.id=$2`, org, id).Scan(&result.Fulfillment, &result.ShippingFee, &result.Subtotal, &result.DeliveryAddress, &result.TableCode, &result.StockPolicy); err != nil {
 		return result, dbError(err)
 	}
-	if result.Status == "COMPLETED" {
+	var paymentState string
+	err = tx.QueryRow(ctx, "SELECT state FROM online_payment_attempts WHERE organization_id=$1 AND order_id=$2", org, id).Scan(&paymentState)
+	if err == nil && paymentState == "PAID" {
+		result.PaymentStatus = "PAID_AT_STORE"
+	} else if result.Status == "COMPLETED" {
 		result.PaymentStatus = "PAID_AT_STORE"
 	}
 	rows, err := tx.Query(ctx, `SELECT variant_id::text,product_name,variant_name,sku,unit,quantity::text,unit_price::text,line_total::text FROM online_order_items WHERE organization_id=$1 AND order_id=$2 ORDER BY variant_id`, org, id)
@@ -91,20 +114,37 @@ func (service *Service) CreateOrder(ctx context.Context, slug, key string, input
 	if err != nil {
 		return Order{}, err
 	}
-	quote, err := quote(ctx, tx, org, shop, input.Items, input.Fulfillment)
+	quote, tableID, err := quoteForTable(ctx, tx, org, shop, QuoteInput{Items: input.Items, Fulfillment: input.Fulfillment, TableToken: input.TableToken})
 	if err != nil {
 		return Order{}, err
 	}
 	if quote.ID != input.QuoteID {
 		return Order{}, ErrQuote
 	}
-	_, err = tx.Exec(ctx, `INSERT INTO online_orders(id,organization_id,branch_id,terminal_id,stock_location_id,customer_name,contact_phone,customer_note,pickup_instructions,store_name,store_phone,estimated_total,access_hash,request_fingerprint,fulfillment,shipping_fee,delivery_address) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`, key, org, shop.BranchID, shop.orderTerminalID(), shop.LocationID, input.CustomerName, input.ContactPhone, input.CustomerNote, shop.PickupInstructions, shop.Name, shop.ContactPhone, quote.Total, accessHash(input.AccessToken), fingerprint, input.Fulfillment, quote.ShippingFee, input.DeliveryAddress)
+	_, err = tx.Exec(ctx, `INSERT INTO online_orders(id,organization_id,branch_id,terminal_id,stock_location_id,customer_name,contact_phone,customer_note,pickup_instructions,store_name,store_phone,estimated_total,access_hash,request_fingerprint,fulfillment,shipping_fee,delivery_address,stock_policy) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,'MENU_ONLY')`, key, org, shop.BranchID, shop.orderTerminalID(), shop.LocationID, input.CustomerName, input.ContactPhone, input.CustomerNote, shop.PickupInstructions, shop.Name, shop.ContactPhone, quote.Total, accessHash(input.AccessToken), fingerprint, input.Fulfillment, quote.ShippingFee, input.DeliveryAddress)
 	if err != nil {
 		return Order{}, dbError(err)
+	}
+	if tableID != "" {
+		if _, err = tx.Exec(ctx, "INSERT INTO restaurant_order_tables(organization_id,order_id,table_id,table_code) VALUES($1,$2,$3,$4)", org, key, tableID, quote.TableCode); err != nil {
+			return Order{}, dbError(err)
+		}
 	}
 	for _, line := range quote.Items {
 		_, err = tx.Exec(ctx, `INSERT INTO online_order_items(organization_id,order_id,variant_id,product_name,variant_name,sku,unit,quantity,unit_price,line_total) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, org, key, line.VariantID, line.ProductName, line.VariantName, line.SKU, line.Unit, line.Quantity, line.UnitPrice, line.LineTotal)
 		if err != nil {
+			return Order{}, dbError(err)
+		}
+	}
+	if _, err = restaurant.AssignQueueNumber(ctx, tx, org, shop.BranchID, key); err != nil {
+		switch {
+		case errors.Is(err, restaurant.ErrInput):
+			return Order{}, ErrInput
+		case errors.Is(err, restaurant.ErrConflict):
+			return Order{}, ErrConflict
+		case errors.Is(err, restaurant.ErrNotFound):
+			return Order{}, ErrNotFound
+		default:
 			return Order{}, dbError(err)
 		}
 	}
@@ -226,6 +266,25 @@ func (service *Service) Transition(ctx context.Context, user, org, id string, in
 		return Order{}, ErrInput
 	}
 	if input.Status == "PREPARING" || input.Status == "READY" {
+		var paymentState string
+		var holdReleased bool
+		err = tx.QueryRow(ctx, "SELECT state, stock_hold_released FROM online_payment_attempts WHERE organization_id=$1 AND order_id=$2", org, id).Scan(&paymentState, &holdReleased)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return current, ErrConflict
+		} else if err != nil {
+			return current, dbError(err)
+		}
+		if paymentState != "PAID" || holdReleased {
+			return current, ErrConflict
+		}
+		var blocked bool
+		err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM online_refund_intents WHERE organization_id=$1 AND order_id=$2 AND state IN ('REQUESTED','PENDING','REQUIRES_ACTION','SUCCEEDED')) OR EXISTS(SELECT 1 FROM online_payment_reconciliations WHERE organization_id=$1 AND order_id=$2 AND action='FULFILLMENT_REVIEW')", org, id).Scan(&blocked)
+		if err != nil {
+			return current, dbError(err)
+		}
+		if blocked {
+			return current, ErrConflict
+		}
 		shop := Settings{TerminalID: current.TerminalID, BranchID: current.BranchID}
 		if err = tx.QueryRow(ctx, "SELECT stock_location_id::text FROM online_orders WHERE organization_id=$1 AND id=$2", org, id).Scan(&shop.LocationID); err != nil {
 			return current, err
@@ -238,9 +297,11 @@ func (service *Service) Transition(ctx context.Context, user, org, id string, in
 			if err != nil {
 				return current, err
 			}
-			var enough bool
-			if err = tx.QueryRow(ctx, "SELECT $1::numeric>=$2::numeric", value.Available, line.Quantity).Scan(&enough); err != nil {
-				return current, err
+			enough := true
+			if value.Available != nil {
+				if err = tx.QueryRow(ctx, "SELECT $1::numeric>=$2::numeric", *value.Available, line.Quantity).Scan(&enough); err != nil {
+					return current, err
+				}
 			}
 			if !value.Saleable || !enough {
 				return current, ErrStock

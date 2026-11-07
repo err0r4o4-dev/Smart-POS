@@ -110,8 +110,8 @@ const catalogBrowseSQL = `WITH listed AS (
  SELECT variant.id::text AS variant_id, product.name AS product_name, variant.name AS variant_name, variant.sku,
  unit.name AS unit, unit.unit_type, COALESCE(category.id::text,'uncategorized') AS category_id,
  COALESCE(category.name,'ไม่มีหมวดหมู่') AS category_name, COALESCE(variant.attributes->>'storefront_image_url','') AS image_url,
- effective.price, greatest(0.000,storefront_sellable_quantity($1,$4,variant.id)-storefront_reserved_quantity($1,$4,variant.id)) AS available_quantity,
- (unit.status='ACTIVE' AND variant.currency='THB' AND effective.price>0) AS saleable
+ effective.price,
+ (unit.status='ACTIVE' AND variant.currency='THB' AND effective.price>0 AND NOT EXISTS(SELECT 1 FROM quality_recalls recall WHERE recall.organization_id=variant.organization_id AND recall.variant_id=variant.id AND recall.batch_id IS NULL)) AS saleable
  FROM product_variants variant
  JOIN products product ON product.organization_id=variant.organization_id AND product.id=variant.product_id
  JOIN units unit ON unit.organization_id=variant.organization_id AND unit.id=variant.unit_id
@@ -125,10 +125,10 @@ const catalogBrowseSQL = `WITH listed AS (
   ORDER BY (list.branch_id IS NOT NULL) DESC,list.priority DESC,list.id LIMIT 1
  ) price_list ON true
  CROSS JOIN LATERAL (SELECT COALESCE(price_list.price,variant.selling_price) AS price) effective
- WHERE variant.organization_id=$1 AND product.status='ACTIVE' AND variant.status='ACTIVE'
+ WHERE variant.organization_id=$1 AND $4::uuid IS NOT NULL AND product.status='ACTIVE' AND variant.status='ACTIVE'
  AND ($2='' OR product.name ILIKE '%'||$2||'%' OR variant.name ILIKE '%'||$2||'%' OR variant.sku ILIKE '%'||$2||'%')
 ), matching AS (
- SELECT *, (saleable AND available_quantity>=CASE WHEN unit_type IN ('COUNT','PACKAGING') THEN 1.000 ELSE 0.001 END) AS ready
+ SELECT *, saleable AS ready
  FROM listed WHERE price>=COALESCE(nullif($5,'')::numeric,0) AND ($6='' OR price<=nullif($6,'')::numeric)
 ), filtered AS (
  SELECT * FROM matching WHERE ($7='' OR ($7='available' AND ready) OR ($7='unavailable' AND NOT ready))
@@ -136,7 +136,7 @@ const catalogBrowseSQL = `WITH listed AS (
  SELECT * FROM filtered WHERE ($8='' OR category_id=$8)
 ), page_items AS (
  SELECT row_number() OVER (ORDER BY %s) AS ordinal,variant_id,product_name,variant_name,sku,unit,unit_type,price::text AS unit_price,
- available_quantity::text AS available,saleable,true AS published,category_id,category_name,image_url
+ NULL::text AS available,'MENU_ONLY'::text AS stock_policy,saleable,true AS published,category_id,category_name,image_url
  FROM selected ORDER BY %s LIMIT 24 OFFSET $9
 ), facets AS (
  SELECT category_id AS id,category_name AS name,count(*)::int AS count FROM filtered GROUP BY category_id,category_name

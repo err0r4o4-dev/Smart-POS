@@ -16,6 +16,7 @@ import (
 	"smartpos/api/internal/modules/pos"
 	"smartpos/api/internal/modules/pricing"
 	"smartpos/api/internal/modules/purchasing"
+	"smartpos/api/internal/modules/restaurant"
 	"smartpos/api/internal/modules/returns"
 	"smartpos/api/internal/modules/storefront"
 	"smartpos/api/internal/platform/httpx"
@@ -26,6 +27,7 @@ type Readiness interface{ Ready(context.Context) error }
 
 type Options struct {
 	PaymentSandbox            *stripe.Client
+	CustomerPayments          storefront.CustomerPaymentGateway
 	SingleStoreOrganizationID string
 }
 
@@ -65,9 +67,10 @@ func RouterWithOptions(checker Readiness, logger *slog.Logger, options Options, 
 			pricingHandler := pricing.Handler{Service: &pricing.Service{Organization: organizations}}
 			customerHandler := customers.Handler{Service: &customers.Service{Organization: organizations}}
 			loyaltyHandler := loyalty.Handler{Service: &loyalty.Service{Organization: organizations}}
-			storefrontHandler := storefront.Handler{Service: &storefront.Service{Organization: organizations}, Authentication: authentication[0], Sandbox: options.PaymentSandbox}
+			storefrontHandler := storefront.Handler{Service: &storefront.Service{Organization: organizations, CustomerPayments: options.CustomerPayments}, Authentication: authentication[0], Sandbox: options.PaymentSandbox}
+			restaurantHandler := restaurant.Handler{Service: &restaurant.Service{Organization: organizations}}
 			storefrontHandler.PublicRoutes(version)
-			organization.Handler{Service: organizations, Authentication: authentication[0]}.Routes(version, catalogHandler.TenantRoutes, inventoryHandler.TenantRoutes, posHandler.TenantRoutes, purchasingHandler.TenantRoutes, returnsHandler.TenantRoutes, pricingHandler.TenantRoutes, customerHandler.TenantRoutes, loyaltyHandler.TenantRoutes, storefrontHandler.TenantRoutes)
+			organization.Handler{Service: organizations, Authentication: authentication[0]}.Routes(version, catalogHandler.TenantRoutes, inventoryHandler.TenantRoutes, posHandler.TenantRoutes, purchasingHandler.TenantRoutes, returnsHandler.TenantRoutes, pricingHandler.TenantRoutes, customerHandler.TenantRoutes, loyaltyHandler.TenantRoutes, storefrontHandler.TenantRoutes, restaurantHandler.TenantRoutes)
 		}
 		version.Get("/system", func(writer http.ResponseWriter, request *http.Request) {
 			httpx.JSON(writer, 200, map[string]any{"data": map[string]any{"name": "SmartPOS", "phase": 0, "authentication": "server_sessions"}})

@@ -9,7 +9,7 @@ metadata:
 
 # Test-Driven Development
 
-Read the task, repository rules, existing tests and affected public behavior. Maintain the task checklist required by AGENTS.md; do not create additional trackers or delete the roadmap.
+Read the task, repository rules, existing tests and affected public behavior. Use the existing tracker when required; preserve its completed history and roadmap.
 
 1. Define acceptance cases from the requested behavior and inspected callers. Ask only when a material ambiguity remains, not for approval of every routine step.
 2. Write one focused test that fails for the intended missing behavior or reproduced bug. Confirm the failure reason where the environment allows it; an infrastructure failure is not a valid RED result.
@@ -19,4 +19,4 @@ Read the task, repository rules, existing tests and affected public behavior. Ma
 
 Use [behavioral tests](tests.md) and [mocking boundaries](mocking.md) as community examples, not a prohibition on needed domain/database invariant checks. Documentation-only changes use metadata/reference/format checks; configuration behavior uses existing suitable checks. A missing test framework is not permission to install one.
 
-Report RED/GREEN evidence honestly, including tests not run or blocked. Keep unresolved TODO items; remove only the completed task section after verification.
+Report RED/GREEN evidence honestly, including tests not run or blocked. Preserve completed and unresolved TODO history.

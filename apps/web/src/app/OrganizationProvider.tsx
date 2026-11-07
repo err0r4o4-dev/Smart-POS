@@ -29,8 +29,6 @@ interface OrganizationState {
   select: (orgID: string, branchID?: string) => void;
   refresh: () => Promise<void>;
   can: (permission: string) => boolean;
-  invitationToken: string;
-  clearInvitation: () => void;
 }
 const OrganizationStateContext = createContext<OrganizationState | null>(null);
 function readSelection(userID: string): Selection {
@@ -56,18 +54,14 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     orgID: '',
     branchID: '',
   });
-  const [invitationToken, setInvitationToken] = useState(
-    () =>
-      new URLSearchParams(window.location.hash.slice(1)).get('invitation') ??
-      '',
-  );
   useEffect(() => {
-    if (window.location.hash.startsWith('#invitation='))
+    if (window.location.hash.startsWith('#invitation=')) {
       window.history.replaceState(
-        null,
+        window.history.state,
         '',
         window.location.pathname + window.location.search,
       );
+    }
   }, []);
   useEffect(() => {
     if (state.status === 'anonymous') {
@@ -184,8 +178,6 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
           (organizationsQuery.isPending || (!!orgID && contextQuery.isPending)),
         error: failure instanceof Error ? failure.message : '',
         can: (permission) => context?.permissions.includes(permission) ?? false,
-        invitationToken,
-        clearInvitation: () => setInvitationToken(''),
       }}
     >
       {children}

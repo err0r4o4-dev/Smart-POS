@@ -1,16 +1,26 @@
 # Complete route inventory
 
+## Owner-only transition (2026-11-05)
+
+The approved change retires `/work`, `/employees`, `/employees/:id` and
+`/roles` and restricts backoffice access to active OWNER memberships. Account
+and login routes and `/shop` ordering remain. The contract inventory has 117
+routes after removing those three implemented employee and role entries. The
+employees module retains `/approvals` and `/audit-logs` as planned, unregistered
+routes. Main reports the contract check passed; overall acceptance remains open
+in `TODO.md`.
+
 Online-flow status (2026-10-12): **PARTIAL / PAUSED by the user**. The inventory remains17 modules/114 page routes; this refresh adds no routes or API contracts. Internal payment/webhook/refund services have no customer HTTP registration/runtime forwarding. Delivery snapshots do not imply a shipped/returned order UI or verified financial reporting. See [current capability boundary](payment-sandbox.md#current-online-flow-status-2026-10-12).
 
-Canonical source: packages/contracts/routes.json. Exactly 17 modules and 114 page routes (implemented and planned). Static routes are ranked before dynamic routes by React Router. Only ready pages are registered. A shell is not a completed business feature.
+Canonical source: packages/contracts/routes.json. Earlier phase counts below are historical. Static routes are ranked before dynamic routes by React Router. Only ready pages are registered. A shell is not a completed business feature.
 
-Implemented identity routes are Phase 1A; organization/branch/member routes below are Phase 1B. These statuses supersede older planned labels without adding routes. Tenant routes require an authenticated session, active organization membership and the listed permission; Owner/Manager branch scope is enforced again by the API. `/setup` also supports memory-only email invitation acceptance after sign-in. See [organization architecture](organization.md).
+Identity and organization routes originated in Phases 1A and 1B. The approved transition requires an authenticated active OWNER membership for backoffice routes, with server-side tenant and permission checks. Invitation acceptance is being retired. See [organization architecture](organization.md).
 
-The nine Products routes are implemented Phase 1C. Catalog records are organization-scoped and shared across branches, not branch-owned. The backend rechecks active organization membership and catalog permissions; the existing Manager policy denies catalog access when no assigned active branch remains. Operational staff access follows active organization membership and fixed catalog permissions, not a separate all-role active-branch gate. Mutation-specific permissions are enforced separately from read access. See [catalog architecture](catalog.md).
+The nine Products routes are Phase 1C inventory entries. Catalog records are organization-scoped and shared across branches. Mutation-specific permissions are enforced separately from read access; the owner-only transition supersedes historical staff grants. See [catalog architecture](catalog.md).
 
 Phase5.1 registers two Returns routes;5.2 two Exchange/Void;5.3 five Pricing;5.4 three Customer;5.5 two Loyalty;5.6 four Quality routes. Phase0–4 and Phase5.1–5.7 COMPLETED (Local); Phase5 overall COMPLETED (Local); Phase6–7 NOT STARTED; Phase6 NOT READY; Production Ready NO. The historical Phase5 checkpoint counted16 modules/106 routes; storefront and its management-only Stripe sandbox diagnostic bring the current inventory to17 modules/114 routes. Sandbox diagnostics do not implement customer online payment or fulfillment. See [Quality](quality.md), [sandbox](payment-sandbox.md) and [final acceptance](../development/phase57-verification.md).
 
-Storefront adds seven logical routes; management/work routes below use their existing workspace prefixes. See [storefront flow](storefront.md). This extension does not claim online payment or Phase6 readiness.
+Storefront adds seven logical routes; backoffice routes use the management workspace prefix under the approved transition. See [storefront flow](storefront.md). This extension does not claim online payment or Phase6 readiness.
 
 | Module | Route | Status | Phase | Access target |
 | --- | --- | --- | --- | --- |
@@ -18,9 +28,9 @@ Storefront adds seven logical routes; management/work routes below use their exi
 | Storefront | `/shop/:slug` | Implemented; selectively published catalog | 5 | public |
 | Storefront | `/shop/:slug/cart` | Implemented; guest pickup order | 5 | public + Origin + rate limit |
 | Storefront | `/shop/:slug/track/:orderId` | Implemented; private tracking fragment | 5 | matching access token |
-| Storefront | `/settings/storefront` | Implemented under `/manage` | 5 | Owner/Manager + storefront.manage |
-| Storefront | `/online-orders` | Implemented under `/manage` and `/work` | 5 | session + tenant + branch + online_orders.read |
-| Storefront | `/online-orders/:orderId` | Implemented; staff workflow / POS entry | 5 | online_orders.read; mutations separately gated |
+| Storefront | `/settings/storefront` | Implemented under `/manage` | 5 | OWNER + storefront.manage |
+| Storefront | `/online-orders` | Implemented under `/manage`; `/work` retirement in progress | 5 | session + tenant + branch + online_orders.read |
+| Storefront | `/online-orders/:orderId` | Implemented; backoffice workflow / POS entry | 5 | online_orders.read; mutations separately gated |
 | Authentication | `/login` | Implemented Phase 1A | 1 | public Origin-validated entry |
 | Authentication | `/register` | Implemented Phase 1A | 1 | public Origin-validated entry |
 | Authentication | `/forgot-password` | Implemented Phase 1A | 1 | public Origin-validated entry |
@@ -108,9 +118,6 @@ Storefront adds seven logical routes; management/work routes below use their exi
 | Reports | `/reports/shelves` | Planned (not registered) | 6 | session + tenant + branch permission |
 | Reports | `/reports/employees` | Planned (not registered) | 6 | session + tenant + branch permission |
 | Reports | `/reports/export` | Planned (not registered) | 6 | session + tenant + branch permission |
-| Employees & Permissions | `/employees` | Implemented Phase 1B | 1 | session + tenant + employee.read; scoped write permissions |
-| Employees & Permissions | `/employees/:id` | Implemented Phase 1B | 1 | session + tenant + employee.read; scoped update/remove/audit |
-| Employees & Permissions | `/roles` | Implemented Phase 1B | 1 | session + tenant + role.read |
 | Employees & Permissions | `/approvals` | Planned (not registered) | 1 | session + tenant + branch permission |
 | Employees & Permissions | `/audit-logs` | Planned (not registered) | 1 | session + tenant + branch permission |
 | Settings | `/settings` | Planned (not registered) | 1 | session + tenant + branch permission |
@@ -133,4 +140,14 @@ Additional Phase 0 routes outside the 106 business inventory: / redirects to /da
 
 ## Inventory access and deferred valuation
 
-Ten Phase 2 Inventory routes above are implemented; /inventory/valuation stays Planned because no accounting costing method exists. Read pages require inventory.read, movement history additionally requires inventory.audit.read at the API, and each mutation checks its own inventory permission. Lists/details/actions are branch-scoped; destination transfer participants can inspect that transfer without reading arbitrary source balances. Owner has organization-wide scope; Manager remains assigned-active-branch scoped. There is no fake inventory data or business dashboard/checkout implementation.
+Ten Phase 2 Inventory routes above are implemented; /inventory/valuation stays Planned because no accounting costing method exists. Read pages require inventory.read, movement history additionally requires inventory.audit.read at the API, and each mutation checks its own inventory permission. Lists/details/actions are branch-scoped; destination transfer participants can inspect that transfer without reading arbitrary source balances. The owner-only transition supersedes historical Manager access. There is no fake inventory data or business dashboard/checkout implementation.
+
+## Restaurant Routes
+
+- `/restaurant/tables` - Implemented table metadata only; dine-in QR ordering and customer token consumer are not enabled
+- `/restaurant/queue` - Implemented authenticated staff/management queue for live paid online orders; uses per-business-period queue sequence, no public board token
+- `/restaurant/settings` - Implemented branch closing-time and timezone settings with half-open daily reporting window; never resets stock
+
+Ingredient management, recipes, quick stock and ingredient forecasting are retired
+from active web routes and restaurant APIs. Historical stock and recipe records
+remain for existing transaction recovery; their retention is not an active UI.

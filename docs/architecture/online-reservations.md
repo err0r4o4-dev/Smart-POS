@@ -1,5 +1,32 @@
 # Online reservation foundation
 
+## Ingredient retirement (2026-11-07)
+
+Schema 32 retains the tracked reservation foundation below for historical
+transactions. New server-created restaurant orders use immutable `MENU_ONLY`
+policy, create no stock snapshots, and contribute no stock requirements or
+reservations. A missing snapshot on a `TRACKED` order keeps its historical
+direct-stock fallback; it never changes policy. Existing paid holds are not
+bulk-released. Payment confirmation, cancellation, refund reconciliation and
+paid-only kitchen predicates remain mandatory. See [POS policy](pos.md).
+
+This is the implementation boundary, not evidence of migration or database
+acceptance. Do not apply the migration to primary or retained data as a test.
+
+## Ingredient snapshot continuation (2026-11-05)
+
+Migration `000028_online_ingredient_reservations.up.sql` and its Go consumers are a local draft. Database execution and stock-flow acceptance remain unverified. The API now requires clean schema 28; do not roll out these binaries against schema 27.
+
+New order lines automatically freeze their ingredient quantities, units and recipe revision in `online_order_stock_items`. Lines without recipes freeze direct stock instead. Later recipe edits do not change existing holds or settlement quantities. Runtime access to these snapshots is SELECT-only with tenant RLS; updates and deletion are also trigger-protected.
+
+Reservation totals aggregate shared ingredients and direct stock. Cart checks exclude only the matching `cart_id`; order checks use the separate `storefront_reserved_quantity_for_order` function. An order UUID cannot exclude an unrelated cart's hold. Completion uses the frozen requirements in the existing atomic sale/ledger transaction and rejects SALE movements with a different inventory operation. Cancellation, expiry and payment recovery retain the existing hold lifecycle and quality restrictions. Holds create no physical stock movements.
+
+Rollout requires a maintenance window: the migration locks the order, item and payment-attempt tables and refuses any live order, including linked carts or unresolved payment holds. Complete or reconcile those orders through supported workflows first. It does not backfill historical recipes or reinterpret existing holds. No down migration is supplied; a failed transaction rolls back, while post-rollout corrections require a reviewed forward migration.
+
+The guarded isolated suite includes ingredient shortage, competing orders, pickup/delivery release, dine-in retry, recipe edits/deactivation, direct items gaining recipes, mixed menu/direct settlement, identifier exclusions, operation mismatches, tenant protection and repeated prepaid settlement. These cases compile but have not run against PostgreSQL in this continuation. A skipped database suite is not migration or transaction acceptance. Use `npm run verify:single-store` only after confirming its disposable Docker prerequisites; never substitute the primary database. Upgrade refusal and historical-data preservation also require isolated 27-to-28 acceptance before rollout.
+
+## Historical reservation evidence (schemas 15-23)
+
 Continuation: [separate online stock sources](online-stock-sources.md) adds optional same-branch warehouse sourcing in schema16. The schema15 scope/results below remain historical; customer payment/delivery acceptance is still separate.
 
 Current cumulative status: Go readiness requires clean schema23. Reservations/source selection, internal payment holds/orchestration/reconciliation, delivery snapshots and internal pre-shipment refunds exist, but the full customer flow is **PARTIAL / PAUSED by the user**. See [current status and policy](payment-sandbox.md#current-online-flow-status-2026-10-12); schema15 evidence below is not a current rollout or full-flow acceptance.

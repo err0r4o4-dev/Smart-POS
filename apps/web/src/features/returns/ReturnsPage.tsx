@@ -22,6 +22,7 @@ import { useReturnsCommand, useReturnsQuery } from './returns-hooks';
 import { copy, type ReturnsCopy } from './copy';
 import { BatchPicker, type BatchSelection } from '../quality/BatchPicker';
 import { untrackedBatch } from '../../lib/quality-api';
+import { isKnownStockPolicy } from '../../lib/pos-api';
 
 type Command = ReturnType<typeof useReturnsCommand>;
 type Location = { id: string; name: string; type: string; status: string };
@@ -305,10 +306,14 @@ function ReturnLines({
     >({}),
     [destinations, setDestinations] = useState<Record<string, string>>({}),
     [invalid, setInvalid] = useState(false);
+  const isTracked = sale.stock_policy === 'TRACKED';
+  const isMenuOnly = sale.stock_policy === 'MENU_ONLY';
+  const isValidPolicy = isKnownStockPolicy(sale.stock_policy);
   const locations = useReturnsQuery<POSPage<Location>>(
-    `/inventory/locations?branch_id=${sale.branch_id}&page_size=100`,
+    isTracked ? `/inventory/locations?branch_id=${sale.branch_id}&page_size=100` : '',
   );
   async function submit(event: FormEvent) {
+    if (!isValidPolicy) return;
     event.preventDefault();
     const selected = sale.items.filter((item) => quantities[item.id]);
     if (
@@ -323,7 +328,9 @@ function ReturnLines({
     }
     setInvalid(false);
     const items = selected.map((item) => {
-      const disposition = dispositions[item.id] ?? 'RESTOCK_SELLABLE';
+      const disposition = isMenuOnly
+        ? 'NO_STOCK_RETURN'
+        : (dispositions[item.id] ?? 'RESTOCK_SELLABLE');
       return {
         original_sale_item_id: item.id,
         ...(disposition === 'NO_STOCK_RETURN'
@@ -347,13 +354,22 @@ function ReturnLines({
       setQuantities({});
     }
   }
+  if (!isValidPolicy) {
+    return (
+      <div role="alert">
+        <p>{text.invalid}</p>
+      </div>
+    );
+  }
   return (
     <form onSubmit={(event) => void submit(event)}>
       <p>{sale.sale_number}</p>
       <p>{text.preview}</p>
       <CatalogError error={locations.error} />
       {sale.items.map((item) => {
-        const disposition = dispositions[item.id] ?? 'RESTOCK_SELLABLE';
+        const disposition = isMenuOnly
+          ? 'NO_STOCK_RETURN'
+          : (dispositions[item.id] ?? 'RESTOCK_SELLABLE');
         return (
           <fieldset key={item.id} className="returns-line">
             <legend>
@@ -364,7 +380,7 @@ function ReturnLines({
               {item.returnable_quantity} · {text.historical}: {item.line_total}{' '}
               THB
             </p>
-            {disposition !== 'NO_STOCK_RETURN' && (
+            {isTracked && disposition !== 'NO_STOCK_RETURN' && (
               <>
                 <p>
                   {t('returns.originalLot')} {item.batch_id ?? 'UNTRACKED'}{' '}
@@ -395,7 +411,8 @@ function ReturnLines({
                   }
                 />
               </Field>
-              <Field label={`${text.disposition} ${item.sku}`}>
+              {isTracked && (
+                <Field label={`${text.disposition} ${item.sku}`}>
                 <select
                   value={disposition}
                   onChange={(event) => {
@@ -412,7 +429,8 @@ function ReturnLines({
                   <option value="NO_STOCK_RETURN">{text.noStock}</option>
                 </select>
               </Field>
-              {disposition !== 'NO_STOCK_RETURN' && (
+              )}
+              {isTracked && disposition !== 'NO_STOCK_RETURN' && (
                 <Field label={`${text.destination} ${item.sku}`}>
                   <select
                     value={destinations[item.id] ?? item.stock_location_id}
@@ -454,7 +472,7 @@ function ReturnLines({
         />
       </Field>
       {invalid && <p role="alert">{text.invalid}</p>}
-      <Button type="submit" disabled={command.busy || !locations.data}>
+      <Button type="submit" disabled={command.busy || (isTracked && !locations.data)}>
         {text.create}
       </Button>
     </form>

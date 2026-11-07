@@ -8,8 +8,8 @@ import { LoginLayout } from '../../layouts/LoginLayout';
 import { forgotPassword, register, resetPassword } from '../../lib/api';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
-import { isManagementRole } from '../../app/access';
 import { paths } from '../../app/routes';
+import { ResendVerification } from './VerificationFlow';
 
 function ErrorMessage({ message }: { message: string }) {
   const { localize } = useLanguage();
@@ -66,7 +66,9 @@ function PasswordField({
 }
 
 export function safeReturnTo(value: string | null) {
-  return value === '/account' ? value : paths.workspace;
+  return value === '/account' || value === paths.setup
+    ? value
+    : paths.workspace;
 }
 
 export function LoginPage() {
@@ -157,7 +159,7 @@ export function LoginPage() {
 }
 
 export function RegisterPage() {
-  const { t, localize } = useLanguage();
+  const { t, localize, language } = useLanguage();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -165,7 +167,7 @@ export function RegisterPage() {
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
   const [pending, setPending] = useState(false);
-  const navigate = useNavigate();
+  const [registered, setRegistered] = useState(false);
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (password !== confirm) {
@@ -176,7 +178,7 @@ export function RegisterPage() {
     setPending(true);
     try {
       await register(email, password, name);
-      navigate('/login?registered=1', { replace: true });
+      setRegistered(true);
     } catch (failure) {
       setError(
         failure instanceof Error
@@ -187,12 +189,36 @@ export function RegisterPage() {
       setPending(false);
     }
   };
+  if (registered)
+    return (
+      <LoginLayout titleId="verify-title">
+        <div className="auth-header-card">
+          <Tag tone="amber">{t('auth.createAccount2')}</Tag>
+          <h2 id="verify-title">{language === 'en' ? 'Verify your email' : 'ยืนยันอีเมล'}</h2>
+          <p>
+            {language === 'en'
+              ? 'Your account was created. Verify your email before setting up your store.'
+              : 'สร้างบัญชีแล้ว กรุณายืนยันอีเมลก่อนตั้งค่าร้าน'}
+          </p>
+        </div>
+        <div className="auth-form-body">
+          <ResendVerification initialEmail={email} />
+        </div>
+        <div className="auth-links auth-links-single">
+          <Link to="/login">{t('auth.alreadyHaveAnAccountSignIn')}</Link>
+        </div>
+      </LoginLayout>
+    );
   return (
     <LoginLayout titleId="register-title">
       <div className="auth-header-card">
         <Tag tone="amber">{t('auth.createAccount2')}</Tag>
         <h2 id="register-title">{t('auth.getStarted')}</h2>
-        <p>{t('auth.organizationSetupFollowsInAFuturePhase')}</p>
+        <p>
+          {language === 'en'
+            ? 'Create an account and verify your email to set up your store.'
+            : 'สร้างบัญชีและยืนยันอีเมลเพื่อตั้งค่าร้าน'}
+        </p>
       </div>
       <form onSubmit={submit} className="auth-form-body">
         <fieldset disabled={pending}>
@@ -447,25 +473,39 @@ export function AccountPage() {
           <dt>{t('auth.status')}</dt>
           <dd>{labelCode(state.session.user.status)}</dd>
         </dl>
-        <p>
-          <Link to={paths.workspace}>
-            {t('auth.openYourRoleBasedWorkspace')}
-          </Link>{' '}
-          Â·{' '}
-          <Link to="/setup">
-            {t('auth.selectOrganizationSetUpStoreAcceptInvitation')}
-          </Link>
-          {tenant.context &&
-            isManagementRole(tenant.context.membership.role) && (
-              <>
-                {' '}
-                Â·{' '}
-                <Link to="/manage/settings/store">
-                  {t('auth.manageOrganizationAndBranches')}
-                </Link>
-              </>
+        {tenant.context?.membership.role === 'OWNER' ? (
+          <p>
+            <Link to={paths.dashboard}>
+              {t('auth.openYourRoleBasedWorkspace')}
+            </Link>
+            {' · '}
+            <Link to="/setup">{t('organization.setUpStore')}</Link>
+          </p>
+        ) : !tenant.loading && !tenant.error ? (
+          <div role="status">
+            <p>
+              {t(
+                !tenant.context && tenant.storeMode === 'multi'
+                  ? 'auth.noOwnedStore'
+                  : 'auth.ownerOnlyAccess',
+              )}
+            </p>
+            {!tenant.context && tenant.storeMode === 'multi' && (
+              <p>
+                <Link to="/setup">{t('organization.setUpStore')}</Link>
+              </p>
             )}
-        </p>
+          </div>
+        ) : tenant.error ? (
+          <p role="alert">
+            {localize(tenant.error)}{' '}
+            <Button onClick={() => void tenant.refresh()}>
+              {t('organization.refreshPermissions')}
+            </Button>
+          </p>
+        ) : (
+          <Loading />
+        )}
         <ErrorMessage message={localize(error ?? '')} />
         <Button onClick={() => void logout()} disabled={pending}>
           {pending ? t('auth.signingOut') : t('auth.signOut')}
@@ -474,4 +514,3 @@ export function AccountPage() {
     </div>
   );
 }
-

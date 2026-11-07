@@ -43,14 +43,34 @@ func settle(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org
 	if err = validateReward(ctx, tx, actor, org, item); err != nil {
 		return "", err
 	}
-	movements := []inventory.Item{}
+	var movements []inventory.Item
+	if cart.StockPolicy == "TRACKED" {
+		movements, err = effectiveSaleMovements(ctx, tx, org, item.BranchID, item.CartID, item.Items)
+		if err != nil {
+			return "", err
+		}
+	} else if cart.StockPolicy != "MENU_ONLY" {
+		return "", ErrConflict
+	}
 	for _, snapshot := range item.Items {
+		if cart.StockPolicy == "MENU_ONLY" && (snapshot.BatchID != nil || snapshot.BatchVerified) {
+			return "", ErrConflict
+		}
 		current, err := variant(ctx, tx, org, value.StockLocationID, snapshot.VariantID, snapshot.Quantity, snapshot.UnitPrice)
 		if err != nil {
 			return "", err
 		}
-		if err = inventory.QualityAvailabilityForCart(ctx, tx, org, value.StockLocationID, snapshot.VariantID, snapshot.BatchID, item.CartID, &current.Available, &current.Saleable); err != nil {
-			return "", dbError(err)
+		hasRecipe := false
+		if cart.StockPolicy == "TRACKED" {
+			_, hasRecipe, err = readSaleRecipe(ctx, tx, org, item.BranchID, item.CartID, snapshot.VariantID)
+			if err != nil {
+				return "", err
+			}
+			if !hasRecipe {
+				if err = inventory.QualityAvailabilityForCart(ctx, tx, org, value.StockLocationID, snapshot.VariantID, snapshot.BatchID, item.CartID, current.Available, &current.Saleable); err != nil {
+					return "", dbError(err)
+				}
+			}
 		}
 		if !current.Saleable {
 			return "", ErrConflict
@@ -58,12 +78,13 @@ func settle(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org
 		if current.PriceChanged {
 			return "", ErrPrice
 		}
-		quantity, _ := scaled(current.Quantity, 3)
-		stock, _ := scaled(current.Available, 3)
-		if stock < quantity {
-			return "", ErrStock
+		if cart.StockPolicy == "TRACKED" && !hasRecipe {
+			quantity, _ := scaled(current.Quantity, 3)
+			stock, _ := scaled(*current.Available, 3)
+			if stock < quantity {
+				return "", ErrStock
+			}
 		}
-		movements = append(movements, inventory.Item{VariantID: snapshot.VariantID, Quantity: snapshot.Quantity, BatchID: snapshot.BatchID})
 	}
 	op, err := inventory.BeginSale(ctx, tx, user, org, item.ID, item.Items)
 	if err != nil {
@@ -71,8 +92,8 @@ func settle(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org
 	}
 	var sale string
 	quoteData, _ := json.Marshal(item.Pricing)
-	err = tx.QueryRow(ctx, `INSERT INTO sales(organization_id,branch_id,terminal_id,shift_id,cart_id,checkout_id,cashier_id,currency,subtotal,grand_total,inventory_operation_id,store_name,branch_name,store_address,terminal_name,cashier_name,discount_total,pricing_snapshot,customer_id,customer_code_snapshot)
- SELECT $1,$2,$3,$4,$5,$6,$7,'THB',$12,$8,$9,organization.name,branch.name,CASE WHEN branch.address<>'' THEN branch.address ELSE organization.address END,$10,$11,$13,$14,$15,$16 FROM organizations organization JOIN branches branch ON branch.organization_id=organization.id AND branch.id=$2 WHERE organization.id=$1 RETURNING id::text`, org, item.BranchID, item.TerminalID, item.ShiftID, item.CartID, item.ID, user, item.Total, op, value.Name, actor.DisplayName, item.Pricing.Subtotal, item.Pricing.Discount, quoteData, item.CustomerID, item.CustomerCode).Scan(&sale)
+	err = tx.QueryRow(ctx, `INSERT INTO sales(organization_id,branch_id,terminal_id,shift_id,cart_id,checkout_id,cashier_id,currency,subtotal,grand_total,inventory_operation_id,store_name,branch_name,store_address,terminal_name,cashier_name,discount_total,pricing_snapshot,customer_id,customer_code_snapshot,stock_policy)
+ SELECT $1,$2,$3,$4,$5,$6,$7,'THB',$12,$8,$9,organization.name,branch.name,CASE WHEN branch.address<>'' THEN branch.address ELSE organization.address END,$10,$11,$13,$14,$15,$16,$17 FROM organizations organization JOIN branches branch ON branch.organization_id=organization.id AND branch.id=$2 WHERE organization.id=$1 RETURNING id::text`, org, item.BranchID, item.TerminalID, item.ShiftID, item.CartID, item.ID, user, item.Total, op, value.Name, actor.DisplayName, item.Pricing.Subtotal, item.Pricing.Discount, quoteData, item.CustomerID, item.CustomerCode, cart.StockPolicy).Scan(&sale)
 	if err != nil {
 		return "", dbError(err)
 	}
@@ -139,9 +160,6 @@ func (service *Service) CompleteCheckout(ctx context.Context, user, org, id stri
 		return item, organization.ErrDenied
 	}
 	if item.Status == "COMPLETED" {
-		if err = pricing.CurrentApprover(ctx, tx, org, item.Pricing.ApprovalID); err != nil {
-			return item, err
-		}
 		return item, nil
 	}
 	if !allowed([]string{"CONFIRMED", "RECONCILIATION_REQUIRED"}, item.Status) {

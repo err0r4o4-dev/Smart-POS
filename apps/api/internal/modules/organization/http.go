@@ -84,11 +84,6 @@ func (handler Handler) Routes(router chi.Router, tenantExtensions ...func(chi.Ro
 		private.Get("/organizations", endpoint(200, func(ctx context.Context, user identity.Profile, org string, request *http.Request) (any, error) {
 			return service.List(ctx, user.ID)
 		}))
-		private.Post("/invitations/accept", bodyEndpoint(200, func(ctx context.Context, user identity.Profile, org string, request *http.Request, input struct {
-			Token string `json:"token"`
-		}) (Context, error) {
-			return service.Accept(ctx, user, input.Token)
-		}))
 		private.Route("/organizations/{id}", func(tenant chi.Router) {
 			for _, register := range tenantExtensions {
 				register(tenant)
@@ -104,20 +99,6 @@ func (handler Handler) Routes(router chi.Router, tenantExtensions ...func(chi.Ro
 			}))
 			tenant.Patch("/", bodyEndpoint(200, func(ctx context.Context, user identity.Profile, org string, request *http.Request, input OrganizationInput) (Organization, error) {
 				return service.Update(ctx, user.ID, org, input)
-			}))
-			tenant.Get("/roles", endpoint(200, func(ctx context.Context, user identity.Profile, org string, request *http.Request) (any, error) {
-				state, err := service.Context(ctx, user.ID, org)
-				if err != nil {
-					return nil, err
-				}
-				if !contains(state.Permissions, "role.read") {
-					return nil, ErrDenied
-				}
-				matrix := map[string][]string{}
-				for _, role := range Roles {
-					matrix[role] = Permissions(role)
-				}
-				return matrix, nil
 			}))
 			tenant.Get("/branches", endpoint(200, func(ctx context.Context, user identity.Profile, org string, request *http.Request) (any, error) {
 				return service.Branches(ctx, user.ID, org)
@@ -139,32 +120,6 @@ func (handler Handler) Routes(router chi.Router, tenantExtensions ...func(chi.Ro
 			}))
 			tenant.Patch("/branches/{branchId}", bodyEndpoint(200, func(ctx context.Context, user identity.Profile, org string, request *http.Request, input BranchInput) (Branch, error) {
 				return service.SaveBranch(ctx, user.ID, org, chi.URLParam(request, "branchId"), input)
-			}))
-			tenant.Get("/members", endpoint(200, func(ctx context.Context, user identity.Profile, org string, request *http.Request) (any, error) {
-				return service.Members(ctx, user.ID, org, "")
-			}))
-			tenant.Get("/members/{memberId}", endpoint(200, func(ctx context.Context, user identity.Profile, org string, request *http.Request) (any, error) {
-				members, err := service.Members(ctx, user.ID, org, chi.URLParam(request, "memberId"))
-				if err != nil {
-					return nil, err
-				}
-				return members[0], nil
-			}))
-			tenant.Patch("/members/{memberId}", bodyEndpoint(200, func(ctx context.Context, user identity.Profile, org string, request *http.Request, input MemberInput) (Member, error) {
-				return service.UpdateMember(ctx, user.ID, org, chi.URLParam(request, "memberId"), input, false)
-			}))
-			tenant.Delete("/members/{memberId}", endpoint(200, func(ctx context.Context, user identity.Profile, org string, request *http.Request) (any, error) {
-				return service.UpdateMember(ctx, user.ID, org, chi.URLParam(request, "memberId"), MemberInput{}, true)
-			}))
-			tenant.Get("/invitations", endpoint(200, func(ctx context.Context, user identity.Profile, org string, request *http.Request) (any, error) {
-				return service.Invitations(ctx, user.ID, org)
-			}))
-			tenant.Post("/invitations", bodyEndpoint(201, func(ctx context.Context, user identity.Profile, org string, request *http.Request, input InviteInput) (Invitation, error) {
-				return service.Invite(ctx, user.ID, org, input)
-			}))
-			tenant.Delete("/invitations/{invitationId}", endpoint(200, func(ctx context.Context, user identity.Profile, org string, request *http.Request) (any, error) {
-				err := service.RevokeInvitation(ctx, user.ID, org, chi.URLParam(request, "invitationId"))
-				return map[string]bool{"revoked": err == nil}, err
 			}))
 			tenant.Get("/audit", endpoint(200, func(ctx context.Context, user identity.Profile, org string, request *http.Request) (any, error) {
 				return service.Audit(ctx, user.ID, org, request.URL.Query().Get("member_id"))

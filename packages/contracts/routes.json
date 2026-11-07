@@ -176,13 +176,7 @@
     "module": "employees",
     "name": "Employees & Permissions",
     "phase": 1,
-    "routes": [
-      "/employees",
-      "/employees/:id",
-      "/roles",
-      "/approvals",
-      "/audit-logs"
-    ]
+    "routes": ["/approvals", "/audit-logs"]
   },
   {
     "module": "settings",
@@ -220,6 +214,16 @@
       "/settings/storefront/payments",
       "/online-orders",
       "/online-orders/:orderId"
+    ]
+  },
+  {
+    "module": "restaurant",
+    "name": "Restaurant Operations",
+    "phase": 6,
+    "routes": [
+      "/restaurant/tables",
+      "/restaurant/queue",
+      "/restaurant/settings"
     ]
   }
 ]

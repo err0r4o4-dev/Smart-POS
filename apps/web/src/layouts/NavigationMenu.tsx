@@ -42,17 +42,14 @@ const pathIcons: Record<string, LucideIcon> = {
   '/manage/online-orders': ShoppingCart,
   '/manage/sales': FileText,
   '/manage/receipts': Receipt,
-  '/work/pos': Play,
-  '/work/online-orders': ShoppingCart,
-  '/work/sales': FileText,
-  '/work/receipts': Receipt,
 };
 
 const groupIcons: Record<string, LucideIcon> = {
+  sales: ShoppingCart,
+  menu: ReceiptText,
   inventory: Briefcase,
   customers: Contact,
-  pricing: ReceiptText,
-  returns: BarChart3,
+  reports: BarChart3,
   settings: Settings,
 };
 
@@ -205,19 +202,16 @@ export function NavigationMenu({
     );
   };
 
-  const ungroupedTopItems = visibleItems.filter(
+  const ungroupedTopItems = visibleItems.filter((item) => item.to === homePath);
+  const ungroupedBottomItems = visibleItems.filter(
     (item) =>
-      item.to === homePath ||
+      item.to !== homePath &&
       !groups.some((group) => group.paths.includes(item.to)),
   );
-  const orderedTopItems = [
-    ...ungroupedTopItems.filter((item) => item.to === homePath),
-    ...ungroupedTopItems.filter((item) => item.to !== homePath),
-  ];
 
   return (
     <>
-      {orderedTopItems.map(renderLink)}
+      {ungroupedTopItems.map(renderLink)}
       {groups.map((group) => {
         const groupItems = group.paths.flatMap((path) =>
           visibleItems.filter((item) => item.to === path),
@@ -256,6 +250,7 @@ export function NavigationMenu({
           </div>
         );
       })}
+      {ungroupedBottomItems.map(renderLink)}
     </>
   );
 }

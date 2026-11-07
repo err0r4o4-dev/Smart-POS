@@ -149,7 +149,7 @@ export const storefront = defineMessages({
     chooseMoreProducts: 'เลือกสินค้าเพิ่ม',
     checkingStoreStatus: 'กำลังตรวจสถานะร้าน…',
     cartItemsAreNotReservedStockIs:
-      'สินค้าในตะกร้ายังไม่ถูกกัน ระบบกันสินค้าหลังส่งออเดอร์สำเร็จ ยังไม่รับเงินออนไลน์ รอร้านตรวจสอบก่อนมารับ ยอดและโปรโมชันสุดท้ายยืนยันที่ POS',
+      'รายการที่ติดตามสต็อกจะถูกกันหลังส่งออเดอร์สำเร็จ ยังไม่รับเงินออนไลน์ รอร้านตรวจสอบก่อนมารับ ยอดและโปรโมชันสุดท้ายยืนยันที่ POS',
     yourCartIsEmpty: 'ตะกร้ายังว่าง',
     backToProducts: 'กลับไปเลือกสินค้า',
     cartItems: 'รายการในตะกร้า',
@@ -169,7 +169,7 @@ export const storefront = defineMessages({
     contactPhone: 'เบอร์ติดต่อ',
     noteToStore: 'หมายเหตุถึงร้าน',
     iUnderstandStockIsReservedAfterSuccessful:
-      'ฉันเข้าใจว่าระบบกันสินค้าหลังส่งออเดอร์สำเร็จจนถึงเวลาหมดอายุ ต้องรอร้านตรวจสอบและยืนยันยอดสุดท้ายก่อนชำระที่ร้าน',
+      'ฉันเข้าใจว่ารายการที่ติดตามสต็อกจะถูกกันหลังส่งออเดอร์สำเร็จจนถึงเวลาหมดอายุ และต้องรอร้านตรวจสอบและยืนยันยอดสุดท้ายก่อนชำระที่ร้าน',
     theStoreUsesYourNameAndPhone:
       'ร้านใช้ชื่อและเบอร์เพื่อติดต่อเรื่องออเดอร์นี้ ไม่ใช่การสมัครบัญชีหรือยินยอมรับการตลาด',
     submitOrderUnpaid: 'ส่งออเดอร์ · ยังไม่ชำระเงิน',
@@ -220,6 +220,12 @@ export const storefront = defineMessages({
     publishedStores: 'ร้านที่เผยแพร่',
     loadingStorefronts: 'กำลังโหลดหน้าร้าน…',
     noPublishedStoresYet: 'ยังไม่มีร้านที่เปิดเผยแพร่',
+    searchStores: 'ค้นหาร้าน',
+    searchStoresPlaceholder: 'พิมพ์ชื่อร้านอาหารหรือคาเฟ่',
+    acceptingOrders: 'กำลังรับออเดอร์',
+    notAcceptingOrders: 'ปิดรับออเดอร์ชั่วคราว',
+    viewStore: 'ดูหน้าร้าน',
+    noMatchingStores: 'ไม่พบร้านที่ตรงกับคำค้น',
     onceStoresSetUpTheirStorefrontsAnd:
       'เมื่อร้านตั้งค่าหน้าร้านและเผยแพร่สินค้าแล้ว คุณจะเลือกซื้อได้ที่นี่',
     openedValue0InPosReviewTheTotal:
@@ -385,7 +391,7 @@ export const storefront = defineMessages({
     chooseMoreProducts: 'Choose more products',
     checkingStoreStatus: 'Checking store status…',
     cartItemsAreNotReservedStockIs:
-      'Cart items are not reserved. Stock is reserved after successful order submission. No online payment is collected. Wait for store review before pickup; final totals and promotions are confirmed at POS.',
+      'Stock is reserved for tracked items after successful order submission. No online payment is collected. Wait for store review before pickup; final totals and promotions are confirmed at POS.',
     yourCartIsEmpty: 'Your cart is empty',
     backToProducts: 'Back to products',
     cartItems: 'Cart items',
@@ -406,7 +412,7 @@ export const storefront = defineMessages({
     contactPhone: 'Contact phone',
     noteToStore: 'Note to store',
     iUnderstandStockIsReservedAfterSuccessful:
-      'I understand stock is reserved after successful submission until expiry. I must wait for store review and final total confirmation before paying in store.',
+      'I understand stock is reserved for tracked items after successful submission until expiry. I must wait for store review and final total confirmation before paying in store.',
     theStoreUsesYourNameAndPhone:
       'The store uses your name and phone to contact you about this order. This does not create an account or opt you into marketing.',
     submitOrderUnpaid: 'Submit order · Unpaid',
@@ -459,6 +465,12 @@ export const storefront = defineMessages({
     publishedStores: 'Published stores',
     loadingStorefronts: 'Loading storefronts…',
     noPublishedStoresYet: 'No published stores yet',
+    searchStores: 'Search stores',
+    searchStoresPlaceholder: 'Search by store name',
+    acceptingOrders: 'Accepting orders',
+    notAcceptingOrders: 'Orders temporarily closed',
+    viewStore: 'View store',
+    noMatchingStores: 'No stores match your search',
     onceStoresSetUpTheirStorefrontsAnd:
       'Once stores set up their storefronts and publish products, you can shop here.',
     openedValue0InPosReviewTheTotal:

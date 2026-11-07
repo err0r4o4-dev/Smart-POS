@@ -208,6 +208,9 @@ it('clears tenant caches on logout and strips invitation tokens from URL', async
   const view = mount();
   expect(window.location.hash).toBe('');
   expect(await screen.findByText('a')).toBeVisible();
+  expect(
+    mocks.request.mock.calls.some(([path]) => path.includes('invitation')),
+  ).toBe(false);
   mocks.auth = { status: 'anonymous', session: null };
   view.rerender(view.tree());
   await waitFor(() =>

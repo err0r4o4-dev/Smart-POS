@@ -22,9 +22,16 @@ import (
 	"smartpos/api/internal/transport"
 )
 
-type singleStoreMailbox struct{ tokens map[string]string }
+type singleStoreMailbox struct {
+	tokens             map[string]string
+	verificationTokens map[string]string
+}
 
 func (mailbox *singleStoreMailbox) SendReset(context.Context, string, string) error { return nil }
+func (mailbox *singleStoreMailbox) SendEmailVerification(_ context.Context, email, token string) error {
+	mailbox.verificationTokens[email] = token
+	return nil
+}
 func (mailbox *singleStoreMailbox) SendInvitation(_ context.Context, email, token string) error {
 	mailbox.tokens[email] = token
 	return nil
@@ -39,7 +46,11 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 	if err != nil || configuration.ConnConfig.Host != "127.0.0.1" || configuration.ConnConfig.Port != 15514 || configuration.ConnConfig.Database != "smartpos_single_store_acceptance" {
 		t.Fatal("refusing an unconfirmed isolated database target")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+	deadline := 45 * time.Second
+	if os.Getenv("SMARTPOS_RESTAURANT_BROWSER") == "1" {
+		deadline = 4 * time.Minute
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), deadline)
 	defer cancel()
 	pool, err := database.Open(ctx, dsn)
 	if err != nil {
@@ -60,7 +71,7 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 	if err = (database.Checker{Pool: pool}).Ready(ctx); err != nil {
 		t.Fatal("official schema migrations are required")
 	}
-	mailbox := &singleStoreMailbox{tokens: map[string]string{}}
+	mailbox := &singleStoreMailbox{tokens: map[string]string{}, verificationTokens: map[string]string{}}
 	accounts, err := identity.NewService(ctx, pool, mailbox, slog.New(slog.NewTextHandler(io.Discard, nil)), time.Hour)
 	if err != nil {
 		t.Fatal(err)
@@ -72,6 +83,19 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 	guest, err := accounts.Register(ctx, "single-store-staff@example.test", "Synthetic-staff-password-2026", "Synthetic staff")
 	if err != nil {
 		t.Fatal(err)
+	}
+	for _, profile := range []identity.Profile{owner, guest} {
+		token := mailbox.verificationTokens[profile.Email]
+		if token == "" {
+			t.Fatalf("verification token missing for %s", profile.Email)
+		}
+		result, verifyErr := accounts.VerifyEmail(ctx, token)
+		if verifyErr != nil {
+			t.Fatal(verifyErr)
+		}
+		if !result.Verified || !result.User.EmailVerified || result.User.ID != profile.ID {
+			t.Fatalf("verification failed for %s", profile.Email)
+		}
 	}
 	multi := &organization.Service{Pool: pool, Mailer: mailbox}
 	createInput := func(code string) organization.CreateInput {
@@ -218,6 +242,9 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 			t.Fatalf("membership required: %v", problem)
 		}
 	})
+	t.Run("restaurant onboarding generated metadata and profile preservation", func(testContext *testing.T) {
+		onboardingAcceptance(testContext, ctx, accounts, multi, single, owner.ID, guest.ID, second)
+	})
 	t.Run("public directory and slug reads cannot expose another store", func(t *testing.T) {
 		result, problem := shop.Directory(ctx)
 		if problem != nil {
@@ -292,6 +319,13 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 		}
 		paymentPrepaidAcceptance(t, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "prepaid-fixture"), first.Organization.ID, guest.ID)
 	})
+	t.Run("menu-only zero-stock sales", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "bf111111-1111-4111-8111-111111111111", createInput("MENU_ONLY"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		menuOnlyAcceptance(t, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "menu-only-fixture"), first.Organization.ID, guest.ID)
+	})
 	t.Run("staff customer payment reconciliation", func(t *testing.T) {
 		state, problem := multi.Create(ctx, owner.ID, "6a111111-1111-4111-8111-111111111111", createInput("RECONCILE"))
 		if problem != nil {
@@ -308,6 +342,13 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 	})
 	t.Run("atomic online reservation foundation", func(t *testing.T) {
 		reservationAcceptance(t, ctx, multi, owner.ID, first.Organization.ID, firstShop)
+	})
+	t.Run("recipe ingredient reservation and deduction", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "ae111111-1111-4111-8111-111111111111", createInput("INGREDIENT"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		ingredientReservationAcceptance(t, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "ingredient-fixture"), first.Organization.ID, guest.ID)
 	})
 	t.Run("unpublished pinned store does not fall back to another store", func(t *testing.T) {
 		_, problem := (&storefront.Service{Organization: multi}).SaveSettings(ctx, owner.ID, first.Organization.ID, storefront.SettingsInput{Slug: firstShop.Slug, Name: firstShop.Name, TerminalID: firstShop.TerminalID, Revision: firstShop.Revision})
@@ -332,5 +373,35 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 			t.Fatal(problem)
 		}
 		catalogAcceptance(t, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "catalog-fixture"))
+	})
+	t.Run("durable restaurant queue numbers", func(testContext *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "9c111111-1111-4111-8111-111111111111", createInput("QUEUE"))
+		if problem != nil {
+			testContext.Fatal(problem)
+		}
+		restaurantQueueAcceptance(testContext, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "queue-fixture"), first.Organization.ID)
+	})
+	t.Run("recipe browse availability", func(testContext *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "ab444444-4444-4444-8444-444444444444", createInput("BROWSE_RECIPE"))
+		if problem != nil {
+			testContext.Fatal(problem)
+		}
+		catalogBrowseAcceptance(testContext, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "browse-recipe-fixture"), first.Organization.ID, guest.ID)
+	})
+	if os.Getenv("SMARTPOS_RESTAURANT_BROWSER") == "1" {
+		t.Run("real restaurant browser lifecycle", func(testContext *testing.T) {
+			state, problem := multi.Create(ctx, owner.ID, "ab555555-5555-4555-8555-555555555555", createInput("BROWSER_RECIPE"))
+			if problem != nil {
+				testContext.Fatal(problem)
+			}
+			restaurantBrowserAcceptance(testContext, ctx, multi, accounts, owner.ID, owner.Email, state.Organization.ID, seedShop(state, "browser-restaurant"))
+		})
+	}
+	t.Run("restaurant queue schema isolation", func(testContext *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "9d111111-1111-4111-8111-111111111111", createInput("QUEUE_SCHEMA"))
+		if problem != nil {
+			testContext.Fatal(problem)
+		}
+		restaurantQueueSchemaAcceptance(testContext, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "queue-schema-fixture"), first.Organization.ID)
 	})
 }

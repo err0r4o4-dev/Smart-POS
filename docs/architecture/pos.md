@@ -4,6 +4,26 @@ Current Phase5.1–5.3 extension: Returns/Refunds and Exchanges/Voids reuse immu
 
 Local implementation, verified on 2026-10-10; not a production release. The work started with the 2026-10-09 execution context. Go remains a modular monolith with Chi/pgx, PostgreSQL remains the only transactional database, and React/TanStack Query remains the frontend. No gateway, microservice, AI or Phase 4 functionality is added.
 
+## Menu-only retirement boundary (2026-11-07)
+
+New normal POS carts and storefront orders use the immutable, server-selected
+`MENU_ONLY` stock policy. Availability is `null`, not an unlimited quantity.
+Active catalog/unit, exact quantities, prices, payments, receipts, tenant/branch
+authorization and paid-only kitchen gates still apply. These sales must not
+create ingredient or direct menu stock movements.
+
+Existing carts, orders and sales remain `TRACKED`. Historical online stock
+snapshots and the existing missing-snapshot fallback remain authoritative for
+their settlement and recovery. A linked online order determines sale policy;
+an unlinked cart uses its stored policy. Menu-only returns are financial-only
+and must not restock. Recipe tables and immutable ledger history are retained.
+
+Schema 32 is required. Do not remove policy support after menu-only writes:
+freeze writes and use a forward-compatible recovery plan instead. The tracked
+stock details below describe retained historical behavior, not a prerequisite
+for new menu-only sales. Database acceptance is reported separately from this
+design description.
+
 ## Terminal and stock-source policy
 
 - A terminal belongs to one organization and branch and identifies exactly one active stock location in that branch.

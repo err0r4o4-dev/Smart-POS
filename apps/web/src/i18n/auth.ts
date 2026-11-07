@@ -14,8 +14,10 @@ export const auth = defineMessages({
     show: 'แสดง',
     signInUnavailable: 'ไม่สามารถเข้าสู่ระบบได้',
     welcomeBack: 'ยินดีต้อนรับกลับ',
-    signInForStoreOwnersManagersAnd:
-      'เข้าสู่ระบบสำหรับเจ้าของร้าน ผู้จัดการ และพนักงาน ไม่ใช่บัญชีผู้ซื้อออนไลน์',
+    ownerOnlyAccess:
+      'พื้นที่จัดการร้านสำหรับเจ้าของร้านเท่านั้น หากต้องการความช่วยเหลือ โปรดติดต่อผู้ดูแลระบบ',
+    noOwnedStore: 'คุณยังไม่มีร้านที่เป็นเจ้าของ สามารถตั้งค่าร้านใหม่ได้',
+    signInForStoreOwnersManagersAnd: 'เข้าสู่ระบบสำหรับเจ้าของร้าน',
     accountCreatedSignInToContinue:
       'สร้างบัญชีแล้ว เข้าสู่ระบบเพื่อดำเนินการต่อ',
     emailAddress: 'ที่อยู่อีเมล',
@@ -53,7 +55,7 @@ export const auth = defineMessages({
     yourAccount: 'บัญชีของคุณ',
     email: 'อีเมล',
     status: 'สถานะ',
-    openYourRoleBasedWorkspace: 'เข้าสู่พื้นที่ทำงานตามบทบาท',
+    openYourRoleBasedWorkspace: 'เข้าสู่พื้นที่จัดการร้าน',
     selectOrganizationSetUpStoreAcceptInvitation:
       'เลือกองค์กร / ตั้งค่าร้าน / รับคำเชิญ',
     manageOrganizationAndBranches: 'จัดการองค์กรและสาขา',
@@ -79,8 +81,10 @@ export const auth = defineMessages({
     show: 'Show',
     signInUnavailable: 'Sign in unavailable',
     welcomeBack: 'Welcome back.',
-    signInForStoreOwnersManagersAnd:
-      'Sign in for store owners, managers and staff. This is not an online shopper account.',
+    ownerOnlyAccess:
+      'Store management is available to owners only. Contact your administrator for help.',
+    noOwnedStore: 'You do not have an owned store. You can set up a new store.',
+    signInForStoreOwnersManagersAnd: 'Sign in for store owners.',
     accountCreatedSignInToContinue: 'Account created. Sign in to continue.',
     emailAddress: 'Email address',
     signingIn: 'Signing in…',
@@ -117,7 +121,7 @@ export const auth = defineMessages({
     yourAccount: 'Your account',
     email: 'Email',
     status: 'Status',
-    openYourRoleBasedWorkspace: 'Open your role-based workspace',
+    openYourRoleBasedWorkspace: 'Open store management',
     selectOrganizationSetUpStoreAcceptInvitation:
       'Select organization / Set up store / Accept invitation',
     manageOrganizationAndBranches: 'Manage organization and branches',

@@ -1,59 +1,36 @@
 import { expect, it } from 'vitest';
-import {
-  businessArea,
-  isBusinessPath,
-  isManagementPath,
-  workspacePath,
-} from './workspace-paths';
+import { businessArea, isBusinessPath, workspacePath } from './workspace-paths';
 
-it.each([
-  'products',
-  'inventory',
-  'pos',
-  'sales',
-  'purchasing/orders',
-  'customers',
-])('scopes %s without losing queries or fragments', (module) => {
-  const path = `/${module}/item-1?search=abc#details`;
-  expect(workspacePath(path, 'management')).toBe('/manage' + path);
-  expect(workspacePath(path, 'staff')).toBe('/work' + path);
+it('recognizes only the management workspace', () => {
+  expect(businessArea('/manage/pos')).toBe('management');
+  expect(businessArea('/work/products')).toBeUndefined();
+  expect(businessArea('/manage-other')).toBeUndefined();
 });
 
-it('does not treat removed /shelves flow as a business workspace path', () => {
-  expect(isBusinessPath('/shelves')).toBe(false);
-  expect(isBusinessPath('/shelves/replenishments')).toBe(false);
-  expect(workspacePath('/shelves', 'management')).toBe('/shelves');
-  expect(workspacePath('/shelves', 'staff')).toBe('/shelves');
-});
-
-it.each([
-  '/shop',
-  '/account',
-  '/help',
-  '/login',
-  '/workspace',
-  '/setup',
-  '//example.test/products',
-  'https://example.test/products',
-  '/products-other',
-  '/manage/products',
-  '/work/products',
-])(
-  'does not rewrite neutral, external or already scoped destination %s',
+it.each(['/employees', '/employees/one', '/roles', '/roles/one'])(
+  'does not scope retired path %s',
   (path) => {
-    expect(workspacePath(path, 'staff')).toBe(path);
+    expect(isBusinessPath(path)).toBe(false);
+    expect(workspacePath(path, 'management')).toBe(path);
   },
 );
 
-it('uses segment boundaries and excludes management administration from work routes', () => {
-  expect(businessArea('/work/products/item')).toBe('staff');
-  expect(businessArea('/manage/pos')).toBe('management');
-  expect(businessArea('/work-other')).toBeUndefined();
-  expect(isBusinessPath('/products/item')).toBe(true);
-  expect(isManagementPath('/settings/store')).toBe(true);
-  expect(isManagementPath('/pricing/lists')).toBe(true);
-  expect(isManagementPath('/products')).toBe(false);
-  expect(workspacePath('/discount-approvals', 'staff')).toBe(
-    '/manage/discount-approvals',
-  );
+it.each(['/products/item?search=abc#details', '/restaurant/queue', '/pos'])(
+  'scopes %s in management only',
+  (path) => {
+    expect(workspacePath(path, 'management')).toBe('/manage' + path);
+    expect(workspacePath(path)).toBe(path);
+  },
+);
+
+it.each([
+  '/shop',
+  '/shop/a/cart',
+  '/account',
+  '/manage/products',
+  '/work/products',
+  '/products-other',
+  '//example.test/products',
+])('preserves neutral or already scoped path %s', (path) => {
+  expect(workspacePath(path, 'management')).toBe(path);
 });

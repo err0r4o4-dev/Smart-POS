@@ -1,11 +1,58 @@
 package identity
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
 	"testing"
+
+	"github.com/go-chi/chi/v5"
 )
+
+func TestEmailVerificationRoutesAreRegistered(t *testing.T) {
+	router := chi.NewRouter()
+	(Handler{}).Routes(router)
+	seen := map[string]bool{}
+	if err := chi.Walk(router, func(method, route string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
+		seen[method+" "+route] = true
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, route := range []string{"POST /auth/email/verify", "POST /auth/email/resend"} {
+		if !seen[route] {
+			t.Fatalf("missing route %s", route)
+		}
+	}
+}
+
+func TestMalformedEmailVerificationTokenIsRejectedBeforeDatabase(t *testing.T) {
+	handler := Handler{Origins: []string{"https://example.test"}}
+	body, _ := json.Marshal(map[string]string{"token": "bad"})
+	request := httptest.NewRequest(http.MethodPost, "/auth/email/verify", bytes.NewReader(body))
+	request.Header.Set("Origin", "https://example.test")
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	handler.verifyEmail(response, request)
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
+	}
+}
+
+func TestEmailResendRejectsInvalidEmailBeforeDatabase(t *testing.T) {
+	handler := Handler{Origins: []string{"https://example.test"}}
+	body, _ := json.Marshal(map[string]string{"email": "invalid"})
+	request := httptest.NewRequest(http.MethodPost, "/auth/email/resend", bytes.NewReader(body))
+	request.Header.Set("Origin", "https://example.test")
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	handler.resendEmail(response, request)
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
+	}
+}
 
 func TestClientIPTrustBoundary(t *testing.T) {
 	handler := Handler{TrustedProxyIP: netip.MustParseAddr("172.30.42.2")}

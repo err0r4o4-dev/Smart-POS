@@ -10,7 +10,7 @@ export function OrderDetails({
   order: OnlineOrder;
   staff?: boolean;
 }) {
-  const { t, localize, formatDateTime } = useLanguage();
+  const { t, localize, formatDateTime, language } = useLanguage();
 
   return (
     <div className="online-order-detail">
@@ -20,10 +20,17 @@ export function OrderDetails({
           {localize(orderStatusLabels[order.status])}
         </Tag>
       </div>
+      {order.table_code && <p>โต๊ะ {order.table_code}</p>}
       <p>
         {order.payment_status === 'PAID_AT_STORE'
-          ? t('storefront.paidAndSaleSavedInStore')
-          : t('storefront.unpaidPickUpAndPayInStore')}
+          ? order.status === 'COMPLETED'
+            ? t('storefront.paidAndSaleSavedInStore')
+            : language === 'th'
+              ? 'ยืนยันการชำระเงินแล้ว'
+              : 'Payment verified'
+          : language === 'th'
+            ? 'ยังไม่ชำระเงิน'
+            : 'Unpaid'}
       </p>
       {staff && (
         <p>

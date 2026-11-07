@@ -9,6 +9,10 @@ export interface OrganizationInput {
   contact_phone: string;
   address: string;
 }
+export type OrganizationCreateInput = Omit<OrganizationInput, 'code'> & {
+  code?: string;
+  branch?: BranchInput;
+};
 export interface Organization extends OrganizationInput {
   id: string;
   currency: string;

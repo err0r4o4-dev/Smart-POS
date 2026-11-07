@@ -65,46 +65,7 @@ func (service *Service) SaveBranch(ctx context.Context, userID, orgID, branchID 
 	return Branch{branchID, orgID, input, isMain}, dbError(tx.Commit(ctx))
 }
 func (service *Service) Members(ctx context.Context, userID, orgID, memberID string) ([]Member, error) {
-	tx, actor, err := service.authorized(ctx, userID, orgID, "employee.read")
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback(ctx)
-	if memberID != "" && !uuidPattern.MatchString(memberID) {
-		return nil, ErrNotFound
-	}
-	rows, err := tx.Query(ctx, "SELECT id::text FROM organization_memberships WHERE organization_id=$1 AND ($2='' OR id::text=$2) ORDER BY created_at", orgID, memberID)
-	if err != nil {
-		return nil, err
-	}
-	ids := []string{}
-	for rows.Next() {
-		var identifier string
-		if err = rows.Scan(&identifier); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		ids = append(ids, identifier)
-	}
-	err = rows.Err()
-	rows.Close()
-	if err != nil {
-		return nil, err
-	}
-	result := []Member{}
-	for _, identifier := range ids {
-		member, err := memberBy(ctx, tx, orgID, "m.id", identifier)
-		if err != nil {
-			return nil, err
-		}
-		if actor.Role == "OWNER" || member.ID == actor.ID || (subordinate(member.Role) && len(member.BranchIDs) > 0 && subset(member.BranchIDs, actor.BranchIDs)) {
-			result = append(result, member)
-		}
-	}
-	if memberID != "" && len(result) == 0 {
-		return nil, ErrNotFound
-	}
-	return result, nil
+	return nil, ErrNotFound
 }
 func validateAssignments(ctx context.Context, tx pgx.Tx, orgID string, branchIDs []string) error {
 	if len(branchIDs) == 0 || len(branchIDs) > 100 {
@@ -127,69 +88,7 @@ func validateAssignments(ctx context.Context, tx pgx.Tx, orgID string, branchIDs
 	return nil
 }
 func (service *Service) UpdateMember(ctx context.Context, userID, orgID, memberID string, input MemberInput, remove bool) (Member, error) {
-	if !uuidPattern.MatchString(memberID) {
-		return Member{}, ErrNotFound
-	}
-	permission := "employee.update"
-	if remove {
-		permission = "employee.remove"
-	}
-	tx, actor, err := service.authorized(ctx, userID, orgID, permission)
-	if err != nil {
-		return Member{}, err
-	}
-	defer tx.Rollback(ctx)
-	target, err := memberBy(ctx, tx, orgID, "m.id", memberID)
-	if err != nil {
-		return Member{}, err
-	}
-	if remove {
-		input = MemberInput{target.Role, "REMOVED", target.BranchIDs}
-	}
-	if input.Status != "ACTIVE" && input.Status != "SUSPENDED" && input.Status != "REMOVED" {
-		return Member{}, ErrInput
-	}
-	if !canManage(actor, target, input.Role, input.BranchIDs) {
-		return Member{}, ErrDenied
-	}
-	if !remove && input.Role == "OWNER" && len(input.BranchIDs) != 0 {
-		return Member{}, ErrInput
-	}
-	if !remove && input.Role != "OWNER" {
-		if err = validateAssignments(ctx, tx, orgID, input.BranchIDs); err != nil {
-			return Member{}, err
-		}
-	}
-	if target.Role == "OWNER" && target.Status == "ACTIVE" && (input.Role != "OWNER" || input.Status != "ACTIVE") {
-		var count int
-		if err = tx.QueryRow(ctx, "SELECT count(*) FROM organization_memberships WHERE organization_id=$1 AND role='OWNER' AND status='ACTIVE'", orgID).Scan(&count); err != nil {
-			return Member{}, err
-		}
-		if count <= 1 {
-			return Member{}, ErrConflict
-		}
-	}
-	if _, err = tx.Exec(ctx, "UPDATE organization_memberships SET role=$3,status=$4,updated_at=now() WHERE organization_id=$1 AND id=$2", orgID, memberID, input.Role, input.Status); err != nil {
-		return Member{}, dbError(err)
-	}
-	if _, err = tx.Exec(ctx, "DELETE FROM branch_memberships WHERE organization_id=$1 AND membership_id=$2", orgID, memberID); err != nil {
-		return Member{}, err
-	}
-	if input.Role != "OWNER" {
-		for _, branchID := range input.BranchIDs {
-			if _, err = tx.Exec(ctx, "INSERT INTO branch_memberships(organization_id,membership_id,branch_id) VALUES($1,$2,$3)", orgID, memberID, branchID); err != nil {
-				return Member{}, dbError(err)
-			}
-		}
-	}
-	if err = audit(ctx, tx, orgID, userID, "MEMBERSHIP_UPDATED", memberID, input.BranchIDs); err != nil {
-		return Member{}, err
-	}
-	result, err := memberBy(ctx, tx, orgID, "m.id", memberID)
-	if err != nil {
-		return result, err
-	}
-	return result, dbError(tx.Commit(ctx))
+	return Member{}, ErrNotFound
 }
 
 type AuditEvent struct {

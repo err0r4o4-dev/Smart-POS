@@ -21,10 +21,10 @@ func (service *Service) SettlePrepaidOnlineOrder(ctx context.Context, user, org,
 	if !uuidPattern.MatchString(id) || input.Revision <= 0 {
 		return Checkout{}, ErrInput
 	}
-	var status, branch, terminalID, location, total string
+	var status, branch, terminalID, location, total, shippingFee, policy string
 	var revision int64
 	var cartID *string
-	err = tx.QueryRow(ctx, `SELECT status,branch_id::text,terminal_id::text,stock_location_id::text,estimated_total::text,revision,cart_id::text FROM online_orders WHERE organization_id=$1 AND id=$2 FOR UPDATE`, org, id).Scan(&status, &branch, &terminalID, &location, &total, &revision, &cartID)
+	err = tx.QueryRow(ctx, `SELECT status,branch_id::text,terminal_id::text,stock_location_id::text,estimated_total::text,shipping_fee::text,revision,cart_id::text,stock_policy FROM online_orders WHERE organization_id=$1 AND id=$2 FOR UPDATE`, org, id).Scan(&status, &branch, &terminalID, &location, &total, &shippingFee, &revision, &cartID, &policy)
 	if err != nil {
 		return Checkout{}, dbError(err)
 	}
@@ -47,7 +47,7 @@ func (service *Service) SettlePrepaidOnlineOrder(ctx context.Context, user, org,
 		return Checkout{}, ErrConflict
 	}
 	var reviewRequired bool
-	if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM online_payment_reconciliations WHERE organization_id=$1 AND order_id=$2 AND action='FULFILLMENT_REVIEW')", org, id).Scan(&reviewRequired); err != nil {
+	if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM online_payment_reconciliations WHERE organization_id=$1 AND order_id=$2 AND action='FULFILLMENT_REVIEW') OR EXISTS(SELECT 1 FROM online_refund_intents WHERE organization_id=$1 AND order_id=$2 AND state IN ('REQUESTED','PENDING','REQUIRES_ACTION','SUCCEEDED'))", org, id).Scan(&reviewRequired); err != nil {
 		return Checkout{}, err
 	}
 	if reviewRequired {
@@ -74,7 +74,7 @@ func (service *Service) SettlePrepaidOnlineOrder(ctx context.Context, user, org,
 		return Checkout{}, err
 	}
 	var cart string
-	err = tx.QueryRow(ctx, "INSERT INTO pos_carts(organization_id,branch_id,terminal_id,cashier_id,create_key) VALUES($1,$2,$3,$4,gen_random_uuid()) RETURNING id::text", org, branch, terminalID, user).Scan(&cart)
+	err = tx.QueryRow(ctx, "INSERT INTO pos_carts(organization_id,branch_id,terminal_id,cashier_id,create_key,stock_policy) VALUES($1,$2,$3,$4,gen_random_uuid(),$5) RETURNING id::text", org, branch, terminalID, user, policy).Scan(&cart)
 	if err != nil {
 		return Checkout{}, dbError(err)
 	}
@@ -99,7 +99,10 @@ func (service *Service) SettlePrepaidOnlineOrder(ctx context.Context, user, org,
 		if problem != nil {
 			return Checkout{}, problem
 		}
-		available, problem := scaled(item.Available, 3)
+		if item.Available == nil {
+			continue
+		}
+		available, problem := scaled(*item.Available, 3)
 		if problem != nil {
 			return Checkout{}, problem
 		}
@@ -107,7 +110,19 @@ func (service *Service) SettlePrepaidOnlineOrder(ctx context.Context, user, org,
 			return Checkout{}, ErrStock
 		}
 	}
-	if current.ReviewRequired || current.Total != total || current.Pricing.Discount != "0.00" {
+	cartTotalScaled, problem := scaled(current.Total, 2)
+	if problem != nil {
+		return Checkout{}, ErrPrice
+	}
+	shippingScaled, problem := scaled(shippingFee, 2)
+	if problem != nil {
+		return Checkout{}, ErrPrice
+	}
+	expectedTotalScaled, problem := scaled(total, 2)
+	if problem != nil {
+		return Checkout{}, ErrPrice
+	}
+	if current.ReviewRequired || (cartTotalScaled+shippingScaled != expectedTotalScaled) || current.Pricing.Discount != "0.00" {
 		return Checkout{}, ErrPrice
 	}
 	items, err := json.Marshal(current.Items)

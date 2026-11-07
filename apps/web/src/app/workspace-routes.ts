@@ -1,11 +1,7 @@
 import { createElement } from 'react';
 import type { RouteObject } from 'react-router-dom';
 import { LegacyWorkspaceRedirect } from '../features/workspace/WorkspaceRouting';
-import {
-  isBusinessPath,
-  isManagementPath,
-  workspacePath,
-} from './workspace-paths';
+import { isBusinessPath, workspacePath } from './workspace-paths';
 
 export function scopeWorkspaceRoutes(routes: RouteObject[]): RouteObject[] {
   return routes.flatMap((route): RouteObject[] => {
@@ -18,9 +14,6 @@ export function scopeWorkspaceRoutes(routes: RouteObject[]): RouteObject[] {
         element: createElement(LegacyWorkspaceRedirect, { path: route.path }),
       },
       { ...route, path: workspacePath(route.path, 'management') },
-      ...(!isManagementPath(route.path)
-        ? [{ ...route, path: workspacePath(route.path, 'staff') }]
-        : []),
     ];
   });
 }

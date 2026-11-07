@@ -2,6 +2,9 @@ package storefront_test
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -35,7 +38,7 @@ func paymentHoldAcceptance(test *testing.T, ctx context.Context, organizations *
 			test.Fatal(problem)
 		}
 		input := storefront.OrderInput{Items: items, QuoteID: quote.ID, CustomerName: "Synthetic hold buyer", ContactPhone: "0800000000", AccessToken: strings.Repeat("d", 64)}
-		order, problem := service.CreateOrder(ctx, shop.Slug, key, input)
+		order, problem := createLegacyHoldFixture(ctx, organizations, owner, org, shop, key, input, quote)
 		if problem != nil {
 			test.Fatal(problem)
 		}
@@ -213,4 +216,39 @@ func paymentHoldAcceptance(test *testing.T, ctx context.Context, organizations *
 			test.Fatalf("unscoped payment hold leaked: %v %v", live, problem)
 		}
 	})
+}
+
+// createLegacyHoldFixture records an order as it existed before menu-only policy.
+func createLegacyHoldFixture(ctx context.Context, organizations *organization.Service, owner, org string, shop storefront.Settings, key string, input storefront.OrderInput, quote storefront.Quote) (storefront.Order, error) {
+	tx, _, err := organizations.Authorized(ctx, owner, org, "storefront.manage")
+	if err != nil {
+		return storefront.Order{}, err
+	}
+	defer tx.Rollback(ctx)
+	inputJSON, err := json.Marshal(input)
+	if err != nil {
+		return storefront.Order{}, err
+	}
+	fingerprint := sha256.Sum256(inputJSON)
+	tokenHash := sha256.Sum256([]byte(input.AccessToken))
+	terminal := shop.TerminalID
+	if shop.OnlineTerminalID != "" {
+		terminal = shop.OnlineTerminalID
+	}
+	_, err = tx.Exec(ctx, `INSERT INTO online_orders(id,organization_id,branch_id,terminal_id,stock_location_id,customer_name,contact_phone,customer_note,pickup_instructions,store_name,store_phone,estimated_total,access_hash,request_fingerprint,fulfillment,shipping_fee,delivery_address,stock_policy) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'PICKUP',$15,$16,'TRACKED')`, key, org, shop.BranchID, terminal, shop.LocationID, input.CustomerName, input.ContactPhone, input.CustomerNote, shop.PickupInstructions, shop.Name, shop.ContactPhone, quote.Total, hex.EncodeToString(tokenHash[:]), hex.EncodeToString(fingerprint[:]), quote.ShippingFee, input.DeliveryAddress)
+	if err != nil {
+		return storefront.Order{}, err
+	}
+	for _, line := range quote.Items {
+		if _, err = tx.Exec(ctx, `INSERT INTO online_order_items(organization_id,order_id,variant_id,product_name,variant_name,sku,unit,quantity,unit_price,line_total) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, org, key, line.VariantID, line.ProductName, line.VariantName, line.SKU, line.Unit, line.Quantity, line.UnitPrice, line.LineTotal); err != nil {
+			return storefront.Order{}, err
+		}
+	}
+	if _, err = tx.Exec(ctx, `INSERT INTO online_order_events(organization_id,order_id,status) VALUES($1,$2,'PENDING')`, org, key); err != nil {
+		return storefront.Order{}, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return storefront.Order{}, err
+	}
+	return (&storefront.Service{Organization: organizations}).Track(ctx, shop.Slug, storefront.TrackingInput{OrderID: key, AccessToken: input.AccessToken})
 }

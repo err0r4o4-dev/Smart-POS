@@ -10,11 +10,7 @@ import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
 import { isManagementRole } from '../../app/access';
 import { paths } from '../../app/routes';
-import {
-  businessArea,
-  isManagementPath,
-  workspacePath,
-} from '../../app/workspace-paths';
+import { businessArea, workspacePath } from '../../app/workspace-paths';
 import { ErrorState, Loading } from '../../components/ui/primitives';
 
 export function WorkspaceAreaGate() {
@@ -38,12 +34,7 @@ export function WorkspaceAreaGate() {
       );
     if (!tenant.context) return <Navigate to={paths.account} replace />;
     if (!isManagementRole(tenant.context.membership.role))
-      return (
-        <Navigate
-          to={pathname === paths.dashboard ? paths.staff : paths.forbidden}
-          replace
-        />
-      );
+      return <Navigate to={paths.forbidden} replace />;
   }
   return <Outlet />;
 }
@@ -64,17 +55,11 @@ export function LegacyWorkspaceRedirect({ path }: { path: string }) {
       />
     );
   if (!tenant.context) return <Navigate to={paths.account} replace />;
-  const area =
-    isManagementRole(tenant.context.membership.role) || isManagementPath(path)
-      ? 'management'
-      : 'staff';
+  if (!isManagementRole(tenant.context.membership.role))
+    return <Navigate to={paths.forbidden} replace />;
   const destination =
     path === '/dashboard'
-      ? area === 'management'
-        ? paths.dashboard
-        : paths.staff
-      : path === '/staff'
-        ? paths.staff
-        : workspacePath(generatePath(path, params), area);
+      ? paths.dashboard
+      : workspacePath(generatePath(path, params), 'management');
   return <Navigate to={destination + search + hash} replace />;
 }

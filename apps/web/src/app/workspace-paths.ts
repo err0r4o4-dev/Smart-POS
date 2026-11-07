@@ -1,6 +1,7 @@
-export type BusinessArea = 'management' | 'staff';
+export type BusinessArea = 'management';
 
 const businessRoots = [
+  '/restaurant',
   '/products',
   '/categories',
   '/brands',
@@ -18,16 +19,6 @@ const businessRoots = [
   '/promotions',
   '/discount-approvals',
   '/settings',
-  '/employees',
-  '/roles',
-];
-const managementRoots = [
-  '/settings',
-  '/employees',
-  '/roles',
-  '/pricing',
-  '/promotions',
-  '/discount-approvals',
 ];
 
 function matchesRoot(pathname: string, root: string) {
@@ -36,7 +27,6 @@ function matchesRoot(pathname: string, root: string) {
 
 export function businessArea(pathname: string): BusinessArea | undefined {
   if (matchesRoot(pathname, '/manage')) return 'management';
-  if (matchesRoot(pathname, '/work')) return 'staff';
   return undefined;
 }
 
@@ -45,16 +35,7 @@ export function isBusinessPath(path: string) {
   return businessRoots.some((root) => matchesRoot(pathname, root));
 }
 
-export function isManagementPath(path: string) {
-  return managementRoots.some((root) =>
-    matchesRoot(path.split(/[?#]/, 1)[0], root),
-  );
-}
-
 export function workspacePath(path: string, area?: BusinessArea) {
   if (!area || !isBusinessPath(path)) return path;
-  return (
-    (area === 'management' || isManagementPath(path) ? '/manage' : '/work') +
-    path
-  );
+  return '/manage' + path;
 }

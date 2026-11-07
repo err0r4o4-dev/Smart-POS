@@ -17,8 +17,11 @@ type ExchangePricing struct {
 	Pricing  pricing.Quote
 }
 
-func QuoteExchange(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org, terminalID string, items []ItemInput) (ExchangePricing, error) {
+func QuoteExchange(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org, terminalID, policy string, items []ItemInput) (ExchangePricing, error) {
 	var quote ExchangePricing
+	if policy != "TRACKED" && policy != "MENU_ONLY" {
+		return quote, ErrConflict
+	}
 	if err := validateItems(items); err != nil || len(items) == 0 {
 		return quote, ErrInput
 	}
@@ -33,6 +36,9 @@ func QuoteExchange(ctx context.Context, tx pgx.Tx, actor organization.Member, us
 	}
 	total := int64(0)
 	for _, input := range items {
+		if policy == "MENU_ONLY" && (input.BatchID != nil || input.BatchVerified) {
+			return quote, ErrInput
+		}
 		if input.BatchID != nil && (!uuidPattern.MatchString(*input.BatchID) || !input.BatchVerified) {
 			return quote, ErrInput
 		}
@@ -42,16 +48,21 @@ func QuoteExchange(ctx context.Context, tx pgx.Tx, actor organization.Member, us
 		}
 		item.BatchID = input.BatchID
 		item.BatchVerified = input.BatchVerified
-		if err = inventory.QualityAvailability(ctx, tx, org, value.StockLocationID, input.VariantID, input.BatchID, &item.Available, &item.Saleable); err != nil {
+		item.StockPolicy = policy
+		if policy == "MENU_ONLY" {
+			item.Available = nil
+		} else if err = inventory.QualityAvailability(ctx, tx, org, value.StockLocationID, input.VariantID, input.BatchID, item.Available, &item.Saleable); err != nil {
 			return quote, dbError(err)
 		}
 		requested, _ := scaled(item.Quantity, 3)
-		available, _ := scaled(item.Available, 3)
 		if !item.Saleable {
 			return quote, ErrConflict
 		}
-		if available < requested {
-			return quote, ErrStock
+		if item.Available != nil {
+			available, _ := scaled(*item.Available, 3)
+			if available < requested {
+				return quote, ErrStock
+			}
 		}
 		amount, err := scaled(item.LineTotal, 2)
 		if err != nil || total > maxDecimal-amount {
@@ -76,7 +87,16 @@ func PostExchange(ctx context.Context, tx pgx.Tx, actor organization.Member, use
 	for _, item := range snapshots {
 		inputs = append(inputs, ItemInput{VariantID: item.VariantID, Quantity: item.Quantity, BatchID: item.BatchID, BatchVerified: item.BatchVerified})
 	}
-	quote, err := QuoteExchange(ctx, tx, actor, user, org, terminalID, inputs)
+	policy := "TRACKED"
+	if len(snapshots) > 0 && snapshots[0].StockPolicy != "" {
+		policy = snapshots[0].StockPolicy
+	}
+	for _, snapshot := range snapshots {
+		if snapshot.StockPolicy != "" && snapshot.StockPolicy != policy {
+			return "", ErrConflict
+		}
+	}
+	quote, err := QuoteExchange(ctx, tx, actor, user, org, terminalID, policy, inputs)
 	if err != nil {
 		return "", err
 	}
@@ -106,7 +126,7 @@ func PostExchange(ctx context.Context, tx pgx.Tx, actor organization.Member, use
 	if err = tx.QueryRow(ctx, "SELECT sale.customer_id::text,sale.customer_code_snapshot FROM sale_adjustments adjustment JOIN sales sale ON sale.organization_id=adjustment.organization_id AND sale.id=adjustment.original_sale_id WHERE adjustment.organization_id=$1 AND adjustment.id=$2", org, id).Scan(&customerID, &customerCode); err != nil {
 		return "", dbError(err)
 	}
-	err = tx.QueryRow(ctx, "INSERT INTO pos_carts(organization_id,branch_id,terminal_id,cashier_id,create_key,customer_id) VALUES($1,$2,$3,$4,$5,$6) RETURNING id::text", org, quote.Terminal.BranchID, terminalID, user, id, customerID).Scan(&cart)
+	err = tx.QueryRow(ctx, "INSERT INTO pos_carts(organization_id,branch_id,terminal_id,cashier_id,create_key,customer_id,stock_policy) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id::text", org, quote.Terminal.BranchID, terminalID, user, id, customerID, policy).Scan(&cart)
 	if err != nil {
 		return "", dbError(err)
 	}

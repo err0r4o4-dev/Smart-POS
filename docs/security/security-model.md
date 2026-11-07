@@ -1,5 +1,25 @@
 # Security model
 
+## Owner-only transition (2026-11-05)
+
+The approved policy restricts backoffice access to active OWNER memberships.
+MANAGER, CASHIER, INVENTORY_STAFF and PURCHASING_STAFF memberships and their
+history remain stored, but are to be denied backoffice access. Invitation, member
+and role administration UI and API are being retired. Account/login and `/shop`
+ordering remain in scope; no migration is planned. Server-side authorization and
+tenant isolation remain required. Final independent security delta review found
+no new confirmed defect; required database integration is blocked and overall
+acceptance remains open. See `TODO.md` for current evidence. Dated role-specific
+reviews below describe historical behavior and do not establish current grants.
+
+For new discount work, the current approver check requires an active OWNER
+membership, active account and active branch. New shelf assignments require an
+active OWNER membership and active account. Completed `PrepareCheckout`,
+`ConfirmPayment` and `CompleteCheckout` replay preserves immutable results
+without rechecking the historical approver; caller authorization and applicable
+payment and request checks remain. Independent security review found no new
+confirmed defect. Database runtime verification of these changes remains pending.
+
 Current Phase5 local acceptance includes Quality tenant-safe references, FORCE RLS/runtime grants, current-RBAC-before-replay, posting-time expiry/recall checks, same-lot return guards and Sale/WriteOff/Recall races. [Final scoped security review and evidence](../development/phase57-verification.md) documents actual findings and production boundaries; no production security certification is claimed.
 
 ## Phase5.4 customer protections (2026-10-10)
@@ -65,7 +85,7 @@ Manual QR/transfer confirmation records actor/time/reference only after explicit
 
 The local bootstrap DB identity is privileged even though application transactions SET ROLE smartpos_runtime. Deploying that identity would defeat least-privilege assurances: provision a distinct runtime LOGIN and migration identity, approved backups/restore, TLS/secrets and monitoring first. Existing security sections below retain their earlier scope.
 
-Phase 1A implements global identity endpoints and a protected account page. Phase 1B exposes organization-scoped onboarding, branch/member/invitation APIs. Phase 1C adds organization-shared catalog/taxonomy/Variant/barcode/import APIs through the same identity and authorization services. The Phase 0 auth preview remains presentation-only. Frontend guard defaults deny; backend independently validates the session and active tenant membership/permissions for each applicable API access.
+Phase 1A implements global identity endpoints and a protected account page. Phase 1B introduced organization-scoped onboarding and branch/member/invitation APIs; member and invitation administration is being retired. Phase 1C adds organization-shared catalog/taxonomy/Variant/barcode/import APIs through the same identity and authorization services. The Phase 0 auth preview remains presentation-only. Frontend guard defaults deny; backend independently validates the session and active tenant membership/permissions for each applicable API access.
 
 Phase 1A uses Argon2id with random salts and bounded input, hashed random session tokens in PostgreSQL, a 24-hour default absolute expiry (configurable 1-720 hours), revocation, HttpOnly/SameSite=Lax cookies and Secure `__Host-` cookies in production HTTPS. Authenticated writes check the allowed Origin and a per-session CSRF header. Public auth writes check Origin and JSON input; PostgreSQL counters limit login to five attempts per account/IP in ten minutes and other auth requests by scope. One-time hashed reset tokens expire in 15 minutes; reset atomically changes the password and revokes sessions. Neither session nor reset tokens are stored in browser storage or application logs. No session rotation endpoint is implemented or required for the fixed-expiry design.
 
@@ -82,7 +102,7 @@ Password reset returns the same HTTP 202 envelope for eligible and unknown accou
 
 The 2026-10-09 scoped authentication review and integration checks found the original shared-proxy bucket and synchronous-delivery timing issue resolved. Tests cover fixed IP/account limits, independent real clients, spoofing, CSRF/Origin, token expiry/replay, revocation, cookie policy and sanitized application logs. This is not a production security certification or a statistical side-channel analysis.
 
-## Phase 1B tenant and membership policy
+## Historical Phase 1B tenant and membership policy
 
 - Fixed roles: OWNER, MANAGER, CASHIER, INVENTORY_STAFF and PURCHASING_STAFF. Permissions are server-defined; global sessions do not carry trusted tenant/role grants. Unknown roles/default permission requests deny. In Phase 1B operational staff read organization context/assigned active branches only, with organization contacts redacted; Phase 1C extends their access with the explicit catalog grants below. No POS/inventory/purchasing business APIs are implemented.
 - Owner manages the organization/all branches/members. Manager may update assigned active branches but cannot create/deactivate them or edit organization settings. Manager may manage only subordinate operational staff whose entire old and new branch sets are within the Manager's active assignments; cannot modify self/Owner/Manager or grant those roles. No active branches means no employee/role/audit management permissions.
@@ -95,7 +115,7 @@ The 2026-10-09 scoped authentication review and integration checks found the ori
 
 Invitation SMTP is bounded and synchronous inside its transaction; outage returns 503 and rolls back the invitation. It is not a durable outbox: SMTP acceptance followed by a failed database commit can send an unusable link. Production SMTP/TLS, delivery retries, abuse controls and retention require separate gates. See [organization architecture](../architecture/organization.md) and the dated verification report for tested boundaries.
 
-## Phase 1C catalog and import policy
+## Historical Phase 1C catalog and import policy
 
 - Catalog reuses Phase 1B transaction authorization, active organization/membership checks, request IDs and audit service; no second RBAC engine is introduced. Owner/Manager have ten catalog permissions, subject to the existing Manager no-active-branch restriction. INVENTORY_STAFF has explicit read/create/update/import/barcode/label permissions, but no archive or taxonomy administration. CASHIER/PURCHASING_STAFF have catalog.read only. Active branch assignment is not an additional catalog gate for every operational role because records are organization-wide.
 - Every catalog query filters organization identity; composite tenant FKs protect related taxonomy/Product/Variant/unit references. All seven migration-4 catalog tables enable FORCE RLS. Runtime grants allow SELECT/INSERT/UPDATE and DELETE only for barcode mappings; Products, Variants and taxonomy use archive/status changes. Bootstrap credentials remain privileged; production must provision separate least-privileged LOGIN/migration identities.

@@ -19,7 +19,7 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import { Button, Card, Loading } from '../../components/ui/primitives';
-import { exactDecimal, moneyText } from '../../lib/pos-api';
+import { exactDecimal, isKnownStockPolicy, MAX_LINE_QUANTITY, moneyText } from '../../lib/pos-api';
 import {
   storefrontRequest,
   type ShopCatalogPage,
@@ -503,8 +503,10 @@ function CatalogProductCard({
 }) {
   const { t, language } = useLanguage();
 
-  const stock = exactDecimal(product.available, 3) ?? 0n;
-  const remaining = stock - (exactDecimal(cartQuantity, 3) ?? 0n);
+  const stock = exactDecimal(product.available ?? '', 3) ?? 0n;
+  const menuOnly = product.stock_policy === 'MENU_ONLY';
+  const cartUnits = exactDecimal(cartQuantity, 3) ?? 0n;
+  const remaining = (menuOnly ? MAX_LINE_QUANTITY : stock < MAX_LINE_QUANTITY ? stock : MAX_LINE_QUANTITY) - cartUnits;
   const whole = ['COUNT', 'PACKAGING'].includes(product.unit_type);
   const step = whole ? 1000n : 1n;
   const [quantity, setQuantity] = useState(() =>
@@ -519,7 +521,7 @@ function CatalogProductCard({
     units > 0n &&
     units <= remaining &&
     (!whole || units % 1000n === 0n);
-  const ready = product.saleable && stock >= step;
+  const ready = product.saleable && isKnownStockPolicy(product.stock_policy) && (menuOnly || stock >= step);
   const inputID = `quantity-${product.variant_id}`;
   const errorID = `${inputID}-error`;
   return (
@@ -590,16 +592,16 @@ function CatalogProductCard({
                 {ready
                   ? language === 'th'
                     ? 'พร้อมจำหน่าย'
-                    : 'In stock'
+                    : menuOnly ? 'Available' : 'In stock'
                   : t('storefront.productUnavailableForSale')}
               </span>
               <span className="catalog-visually-hidden">
-                {ready
+                {ready && !menuOnly
                   ? t('storefront.availableValue0Value1', {
                       value0: quantityText(stock),
                       value1: product.unit,
                     })
-                  : t('storefront.productUnavailableForSale')}
+                  : !ready ? t('storefront.productUnavailableForSale') : null}
               </span>
             </p>
           </div>
@@ -666,7 +668,7 @@ function CatalogProductCard({
             {quantityText(remaining)} {product.unit}
           </small>
         )}
-        {ready && remaining < step && (
+        {ready && remaining < step && !menuOnly && (
           <small className="catalog-cart-limit">
             {t('storefront.allAvailableQuantityIsAlreadyInYour')}
           </small>

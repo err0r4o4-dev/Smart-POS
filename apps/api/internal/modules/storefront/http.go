@@ -84,6 +84,7 @@ func page(request *http.Request) (int, error) {
 }
 func (handler Handler) PublicRoutes(router chi.Router) {
 	service := handler.Service
+	handler.customerPaymentRoutes(router)
 	router.Get("/storefronts", func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("X-SmartPOS-Store-Mode", service.Organization.StoreMode())
 		endpoint(200, func(ctx context.Context, _, _ string, _ *http.Request) (any, error) { return service.Directory(ctx) })(writer, request)

@@ -37,17 +37,17 @@ func paymentPrepaidAcceptance(test *testing.T, ctx context.Context, organization
 	if err != nil {
 		test.Fatal(err)
 	}
+	if _, err = service.Transition(ctx, owner, org, order.ID, storefront.TransitionInput{Revision: order.Revision, Status: "PREPARING"}); !errors.Is(err, storefront.ErrConflict) {
+		test.Fatalf("order without a payment attempt entered preparation: %v", err)
+	}
 	attempt, err := service.BeginCustomerPayment(ctx, shop.Slug, storefront.TrackingInput{OrderID: order.ID, AccessToken: strings.Repeat("7", 64)})
 	if err != nil {
 		test.Fatal(err)
 	}
-	for _, status := range []string{"PREPARING", "READY"} {
-		order, err = service.Transition(ctx, owner, org, order.ID, storefront.TransitionInput{Revision: order.Revision, Status: status})
-		if err != nil {
-			test.Fatal(err)
-		}
+	if _, err = service.Transition(ctx, owner, org, order.ID, storefront.TransitionInput{Revision: order.Revision, Status: "PREPARING"}); !errors.Is(err, storefront.ErrConflict) {
+		test.Fatalf("unpaid order entered preparation: %v", err)
 	}
-	assertUnsettled := func(test *testing.T) {
+	assertUnsettled := func(test *testing.T, expectedStatus string) {
 		test.Helper()
 		tx, _, problem := organizations.Authorized(ctx, owner, org, "pos.checkout")
 		if problem != nil {
@@ -58,7 +58,7 @@ func paymentPrepaidAcceptance(test *testing.T, ctx context.Context, organization
 		var status string
 		var released bool
 		problem = tx.QueryRow(ctx, `SELECT (SELECT count(*) FROM pos_carts WHERE organization_id=$1),(SELECT count(*) FROM pos_checkouts WHERE organization_id=$1),(SELECT count(*) FROM sales WHERE organization_id=$1),(SELECT count(*) FROM stock_movements WHERE organization_id=$1 AND movement_type='SALE'),doc.status,attempt.stock_hold_released FROM online_orders doc JOIN online_payment_attempts attempt ON attempt.organization_id=doc.organization_id AND attempt.order_id=doc.id WHERE doc.organization_id=$1 AND doc.id=$2`, org, order.ID).Scan(&carts, &checkouts, &sales, &movements, &status, &released)
-		if problem != nil || carts != 0 || checkouts != 0 || sales != 0 || movements != 0 || status != "READY" || released {
+		if problem != nil || carts != 0 || checkouts != 0 || sales != 0 || movements != 0 || status != expectedStatus || released {
 			test.Fatalf("failed prepaid request changed fulfillment: %d %d %d %d %s %v error %v", carts, checkouts, sales, movements, status, released, problem)
 		}
 	}
@@ -67,18 +67,24 @@ func paymentPrepaidAcceptance(test *testing.T, ctx context.Context, organization
 		if !errors.Is(problem, pos.ErrConflict) {
 			test.Fatalf("unresolved evidence: %v", problem)
 		}
-		assertUnsettled(test)
+		assertUnsettled(test, "PENDING")
 	})
 	body := paymentFixtureEvent(test, "evt_prepaidPaid", "checkout.session.completed", paymentFixtureSession(attempt, "cs_test_prepaidPaid", "complete", "paid"))
 	now := time.Now()
 	if _, err = service.AcceptCustomerWebhook(ctx, body, paymentSignature(body, now), now); err != nil {
 		test.Fatal(err)
 	}
+	for _, status := range []string{"PREPARING", "READY"} {
+		order, err = service.Transition(ctx, owner, org, order.ID, storefront.TransitionInput{Revision: order.Revision, Status: status})
+		if err != nil {
+			test.Fatal(err)
+		}
+	}
 	test.Run("paid evidence does not bypass an own open shift", func(test *testing.T) {
 		if _, problem := point.SettlePrepaidOnlineOrder(ctx, owner, org, order.ID, pos.OnlineOrderInput{Revision: order.Revision}); !errors.Is(problem, pos.ErrConflict) {
 			test.Fatalf("missing own shift: %v", problem)
 		}
-		assertUnsettled(test)
+		assertUnsettled(test, "READY")
 	})
 	if _, err = point.OpenShift(ctx, owner, org, "7a333333-3333-4333-8333-333333333333", pos.ShiftInput{TerminalID: shop.TerminalID, OpeningCash: "0.00"}); err != nil {
 		test.Fatal(err)
@@ -93,7 +99,7 @@ func paymentPrepaidAcceptance(test *testing.T, ctx context.Context, organization
 		if _, problem := point.SettlePrepaidOnlineOrder(ctx, owner, org, order.ID, pos.OnlineOrderInput{Revision: order.Revision + 1}); !errors.Is(problem, pos.ErrConflict) {
 			test.Fatalf("stale revision: %v", problem)
 		}
-		assertUnsettled(test)
+		assertUnsettled(test, "READY")
 	})
 	test.Run("price drift rolls back cart and retains paid stock", func(test *testing.T) {
 		write, _, problem := organizations.Authorized(ctx, owner, org, "storefront.manage")
@@ -111,7 +117,7 @@ func paymentPrepaidAcceptance(test *testing.T, ctx context.Context, organization
 		if !errors.Is(problem, pos.ErrPrice) {
 			test.Fatalf("paid price drift: %v", problem)
 		}
-		assertUnsettled(test)
+		assertUnsettled(test, "READY")
 		restore, _, problem := organizations.Authorized(ctx, owner, org, "storefront.manage")
 		if problem != nil {
 			test.Fatal(problem)
@@ -195,7 +201,7 @@ func paymentPrepaidAcceptance(test *testing.T, ctx context.Context, organization
 		var sales, payments, receipts, movements int
 		var cash, expected, status string
 		problem = tx.QueryRow(ctx, `SELECT (SELECT count(*) FROM sales WHERE organization_id=$1),(SELECT count(*) FROM sale_payments WHERE organization_id=$1),(SELECT count(*) FROM receipts WHERE organization_id=$1),(SELECT count(*) FROM stock_movements WHERE organization_id=$1 AND movement_type='SALE'),cash_sales::text,expected_cash::text,(SELECT status FROM online_orders WHERE organization_id=$1 AND id=$2) FROM register_shifts WHERE organization_id=$1 AND status='OPEN'`, org, order.ID).Scan(&sales, &payments, &receipts, &movements, &cash, &expected, &status)
-		if problem != nil || sales != 1 || payments != 1 || receipts != 1 || movements != 1 || cash != "0.00" || expected != "0.00" || status != "COMPLETED" {
+		if problem != nil || sales != 1 || payments != 1 || receipts != 1 || movements != 0 || cash != "0.00" || expected != "0.00" || status != "COMPLETED" {
 			test.Fatalf("prepaid atomic effects: %d %d %d %d %s %s %s error %v", sales, payments, receipts, movements, cash, expected, status, problem)
 		}
 	})
@@ -214,7 +220,7 @@ func paymentPrepaidAcceptance(test *testing.T, ctx context.Context, organization
 			test.Fatalf("prepaid evidence mutation: %v", problem)
 		}
 	})
-	newPaymentOrder := func(key string) (storefront.Order, storefront.PaymentAttempt) {
+	newPaymentOrder := func(test *testing.T, key string) (storefront.Order, storefront.PaymentAttempt) {
 		test.Helper()
 		quote, problem := service.Quote(ctx, shop.Slug, storefront.QuoteInput{Items: items})
 		if problem != nil {
@@ -230,7 +236,7 @@ func paymentPrepaidAcceptance(test *testing.T, ctx context.Context, organization
 		}
 		return next, payment
 	}
-	ready := func(next storefront.Order) storefront.Order {
+	ready := func(test *testing.T, next storefront.Order) storefront.Order {
 		test.Helper()
 		for _, status := range []string{"PREPARING", "READY"} {
 			var problem error
@@ -241,7 +247,7 @@ func paymentPrepaidAcceptance(test *testing.T, ctx context.Context, organization
 		}
 		return next
 	}
-	accept := func(payment storefront.PaymentAttempt, session, event, state, paid string) {
+	accept := func(test *testing.T, payment storefront.PaymentAttempt, session, event, state, paid string) {
 		test.Helper()
 		eventType := "checkout.session.completed"
 		if state == "expired" {
@@ -264,27 +270,65 @@ func paymentPrepaidAcceptance(test *testing.T, ctx context.Context, organization
 		var sales, carts, movements int
 		var quantity, ledger string
 		problem = tx.QueryRow(ctx, `SELECT doc.cart_id IS NULL AND doc.sale_id IS NULL,attempt.stock_hold_released,(SELECT count(*) FROM sales WHERE organization_id=$1),(SELECT count(*) FROM pos_carts WHERE organization_id=$1),(SELECT count(*) FROM stock_movements WHERE organization_id=$1 AND movement_type='SALE'),(SELECT quantity::text FROM stock_balances WHERE organization_id=$1 AND location_id=$3 AND variant_id=$4),(SELECT sum(quantity_delta)::text FROM stock_movements WHERE organization_id=$1 AND location_id=$3 AND variant_id=$4) FROM online_orders doc JOIN online_payment_attempts attempt ON attempt.organization_id=doc.organization_id AND attempt.order_id=doc.id WHERE doc.organization_id=$1 AND doc.id=$2`, org, next.ID, shop.LocationID, variant).Scan(&untouched, &held, &sales, &carts, &movements, &quantity, &ledger)
-		if problem != nil || !untouched || held != released || sales != 1 || carts != 1 || movements != 1 || quantity != "2.000" || ledger != quantity {
+		if problem != nil || !untouched || held != released || sales != 1 || carts != 1 || movements != 0 || quantity != "3.000" || ledger != quantity {
 			test.Fatalf("failed fulfillment posted or lost stock: %v %v %d %d %d %s %s error %v", untouched, held, sales, carts, movements, quantity, ledger, problem)
 		}
 	}
 	test.Run("expired then late paid cannot spend a released hold", func(test *testing.T) {
-		next, payment := newPaymentOrder("7a444444-4444-4444-8444-444444444444")
-		next = ready(next)
-		accept(payment, "cs_test_prepaidLate", "evt_prepaidExpired", "expired", "unpaid")
-		accept(payment, "cs_test_prepaidLate", "evt_prepaidLatePaid", "complete", "paid")
+		next, payment := newPaymentOrder(test, "7a444444-4444-4444-8444-444444444444")
+		accept(test, payment, "cs_test_prepaidLate", "evt_prepaidExpired", "expired", "unpaid")
+		accept(test, payment, "cs_test_prepaidLate", "evt_prepaidLatePaid", "complete", "paid")
 		if _, problem := point.SettlePrepaidOnlineOrder(ctx, owner, org, next.ID, pos.OnlineOrderInput{Revision: next.Revision}); !errors.Is(problem, pos.ErrConflict) {
 			test.Fatalf("late paid resurrected stock: %v", problem)
 		}
 		assertNoAdditionalSale(test, next, true)
 	})
+	test.Run("pending refund blocks ready transition", func(test *testing.T) {
+		next, payment := newPaymentOrder(test, "7a888888-8888-4888-8888-888888888888")
+		accept(test, payment, "cs_test_prepaidRefund", "evt_prepaidRefundPaid", "complete", "paid")
+		var problem error
+		next, problem = service.Transition(ctx, owner, org, next.ID, storefront.TransitionInput{Revision: next.Revision, Status: "PREPARING"})
+		if problem != nil {
+			test.Fatal(problem)
+		}
+		gateway := &refundGatewayFixture{CustomerClient: client}
+		gateway.createRefund = func(context.Context, stripe.CustomerRefundCharge) (stripe.CustomerRefund, error) {
+			return stripe.CustomerRefund{}, stripe.ErrUnavailable
+		}
+		service.CustomerPayments = gateway
+		defer func() { service.CustomerPayments = client }()
+		if _, problem = service.CancelPaidCustomerOrder(ctx, owner, org, next.ID, "7a999999-9999-4999-8999-999999999999"); !errors.Is(problem, stripe.ErrUnavailable) {
+			test.Fatalf("refund request: %v", problem)
+		}
+		tx, _, problem := organizations.Authorized(ctx, owner, org, "storefront.manage")
+		if problem != nil {
+			test.Fatal(problem)
+		}
+		var refundState string
+		problem = tx.QueryRow(ctx, "SELECT state FROM online_refund_intents WHERE organization_id=$1 AND order_id=$2", org, next.ID).Scan(&refundState)
+		tx.Rollback(ctx)
+		if problem != nil || refundState != "REQUESTED" {
+			test.Fatalf("durable refund request: %s %v", refundState, problem)
+		}
+		if _, problem = service.Transition(ctx, owner, org, next.ID, storefront.TransitionInput{Revision: next.Revision, Status: "READY"}); !errors.Is(problem, storefront.ErrConflict) {
+			test.Fatalf("refund request entered ready: %v", problem)
+		}
+		assertNoAdditionalSale(test, next, false)
+		gateway.createRefund = func(_ context.Context, charge stripe.CustomerRefundCharge) (stripe.CustomerRefund, error) {
+			return stripe.CustomerRefund{ID: "re_prepaidCleanup", Object: "refund", Status: "succeeded", AmountMinor: charge.AmountMinor, Currency: "thb", PaymentIntent: charge.PaymentIntent, Metadata: map[string]string{"smartpos_purpose": stripe.CustomerRefundPurpose, "organization_id": org, "order_id": next.ID, "refund_id": charge.RefundID}}, nil
+		}
+		refunded, problem := service.CancelPaidCustomerOrder(ctx, owner, org, next.ID, "7a999999-9999-4999-8999-999999999999")
+		if problem != nil || refunded.State != "SUCCEEDED" {
+			test.Fatalf("complete synthetic refund cleanup: %+v %v", refunded, problem)
+		}
+	})
 	test.Run("paid does not bypass fulfillment readiness or product recall", func(test *testing.T) {
-		next, payment := newPaymentOrder("7a555555-5555-4555-8555-555555555555")
-		accept(payment, "cs_test_prepaidRecall", "evt_prepaidRecallPaid", "complete", "paid")
+		next, payment := newPaymentOrder(test, "7a555555-5555-4555-8555-555555555555")
+		accept(test, payment, "cs_test_prepaidRecall", "evt_prepaidRecallPaid", "complete", "paid")
 		if _, problem := point.SettlePrepaidOnlineOrder(ctx, owner, org, next.ID, pos.OnlineOrderInput{Revision: next.Revision}); !errors.Is(problem, pos.ErrConflict) {
 			test.Fatalf("pending fulfillment was settled: %v", problem)
 		}
-		next = ready(next)
+		next = ready(test, next)
 		if _, problem := (&inventory.Service{Organization: organizations}).CreateRecall(ctx, owner, org, "7a666666-6666-4666-8666-666666666666", inventory.RecallInput{VariantID: variant, Reason: "Synthetic prepaid recall"}); problem != nil {
 			test.Fatal(problem)
 		}

@@ -125,6 +125,8 @@ func (handler Handler) Routes(router chi.Router) {
 	router.Route("/auth", func(auth chi.Router) {
 		auth.Post("/register", handler.register)
 		auth.Post("/login", handler.login)
+		auth.Post("/email/verify", handler.verifyEmail)
+		auth.Post("/email/resend", handler.resendEmail)
 		auth.Post("/forgot-password", handler.forgot)
 		auth.Post("/reset-password", handler.reset)
 		auth.Group(func(private chi.Router) {
@@ -133,6 +135,72 @@ func (handler Handler) Routes(router chi.Router) {
 			private.Post("/logout", handler.logout)
 		})
 	})
+}
+
+func (handler Handler) verifyEmail(writer http.ResponseWriter, request *http.Request) {
+	if !handler.requireOrigin(writer, request) {
+		return
+	}
+	var input struct {
+		Token string `json:"token"`
+	}
+	if !decode(writer, request, &input) {
+		return
+	}
+	if err := ValidateVerificationToken(input.Token); err != nil {
+		httpx.Error(writer, request, 400, "INVALID_VERIFICATION_TOKEN", "Verification link is invalid or expired")
+		return
+	}
+	if !handler.throttle(writer, request, "EMAIL_VERIFY", input.Token, 5, time.Hour) {
+		return
+	}
+	result, err := handler.Service.VerifyEmail(request.Context(), input.Token)
+	if errors.Is(err, ErrInvalidToken) {
+		httpx.Error(writer, request, 400, "INVALID_VERIFICATION_TOKEN", "Verification link is invalid or expired")
+		return
+	}
+	if errors.Is(err, ErrVerificationUnavailable) {
+		httpx.Error(writer, request, 503, "DEPENDENCY_UNAVAILABLE", "Email verification is unavailable")
+		return
+	}
+	if err != nil {
+		httpx.Error(writer, request, 503, "DEPENDENCY_UNAVAILABLE", "Email verification is unavailable")
+		return
+	}
+	httpx.JSON(writer, 200, map[string]any{"data": result})
+}
+
+func (handler Handler) resendEmail(writer http.ResponseWriter, request *http.Request) {
+	if !handler.requireOrigin(writer, request) {
+		return
+	}
+	var input struct {
+		Email string `json:"email"`
+	}
+	if !decode(writer, request, &input) {
+		return
+	}
+	if _, err := NormalizeEmail(input.Email); err != nil {
+		httpx.Error(writer, request, 400, "INVALID_INPUT", "Enter a valid email address")
+		return
+	}
+	if !handler.throttle(writer, request, "EMAIL_RESEND", input.Email, 3, time.Hour) {
+		return
+	}
+	err := handler.Service.ResendEmailVerification(request.Context(), input.Email)
+	if errors.Is(err, ErrInvalidInput) {
+		httpx.Error(writer, request, 400, "INVALID_INPUT", "Enter a valid email address")
+		return
+	}
+	if errors.Is(err, ErrVerificationUnavailable) {
+		httpx.Error(writer, request, 503, "DEPENDENCY_UNAVAILABLE", "Email verification is unavailable")
+		return
+	}
+	if err != nil {
+		httpx.Error(writer, request, 503, "DEPENDENCY_UNAVAILABLE", "Email verification is unavailable")
+		return
+	}
+	httpx.JSON(writer, 202, map[string]any{"data": map[string]string{"message": "If an eligible account exists, check your email for verification instructions."}})
 }
 
 func (handler Handler) RequireAuth(next http.Handler) http.Handler {

@@ -7,6 +7,7 @@ import {
   Bell,
   ChevronDown,
   ChevronRight,
+  CircleHelp,
   House,
   Menu,
   Search,
@@ -15,7 +16,6 @@ import {
 } from 'lucide-react';
 import {
   anonymousSession,
-  isManagementRole,
   roleLabels,
   type WorkspaceArea,
 } from '../app/access';
@@ -23,8 +23,6 @@ import {
   accountNavigation,
   navigation,
   paths,
-  staffNavigation,
-  staffNavigationGroups,
   navigationGroups,
 } from '../app/routes';
 import { Brand, Tag } from '../components/ui/primitives';
@@ -55,65 +53,46 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
   const role = access.authenticated ? access.role : undefined;
   const areaTitle = {
     management: t('shell.storeManagement'),
-    staff: t('workspace.staffWorkspace'),
     account: t('shell.accountAndAccess'),
   }[area];
   const rawItems =
     area === 'management'
       ? navigation
-      : area === 'staff'
-        ? staffNavigation
-        : state.status === 'authenticated'
-          ? accountNavigation
-          : [
-              {
-                to: '/',
-                label: t('shell.homeAndEntrances'),
-                icon: 'dashboard' as const,
-              },
-              {
-                to: paths.help,
-                label: t('landing.help'),
-                icon: 'help' as const,
-              },
-              {
-                to: paths.system,
-                label: t('shell.systemStatus'),
-                icon: 'help' as const,
-              },
-              {
-                to: paths.login,
-                label: t('shell.storeTeamSignIn'),
-                icon: 'auth' as const,
-              },
-            ];
-  const items = rawItems
-    .map((item) => ({ ...item, label: localize(item.label) }))
-    .map((item) =>
-      tenant.storeMode === 'single' && item.to === paths.setup
-        ? {
-            ...item,
-            label:
-              area === 'management'
-                ? t('shell.enterStoreAcceptInvitation')
-                : t('shell.acceptStoreInvitation'),
-          }
-        : item,
-    );
-  const groups =
-    area === 'management'
-      ? navigationGroups
-      : area === 'staff'
-        ? staffNavigationGroups
-        : [];
+      : state.status === 'authenticated'
+        ? accountNavigation
+        : [
+            {
+              to: '/',
+              label: t('shell.homeAndEntrances'),
+              icon: 'dashboard' as const,
+            },
+            {
+              to: paths.help,
+              label: t('landing.help'),
+              icon: 'help' as const,
+            },
+            {
+              to: paths.system,
+              label: t('shell.systemStatus'),
+              icon: 'help' as const,
+            },
+            {
+              to: paths.login,
+              label: t('shell.storeTeamSignIn'),
+              icon: 'auth' as const,
+            },
+          ];
+  const items = rawItems.map((item) => ({
+    ...item,
+    label: localize(item.label),
+  }));
+  const groups = area === 'management' ? navigationGroups : [];
   const homePath =
     area === 'management'
       ? paths.dashboard
-      : area === 'staff'
-        ? paths.staff
-        : state.status === 'authenticated'
-          ? paths.workspace
-          : '/';
+      : state.status === 'authenticated'
+        ? paths.workspace
+        : '/';
   const [open, setOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -200,11 +179,7 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
         ) : (
           <div className="sidebar-note">
             <strong>{areaTitle}</strong>
-            <p>
-              {area === 'staff'
-                ? t('shell.onlyTasksAllowedByYourRoleAre')
-                : t('shell.storeTeamAccountsAreNotOnlineShopper')}
-            </p>
+            <p>{t('shell.storeTeamAccountsAreNotOnlineShopper')}</p>
             <NavLink to="/">{t('shell.homeAndEntrances')}</NavLink>
           </div>
         )}
@@ -216,7 +191,7 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
               <House size={15} />
             </span>
             <span>{areaTitle}</span>
-            <span>/</span>
+            <ChevronRight size={15} className="breadcrumb-separator" aria-hidden="true" />
             <strong>{pageTitle}</strong>
           </div>
           <div className="topbar-right">
@@ -249,18 +224,15 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
                 <NavLink to={paths.shop} className="workspace-area-link">
                   {t('shell.viewStorefront')}
                 </NavLink>
-                {role && isManagementRole(role) && (
-                  <NavLink
-                    to={area === 'staff' ? paths.dashboard : paths.staff}
-                    className="workspace-area-link"
-                  >
-                    {area === 'staff'
-                      ? t('shell.storeManagement')
-                      : t('workspace.staffWorkspace')}
-                  </NavLink>
-                )}
               </>
             )}
+            <NavLink
+              to={paths.help}
+              className="icon-button topbar-help"
+              aria-label={t('landing.help')}
+            >
+              <CircleHelp size={20} aria-hidden="true" />
+            </NavLink>
             <NavLink
               to={state.status === 'authenticated' ? '/account' : '/login'}
               className="avatar"
@@ -290,10 +262,12 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
         <main id="main-content" className="content">
           <Outlet />
         </main>
-        <footer className="footer">
-          SmartPOS · {areaTitle}
-          <span>{t('shell.theCustomerStorefrontIsSeparateFromThe')}</span>
-        </footer>
+        {area === 'management' && (
+          <footer className="footer">
+            SmartPOS · {areaTitle}
+            <span>{t('shell.theCustomerStorefrontIsSeparateFromThe')}</span>
+          </footer>
+        )}
       </div>
       {
         <dialog
@@ -352,16 +326,6 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
             <NavLink to={paths.shop} onClick={close}>
               {t('shell.customerStorefront')}
             </NavLink>
-            {role && isManagementRole(role) && (
-              <NavLink
-                to={area === 'staff' ? paths.dashboard : paths.staff}
-                onClick={close}
-              >
-                {area === 'staff'
-                  ? t('shell.storeManagement')
-                  : t('workspace.staffWorkspace')}
-              </NavLink>
-            )}
           </div>
           <nav id="mobile-navigation" aria-label={t('shell.mobileNavigation')}>
             <NavigationMenu

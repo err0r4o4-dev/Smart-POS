@@ -5,8 +5,15 @@ import YAML from 'yaml';
 const modules = JSON.parse(
   readFileSync('packages/contracts/routes.json', 'utf8'),
 );
-const expected = [6, 4, 9, 6, 9, 11, 7, 8, 5, 5, 4, 6, 7, 5, 10, 4, 8];
-assert.equal(modules.length, 17);
+const retiredEmployeeRoutes = ['/employees', '/employees/:id', '/roles'];
+assert.ok(
+  modules.every((module) =>
+    module.routes.every((route) => !retiredEmployeeRoutes.includes(route)),
+  ),
+  'Employee and role management must not be part of the active route inventory',
+);
+const expected = [6, 4, 9, 6, 9, 11, 7, 8, 5, 5, 4, 6, 7, 2, 10, 4, 8, 3];
+assert.equal(modules.length, 18);
 assert.deepEqual(
   modules.map((item) => item.routes.length),
   expected,
@@ -14,6 +21,15 @@ assert.deepEqual(
 const routes = modules.flatMap((item) => item.routes);
 assert.equal(routes.length, 114);
 assert.equal(new Set(routes).size, 114);
+for (const route of [
+  '/restaurant/recipes',
+  '/restaurant/quick-stock',
+  '/restaurant/forecast',
+])
+  assert.ok(
+    !routes.includes(route),
+    `Retired ingredient route remains: ${route}`,
+  );
 const routeDocs = readFileSync('docs/architecture/routes.md', 'utf8');
 const moduleDocs = readFileSync('docs/architecture/modules.md', 'utf8');
 for (const item of modules) {
@@ -25,6 +41,86 @@ for (const item of modules) {
     assert.ok(routeDocs.includes('`' + route + '`'), `Missing route ${route}`);
 }
 const api = YAML.parse(readFileSync('packages/contracts/openapi.yaml', 'utf8'));
+const retiredIngredientPaths = [
+  '/recipes',
+  '/recipes/{recipeId}',
+  '/quick-stock',
+  '/forecast',
+].map((suffix) => '/api/v1/organizations/{id}/restaurant' + suffix);
+for (const path of retiredIngredientPaths)
+  assert.ok(!api.paths[path], `Retired ingredient API remains: ${path}`);
+for (const schema of [
+  'RestaurantRecipeIngredientInput',
+  'RestaurantRecipeIngredient',
+  'RestaurantRecipeInput',
+  'RestaurantRecipe',
+  'RestaurantForecastStatus',
+  'RestaurantQuickStockInput',
+  'RestaurantQuickStockResult',
+])
+  assert.ok(
+    !api.components.schemas[schema],
+    `Retired ingredient schema remains: ${schema}`,
+  );
+assert.deepEqual(api.components.schemas.Role.enum, ['OWNER']);
+assert.deepEqual(api.components.schemas.StockPolicy?.enum, [
+  'TRACKED',
+  'MENU_ONLY',
+]);
+for (const name of [
+  'POSItem',
+  'POSCart',
+  'StorefrontProduct',
+  'StorefrontCatalogProduct',
+  'OnlineOrder',
+  'POSSale',
+  'ReturnableSale',
+]) {
+  const schema = api.components.schemas[name];
+  assert.ok(
+    schema.required.includes('stock_policy'),
+    `${name} must expose its stock policy`,
+  );
+  assert.equal(
+    schema.properties.stock_policy.$ref,
+    '#/components/schemas/StockPolicy',
+  );
+}
+for (const name of ['POSItem', 'StorefrontProduct', 'StorefrontCatalogProduct'])
+  assert.ok(
+    api.components.schemas[name].properties.available.anyOf.some(
+      (item) => item.type === 'null',
+    ),
+    `${name} must allow a null menu-only balance`,
+  );
+for (const name of ['POSCartInput', 'StorefrontOrderInput'])
+  assert.equal(
+    api.components.schemas[name].properties.stock_policy,
+    undefined,
+    `${name} must not accept client stock policy`,
+  );
+const retiredEmployeePaths = [
+  '/api/v1/invitations/accept',
+  ...[
+    '/members',
+    '/members/{memberId}',
+    '/roles',
+    '/invitations',
+    '/invitations/{invitationId}',
+  ].map((suffix) => '/api/v1/organizations/{id}' + suffix),
+];
+for (const path of retiredEmployeePaths)
+  assert.equal(
+    api.paths[path],
+    undefined,
+    `Retired employee API remains: ${path}`,
+  );
+for (const schema of ['MemberInput', 'InviteInput', 'Invitation'])
+  assert.equal(
+    api.components.schemas[schema],
+    undefined,
+    `Retired employee input remains: ${schema}`,
+  );
 const sandboxPaths = [
   '',
   '/checkouts',
@@ -33,11 +129,34 @@ const sandboxPaths = [
 ].map(
   (suffix) => '/api/v1/organizations/{id}/storefront/payment-sandbox' + suffix,
 );
+const restaurantPaths = [
+  '/settings',
+  '/tables',
+  '/tables/{tableId}',
+  '/queue',
+  '/setup',
+  '/setup/profile',
+  '/setup/services',
+  '/setup/tables',
+  '/setup/menu',
+  '/setup/payments',
+  '/setup/orders',
+  '/setup/complete',
+].map((path) => '/api/v1/organizations/{id}/restaurant' + path);
+
 const storefrontPaths = [
   '/api/v1/storefronts',
-  ...['', '/products', '/quote', '/orders', '/track'].map(
-    (suffix) => '/api/v1/storefronts/{slug}' + suffix,
-  ),
+  ...[
+    '',
+    '/products',
+    '/quote',
+    '/orders',
+    '/track',
+    '/payment/checkout',
+    '/payment/recover',
+    '/payment/status',
+  ].map((suffix) => '/api/v1/storefronts/{slug}' + suffix),
+  '/api/v1/storefront-payments/stripe/webhook',
   ...[
     '/storefront',
     '/storefront/products',
@@ -46,6 +165,7 @@ const storefrontPaths = [
     '/online-orders/{orderId}',
     '/online-orders/{orderId}/status',
     '/online-orders/{orderId}/pos-cart',
+    '/online-orders/{orderId}/settle-prepaid',
   ].map((suffix) => '/api/v1/organizations/{id}' + suffix),
 ];
 const catalogPaths = [
@@ -236,6 +356,7 @@ assert.deepEqual(
     ...loyaltyPaths,
     ...qualityPaths,
     ...storefrontPaths,
+    ...restaurantPaths,
     ...sandboxPaths,
     '/api/v1/auth/forgot-password',
     '/api/v1/auth/login',
@@ -243,19 +364,15 @@ assert.deepEqual(
     '/api/v1/auth/me',
     '/api/v1/auth/register',
     '/api/v1/auth/reset-password',
-    '/api/v1/invitations/accept',
+    '/api/v1/auth/email/verify',
+    '/api/v1/auth/email/resend',
     '/api/v1/organizations',
     '/api/v1/organizations/{id}',
     '/api/v1/organizations/{id}/audit',
     '/api/v1/organizations/{id}/branches',
     '/api/v1/organizations/{id}/branches/{branchId}',
     '/api/v1/organizations/{id}/context',
-    '/api/v1/organizations/{id}/invitations',
-    '/api/v1/organizations/{id}/invitations/{invitationId}',
-    '/api/v1/organizations/{id}/members',
-    '/api/v1/organizations/{id}/members/{memberId}',
     '/api/v1/organizations/{id}/permissions',
-    '/api/v1/organizations/{id}/roles',
     '/api/v1/system',
     '/health/live',
     '/health/ready',
@@ -283,8 +400,7 @@ assert.deepEqual(
   Object.keys(memberSchema.properties).sort(),
 );
 for (const [path, item] of Object.entries(api.paths)) {
-  if (!path.includes('/organizations') && path !== '/api/v1/invitations/accept')
-    continue;
+  if (!path.includes('/organizations')) continue;
   for (const method of ['get', 'post', 'put', 'patch', 'delete']) {
     if (!item[method]) continue;
     assert.deepEqual(item[method].security, [{ sessionCookie: [] }]);
@@ -353,8 +469,8 @@ for (const path of ['/api/v1/organizations', '/api/v1/storefronts']) {
 assert.ok(
   api.paths['/api/v1/organizations'].post.description.includes('single-store'),
 );
-for (const path of storefrontPaths) {
-  for (const method of ['get', 'post', 'put']) {
+for (const path of [...storefrontPaths, ...restaurantPaths]) {
+  for (const method of ['get', 'post', 'put', 'patch']) {
     const operation = api.paths[path][method];
     if (!operation) continue;
     if (path.startsWith('/api/v1/storefronts')) {
@@ -366,6 +482,73 @@ for (const path of storefrontPaths) {
   }
 }
 const guestCreate = api.paths['/api/v1/storefronts/{slug}/orders'].post;
+const prepaidSettlement =
+  api.paths['/api/v1/organizations/{id}/online-orders/{orderId}/settle-prepaid']
+    .post;
+assert.deepEqual(prepaidSettlement.security, [{ sessionCookie: [] }]);
+assert.ok(
+  prepaidSettlement.parameters.some(
+    (parameter) => parameter.$ref === '#/components/parameters/CSRF',
+  ),
+);
+assert.equal(
+  prepaidSettlement.requestBody.content['application/json'].schema.$ref,
+  '#/components/schemas/OnlineOrderImportInput',
+);
+assert.equal(
+  prepaidSettlement.responses['200'].content['application/json'].schema
+    .properties.data.$ref,
+  '#/components/schemas/POSCheckout',
+);
+assert.deepEqual(prepaidSettlement.responses['409'], {
+  description: 'Revision, payment, shift, stock, price or fulfillment conflict',
+  content: {
+    'application/json': {
+      schema: { $ref: '#/components/schemas/StorefrontError' },
+    },
+  },
+});
+assert.ok(
+  api.components.schemas.POSCheckout.properties.method.enum.includes(
+    'ONLINE_STRIPE',
+  ),
+);
+assert.ok(
+  !api.components.schemas.POSCheckout.required.includes('credit_amount'),
+);
+for (const suffix of ['checkout', 'recover', 'status']) {
+  const operation =
+    api.paths[`/api/v1/storefronts/{slug}/payment/${suffix}`].post;
+  assert.equal(
+    operation.requestBody.content['application/json'].schema.$ref,
+    '#/components/schemas/StorefrontTrackingInput',
+  );
+  assert.equal(
+    operation.responses['200'].content['application/json'].schema.$ref,
+    suffix === 'status'
+      ? '#/components/schemas/PublicPaymentAttemptEnvelope'
+      : '#/components/schemas/PublicCustomerCheckoutEnvelope',
+  );
+}
+const paymentWebhook =
+  api.paths['/api/v1/storefront-payments/stripe/webhook'].post;
+assert.deepEqual(paymentWebhook.security, []);
+assert.ok(
+  paymentWebhook.parameters.some(
+    (parameter) => parameter.name === 'Stripe-Signature' && parameter.required,
+  ),
+);
+assert.deepEqual(
+  Object.keys(api.components.schemas.PublicPaymentAttempt.properties).sort(),
+  ['amount_minor', 'currency', 'state'],
+);
+assert.deepEqual(
+  Object.keys(
+    api.components.schemas.PublicCustomerCheckoutEnvelope.properties.data
+      .properties,
+  ).sort(),
+  ['attempt', 'url'],
+);
 assert.ok(
   guestCreate.parameters.some(
     (parameter) => parameter.name === 'Idempotency-Key' && parameter.required,
@@ -379,6 +562,64 @@ assert.equal(
   api.components.schemas.StorefrontOrderInput.properties.access_token.pattern,
   '^[a-f0-9]{64}$',
 );
+for (const name of ['StorefrontQuoteInput', 'StorefrontOrderInput']) {
+  const schema = api.components.schemas[name];
+  assert.equal(schema.properties.table_token?.writeOnly, true);
+  assert.equal(schema.properties.table_token?.pattern, '^[a-f0-9]{64}$');
+  assert.deepEqual(schema.properties.fulfillment?.enum, ['PICKUP', 'DELIVERY']);
+  assert.ok(
+    schema.allOf.some(
+      (rule) =>
+        rule.if?.required?.includes('table_token') &&
+        rule.then?.properties?.fulfillment?.const === 'PICKUP',
+    ),
+  );
+}
+for (const name of [
+  'StorefrontQuote',
+  'PublicOnlineOrder',
+  'OnlineOrder',
+  'RestaurantQueueItem',
+]) {
+  assert.equal(
+    api.components.schemas[name].properties.table_code?.type,
+    'string',
+  );
+  assert.equal(api.components.schemas[name].properties.table_token, undefined);
+}
+assert.equal(
+  api.components.schemas.RestaurantTable.properties.qr_token?.readOnly,
+  true,
+);
+assert.equal(
+  api.components.schemas.RestaurantTable.properties.qr_token?.pattern,
+  '^[a-f0-9]{64}$',
+);
+assert.ok(
+  api.components.schemas.RestaurantQueueItem.properties.channel.enum.includes(
+    'DINE_IN',
+  ),
+);
+const restaurantQueue =
+  api.paths['/api/v1/organizations/{id}/restaurant/queue'].get;
+assert.deepEqual(restaurantQueue.security, [{ sessionCookie: [] }]);
+assert.match(restaurantQueue.description, /durable queue numbers/i);
+assert.doesNotMatch(restaurantQueue.description, /no daily queue allocation/i);
+const restaurantQueueNumber =
+  api.components.schemas.RestaurantQueueItem.properties.queue_number;
+assert.equal(restaurantQueueNumber.type, 'string');
+for (const pattern of [
+  /durable/i,
+  /closing time/i,
+  /midnight alone/i,
+  /gaps/i,
+  /WEB-/,
+])
+  assert.match(restaurantQueueNumber.description, pattern);
+assert.doesNotMatch(
+  restaurantQueueNumber.description,
+  /current position|not a durable|can change when orders leave/i,
+);
 for (const field of [
   'customer_name',
   'contact_phone',
@@ -388,6 +629,9 @@ for (const field of [
   'cart_id',
   'sale_id',
   'access_hash',
+  'delivery_address',
+  'table_token',
+  'qr_token',
 ])
   assert.equal(
     api.components.schemas.PublicOnlineOrder.properties[field],
@@ -809,5 +1053,5 @@ assert.ok(
   'Internal AI must not publish a host port',
 );
 console.log(
-  'PASS: 17 modules, 114 unique documented routes, Stripe sandbox/storefront/POS contracts and service health wiring',
+  'PASS: 18 modules, 114 unique documented routes, owner-only access, Stripe sandbox/storefront/POS contracts and service health wiring',
 );

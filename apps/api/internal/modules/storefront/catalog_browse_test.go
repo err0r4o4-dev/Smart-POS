@@ -41,7 +41,8 @@ func TestCatalogImageURL(test *testing.T) {
 }
 
 func TestCatalogPageJSON(test *testing.T) {
-	value := CatalogPage{Page: Page[CatalogProduct]{Items: []CatalogProduct{{Product: Product{VariantID: "22222222-2222-4222-8222-222222222222", UnitPrice: "19.99", Available: "2.000"}, CategoryID: "uncategorized", CategoryName: "ไม่มีหมวดหมู่"}}, Page: 1, PageSize: 24, Total: 1}, Categories: []CatalogCategory{{ID: "uncategorized", Name: "ไม่มีหมวดหมู่", Count: 1}}}
+	available := "2.000"
+	value := CatalogPage{Page: Page[CatalogProduct]{Items: []CatalogProduct{{Product: Product{VariantID: "22222222-2222-4222-8222-222222222222", UnitPrice: "19.99", Available: &available, StockPolicy: "TRACKED"}, CategoryID: "uncategorized", CategoryName: "ไม่มีหมวดหมู่"}}, Page: 1, PageSize: 24, Total: 1}, Categories: []CatalogCategory{{ID: "uncategorized", Name: "ไม่มีหมวดหมู่", Count: 1}}}
 	encoded, err := json.Marshal(value)
 	if err != nil {
 		test.Fatal(err)

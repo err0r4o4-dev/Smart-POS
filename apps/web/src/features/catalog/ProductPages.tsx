@@ -6,7 +6,6 @@ import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavig
 import {
   Archive,
   ArrowLeft,
-  Award,
   Check,
   CheckCircle2,
   ClipboardList,
@@ -15,8 +14,6 @@ import {
   Package,
   PauseCircle,
   Plus,
-  Printer,
-  Upload,
 } from 'lucide-react';
 import { Button, Card, Tag } from '../../components/ui/primitives';
 import {
@@ -52,8 +49,6 @@ import {
   Pagination,
 } from './CatalogUI';
 import { ProductFields, VariantFields, VariantEditor } from './ProductForm';
-import { BarcodeScanner } from './BarcodeScanner';
-import { BarcodeManager } from './BarcodeManager';
 
 function statusTone(status: string): 'success' | 'amber' | 'neutral' {
   if (status === 'ACTIVE') return 'success';
@@ -70,7 +65,6 @@ export function ProductsPage() {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState('');
   const [category, setCategory] = useState<string | null>(null);
-  const [brand, setBrand] = useState<string | null>(null);
   const [sort, setSort] = useState('name');
   const queryParams = new URLSearchParams({
     search: params.get('search') ?? '',
@@ -79,13 +73,11 @@ export function ProductsPage() {
     status,
     sort,
     ...(category ? { category_id: category } : {}),
-    ...(brand ? { brand_id: brand } : {}),
   });
   const query = useCatalogQuery<CatalogPage<Product>>(
     `/products?${queryParams}`,
   );
   const categories = useTaxonomyOptions('categories');
-  const brands = useTaxonomyOptions('brands');
   const items = useMemo(() => query.data?.items ?? [], [query.data?.items]);
   const totalProducts = query.data?.total ?? 0;
   const activeCount = useMemo(
@@ -103,26 +95,8 @@ export function ProductsPage() {
 
   return (
     <div className="catalog-page">
-      <CatalogHeader title={t('common.products')}>
+      <CatalogHeader title={t('catalog.restaurantItems')}>
         <>
-          {catalog.tenant.can('catalog.import') && (
-            <Link
-              className="button button-secondary sales-export-btn"
-              to="/products/import"
-            >
-              <Upload size={15} aria-hidden="true" />
-              <span>{t('catalog.importProducts')}</span>
-            </Link>
-          )}
-          {catalog.tenant.can('catalog.labels.print') && (
-            <Link
-              className="button button-secondary sales-export-btn"
-              to="/products/labels"
-            >
-              <Printer size={15} aria-hidden="true" />
-              <span>{t('catalog.printLabels')}</span>
-            </Link>
-          )}
           {catalog.tenant.can('catalog.create') && (
             <Link className="button sales-new-sale-btn" to="/products/new">
               <Plus size={16} aria-hidden="true" />
@@ -133,11 +107,11 @@ export function ProductsPage() {
       </CatalogHeader>
       <CatalogNav />
 
-      <StandardKpiGrid label={t('common.products')}>
+      <StandardKpiGrid label={t('catalog.restaurantItems')}>
         <StandardKpiCard
           icon={<Package size={20} />}
           tone="amber"
-          label={t('common.products')}
+          label={t('catalog.restaurantItems')}
           value={`${totalProducts} ${t('pos.itemsUnit')}`}
           subtext={t('catalog.sharedOrganizationCatalog')}
           sparkline
@@ -156,15 +130,7 @@ export function ProductsPage() {
           label={t('catalog.categories')}
           value={`${categories.data?.length ?? 0} ${t('pos.itemsUnit')}`}
         />
-        <StandardKpiCard
-          icon={<Award size={20} />}
-          tone="info"
-          label={t('catalog.brands')}
-          value={`${brands.data?.length ?? 0} ${t('pos.itemsUnit')}`}
-        />
       </StandardKpiGrid>
-
-      <BarcodeScanner />
 
       <StandardFilterCard
         useForm
@@ -178,7 +144,6 @@ export function ProductsPage() {
           setParams({});
           setStatus('');
           setCategory(null);
-          setBrand(null);
           setSort('name');
           setPage(1);
         }}
@@ -186,7 +151,7 @@ export function ProductsPage() {
         searchLabel={t('common.searchProducts')}
       >
         <StandardSearchField
-          label={t('catalog.searchNameSkuBarcode')}
+          label={t('catalog.searchRestaurantItems')}
           maxLength={200}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
@@ -214,15 +179,6 @@ export function ProductsPage() {
           items={categories.data ?? []}
           change={(value) => {
             setCategory(value);
-            setPage(1);
-          }}
-        />
-        <TaxonomySelect
-          label={t('catalog.filterBrand')}
-          value={brand}
-          items={brands.data ?? []}
-          change={(value) => {
-            setBrand(value);
             setPage(1);
           }}
         />
@@ -279,14 +235,11 @@ export function ProductsPage() {
           ]}
         />
         <QueryFeedback
-          loading={
-            query.isFetching || categories.isFetching || brands.isFetching
-          }
-          error={query.error ?? categories.error ?? brands.error}
+          loading={query.isFetching || categories.isFetching}
+          error={query.error ?? categories.error}
           retry={() => {
             void query.refetch();
             void categories.refetch();
-            void brands.refetch();
           }}
         />
         {query.data && (
@@ -300,9 +253,9 @@ export function ProductsPage() {
               <table className="catalog-table record-table">
                 <thead>
                   <tr>
-                    <th>{t('common.products')}</th>
-                    <th>{t('catalog.skuBarcode')}</th>
-                    <th>{t('catalog.categoryBrand')}</th>
+                    <th>{t('catalog.restaurantItems')}</th>
+                    <th>{t('common.sku')}</th>
+                    <th>{t('catalog.categories')}</th>
                     <th className="sales-amount">
                       {t('catalog.sellingPrice')}
                     </th>
@@ -330,10 +283,6 @@ export function ProductsPage() {
                         {product.variants.map((variant) => (
                           <div key={variant.id}>
                             <code>{variant.sku}</code>
-                            <small className="sales-secondary">
-                              {variant.barcodes.find((item) => item.is_primary)
-                                ?.code ?? t('catalog.noBarcodesYet')}
-                            </small>
                           </div>
                         ))}
                       </td>
@@ -341,9 +290,6 @@ export function ProductsPage() {
                         <strong className="sales-branch-name">
                           {product.category_name || '—'}
                         </strong>
-                        <small className="sales-secondary">
-                          {product.brand_name || '—'}
-                        </small>
                       </td>
                       <td className="sales-amount">
                         {product.variants.map((variant) => (
@@ -399,12 +345,18 @@ export function ProductDetailsPage() {
   return (
     <div className="catalog-page">
       <CatalogHeader title={t('catalog.productDetails')}>
-        <Link className="button button-secondary sales-export-btn" to="/products">
+        <Link
+          className="button button-secondary sales-export-btn"
+          to="/products"
+        >
           <ArrowLeft size={16} aria-hidden="true" />
           <span>{t('catalog.backToProducts')}</span>
         </Link>
         {catalog.tenant.can('catalog.update') && (
-          <Link className="button sales-new-sale-btn" to={`/products/${id}/edit`}>
+          <Link
+            className="button sales-new-sale-btn"
+            to={`/products/${id}/edit`}
+          >
             <span>{t('catalog.editProduct')}</span>
           </Link>
         )}
@@ -427,15 +379,10 @@ export function ProductDetailsPage() {
                 </Tag>
                 <p>{query.data.description || t('catalog.noDescription')}</p>
                 <p>
-                  {t('catalog.category')} {query.data.category_name || '—'}{' '}
-                  {t('catalog.brand')} {query.data.brand_name || '—'}
+                  {t('catalog.category')} {query.data.category_name || '—'}
                 </p>
               </div>
             </div>
-            <p className="notice">
-              {t('catalog.viewBranchStockAt')}{' '}
-              <Link to="/inventory/balances">{t('catalog.stockBalances')}</Link>
-            </p>
           </Card>
           {query.data.variants.map((variant) => (
             <div key={variant.id}>
@@ -463,7 +410,6 @@ export function ProductDetailsPage() {
                   ))}
                 </dl>
               </Card>
-              <BarcodeManager product={query.data!} variant={variant} />
             </div>
           ))}
         </>
@@ -475,27 +421,16 @@ export function ProductEditorPage({ edit = false }: { edit?: boolean }) {
   const { id = '' } = useParams();
   const query = useCatalogQuery<Product>(`/products/${id}`, edit);
   const categories = useTaxonomyOptions('categories');
-  const brands = useTaxonomyOptions('brands');
   const units = useTaxonomyOptions('units');
-  if (
-    (edit && query.isPending) ||
-    categories.isPending ||
-    brands.isPending ||
-    units.isPending
-  )
+  if ((edit && query.isPending) || categories.isPending || units.isPending)
     return <CatalogLoading pending />;
-  const error =
-    (edit ? query.error : null) ??
-    categories.error ??
-    brands.error ??
-    units.error;
+  const error = (edit ? query.error : null) ?? categories.error ?? units.error;
   if (error) return <CatalogError error={error} />;
   return (
     <ProductEditor
       key={edit ? id : 'new'}
       initial={edit ? query.data : undefined}
       categories={categories.data ?? []}
-      brands={brands.data ?? []}
       units={units.data ?? []}
     />
   );
@@ -503,12 +438,10 @@ export function ProductEditorPage({ edit = false }: { edit?: boolean }) {
 function ProductEditor({
   initial,
   categories,
-  brands,
   units,
 }: {
   initial?: Product;
   categories: Parameters<typeof ProductFields>[0]['categories'];
-  brands: Parameters<typeof ProductFields>[0]['brands'];
   units: Parameters<typeof VariantFields>[0]['units'];
 }) {
   const { t } = useLanguage();
@@ -581,7 +514,6 @@ function ProductEditor({
             value={value}
             change={setValue}
             categories={categories}
-            brands={brands}
             archive={!!initial && catalog.tenant.can('catalog.archive')}
           />
           {!initial && (

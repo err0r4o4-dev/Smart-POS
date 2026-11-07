@@ -23,15 +23,45 @@ func productForOrder(ctx context.Context, tx pgx.Tx, org string, shop Settings, 
 		}
 		return Product{}, err
 	}
-	result := Product{VariantID: id, ProductName: value.ProductName, VariantName: value.VariantName, SKU: value.SKU, Unit: value.Unit, UnitType: value.UnitType, Available: "0.000"}
+	result := Product{VariantID: id, ProductName: value.ProductName, VariantName: value.VariantName, SKU: value.SKU, Unit: value.Unit, UnitType: value.UnitType, StockPolicy: "MENU_ONLY"}
+	if order != "" {
+		if err = tx.QueryRow(ctx, "SELECT stock_policy FROM online_orders WHERE organization_id=$1 AND id=$2", org, order).Scan(&result.StockPolicy); err != nil {
+			return result, dbError(err)
+		}
+	}
 	result.UnitPrice, _, _, err = pricing.EffectivePrice(ctx, tx, org, shop.BranchID, id, value.UnitPrice)
 	if err != nil {
 		return result, err
 	}
 	_, priceError := pos.EstimateOnlineLine(result.UnitPrice, "1.000", result.UnitType)
 	result.Saleable = value.ProductStatus == "ACTIVE" && value.VariantStatus == "ACTIVE" && value.UnitStatus == "ACTIVE" && value.Currency == "THB" && priceError == nil
-	err = tx.QueryRow(ctx, `SELECT COALESCE((SELECT published FROM storefront_products WHERE organization_id=$1 AND variant_id=$2),false),greatest(0.000,storefront_sellable_quantity($1,$3,$2)-storefront_reserved_quantity($1,$3,$2)+COALESCE((SELECT item.quantity FROM online_order_items item JOIN online_orders doc ON doc.organization_id=item.organization_id AND doc.id=item.order_id WHERE item.organization_id=$1 AND item.variant_id=$2 AND doc.id=nullif($4,'')::uuid AND doc.stock_location_id=$3 AND doc.stock_reserved AND storefront_order_live(doc.organization_id,doc.id)),0.000))::text`, org, id, shop.LocationID, order).Scan(&result.Published, &result.Available)
-	return result, dbError(err)
+	var recalled bool
+	if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM quality_recalls WHERE organization_id=$1 AND variant_id=$2 AND batch_id IS NULL)", org, id).Scan(&recalled); err != nil {
+		return result, dbError(err)
+	}
+	result.Saleable = result.Saleable && !recalled
+	err = tx.QueryRow(ctx, `SELECT COALESCE((SELECT published FROM storefront_products WHERE organization_id=$1 AND variant_id=$2),false)`, org, id).Scan(&result.Published)
+	if err != nil {
+		return result, dbError(err)
+	}
+	if result.StockPolicy == "MENU_ONLY" {
+		return result, nil
+	}
+	if result.StockPolicy != "TRACKED" {
+		return result, ErrConflict
+	}
+	available := "0.000"
+	result.Available = &available
+	if err = tx.QueryRow(ctx, `SELECT greatest(0.000,storefront_sellable_quantity($1,$3,$2)-storefront_reserved_quantity_for_order($1,$3,$2,nullif($4,'')::uuid))::text`, org, id, shop.LocationID, order).Scan(result.Available); err != nil {
+		return result, dbError(err)
+	}
+	if recipeAvailable, hasRecipe, recipeSaleable, problem := pos.RecipeAvailabilityForOrder(ctx, tx, org, shop.BranchID, shop.LocationID, order, id, "1.000"); problem != nil {
+		return result, problem
+	} else if hasRecipe {
+		*result.Available = recipeAvailable
+		result.Saleable = result.Saleable && recipeSaleable
+	}
+	return result, nil
 }
 func products(ctx context.Context, tx pgx.Tx, org string, shop Settings, search string, page int, public bool) (Page[Product], error) {
 	result := Page[Product]{Items: []Product{}, Page: page, PageSize: 24}
@@ -170,13 +200,6 @@ func quote(ctx context.Context, tx pgx.Tx, org string, shop Settings, items []It
 		if err != nil {
 			return result, ErrInput
 		}
-		var enough bool
-		if err = tx.QueryRow(ctx, "SELECT $1::numeric>=$2::numeric", value.Available, input.Quantity).Scan(&enough); err != nil {
-			return result, dbError(err)
-		}
-		if !enough {
-			return result, ErrStock
-		}
 		if total > 999999999999999999-amount {
 			return result, ErrInput
 		}
@@ -203,6 +226,9 @@ func quote(ctx context.Context, tx pgx.Tx, org string, shop Settings, items []It
 	return result, nil
 }
 func (service *Service) Quote(ctx context.Context, slug string, input QuoteInput) (Quote, error) {
+	if input.validateTableContext() != nil {
+		return Quote{}, ErrInput
+	}
 	tx, org, err := service.public(ctx, slug, false)
 	if err != nil {
 		return Quote{}, err
@@ -212,9 +238,25 @@ func (service *Service) Quote(ctx context.Context, slug string, input QuoteInput
 	if err != nil {
 		return Quote{}, err
 	}
-	result, err := quote(ctx, tx, org, shop, input.Items, input.Fulfillment)
+	result, _, err := quoteForTable(ctx, tx, org, shop, input)
 	if err != nil {
 		return result, fmt.Errorf("quote: %w", err)
 	}
 	return result, nil
+}
+
+func quoteForTable(ctx context.Context, tx pgx.Tx, org string, shop Settings, input QuoteInput) (Quote, string, error) {
+	tableID, tableCode, err := dineInTable(ctx, tx, org, shop.BranchID, input.TableToken)
+	if err != nil {
+		return Quote{}, "", err
+	}
+	result, err := quote(ctx, tx, org, shop, input.Items, input.Fulfillment)
+	if err != nil {
+		return result, "", err
+	}
+	if tableID != "" {
+		result.TableCode = tableCode
+		result.ID = digest(struct{ QuoteID, TableID, TableCode string }{result.ID, tableID, tableCode})
+	}
+	return result, tableID, nil
 }

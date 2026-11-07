@@ -17,3 +17,4 @@ __pycache__/
 .tools/
 *.tsbuildinfo
 /apps/api/server
+/apps/api/.cache/

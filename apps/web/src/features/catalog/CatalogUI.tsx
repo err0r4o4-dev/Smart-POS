@@ -1,7 +1,6 @@
 import { useLanguage } from '../../app/language';
 import type { ReactNode } from 'react';
 import {
-  Award,
   ChevronLeft,
   ChevronRight,
   Layers,
@@ -28,12 +27,7 @@ export function CatalogHeader({
       icon={icon ?? <Package size={24} />}
       eyebrow={t('catalog.manageProducts')}
       title={title}
-      description={
-        <>
-          {t('catalog.sharedOrganizationCatalog')}{' '}
-          <Link to="/inventory/balances">{t('catalog.viewBranchStock')}</Link>
-        </>
-      }
+      description={t('catalog.sharedOrganizationCatalog')}
       actions={children}
     />
   );
@@ -45,15 +39,11 @@ export function CatalogNav() {
     <nav className="catalog-nav" aria-label={t('catalog.catalog')}>
       <Link to="/products">
         <Package size={15} aria-hidden="true" />
-        <span>{t('common.products')}</span>
+        <span>{t('catalog.restaurantItems')}</span>
       </Link>
       <Link to="/categories">
         <Layers size={15} aria-hidden="true" />
         <span>{t('catalog.categories')}</span>
-      </Link>
-      <Link to="/brands">
-        <Award size={15} aria-hidden="true" />
-        <span>{t('catalog.brands')}</span>
       </Link>
       <Link to="/units">
         <Ruler size={15} aria-hidden="true" />

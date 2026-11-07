@@ -153,7 +153,7 @@
   border-radius: 16px;
   background: var(--primary-soft);
   border: 1px solid var(--primary-border);
-  color: var(--primary-strong);
+  color: var(--text-primary);
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -599,7 +599,7 @@
 .dashboard-sales-table th {
   text-align: left;
   padding: 9px 10px;
-  background: #f8fafc;
+  background: var(--primary-subtle);
   color: var(--text-strong);
   font-size: 12px;
   font-weight: 600;
@@ -736,7 +736,7 @@ a.dashboard-alert-row:hover {
   padding: 12px 8px;
   border-radius: 16px;
   border: 1px solid var(--border);
-  background: #f8fafc;
+  background: var(--primary-subtle);
   color: var(--text-primary);
   font-size: 12px;
   font-weight: 650;
@@ -750,12 +750,12 @@ a.dashboard-alert-row:hover {
   border-color: var(--primary-border);
 }
 .dashboard-shortcut-tile.is-primary {
-  background: linear-gradient(145deg, #fef08a, #fde047);
-  border-color: #facc15;
+  background: var(--brand-gradient);
+  border-color: var(--primary);
   color: var(--text-primary);
 }
 .dashboard-shortcut-tile.is-primary:hover:not(.is-disabled) {
-  background: linear-gradient(145deg, #fde047, #facc15);
+  background: var(--primary-hover);
 }
 .dashboard-shortcut-tile.is-disabled {
   opacity: 0.55;
@@ -904,14 +904,14 @@ a.dashboard-alert-row:hover {
   .storefront-content {
     padding: 24px 16px;
   }
-  .storefront-illustration {
+  .storefront-illustration,
+  .storefront-hero > svg {
     display: none;
   }
 }
 @media (max-width: 639px) {
   .management-shell .topbar-right > .tag,
-  .management-shell .breadcrumb > span,
-  .management-shell .breadcrumb > strong {
+  .management-shell .breadcrumb > span:not(.breadcrumb-home) {
     display: none;
   }
   .landing-navigation .landing-shop-link {

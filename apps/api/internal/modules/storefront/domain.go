@@ -56,16 +56,17 @@ type SettingsInput struct {
 	Revision           int64  `json:"revision"`
 }
 type Product struct {
-	VariantID   string `json:"variant_id"`
-	ProductName string `json:"product_name"`
-	VariantName string `json:"variant_name"`
-	SKU         string `json:"sku"`
-	Unit        string `json:"unit"`
-	UnitType    string `json:"unit_type"`
-	UnitPrice   string `json:"unit_price"`
-	Available   string `json:"available"`
-	Saleable    bool   `json:"saleable"`
-	Published   bool   `json:"published"`
+	VariantID   string  `json:"variant_id"`
+	ProductName string  `json:"product_name"`
+	VariantName string  `json:"variant_name"`
+	SKU         string  `json:"sku"`
+	Unit        string  `json:"unit"`
+	UnitType    string  `json:"unit_type"`
+	UnitPrice   string  `json:"unit_price"`
+	Available   *string `json:"available"`
+	StockPolicy string  `json:"stock_policy"`
+	Saleable    bool    `json:"saleable"`
+	Published   bool    `json:"published"`
 }
 type Page[T any] struct {
 	Items    []T `json:"items"`
@@ -80,9 +81,11 @@ type ItemInput struct {
 type QuoteInput struct {
 	Items       []ItemInput `json:"items"`
 	Fulfillment string      `json:"fulfillment"`
+	TableToken  string      `json:"table_token,omitempty"`
 }
 type OrderInput struct {
 	Fulfillment     string      `json:"fulfillment"`
+	TableToken      string      `json:"table_token,omitempty"`
 	DeliveryAddress string      `json:"delivery_address"`
 	Items           []ItemInput `json:"items"`
 	QuoteID         string      `json:"quote_id"`
@@ -102,6 +105,7 @@ type Line struct {
 	LineTotal   string `json:"line_total"`
 }
 type Quote struct {
+	TableCode   string `json:"table_code,omitempty"`
 	Fulfillment string `json:"fulfillment"`
 	Subtotal    string `json:"subtotal"`
 	ShippingFee string `json:"shipping_fee"`
@@ -116,7 +120,9 @@ type Event struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 type Order struct {
+	StockPolicy        string    `json:"stock_policy"`
 	Fulfillment        string    `json:"fulfillment"`
+	TableCode          string    `json:"table_code,omitempty"`
 	DeliveryAddress    string    `json:"delivery_address,omitempty"`
 	ShippingFee        string    `json:"shipping_fee"`
 	Subtotal           string    `json:"subtotal"`
@@ -143,6 +149,7 @@ type Order struct {
 	Items              []Line    `json:"items"`
 	Events             []Event   `json:"events"`
 }
+
 type TrackingInput struct {
 	OrderID     string `json:"order_id"`
 	AccessToken string `json:"access_token"`
@@ -216,7 +223,7 @@ func (shop Settings) orderTerminalID() string {
 func (input *OrderInput) validate() error {
 	input.Fulfillment = fulfillmentMode(input.Fulfillment)
 	input.DeliveryAddress = strings.TrimSpace(input.DeliveryAddress)
-	if input.Fulfillment != "PICKUP" && input.Fulfillment != "DELIVERY" || !text(input.DeliveryAddress, 2000, input.Fulfillment == "DELIVERY") || input.Fulfillment == "PICKUP" && input.DeliveryAddress != "" {
+	if input.Fulfillment != "PICKUP" && input.Fulfillment != "DELIVERY" || !text(input.DeliveryAddress, 2000, input.Fulfillment == "DELIVERY") || input.Fulfillment == "PICKUP" && input.DeliveryAddress != "" || input.TableToken != "" && !tokenPattern.MatchString(input.TableToken) || input.TableToken != "" && input.Fulfillment != "PICKUP" {
 		return ErrInput
 	}
 	input.CustomerName = strings.TrimSpace(input.CustomerName)
@@ -226,6 +233,14 @@ func (input *OrderInput) validate() error {
 		return ErrInput
 	}
 	return normalizeItems(input.Items)
+}
+
+func (input QuoteInput) validateTableContext() error {
+	mode := fulfillmentMode(input.Fulfillment)
+	if mode != "PICKUP" && mode != "DELIVERY" || input.TableToken != "" && (mode != "PICKUP" || !tokenPattern.MatchString(input.TableToken)) {
+		return ErrInput
+	}
+	return nil
 }
 func fulfillmentMode(mode string) string {
 	if mode == "" {

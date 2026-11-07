@@ -1,9 +1,12 @@
+import type { StockPolicy } from './pos-api';
+
 export type StockDisposition =
   'RESTOCK_SELLABLE' | 'QUARANTINE' | 'DAMAGED' | 'NO_STOCK_RETURN';
 export interface ReturnableSale {
   id: string;
   sale_number: string;
   branch_id: string;
+  stock_policy: StockPolicy;
   grand_total: string;
   items: {
     id: string;

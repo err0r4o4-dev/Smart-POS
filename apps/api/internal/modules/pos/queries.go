@@ -122,6 +122,8 @@ func (service *Service) List(ctx context.Context, user, org, resource string, fi
 			if err != nil {
 				return result, err
 			}
+			item.StockPolicy = "MENU_ONLY"
+			item.Available = nil
 			items = append(items, item)
 		}
 		result.Items = items
@@ -134,7 +136,7 @@ func (service *Service) List(ctx context.Context, user, org, resource string, fi
 	case "terminals":
 		return jsonPage(ctx, tx, "to_jsonb(item)", " FROM pos_terminals item", base+" AND ($5='' OR item.status=$5)", append(args, filters.Status), filters)
 	case "carts":
-		return jsonPage(ctx, tx, "to_jsonb(item)-'create_key'", " FROM pos_carts item", base+" AND item.cashier_id=$5 AND ($6='' OR item.status=$6) AND ($7='' OR item.terminal_id=nullif($7,'')::uuid)", append(args, user, filters.Status, filters.TerminalID), filters)
+		return jsonPage(ctx, tx, `to_jsonb(item)-'create_key'||jsonb_build_object('stock_policy',COALESCE((SELECT doc.stock_policy FROM online_orders doc WHERE doc.organization_id=item.organization_id AND doc.cart_id=item.id),item.stock_policy))`, " FROM pos_carts item", base+" AND item.cashier_id=$5 AND ($6='' OR item.status=$6) AND ($7='' OR item.terminal_id=nullif($7,'')::uuid)", append(args, user, filters.Status, filters.TerminalID), filters)
 	case "shifts":
 		from := ` FROM (SELECT shift.*,shift.opened_at AS created_at FROM register_shifts shift) item JOIN pos_terminals terminal ON terminal.organization_id=item.organization_id AND terminal.id=item.terminal_id JOIN users cashier ON cashier.id=item.cashier_id`
 		selectSQL := `to_jsonb(item)-ARRAY['open_key','close_key']||jsonb_build_object('opening_cash',item.opening_cash::text,'cash_sales',item.cash_sales::text,'cash_refunds',item.cash_refunds::text,'expected_cash',item.expected_cash::text,'counted_cash',item.counted_cash::text,'difference',item.difference::text,'terminal_name',terminal.name,'cashier_name',cashier.display_name)`

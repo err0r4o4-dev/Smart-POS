@@ -1,5 +1,5 @@
 import { ApiError } from './api';
-import { exactDecimal } from './pos-api';
+import { exactDecimal, type StockPolicy } from './pos-api';
 import { responseStoreMode, type StoreMode } from './store-mode';
 
 export interface ShopSummary {
@@ -26,7 +26,8 @@ export interface ShopProduct {
   unit: string;
   unit_type: string;
   unit_price: string;
-  available: string;
+  available: string | null;
+  stock_policy: StockPolicy;
   saleable: boolean;
   published: boolean;
   category_id?: string;
@@ -58,6 +59,7 @@ export interface ShopLine {
   line_total: string;
 }
 export interface ShopQuote {
+  table_code?: string;
   quote_id: string;
   items: ShopLine[];
   estimated_total: string;
@@ -72,6 +74,8 @@ export type OrderStatus =
   | 'CANCELLED'
   | 'EXPIRED';
 export interface OnlineOrder {
+  readonly stock_policy: StockPolicy;
+  table_code?: string;
   id: string;
   number: string;
   status: OrderStatus;
@@ -96,6 +100,8 @@ export interface OnlineOrder {
   events: { status: OrderStatus; message: string; created_at: string }[];
 }
 export interface ShopOrderInput {
+  fulfillment?: 'PICKUP' | 'DELIVERY';
+  table_token?: string;
   items: { variant_id: string; quantity: string }[];
   quote_id: string;
   customer_name: string;
@@ -158,6 +164,14 @@ export async function storefrontRequest<Result>(
   options.storeMode?.(responseStoreMode(response.headers));
   return result.data;
 }
+export function readTableToken(search: string) {
+  const tokens = new URLSearchParams(search).getAll('table');
+  if (tokens.length === 0) return '';
+  return tokens.length === 1 && /^[a-f0-9]{64}$/.test(tokens[0])
+    ? tokens[0]
+    : null;
+}
+
 export function newTrackingToken() {
   return Array.from(crypto.getRandomValues(new Uint8Array(32)), (value) =>
     value.toString(16).padStart(2, '0'),

@@ -244,6 +244,7 @@ describe('SalesPage standardized design and behavior', () => {
   it('renders standardized SaleDetailsPage with receipt reprint controls and linked actions', async () => {
     const detailedSale: POSSale = {
       ...sampleSales[0],
+      stock_policy: 'TRACKED',
       store_name: 'yam',
       store_address: 'กรุงเทพฯ',
       currency: 'THB',
@@ -278,6 +279,17 @@ describe('SalesPage standardized design and behavior', () => {
       },
       movements: [],
       audit: [],
+      customer_id: 'customer-1',
+      adjustments: [
+        {
+          id: 'adjustment-1',
+          kind: 'EXCHANGE',
+          number: 'EX-001',
+          status: 'POSTED',
+          net_difference: '0.00',
+        },
+      ],
+      returns: [{ id: 'return-1', number: 'RET-001', status: 'POSTED' }],
     };
     mocks.request.mockResolvedValueOnce(detailedSale);
 
@@ -306,6 +318,17 @@ describe('SalesPage standardized design and behavior', () => {
     expect(
       screen.getByRole('link', { name: 'กลับประวัติขาย' }),
     ).toHaveAttribute('href', '/manage/sales');
+    expect(screen.getByText(/EX-001/)).toBeVisible();
+    expect(screen.getByText(/RET-001/)).toBeVisible();
+    for (const path of [
+      '/loyalty',
+      '/pos/exchanges',
+      '/sales/voids',
+      '/pos/returns',
+    ]) {
+      expect(
+        document.querySelector(`a[href^="/manage${path}"]`),
+      ).not.toBeInTheDocument();
+    }
   });
 });
-

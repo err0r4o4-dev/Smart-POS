@@ -1,2 +1,4 @@
 server
 *.exe
+.cache
+.env*

@@ -27,25 +27,60 @@ it('synchronizes header and catalog snapshots and preserves product image', () =
     first.result.current.add(product, '3.000');
   });
   expect(first.result.current.items[0].quantity).toBe('5.000');
-  expect(first.result.current.items[0].image_url).toBe('https://example.com/coke.png');
+  expect(first.result.current.items[0].image_url).toBe(
+    'https://example.com/coke.png',
+  );
   expect(second.result.current.items[0].quantity).toBe('5.000');
-  expect(second.result.current.items[0].image_url).toBe('https://example.com/coke.png');
+  expect(second.result.current.items[0].image_url).toBe(
+    'https://example.com/coke.png',
+  );
   act(() => second.result.current.update([]));
   expect(first.result.current.items).toEqual([]);
 });
 
 it('adds menu-only items without stock but respects quantity bounds and saleability', () => {
   const cart = renderHook(() => useShopCart('menu-policy'));
-  const menu = { ...product, stock_policy: 'MENU_ONLY' as const, available: null };
+  const menu = {
+    ...product,
+    stock_policy: 'MENU_ONLY' as const,
+    available: null,
+  };
   act(() => {
     expect(cart.result.current.add(menu, '2')).toBe(true);
     expect(cart.result.current.add(menu, '1000000')).toBe(false);
-    expect(cart.result.current.add({ ...menu, saleable: false }, '1')).toBe(false);
-    expect(cart.result.current.add({ ...menu, stock_policy: 'TRACKED', available: null }, '1')).toBe(false);
-    expect(cart.result.current.add({ ...menu, stock_policy: 'UNKNOWN' as never }, '1')).toBe(false);
-    expect(cart.result.current.add({ ...menu, stock_policy: undefined as never }, '1')).toBe(false);
-    expect(cart.result.current.add({ ...product, stock_policy: 'UNKNOWN' as never }, '1')).toBe(false);
-    expect(cart.result.current.add({ ...product, stock_policy: undefined as never }, '1')).toBe(false);
+    expect(cart.result.current.add({ ...menu, saleable: false }, '1')).toBe(
+      false,
+    );
+    expect(
+      cart.result.current.add(
+        { ...menu, stock_policy: 'TRACKED', available: null },
+        '1',
+      ),
+    ).toBe(false);
+    expect(
+      cart.result.current.add(
+        { ...menu, stock_policy: 'UNKNOWN' as never },
+        '1',
+      ),
+    ).toBe(false);
+    expect(
+      cart.result.current.add(
+        { ...menu, stock_policy: undefined as never },
+        '1',
+      ),
+    ).toBe(false);
+    expect(
+      cart.result.current.add(
+        { ...product, stock_policy: 'UNKNOWN' as never },
+        '1',
+      ),
+    ).toBe(false);
+    expect(
+      cart.result.current.add(
+        { ...product, stock_policy: undefined as never },
+        '1',
+      ),
+    ).toBe(false);
   });
   expect(cart.result.current.items[0].quantity).toBe('2.000');
 });
@@ -77,7 +112,9 @@ it('updates from matching storage events without sharing another store cart', ()
     );
   });
   expect(first.result.current.items[0].quantity).toBe('2.000');
-  expect(first.result.current.items[0].image_url).toBe('https://example.com/coke.png');
+  expect(first.result.current.items[0].image_url).toBe(
+    'https://example.com/coke.png',
+  );
   expect(second.result.current.items).toEqual([]);
 });
 

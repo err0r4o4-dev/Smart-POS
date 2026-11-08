@@ -17916,7 +17916,8 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/RestaurantSetupServicesInput' }
+            schema:
+              { $ref: '#/components/schemas/RestaurantSetupServicesInput' }
       responses:
         '200':
           description: Updated setup progress.
@@ -18006,7 +18007,8 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/RestaurantSetupPaymentsInput' }
+            schema:
+              { $ref: '#/components/schemas/RestaurantSetupPaymentsInput' }
       responses:
         '200':
           description: Updated setup progress.
@@ -18067,7 +18069,8 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/RestaurantSetupCompleteInput' }
+            schema:
+              { $ref: '#/components/schemas/RestaurantSetupCompleteInput' }
       responses:
         '200':
           description: Dashboard-ready setup state.
@@ -18466,7 +18469,11 @@ components:
       additionalProperties: false
       required: [key, status, complete, ready, reasons]
       properties:
-        key: { type: string, enum: [profile, services, tables, menu, payments, orders] }
+        key:
+          {
+            type: string,
+            enum: [profile, services, tables, menu, payments, orders],
+          }
         status: { type: string, enum: [PENDING, COMPLETE] }
         complete: { type: boolean }
         ready: { type: boolean }
@@ -18476,11 +18483,31 @@ components:
     RestaurantSetupState:
       type: object
       additionalProperties: false
-      required: [organization_id, branch_id, current_step, complete, ready, completed, readiness, steps, profile, services, tables, menu, payments, orders]
+      required:
+        [
+          organization_id,
+          branch_id,
+          current_step,
+          complete,
+          ready,
+          completed,
+          readiness,
+          steps,
+          profile,
+          services,
+          tables,
+          menu,
+          payments,
+          orders,
+        ]
       properties:
         organization_id: { type: string, format: uuid }
         branch_id: { type: string, format: uuid }
-        current_step: { type: string, enum: [profile, services, tables, menu, payments, orders, review] }
+        current_step:
+          {
+            type: string,
+            enum: [profile, services, tables, menu, payments, orders, review],
+          }
         complete: { type: boolean }
         ready: { type: boolean }
         completed: { type: boolean }
@@ -18502,7 +18529,11 @@ components:
           type: object
           properties:
             cardPayments: { type: boolean, const: false }
-        steps: { type: array, items: { $ref: '#/components/schemas/RestaurantSetupStep' } }
+        steps:
+          {
+            type: array,
+            items: { $ref: '#/components/schemas/RestaurantSetupStep' },
+          }
         profile: { type: object, additionalProperties: true }
         services: { $ref: '#/components/schemas/RestaurantServiceModes' }
         tables: { type: object, additionalProperties: true }
@@ -18520,7 +18551,12 @@ components:
       properties:
         table_id: { type: string, format: uuid }
         code: { type: string }
-        qr_token: { type: string, writeOnly: false, description: Secret table bearer token issued by this mutation. }
+        qr_token:
+          {
+            type: string,
+            writeOnly: false,
+            description: Secret table bearer token issued by this mutation.,
+          }
     RestaurantServiceModes:
       type: object
       additionalProperties: false
@@ -18604,8 +18640,18 @@ components:
       required: [branch_id, zones, tables, generate_qr]
       properties:
         branch_id: { type: string, format: uuid }
-        zones: { type: array, maxItems: 100, items: { $ref: '#/components/schemas/RestaurantSetupZoneInput' } }
-        tables: { type: array, maxItems: 500, items: { $ref: '#/components/schemas/RestaurantSetupTableInput' } }
+        zones:
+          {
+            type: array,
+            maxItems: 100,
+            items: { $ref: '#/components/schemas/RestaurantSetupZoneInput' },
+          }
+        tables:
+          {
+            type: array,
+            maxItems: 500,
+            items: { $ref: '#/components/schemas/RestaurantSetupTableInput' },
+          }
         generate_qr: { type: boolean }
     RestaurantSetupCategoryInput:
       type: object
@@ -18627,8 +18673,22 @@ components:
       required: [branch_id, categories, items]
       properties:
         branch_id: { type: string, format: uuid }
-        categories: { type: array, minItems: 1, maxItems: 100, items: { $ref: '#/components/schemas/RestaurantSetupCategoryInput' } }
-        items: { type: array, minItems: 1, maxItems: 500, items: { $ref: '#/components/schemas/RestaurantSetupMenuItemInput' } }
+        categories:
+          {
+            type: array,
+            minItems: 1,
+            maxItems: 100,
+            items:
+              { $ref: '#/components/schemas/RestaurantSetupCategoryInput' },
+          }
+        items:
+          {
+            type: array,
+            minItems: 1,
+            maxItems: 500,
+            items:
+              { $ref: '#/components/schemas/RestaurantSetupMenuItemInput' },
+          }
     RestaurantSetupPaymentsInput:
       type: object
       additionalProperties: false
@@ -18636,20 +18696,34 @@ components:
       properties:
         branch_id: { type: string, format: uuid }
         cash: { type: boolean, default: true }
-        promptpay: { type: boolean, const: false, description: Unavailable until a merchant identifier can be persisted. }
+        promptpay:
+          {
+            type: boolean,
+            const: false,
+            description: Unavailable until a merchant identifier can be persisted.,
+          }
         bank_transfer: { type: boolean }
         card: { type: boolean, const: false }
     RestaurantSetupOrdersInput:
       type: object
       additionalProperties: false
-      required: [branch_id, qr_ordering, kitchen_queue, auto_confirm, vat_rate, service_charge_rate]
+      required:
+        [
+          branch_id,
+          qr_ordering,
+          kitchen_queue,
+          auto_confirm,
+          vat_rate,
+          service_charge_rate,
+        ]
       properties:
         branch_id: { type: string, format: uuid }
         qr_ordering: { type: boolean, default: true }
         kitchen_queue: { type: boolean, default: true }
         auto_confirm: { type: boolean, default: false }
         vat_rate: { type: string, pattern: '^[0-9]{1,16}(\.[0-9]{1,2})?$' }
-        service_charge_rate: { type: string, pattern: '^[0-9]{1,16}(\.[0-9]{1,2})?$' }
+        service_charge_rate:
+          { type: string, pattern: '^[0-9]{1,16}(\.[0-9]{1,2})?$' }
     RestaurantSetupCompleteInput:
       type: object
       additionalProperties: false
@@ -23988,7 +24062,8 @@ components:
         - TRACKED
         - MENU_ONLY
       readOnly: true
-      description: Immutable server-selected stock policy. Legacy transactions remain
+      description:
+        Immutable server-selected stock policy. Legacy transactions remain
         TRACKED; new restaurant carts and orders use MENU_ONLY. Linked orders govern
         settlement. Historical stock snapshots are retained.
     POSMoney:

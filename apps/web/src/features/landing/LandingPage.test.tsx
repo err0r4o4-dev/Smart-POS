@@ -28,9 +28,10 @@ it('replaces the footer logo with guide links while keeping the header brand', (
   const navigation = within(
     footer.getByRole('navigation', { name: 'ลิงก์ท้ายหน้า' }),
   );
-  expect(
-    navigation.getByRole('link', { name: 'คู่มือ' }),
-  ).toHaveAttribute('href', '/help');
+  expect(navigation.getByRole('link', { name: 'คู่มือ' })).toHaveAttribute(
+    'href',
+    '/help',
+  );
   expect(
     navigation.getByRole('link', { name: 'วิธีเริ่มต้น' }),
   ).toHaveAttribute('href', '#how-it-works');
@@ -78,9 +79,7 @@ it('shows landing sections and real destinations without the management sidebar'
   expect(
     document.querySelector('.landing-access-grid'),
   ).not.toBeInTheDocument();
-  expect(
-    screen.getByText('ภาพประกอบ POS ไม่ใช่ข้อมูลขายจริง'),
-  ).toBeVisible();
+  expect(screen.getByText('ภาพประกอบ POS ไม่ใช่ข้อมูลขายจริง')).toBeVisible();
   expect(
     screen.queryByRole('navigation', { name: 'Main navigation' }),
   ).not.toBeInTheDocument();

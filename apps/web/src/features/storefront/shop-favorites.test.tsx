@@ -36,7 +36,9 @@ describe('useShopFavorites', () => {
     expect(storeA.current.isFavorite('var-1')).toBe(true);
     expect(storeB.current.isFavorite('var-1')).toBe(false);
 
-    const stored = JSON.parse(localStorage.getItem('shop-favorites:store-a') || '[]');
+    const stored = JSON.parse(
+      localStorage.getItem('shop-favorites:store-a') || '[]',
+    );
     expect(stored).toEqual(['var-1']);
   });
 });

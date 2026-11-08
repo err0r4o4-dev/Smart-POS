@@ -32,6 +32,7 @@
 ### Task 1: Full-Stack Compose Watch Configuration & Go Auto-Rebuild Supervisor
 
 **Files:**
+
 - Create: `apps/api/scripts/dev-watch.sh`
 - Modify: `apps/api/Dockerfile`
 - Modify: `docker-compose.dev.yml`
@@ -39,6 +40,7 @@
 - Test: `scripts/dev-stack.test.mjs`
 
 **Interfaces:**
+
 - Produces:
   - `apps/api/scripts/dev-watch.sh` supporting env overrides for hermetic testing:
     - `SMARTPOS_DEV_WATCH_SRC` (default `/src`)
@@ -55,6 +57,7 @@
 - [ ] **Step 1: Write failing static and behavioral tests in `scripts/dev-stack.test.mjs`**
 
 Update `scripts/dev-stack.test.mjs` to assert:
+
 - `Object.keys(development.services).sort()` equals `['api', 'caddy', 'web']`.
 - `development.services.api.build.target === 'development'`, `base.services.api.build.target === 'runtime'`, `development.services.api.init === true`, `development.services.api.volumes === undefined`.
 - `development.services.api.develop.watch` contains:
@@ -94,15 +97,18 @@ Expected: PASS (all dev-stack static + behavioral tests and log-format tests pas
 ### Task 2: Documentation Synchronization & Verification
 
 **Files:**
+
 - Modify: `README.md:177-218`
 
 **Interfaces:**
+
 - Consumes: `stack:dev`, `stack:dev:up`, `stack:dev:watch` scripts from Task 1.
 - Produces: Updated live-development setup section in `README.md`.
 
 - [ ] **Step 1: Update `README.md` live-watch section**
 
 Update the `Frontend auto-update through the gateway` section in `README.md` to `Live auto-update through the gateway (web + API)` (preserving surrounding structure and anchor compatibility if referenced), documenting:
+
 - `npm run stack:dev` (and detached `npm run stack:dev:up` + `npm run stack:dev:watch`) updates both `apps/web` (Vite HMR) and `apps/api` (Go incremental rebuild + graceful restart) at `http://localhost:8088`.
 - `--no-deps` targets `api`, `web`, and `caddy` only — `postgres`, `migrate`, and `ai` are not started or migrated implicitly.
 - Returning to built containers uses `docker compose up --build -d --wait --no-deps api web caddy`.
@@ -110,6 +116,7 @@ Update the `Frontend auto-update through the gateway` section in `README.md` to 
 - [ ] **Step 2: Run formatting, contract, and test verification**
 
 Run:
+
 - `npm exec -- prettier --check docker-compose.dev.yml package.json scripts/dev-stack.test.mjs README.md`
 - `npm run test:dev-stack`
 - `npm run contracts:check`

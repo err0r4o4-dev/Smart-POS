@@ -215,10 +215,7 @@ export function SettingsPage({
         description="รายละเอียดการตั้งค่าร้านอาหาร"
         actions={
           <div className="settings-heading-actions">
-            <Link
-              to="/settings/storefront"
-              className="settings-btn-secondary"
-            >
+            <Link to="/settings/storefront" className="settings-btn-secondary">
               <Store size={17} aria-hidden="true" />
               <span>ตั้งค่าหน้าร้านออนไลน์</span>
             </Link>
@@ -287,7 +284,8 @@ export function SettingsPage({
                   <div className="settings-form-row">
                     <div className="settings-field-group">
                       <label className="settings-label" htmlFor="store-name">
-                        ชื่อร้านอาหาร <span className="settings-required">*</span>
+                        ชื่อร้านอาหาร{' '}
+                        <span className="settings-required">*</span>
                       </label>
                       <input
                         id="store-name"
@@ -301,7 +299,8 @@ export function SettingsPage({
 
                     <div className="settings-field-group">
                       <label className="settings-label" htmlFor="business-type">
-                        ประเภทธุรกิจ <span className="settings-required">*</span>
+                        ประเภทธุรกิจ{' '}
+                        <span className="settings-required">*</span>
                       </label>
                       <div className="settings-select-wrapper">
                         <span
@@ -459,7 +458,8 @@ export function SettingsPage({
             <div className="settings-card-body">
               <div className="settings-field-group">
                 <label className="settings-label" htmlFor="service-format">
-                  รูปแบบการให้บริการ <span className="settings-required">*</span>
+                  รูปแบบการให้บริการ{' '}
+                  <span className="settings-required">*</span>
                 </label>
                 <div className="settings-select-wrapper">
                   <span className="settings-select-icon" aria-hidden="true">
@@ -539,7 +539,10 @@ export function SettingsPage({
               {/* Inline Editor for Closing time */}
               <div className="settings-hours-edit-panel">
                 <div className="settings-field-group">
-                  <label className="settings-label" htmlFor="closing-time-input">
+                  <label
+                    className="settings-label"
+                    htmlFor="closing-time-input"
+                  >
                     เวลาปิดรอบวัน
                   </label>
                   <input
@@ -586,9 +589,7 @@ export function SettingsPage({
                   role="checkbox"
                   aria-checked={payments.cash}
                   className="settings-checkbox-item"
-                  onClick={() =>
-                    setPayments((p) => ({ ...p, cash: !p.cash }))
-                  }
+                  onClick={() => setPayments((p) => ({ ...p, cash: !p.cash }))}
                 >
                   <span
                     className={`settings-check-icon ${payments.cash ? 'checked' : ''}`}
@@ -832,7 +833,10 @@ export function SettingsPage({
           </section>
 
           {/* 6. หน้าร้านออนไลน์ */}
-          <section className="settings-card" aria-labelledby="storefront-card-title">
+          <section
+            className="settings-card"
+            aria-labelledby="storefront-card-title"
+          >
             <header className="settings-card-header">
               <div className="settings-card-icon" aria-hidden="true">
                 <Store size={18} />
@@ -842,13 +846,22 @@ export function SettingsPage({
                   หน้าร้านออนไลน์
                 </h2>
                 <p className="settings-card-subtitle">
-                  ตั้งค่าหน้าร้านสำหรับรับออเดอร์ออนไลน์ (ซื้อกลับบ้าน / เดลิเวอรี)
+                  ตั้งค่าหน้าร้านสำหรับรับออเดอร์ออนไลน์ (ซื้อกลับบ้าน /
+                  เดลิเวอรี)
                 </p>
               </div>
             </header>
             <div className="settings-card-body">
-              <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
-                จัดการการเปิด-ปิดหน้าร้านออนไลน์ กำหนดชื่อและลิงก์ร้าน สีธีม ช่องทางรับออเดอร์ เวลาทำการ และดาวน์โหลด QR Code สำหรับลูกค้า
+              <p
+                style={{
+                  margin: '0 0 14px',
+                  fontSize: '13px',
+                  color: '#64748b',
+                  lineHeight: 1.5,
+                }}
+              >
+                จัดการการเปิด-ปิดหน้าร้านออนไลน์ กำหนดชื่อและลิงก์ร้าน สีธีม
+                ช่องทางรับออเดอร์ เวลาทำการ และดาวน์โหลด QR Code สำหรับลูกค้า
               </p>
               <Link
                 to="/settings/storefront"

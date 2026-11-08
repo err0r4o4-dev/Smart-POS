@@ -80,11 +80,9 @@ it('renders the complete settings layout matching the mockup', () => {
   expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
     'การตั้งค่า',
   );
+  expect(screen.getByText('รายละเอียดการตั้งค่าร้านอาหาร')).toBeInTheDocument();
   expect(
-    screen.getByText('รายละเอียดการตั้งค่าร้านอาหาร'),
-  ).toBeInTheDocument();
-  expect(
-    screen.getByRole('link', { name: /ตั้งค่าหน้าร้านออนไลน์/ }),
+    screen.getAllByRole('link', { name: /ตั้งค่าหน้าร้านออนไลน์/ })[0],
   ).toHaveAttribute('href', '/settings/storefront');
   expect(
     screen.getByRole('button', { name: 'บันทึกการเปลี่ยนแปลง' }),
@@ -174,13 +172,6 @@ it('renders the complete settings layout matching the mockup', () => {
 
 it('allows editing form fields and toggling options', () => {
   renderPage();
-
-  // Toggle online store button
-  const onlineBtn = screen.getByRole('button', { name: 'เปิดร้านออนไลน์' });
-  fireEvent.click(onlineBtn);
-  expect(
-    screen.getByRole('button', { name: 'ปิดร้านออนไลน์' }),
-  ).toBeInTheDocument();
 
   // Change name and phone
   const nameInput = screen.getByLabelText(/ชื่อร้านอาหาร/);

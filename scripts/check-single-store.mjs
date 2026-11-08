@@ -587,7 +587,8 @@ COMMIT;`,
     '-c',
     "CREATE TABLE single_store_acceptance_marker(marker text NOT NULL); INSERT INTO single_store_acceptance_marker VALUES ('ephemeral-single-store'); GRANT SELECT ON single_store_acceptance_marker TO smartpos_runtime;",
   ]);
-  const testPattern = process.env.SMARTPOS_SINGLE_STORE_TEST_PATTERN ??
+  const testPattern =
+    process.env.SMARTPOS_SINGLE_STORE_TEST_PATTERN ??
     '^(TestSingleStoreIsolatedDatabase|TestCustomerPaymentRateLimitScopesIsolatedDatabase)$';
   console.log(`SCOPE: Go integration test pattern ${testPattern}`);
   const testOutput = run(
@@ -612,7 +613,9 @@ COMMIT;`,
   );
   console.log(redact(testOutput));
   assertIntegrationTestsRan(testOutput);
-  console.log('PASS: selected integration acceptance cases completed without skips.');
+  console.log(
+    'PASS: selected integration acceptance cases completed without skips.',
+  );
 } catch (error) {
   console.error(redact(error.message));
   process.exitCode = 1;

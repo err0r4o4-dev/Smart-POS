@@ -20,8 +20,7 @@ export interface RestaurantSettings {
   revision: number;
   period: { start: string; end: string };
 }
-export type RestaurantView =
-  'settings' | 'tables' | 'queue';
+export type RestaurantView = 'settings' | 'tables' | 'queue';
 const titles: Record<RestaurantView, string> = {
   settings: 'ตั้งค่ารอบวันร้านอาหาร',
   tables: 'โต๊ะอาหาร',

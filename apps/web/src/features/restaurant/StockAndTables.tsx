@@ -1,10 +1,15 @@
+import { useLanguage } from '../../app/language';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button, Card } from '../../components/ui/primitives';
 import type { ShopSettings } from '../../lib/storefront-api';
 import { Field, Table } from '../inventory/InventoryUI';
 import { CommandState, QueryState } from './RestaurantUI';
-import { useRestaurantCommand, useRestaurantQuery, useRestaurantScope } from './restaurant-hooks';
+import {
+  useRestaurantCommand,
+  useRestaurantQuery,
+  useRestaurantScope,
+} from './restaurant-hooks';
 
 interface DiningTable {
   id: string;
@@ -17,6 +22,7 @@ interface DiningTable {
   qr_token?: string;
 }
 export function TablesScreen() {
+  const { t } = useLanguage();
   const scope = useRestaurantScope();
   const query = useRestaurantQuery<DiningTable[]>(
     `/restaurant/tables?branch_id=${scope.branch}`,
@@ -26,27 +32,35 @@ export function TablesScreen() {
   return (
     <>
       <Card className="catalog-panel">
-        <h2>ข้อมูลโต๊ะในสาขา</h2>
-        <p>
-          เพิ่มโต๊ะเพื่อรับลิงก์สำหรับสร้าง QR สั่งอาหาร
-          ลิงก์จะแสดงหลังสร้างโต๊ะเท่านั้น ระบบยังไม่ได้สร้างภาพ QR ให้
-          และต้องตรวจการชำระเงินก่อนเข้าคิวครัว
-        </p>
+        <h2>{t('restaurant.tableHeading')}</h2>
+        <p>{t('restaurant.tableDescription')}</p>
         <QueryState query={query} />
         {query.data && !query.error ? (
           query.data.length === 0 ? (
-            <p role="status">ยังไม่มีโต๊ะอาหาร</p>
+            <p role="status">{t('restaurant.noTables')}</p>
           ) : (
-            <Table headers={['โต๊ะ', 'ชื่อ', 'ที่นั่ง', 'สถานะ', 'จัดการ']}>
+            <Table
+              headers={[
+                t('restaurant.table'),
+                t('restaurant.name'),
+                t('restaurant.seats'),
+                t('restaurant.status'),
+                t('restaurant.actions'),
+              ]}
+            >
               {query.data.map((table) => (
                 <tr key={table.id}>
                   <th scope="row">{table.code}</th>
                   <td>{table.name}</td>
                   <td>{table.seats}</td>
-                  <td>{table.status === 'ACTIVE' ? 'ใช้งาน' : 'พักใช้'}</td>
+                  <td>
+                    {table.status === 'ACTIVE'
+                      ? t('restaurant.active')
+                      : t('restaurant.inactive')}
+                  </td>
                   <td>
                     <Button onClick={() => setEditing(table)}>
-                      แก้ไข {table.code}
+                      {t('restaurant.editCode', { code: table.code })}
                     </Button>
                   </td>
                 </tr>
@@ -70,6 +84,7 @@ function TableForm({
   table: DiningTable | null;
   done: () => void;
 }) {
+  const { t } = useLanguage();
   const scope = useRestaurantScope();
   const [code, setCode] = useState(table?.code ?? '');
   const [name, setName] = useState(table?.name ?? '');
@@ -88,7 +103,7 @@ function TableForm({
   );
   return (
     <Card className="catalog-panel">
-      <h2>{table ? 'แก้ไขโต๊ะ' : 'เพิ่มโต๊ะ'}</h2>
+      <h2>{table ? t('restaurant.editTable') : t('restaurant.addTable')}</h2>
       <form
         className="restaurant-form"
         onSubmit={(event) => {
@@ -104,7 +119,7 @@ function TableForm({
         }}
       >
         <fieldset disabled={command.locked}>
-          <Field label="รหัสโต๊ะ">
+          <Field label={t('restaurant.tableCode')}>
             <input
               required
               pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,39}"
@@ -113,7 +128,7 @@ function TableForm({
               onChange={(event) => setCode(event.target.value)}
             />
           </Field>
-          <Field label="ชื่อโต๊ะ">
+          <Field label={t('restaurant.tableName')}>
             <input
               required
               maxLength={100}
@@ -121,7 +136,7 @@ function TableForm({
               onChange={(event) => setName(event.target.value)}
             />
           </Field>
-          <Field label="จำนวนที่นั่ง">
+          <Field label={t('restaurant.seatCount')}>
             <input
               required
               type="number"
@@ -132,24 +147,24 @@ function TableForm({
               onChange={(event) => setSeats(Number(event.target.value))}
             />
           </Field>
-          <Field label="สถานะโต๊ะ">
+          <Field label={t('restaurant.tableStatus')}>
             <select
               value={status}
               onChange={(event) => setStatus(event.target.value)}
             >
-              <option value="ACTIVE">ใช้งาน</option>
-              <option value="INACTIVE">พักใช้</option>
+              <option value="ACTIVE">{t('restaurant.active')}</option>
+              <option value="INACTIVE">{t('restaurant.inactive')}</option>
             </select>
           </Field>
         </fieldset>
         <CommandState command={command} />
         <div className="catalog-actions">
           <Button type="submit" disabled={command.isPending}>
-            บันทึกโต๊ะ
+            {t('restaurant.saveTable')}
           </Button>
           {table ? (
             <Button disabled={command.locked} onClick={done}>
-              ยกเลิกการแก้ไข
+              {t('restaurant.cancelEdit')}
             </Button>
           ) : null}
         </div>
@@ -160,43 +175,33 @@ function TableForm({
 }
 
 function TableOrderLink({ table }: { table: DiningTable }) {
+  const { t } = useLanguage();
   const scope = useRestaurantScope();
   const permitted = scope.can('storefront.manage');
   const shop = useRestaurantQuery<ShopSettings | null>(
     '/storefront',
     'storefront.manage',
   );
-  if (!permitted)
-    return (
-      <p role="status">ต้องมีสิทธิ์จัดการหน้าร้านออนไลน์เพื่อแสดงลิงก์โต๊ะ</p>
-    );
+  if (!permitted) return <p role="status">{t('restaurant.linkPermission')}</p>;
   if (shop.isPending || shop.error) return <QueryState query={shop} />;
-  if (!shop.data)
-    return <p role="status">ตั้งค่าหน้าร้านออนไลน์ก่อนใช้ลิงก์โต๊ะ</p>;
+  if (!shop.data) return <p role="status">{t('restaurant.setupStorefront')}</p>;
   if (
     table.branch_id !== scope.branch ||
     shop.data?.branch_id !== table.branch_id
   ) {
-    return (
-      <p role="status">
-        หน้าร้านออนไลน์ไม่ได้ผูกกับสาขาของโต๊ะนี้ ไม่สามารถสร้างลิงก์ได้
-      </p>
-    );
+    return <p role="status">{t('restaurant.wrongBranch')}</p>;
   }
   if (!shop.data.published || !shop.data.slug)
-    return <p role="status">เผยแพร่หน้าร้านออนไลน์ก่อนใช้ลิงก์โต๊ะ</p>;
+    return <p role="status">{t('restaurant.publishStorefront')}</p>;
   if (table.status !== 'ACTIVE')
-    return <p role="status">โต๊ะนี้พักใช้ จึงยังใช้ลิงก์สั่งอาหารไม่ได้</p>;
+    return <p role="status">{t('restaurant.inactiveTable')}</p>;
   const path = `/shop/${encodeURIComponent(shop.data.slug)}?table=${table.qr_token}`;
   return (
-    <section aria-label={`ลิงก์โต๊ะ ${table.code}`}>
-      <h3>ลิงก์สำหรับสร้าง QR โต๊ะ {table.code}</h3>
-      <p>
-        เก็บลิงก์นี้ไว้ก่อนออกจากหน้า ใช้สำหรับโต๊ะนี้เท่านั้น ยังไม่มีภาพ QR
-        ให้ดาวน์โหลด
-      </p>
+    <section aria-label={t('restaurant.tableLinkLabel', { code: table.code })}>
+      <h3>{t('restaurant.tableLinkTitle', { code: table.code })}</h3>
+      <p>{t('restaurant.tableLinkDescription')}</p>
       <Link to={path} target="_blank" rel="noreferrer">
-        เปิดหน้าสั่งอาหาร โต๊ะ {table.code}
+        {t('restaurant.openTableLink', { code: table.code })}
       </Link>
     </section>
   );

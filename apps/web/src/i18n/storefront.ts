@@ -1,12 +1,23 @@
 import { defineMessages } from './defineMessages';
 export const storefront = defineMessages({
   th: {
+    paymentStates: {
+      REQUESTED: 'ส่งคำขอชำระเงินแล้ว',
+      OPEN: 'รอชำระเงิน',
+      PROCESSING: 'กำลังตรวจสอบการชำระเงิน',
+      EXPIRED: 'หน้าชำระเงินหมดอายุ',
+      PAID: 'ยืนยันการชำระเงินแล้ว',
+    },
+    paymentStatusLabel: 'สถานะชำระเงิน: {status}',
+    tableLabel: 'โต๊ะ {code}',
+    deliveryFeeLabel: 'ค่าจัดส่ง ฿{amount}',
+    invalidTableLink: 'ลิงก์โต๊ะไม่ถูกต้อง กรุณาสแกน QR ที่โต๊ะอีกครั้ง',
     receiveOnlineOrders: 'รับออเดอร์ออนไลน์',
     onlineStorefrontSettings: 'ตั้งค่าหน้าร้านออนไลน์',
     testStripeSandbox: 'ทดสอบ Stripe sandbox',
     manageOrders: 'จัดการออเดอร์',
     publishSelectedProductsForPickupAndPos:
-      'เผยแพร่เฉพาะสินค้าที่เลือก รับสินค้าที่ร้านและชำระผ่าน POS ออเดอร์ใหม่กันจำนวนสินค้าจนหมดอายุ แต่ยังต้องตรวจ lot และราคาสุดท้าย ไม่รับโอน/จัดส่งออนไลน์ ออเดอร์ที่ยังไม่เข้า POS หมดอายุใน 48 ชั่วโมง',
+      'เลือกสินค้าที่ต้องการเผยแพร่และตั้งค่าช่องทางรับออเดอร์ให้ตรงกับบริการของร้าน ออเดอร์ใหม่จะกันจำนวนสินค้าไว้จนหมดอายุ ตรวจสอบสต็อก ราคาสุดท้าย และสถานะชำระเงินก่อนดำเนินการ ช่องทางชำระเงินออนไลน์ขึ้นอยู่กับการตั้งค่าของร้าน',
     loadingSettings: 'กำลังโหลดการตั้งค่า…',
     publishedProducts: 'สินค้าที่เผยแพร่',
     previewStorefront: 'ดูตัวอย่างหน้าร้าน',
@@ -237,12 +248,24 @@ export const storefront = defineMessages({
     increaseQuantityForValue02: 'เพิ่มจำนวน {value0}',
   },
   en: {
+    paymentStates: {
+      REQUESTED: 'Payment requested',
+      OPEN: 'Awaiting payment',
+      PROCESSING: 'Processing payment',
+      EXPIRED: 'Payment session expired',
+      PAID: 'Payment verified',
+    },
+    paymentStatusLabel: 'Payment status: {status}',
+    tableLabel: 'Table {code}',
+    deliveryFeeLabel: 'Delivery fee ฿{amount}',
+    invalidTableLink:
+      'Invalid table link. Scan the QR code at your table again.',
     receiveOnlineOrders: 'Receive online orders',
     onlineStorefrontSettings: 'Online storefront settings',
     testStripeSandbox: 'Test Stripe sandbox',
     manageOrders: 'Manage orders',
     publishSelectedProductsForPickupAndPos:
-      'Publish selected products for pickup and POS payment. New orders reserve quantities until expiry; lots and final prices still need review. No online transfers or shipping. Orders not imported into POS expire after 48 hours.',
+      'Choose which products to publish and enable the order channels your store supports. New orders reserve quantities until they expire. Check stock, final prices and payment status before proceeding. Online payment availability depends on your store settings.',
     loadingSettings: 'Loading settings…',
     publishedProducts: 'Published products',
     previewStorefront: 'Preview storefront',

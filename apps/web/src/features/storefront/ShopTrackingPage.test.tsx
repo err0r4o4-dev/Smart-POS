@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, expect, it, vi } from 'vitest';
-import { render } from '../../test/render';
+import { render, renderInEnglish } from '../../test/render';
 import { ShopTrackingPage } from './ShopTrackingPage';
 
 const request = vi.hoisted(() => vi.fn());
@@ -32,8 +32,11 @@ const attempt = {
   currency: 'thb',
   stock_hold_released: false,
 };
-function view(path = `/shop/shop/orders/order#access=${token}`) {
-  return render(
+function view(
+  path = `/shop/shop/orders/order#access=${token}`,
+  english = false,
+) {
+  return (english ? renderInEnglish : render)(
     <QueryClientProvider
       client={
         new QueryClient({
@@ -64,6 +67,26 @@ beforeEach(() => {
       : { attempt, url: 'https://checkout.stripe.com/c/pay/cs_test_123' },
   );
 });
+
+it.each([
+  ['REQUESTED', 'Payment requested'],
+  ['OPEN', 'Awaiting payment'],
+  ['PROCESSING', 'Processing payment'],
+  ['EXPIRED', 'Payment session expired'],
+  ['PAID', 'Payment verified'],
+])(
+  'shows a readable English label for payment state %s',
+  async (state, label) => {
+    request.mockImplementation(async (path: string) =>
+      path.endsWith('/track') ? order : { ...attempt, state },
+    );
+    view(undefined, true);
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Check payment status' }),
+    );
+    expect(await screen.findByText(label, { exact: false })).toBeVisible();
+  },
+);
 
 it('restores the tracking token after checkout returns without its fragment', async () => {
   const first = view();

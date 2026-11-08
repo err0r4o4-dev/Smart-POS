@@ -1,3 +1,4 @@
+import { useLanguage } from '../../app/language';
 import { CookingPot } from 'lucide-react';
 import { Button, Card } from '../../components/ui/primitives';
 import { StandardPageHeader } from '../../components/ui/StandardPage';
@@ -20,13 +21,7 @@ export interface RestaurantSettings {
   revision: number;
   period: { start: string; end: string };
 }
-export type RestaurantView =
-  'settings' | 'tables' | 'queue';
-const titles: Record<RestaurantView, string> = {
-  settings: 'ตั้งค่ารอบวันร้านอาหาร',
-  tables: 'โต๊ะอาหาร',
-  queue: 'หน้าจอคิวอาหาร',
-};
+export type RestaurantView = 'settings' | 'tables' | 'queue';
 const permissions: Record<RestaurantView, string> = {
   settings: 'storefront.manage',
   tables: 'online_orders.manage',
@@ -34,7 +29,13 @@ const permissions: Record<RestaurantView, string> = {
 };
 
 export function RestaurantPage({ view }: { view: RestaurantView }) {
+  const { t } = useLanguage();
   const scope = useRestaurantScope();
+  const titles = {
+    settings: t('restaurant.settingsTitle'),
+    tables: t('restaurant.tablesTitle'),
+    queue: t('restaurant.queueTitle'),
+  };
   const key = JSON.stringify([
     scope.user,
     scope.org,
@@ -51,9 +52,9 @@ export function RestaurantPage({ view }: { view: RestaurantView }) {
         />
       )}
       {!scope.branch ? (
-        <p role="status">เลือกสาขาก่อนจัดการร้านอาหาร</p>
+        <p role="status">{t('restaurant.selectBranch')}</p>
       ) : !scope.can(permissions[view]) ? (
-        <p role="alert">คุณไม่มีสิทธิ์ใช้งานหน้านี้</p>
+        <p role="alert">{t('restaurant.noPermission')}</p>
       ) : (
         <RestaurantContent key={key} view={view} />
       )}
@@ -106,6 +107,7 @@ interface QueueItem {
   created_at: string;
 }
 function QueueScreen() {
+  const { t } = useLanguage();
   const scope = useRestaurantScope();
   const query = useRestaurantQuery<QueueItem[]>(
     `/restaurant/queue?branch_id=${scope.branch}`,
@@ -114,40 +116,45 @@ function QueueScreen() {
   );
   return (
     <Card className="catalog-panel">
-      <p>
-        ออเดอร์ที่ยืนยันชำระแล้วในรอบเวลาปิดร้าน อัปเดตทุก 15 วินาที
-        เลขลำดับอาจเปลี่ยนเมื่อออเดอร์ออกจากคิว หน้านี้ยังต้องเข้าสู่ระบบ
-      </p>
+      <p>{t('restaurant.queueDescription')}</p>
       <Button
         onClick={() => {
           void query.refetch();
         }}
         disabled={query.isFetching}
       >
-        อัปเดตคิว
+        {t('restaurant.refreshQueue')}
       </Button>
       <QueryState query={query} />
       {query.data && !query.error ? (
         query.data.length === 0 ? (
-          <p role="status">ยังไม่มีออเดอร์ที่ชำระแล้วรอทำอาหาร</p>
+          <p role="status">{t('restaurant.queueEmpty')}</p>
         ) : (
-          <Table headers={['คิว', 'ช่องทาง', 'สถานะ']}>
+          <Table
+            headers={[
+              t('restaurant.queue'),
+              t('restaurant.channel'),
+              t('restaurant.status'),
+            ]}
+          >
             {query.data.map((item) => (
               <tr key={item.order_id}>
                 <th scope="row">{item.queue_number}</th>
                 <td>
                   {item.channel === 'DINE_IN'
-                    ? `ทานที่ร้าน${item.table_code ? ` · โต๊ะ ${item.table_code}` : ''}`
+                    ? item.table_code
+                      ? t('restaurant.dineInTable', { code: item.table_code })
+                      : t('restaurant.dineIn')
                     : item.channel === 'DELIVERY'
-                      ? 'จัดส่ง'
-                      : 'รับที่ร้าน'}
+                      ? t('restaurant.delivery')
+                      : t('restaurant.pickup')}
                 </td>
                 <td>
                   {(
                     {
-                      PENDING: 'รอทำ',
-                      PREPARING: 'กำลังทำ',
-                      READY: 'พร้อมรับ',
+                      PENDING: t('restaurant.pending'),
+                      PREPARING: t('restaurant.preparing'),
+                      READY: t('restaurant.ready'),
                     } as Record<string, string>
                   )[item.status] ?? item.status}
                 </td>
@@ -156,9 +163,7 @@ function QueueScreen() {
           </Table>
         )
       ) : null}
-      <WorkspaceLink to="/orders">
-        จัดการออเดอร์และสถานะอาหาร
-      </WorkspaceLink>
+      <WorkspaceLink to="/orders">{t('restaurant.manageOrders')}</WorkspaceLink>
     </Card>
   );
 }

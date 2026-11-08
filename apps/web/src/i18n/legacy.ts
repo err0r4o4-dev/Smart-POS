@@ -1,6 +1,15 @@
 // Exact source labels retained by existing metadata and client error helpers.
 import type { TranslationKey } from './index';
 export const legacyLabels = {
+  'ระบุ SKU, ชื่อ Variant และหน่วยนับให้ถูกต้อง':
+    'shared.enterAValidSkuVariantNameAnd',
+  'บันทึกสำเร็จ — ข้อมูลและสต็อกแสดงตามผลจาก server':
+    'shared.savedDataAndStockReflectTheServer',
+  ข้อมูลสถานะชำระเงินไม่ถูกต้อง: 'shared.invalidPaymentStatus',
+  ข้อมูลชำระเงินไม่ถูกต้อง: 'shared.invalidPaymentData',
+  ลิงก์ชำระเงินไม่ถูกต้อง: 'shared.invalidPaymentLink',
+  โหลดข้อมูลไม่สำเร็จ: 'restaurant.loadFailed',
+  บันทึกไม่สำเร็จ: 'restaurant.saveFailed',
   'ไม่พร้อมขาย / archived': 'catalog.archived',
   'นำเข้าสินค้า CSV / XLSX': 'catalog.xlsx',
   'สินค้า / SKU': 'catalog.sku',

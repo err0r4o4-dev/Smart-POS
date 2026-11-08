@@ -13,6 +13,7 @@ import {
   X,
 } from 'lucide-react';
 import { useLanguage } from '../../app/language';
+import type { UiMessage } from '../../i18n';
 import {
   storefrontRequest,
   type ShopDirectoryEntry,
@@ -48,7 +49,12 @@ export function VeloRobotAvatar({ size = 42 }: { size?: number }) {
           </linearGradient>
         </defs>
         {/* Soft squircle background */}
-        <rect width="48" height="48" rx="14" fill={'url(#' + gradientId + ')'} />
+        <rect
+          width="48"
+          height="48"
+          rx="14"
+          fill={'url(#' + gradientId + ')'}
+        />
         {/* Antenna */}
         <line
           x1="24"
@@ -75,14 +81,7 @@ export function VeloRobotAvatar({ size = 42 }: { size?: number }) {
         <rect x="6.5" y="21" width="3" height="7" rx="1.5" fill="#ca8a04" />
         <rect x="38.5" y="21" width="3" height="7" rx="1.5" fill="#ca8a04" />
         {/* Screen / Face */}
-        <rect
-          x="13.5"
-          y="16.5"
-          width="21"
-          height="15"
-          rx="5"
-          fill="#ffffff"
-        />
+        <rect x="13.5" y="16.5" width="21" height="15" rx="5" fill="#ffffff" />
         {/* Eyes */}
         <rect
           x="17.5"
@@ -121,14 +120,16 @@ interface ChatStoreCard {
 interface ChatMessage {
   id: string;
   sender: 'bot' | 'user';
-  text: string;
+  text: UiMessage;
   time: string;
   stores?: ChatStoreCard[];
   trackingLink?: boolean;
 }
 
-export function VeloAssistantChat({ defaultOpen = false }: { defaultOpen?: boolean } = {}) {
-  const { language } = useLanguage();
+export function VeloAssistantChat({
+  defaultOpen = false,
+}: { defaultOpen?: boolean } = {}) {
+  const { t, messageText } = useLanguage();
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [input, setInput] = useState('');
   const launcherRef = useRef<HTMLButtonElement>(null);
@@ -148,7 +149,10 @@ export function VeloAssistantChat({ defaultOpen = false }: { defaultOpen?: boole
   });
 
   const openStores = useMemo(
-    () => (Array.isArray(shops.data) ? shops.data.filter((s) => s?.accepting_orders) : []),
+    () =>
+      Array.isArray(shops.data)
+        ? shops.data.filter((s) => s?.accepting_orders)
+        : [],
     [shops.data],
   );
 
@@ -161,36 +165,36 @@ export function VeloAssistantChat({ defaultOpen = false }: { defaultOpen?: boole
       };
     }
     return {
-      slug: "yam",
-      name: "yam",
+      slug: 'yam',
+      name: 'yam',
       accepting_orders: true,
     };
   }, [openStores]);
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
-      id: "init-1",
-      sender: "bot",
-      text: "Hi! I can help you find a restaurant or recommend dishes.",
-      time: "10:24 AM",
+      id: 'init-1',
+      sender: 'bot',
+      text: { key: 'assistant.greeting' },
+      time: '10:24 AM',
     },
     {
-      id: "init-2",
-      sender: "bot",
-      text: "You can ask things like: best noodles, open stores, or vegetarian options.",
-      time: "10:24 AM",
+      id: 'init-2',
+      sender: 'bot',
+      text: { key: 'assistant.examples' },
+      time: '10:24 AM',
     },
     {
-      id: "init-3",
-      sender: "user",
-      text: "Show me stores that are open now.",
-      time: "10:25 AM",
+      id: 'init-3',
+      sender: 'user',
+      text: { key: 'assistant.promptOpen' },
+      time: '10:25 AM',
     },
     {
-      id: "init-4",
-      sender: "bot",
-      text: "Here are stores that are open now:",
-      time: "10:25 AM",
+      id: 'init-4',
+      sender: 'bot',
+      text: { key: 'assistant.openResults' },
+      time: '10:25 AM',
     },
   ]);
 
@@ -203,14 +207,17 @@ export function VeloAssistantChat({ defaultOpen = false }: { defaultOpen?: boole
     return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const handleSendPrompt = (promptText: string) => {
+  const handleSendPrompt = (
+    promptText: string,
+    displayText: UiMessage = promptText,
+  ) => {
     if (!promptText.trim()) return;
 
     const time = getTimeString();
     const userMsg: ChatMessage = {
       id: 'user-' + Date.now(),
       sender: 'user',
-      text: promptText,
+      text: displayText,
       time,
     };
 
@@ -226,7 +233,7 @@ export function VeloAssistantChat({ defaultOpen = false }: { defaultOpen?: boole
       botResponse = {
         id: 'bot-' + (Date.now() + 1),
         sender: 'bot',
-        text: 'Here are stores that are open now:',
+        text: { key: 'assistant.openResults' },
         time,
         stores: active.slice(0, 3).map((s) => ({
           slug: s.slug,
@@ -244,10 +251,7 @@ export function VeloAssistantChat({ defaultOpen = false }: { defaultOpen?: boole
       botResponse = {
         id: 'bot-' + (Date.now() + 1),
         sender: 'bot',
-        text:
-          language === 'th'
-            ? 'เมนูยอดนิยมวันนี้ประกอบด้วย ก๋วยเตี๋ยวต้มยำโบราณ, ข้าวราดกะเพราเนื้อ, และชาเขียวมัทฉะลาเต้! คุณสามารถเลือกดูร้านค้าเพื่อเริ่มสั่งได้ทันที'
-            : 'Popular recommendations today include signature noodles, basil bowls, and handcrafted matcha lattes! Choose an open store to explore its full menu.',
+        text: { key: 'assistant.recommendations' },
         time,
         stores: openStores.length > 0 ? [primaryStore] : undefined,
       };
@@ -260,25 +264,21 @@ export function VeloAssistantChat({ defaultOpen = false }: { defaultOpen?: boole
       botResponse = {
         id: 'bot-' + (Date.now() + 1),
         sender: 'bot',
-        text:
-          language === 'th'
-            ? 'คุณสามารถติดตามสถานะคำสั่งซื้อแบบเรียลไทม์ได้ที่นี่:'
-            : 'You can check your order status anytime using our live tracking page:',
+        text: { key: 'assistant.trackingReply' },
         time,
         trackingLink: true,
       };
     } else {
       const match = Array.isArray(shops.data)
-        ? shops.data.find((s) => s?.name && s.name.toLowerCase().includes(lower))
+        ? shops.data.find(
+            (s) => s?.name && s.name.toLowerCase().includes(lower),
+          )
         : undefined;
       if (match) {
         botResponse = {
           id: 'bot-' + (Date.now() + 1),
           sender: 'bot',
-          text:
-            language === 'th'
-              ? 'พบร้านค้าที่คุณกำลังค้นหา: ' + match.name
-              : 'I found this store matching your search: ' + match.name,
+          text: { key: 'assistant.foundStore', params: { name: match.name } },
           time,
           stores: [
             {
@@ -292,10 +292,7 @@ export function VeloAssistantChat({ defaultOpen = false }: { defaultOpen?: boole
         botResponse = {
           id: 'bot-' + (Date.now() + 1),
           sender: 'bot',
-          text:
-            language === 'th'
-              ? 'ยินดีให้ความช่วยเหลือครับ! คุณสามารถสอบถามเกี่ยวกับร้านค้าที่เปิดอยู่ เมนูแนะนำ หรือติดตามคำสั่งซื้อได้เลยครับ'
-              : "I'm here to help! You can ask about stores that are open now, popular dishes, or how to track your order.",
+          text: { key: 'assistant.fallback' },
           time,
         };
       }
@@ -320,11 +317,7 @@ export function VeloAssistantChat({ defaultOpen = false }: { defaultOpen?: boole
         ref={launcherRef}
         type="button"
         className="velo-chat-launcher"
-        aria-label={
-          language === 'th'
-            ? 'เปิดผู้ช่วย VELO Assistant'
-            : 'Open VELO Assistant chat'
-        }
+        aria-label={t('assistant.open')}
         aria-expanded={isOpen}
         onClick={() => setIsOpen((prev) => !prev)}
       >
@@ -383,22 +376,18 @@ export function VeloAssistantChat({ defaultOpen = false }: { defaultOpen?: boole
               <VeloRobotAvatar size={42} />
               <div className="velo-chat-header-titles">
                 <h2 className="velo-chat-title">VELO Assistant</h2>
-                <p className="velo-chat-subtitle">
-                  Ask about stores, menus, or orders
-                </p>
+                <p className="velo-chat-subtitle">{t('assistant.subtitle')}</p>
               </div>
             </div>
             <div className="velo-chat-header-actions">
               <span className="velo-chat-status">
                 <span className="velo-chat-status-dot" aria-hidden="true" />
-                Online
+                {t('assistant.online')}
               </span>
               <button
                 type="button"
                 className="velo-chat-icon-btn"
-                aria-label={
-                  language === 'th' ? 'ย่อหน้าต่างแชท' : 'Minimize chat'
-                }
+                aria-label={t('assistant.minimize')}
                 onClick={() => setIsOpen(false)}
               >
                 <Minus size={18} aria-hidden="true" />
@@ -406,7 +395,7 @@ export function VeloAssistantChat({ defaultOpen = false }: { defaultOpen?: boole
               <button
                 type="button"
                 className="velo-chat-icon-btn"
-                aria-label={language === 'th' ? 'ปิดแชท' : 'Close chat'}
+                aria-label={t('assistant.close')}
                 onClick={() => setIsOpen(false)}
               >
                 <X size={18} aria-hidden="true" />
@@ -416,102 +405,103 @@ export function VeloAssistantChat({ defaultOpen = false }: { defaultOpen?: boole
 
           {/* Messages Area */}
           <div className="velo-chat-body" tabIndex={0}>
-            <div className="velo-chat-date-pill">Today</div>
+            <div className="velo-chat-date-pill">{t('assistant.today')}</div>
 
             {messages.map((msg) => {
-              const storesToRender = msg.id === "init-4" ? [primaryStore] : msg.stores;
+              const storesToRender =
+                msg.id === 'init-4' ? [primaryStore] : msg.stores;
               return (
-              <div
-                key={msg.id}
-                className={'velo-chat-msg-row velo-chat-msg-' + msg.sender}
-              >
-                {msg.sender === 'bot' && <VeloRobotAvatar size={28} />}
-                <div className="velo-chat-msg-content">
-                  <div className="velo-chat-bubble">
-                    <p>{msg.text}</p>
-                    {storesToRender && storesToRender.length > 0 && (
-                      <div className="velo-chat-stores-list">
-                        {storesToRender.map((store) => (
-                          <Link
-                            key={store.slug}
-                            to={'/shop/' + encodeURIComponent(store.slug)}
-                            className="velo-chat-store-card"
-                          >
-                            <div className="velo-chat-store-icon">
-                              <Store
-                                size={22}
-                                strokeWidth={2}
-                                aria-hidden="true"
-                              />
-                            </div>
-                            <div className="velo-chat-store-info">
-                              <span className="velo-chat-store-name">
-                                {store.name}
-                              </span>
-                              <span className="velo-chat-store-status">
-                                <span
-                                  className="velo-chat-store-dot"
+                <div
+                  key={msg.id}
+                  className={'velo-chat-msg-row velo-chat-msg-' + msg.sender}
+                >
+                  {msg.sender === 'bot' && <VeloRobotAvatar size={28} />}
+                  <div className="velo-chat-msg-content">
+                    <div className="velo-chat-bubble">
+                      <p>
+                        {typeof msg.text === 'string'
+                          ? msg.text
+                          : messageText(msg.text)}
+                      </p>
+                      {storesToRender && storesToRender.length > 0 && (
+                        <div className="velo-chat-stores-list">
+                          {storesToRender.map((store) => (
+                            <Link
+                              key={store.slug}
+                              to={'/shop/' + encodeURIComponent(store.slug)}
+                              className="velo-chat-store-card"
+                            >
+                              <div className="velo-chat-store-icon">
+                                <Store
+                                  size={22}
+                                  strokeWidth={2}
                                   aria-hidden="true"
                                 />
-                                {store.accepting_orders
-                                  ? 'Accepting orders'
-                                  : 'Not accepting orders'}
-                              </span>
-                            </div>
-                            <ChevronRight
-                              size={18}
-                              className="velo-chat-store-arrow"
+                              </div>
+                              <div className="velo-chat-store-info">
+                                <span className="velo-chat-store-name">
+                                  {store.name}
+                                </span>
+                                <span className="velo-chat-store-status">
+                                  <span
+                                    className="velo-chat-store-dot"
+                                    aria-hidden="true"
+                                  />
+                                  {store.accepting_orders
+                                    ? t('assistant.accepting')
+                                    : t('assistant.notAccepting')}
+                                </span>
+                              </div>
+                              <ChevronRight
+                                size={18}
+                                className="velo-chat-store-arrow"
+                                aria-hidden="true"
+                              />
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                      {msg.trackingLink && (
+                        <Link
+                          to="/shop/tracking"
+                          className="velo-chat-store-card velo-chat-tracking-card"
+                        >
+                          <div className="velo-chat-store-icon velo-chat-track-icon">
+                            <Package
+                              size={22}
+                              strokeWidth={2}
                               aria-hidden="true"
                             />
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                    {msg.trackingLink && (
-                      <Link
-                        to="/shop/tracking"
-                        className="velo-chat-store-card velo-chat-tracking-card"
-                      >
-                        <div className="velo-chat-store-icon velo-chat-track-icon">
-                          <Package
-                            size={22}
-                            strokeWidth={2}
+                          </div>
+                          <div className="velo-chat-store-info">
+                            <span className="velo-chat-store-name">
+                              {t('assistant.trackingPage')}
+                            </span>
+                            <span className="velo-chat-store-status">
+                              {t('assistant.trackingHint')}
+                            </span>
+                          </div>
+                          <ChevronRight
+                            size={18}
+                            className="velo-chat-store-arrow"
                             aria-hidden="true"
                           />
-                        </div>
-                        <div className="velo-chat-store-info">
-                          <span className="velo-chat-store-name">
-                            {language === 'th'
-                              ? 'หน้าติดตามคำสั่งซื้อ'
-                              : 'Track Order Page'}
-                          </span>
-                          <span className="velo-chat-store-status">
-                            {language === 'th'
-                              ? 'ใส่รหัสคำสั่งซื้อเพื่อดูสถานะ'
-                              : 'Enter token to see live status'}
-                          </span>
-                        </div>
-                        <ChevronRight
-                          size={18}
-                          className="velo-chat-store-arrow"
-                          aria-hidden="true"
-                        />
-                      </Link>
-                    )}
-                  </div>
-                  <div className="velo-chat-timestamp">
-                    <span>{msg.time}</span>
-                    {msg.sender === 'user' && (
-                      <span
-                        className="velo-chat-checks"
-                        aria-label="ส่งแล้วและอ่านแล้ว"
-                      >
-                        ✓✓
-                      </span>
-                    )}
+                        </Link>
+                      )}
+                    </div>
+                    <div className="velo-chat-timestamp">
+                      <span>{msg.time}</span>
+                      {msg.sender === 'user' && (
+                        <span
+                          className="velo-chat-checks"
+                          aria-label={t('assistant.sentRead')}
+                        >
+                          ✓✓
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
               );
             })}
             <div ref={messagesEndRef} />
@@ -521,37 +511,43 @@ export function VeloAssistantChat({ defaultOpen = false }: { defaultOpen?: boole
           <div
             className="velo-chat-suggestions"
             role="group"
-            aria-label="คำถามแนะนำ"
+            aria-label={t('assistant.suggestions')}
           >
             <button
               type="button"
               className="velo-chat-chip"
               onClick={() =>
-                handleSendPrompt('Show me stores that are open now.')
+                handleSendPrompt('Show me stores that are open now.', {
+                  key: 'assistant.promptOpen',
+                })
               }
             >
               <Clock size={15} aria-hidden="true" />
-              <span>Open now</span>
+              <span>{t('assistant.openNow')}</span>
             </button>
             <button
               type="button"
               className="velo-chat-chip"
               onClick={() =>
-                handleSendPrompt('Show me popular dishes.')
+                handleSendPrompt('Show me popular dishes.', {
+                  key: 'assistant.promptPopular',
+                })
               }
             >
               <Flame size={15} aria-hidden="true" />
-              <span>Popular dishes</span>
+              <span>{t('assistant.popularDishes')}</span>
             </button>
             <button
               type="button"
               className="velo-chat-chip"
               onClick={() =>
-                handleSendPrompt('How can I track my order?')
+                handleSendPrompt('How can I track my order?', {
+                  key: 'assistant.promptTrack',
+                })
               }
             >
               <Package size={15} aria-hidden="true" />
-              <span>Track order</span>
+              <span>{t('assistant.trackOrder')}</span>
             </button>
           </div>
 
@@ -561,8 +557,8 @@ export function VeloAssistantChat({ defaultOpen = false }: { defaultOpen?: boole
               <button
                 type="button"
                 className="velo-chat-attach-btn"
-                aria-label={language === 'th' ? 'แนบไฟล์' : 'Attach file'}
-                title={language === 'th' ? 'แนบไฟล์' : 'Attach file'}
+                aria-label={t('assistant.attach')}
+                title={t('assistant.attach')}
                 onClick={() => {}}
               >
                 <Paperclip size={18} aria-hidden="true" />
@@ -572,14 +568,14 @@ export function VeloAssistantChat({ defaultOpen = false }: { defaultOpen?: boole
                 className="velo-chat-input"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Type your message..."
-                aria-label="Type your message"
+                placeholder={t('assistant.placeholder')}
+                aria-label={t('assistant.inputLabel')}
               />
               <button
                 type="submit"
                 className="velo-chat-send-btn"
                 disabled={!input.trim()}
-                aria-label={language === 'th' ? 'ส่งข้อความ' : 'Send message'}
+                aria-label={t('assistant.send')}
               >
                 <SendHorizonal size={16} aria-hidden="true" />
               </button>

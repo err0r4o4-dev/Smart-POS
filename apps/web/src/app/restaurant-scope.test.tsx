@@ -5,6 +5,7 @@ import {
   RouterProvider,
 } from 'react-router-dom';
 import { screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { expect, it, vi } from 'vitest';
 import { render } from '../test/render';
 import { navigation } from './routes';
@@ -187,14 +188,32 @@ it('maps customer storefront cart and canonical order tracking routes', () => {
 });
 
 it('redirects legacy customer Stripe return URL /shop/:slug/track/:orderId to /shop/:slug/orders/:orderId with query and hash intact', async () => {
-  const memoryRouter = createMemoryRouter(router.routes, {
-    initialEntries: ['/shop/restaurant-a/track/order-a?payment_return=1#access=abc'],
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
   });
-  render(<RouterProvider router={memoryRouter} />);
-  expect(memoryRouter.state.location.pathname).toBe(
-    '/shop/restaurant-a/orders/order-a',
-  );
-  expect(memoryRouter.state.location.search).toBe('?payment_return=1');
-  expect(memoryRouter.state.location.hash).toBe('#access=abc');
-  memoryRouter.dispose();
+  const memoryRouter = createMemoryRouter(router.routes, {
+    initialEntries: [
+      '/shop/restaurant-a/track/order-a?payment_return=1#access=abc',
+    ],
+  });
+  const fetchSpy = vi
+    .spyOn(globalThis, 'fetch')
+    .mockRejectedValue(new Error('Unexpected API request in redirect test'));
+  try {
+    render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={memoryRouter} />
+      </QueryClientProvider>,
+    );
+    expect(memoryRouter.state.location.pathname).toBe(
+      '/shop/restaurant-a/orders/order-a',
+    );
+    expect(memoryRouter.state.location.search).toBe('?payment_return=1');
+    expect(memoryRouter.state.location.hash).toBe('#access=abc');
+    expect(fetchSpy).not.toHaveBeenCalled();
+  } finally {
+    memoryRouter.dispose();
+    queryClient.clear();
+    fetchSpy.mockRestore();
+  }
 });

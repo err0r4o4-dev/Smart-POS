@@ -345,18 +345,12 @@ export function ProductDetailsPage() {
   return (
     <div className="catalog-page">
       <CatalogHeader title={t('catalog.productDetails')}>
-        <Link
-          className="button button-secondary sales-export-btn"
-          to="/menu"
-        >
+        <Link className="button button-secondary sales-export-btn" to="/menu">
           <ArrowLeft size={16} aria-hidden="true" />
           <span>{t('catalog.backToProducts')}</span>
         </Link>
         {catalog.tenant.can('catalog.update') && (
-          <Link
-            className="button sales-new-sale-btn"
-            to={`/menu/${id}/edit`}
-          >
+          <Link className="button sales-new-sale-btn" to={`/menu/${id}/edit`}>
             <span>{t('catalog.editProduct')}</span>
           </Link>
         )}
@@ -544,8 +538,7 @@ function ProductEditor({
                         )
                       }
                     >
-                      {t('catalog.removeVariant')} {index + 1}{' '}
-                      {t('catalog.remove2')}
+                      {t('catalog.removeVariant', { number: index + 1 })}
                     </Button>
                   )}
                 </fieldset>

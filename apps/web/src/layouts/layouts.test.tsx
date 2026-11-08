@@ -28,9 +28,13 @@ it('shows operational help without links to removed previews', () => {
     </MemoryRouter>,
   );
   expect(
-    screen.getByRole('heading', { name: 'Know the boundary' }),
+    screen.getByRole('heading', {
+      name: 'Handle orders and send them to the kitchen',
+    }),
   ).toBeVisible();
-  expect(screen.getByText(/POS access and an open shift are required/)).toBeVisible();
+  expect(
+    screen.getByText(/you need POS access and an open shift/),
+  ).toBeVisible();
   expect(document.querySelectorAll('a[href^="/preview/"]')).toHaveLength(0);
   expect(screen.queryByText(/preview/i)).not.toBeInTheDocument();
 });

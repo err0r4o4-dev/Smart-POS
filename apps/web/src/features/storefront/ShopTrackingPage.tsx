@@ -279,10 +279,12 @@ function TrackingContents({
                     {payment && (
                       <p role="status">
                         {payment.state === 'PAID'
-                          ? language === 'th'
-                            ? 'ยืนยันการชำระเงินแล้ว'
-                            : 'Payment verified'
-                          : `${language === 'th' ? 'สถานะชำระเงิน' : 'Payment status'}: ${payment.state}`}
+                          ? t('storefront.paymentStates.PAID')
+                          : t('storefront.paymentStatusLabel', {
+                              status: t(
+                                `storefront.paymentStates.${payment.state}`,
+                              ),
+                            })}
                         {payment.stock_hold_released &&
                           (language === 'th'
                             ? ' · การกันสินค้าถูกปล่อยแล้ว กรุณาติดต่อร้าน'

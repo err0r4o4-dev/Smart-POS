@@ -62,9 +62,7 @@ it('keeps restaurant menu navigation without retired retail tools', () => {
     '/products/labels',
     '/inventory/balances',
   ]) {
-    expect(
-      document.querySelector(`a[href="${path}"]`),
-    ).not.toBeInTheDocument();
+    expect(document.querySelector(`a[href="${path}"]`)).not.toBeInTheDocument();
   }
   expect(
     document.querySelector('a[href="/restaurant/recipes"]'),
@@ -135,25 +133,29 @@ it('allows exact maximum prices, normalized SKU and bounded attributes', () => {
 it('blocks zero selling price and incomplete attributes before a variant request', async () => {
   mount(<VariantEditor productID="product-a" units={[unit]} />);
   fireEvent.change(screen.getByLabelText('SKU'), { target: { value: 'CAN' } });
-  fireEvent.change(screen.getByLabelText('หน่วยนับ Variant'), {
+  fireEvent.change(screen.getByLabelText('หน่วยนับของตัวเลือกสินค้า'), {
     target: { value: unit.id },
   });
   fireEvent.change(screen.getByLabelText('ราคาขาย'), {
     target: { value: '0.00' },
   });
   fireEvent.submit(
-    screen.getByRole('button', { name: 'บันทึก Variant' }).closest('form')!,
+    screen
+      .getByRole('button', { name: 'บันทึกตัวเลือกสินค้า' })
+      .closest('form')!,
   );
   expect(screen.getByRole('alert')).toHaveTextContent('ราคาขายต้องมากกว่า 0');
   expect(mocks.request).not.toHaveBeenCalled();
   fireEvent.change(screen.getByLabelText('ราคาขาย'), {
     target: { value: '18.00' },
   });
-  fireEvent.change(screen.getByLabelText('คุณลักษณะ Variant'), {
+  fireEvent.change(screen.getByLabelText('คุณลักษณะของตัวเลือกสินค้า'), {
     target: { value: 'size=' },
   });
   fireEvent.submit(
-    screen.getByRole('button', { name: 'บันทึก Variant' }).closest('form')!,
+    screen
+      .getByRole('button', { name: 'บันทึกตัวเลือกสินค้า' })
+      .closest('form')!,
   );
   expect(screen.getByRole('alert')).toHaveTextContent('key=value');
   expect(mocks.request).not.toHaveBeenCalled();
@@ -197,7 +199,7 @@ it('renders organized sections for product selection and print settings in Label
   ).toBeVisible();
   expect(screen.getByLabelText('ค้นหาสินค้าสำหรับฉลาก')).toBeVisible();
   expect(screen.getByLabelText('สินค้าสำหรับฉลาก')).toBeVisible();
-  expect(screen.getByLabelText('Variant สำหรับฉลาก')).toBeVisible();
+  expect(screen.getByLabelText('ตัวเลือกสินค้าสำหรับฉลาก')).toBeVisible();
   expect(screen.getByLabelText('บาร์โค้ดสำหรับฉลาก')).toBeVisible();
   expect(screen.getByLabelText('ความกว้าง (mm)')).toBeVisible();
   expect(screen.getByLabelText('ความสูง (mm)')).toBeVisible();
@@ -227,17 +229,19 @@ it('creates a saleable variant with string prices and refreshes only after succe
   mocks.request.mockResolvedValue({});
   mount(<VariantEditor productID="product-a" units={[unit]} />);
   fireEvent.change(screen.getByLabelText('SKU'), { target: { value: 'CAN' } });
-  fireEvent.change(screen.getByLabelText('หน่วยนับ Variant'), {
+  fireEvent.change(screen.getByLabelText('หน่วยนับของตัวเลือกสินค้า'), {
     target: { value: unit.id },
   });
   fireEvent.change(screen.getByLabelText('ราคาขาย'), {
     target: { value: '18.00' },
   });
   fireEvent.submit(
-    screen.getByRole('button', { name: 'บันทึก Variant' }).closest('form')!,
+    screen
+      .getByRole('button', { name: 'บันทึกตัวเลือกสินค้า' })
+      .closest('form')!,
   );
   expect(await screen.findByRole('status')).toHaveTextContent(
-    'บันทึก Variant แล้ว',
+    'บันทึกตัวเลือกสินค้าแล้ว',
   );
   expect(mocks.request).toHaveBeenCalledWith(
     '/products/product-a/variants',

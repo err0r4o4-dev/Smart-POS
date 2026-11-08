@@ -135,10 +135,10 @@ it('keeps the search available while loading and shows an honest empty state', a
 });
 
 it('recovers from directory failures without losing the search', async () => {
-  fetchMock.mockRejectedValueOnce(new Error('Directory unavailable'));
+  fetchMock.mockRejectedValueOnce(new Error('โหลดข้อมูลไม่สำเร็จ'));
   view();
   expect(await screen.findByRole('alert')).toHaveTextContent(
-    'Directory unavailable',
+    'โหลดข้อมูลไม่สำเร็จ',
   );
   fireEvent.change(screen.getByRole('searchbox', { name: 'ค้นหาร้าน' }), {
     target: { value: 'yam' },
@@ -213,10 +213,12 @@ it('preserves unknown and missing types without inventing a restaurant classific
   expect(screen.getByRole('heading', { name: 'ร้านพัก' })).toBeVisible();
   expect(screen.getByRole('heading', { name: 'Cafe two' })).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'English' }));
-  expect(
-    screen.getByRole('button', { name: 'Cafe' }),
-  ).toHaveAttribute('aria-pressed', 'true');
-  expect(
-    screen.getByRole('button', { name: 'Shop type' }),
-  ).toHaveAttribute('aria-expanded', 'true');
+  expect(screen.getByRole('button', { name: 'Cafe' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  expect(screen.getByRole('button', { name: 'Shop type' })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
 });

@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, expect, it, vi } from 'vitest';
-import { render } from '../../test/render';
+import { render, renderInEnglish } from '../../test/render';
 import { ShopCartPage } from './ShopCartPage';
 
 const request = vi.hoisted(() => vi.fn());
@@ -20,8 +20,8 @@ const product = {
   unit_price: '10.00',
   quantity: '1.000',
 };
-function view(search = '') {
-  return render(
+function view(search = '', english = false) {
+  return (english ? renderInEnglish : render)(
     <QueryClientProvider
       client={
         new QueryClient({
@@ -57,6 +57,13 @@ beforeEach(() => {
       : { accepting_orders: true, delivery_enabled: true },
   );
 });
+it('shows the invalid table-link warning in English', async () => {
+  view('?table=invalid', true);
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'Invalid table link. Scan the QR code at your table again.',
+  );
+});
+
 it('allows QR dine-in review and preserves the token in the quote and order', async () => {
   const token = 'a'.repeat(64);
   view(`?table=${token}`);
@@ -179,7 +186,9 @@ it('shows delivery fee copy without the pickup-only disclaimer', async () => {
     screen.queryByText(/ไม่มีค่าจัดส่ง เพราะรับที่ร้านเท่านั้น/),
   ).not.toBeInTheDocument();
   expect(
-    screen.getByText('ยอดรวมรวมค่าจัดส่งแล้ว ยังไม่รวมส่วนลด/รางวัลที่อาจใช้ได้ที่ POS'),
+    screen.getByText(
+      'ยอดรวมรวมค่าจัดส่งแล้ว ยังไม่รวมส่วนลด/รางวัลที่อาจใช้ได้ที่ POS',
+    ),
   ).toBeVisible();
 });
 

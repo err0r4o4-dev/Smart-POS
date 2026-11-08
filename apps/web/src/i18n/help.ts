@@ -1,44 +1,46 @@
 import { defineMessages } from './defineMessages';
+
 export const help = defineMessages({
   th: {
-    buildOnSolidGround: 'เริ่มต้นบนรากฐานที่มั่นคง',
-    aPracticalStartingPointForTheFive: 'จุดเริ่มต้นสำหรับทีมนักพัฒนา 5 คน',
-    startLocally: 'เริ่มใช้งานในเครื่อง',
-    fromTheRepositoryRootWithNode24:
-      'เริ่มจาก root ด้วย Node 24 และ Docker Desktop:',
-    openLocalhost8088ForTheCompleteSame:
-      'เปิด localhost:8088 เพื่อใช้ระบบครบชุด ข้อมูลยังอยู่หลังรีสตาร์ต',
-    knowTheBoundary: 'เข้าใจขอบเขตการทำงาน',
-    signInAndSelectYourOrganizationTo:
-      'เข้าสู่ระบบ เลือกองค์กร แล้วจัดการสินค้าและใช้ POS ต้องมีสิทธิ์ POS และเปิดกะ',
-    followTheRoadmap: 'ดูแผนพัฒนา',
-    identityCatalogInventoryPosSalesPurchasingShelves:
-      'บัญชี → สินค้า → สต็อก → POS → จัดซื้อ → งานธุรกิจ → AI',
-    detailedContractsModuleOwnershipAndAcceptanceGates:
-      'สัญญา API เจ้าของโมดูล และเกณฑ์ตรวจรับอยู่ใน docs',
-    developerWorkspace: 'พื้นที่นักพัฒนา',
-    healthStatusIsRealModulePageCounts:
-      'สถานะระบบเป็นข้อมูลจริง จำนวนโมดูลและหน้าเป็นขอบเขตระบบ ไม่ใช่ยอดขาย',
+    title: 'คู่มือใช้งานร้าน',
+    eyebrow: 'ความช่วยเหลือ',
+    description:
+      'ขั้นตอนพื้นฐานสำหรับเตรียมร้าน รับออเดอร์ และติดตามงานในแต่ละวัน',
+    setupTitle: 'เตรียมร้านให้พร้อม',
+    setupBody:
+      'เลือกองค์กรและสาขาที่ต้องการทำงาน ตรวจสอบข้อมูลร้าน เวลาเปิดปิด และช่องทางรับออเดอร์ในหน้าตั้งค่า',
+    menuBody:
+      'เพิ่มเมนูและราคา แล้วเลือกสินค้าที่ต้องการเผยแพร่บนหน้าร้านออนไลน์ ตรวจสอบความพร้อมก่อนเปิดรับออเดอร์',
+    ordersTitle: 'รับออเดอร์และส่งงานเข้าครัว',
+    ordersBody:
+      'ตรวจสอบรายการอาหารและสถานะการชำระเงินก่อนเริ่มทำอาหาร คิวครัวจะแสดงเฉพาะออเดอร์ที่ยืนยันการชำระเงินแล้ว',
+    statusBody:
+      'อัปเดตสถานะเมื่อเริ่มเตรียมอาหารและเมื่ออาหารพร้อมรับ หากใช้ POS ต้องมีสิทธิ์ใช้งานและเปิดกะก่อนขาย',
+    trackingTitle: 'ติดตามออเดอร์และแก้ปัญหา',
+    trackingBody:
+      'ให้ลูกค้าเก็บลิงก์ติดตามออเดอร์ไว้ และไม่ส่งต่อให้ผู้อื่น หากยังไม่ทราบผลการชำระเงิน ให้ตรวจสอบสถานะก่อนลองชำระอีกครั้ง',
+    recoveryBody:
+      'หากโหลดข้อมูลไม่สำเร็จ ให้ลองใหม่ หากเข้าใช้งานบางหน้าไม่ได้ ให้ตรวจสอบสาขาที่เลือกและติดต่อผู้ดูแลร้านเพื่อตรวจสอบสิทธิ์',
   },
   en: {
-    buildOnSolidGround: 'Build on solid ground.',
-    aPracticalStartingPointForTheFive:
-      'A practical starting point for the five-developer team.',
-    startLocally: 'Start locally',
-    fromTheRepositoryRootWithNode24:
-      'From the repository root, with Node 24 and Docker Desktop:',
-    openLocalhost8088ForTheCompleteSame:
-      'Open localhost:8088 for the full stack. Database data persists after restart.',
-    knowTheBoundary: 'Know the boundary',
-    signInAndSelectYourOrganizationTo:
-      'Sign in, select an organization, and use POS. POS access and an open shift are required.',
-    followTheRoadmap: 'View the roadmap',
-    identityCatalogInventoryPosSalesPurchasingShelves:
-      'Identity → Products → Stock → POS → Purchasing → Business → AI',
-    detailedContractsModuleOwnershipAndAcceptanceGates:
-      'Detailed contracts, module ownership and acceptance gates are in the repository’s docs directory.',
-    developerWorkspace: 'DEVELOPER WORKSPACE',
-    healthStatusIsRealModulePageCounts:
-      'System status is real. Module and page counts show system scope, not sales.',
+    title: 'Store help',
+    eyebrow: 'Help',
+    description:
+      'The basics of setting up your store, handling orders and keeping daily work on track.',
+    setupTitle: 'Get your store ready',
+    setupBody:
+      'Select the organization and branch you want to work in. Check store details, opening hours and order channels in Settings.',
+    menuBody:
+      'Add menu items and prices, then choose which products to publish on your online storefront. Check availability before accepting orders.',
+    ordersTitle: 'Handle orders and send them to the kitchen',
+    ordersBody:
+      'Check the items and payment status before starting preparation. Only orders with confirmed payment appear in the kitchen queue.',
+    statusBody:
+      'Update the status when preparation starts and when the food is ready. To sell through POS, you need POS access and an open shift.',
+    trackingTitle: 'Track orders and resolve problems',
+    trackingBody:
+      'Ask customers to keep their tracking link private. If a payment result is uncertain, check its status before attempting another payment.',
+    recoveryBody:
+      'If data cannot be loaded, try again. If you cannot access a page, check the selected branch and ask your store administrator to review your access.',
   },
 });

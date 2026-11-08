@@ -1,4 +1,5 @@
 import { useLanguage } from '../../app/language';
+import { errorMessage } from '../../i18n';
 import { Button, Loading } from '../ui/primitives';
 
 export function QueryFeedback({
@@ -14,18 +15,12 @@ export function QueryFeedback({
   retry?: () => void;
   emptyMessage?: string;
 }) {
-  const { t, localize } = useLanguage();
+  const { t, localize, language } = useLanguage();
 
   if (error)
     return (
       <div role="alert" className="tenant-error">
-        <p>
-          {localize(
-            (error instanceof Error
-              ? error.message
-              : t('shell.unableToLoadData')) ?? '',
-          )}
-        </p>
+        <p>{errorMessage(language, error)}</p>
         {retry && (
           <Button
             className="button-secondary"

@@ -42,7 +42,7 @@ export function SettingsPage({
   branchId?: string;
   onSaveHours?: (closing: string) => void;
 }) {
-  const { localize } = useLanguage();
+  const { t, localize, language } = useLanguage();
   const { state: authState } = useAuth();
   const tenant = useOrganization();
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -79,16 +79,17 @@ export function SettingsPage({
   );
   const [isEditingHours, setIsEditingHours] = useState(false);
   const timezone = initialSettings?.timezone || 'Asia/Bangkok';
+  const dateLocale = language === 'th' ? 'th-TH' : 'en-GB';
   const periodStart = initialSettings?.period?.start
-    ? new Date(initialSettings.period.start).toLocaleString('th-TH', {
+    ? new Date(initialSettings.period.start).toLocaleString(dateLocale, {
         timeZone: timezone,
       })
-    : '4/11/2569 22:00:00';
+    : '—';
   const periodEnd = initialSettings?.period?.end
-    ? new Date(initialSettings.period.end).toLocaleString('th-TH', {
+    ? new Date(initialSettings.period.end).toLocaleString(dateLocale, {
         timeZone: timezone,
       })
-    : '5/11/2569 22:00:00';
+    : '—';
 
   // Payment methods
   const [payments, setPayments] = useState({
@@ -146,12 +147,12 @@ export function SettingsPage({
       }
       setIsEditingHours(false);
       setSaveStatus('saved');
-      setStatusMessage('บันทึกเวลาปิดร้านเรียบร้อยแล้ว');
+      setStatusMessage(t('organization.settingsHoursSaved'));
       setTimeout(() => setSaveStatus('idle'), 3000);
     } catch {
       setIsEditingHours(false);
       setSaveStatus('saved');
-      setStatusMessage('บันทึกเวลาปิดร้านเรียบร้อยแล้ว');
+      setStatusMessage(t('organization.settingsHoursSaved'));
       setTimeout(() => setSaveStatus('idle'), 3000);
     }
   };
@@ -197,12 +198,14 @@ export function SettingsPage({
       }
 
       setSaveStatus('saved');
-      setStatusMessage('บันทึกการเปลี่ยนแปลงเรียบร้อยแล้ว');
+      setStatusMessage(t('organization.settingsSaved'));
       setTimeout(() => setSaveStatus('idle'), 4000);
     } catch (err) {
       setSaveStatus('error');
       setStatusMessage(
-        err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการบันทึกข้อมูล',
+        err instanceof Error
+          ? err.message
+          : t('organization.settingsSaveError'),
       );
     }
   };
@@ -211,16 +214,13 @@ export function SettingsPage({
     <div className="settings-page">
       <StandardPageHeader
         icon={<Settings size={26} />}
-        title="การตั้งค่า"
-        description="รายละเอียดการตั้งค่าร้านอาหาร"
+        title={t('organization.settingsTitle')}
+        description={t('organization.settingsDescription')}
         actions={
           <div className="settings-heading-actions">
-            <Link
-              to="/settings/storefront"
-              className="settings-btn-secondary"
-            >
+            <Link to="/settings/storefront" className="settings-btn-secondary">
               <Store size={17} aria-hidden="true" />
-              <span>ตั้งค่าหน้าร้านออนไลน์</span>
+              <span>{t('organization.settingsStorefront')}</span>
             </Link>
             <button
               type="button"
@@ -231,8 +231,8 @@ export function SettingsPage({
               <Save size={17} aria-hidden="true" />
               <span>
                 {saveStatus === 'saving'
-                  ? 'กำลังบันทึก...'
-                  : 'บันทึกการเปลี่ยนแปลง'}
+                  ? t('organization.settingsSaving')
+                  : t('organization.settingsSave')}
               </span>
             </button>
           </div>
@@ -242,7 +242,7 @@ export function SettingsPage({
       {saveStatus === 'saved' && (
         <div className="settings-toast settings-toast-success" role="status">
           <CheckCircle2 size={18} />
-          <span>{statusMessage}</span>
+          <span>{localize(statusMessage)}</span>
         </div>
       )}
 
@@ -266,10 +266,10 @@ export function SettingsPage({
               </div>
               <div>
                 <h2 id="store-info-title" className="settings-card-title">
-                  ข้อมูลร้าน
+                  {t('organization.settingsStoreInfo')}
                 </h2>
                 <p className="settings-card-subtitle">
-                  ข้อมูลพื้นฐานของร้านอาหารที่แสดงในระบบ POS
+                  {t('organization.settingsStoreInfoDescription')}
                 </p>
               </div>
             </header>
@@ -287,7 +287,8 @@ export function SettingsPage({
                   <div className="settings-form-row">
                     <div className="settings-field-group">
                       <label className="settings-label" htmlFor="store-name">
-                        ชื่อร้านอาหาร <span className="settings-required">*</span>
+                        {t('organization.settingsRestaurantName')}{' '}
+                        <span className="settings-required">*</span>
                       </label>
                       <input
                         id="store-name"
@@ -301,7 +302,8 @@ export function SettingsPage({
 
                     <div className="settings-field-group">
                       <label className="settings-label" htmlFor="business-type">
-                        ประเภทธุรกิจ <span className="settings-required">*</span>
+                        {t('organization.settingsBusinessType')}{' '}
+                        <span className="settings-required">*</span>
                       </label>
                       <div className="settings-select-wrapper">
                         <span
@@ -317,18 +319,20 @@ export function SettingsPage({
                           onChange={(e) => setBusinessType(e.target.value)}
                         >
                           <option value="restaurant">
-                            ร้านอาหาร (Restaurant)
+                            {t('organization.settingsRestaurant')}
                           </option>
                           <option value="cafe">
-                            คาเฟ่ / เบเกอรี่ (Cafe & Bakery)
+                            {t('organization.settingsCafe')}
                           </option>
                           <option value="beverage">
-                            เครื่องดื่ม / ชานม (Beverage & Tea)
+                            {t('organization.settingsBeverage')}
                           </option>
                           <option value="fastfood">
-                            ฟาสต์ฟู้ด (Fast Food)
+                            {t('organization.settingsFastFood')}
                           </option>
-                          <option value="other">อื่น ๆ (Other)</option>
+                          <option value="other">
+                            {t('organization.settingsOtherOption')}
+                          </option>
                         </select>
                         <span
                           className="settings-select-chevron"
@@ -344,7 +348,7 @@ export function SettingsPage({
                   <div className="settings-form-row">
                     <div className="settings-field-group">
                       <label className="settings-label" htmlFor="store-phone">
-                        เบอร์โทรศัพท์
+                        {t('organization.settingsPhone')}
                       </label>
                       <input
                         id="store-phone"
@@ -357,7 +361,7 @@ export function SettingsPage({
 
                     <div className="settings-field-group">
                       <label className="settings-label" htmlFor="store-email">
-                        อีเมล
+                        {t('organization.settingsEmail')}
                       </label>
                       <input
                         id="store-email"
@@ -372,10 +376,15 @@ export function SettingsPage({
 
                 {/* Logo section */}
                 <div className="settings-logo-section">
-                  <span className="settings-label">โลโก้ร้าน</span>
-                  <div className="settings-logo-box" aria-label="โลโก้ร้าน">
+                  <span className="settings-label">
+                    {t('organization.settingsLogo')}
+                  </span>
+                  <div
+                    className="settings-logo-box"
+                    aria-label={t('organization.settingsLogo')}
+                  >
                     {logoUrl ? (
-                      <img src={logoUrl} alt="โลโก้ร้าน" />
+                      <img src={logoUrl} alt={t('organization.settingsLogo')} />
                     ) : (
                       <span>V</span>
                     )}
@@ -393,7 +402,7 @@ export function SettingsPage({
                     onClick={() => logoInputRef.current?.click()}
                   >
                     <Upload size={12} aria-hidden="true" />
-                    <span>เปลี่ยนโลโก้ร้าน</span>
+                    <span>{t('organization.settingsChangeLogo')}</span>
                   </button>
                   {logoUrl && (
                     <button
@@ -402,7 +411,7 @@ export function SettingsPage({
                       onClick={() => setLogoUrl(null)}
                     >
                       <Trash2 size={12} aria-hidden="true" />
-                      <span>ลบ</span>
+                      <span>{t('organization.settingsRemove')}</span>
                     </button>
                   )}
                 </div>
@@ -411,7 +420,7 @@ export function SettingsPage({
               {/* Row 3: Address */}
               <div className="settings-field-group">
                 <label className="settings-label" htmlFor="store-address">
-                  ที่อยู่ร้าน
+                  {t('organization.settingsAddress')}
                 </label>
                 <textarea
                   id="store-address"
@@ -425,7 +434,7 @@ export function SettingsPage({
               {/* Row 4: Description */}
               <div className="settings-field-group">
                 <label className="settings-label" htmlFor="store-description">
-                  คำอธิบายร้าน
+                  {t('organization.settingsStoreDescription')}
                 </label>
                 <textarea
                   id="store-description"
@@ -449,17 +458,18 @@ export function SettingsPage({
               </div>
               <div>
                 <h2 id="service-title" className="settings-card-title">
-                  การให้บริการ
+                  {t('organization.settingsServices')}
                 </h2>
                 <p className="settings-card-subtitle">
-                  กำหนดรูปแบบการให้บริการของร้าน
+                  {t('organization.settingsServicesDescription')}
                 </p>
               </div>
             </header>
             <div className="settings-card-body">
               <div className="settings-field-group">
                 <label className="settings-label" htmlFor="service-format">
-                  รูปแบบการให้บริการ <span className="settings-required">*</span>
+                  {t('organization.settingsServiceMode')}{' '}
+                  <span className="settings-required">*</span>
                 </label>
                 <div className="settings-select-wrapper">
                   <span className="settings-select-icon" aria-hidden="true">
@@ -472,14 +482,16 @@ export function SettingsPage({
                     onChange={(e) => setServiceMode(e.target.value)}
                   >
                     <option value="all">
-                      ทานที่ร้าน / สั่งกลับบ้าน / เดลิเวอรี
+                      {t('organization.settingsAllServices')}
                     </option>
                     <option value="dine_takeaway">
-                      ทานที่ร้าน / สั่งกลับบ้าน
+                      {t('organization.settingsDineTakeaway')}
                     </option>
-                    <option value="dine_in">ทานที่ร้านเท่านั้น</option>
+                    <option value="dine_in">
+                      {t('organization.settingsDineIn')}
+                    </option>
                     <option value="takeaway_delivery">
-                      สั่งกลับบ้าน / เดลิเวอรี
+                      {t('organization.settingsTakeawayDelivery')}
                     </option>
                   </select>
                   <span className="settings-select-chevron" aria-hidden="true">
@@ -498,10 +510,10 @@ export function SettingsPage({
               </div>
               <div>
                 <h2 id="hours-title" className="settings-card-title">
-                  เวลาทำการ
+                  {t('organization.settingsHours')}
                 </h2>
                 <p className="settings-card-subtitle">
-                  กำหนดวันและเวลาที่เปิดให้บริการ
+                  {t('organization.settingsHoursDescription')}
                 </p>
               </div>
             </header>
@@ -510,20 +522,26 @@ export function SettingsPage({
                 <div className="settings-hours-info">
                   <h2
                     className="settings-hours-title"
-                    aria-label="เวลาปิดร้านและรอบวัน"
+                    aria-label={t('organization.settingsCycleAria')}
                   >
-                    เวลาเปิดร้านและรอบวัน
+                    {t('organization.settingsCycleTitle')}
                   </h2>
                   <div className="settings-hours-cycle">
-                    รอบปัจจุบัน: {periodStart} ถึง {periodEnd}
+                    {t('organization.settingsCurrentPeriod', {
+                      start: periodStart,
+                      end: periodEnd,
+                    })}
                   </div>
                   <div className="settings-hours-time">
                     <Clock size={14} aria-hidden="true" />
-                    <span>เวลาปิดร้าน 10:00 - {closingTime} น.</span>
+                    <span>
+                      {t('organization.settingsClosingRange', {
+                        time: closingTime,
+                      })}
+                    </span>
                   </div>
                   <small className="settings-hours-notice">
-                    เปลี่ยนรอบตามเวลาปิดร้านที่ตั้งไว้ ไม่ล้างสต็อก ไม่ลบประวัติ
-                    และไม่ต้องรีเซ็ตตอน 00:00
+                    {t('organization.settingsCycleExplanation')}
                   </small>
                 </div>
                 <button
@@ -532,20 +550,23 @@ export function SettingsPage({
                   onClick={() => setIsEditingHours(!isEditingHours)}
                 >
                   <Pencil size={13} aria-hidden="true" />
-                  <span>แก้ไขเวลาเปิดร้าน</span>
+                  <span>{t('organization.settingsEditHours')}</span>
                 </button>
               </div>
 
               {/* Inline Editor for Closing time */}
               <div className="settings-hours-edit-panel">
                 <div className="settings-field-group">
-                  <label className="settings-label" htmlFor="closing-time-input">
-                    เวลาปิดรอบวัน
+                  <label
+                    className="settings-label"
+                    htmlFor="closing-time-input"
+                  >
+                    {t('organization.settingsClosingTime')}
                   </label>
                   <input
                     id="closing-time-input"
                     type="time"
-                    aria-label="เวลาปิดรอบวัน"
+                    aria-label={t('organization.settingsClosingTime')}
                     className="settings-input"
                     style={{ width: '140px' }}
                     value={closingTime}
@@ -558,7 +579,7 @@ export function SettingsPage({
                   className="button button-primary settings-hours-btn"
                   onClick={() => void saveClosingHours()}
                 >
-                  บันทึกเวลาปิดร้าน
+                  {t('organization.settingsSaveClosing')}
                 </button>
               </div>
             </div>
@@ -572,10 +593,10 @@ export function SettingsPage({
               </div>
               <div>
                 <h2 id="payment-title" className="settings-card-title">
-                  การชำระเงิน
+                  {t('organization.settingsPayments')}
                 </h2>
                 <p className="settings-card-subtitle">
-                  ตั้งค่าช่องทางการชำระเงินที่รองรับ
+                  {t('organization.settingsPaymentsDescription')}
                 </p>
               </div>
             </header>
@@ -586,9 +607,7 @@ export function SettingsPage({
                   role="checkbox"
                   aria-checked={payments.cash}
                   className="settings-checkbox-item"
-                  onClick={() =>
-                    setPayments((p) => ({ ...p, cash: !p.cash }))
-                  }
+                  onClick={() => setPayments((p) => ({ ...p, cash: !p.cash }))}
                 >
                   <span
                     className={`settings-check-icon ${payments.cash ? 'checked' : ''}`}
@@ -596,7 +615,7 @@ export function SettingsPage({
                   >
                     {payments.cash && <Check size={12} strokeWidth={3} />}
                   </span>
-                  <span>เงินสด</span>
+                  <span>{t('organization.settingsCash')}</span>
                 </button>
 
                 <button
@@ -619,7 +638,7 @@ export function SettingsPage({
                       <Check size={12} strokeWidth={3} />
                     )}
                   </span>
-                  <span>บัตรเครดิต/เดบิต</span>
+                  <span>{t('organization.settingsCard')}</span>
                 </button>
 
                 <button
@@ -642,7 +661,7 @@ export function SettingsPage({
                       <Check size={12} strokeWidth={3} />
                     )}
                   </span>
-                  <span>QR พร้อมเพย์</span>
+                  <span>{t('organization.settingsPromptPay')}</span>
                 </button>
 
                 <button
@@ -678,7 +697,7 @@ export function SettingsPage({
                   >
                     {payments.other && <Check size={12} strokeWidth={3} />}
                   </span>
-                  <span>อื่น ๆ</span>
+                  <span>{t('organization.settingsOther')}</span>
                 </button>
               </div>
             </div>
@@ -692,10 +711,10 @@ export function SettingsPage({
               </div>
               <div>
                 <h2 id="tables-qr-title" className="settings-card-title">
-                  การใช้งานโต๊ะและ QR
+                  {t('organization.settingsTablesQr')}
                 </h2>
                 <p className="settings-card-subtitle">
-                  กำหนดการใช้งานโต๊ะในร้านและ QR สำหรับสั่งอาหาร
+                  {t('organization.settingsTablesQrDescription')}
                 </p>
               </div>
             </header>
@@ -721,7 +740,7 @@ export function SettingsPage({
                       <Check size={12} strokeWidth={3} />
                     )}
                   </span>
-                  <span>ใช้งานโต๊ะในร้าน</span>
+                  <span>{t('organization.settingsUseTables')}</span>
                 </button>
 
                 <button
@@ -742,7 +761,7 @@ export function SettingsPage({
                   >
                     {tablesAndQr.use_qr && <Check size={12} strokeWidth={3} />}
                   </span>
-                  <span>ใช้งาน QR สั่งอาหาร</span>
+                  <span>{t('organization.settingsUseQr')}</span>
                 </button>
               </div>
             </div>
@@ -756,10 +775,10 @@ export function SettingsPage({
               </div>
               <div>
                 <h2 id="devices-title" className="settings-card-title">
-                  อุปกรณ์ POS
+                  {t('organization.settingsPosDevices')}
                 </h2>
                 <p className="settings-card-subtitle">
-                  ตั้งค่าอุปกรณ์ที่ใช้งานร่วมกับระบบ POS
+                  {t('organization.settingsPosDescription')}
                 </p>
               </div>
             </header>
@@ -767,7 +786,7 @@ export function SettingsPage({
               <div className="settings-devices-grid">
                 <div className="settings-field-group">
                   <label className="settings-label" htmlFor="pos-terminal">
-                    เครื่อง POS / เครื่องขาย{' '}
+                    {t('organization.settingsTerminal')}{' '}
                     <span className="settings-required">*</span>
                   </label>
                   <div className="settings-select-wrapper">
@@ -795,7 +814,7 @@ export function SettingsPage({
 
                 <div className="settings-field-group">
                   <label className="settings-label" htmlFor="receipt-printer">
-                    เครื่องพิมพ์ใบเสร็จ{' '}
+                    {t('organization.settingsPrinter')}{' '}
                     <span className="settings-required">*</span>
                   </label>
                   <div className="settings-select-wrapper">
@@ -809,15 +828,17 @@ export function SettingsPage({
                       onChange={(e) => setReceiptPrinter(e.target.value)}
                     >
                       <option value="use_connected">
-                        ใช้เครื่องพิมพ์ที่เชื่อมต่อกับร้าน
+                        {t('organization.settingsConnectedPrinter')}
                       </option>
                       <option value="lan">
-                        เครื่องพิมพ์ความร้อน LAN (Kitchen)
+                        {t('organization.settingsLanPrinter')}
                       </option>
                       <option value="bluetooth">
-                        เครื่องพิมพ์บลูทูธ (Counter)
+                        {t('organization.settingsBluetoothPrinter')}
                       </option>
-                      <option value="none">ไม่ใช้เครื่องพิมพ์</option>
+                      <option value="none">
+                        {t('organization.settingsNoPrinter')}
+                      </option>
                     </select>
                     <span
                       className="settings-select-chevron"
@@ -832,23 +853,33 @@ export function SettingsPage({
           </section>
 
           {/* 6. หน้าร้านออนไลน์ */}
-          <section className="settings-card" aria-labelledby="storefront-card-title">
+          <section
+            className="settings-card"
+            aria-labelledby="storefront-card-title"
+          >
             <header className="settings-card-header">
               <div className="settings-card-icon" aria-hidden="true">
                 <Store size={18} />
               </div>
               <div>
                 <h2 id="storefront-card-title" className="settings-card-title">
-                  หน้าร้านออนไลน์
+                  {t('organization.settingsOnlineStore')}
                 </h2>
                 <p className="settings-card-subtitle">
-                  ตั้งค่าหน้าร้านสำหรับรับออเดอร์ออนไลน์ (ซื้อกลับบ้าน / เดลิเวอรี)
+                  {t('organization.settingsOnlineDescription')}
                 </p>
               </div>
             </header>
             <div className="settings-card-body">
-              <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
-                จัดการการเปิด-ปิดหน้าร้านออนไลน์ กำหนดชื่อและลิงก์ร้าน สีธีม ช่องทางรับออเดอร์ เวลาทำการ และดาวน์โหลด QR Code สำหรับลูกค้า
+              <p
+                style={{
+                  margin: '0 0 14px',
+                  fontSize: '13px',
+                  color: '#64748b',
+                  lineHeight: 1.5,
+                }}
+              >
+                {t('organization.settingsOnlineDetails')}
               </p>
               <Link
                 to="/settings/storefront"
@@ -856,7 +887,7 @@ export function SettingsPage({
                 style={{ display: 'inline-flex' }}
               >
                 <Store size={16} aria-hidden="true" />
-                <span>ไปยังหน้าตั้งค่าหน้าร้านออนไลน์</span>
+                <span>{t('organization.settingsGoOnline')}</span>
               </Link>
             </div>
           </section>

@@ -2,7 +2,8 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render } from '../../test/render';
+import { renderInEnglish } from '../../test/render';
+import { useLanguage } from '../../app/language';
 import { VeloAssistantChat } from './VeloAssistantChat';
 
 const mockShops = [
@@ -31,18 +32,88 @@ function renderChat() {
 
   queryClient.setQueryData(['storefront-directory'], mockShops);
 
-  return render(
+  return renderInEnglish(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={['/shop']}>
+        <LanguageToggle />
         <VeloAssistantChat defaultOpen={true} />
       </MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
+function LanguageToggle() {
+  const { setLanguage } = useLanguage();
+  return (
+    <>
+      <button onClick={() => setLanguage('th')}>Switch to Thai</button>
+      <button onClick={() => setLanguage('en')}>Switch to English</button>
+    </>
+  );
+}
+
 describe('VeloAssistantChat', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('updates fixed conversation copy when language changes while preserving typed text and store names', async () => {
+    renderChat();
+    const input = screen.getByRole('textbox', { name: 'Type your message' });
+    fireEvent.change(input, { target: { value: 'yam' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send message' }));
+    expect(
+      await screen.findByText('I found this store matching your search: yam'),
+    ).toBeInTheDocument();
+    fireEvent.change(input, { target: { value: 'Online' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send message' }));
+    fireEvent.change(input, { target: { value: 'Unsent text' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Switch to Thai' }));
+
+    expect(
+      screen.getByText('พบร้านค้าที่คุณกำลังค้นหา: yam'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Online')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'พิมพ์ข้อความ' })).toHaveValue(
+      'Unsent text',
+    );
+    expect(
+      screen.getByText('สวัสดี! ฉันช่วยคุณค้นหาร้านอาหารหรือแนะนำเมนูได้'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('group', { name: 'คำถามแนะนำ' }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: /yam/ }).length).toBeGreaterThan(
+      0,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Switch to English' }));
+    expect(
+      screen.getByText('I found this store matching your search: yam'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('textbox', { name: 'Type your message' }),
+    ).toHaveValue('Unsent text');
+  });
+
+  it('localizes quick prompts, their replies, and accessible labels after a language switch', () => {
+    renderChat();
+    fireEvent.click(screen.getByRole('button', { name: 'Track order' }));
+    expect(screen.getByText('How can I track my order?')).toBeInTheDocument();
+    expect(screen.getAllByLabelText('Sent and read').length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Switch to Thai' }));
+    expect(
+      screen.getByText('ฉันจะติดตามคำสั่งซื้อได้อย่างไร'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('คุณสามารถติดตามสถานะคำสั่งซื้อแบบเรียลไทม์ได้ที่นี่:'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /หน้าติดตามคำสั่งซื้อ/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByLabelText('ส่งแล้วและอ่านแล้ว').length,
+    ).toBeGreaterThan(0);
   });
 
   it('renders launcher button and chat window on initial load', () => {
@@ -55,8 +126,12 @@ describe('VeloAssistantChat', () => {
     expect(launcher).toBeInTheDocument();
 
     // Chat window is open
-    expect(screen.getByRole('dialog', { name: 'VELO Assistant' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'VELO Assistant' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('dialog', { name: 'VELO Assistant' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'VELO Assistant' }),
+    ).toBeInTheDocument();
     expect(
       screen.getByText('Ask about stores, menus, or orders'),
     ).toBeInTheDocument();
@@ -143,7 +218,9 @@ describe('VeloAssistantChat', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole('link', { name: /(?:Track Order Page|หน้าติดตามคำสั่งซื้อ)/i }),
+        screen.getByRole('link', {
+          name: /(?:Track Order Page|หน้าติดตามคำสั่งซื้อ)/i,
+        }),
       ).toBeInTheDocument();
     });
   });
@@ -152,7 +229,9 @@ describe('VeloAssistantChat', () => {
     renderChat();
 
     const input = screen.getByRole('textbox', { name: /Type your message/i });
-    const sendBtn = screen.getByRole('button', { name: /Send message|ส่งข้อความ/i });
+    const sendBtn = screen.getByRole('button', {
+      name: /Send message|ส่งข้อความ/i,
+    });
 
     expect(sendBtn).toBeDisabled();
 

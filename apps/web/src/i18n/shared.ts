@@ -1,6 +1,19 @@
 import { defineMessages } from './defineMessages';
 export const shared = defineMessages({
   th: {
+    requestFailed:
+      'ทำรายการไม่สำเร็จ กรุณาตรวจสอบสถานะล่าสุดก่อนลองใหม่ หากยังมีปัญหาให้ติดต่อผู้ดูแลร้าน',
+    sessionExpired: 'กรุณาเข้าสู่ระบบอีกครั้งเพื่อทำรายการต่อ',
+    accessDenied: 'คุณไม่มีสิทธิ์ทำรายการนี้ กรุณาติดต่อผู้ดูแลร้าน',
+    recordUnavailable: 'ไม่พบข้อมูลที่ต้องการ หรือข้อมูลนี้ไม่พร้อมใช้งาน',
+    requestConflict:
+      'ข้อมูลรายการเปลี่ยนแปลงแล้ว กรุณาตรวจสอบสถานะล่าสุดก่อนทำรายการอีกครั้ง',
+    invalidPaymentStatus:
+      'ตรวจสอบสถานะชำระเงินไม่ได้ กรุณาตรวจสอบสถานะออเดอร์ก่อนลองใหม่',
+    invalidPaymentData:
+      'อ่านข้อมูลชำระเงินไม่ได้ กรุณาตรวจสอบสถานะออเดอร์ก่อนลองใหม่',
+    invalidPaymentLink:
+      'ลิงก์ชำระเงินไม่ถูกต้อง กรุณากู้คืนหน้าชำระเงินหรือติดต่อร้าน',
     storeOwner: 'เจ้าของร้าน',
     manager: 'ผู้จัดการ',
     inventoryStaff: 'พนักงานคลัง',
@@ -37,7 +50,7 @@ export const shared = defineMessages({
     posWorkspaceRequired: 'ต้องอยู่ในพื้นที่ขาย POS',
     scopeChanged: 'ขอบเขตการทำงานเปลี่ยนแล้ว',
     savedDataAndStockReflectTheServer:
-      'บันทึกสำเร็จ — ข้อมูลและสต็อกแสดงตามผลจาก server',
+      'บันทึกแล้ว ข้อมูลและสต็อกอัปเดตตามผลที่ระบบยืนยัน',
     theApiOrItsDatabaseIsUnavailable:
       'API หรือฐานข้อมูลไม่พร้อม เริ่มระบบในเครื่องแล้วลองใหม่',
     theApiReturnedAnUnexpectedReadinessResponse:
@@ -57,7 +70,7 @@ export const shared = defineMessages({
     invalidResponseFormatCheckTheTransactionStatus:
       'รูปแบบผลตอบกลับไม่ถูกต้อง กรุณาตรวจสอบสถานะรายการก่อนทำซ้ำ',
     enterAValidSkuVariantNameAnd:
-      'ระบุ SKU, ชื่อ Variant และหน่วยนับให้ถูกต้อง',
+      'ระบุ SKU ชื่อตัวเลือกสินค้า และหน่วยนับให้ถูกต้อง',
     pricesAllowUpTo2DecimalPlaces:
       'ราคาเป็นทศนิยมไม่เกิน 2 ตำแหน่ง ราคาทุนไม่ติดลบ และราคาขายต้องมากกว่า 0',
     attributesRequireNonEmptyKeyValuePairs:
@@ -93,6 +106,21 @@ export const shared = defineMessages({
     storeSettingsMenu: 'การตั้งค่า',
   },
   en: {
+    requestFailed:
+      'Could not complete the request. Check the latest status before trying again. If the problem continues, contact your store administrator.',
+    sessionExpired: 'Sign in again to continue.',
+    accessDenied:
+      'You do not have permission to do this. Contact your store administrator.',
+    recordUnavailable:
+      'The requested information was not found or is unavailable.',
+    requestConflict:
+      'This record has changed. Check the latest status before trying again.',
+    invalidPaymentStatus:
+      'Could not verify payment status. Check the order status before trying again.',
+    invalidPaymentData:
+      'Could not read payment details. Check the order status before trying again.',
+    invalidPaymentLink:
+      'The payment link is invalid. Recover the checkout page or contact the store.',
     storeOwner: 'Store owner',
     manager: 'Manager',
     inventoryStaff: 'Inventory staff',

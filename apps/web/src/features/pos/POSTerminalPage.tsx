@@ -78,8 +78,17 @@ export function POSTerminalPage() {
       ),
   });
   const add = async (item: POSItem) => {
-    if (!pos.shift || !pos.terminal || invalidCartPolicy || (pos.cart && pos.cart.stock_policy !== item.stock_policy) || !item.saleable || !isKnownStockPolicy(item.stock_policy) ||
-      (item.stock_policy !== 'MENU_ONLY' && (exactDecimal(item.available ?? '', 3) ?? 0n) <= 0n)) return;
+    if (
+      !pos.shift ||
+      !pos.terminal ||
+      invalidCartPolicy ||
+      (pos.cart && pos.cart.stock_policy !== item.stock_policy) ||
+      !item.saleable ||
+      !isKnownStockPolicy(item.stock_policy) ||
+      (item.stock_policy !== 'MENU_ONLY' &&
+        (exactDecimal(item.available ?? '', 3) ?? 0n) <= 0n)
+    )
+      return;
     let cart = pos.cart;
     if (!cart) {
       cart = await pos.mutate<POSCart>('/pos/carts', {
@@ -88,7 +97,10 @@ export function POSTerminalPage() {
       if (!cart) return;
       pos.setCart(cart.id);
     }
-    if (!hasValidCartStockPolicy(cart) || cart.stock_policy !== item.stock_policy) {
+    if (
+      !hasValidCartStockPolicy(cart) ||
+      cart.stock_policy !== item.stock_policy
+    ) {
       pos.setMessage(t('pos.cartPolicyRefresh'));
       return;
     }
@@ -106,8 +118,7 @@ export function POSTerminalPage() {
         return;
       }
       current.quantity = adjustQuantity(current.quantity, 1000n);
-    }
-    else
+    } else
       items.push({
         variant_id: item.variant_id,
         quantity: '1',
@@ -235,15 +246,21 @@ export function POSTerminalPage() {
                   {moneyText(item.unit_price)} {t('pos.thb')} {item.unit}
                 </strong>
                 <small>
-                  {item.stock_policy !== 'MENU_ONLY' && <>{t('pos.available')} {item.available ?? '—'} · </>}{item.product_status}/
-                  {item.variant_status}
+                  {item.stock_policy !== 'MENU_ONLY' && (
+                    <>
+                      {t('pos.available')} {item.available ?? '—'} ·{' '}
+                    </>
+                  )}
+                  {item.product_status}/{item.variant_status}
                 </small>
                 <Button
                   disabled={
-                    pos.busy || invalidCartPolicy ||
+                    pos.busy ||
+                    invalidCartPolicy ||
                     !pos.shift ||
                     !item.saleable ||
-                    (!!pos.cart && pos.cart.stock_policy !== item.stock_policy) ||
+                    (!!pos.cart &&
+                      pos.cart.stock_policy !== item.stock_policy) ||
                     !isKnownStockPolicy(item.stock_policy) ||
                     (item.stock_policy !== 'MENU_ONLY' &&
                       (exactDecimal(item.available ?? '', 3) ?? 0n) <= 0n)
@@ -264,7 +281,12 @@ export function POSTerminalPage() {
         <Card className="cart-panel">
           <CartPanel />
           <Button
-            disabled={!pos.cart?.items.length || !pos.shift || pos.busy || invalidCartPolicy}
+            disabled={
+              !pos.cart?.items.length ||
+              !pos.shift ||
+              pos.busy ||
+              invalidCartPolicy
+            }
             onClick={() => navigate('/pos/checkout')}
           >
             {t('pos.goToCheckout')}
@@ -289,12 +311,21 @@ function CartPanel() {
     if (!cart || invalidCartPolicy) return;
     const amount = exactDecimal(quantity, 3);
     const selected = cart.items.find((item) => item.variant_id === variantID);
-    if (amount === null || amount <= 0n || amount > MAX_LINE_QUANTITY ||
-      (selected && ['COUNT', 'PACKAGING'].includes(selected.unit_type) && amount % 1000n !== 0n)) {
+    if (
+      amount === null ||
+      amount <= 0n ||
+      amount > MAX_LINE_QUANTITY ||
+      (selected &&
+        ['COUNT', 'PACKAGING'].includes(selected.unit_type) &&
+        amount % 1000n !== 0n)
+    ) {
       pos.setMessage(t('pos.quantityMustBeGreaterThan0With'));
       return;
     }
-    if (selected?.stock_policy === 'TRACKED' && amount > (exactDecimal(selected.available ?? '', 3) ?? 0n)) {
+    if (
+      selected?.stock_policy === 'TRACKED' &&
+      amount > (exactDecimal(selected.available ?? '', 3) ?? 0n)
+    ) {
       pos.setMessage(t('pos.insufficientStockAvailable'));
       return;
     }
@@ -339,25 +370,34 @@ function CartPanel() {
   return (
     <>
       <h2>{t('pos.shoppingCart')}</h2>
-      {invalidCartPolicy && <div role="alert"><p>{t('pos.cartPolicyRefresh')}</p><Button onClick={() => void pos.refresh()}>{t('pos.refreshCart')}</Button></div>}
+      {invalidCartPolicy && (
+        <div role="alert">
+          <p>{t('pos.cartPolicyRefresh')}</p>
+          <Button onClick={() => void pos.refresh()}>
+            {t('pos.refreshCart')}
+          </Button>
+        </div>
+      )}
       <CustomerPicker />
       {!cart?.items.length && <p>{t('pos.yourCartIsEmpty')}</p>}
       {cart?.items.map((item) => (
         <div className="pos-cart-item" key={item.variant_id}>
           <h3>{item.product_name}</h3>
-          {item.stock_policy !== 'MENU_ONLY' && <CartBatchPicker
-            key={`${item.variant_id}:${cart.revision}`}
-            variant={item.variant_id}
-            location={pos.terminal?.stock_location_id}
-            label={`Batch/Lot ${item.sku}`}
-            sellableOnly
-            initial={{
-              batch_id: item.batch_id ?? null,
-              batch_verified: item.batch_verified ?? false,
-            }}
-            busy={pos.busy || invalidCartPolicy}
-            save={(batch) => update(item.variant_id, item.quantity, batch)}
-          />}
+          {item.stock_policy !== 'MENU_ONLY' && (
+            <CartBatchPicker
+              key={`${item.variant_id}:${cart.revision}`}
+              variant={item.variant_id}
+              location={pos.terminal?.stock_location_id}
+              label={`Batch/Lot ${item.sku}`}
+              sellableOnly
+              initial={{
+                batch_id: item.batch_id ?? null,
+                batch_verified: item.batch_verified ?? false,
+              }}
+              busy={pos.busy || invalidCartPolicy}
+              save={(batch) => update(item.variant_id, item.quantity, batch)}
+            />
+          )}
           <small>
             {item.sku} · {item.unit} · {moneyText(item.unit_price)}{' '}
             {t('loyalty.thb')}
@@ -415,12 +455,13 @@ function CartPanel() {
           {!item.saleable && (
             <p>{t('pos.productUnavailableRemoveItFromTheCart')}</p>
           )}
-          {item.stock_policy !== 'MENU_ONLY' && (exactDecimal(item.available ?? '', 3) ?? 0n) <
-            (exactDecimal(item.quantity, 3) ?? 0n) && (
-            <p>
-              {t('pos.insufficientStockAvailable')} {item.available}
-            </p>
-          )}
+          {item.stock_policy !== 'MENU_ONLY' &&
+            (exactDecimal(item.available ?? '', 3) ?? 0n) <
+              (exactDecimal(item.quantity, 3) ?? 0n) && (
+              <p>
+                {t('pos.insufficientStockAvailable')} {item.available}
+              </p>
+            )}
         </div>
       ))}
       <div className="checkout-summary">

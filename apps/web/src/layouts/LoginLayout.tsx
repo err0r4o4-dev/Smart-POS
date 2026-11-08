@@ -6,13 +6,19 @@ import { LanguageSwitcher } from '../components/ui/LanguageSwitcher';
 import { Brand } from '../components/ui/primitives';
 import './login.css';
 
-export function LoginLayout({ children }: { children: ReactNode }) {
+export function LoginLayout({
+  children,
+  titleId = 'login-title',
+}: {
+  children: ReactNode;
+  titleId?: string;
+}) {
   const { t } = useLanguage();
 
   return (
     <main id="main-content" className="login-shell">
       <section className="login-visual" aria-labelledby="login-visual-title">
-        <div className="login-visual-brand">
+        <div className="login-visual-brand auth-story">
           <Brand />
         </div>
         <div className="login-visual-copy">
@@ -31,7 +37,7 @@ export function LoginLayout({ children }: { children: ReactNode }) {
         </footer>
       </section>
 
-      <section className="login-panel" aria-labelledby="login-title">
+      <section className="login-panel" aria-labelledby={titleId}>
         <header className="login-toolbar">
           <Link to="/" className="login-back-link">
             <ArrowLeft size={17} aria-hidden="true" />

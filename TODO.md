@@ -82,20 +82,20 @@ database, external assets, new dependencies, publication or deployment changes.
   new suite; current and HEAD CSS show the same readiness dependency.
   Evidence: `.local/warm-gold/public-browser.log`. Do not claim a full-suite pass.
 - [x] Verify mocked browser states at mobile, tablet and desktop widths.
-  Final Playwright: 55 passed (49 theme + 6 setup cases). Setup, dashboard,
-  settings, products, kitchen queue and POS checked at 320/768/901/1024/1440;
-  landing, login, registration, recovery and empty shop at 320/768/1440.
-  Keyboard focus, mobile navigation, reduced motion, theme tokens and overflow
-  checked. Header and 50px shop overflow regressions reproduced RED then GREEN.
-  Screenshots inspected: setup mobile, settings desktop, POS mobile/tablet,
-  landing desktop and fixed shop mobile. APIs synthetic; no business writes.
-  Log: `.local/warm-gold/browser-final.log`; images: `test-results/warm-gold-final`.
-  Limits: Chromium 156/Windows viewport emulation, not real devices/Safari/Firefox,
-  screen readers, populated sale/cart states or database-backed acceptance.
+      Final Playwright: 55 passed (49 theme + 6 setup cases). Setup, dashboard,
+      settings, products, kitchen queue and POS checked at 320/768/901/1024/1440;
+      landing, login, registration, recovery and empty shop at 320/768/1440.
+      Keyboard focus, mobile navigation, reduced motion, theme tokens and overflow
+      checked. Header and 50px shop overflow regressions reproduced RED then GREEN.
+      Screenshots inspected: setup mobile, settings desktop, POS mobile/tablet,
+      landing desktop and fixed shop mobile. APIs synthetic; no business writes.
+      Log: `.local/warm-gold/browser-final.log`; images: `test-results/warm-gold-final`.
+      Limits: Chromium 156/Windows viewport emulation, not real devices/Safari/Firefox,
+      screen readers, populated sale/cart states or database-backed acceptance.
 - [x] Complete independent review and resolve task-related findings.
-  Independent reviewer found no task-related findings, including the final
-  mobile hero-selector fix. Differential check verified 50px to 0px overflow;
-  320/767/768/1440 checks passed. Final `git diff --check` passed.
+      Independent reviewer found no task-related findings, including the final
+      mobile hero-selector fix. Differential check verified 50px to 0px overflow;
+      320/767/768/1440 checks passed. Final `git diff --check` passed.
 - [?] Full-suite acceptance remains open on the recorded assertion/readiness
   failures; unrelated test/copy maintenance is not included in this UI change.
 - [ ] Remove this task section only after required acceptance passes.
@@ -163,24 +163,24 @@ tenant isolation). Recovery: reverse only this task's changes; preserve data and
 unrelated work. Backend, frontend, contracts and documentation have separate owners.
 
 - [/] Implement owner-only server policy and organization listing, retire the
-      administration endpoints and update the frontend workspace and guards.
+  administration endpoints and update the frontend workspace and guards.
 - [/] Update contracts, route inventory and assigned architecture/security docs.
 - [ ] Verify owner access and non-owner denial, tenant isolation, retired routes,
       account/login and shop journeys, and preservation of existing data/schema.
 - [/] Backend authority follow-up: require a current OWNER discount approver for
-      new work while preserving completed replay; require an active OWNER and
-      active account for new shelf assignments. Preserve historical data.
-      Main reports implementation and Go checks. Final independent security
-      delta review found no new confirmed defect; database runtime verification
-      remains pending.
+  new work while preserving completed replay; require an active OWNER and
+  active account for new shelf assignments. Preserve historical data.
+  Main reports implementation and Go checks. Final independent security
+  delta review found no new confirmed defect; database runtime verification
+  remains pending.
 - [/] Reconcile the contract inventory to 117 routes: remove `/employees`,
-      `/employees/:id` and `/roles`; retain planned, unregistered `/approvals`
-      and `/audit-logs` in the employees module.
+  `/employees/:id` and `/roles`; retain planned, unregistered `/approvals`
+  and `/audit-logs` in the employees module.
   - Main reports PASS `npm run contracts:check`: 18 modules / 117 routes after
     six OpenAPI paths and three retired inputs were removed and Role set to OWNER.
     The earlier contract assertion failure preceded that update.
 - [/] Record current tests, contract checks, independent security/code review and
-      browser results from Main. Acceptance remains open.
+  browser results from Main. Acceptance remains open.
   - Main reports fresh PASS `go test ./... -count=1` (18 test packages;
     `cmd/server` has no tests) and `go vet ./...` from `apps/api` after the
     authority follow-up. Some added checks inspect query/source text and do not
@@ -372,10 +372,7 @@ Preserve existing tests and contracts.
 - [x] 2. Implement StorefrontSettingsPage component with all 6 cards and actions
 - [x] 3. Implement storefront-settings.css with responsive 2-column styling matching mockup
 - [x] 4. Unit tests covering all StorefrontSettingsPage interactions and SettingsPage navigation
-- [/] 5. Run typecheck, lint, and full test suite verification (waiting for classifier to run terminal commands)
-    4. P1: Runtime CustomerPayments wiring gap identified -> implemented and verified in router.go, main.go, and storefront.Service.
-    5. P2: Order tracking payment status reporting identified -> implemented and verified in readOrder.
-    6. P2: Payment recovery edge cases identified.
+- [/] 5. Run typecheck, lint, and full test suite verification (waiting for classifier to run terminal commands) 4. P1: Runtime CustomerPayments wiring gap identified -> implemented and verified in router.go, main.go, and storefront.Service. 5. P2: Order tracking payment status reporting identified -> implemented and verified in readOrder. 6. P2: Payment recovery edge cases identified.
 - [ ] Remove only this task section after all acceptance gates pass.
 
 Execution decisions:

@@ -95,9 +95,7 @@ export function StorefrontSettingsPage({
   const [name, setName] = useState(
     initialSettings?.name || org?.name || 'VELO Cafe & Restaurant',
   );
-  const [slug, setSlug] = useState(
-    initialSettings?.slug || 'velocafe',
-  );
+  const [slug, setSlug] = useState(initialSettings?.slug || 'velocafe');
   const [description, setDescription] = useState(
     initialSettings?.description ||
       'ร้านอาหารและคาเฟ่ อาหารไทย เครื่องดื่ม และเบเกอรี่',
@@ -227,9 +225,7 @@ export function StorefrontSettingsPage({
           >
             <Save size={16} aria-hidden="true" />
             <span>
-              {saveStatus === 'saving'
-                ? 'กำลังบันทึก...'
-                : 'บันทึกการตั้งค่า'}
+              {saveStatus === 'saving' ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่า'}
             </span>
           </button>
         </div>
@@ -237,7 +233,10 @@ export function StorefrontSettingsPage({
 
       {/* Success/Error Toast */}
       {saveStatus === 'saved' && (
-        <div className="storefront-toast storefront-toast-success" role="status">
+        <div
+          className="storefront-toast storefront-toast-success"
+          role="status"
+        >
           <CheckCircle2 size={18} />
           <span>{statusMessage}</span>
         </div>
@@ -298,10 +297,7 @@ export function StorefrontSettingsPage({
 
               <div className="storefront-form-row">
                 <div className="storefront-field-group">
-                  <label
-                    className="storefront-label"
-                    htmlFor="storefront-name"
-                  >
+                  <label className="storefront-label" htmlFor="storefront-name">
                     ชื่อหน้าร้าน (แสดงบนเว็บ){' '}
                     <span className="storefront-required">*</span>
                   </label>
@@ -316,10 +312,7 @@ export function StorefrontSettingsPage({
                 </div>
 
                 <div className="storefront-field-group">
-                  <label
-                    className="storefront-label"
-                    htmlFor="storefront-slug"
-                  >
+                  <label className="storefront-label" htmlFor="storefront-slug">
                     ลิงก์หน้าร้าน (URL){' '}
                     <span className="storefront-required">*</span>
                   </label>
@@ -344,10 +337,7 @@ export function StorefrontSettingsPage({
               </div>
 
               <div className="storefront-field-group">
-                <label
-                  className="storefront-label"
-                  htmlFor="storefront-desc"
-                >
+                <label className="storefront-label" htmlFor="storefront-desc">
                   คำอธิบายร้าน (ไม่บังคับ)
                 </label>
                 <textarea
@@ -618,36 +608,225 @@ export function StorefrontSettingsPage({
                     >
                       <rect width="100" height="100" fill="#ffffff" />
                       {/* Top-Left Finder */}
-                      <rect x="10" y="10" width="28" height="28" fill="#0f172a" rx="4" />
-                      <rect x="15" y="15" width="18" height="18" fill="#ffffff" rx="2" />
-                      <rect x="19" y="19" width="10" height="10" fill="#0f172a" rx="1.5" />
+                      <rect
+                        x="10"
+                        y="10"
+                        width="28"
+                        height="28"
+                        fill="#0f172a"
+                        rx="4"
+                      />
+                      <rect
+                        x="15"
+                        y="15"
+                        width="18"
+                        height="18"
+                        fill="#ffffff"
+                        rx="2"
+                      />
+                      <rect
+                        x="19"
+                        y="19"
+                        width="10"
+                        height="10"
+                        fill="#0f172a"
+                        rx="1.5"
+                      />
                       {/* Top-Right Finder */}
-                      <rect x="62" y="10" width="28" height="28" fill="#0f172a" rx="4" />
-                      <rect x="67" y="15" width="18" height="18" fill="#ffffff" rx="2" />
-                      <rect x="71" y="19" width="10" height="10" fill="#0f172a" rx="1.5" />
+                      <rect
+                        x="62"
+                        y="10"
+                        width="28"
+                        height="28"
+                        fill="#0f172a"
+                        rx="4"
+                      />
+                      <rect
+                        x="67"
+                        y="15"
+                        width="18"
+                        height="18"
+                        fill="#ffffff"
+                        rx="2"
+                      />
+                      <rect
+                        x="71"
+                        y="19"
+                        width="10"
+                        height="10"
+                        fill="#0f172a"
+                        rx="1.5"
+                      />
                       {/* Bottom-Left Finder */}
-                      <rect x="10" y="62" width="28" height="28" fill="#0f172a" rx="4" />
-                      <rect x="15" y="67" width="18" height="18" fill="#ffffff" rx="2" />
-                      <rect x="19" y="71" width="10" height="10" fill="#0f172a" rx="1.5" />
+                      <rect
+                        x="10"
+                        y="62"
+                        width="28"
+                        height="28"
+                        fill="#0f172a"
+                        rx="4"
+                      />
+                      <rect
+                        x="15"
+                        y="67"
+                        width="18"
+                        height="18"
+                        fill="#ffffff"
+                        rx="2"
+                      />
+                      <rect
+                        x="19"
+                        y="71"
+                        width="10"
+                        height="10"
+                        fill="#0f172a"
+                        rx="1.5"
+                      />
                       {/* Data dots */}
-                      <rect x="44" y="12" width="6" height="6" fill="#0f172a" rx="1" />
-                      <rect x="52" y="20" width="6" height="6" fill="#0f172a" rx="1" />
-                      <rect x="44" y="28" width="6" height="6" fill="#0f172a" rx="1" />
-                      <rect x="14" y="44" width="6" height="6" fill="#0f172a" rx="1" />
-                      <rect x="22" y="52" width="6" height="6" fill="#0f172a" rx="1" />
-                      <rect x="44" y="44" width="8" height="8" fill="#facc15" rx="2" />
-                      <rect x="54" y="44" width="6" height="6" fill="#0f172a" rx="1" />
-                      <rect x="64" y="52" width="6" height="6" fill="#0f172a" rx="1" />
-                      <rect x="74" y="44" width="6" height="6" fill="#0f172a" rx="1" />
-                      <rect x="82" y="52" width="6" height="6" fill="#0f172a" rx="1" />
-                      <rect x="44" y="64" width="6" height="6" fill="#0f172a" rx="1" />
-                      <rect x="52" y="72" width="6" height="6" fill="#0f172a" rx="1" />
-                      <rect x="62" y="64" width="6" height="6" fill="#0f172a" rx="1" />
-                      <rect x="72" y="72" width="6" height="6" fill="#0f172a" rx="1" />
-                      <rect x="80" y="80" width="8" height="8" fill="#0f172a" rx="1.5" />
-                      <rect x="44" y="80" width="6" height="6" fill="#0f172a" rx="1" />
-                      <rect x="54" y="82" width="6" height="6" fill="#0f172a" rx="1" />
-                      <rect x="64" y="80" width="6" height="6" fill="#0f172a" rx="1" />
+                      <rect
+                        x="44"
+                        y="12"
+                        width="6"
+                        height="6"
+                        fill="#0f172a"
+                        rx="1"
+                      />
+                      <rect
+                        x="52"
+                        y="20"
+                        width="6"
+                        height="6"
+                        fill="#0f172a"
+                        rx="1"
+                      />
+                      <rect
+                        x="44"
+                        y="28"
+                        width="6"
+                        height="6"
+                        fill="#0f172a"
+                        rx="1"
+                      />
+                      <rect
+                        x="14"
+                        y="44"
+                        width="6"
+                        height="6"
+                        fill="#0f172a"
+                        rx="1"
+                      />
+                      <rect
+                        x="22"
+                        y="52"
+                        width="6"
+                        height="6"
+                        fill="#0f172a"
+                        rx="1"
+                      />
+                      <rect
+                        x="44"
+                        y="44"
+                        width="8"
+                        height="8"
+                        fill="#facc15"
+                        rx="2"
+                      />
+                      <rect
+                        x="54"
+                        y="44"
+                        width="6"
+                        height="6"
+                        fill="#0f172a"
+                        rx="1"
+                      />
+                      <rect
+                        x="64"
+                        y="52"
+                        width="6"
+                        height="6"
+                        fill="#0f172a"
+                        rx="1"
+                      />
+                      <rect
+                        x="74"
+                        y="44"
+                        width="6"
+                        height="6"
+                        fill="#0f172a"
+                        rx="1"
+                      />
+                      <rect
+                        x="82"
+                        y="52"
+                        width="6"
+                        height="6"
+                        fill="#0f172a"
+                        rx="1"
+                      />
+                      <rect
+                        x="44"
+                        y="64"
+                        width="6"
+                        height="6"
+                        fill="#0f172a"
+                        rx="1"
+                      />
+                      <rect
+                        x="52"
+                        y="72"
+                        width="6"
+                        height="6"
+                        fill="#0f172a"
+                        rx="1"
+                      />
+                      <rect
+                        x="62"
+                        y="64"
+                        width="6"
+                        height="6"
+                        fill="#0f172a"
+                        rx="1"
+                      />
+                      <rect
+                        x="72"
+                        y="72"
+                        width="6"
+                        height="6"
+                        fill="#0f172a"
+                        rx="1"
+                      />
+                      <rect
+                        x="80"
+                        y="80"
+                        width="8"
+                        height="8"
+                        fill="#0f172a"
+                        rx="1.5"
+                      />
+                      <rect
+                        x="44"
+                        y="80"
+                        width="6"
+                        height="6"
+                        fill="#0f172a"
+                        rx="1"
+                      />
+                      <rect
+                        x="54"
+                        y="82"
+                        width="6"
+                        height="6"
+                        fill="#0f172a"
+                        rx="1"
+                      />
+                      <rect
+                        x="64"
+                        y="80"
+                        width="6"
+                        height="6"
+                        fill="#0f172a"
+                        rx="1"
+                      />
                     </svg>
                   </div>
                   <div className="storefront-qr-info">

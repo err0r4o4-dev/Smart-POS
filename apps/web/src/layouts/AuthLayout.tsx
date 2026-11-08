@@ -37,9 +37,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
       <div className="auth-centered-stage">
         <div className="auth-card-wrapper">
           <div className="auth-card-glow-border" aria-hidden="true" />
-          <div className="auth-glass-card">
-            {children}
-          </div>
+          <div className="auth-glass-card">{children}</div>
         </div>
 
         <footer className="auth-stage-footer">
@@ -48,7 +46,9 @@ export function AuthLayout({ children }: { children: ReactNode }) {
             <span>SmartPOS · Intelligent Retail Architecture</span>
           </div>
           <div className="auth-footer-links">
-            <small>© {new Date().getFullYear()} SmartPOS System. All rights reserved.</small>
+            <small>
+              © {new Date().getFullYear()} SmartPOS System. All rights reserved.
+            </small>
           </div>
         </footer>
       </div>

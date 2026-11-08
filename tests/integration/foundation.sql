@@ -2,7 +2,7 @@ BEGIN;
 
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM schema_migrations WHERE version = 13 AND NOT dirty) THEN
+  IF NOT EXISTS (SELECT 1 FROM schema_migrations WHERE version >= 13 AND NOT dirty) THEN
     RAISE EXCEPTION 'migration not ready';
   END IF;
 END $$;
@@ -36,7 +36,12 @@ BEGIN
   END;
 END $$;
 
-CREATE ROLE smartpos_phase0_verification NOLOGIN;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'smartpos_phase0_verification') THEN
+    CREATE ROLE smartpos_phase0_verification NOLOGIN;
+  END IF;
+END $$;
 GRANT SELECT, INSERT ON organizations, branches TO smartpos_phase0_verification;
 GRANT SELECT ON organization_memberships TO smartpos_phase0_verification;
 SET LOCAL ROLE smartpos_phase0_verification;
@@ -66,4 +71,12 @@ BEGIN
 END $$;
 
 RESET ROLE;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'smartpos_phase0_verification') THEN
+    EXECUTE 'REVOKE ALL ON organizations, branches, organization_memberships FROM smartpos_phase0_verification';
+    EXECUTE 'DROP OWNED BY smartpos_phase0_verification';
+    EXECUTE 'DROP ROLE smartpos_phase0_verification';
+  END IF;
+END $$;
 ROLLBACK;

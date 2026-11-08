@@ -369,7 +369,9 @@
   padding: 5px 11px;
   border-radius: 8px;
   min-height: 30px;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 .dashboard-segment-btn.active {
   background: var(--primary-soft);
@@ -742,7 +744,9 @@ a.dashboard-alert-row:hover {
   font-weight: 650;
   text-align: center;
   line-height: 1.3;
-  transition: background 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
   min-width: 0;
 }
 .dashboard-shortcut-tile:hover:not(.is-disabled) {

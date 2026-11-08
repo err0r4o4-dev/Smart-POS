@@ -3,30 +3,43 @@ import { spawnSync } from 'node:child_process';
 
 const project = process.env.RESILIENCE_COMPOSE_PROJECT;
 const database = process.env.AUTH_TEST_DATABASE ?? '';
-assert.equal(
-  project,
-  'smartpos-auth-test',
-  'Resilience requires explicit isolated Compose project',
-);
-assert.match(
-  database,
-  /^smartpos_phase53_phase54_phase55_phase56_[a-z0-9_]+$/,
-  'Resilience requires isolated schema13 DB',
-);
-const baseURL = 'http://127.0.0.1:18088';
-const config = spawnSync(
-  'docker',
-  ['compose', '-p', project, 'config', '--format', 'json'],
-  { encoding: 'utf8' },
-);
-assert.equal(config.status, 0, 'Cannot verify isolated Compose configuration');
-assert.equal(
-  JSON.parse(config.stdout).services.postgres.environment.POSTGRES_DB,
-  database,
-  'Refusing mismatched database target',
-);
+const isIsolated = Boolean(project);
+
+if (isIsolated) {
+  assert.equal(
+    project,
+    'smartpos-auth-test',
+    'Resilience requires explicit isolated Compose project',
+  );
+  assert.match(
+    database,
+    /^smartpos_phase53_phase54_phase55_phase56_[a-z0-9_]+$/,
+    'Resilience requires isolated schema13 DB',
+  );
+  const config = spawnSync(
+    'docker',
+    ['compose', '-p', project, 'config', '--format', 'json'],
+    { encoding: 'utf8' },
+  );
+  assert.equal(
+    config.status,
+    0,
+    'Cannot verify isolated Compose configuration',
+  );
+  assert.equal(
+    JSON.parse(config.stdout).services.postgres.environment.POSTGRES_DB,
+    database,
+    'Refusing mismatched database target',
+  );
+}
+
+const baseURL = isIsolated
+  ? 'http://127.0.0.1:18088'
+  : (process.env.E2E_BASE_URL ?? 'http://127.0.0.1:8088');
+const composePrefix = isIsolated ? ['compose', '-p', project] : ['compose'];
+
 function compose(...args) {
-  const result = spawnSync('docker', ['compose', '-p', project, ...args], {
+  const result = spawnSync('docker', [...composePrefix, ...args], {
     stdio: 'inherit',
   });
   assert.equal(result.status, 0, `docker compose ${args[0]} failed`);
@@ -67,7 +80,7 @@ await expectStatus('/health/ready', 200);
 compose('stop', 'api');
 const logs = spawnSync(
   'docker',
-  ['compose', '-p', project, 'logs', '--no-color', '--tail', '15', 'api'],
+  [...composePrefix, 'logs', '--no-color', '--tail', '15', 'api'],
   { encoding: 'utf8' },
 );
 try {

@@ -6,7 +6,15 @@ import {
   type OrganizationContext,
 } from '../../lib/organization-api';
 
-export const setupStepKeys = ['profile', 'services', 'tables', 'menu', 'payments', 'orders', 'review'] as const;
+export const setupStepKeys = [
+  'profile',
+  'services',
+  'tables',
+  'menu',
+  'payments',
+  'orders',
+  'review',
+] as const;
 export type SetupStepKey = (typeof setupStepKeys)[number];
 
 export interface SetupStepState {
@@ -29,12 +37,16 @@ export interface IssuedTableQRToken {
 }
 
 export interface SetupProfileInput {
-  organization: Pick<OrganizationInput, 'name' | 'business_type' | 'contact_email' | 'contact_phone' | 'address'>;
+  organization: Pick<
+    OrganizationInput,
+    'name' | 'business_type' | 'contact_email' | 'contact_phone' | 'address'
+  >;
   service_modes: { dine_in: boolean; takeaway: boolean; delivery: boolean };
 }
 
 interface SetupProfileState extends SetupProfileInput {
-  organization: SetupProfileInput['organization'] & Pick<OrganizationInput, 'code'>;
+  organization: SetupProfileInput['organization'] &
+    Pick<OrganizationInput, 'code'>;
   branch: Pick<BranchInput, 'name' | 'code' | 'address' | 'phone' | 'email'>;
 }
 
@@ -44,7 +56,13 @@ export interface SetupServicesInput {
 
 export interface SetupTablesInput {
   zones: Array<{ name: string; code?: string }>;
-  tables: Array<{ name: string; zone: string; seats: number; code?: string; zone_code?: string }>;
+  tables: Array<{
+    name: string;
+    zone: string;
+    seats: number;
+    code?: string;
+    zone_code?: string;
+  }>;
   qr_enabled: boolean;
 }
 
@@ -136,13 +154,21 @@ function branchQuery(context: SetupContext) {
 }
 
 function normalizeState(raw: BackendSetupState): SetupState {
-  if (!raw || !raw.readiness || typeof raw.readiness.ready !== 'boolean' || !Array.isArray(raw.readiness.incomplete) || !Array.isArray(raw.steps))
+  if (
+    !raw ||
+    !raw.readiness ||
+    typeof raw.readiness.ready !== 'boolean' ||
+    !Array.isArray(raw.readiness.incomplete) ||
+    !Array.isArray(raw.steps)
+  )
     throw new Error('รูปแบบผลตอบกลับสถานะการตั้งค่าไม่ถูกต้อง กรุณาลองใหม่');
   return {
     current_step: raw.current_step,
     complete: raw.completed,
     steps: raw.steps.map((step) => ({
-      key: setupStepKeys.includes(step.key as SetupStepKey) ? (step.key as SetupStepKey) : 'review',
+      key: setupStepKeys.includes(step.key as SetupStepKey)
+        ? (step.key as SetupStepKey)
+        : 'review',
       complete: step.status === 'COMPLETE' || step.status === 'COMPLETED',
       reason: step.reasons?.join(' '),
     })),
@@ -159,33 +185,62 @@ function normalizeState(raw: BackendSetupState): SetupState {
         : undefined,
     tables: raw.tables,
     menu: raw.menu,
-    payments: raw.payments ? {
-      cash: Boolean(raw.payments.cash),
-      bank_transfer: Boolean(raw.payments.bank_transfer),
-      promptpay: Boolean(raw.payments.promptpay && raw.capabilities?.promptPay),
-      card: false,
-    } : undefined,
+    payments: raw.payments
+      ? {
+          cash: Boolean(raw.payments.cash),
+          bank_transfer: Boolean(raw.payments.bank_transfer),
+          promptpay: Boolean(
+            raw.payments.promptpay && raw.capabilities?.promptPay,
+          ),
+          card: false,
+        }
+      : undefined,
     orders: raw.orders,
   };
 }
 
 export function getSetup(context: SetupContext, signal?: AbortSignal) {
-  return organizationRequest<BackendSetupState>(setupPath(context) + branchQuery(context), { signal }).then(normalizeState);
+  return organizationRequest<BackendSetupState>(
+    setupPath(context) + branchQuery(context),
+    { signal },
+  ).then(normalizeState);
 }
 
-export function createOrganization(body: OrganizationCreateInput, csrf: string, key: string) {
-  return organizationRequest<OrganizationContext>('/organizations', { method: 'POST', body, csrf, key });
+export function createOrganization(
+  body: OrganizationCreateInput,
+  csrf: string,
+  key: string,
+) {
+  return organizationRequest<OrganizationContext>('/organizations', {
+    method: 'POST',
+    body,
+    csrf,
+    key,
+  });
 }
 
 function toBackendPayload(
   step: Exclude<SetupStepKey, 'review'>,
-  body: SetupProfileInput | SetupServicesInput | SetupTablesInput | SetupMenuInput | SetupPaymentsInput | SetupOrdersInput,
+  body:
+    | SetupProfileInput
+    | SetupServicesInput
+    | SetupTablesInput
+    | SetupMenuInput
+    | SetupPaymentsInput
+    | SetupOrdersInput,
   branchID: string,
 ) {
   if (step === 'profile') {
     const input = body as SetupProfileInput;
-    const { name, business_type, contact_email, contact_phone, address } = input.organization;
-    const organization = { name, business_type, contact_email, contact_phone, address };
+    const { name, business_type, contact_email, contact_phone, address } =
+      input.organization;
+    const organization = {
+      name,
+      business_type,
+      contact_email,
+      contact_phone,
+      address,
+    };
     return {
       branch_id: branchID,
       organization,
@@ -199,10 +254,16 @@ function toBackendPayload(
   }
   if (step === 'tables') {
     const input = body as SetupTablesInput;
-    if (input.tables.some((table) => !input.zones.some((zone) => zone.name === table.zone)))
+    if (
+      input.tables.some(
+        (table) => !input.zones.some((zone) => zone.name === table.zone),
+      )
+    )
       throw new Error('ไม่พบโซนของโต๊ะ กรุณาตรวจสอบข้อมูล');
     const assignCodes = (entries: Array<{ code?: string }>, prefix: string) => {
-      const used = new Set(entries.flatMap((entry) => entry.code ? [entry.code] : []));
+      const used = new Set(
+        entries.flatMap((entry) => (entry.code ? [entry.code] : [])),
+      );
       let next = 1;
       return entries.map((entry) => {
         if (entry.code) return entry.code;
@@ -216,15 +277,31 @@ function toBackendPayload(
     const tableCodes = assignCodes(input.tables, 'TABLE');
     return {
       branch_id: branchID,
-      zones: input.zones.map((zone, index) => ({ code: zoneCodes[index], name: zone.name })),
-      tables: input.tables.map((table, index) => ({ code: tableCodes[index], name: table.name, seats: table.seats, zone_code: zoneCodes[input.zones.findIndex((zone) => zone.name === table.zone)] })),
+      zones: input.zones.map((zone, index) => ({
+        code: zoneCodes[index],
+        name: zone.name,
+      })),
+      tables: input.tables.map((table, index) => ({
+        code: tableCodes[index],
+        name: table.name,
+        seats: table.seats,
+        zone_code:
+          zoneCodes[input.zones.findIndex((zone) => zone.name === table.zone)],
+      })),
       generate_qr: input.qr_enabled,
     };
   }
-  if (step === 'menu') return { ...(body as SetupMenuInput), branch_id: branchID };
+  if (step === 'menu')
+    return { ...(body as SetupMenuInput), branch_id: branchID };
   if (step === 'payments') {
     const input = body as SetupPaymentsInput;
-    return { branch_id: branchID, cash: input.cash, bank_transfer: input.bank_transfer, promptpay: input.promptpay, card: false };
+    return {
+      branch_id: branchID,
+      cash: input.cash,
+      bank_transfer: input.bank_transfer,
+      promptpay: input.promptpay,
+      card: false,
+    };
   }
   const input = body as SetupOrdersInput;
   return {
@@ -239,19 +316,29 @@ function toBackendPayload(
 
 export function saveSetupStep(
   step: Exclude<SetupStepKey, 'review'>,
-  body: SetupProfileInput | SetupServicesInput | SetupTablesInput | SetupMenuInput | SetupPaymentsInput | SetupOrdersInput,
+  body:
+    | SetupProfileInput
+    | SetupServicesInput
+    | SetupTablesInput
+    | SetupMenuInput
+    | SetupPaymentsInput
+    | SetupOrdersInput,
   context: SetupContext,
   csrf: string,
   key: string,
 ) {
-  return organizationRequest<BackendSetupState>(setupPath(context, stepPaths[step]), {
-    method: 'PUT',
-    body: toBackendPayload(step, body, context.branchID),
-    csrf,
-    key,
-  }).then((raw) => ({
+  return organizationRequest<BackendSetupState>(
+    setupPath(context, stepPaths[step]),
+    {
+      method: 'PUT',
+      body: toBackendPayload(step, body, context.branchID),
+      csrf,
+      key,
+    },
+  ).then((raw) => ({
     ...normalizeState(raw),
-    issued_table_qr_tokens: step === 'tables' ? raw.issued_table_qr_tokens : undefined,
+    issued_table_qr_tokens:
+      step === 'tables' ? raw.issued_table_qr_tokens : undefined,
   }));
 }
 

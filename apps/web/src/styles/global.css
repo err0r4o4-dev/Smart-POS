@@ -299,8 +299,12 @@ ul {
   color: var(--text-primary);
   font-size: var(--font-caption);
   font-weight: 700;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65), var(--shadow-control);
-  transition: background 0.15s, box-shadow 0.15s;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    var(--shadow-control);
+  transition:
+    background 0.15s,
+    box-shadow 0.15s;
 }
 .button:hover:not(:disabled) {
   background: var(--primary-hover);
@@ -429,7 +433,11 @@ ul {
 .sidebar {
   overflow: hidden;
   background:
-    radial-gradient(ellipse 150% 280px at -20% 100%, #ffe9b3 0%, transparent 80%),
+    radial-gradient(
+      ellipse 150% 280px at -20% 100%,
+      #ffe9b3 0%,
+      transparent 80%
+    ),
     linear-gradient(180deg, var(--surface) 46%, var(--primary-subtle));
   border-right: 1px solid var(--border);
   position: fixed;
@@ -1002,7 +1010,11 @@ ul {
   padding: 28px 32px 36px;
   background-image: var(--canvas-art), var(--canvas-background);
   background-repeat: no-repeat;
-  background-size: 100% 100%, auto, auto, auto;
+  background-size:
+    100% 100%,
+    auto,
+    auto,
+    auto;
 }
 .page-heading {
   display: flex;
@@ -1500,9 +1512,13 @@ ul {
   position: relative;
   display: flex;
   flex-direction: column;
-    background-color: var(--canvas);
-    background-image: var(--canvas-art), var(--canvas-background);
-    background-size: 100% 100%, auto, auto, auto;
+  background-color: var(--canvas);
+  background-image: var(--canvas-art), var(--canvas-background);
+  background-size:
+    100% 100%,
+    auto,
+    auto,
+    auto;
   overflow-x: hidden;
   font-family: var(--font-body);
 }
@@ -1528,7 +1544,12 @@ ul {
   left: 10%;
   width: 500px;
   height: 500px;
-  background: radial-gradient(circle, rgba(254, 240, 138, 0.7) 0%, rgba(244, 197, 66, 0.3) 50%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    rgba(254, 240, 138, 0.7) 0%,
+    rgba(244, 197, 66, 0.3) 50%,
+    transparent 70%
+  );
 }
 
 .glow-bottom-right {
@@ -1536,16 +1557,32 @@ ul {
   right: 10%;
   width: 550px;
   height: 550px;
-  background: radial-gradient(circle, rgba(253, 230, 138, 0.6) 0%, rgba(234, 179, 8, 0.25) 50%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    rgba(253, 230, 138, 0.6) 0%,
+    rgba(234, 179, 8, 0.25) 50%,
+    transparent 70%
+  );
 }
 
 .glow-grid {
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(rgba(133, 77, 14, 0.08) 1px, transparent 1px);
+  background-image: radial-gradient(
+    rgba(133, 77, 14, 0.08) 1px,
+    transparent 1px
+  );
   background-size: 32px 32px;
-  mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, black 30%, transparent 80%);
-  -webkit-mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, black 30%, transparent 80%);
+  mask-image: radial-gradient(
+    ellipse 60% 60% at 50% 50%,
+    black 30%,
+    transparent 80%
+  );
+  -webkit-mask-image: radial-gradient(
+    ellipse 60% 60% at 50% 50%,
+    black 30%,
+    transparent 80%
+  );
 }
 
 /* Floating Navigation Header */
@@ -1628,7 +1665,12 @@ ul {
 .auth-card-glow-border {
   position: absolute;
   inset: -2px;
-  background: linear-gradient(135deg, rgba(244, 197, 66, 0.45), rgba(255, 255, 255, 0.8), rgba(234, 179, 8, 0.25));
+  background: linear-gradient(
+    135deg,
+    rgba(244, 197, 66, 0.45),
+    rgba(255, 255, 255, 0.8),
+    rgba(234, 179, 8, 0.25)
+  );
   border-radius: calc(var(--radius-overlay) + 2px);
   z-index: 1;
   filter: blur(4px);

@@ -191,7 +191,9 @@
   font-size: 14px;
   color: var(--text-primary);
   background: var(--surface);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
   box-sizing: border-box;
 }
 

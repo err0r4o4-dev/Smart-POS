@@ -113,6 +113,17 @@ it.each([
   '/sales/voids',
   '/restaurant/recipes',
   '/inventory/batches',
+  ...['', '/manage', '/work'].flatMap((prefix) =>
+    [
+      '/restaurant/recipes',
+      '/restaurant/quick-stock',
+      '/restaurant/forecast',
+      '/inventory/batches',
+      '/inventory/expiry',
+      '/inventory/write-offs',
+      '/inventory/recalls',
+    ].map((path) => prefix + path),
+  ),
 ])('renders 404 not found without API requests for %s', async (path) => {
   const fetchSpy = vi.spyOn(globalThis, 'fetch');
   try {

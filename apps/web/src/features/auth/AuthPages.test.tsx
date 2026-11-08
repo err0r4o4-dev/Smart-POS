@@ -2,7 +2,7 @@ import { renderInEnglish as render } from '../../test/render';
 import { fireEvent, screen, within } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { beforeEach, expect, it, vi } from 'vitest';
-import { LoginPage, ResetPasswordPage } from './AuthPages';
+import { LoginPage, RegisterPage, ResetPasswordPage } from './AuthPages';
 
 const mocks = vi.hoisted(() => ({
   resetPassword: vi.fn(),
@@ -103,4 +103,58 @@ it('removes the reset token from the URL before submission but retains it for th
     'a long valid password',
   );
   expect(mocks.clear).toHaveBeenCalled();
+});
+
+it('renders the register page in the split layout and validates mismatched passwords', async () => {
+  render(
+    <BrowserRouter>
+      <RegisterPage />
+    </BrowserRouter>,
+  );
+  const introduction = screen.getByRole('region', {
+    name: 'Run your store, simply.',
+  });
+  const registerPanel = screen.getByRole('region', { name: 'Get started.' });
+  expect(
+    within(introduction).getByRole('img', { name: /point-of-sale terminal/i }),
+  ).toHaveAttribute('src', '/images/auth-pos-reference.png');
+  expect(
+    introduction.compareDocumentPosition(registerPanel) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  expect(within(registerPanel).getByLabelText('Display name')).toHaveValue('');
+  expect(within(registerPanel).getByLabelText('Email address')).toHaveValue('');
+  expect(
+    within(registerPanel).getByLabelText('Password', { exact: true }),
+  ).toHaveValue('');
+  expect(within(registerPanel).getByLabelText('Confirm password')).toHaveValue(
+    '',
+  );
+  expect(
+    within(registerPanel).getByRole('link', {
+      name: 'Already have an account? Sign in',
+    }),
+  ).toHaveAttribute('href', '/login');
+
+  fireEvent.change(within(registerPanel).getByLabelText('Display name'), {
+    target: { value: 'Synthetic User' },
+  });
+  fireEvent.change(within(registerPanel).getByLabelText('Email address'), {
+    target: { value: 'synthetic@example.test' },
+  });
+  fireEvent.change(
+    within(registerPanel).getByLabelText('Password', { exact: true }),
+    {
+      target: { value: 'password123456' },
+    },
+  );
+  fireEvent.change(within(registerPanel).getByLabelText('Confirm password'), {
+    target: { value: 'different123456' },
+  });
+  fireEvent.click(
+    within(registerPanel).getByRole('button', { name: 'Create account' }),
+  );
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'Passwords do not match',
+  );
 });

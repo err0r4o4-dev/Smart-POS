@@ -19,7 +19,12 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import { Button, Card, Loading } from '../../components/ui/primitives';
-import { exactDecimal, isKnownStockPolicy, MAX_LINE_QUANTITY, moneyText } from '../../lib/pos-api';
+import {
+  exactDecimal,
+  isKnownStockPolicy,
+  MAX_LINE_QUANTITY,
+  moneyText,
+} from '../../lib/pos-api';
 import {
   storefrontRequest,
   type ShopCatalogPage,
@@ -32,10 +37,10 @@ import { ShopError, ShopPagination } from './shop-feedback';
 import './catalog.css';
 
 const CATEGORY_TRANSLATIONS: Record<string, string> = {
-  'ขนมขบเคี้ยว': 'Snacks',
-  'ผลิตภัณฑ์นมและเนย': 'Dairy & Butter',
-  'อาหารกึ่งสำเร็จรูป': 'Instant Food',
-  'เครื่องดื่ม': 'Beverages',
+  ขนมขบเคี้ยว: 'Snacks',
+  ผลิตภัณฑ์นมและเนย: 'Dairy & Butter',
+  อาหารกึ่งสำเร็จรูป: 'Instant Food',
+  เครื่องดื่ม: 'Beverages',
 };
 
 const PRODUCT_TRANSLATIONS: Record<string, string> = {
@@ -43,11 +48,14 @@ const PRODUCT_TRANSLATIONS: Record<string, string> = {
   'มันฝรั่งแท้ทอดกรอบ เลย์ รสคลาสสิค': "Lay's Classic Potato Chips",
   'บะหมี่กึ่งสำเร็จรูป มาม่า รสต้มยำกุ้ง': 'Mama Instant Noodles Tom Yum Kung',
   'ชาเขียวพร้อมดื่ม อิชิตัน กรีนที รสต้นตำรับ': 'Ichitan Green Tea Original',
-  'นมเปรี้ยว ดัชมิลล์ 4อิน1 รสผลไม้รวม': 'Dutch Mill 4-in-1 Mixed Fruit Drinking Yogurt',
+  'นมเปรี้ยว ดัชมิลล์ 4อิน1 รสผลไม้รวม':
+    'Dutch Mill 4-in-1 Mixed Fruit Drinking Yogurt',
   'เนสกาแฟ เบลนด์ แอนด์ บรู ริช อโรมา': 'Nescafe Blend & Brew Rich Aroma',
   'โออิชิ กรีนที รสข้าวญี่ปุ่น เก็นไมฉะ': 'Oishi Green Tea Genmaicha',
-  'เป๊ปซี่ กลิ่นไลม์ มะนาว ลิมิเต็ด (เลิกจำหน่าย)': 'Pepsi Lime Limited Edition',
-  'เลย์ แม็กซ์ แผ่นหยัก กลิ่นพริกปีศาจ เอกซ์ตรีม (เลิกจำหน่าย)': "Lay's Max Ghost Pepper Extreme",
+  'เป๊ปซี่ กลิ่นไลม์ มะนาว ลิมิเต็ด (เลิกจำหน่าย)':
+    'Pepsi Lime Limited Edition',
+  'เลย์ แม็กซ์ แผ่นหยัก กลิ่นพริกปีศาจ เอกซ์ตรีม (เลิกจำหน่าย)':
+    "Lay's Max Ghost Pepper Extreme",
 };
 
 function translateCategory(name: string | undefined, lang: string): string {
@@ -110,7 +118,8 @@ export function ShopCatalog({ slug }: { slug: string }) {
   if (filters.category) parameters.set('category_id', filters.category);
   if (filters.minimum) parameters.set('min_price', filters.minimum);
   if (filters.maximum) parameters.set('max_price', filters.maximum);
-  if (filters.sort !== 'name' && filters.sort !== 'favorites') parameters.set('sort', filters.sort);
+  if (filters.sort !== 'name' && filters.sort !== 'favorites')
+    parameters.set('sort', filters.sort);
   const query = parameters.toString();
   const products = useQuery({
     queryKey: ['storefront', slug, 'products', query],
@@ -161,19 +170,31 @@ export function ShopCatalog({ slug }: { slug: string }) {
   );
   return (
     <div className="shop-catalog">
-      <div className={`catalog-layout ${sidebarCollapsed ? 'catalog-layout-sidebar-collapsed' : ''}`}>
+      <div
+        className={`catalog-layout ${sidebarCollapsed ? 'catalog-layout-sidebar-collapsed' : ''}`}
+      >
         <aside
           className={`catalog-sidebar ${sidebarCollapsed ? 'catalog-sidebar-collapsed' : ''}`}
           aria-label={t('catalog.productCategory')}
         >
           <div className="catalog-sidebar-header">
             <h2>
-              {language === 'th' ? 'หมวดหมู่เมนู' : t('catalog.productCategory')}
+              {language === 'th'
+                ? 'หมวดหมู่เมนู'
+                : t('catalog.productCategory')}
             </h2>
             <button
               type="button"
               className="catalog-sidebar-collapse-btn"
-              aria-label={sidebarCollapsed ? (language === 'th' ? 'ขยายหมวดหมู่' : 'Expand categories') : (language === 'th' ? 'ย่อหมวดหมู่' : 'Collapse categories')}
+              aria-label={
+                sidebarCollapsed
+                  ? language === 'th'
+                    ? 'ขยายหมวดหมู่'
+                    : 'Expand categories'
+                  : language === 'th'
+                    ? 'ย่อหมวดหมู่'
+                    : 'Collapse categories'
+              }
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             >
               {sidebarCollapsed ? (
@@ -280,13 +301,19 @@ export function ShopCatalog({ slug }: { slug: string }) {
                   {language === 'th' ? 'เรียงตาม: ยอดนิยม' : 'Sort: Popular'}
                 </option>
                 <option value="favorites">
-                  {language === 'th' ? 'เรียงตาม: รายการโปรด' : 'Sort: Favorites'}
+                  {language === 'th'
+                    ? 'เรียงตาม: รายการโปรด'
+                    : 'Sort: Favorites'}
                 </option>
                 <option value="price_asc">
-                  {language === 'th' ? 'เรียงตาม: ราคา ต่ำ-สูง' : t('storefront.priceLowToHigh')}
+                  {language === 'th'
+                    ? 'เรียงตาม: ราคา ต่ำ-สูง'
+                    : t('storefront.priceLowToHigh')}
                 </option>
                 <option value="price_desc">
-                  {language === 'th' ? 'เรียงตาม: ราคา สูง-ต่ำ' : t('storefront.priceHighToLow')}
+                  {language === 'th'
+                    ? 'เรียงตาม: ราคา สูง-ต่ำ'
+                    : t('storefront.priceHighToLow')}
                 </option>
               </select>
             </div>
@@ -440,12 +467,12 @@ export function ShopCatalog({ slug }: { slug: string }) {
                   const added = favorites.toggle(product.variant_id);
                   setMessage(
                     added
-                      ? (language === 'th'
-                          ? `บันทึก "${product.product_name}" ในรายการโปรดแล้ว`
-                          : `Added "${product.product_name}" to favorites`)
-                      : (language === 'th'
-                          ? `นำ "${product.product_name}" ออกจากรายการโปรดแล้ว`
-                          : `Removed "${product.product_name}" from favorites`),
+                      ? language === 'th'
+                        ? `บันทึก "${product.product_name}" ในรายการโปรดแล้ว`
+                        : `Added "${product.product_name}" to favorites`
+                      : language === 'th'
+                        ? `นำ "${product.product_name}" ออกจากรายการโปรดแล้ว`
+                        : `Removed "${product.product_name}" from favorites`,
                   );
                 }}
                 disabled={
@@ -506,7 +533,12 @@ function CatalogProductCard({
   const stock = exactDecimal(product.available ?? '', 3) ?? 0n;
   const menuOnly = product.stock_policy === 'MENU_ONLY';
   const cartUnits = exactDecimal(cartQuantity, 3) ?? 0n;
-  const remaining = (menuOnly ? MAX_LINE_QUANTITY : stock < MAX_LINE_QUANTITY ? stock : MAX_LINE_QUANTITY) - cartUnits;
+  const remaining =
+    (menuOnly
+      ? MAX_LINE_QUANTITY
+      : stock < MAX_LINE_QUANTITY
+        ? stock
+        : MAX_LINE_QUANTITY) - cartUnits;
   const whole = ['COUNT', 'PACKAGING'].includes(product.unit_type);
   const step = whole ? 1000n : 1n;
   const [quantity, setQuantity] = useState(() =>
@@ -521,7 +553,10 @@ function CatalogProductCard({
     units > 0n &&
     units <= remaining &&
     (!whole || units % 1000n === 0n);
-  const ready = product.saleable && isKnownStockPolicy(product.stock_policy) && (menuOnly || stock >= step);
+  const ready =
+    product.saleable &&
+    isKnownStockPolicy(product.stock_policy) &&
+    (menuOnly || stock >= step);
   const inputID = `quantity-${product.variant_id}`;
   const errorID = `${inputID}-error`;
   return (
@@ -550,13 +585,21 @@ function CatalogProductCard({
           aria-pressed={isFavorite}
           aria-label={
             isFavorite
-              ? (language === 'th' ? 'นำออกจากรายการโปรด' : 'Remove from favorites')
-              : (language === 'th' ? 'บันทึกในรายการโปรด' : 'Add to favorites')
+              ? language === 'th'
+                ? 'นำออกจากรายการโปรด'
+                : 'Remove from favorites'
+              : language === 'th'
+                ? 'บันทึกในรายการโปรด'
+                : 'Add to favorites'
           }
           title={
             isFavorite
-              ? (language === 'th' ? 'นำออกจากรายการโปรด' : 'Remove from favorites')
-              : (language === 'th' ? 'บันทึกในรายการโปรด' : 'Add to favorites')
+              ? language === 'th'
+                ? 'นำออกจากรายการโปรด'
+                : 'Remove from favorites'
+              : language === 'th'
+                ? 'บันทึกในรายการโปรด'
+                : 'Add to favorites'
           }
           onClick={(e) => {
             e.preventDefault();
@@ -576,9 +619,12 @@ function CatalogProductCard({
       <div className="catalog-product-body">
         <div className="catalog-product-info">
           <span className="catalog-product-category">
-            {translateCategory(product.category_name, language) || t('common.products')}
+            {translateCategory(product.category_name, language) ||
+              t('common.products')}
           </span>
-          <h2 id={`product-${product.variant_id}`}>{translateProduct(product.product_name, language)}</h2>
+          <h2 id={`product-${product.variant_id}`}>
+            {translateProduct(product.product_name, language)}
+          </h2>
           <p className="catalog-variant">{product.variant_name}</p>
         </div>
         <div className="catalog-product-meta-actions">
@@ -592,7 +638,9 @@ function CatalogProductCard({
                 {ready
                   ? language === 'th'
                     ? 'พร้อมจำหน่าย'
-                    : menuOnly ? 'Available' : 'In stock'
+                    : menuOnly
+                      ? 'Available'
+                      : 'In stock'
                   : t('storefront.productUnavailableForSale')}
               </span>
               <span className="catalog-visually-hidden">
@@ -601,7 +649,9 @@ function CatalogProductCard({
                       value0: quantityText(stock),
                       value1: product.unit,
                     })
-                  : !ready ? t('storefront.productUnavailableForSale') : null}
+                  : !ready
+                    ? t('storefront.productUnavailableForSale')
+                    : null}
               </span>
             </p>
           </div>
@@ -641,7 +691,10 @@ function CatalogProductCard({
                   value0: product.product_name,
                 })}
                 disabled={
-                  disabled || !ready || units === null || units + step > remaining
+                  disabled ||
+                  !ready ||
+                  units === null ||
+                  units + step > remaining
                 }
                 onClick={() => {
                   if (units !== null) setQuantity(quantityText(units + step));

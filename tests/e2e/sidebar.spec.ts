@@ -188,7 +188,9 @@ test('deep links open a collapsed destination group and highlight only its menu'
     name: 'Main navigation',
     exact: true,
   });
-  await initialMenu.getByRole('button', { name: 'การขาย', exact: true }).click();
+  await initialMenu
+    .getByRole('button', { name: 'การขาย', exact: true })
+    .click();
   await initialMenu
     .getByRole('button', { name: 'รายงานและวิเคราะห์', exact: true })
     .click();

@@ -217,11 +217,7 @@ export function StandardFilterCard({
         ) : (
           children
         ))}
-      {(footerLeft ||
-        onReset ||
-        onSearch ||
-        searchSubmit ||
-        extraActions) && (
+      {(footerLeft || onReset || onSearch || searchSubmit || extraActions) && (
         <div className="sales-filter-bottom-row">
           {footerLeft ?? <div />}
           {(onReset || onSearch || searchSubmit || extraActions) && (

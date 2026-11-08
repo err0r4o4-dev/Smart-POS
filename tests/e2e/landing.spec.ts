@@ -65,6 +65,8 @@ test('landing supports keyboard access to the main content', async ({
   page,
 }) => {
   await page.goto('/');
+  const skip = page.locator('.skip-link');
+  await skip.waitFor({ state: 'attached' });
   await page.keyboard.press('Tab');
   await expect(
     page.getByRole('link', { name: 'ข้ามไปเนื้อหาหลัก' }),
@@ -187,6 +189,9 @@ test('the header logo retains visible keyboard focus and its home destination', 
   const headerLogo = page
     .getByRole('banner')
     .getByRole('link', { name: 'VELO POS หน้าแรก' });
+  await headerLogo.waitFor({ state: 'attached' });
+  const skip = page.locator('.skip-link');
+  await skip.waitFor({ state: 'attached' });
   await page.keyboard.press('Tab');
   await page.keyboard.press('Tab');
   await expect(headerLogo).toBeFocused();

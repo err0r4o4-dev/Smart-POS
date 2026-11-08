@@ -69,21 +69,14 @@ function view(settings = false) {
       }
     >
       <MemoryRouter
-        initialEntries={[
-          settings
-            ? '/manage/settings/storefront'
-            : '/manage/online-orders/order',
-        ]}
+        initialEntries={[settings ? '/settings/storefront' : '/orders/order']}
       >
         <Routes>
           <Route
-            path="/manage/settings/storefront"
+            path="/settings/storefront"
             element={<StorefrontSettingsPage />}
           />
-          <Route
-            path="/manage/online-orders/:orderId"
-            element={<OnlineOrderPage />}
-          />
+          <Route path="/orders/:orderId" element={<OnlineOrderPage />} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -109,7 +102,7 @@ it('allows initial store setup when settings do not exist', async () => {
   view(true);
   const save = await screen.findByRole('button', { name: 'บันทึกการตั้งค่า' });
   expect(
-    screen.getAllByText(/ออเดอร์ใหม่กันจำนวนสินค้าจนหมดอายุ/)[0],
+    screen.getAllByText(/ออเดอร์ใหม่จะกันจำนวนสินค้าไว้จนหมดอายุ/)[0],
   ).toBeVisible();
   expect(save).toBeEnabled();
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -333,7 +326,7 @@ it('sends READY orders to POS in the management workspace', async () => {
   view();
   expect(
     await screen.findByRole('link', { name: 'ลูกค้ามารับ · เปิดเข้า POS' }),
-  ).toHaveAttribute('href', '/manage/pos?online_order=order');
+  ).toHaveAttribute('href', '/pos?online_order=order');
   expect(
     screen.queryByRole('button', { name: /สำเร็จ/ }),
   ).not.toBeInTheDocument();

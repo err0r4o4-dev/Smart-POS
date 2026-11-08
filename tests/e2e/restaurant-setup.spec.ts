@@ -189,11 +189,8 @@ for (const width of [320, 1440]) {
   });
 }
 
-for (const width of [320, 768, 1440]) {
-  test(`restaurant setup layout at ${width}px with mocked API`, async ({
-    page,
-    baseURL,
-  }, testInfo) => {
+for (const width of [320, 640, 641, 768, 1024, 1440]) {
+  test(`restaurant setup layout at ${width}px with mocked API`, async ({ page, baseURL }, testInfo) => {
     const origin = new URL(baseURL!).origin;
     await page.setViewportSize({ width, height: 900 });
     await page.route('**/*', async (route) => {
@@ -276,24 +273,30 @@ for (const width of [320, 768, 1440]) {
     });
     await page.goto('/setup');
     await expect(page.getByLabel('ชื่อร้าน')).toHaveValue('ร้านตัวอย่าง');
-    await expect(
-      page.locator('.sales-page-heading').getByRole('heading', { level: 1 }),
-    ).toHaveText('เริ่มต้นใช้งานร้านอาหาร');
-    await expect(page.locator('.content')).toHaveCSS(
-      'background-image',
-      /radial-gradient/,
-    );
-    await expect(page.locator('.setup-card')).toHaveCSS(
-      'background-color',
-      'rgb(255, 255, 255)',
-    );
-    const progress = page.getByRole('complementary', {
-      name: 'ความคืบหน้าการตั้งค่า',
-    });
+    await expect(page.locator('aside.sidebar')).toHaveCount(0);
+    await expect(page.locator('.setup-topbar .workspace-area-link')).toHaveCount(0);
+    await expect(page.locator('.setup-topbar .tag')).toHaveCount(0);
+    await expect(page.locator('.setup-topbar .language-switcher')).toBeVisible();
+    const header = page.locator('.setup-topbar');
+    await expect(header).toHaveCSS('min-height', width <= 640 ? '64px' : '72px');
+    await expect(header.locator('.brand-mark')).toHaveCSS('height', width <= 640 ? '32px' : '36px');
+    const headerBox = await header.boundingBox();
+    expect(headerBox?.height).toBe(width <= 640 ? 64 : 72);
+    const brandBox = await header.locator('.setup-topbar-brand').boundingBox();
+    const actionsBox = await header.locator('.setup-topbar-actions').boundingBox();
+    expect(brandBox!.x + brandBox!.width).toBeLessThan(actionsBox!.x);
+    expect(actionsBox!.x + actionsBox!.width).toBeLessThanOrEqual(width - 16);
+    await expect(page.getByRole('heading', { level: 1, name: 'เริ่มต้นใช้งานร้านอาหาร' })).toHaveCount(1);
+    await expect(page.locator('.setup-page-wrapper')).toHaveCSS('background-image', /radial-gradient/);
+    await expect(page.locator('.setup-card')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+    const progress = page.getByRole('complementary', { name: 'ความคืบหน้าการตั้งค่า' });
+    await expect(progress).toHaveClass(/setup-top-stepper/);
     await expect(progress.getByRole('listitem')).toHaveCount(7);
+    const progressBox = await progress.boundingBox();
+    const layoutBox = await page.locator('.setup-layout').boundingBox();
+    expect(progressBox?.y ?? 0).toBeLessThan(layoutBox?.y ?? 0);
     if (width <= 768) {
-      const bounds = await progress.boundingBox();
-      expect(bounds?.height).toBeLessThan(300);
+      expect(progressBox?.height).toBeLessThan(300);
     }
     await progress.getByRole('button', { name: /1 ข้อมูลร้าน/ }).focus();
     await page.keyboard.press('Tab');

@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useLanguage } from '../../app/language';
+import { errorMessage } from '../../i18n';
 import { Button } from '../../components/ui/primitives';
 
 export function ShopError({
@@ -9,17 +10,11 @@ export function ShopError({
   error: unknown;
   retry?: () => void;
 }) {
-  const { t, localize } = useLanguage();
+  const { t, language } = useLanguage();
 
   return (
     <div className="error-state" role="alert">
-      <p>
-        {localize(
-          (error instanceof Error
-            ? error.message
-            : t('storefront.noAccessibleDataFound')) ?? '',
-        )}
-      </p>
+      <p>{errorMessage(language, error)}</p>
       {retry && (
         <Button className="button-secondary" onClick={retry}>
           {t('shell.tryAgain')}

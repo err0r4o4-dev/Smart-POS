@@ -55,35 +55,33 @@ beforeEach(() => {
   });
 });
 it('keeps restaurant menu navigation without retired retail tools', () => {
-  mount(<ProductsPage />, '/manage/products');
+  mount(<ProductsPage />, '/menu');
   for (const path of [
     '/brands',
     '/products/import',
     '/products/labels',
     '/inventory/balances',
   ]) {
-    expect(
-      document.querySelector(`a[href="/manage${path}"]`),
-    ).not.toBeInTheDocument();
+    expect(document.querySelector(`a[href="${path}"]`)).not.toBeInTheDocument();
   }
   expect(
-    document.querySelector('a[href="/manage/restaurant/recipes"]'),
+    document.querySelector('a[href="/restaurant/recipes"]'),
   ).not.toBeInTheDocument();
   expect(
-    document.querySelector('a[href="/manage/restaurant/quick-stock"]'),
+    document.querySelector('a[href="/restaurant/quick-stock"]'),
   ).not.toBeInTheDocument();
 });
 it('keeps management-only recipe and ingredient shortcuts out of staff catalog pages', () => {
   mount(<ProductsPage />, '/work/products');
   expect(
-    document.querySelector('a[href="/manage/restaurant/recipes"]'),
+    document.querySelector('a[href="/restaurant/recipes"]'),
   ).not.toBeInTheDocument();
   expect(
-    document.querySelector('a[href="/manage/restaurant/quick-stock"]'),
+    document.querySelector('a[href="/restaurant/quick-stock"]'),
   ).not.toBeInTheDocument();
 });
 it('removes brand and barcode merchandising controls from restaurant menu management', () => {
-  mount(<ProductsPage />, '/manage/products');
+  mount(<ProductsPage />, '/menu');
   expect(screen.queryByLabelText('กรองแบรนด์')).not.toBeInTheDocument();
   expect(screen.queryByText('แบรนด์')).not.toBeInTheDocument();
   expect(
@@ -101,9 +99,9 @@ it('omits the ingredient shortcut without stock read permission', () => {
   mocks.can.mockImplementation(
     (permission: string) => permission !== 'inventory.read',
   );
-  mount(<ProductsPage />, '/manage/products');
+  mount(<ProductsPage />, '/menu');
   expect(
-    document.querySelector('a[href="/manage/restaurant/quick-stock"]'),
+    document.querySelector('a[href="/restaurant/quick-stock"]'),
   ).not.toBeInTheDocument();
 });
 it.each(['-1', '0.001', '1e2', 'NaN', '01', '10000000000000000'])(
@@ -135,25 +133,29 @@ it('allows exact maximum prices, normalized SKU and bounded attributes', () => {
 it('blocks zero selling price and incomplete attributes before a variant request', async () => {
   mount(<VariantEditor productID="product-a" units={[unit]} />);
   fireEvent.change(screen.getByLabelText('SKU'), { target: { value: 'CAN' } });
-  fireEvent.change(screen.getByLabelText('หน่วยนับ Variant'), {
+  fireEvent.change(screen.getByLabelText('หน่วยนับของตัวเลือกสินค้า'), {
     target: { value: unit.id },
   });
   fireEvent.change(screen.getByLabelText('ราคาขาย'), {
     target: { value: '0.00' },
   });
   fireEvent.submit(
-    screen.getByRole('button', { name: 'บันทึก Variant' }).closest('form')!,
+    screen
+      .getByRole('button', { name: 'บันทึกตัวเลือกสินค้า' })
+      .closest('form')!,
   );
   expect(screen.getByRole('alert')).toHaveTextContent('ราคาขายต้องมากกว่า 0');
   expect(mocks.request).not.toHaveBeenCalled();
   fireEvent.change(screen.getByLabelText('ราคาขาย'), {
     target: { value: '18.00' },
   });
-  fireEvent.change(screen.getByLabelText('คุณลักษณะ Variant'), {
+  fireEvent.change(screen.getByLabelText('คุณลักษณะของตัวเลือกสินค้า'), {
     target: { value: 'size=' },
   });
   fireEvent.submit(
-    screen.getByRole('button', { name: 'บันทึก Variant' }).closest('form')!,
+    screen
+      .getByRole('button', { name: 'บันทึกตัวเลือกสินค้า' })
+      .closest('form')!,
   );
   expect(screen.getByRole('alert')).toHaveTextContent('key=value');
   expect(mocks.request).not.toHaveBeenCalled();
@@ -184,7 +186,7 @@ it('renders back / return link pointing to products list in LabelsPage', () => {
   });
   expect(backLinks.length).toBe(1);
   expect(backLinks[0]).toBeVisible();
-  expect(backLinks[0]).toHaveAttribute('href', '/products');
+  expect(backLinks[0]).toHaveAttribute('href', '/menu');
 });
 
 it('renders organized sections for product selection and print settings in LabelsPage', () => {
@@ -197,7 +199,7 @@ it('renders organized sections for product selection and print settings in Label
   ).toBeVisible();
   expect(screen.getByLabelText('ค้นหาสินค้าสำหรับฉลาก')).toBeVisible();
   expect(screen.getByLabelText('สินค้าสำหรับฉลาก')).toBeVisible();
-  expect(screen.getByLabelText('Variant สำหรับฉลาก')).toBeVisible();
+  expect(screen.getByLabelText('ตัวเลือกสินค้าสำหรับฉลาก')).toBeVisible();
   expect(screen.getByLabelText('บาร์โค้ดสำหรับฉลาก')).toBeVisible();
   expect(screen.getByLabelText('ความกว้าง (mm)')).toBeVisible();
   expect(screen.getByLabelText('ความสูง (mm)')).toBeVisible();
@@ -211,7 +213,7 @@ it('renders back / return link pointing to products list in ImportPage', () => {
   mount(<ImportPage />);
   const backLink = screen.getByRole('link', { name: /ย้อนกลับ \/ กลับรายการ/ });
   expect(backLink).toBeVisible();
-  expect(backLink).toHaveAttribute('href', '/products');
+  expect(backLink).toHaveAttribute('href', '/menu');
   expect(backLink).toHaveClass('button', 'button-secondary');
 });
 
@@ -219,7 +221,7 @@ it('renders back / return link pointing to products list in ProductEditorPage', 
   mount(<ProductEditorPage />);
   const backLink = screen.getByRole('link', { name: /ย้อนกลับ \/ กลับรายการ/ });
   expect(backLink).toBeVisible();
-  expect(backLink).toHaveAttribute('href', '/products');
+  expect(backLink).toHaveAttribute('href', '/menu');
   expect(backLink).toHaveClass('button', 'button-secondary');
 });
 
@@ -227,17 +229,19 @@ it('creates a saleable variant with string prices and refreshes only after succe
   mocks.request.mockResolvedValue({});
   mount(<VariantEditor productID="product-a" units={[unit]} />);
   fireEvent.change(screen.getByLabelText('SKU'), { target: { value: 'CAN' } });
-  fireEvent.change(screen.getByLabelText('หน่วยนับ Variant'), {
+  fireEvent.change(screen.getByLabelText('หน่วยนับของตัวเลือกสินค้า'), {
     target: { value: unit.id },
   });
   fireEvent.change(screen.getByLabelText('ราคาขาย'), {
     target: { value: '18.00' },
   });
   fireEvent.submit(
-    screen.getByRole('button', { name: 'บันทึก Variant' }).closest('form')!,
+    screen
+      .getByRole('button', { name: 'บันทึกตัวเลือกสินค้า' })
+      .closest('form')!,
   );
   expect(await screen.findByRole('status')).toHaveTextContent(
-    'บันทึก Variant แล้ว',
+    'บันทึกตัวเลือกสินค้าแล้ว',
   );
   expect(mocks.request).toHaveBeenCalledWith(
     '/products/product-a/variants',
@@ -291,7 +295,7 @@ it('shows unknown barcode actions without fabricating a product', async () => {
   );
   expect(screen.getByRole('link', { name: 'สร้างสินค้าใหม่' })).toHaveAttribute(
     'href',
-    '/products/new?barcode=00123',
+    '/menu/new?barcode=00123',
   );
   expect(screen.getByLabelText('บาร์โค้ด')).toHaveFocus();
 });

@@ -2,38 +2,32 @@ import { createElement } from 'react';
 import { expect, it } from 'vitest';
 import { scopeWorkspaceRoutes } from './workspace-routes';
 
-it('retains existing permission parents and page elements for owner scoped paths', () => {
+it('preserves clean root restaurant routes and permission parents without /manage duplication', () => {
   const gate = createElement('div', { id: 'permission-gate' });
-  const page = createElement('h1', null, 'Product');
+  const page = createElement('h1', null, 'Menu item');
   const routes = scopeWorkspaceRoutes([
-    { element: gate, children: [{ path: '/products/:id', element: page }] },
+    { element: gate, children: [{ path: '/menu/:id', element: page }] },
   ]);
   expect(routes[0].element).toBe(gate);
   expect(routes[0].children?.map((route) => route.path)).toEqual([
-    '/products/:id',
-    '/manage/products/:id',
+    '/menu/:id',
   ]);
-  expect(routes[0].children?.[1].element).toBe(page);
-  expect(routes[0].children?.[0].element).not.toBe(page);
+  expect(routes[0].children?.[0].element).toBe(page);
 });
 
-it('does not publish admin pages in work or rewrite customer and account routes', () => {
+it('keeps settings, customer storefront, and dashboard routes at their clean paths', () => {
   const routes = scopeWorkspaceRoutes([
-    { path: '/settings/store' },
-    { path: '/pricing' },
+    { path: '/settings' },
+    { path: '/settings/storefront' },
+    { path: '/settings/payments' },
     { path: '/shop' },
-    { path: '/account' },
-    { path: '/manage/dashboard' },
-    { path: '/work' },
+    { path: '/dashboard' },
   ]);
   expect(routes.map((route) => route.path)).toEqual([
-    '/settings/store',
-    '/manage/settings/store',
-    '/pricing',
-    '/manage/pricing',
+    '/settings',
+    '/settings/storefront',
+    '/settings/payments',
     '/shop',
-    '/account',
-    '/manage/dashboard',
-    '/work',
+    '/dashboard',
   ]);
 });

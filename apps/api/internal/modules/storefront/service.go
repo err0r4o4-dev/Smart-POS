@@ -104,7 +104,7 @@ func (service *Service) Directory(ctx context.Context) (json.RawMessage, error) 
 			return nil, err
 		}
 		var result []byte
-		err = tx.QueryRow(ctx, `SELECT COALESCE(jsonb_agg(jsonb_build_object('slug',shop.slug,'name',shop.name,'accepting_orders',shop.accepting_orders)),'[]'::jsonb) FROM storefronts shop JOIN organizations org ON org.id=shop.organization_id WHERE shop.organization_id=$1 AND shop.published AND org.status='ACTIVE'`, org).Scan(&result)
+		err = tx.QueryRow(ctx, `SELECT COALESCE(jsonb_agg(jsonb_build_object('slug',shop.slug,'name',shop.name,'accepting_orders',shop.accepting_orders,'business_type',org.business_type)),'[]'::jsonb) FROM storefronts shop JOIN organizations org ON org.id=shop.organization_id WHERE shop.organization_id=$1 AND shop.published AND org.status='ACTIVE'`, org).Scan(&result)
 		return json.RawMessage(result), dbError(err)
 	}
 	var result []byte

@@ -1,6 +1,6 @@
 import { useLanguage } from '../../app/language';
-import { BookOpen, Code2, ShieldCheck } from 'lucide-react';
-import { Card, Tag } from '../../components/ui/primitives';
+import { BookOpen, Store, CookingPot } from 'lucide-react';
+import { Card } from '../../components/ui/primitives';
 import { StandardPageHeader } from '../../components/ui/StandardPage';
 
 export function HelpPage() {
@@ -10,33 +10,29 @@ export function HelpPage() {
     <>
       <StandardPageHeader
         icon={<BookOpen size={24} />}
-        eyebrow={t('help.developerWorkspace')}
-        title={t('help.buildOnSolidGround')}
-        description={t('help.aPracticalStartingPointForTheFive')}
+        eyebrow={t('help.eyebrow')}
+        title={t('help.title')}
+        description={t('help.description')}
         headingTabIndex={-1}
-        actions={<Tag tone="amber">{t('dashboard.phase0')}</Tag>}
       />
       <div className="help-grid">
         <Card>
-          <Code2 className="help-icon" />
-          <h2>{t('help.startLocally')}</h2>
-          <p>{t('help.fromTheRepositoryRootWithNode24')}</p>
-          <pre>
-            <code>npm ci{'\n'}npm run stack:up</code>
-          </pre>
-          <p>{t('help.openLocalhost8088ForTheCompleteSame')}</p>
+          <Store className="help-icon" />
+          <h2>{t('help.setupTitle')}</h2>
+          <p>{t('help.setupBody')}</p>
+          <p>{t('help.menuBody')}</p>
         </Card>
         <Card>
-          <ShieldCheck className="help-icon" />
-          <h2>{t('help.knowTheBoundary')}</h2>
-          <p>{t('help.signInAndSelectYourOrganizationTo')}</p>
-          <p>{t('help.healthStatusIsRealModulePageCounts')}</p>
+          <CookingPot className="help-icon" />
+          <h2>{t('help.ordersTitle')}</h2>
+          <p>{t('help.ordersBody')}</p>
+          <p>{t('help.statusBody')}</p>
         </Card>
         <Card>
           <BookOpen className="help-icon" />
-          <h2>{t('help.followTheRoadmap')}</h2>
-          <p>{t('help.identityCatalogInventoryPosSalesPurchasingShelves')}</p>
-          <p>{t('help.detailedContractsModuleOwnershipAndAcceptanceGates')}</p>
+          <h2>{t('help.trackingTitle')}</h2>
+          <p>{t('help.trackingBody')}</p>
+          <p>{t('help.recoveryBody')}</p>
         </Card>
       </div>
     </>

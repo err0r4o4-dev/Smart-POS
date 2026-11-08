@@ -1,4 +1,4 @@
-import { render } from '../../test/render';
+import { render, renderInEnglish } from '../../test/render';
 import {
   act,
   fireEvent,
@@ -219,7 +219,7 @@ afterEach(() => {
   });
 });
 
-function renderSetup(initialEntries = ['/setup']) {
+function renderSetup(initialEntries = ['/setup'], english = false) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -228,15 +228,63 @@ function renderSetup(initialEntries = ['/setup']) {
       <MemoryRouter initialEntries={initialEntries}>
         <Routes>
           <Route path="/setup" element={<SetupPage />} />
-          <Route path="/manage/dashboard" element={<h1>แดชบอร์ด</h1>} />
+          <Route path="/dashboard" element={<h1>แดชบอร์ด</h1>} />
           <Route path="/account" element={<h1>บัญชี</h1>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>
   );
-  const result = render(page());
+  const result = (english ? renderInEnglish : render)(page());
   return { ...result, client, refreshView: () => result.rerender(page()) };
 }
+
+it('shows setup labels and validation in English', () => {
+  mocks.role = null;
+  renderSetup(['/setup'], true);
+  expect(screen.getByLabelText('Store name')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Save and continue' }));
+  expect(screen.getByText('Enter a store name')).toBeInTheDocument();
+});
+
+it('shows setup progress and QR rotation instructions in English', async () => {
+  mocks.context = {
+    organization: { id: 'org-1' },
+    membership: { role: 'OWNER' },
+  };
+  mocks.request.mockResolvedValue(tableSetup);
+  renderSetup(['/setup'], true);
+  expect(await screen.findByLabelText('First table name')).toHaveValue('โต๊ะ');
+  expect(
+    screen.getByRole('complementary', { name: 'Setup progress' }),
+  ).toHaveTextContent('Areas and tables');
+  expect(screen.getByText(/saving rotates the secrets/)).toBeInTheDocument();
+});
+
+it('shows the readiness review in English', async () => {
+  mocks.context = {
+    organization: { id: 'org-1' },
+    membership: { role: 'OWNER' },
+  };
+  mocks.request.mockResolvedValue({ ...setupState, current_step: 'review' });
+  renderSetup(['/setup'], true);
+  expect(await screen.findByText('Store ready to open')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Open store' })).toBeEnabled();
+});
+
+it('explains unavailable payment methods in English and keeps them disabled', async () => {
+  mocks.context = {
+    organization: { id: 'org-1' },
+    membership: { role: 'OWNER' },
+  };
+  mocks.request.mockResolvedValue({ ...setupState, current_step: 'payments' });
+  renderSetup(['/setup'], true);
+  expect(await screen.findByLabelText(/Credit card/)).toBeDisabled();
+  expect(screen.getByLabelText(/PromptPay/)).toBeDisabled();
+  expect(
+    screen.getByText(/payment provider connection required/),
+  ).toBeInTheDocument();
+  expect(screen.getByText(/Merchant ID required/)).toBeInTheDocument();
+});
 
 it('creates and saves a profile using only visible store fields', async () => {
   mocks.role = null;
@@ -458,41 +506,48 @@ it('never displays or caches a deferred table token response after the user chan
   ).not.toContain('test-secret-token');
 });
 
-it('discards possibly rotated secrets after a failed table save and allows retry', async () => {
-  mocks.context = {
-    organization: { id: 'org-1' },
-    membership: { role: 'OWNER' },
-  };
-  let saves = 0;
-  mocks.request.mockImplementation(
-    (path: string, options?: { method?: string }) => {
-      if (options?.method === 'PUT' && path.endsWith('/tables')) {
-        saves++;
-        return saves === 2
-          ? Promise.reject(new Error('บันทึกไม่สำเร็จ'))
-          : Promise.resolve({
-              ...tableSetup,
-              issued_table_qr_tokens: issuedTokens,
-            });
-      }
-      return Promise.resolve(tableSetup);
-    },
-  );
-  renderSetup();
-  await screen.findByLabelText('ชื่อโต๊ะแรก');
-  fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  await screen.findByDisplayValue(/test-secret-token/);
-  fireEvent.click(screen.getByRole('button', { name: /ย้อนกลับ/ }));
-  fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  expect(await screen.findByRole('alert')).toHaveTextContent('บันทึกไม่สำเร็จ');
-  expect(
-    screen.queryByDisplayValue(/test-secret-token/),
-  ).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  expect(
-    await screen.findByDisplayValue(/test-secret-token/),
-  ).toBeInTheDocument();
-});
+it.each(['บันทึกไม่สำเร็จ', ''])(
+  'discards possibly rotated secrets after table failure %j and allows retry',
+  async (message) => {
+    mocks.context = {
+      organization: { id: 'org-1' },
+      membership: { role: 'OWNER' },
+    };
+    let saves = 0;
+    mocks.request.mockImplementation(
+      (path: string, options?: { method?: string }) => {
+        if (options?.method === 'PUT' && path.endsWith('/tables')) {
+          saves++;
+          return saves === 2
+            ? Promise.reject(new Error(message))
+            : Promise.resolve({
+                ...tableSetup,
+                issued_table_qr_tokens: issuedTokens,
+              });
+        }
+        return Promise.resolve(tableSetup);
+      },
+    );
+    renderSetup();
+    await screen.findByLabelText('ชื่อโต๊ะแรก');
+    fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
+    await screen.findByDisplayValue(/test-secret-token/);
+    fireEvent.click(screen.getByRole('button', { name: /ย้อนกลับ/ }));
+    fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
+    expect(await screen.findByRole('alert')).not.toBeEmptyDOMElement();
+    fireEvent.click(screen.getByRole('button', { name: 'English' }));
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'The secret rotation status may be uncertain.',
+    );
+    expect(
+      screen.queryByDisplayValue(/test-secret-token/),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Save and continue/ }));
+    expect(
+      await screen.findByDisplayValue(/test-secret-token/),
+    ).toBeInTheDocument();
+  },
+);
 
 it('displays arbitrary server readiness prerequisites without enabling activation', async () => {
   mocks.context = {
@@ -549,8 +604,10 @@ it('offers manual selection when copying issued secrets fails', async () => {
   expect(await screen.findByRole('status')).toHaveTextContent(
     'คัดลอกไม่สำเร็จ',
   );
+  fireEvent.click(screen.getByRole('button', { name: 'English' }));
+  expect(screen.getByRole('status')).toHaveTextContent('Copy failed');
   expect(
-    (screen.getByLabelText('รหัสลับโต๊ะ') as HTMLTextAreaElement).value,
+    (screen.getByLabelText('Table secret') as HTMLTextAreaElement).value,
   ).toContain('test-secret-token');
 });
 
@@ -1291,3 +1348,78 @@ it.each(['MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'PURCHASING_STAFF'])(
     expect(screen.getByText('บัญชี')).toBeInTheDocument();
   },
 );
+
+it('renders standalone VELOPOS hero panel and form layout without backoffice sidebar', () => {
+  mocks.role = null;
+  renderSetup();
+
+  expect(document.querySelector('aside.sidebar')).not.toBeInTheDocument();
+  const topbar = document.querySelector('header.topbar.setup-topbar');
+  expect(topbar).toBeInTheDocument();
+  expect(
+    document.querySelector('.topbar .breadcrumb strong'),
+  ).toHaveTextContent('เริ่มต้นใช้งานร้านอาหาร');
+  expect(topbar?.querySelector('.workspace-area-link')).not.toBeInTheDocument();
+  expect(topbar?.querySelector('.tag')).not.toBeInTheDocument();
+  expect(
+    within(topbar as HTMLElement).queryByText('ดูหน้าร้าน'),
+  ).not.toBeInTheDocument();
+  expect(
+    within(topbar as HTMLElement).queryByText('เจ้าของร้าน'),
+  ).not.toBeInTheDocument();
+
+  const stepper = screen.getByRole('complementary', {
+    name: 'ความคืบหน้าการตั้งค่า',
+  });
+  expect(stepper).toHaveClass('setup-top-stepper');
+  expect(stepper).not.toHaveClass('visually-hidden');
+  expect(stepper.querySelector('.setup-top-stepper-line')).toBeInTheDocument();
+  const badges = Array.from(
+    stepper.querySelectorAll('.setup-top-step-badge'),
+  ).map((el) => el.textContent?.trim());
+  expect(badges).toEqual(['1', '2', '3', '4', '5', '6', '7']);
+  const layout = document.querySelector('.setup-layout');
+  expect(layout).not.toBeNull();
+  expect(
+    stepper.compareDocumentPosition(layout!) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  expect(within(stepper).getByText('ตั้งค่าข้อมูลพื้นฐาน')).toBeVisible();
+  expect(within(stepper).getByText('ตรวจทานและเริ่มใช้งาน')).toBeVisible();
+
+  const hero = screen.getByRole('complementary', {
+    name: 'จุดเด่นและบริการ VELOPOS',
+  });
+  expect(within(hero).getByText(/ตั้งค่าร้านอาหารของคุณ/)).toBeVisible();
+  expect(within(hero).getByText(/เริ่มใช้งาน VELOPOS/)).toBeVisible();
+  expect(within(hero).getByText('ตั้งค่าร้านง่าย')).toBeVisible();
+  expect(within(hero).getByText('รองรับการสั่งซื้อหลายรูปแบบ')).toBeVisible();
+  expect(within(hero).getByText('ดูรายงานและยอดขาย')).toBeVisible();
+
+  expect(screen.getByPlaceholderText('เช่น ร้านอาหารของคุณ')).toBeVisible();
+  expect(
+    screen.getByPlaceholderText('เช่น contact@velocafe.com'),
+  ).toBeVisible();
+  expect(screen.getByPlaceholderText('เช่น 061-507-1665')).toBeVisible();
+  expect(
+    screen.getByPlaceholderText(
+      'เช่น 123 ถ.สุขุมวิท แขวงคลองตัน เขตวัฒนา กรุงเทพฯ 10110',
+    ),
+  ).toBeVisible();
+  expect(
+    screen.getByPlaceholderText(
+      'เช่น ร้านอาหารและคาเฟ่ อาหารไทย เครื่องดื่ม และเบเกอรี่',
+    ),
+  ).toBeVisible();
+  expect(document.querySelector('.setup-select-overlay')).toHaveTextContent(
+    'ร้านอาหาร',
+  );
+  expect(document.querySelector('.setup-select-overlay')).not.toHaveTextContent(
+    'Restaurant',
+  );
+  expect(
+    screen.getByText(
+      /คุณสามารถแก้ไขข้อมูลเหล่านี้ได้ในภายหลัง เช่น ชื่อร้าน ที่อยู่ รูปภาพ และคำอธิบายร้าน/,
+    ),
+  ).toBeVisible();
+  expect(screen.getByText('ถัดไป')).toBeVisible();
+});

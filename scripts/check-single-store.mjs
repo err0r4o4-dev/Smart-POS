@@ -537,7 +537,7 @@ COMMIT;`,
     (SELECT count(*) FROM online_order_stock_items)::text || ':' ||
     (SELECT count(*) FROM stock_movements)::text`;
   const beforePolicyUpgrade = sql(upgradeDatabase, policyUpgradeFingerprint);
-  run('docker', migrationArgs(upgradeDatabase, 'up'));
+  run('docker', migrationArgs(upgradeDatabase, 'goto', '32'));
   if (
     sql(upgradeDatabase, 'SELECT version,dirty FROM schema_migrations') !==
     '32|f'
@@ -561,6 +561,41 @@ COMMIT;`,
     );
   console.log(
     'PASS: schema 31-to-32 upgrade preserves historical counts and TRACKED policies.',
+  );
+  const directoryBefore = sql(upgradeDatabase, 'SELECT storefront_directory()');
+  const directoryGrants = sql(
+    upgradeDatabase,
+    "SELECT proacl::text FROM pg_proc WHERE oid='public.storefront_directory()'::regprocedure",
+  );
+  for (const version of ['33', '32', '33']) {
+    run('docker', migrationArgs(upgradeDatabase, 'goto', version));
+    if (
+      sql(upgradeDatabase, 'SELECT version,dirty FROM schema_migrations') !==
+      version + '|f'
+    )
+      throw new Error(
+        'Directory metadata migration did not reach clean schema ' + version,
+      );
+    const directory = sql(
+      upgradeDatabase,
+      version === '32'
+        ? 'SELECT storefront_directory()'
+        : "SELECT COALESCE(jsonb_agg(entry - 'business_type' ORDER BY position),'[]'::jsonb) FROM jsonb_array_elements(storefront_directory()) WITH ORDINALITY AS items(entry,position)",
+    );
+    if (
+      directory !== directoryBefore ||
+      sql(upgradeDatabase, policyUpgradeFingerprint) !== beforePolicyUpgrade ||
+      sql(
+        upgradeDatabase,
+        "SELECT proacl::text FROM pg_proc WHERE oid='public.storefront_directory()'::regprocedure",
+      ) !== directoryGrants
+    )
+      throw new Error(
+        'Directory metadata upgrade/rollback changed visibility, ordering, grants or stored counts.',
+      );
+  }
+  console.log(
+    'PASS: migration 33 upgrade/down-to-32/re-upgrade preserves directory, grants and historical counts.',
   );
   run('docker', migrationArgs(database, 'up'));
   run('docker', migrationArgs(database, 'up'));

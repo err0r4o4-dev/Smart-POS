@@ -76,7 +76,10 @@ function view(path: string) {
             <Route index element={<StorefrontPage />} />
             <Route path=":slug" element={<StorefrontPage />} />
             <Route path=":slug/cart" element={<ShopCartPage />} />
-            <Route path=":slug/track/:orderId" element={<ShopTrackingPage />} />
+            <Route
+              path=":slug/orders/:orderId"
+              element={<ShopTrackingPage />}
+            />
           </Route>
         </Routes>
       </MemoryRouter>
@@ -141,7 +144,7 @@ it('keeps the customer area independent of auth and organization providers', asy
   expect(
     screen.getByRole('heading', { level: 1, name: 'หน้าร้านออนไลน์' }),
   ).toBeVisible();
-  expect(screen.getByText('สำหรับลูกค้า')).toBeVisible();
+  expect(screen.queryByText('สำหรับลูกค้า')).not.toBeInTheDocument();
   expect(
     screen.getByRole('navigation', { name: 'เมนูหน้าร้านลูกค้า' }),
   ).toBeVisible();
@@ -592,7 +595,7 @@ it('renders product image in cart when image_url is available', async () => {
 });
 
 it('requires the private access fragment to track an order', () => {
-  view('/shop/test-shop/track/order');
+  view('/shop/test-shop/orders/order');
   expect(screen.getByRole('alert')).toHaveTextContent('ลิงก์ติดตามไม่ครบ');
   expect(fetchMock).not.toHaveBeenCalled();
 });

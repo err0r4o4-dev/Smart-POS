@@ -1,9 +1,10 @@
-import { render } from '../../test/render';
+import { render, renderInEnglish } from '../../test/render';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { SettingsPage } from './SettingsPage';
+import { useLanguage } from '../../app/language';
 
 const mocks = vi.hoisted(() => ({
   posRequest: vi.fn(),
@@ -51,27 +52,113 @@ vi.mock('../../lib/organization-api', () => ({
   organizationRequest: mocks.orgRequest,
 }));
 
-function renderPage(props = {}) {
+function LanguageSwitch() {
+  const { setLanguage } = useLanguage();
+  return <button onClick={() => setLanguage('th')}>Thai</button>;
+}
+
+function renderPage(props = {}, english = false) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
       mutations: { retry: false },
     },
   });
-  return render(
+  return (english ? renderInEnglish : render)(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
         <SettingsPage {...props} />
+        <LanguageSwitch />
       </MemoryRouter>
     </QueryClientProvider>,
   );
 }
+
+it('shows settings controls in English without translating stored values', () => {
+  renderPage({}, true);
+  expect(
+    screen.getByRole('heading', { level: 1, name: 'Settings' }),
+  ).toBeInTheDocument();
+  expect(screen.getByLabelText(/Restaurant name/)).toHaveValue(
+    'VELO Cafe & Restaurant',
+  );
+  expect(screen.getByRole('checkbox', { name: 'Cash' })).toBeInTheDocument();
+});
+
+it('changes language without losing edited store details', () => {
+  renderPage({}, true);
+  fireEvent.change(screen.getByLabelText(/Restaurant name/), {
+    target: { value: 'My restaurant' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Thai' }));
+  expect(screen.getByLabelText(/ชื่อร้านอาหาร/)).toHaveValue('My restaurant');
+  expect(screen.getByRole('option', { name: 'ร้านอาหาร' })).toBeInTheDocument();
+  expect(
+    screen.queryByRole('option', { name: 'ร้านอาหาร (Restaurant)' }),
+  ).not.toBeInTheDocument();
+});
+
+it('formats the current business period in the selected language and time zone', () => {
+  const period = { start: '2026-11-04T15:00:00Z', end: '2026-11-05T15:00:00Z' };
+  renderPage({ initialSettings: { timezone: 'Asia/Bangkok', period } }, true);
+  const englishStart = new Date(period.start).toLocaleString('en-GB', {
+    timeZone: 'Asia/Bangkok',
+  });
+  const englishEnd = new Date(period.end).toLocaleString('en-GB', {
+    timeZone: 'Asia/Bangkok',
+  });
+  const thaiStart = new Date(period.start).toLocaleString('th-TH', {
+    timeZone: 'Asia/Bangkok',
+  });
+  const thaiEnd = new Date(period.end).toLocaleString('th-TH', {
+    timeZone: 'Asia/Bangkok',
+  });
+  expect(
+    screen.getByText(`Current period: ${englishStart} to ${englishEnd}`),
+  ).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Thai' }));
+  expect(
+    screen.getByText(`รอบปัจจุบัน: ${thaiStart} ถึง ${thaiEnd}`),
+  ).toBeInTheDocument();
+});
+
+it('shows neutral placeholders when the business period is unavailable', () => {
+  renderPage({}, true);
+  expect(screen.getByText('Current period: — to —')).toBeInTheDocument();
+  expect(screen.getByText('Closing time: 22:00')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Thai' }));
+  expect(screen.getByText('รอบปัจจุบัน: — ถึง —')).toBeInTheDocument();
+  expect(screen.getByLabelText('เวลาปิดรอบวัน')).toHaveValue('22:00');
+});
 
 beforeEach(() => {
   mocks.posRequest.mockReset();
   mocks.orgRequest.mockReset();
   mocks.canUpdate = true;
 });
+
+it.each(['hours', 'all'])(
+  'updates the %s success message when switching language',
+  async (section) => {
+    mocks.orgRequest.mockResolvedValue({});
+    mocks.posRequest.mockResolvedValue({});
+    renderPage({}, true);
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: section === 'hours' ? 'Save closing time' : 'Save changes',
+      }),
+    );
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      section === 'hours' ? 'Closing time saved' : 'Changes saved',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Thai' }));
+    expect(screen.getByRole('status')).toHaveTextContent(
+      section === 'hours'
+        ? 'บันทึกเวลาปิดร้านเรียบร้อยแล้ว'
+        : 'บันทึกการเปลี่ยนแปลงเรียบร้อยแล้ว',
+    );
+  },
+);
 
 it('renders the complete settings layout matching the mockup', () => {
   renderPage();
@@ -82,7 +169,7 @@ it('renders the complete settings layout matching the mockup', () => {
   );
   expect(screen.getByText('รายละเอียดการตั้งค่าร้านอาหาร')).toBeInTheDocument();
   expect(
-    screen.getAllByRole('link', { name: /ตั้งค่าหน้าร้านออนไลน์/ })[0],
+    screen.getByRole('link', { name: 'ตั้งค่าหน้าร้านออนไลน์' }),
   ).toHaveAttribute('href', '/settings/storefront');
   expect(
     screen.getByRole('button', { name: 'บันทึกการเปลี่ยนแปลง' }),
@@ -172,6 +259,11 @@ it('renders the complete settings layout matching the mockup', () => {
 
 it('allows editing form fields and toggling options', () => {
   renderPage();
+
+  // Online store settings are managed on their own page.
+  expect(
+    screen.getByRole('link', { name: 'ไปยังหน้าตั้งค่าหน้าร้านออนไลน์' }),
+  ).toHaveAttribute('href', '/settings/storefront');
 
   // Change name and phone
   const nameInput = screen.getByLabelText(/ชื่อร้านอาหาร/);

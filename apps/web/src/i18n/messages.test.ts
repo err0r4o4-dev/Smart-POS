@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { messages, translate, localize } from './index';
+import { messages, translate, localize, errorMessage } from './index';
+import { navigation } from '../app/routes';
 
 function flatten(value: object, prefix = ''): Record<string, string> {
   return Object.fromEntries(
@@ -13,6 +14,40 @@ function flatten(value: object, prefix = ''): Record<string, string> {
 }
 
 describe('translation coverage', () => {
+  it('translates every management navigation label without changing its route', () => {
+    for (const item of navigation) {
+      expect(localize('en', item.label), item.to).not.toMatch(
+        /[\u0e01-\u0e3a\u0e40-\u0e5b]/,
+      );
+      expect(localize('th', item.label), item.to).toBe(item.label);
+    }
+  });
+  it('localizes known errors and preserves unknown server recovery guidance', () => {
+    expect(errorMessage('en', new Error('ข้อมูลสถานะชำระเงินไม่ถูกต้อง'))).toBe(
+      'Could not verify payment status. Check the order status before trying again.',
+    );
+    expect(errorMessage('en', new Error('เกิดปัญหาภายในที่ไม่รู้จัก'))).toBe(
+      'เกิดปัญหาภายในที่ไม่รู้จัก',
+    );
+    expect(
+      errorMessage(
+        'th',
+        new Error('Order changed. Reload it before retrying payment.'),
+      ),
+    ).toBe('Order changed. Reload it before retrying payment.');
+    expect(errorMessage('en', { status: 409 })).toContain(
+      'Check the latest status',
+    );
+    expect(errorMessage('en', { status: 403 })).toContain('permission');
+  });
+  it('renders a complete option-removal sentence in either language', () => {
+    expect(translate('th', 'catalog.removeVariant', { number: 2 })).toBe(
+      'นำตัวเลือกที่ 2 ออก',
+    );
+    expect(translate('en', 'catalog.removeVariant', { number: 2 })).toBe(
+      'Remove option 2',
+    );
+  });
   it('has matching Thai/English keys and interpolation variables for every resource', () => {
     const th = flatten(messages.th),
       en = flatten(messages.en);

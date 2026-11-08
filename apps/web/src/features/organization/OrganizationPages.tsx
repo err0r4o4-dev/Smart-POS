@@ -11,28 +11,40 @@ import {
   ArrowLeft,
   ArrowRight,
   Banknote,
+  BarChart3,
+  Bell,
   Check,
   CheckCircle2,
   ChevronDown,
+  ChevronRight,
   CircleAlert,
+  CircleHelp,
   CreditCard,
   GitBranch,
+  House,
   Info,
   LayoutGrid,
-  ListChecks,
-  MapPinned,
   QrCode,
-  ReceiptText,
+  ShoppingBag,
   Store,
   Utensils,
   WalletCards,
 } from 'lucide-react';
+import { paths } from '../../app/routes';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavigate';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
-import { Button, Card, Loading, Tag } from '../../components/ui/primitives';
+import {
+  Brand,
+  Button,
+  Card,
+  Loading,
+  Tag,
+} from '../../components/ui/primitives';
+import { LanguageSwitcher } from '../../components/ui/LanguageSwitcher';
+import { AccountMenu } from '../../components/ui/AccountMenu';
 import { StandardPageHeader } from '../../components/ui/StandardPage';
 import './setup.css';
 import { SettingsPage } from './SettingsPage';
@@ -181,12 +193,13 @@ function useTenantData<Result>(resource: string) {
   });
 }
 function useWrite() {
+  const { t } = useLanguage();
   const auth = useAuth();
   const tenant = useOrganization();
   const csrf = auth.state.session?.csrf_token;
   return async <Result,>(resource: string, method: string, body?: object) => {
     if (!tenant.context || !csrf)
-      throw new Error('กรุณาเข้าสู่ระบบและเลือกองค์กร');
+      throw new Error(t('organization.signInAndSelectAnOrganization'));
     try {
       const result = await organizationRequest<Result>(
         `/organizations/${tenant.context.organization.id}/${resource}`,
@@ -243,62 +256,93 @@ const createSetupForm = (): SetupFormState => ({
   },
 });
 
+function DiningTableIcon({
+  size = 24,
+  strokeWidth = 2,
+}: {
+  size?: number;
+  strokeWidth?: number;
+}) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3.5 6v12" />
+      <path d="M3.5 13h4.5v5" />
+      <path d="M20.5 6v12" />
+      <path d="M20.5 13H16v5" />
+      <path d="M8.5 9.5h7" />
+      <path d="M12 9.5V18" />
+      <path d="M10 18h4" />
+    </svg>
+  );
+}
+
 const setupMeta = [
   {
     key: 'profile',
-    label: 'ข้อมูลร้าน',
-    sidebarSubtitle: 'ตั้งค่าข้อมูลพื้นฐานของร้าน',
-    cardSubtitle: 'กรอกข้อมูลพื้นฐานของร้านอาหาร เพื่อเริ่มใช้งานระบบ',
-    description: 'กรอกข้อมูลพื้นฐานของร้านอาหาร เพื่อเริ่มใช้งานระบบ',
+    label: 'organization.metaProfile',
+    sidebarSubtitle: 'organization.metaProfileSidebar',
+    cardSubtitle: 'organization.metaProfileCard',
+    description: 'organization.metaProfileCard',
     icon: Store,
   },
   {
     key: 'services',
-    label: 'รูปแบบบริการ',
-    sidebarSubtitle: 'เลือกรูปแบบการให้บริการ',
-    cardSubtitle: 'เลือกรูปแบบการให้บริการ',
-    description: 'เลือกช่องทางบริการของร้าน',
-    icon: Store,
+    label: 'organization.metaServices',
+    sidebarSubtitle: 'organization.metaServicesSidebar',
+    cardSubtitle: 'organization.metaServicesSidebar',
+    description: 'organization.metaServicesDescription',
+    icon: Bell,
   },
   {
     key: 'tables',
-    label: 'พื้นที่และโต๊ะ',
-    sidebarSubtitle: 'จัดการพื้นที่และโต๊ะ',
-    cardSubtitle: 'จัดการพื้นที่และโต๊ะ',
-    description: 'จัดโซน โต๊ะ และ QR สำหรับหน้าร้าน',
-    icon: MapPinned,
+    label: 'organization.metaTables',
+    sidebarSubtitle: 'organization.metaTablesSidebar',
+    cardSubtitle: 'organization.metaTablesSidebar',
+    description: 'organization.metaTablesDescription',
+    icon: DiningTableIcon,
   },
   {
     key: 'menu',
-    label: 'เมนู',
-    sidebarSubtitle: 'เพิ่มและจัดการเมนู',
-    cardSubtitle: 'เพิ่มและจัดการเมนู',
-    description: 'เพิ่มหมวดหมู่และเมนูแรกของร้าน',
+    label: 'organization.metaMenu',
+    sidebarSubtitle: 'organization.metaMenuSidebar',
+    cardSubtitle: 'organization.metaMenuSidebar',
+    description: 'organization.metaMenuDescription',
     icon: Utensils,
   },
   {
     key: 'payments',
-    label: 'การชำระเงิน',
-    sidebarSubtitle: 'ตั้งค่าวิธีการรับชำระ',
-    cardSubtitle: 'ตั้งค่าวิธีการรับชำระ',
-    description: 'เลือกช่องทางรับชำระที่ใช้งานจริง',
-    icon: WalletCards,
+    label: 'organization.metaPayments',
+    sidebarSubtitle: 'organization.metaPaymentsSidebar',
+    cardSubtitle: 'organization.metaPaymentsSidebar',
+    description: 'organization.metaPaymentsDescription',
+    icon: CreditCard,
   },
   {
     key: 'orders',
-    label: 'การสั่งซื้อ',
-    sidebarSubtitle: 'ตั้งค่าช่องทางการสั่งซื้อ',
-    cardSubtitle: 'ตั้งค่าช่องทางการสั่งซื้อ',
-    description: 'กำหนด QR คิวครัว และค่าธรรมเนียม',
-    icon: ReceiptText,
+    label: 'organization.metaOrders',
+    sidebarSubtitle: 'organization.metaOrdersSidebar',
+    cardSubtitle: 'organization.metaOrdersSidebar',
+    description: 'organization.metaOrdersDescription',
+    icon: ShoppingBag,
   },
   {
     key: 'review',
-    label: 'ตรวจสอบความพร้อม',
-    sidebarSubtitle: 'ตรวจทานข้อมูลก่อนเริ่มใช้งาน',
-    cardSubtitle: 'ตรวจทานข้อมูลก่อนเริ่มใช้งาน',
-    description: 'ตรวจรายการก่อนเปิดใช้งานร้าน',
-    icon: ListChecks,
+    label: 'organization.metaReview',
+    sidebarSubtitle: 'organization.metaReviewSidebar',
+    cardSubtitle: 'organization.metaReviewCard',
+    description: 'organization.metaReviewDescription',
+    icon: CheckCircle2,
   },
 ] as const;
 
@@ -354,24 +398,24 @@ function SetupInput({
   );
 }
 
-function SetupSelectOrInput({
+function SetupSelect({
   label,
   value,
   onChange,
   required = false,
-  placeholder,
   options,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   required?: boolean;
-  placeholder?: string;
   options: Array<{ value: string; label: string }>;
 }) {
+  const [open, setOpen] = useState(false);
+  const matchedOption = options.find((opt) => opt.value === value);
   return (
-    <label className="tenant-field setup-field">
-      <span className="setup-field-label">
+    <div className="tenant-field setup-field">
+      <label htmlFor="setup-business-type-input" className="setup-field-label">
         {label}
         {required && (
           <span className="setup-required" aria-hidden="true">
@@ -379,18 +423,25 @@ function SetupSelectOrInput({
             *
           </span>
         )}
-      </span>
+      </label>
       <div className="setup-select-wrapper">
         <input
+          id="setup-business-type-input"
           aria-label={label}
           value={value}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
           onChange={(event) => onChange(event.target.value)}
           required={required}
           type="text"
-          placeholder={placeholder}
           list="setup-business-types"
-          className="setup-select-input"
+          className={`setup-select-element ${!open && matchedOption ? 'has-display-overlay' : ''}`}
         />
+        {!open && matchedOption && (
+          <span className="setup-select-overlay" aria-hidden="true">
+            {matchedOption.label}
+          </span>
+        )}
         <ChevronDown
           size={18}
           className="setup-chevron-icon"
@@ -403,8 +454,102 @@ function SetupSelectOrInput({
             </option>
           ))}
         </datalist>
+        {open && (
+          <ul
+            className="setup-select-dropdown"
+            role="listbox"
+            aria-label={label}
+          >
+            {options.map((opt) => (
+              <li
+                key={opt.value}
+                role="option"
+                aria-selected={opt.value === value}
+              >
+                <button
+                  type="button"
+                  className={`setup-select-option ${opt.value === value ? 'is-selected' : ''}`}
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    onChange(opt.value);
+                    setOpen(false);
+                  }}
+                >
+                  {opt.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
-    </label>
+    </div>
+  );
+}
+
+function SetupHeroPanel() {
+  const { t } = useLanguage();
+  return (
+    <aside
+      className="setup-hero-card"
+      aria-label={t('organization.setupHeroLabel')}
+    >
+      <div className="setup-hero-header">
+        <div className="setup-hero-title">
+          {t('organization.setupHeroTitle')}
+          <br />
+          <span>{t('organization.setupHeroStart')}</span>
+        </div>
+        <p className="setup-hero-subtitle">
+          {t('organization.setupHeroLine1')}
+          <br />
+          {t('organization.setupHeroLine2')}
+          <br />
+          {t('organization.setupHeroLine3')}
+        </p>
+      </div>
+
+      <div className="setup-hero-visual" aria-hidden="true">
+        <img
+          src="/images/auth-pos-reference.png"
+          alt=""
+          className="setup-hero-img"
+          width={520}
+          height={260}
+        />
+      </div>
+
+      <div className="setup-hero-highlights">
+        <div className="setup-hero-feature">
+          <div className="setup-feature-icon">
+            <Store size={20} strokeWidth={2} aria-hidden="true" />
+          </div>
+          <div className="setup-feature-text">
+            <strong>{t('organization.setupHeroEasy')}</strong>
+            <p>{t('organization.setupHeroMinutes')}</p>
+          </div>
+        </div>
+
+        <div className="setup-hero-feature">
+          <div className="setup-feature-icon">
+            <LayoutGrid size={20} strokeWidth={2} aria-hidden="true" />
+          </div>
+          <div className="setup-feature-text">
+            <strong>{t('organization.setupHeroOrdering')}</strong>
+            <p>{t('organization.setupHeroOrderingDetail')}</p>
+          </div>
+        </div>
+
+        <div className="setup-hero-feature">
+          <div className="setup-feature-icon">
+            <BarChart3 size={20} strokeWidth={2} aria-hidden="true" />
+          </div>
+          <div className="setup-feature-text">
+            <strong>{t('organization.setupHeroReports')}</strong>
+            <p>{t('organization.setupHeroReportsDetail')}</p>
+          </div>
+        </div>
+      </div>
+    </aside>
   );
 }
 
@@ -429,7 +574,10 @@ function SetupToggle({
   );
 }
 
-function localReadiness(form: SetupFormState): SetupReadinessItem[] {
+function localReadiness(
+  form: SetupFormState,
+  t: ReturnType<typeof useLanguage>['t'],
+): SetupReadinessItem[] {
   const incomplete: SetupReadinessItem[] = [];
   const profile = form.profile;
   if (
@@ -438,8 +586,8 @@ function localReadiness(form: SetupFormState): SetupReadinessItem[] {
   )
     incomplete.push({
       key: 'profile',
-      label: 'ข้อมูลร้าน',
-      reason: 'กรอกชื่อและประเภทร้านให้ครบ',
+      label: t('organization.metaProfile'),
+      reason: t('organization.setupProfileIncomplete'),
     });
   if (
     !form.tables.zones.some((zone) => zone.name.trim()) ||
@@ -447,8 +595,8 @@ function localReadiness(form: SetupFormState): SetupReadinessItem[] {
   )
     incomplete.push({
       key: 'tables',
-      label: 'พื้นที่และโต๊ะ',
-      reason: 'เพิ่มอย่างน้อยหนึ่งโซนและหนึ่งโต๊ะ',
+      label: t('organization.metaTables'),
+      reason: t('organization.setupTablesIncomplete'),
     });
   if (
     !form.menu.categories.some((category) => category.name.trim()) ||
@@ -458,14 +606,14 @@ function localReadiness(form: SetupFormState): SetupReadinessItem[] {
   )
     incomplete.push({
       key: 'menu',
-      label: 'เมนู',
-      reason: 'เพิ่มเมนูแรกพร้อมราคาที่ถูกต้อง',
+      label: t('organization.metaMenu'),
+      reason: t('organization.setupMenuIncomplete'),
     });
   if (!form.payments.cash && !form.payments.bank_transfer)
     incomplete.push({
       key: 'payments',
-      label: 'การชำระเงิน',
-      reason: 'เลือกช่องทางรับชำระอย่างน้อยหนึ่งช่องทาง',
+      label: t('organization.metaPayments'),
+      reason: t('organization.setupPaymentRequired'),
     });
   const vat = Number(form.orders.vat_percent);
   const service = Number(form.orders.service_charge_percent);
@@ -477,8 +625,8 @@ function localReadiness(form: SetupFormState): SetupReadinessItem[] {
   )
     incomplete.push({
       key: 'orders',
-      label: 'การสั่งซื้อ',
-      reason: 'ค่าภาษีและค่าบริการต้องอยู่ระหว่าง 0 ถึง 100',
+      label: t('organization.metaOrders'),
+      reason: t('organization.setupPercentIncomplete'),
     });
   return incomplete;
 }
@@ -502,14 +650,15 @@ function SetupStepFields({
   promptPayAvailable: boolean;
 }) {
   const profile = form.profile;
+  const { t } = useLanguage();
   if (step === 0)
     return (
       <div className="setup-form-section">
         <div className="setup-form-row">
           <SetupInput
-            label="ชื่อร้าน"
+            label={t('organization.setupStoreName')}
             value={profile.organization.name}
-            placeholder="เช่น ร้านอาหารของคุณ"
+            placeholder={t('organization.setupStoreNameExample')}
             required
             onChange={(name) =>
               update('profile', {
@@ -520,17 +669,16 @@ function SetupStepFields({
           />
         </div>
         <div className="setup-form-grid">
-          <SetupSelectOrInput
-            label="ประเภทร้าน"
+          <SetupSelect
+            label={t('organization.setupStoreType')}
             value={profile.organization.business_type}
-            placeholder="เช่น RESTAURANT"
             required
             options={[
-              { value: 'RESTAURANT', label: 'RESTAURANT' },
-              { value: 'CAFE', label: 'CAFE' },
-              { value: 'BAKERY', label: 'BAKERY' },
-              { value: 'FAST_FOOD', label: 'FAST_FOOD' },
-              { value: 'BAR', label: 'BAR' },
+              { value: 'RESTAURANT', label: t('organization.setupRestaurant') },
+              { value: 'CAFE', label: t('organization.setupCafe') },
+              { value: 'BAKERY', label: t('organization.setupBakery') },
+              { value: 'FAST_FOOD', label: t('organization.setupFastFood') },
+              { value: 'BAR', label: t('organization.setupBar') },
             ]}
             onChange={(business_type) =>
               update('profile', {
@@ -540,9 +688,9 @@ function SetupStepFields({
             }
           />
           <SetupInput
-            label="อีเมลร้าน"
+            label={t('organization.setupStoreEmail')}
             value={profile.organization.contact_email}
-            placeholder="เช่น contact@velocafe.com"
+            placeholder={t('organization.setupEmailExample')}
             type="email"
             onChange={(contact_email) =>
               update('profile', {
@@ -554,9 +702,9 @@ function SetupStepFields({
         </div>
         <div className="setup-form-grid">
           <SetupInput
-            label="โทรศัพท์ร้าน"
+            label={t('organization.setupStorePhone')}
             value={profile.organization.contact_phone}
-            placeholder="เช่น 061-507-1665"
+            placeholder={t('organization.setupPhoneExample')}
             onChange={(contact_phone) =>
               update('profile', {
                 ...profile,
@@ -565,9 +713,9 @@ function SetupStepFields({
             }
           />
           <SetupInput
-            label="ที่อยู่ร้าน"
+            label={t('organization.setupStoreAddress')}
             value={profile.organization.address}
-            placeholder="เช่น 123 ถ.สุขุมวิท ต.คลองตัน อ.คลองตัน จ.กรุงเทพฯ 26120"
+            placeholder={t('organization.setupAddressExample')}
             onChange={(address) =>
               update('profile', {
                 ...profile,
@@ -578,9 +726,9 @@ function SetupStepFields({
         </div>
         <div className="setup-form-row">
           <SetupInput
-            label="คำอธิบายร้าน"
+            label={t('organization.setupStoreDescription')}
             value={profile.organization.description ?? ''}
-            placeholder="เช่น ร้านอาหารและคาเฟ่ อาหารไทย เครื่องดื่ม และเบเกอรี่"
+            placeholder={t('organization.setupDescriptionExample')}
             onChange={(description) =>
               update('profile', {
                 ...profile,
@@ -593,20 +741,17 @@ function SetupStepFields({
           <div className="setup-notice-icon">
             <Info size={18} aria-hidden="true" />
           </div>
-          <p>
-            คุณสามารถแก้ไขข้อมูลเหล่านี้ได้ในภายหลัง เช่น ชื่อร้าน ที่อยู่ อีเมล
-            หรือข้อมูลสาขา ผ่านการตั้งค่าร้านค้าในระบบ
-          </p>
+          <p>{t('organization.setupProfileHint')}</p>
         </div>
       </div>
     );
   if (step === 1)
     return (
       <fieldset className="setup-choice-group">
-        <legend>รูปแบบบริการ</legend>
+        <legend>{t('organization.setupServiceModes')}</legend>
         <div className="setup-choice-grid">
           <SetupToggle
-            label="ทานที่ร้าน"
+            label={t('organization.setupDineIn')}
             checked={form.services.service_modes.dine_in}
             onChange={(dine_in) =>
               update('services', {
@@ -615,7 +760,7 @@ function SetupStepFields({
             }
           />
           <SetupToggle
-            label="ซื้อกลับบ้าน"
+            label={t('organization.setupTakeaway')}
             checked={form.services.service_modes.takeaway}
             onChange={(takeaway) =>
               update('services', {
@@ -624,7 +769,7 @@ function SetupStepFields({
             }
           />
           <SetupToggle
-            label="เดลิเวอรี"
+            label={t('organization.setupDelivery')}
             checked={form.services.service_modes.delivery}
             onChange={(delivery) =>
               update('services', {
@@ -640,7 +785,7 @@ function SetupStepFields({
       <div className="setup-form-section">
         <div className="setup-form-grid">
           <SetupInput
-            label="ชื่อโซนแรก"
+            label={t('organization.setupFirstZone')}
             value={form.tables.zones[0]?.name ?? ''}
             required
             onChange={(name) =>
@@ -659,7 +804,7 @@ function SetupStepFields({
             }
           />
           <SetupInput
-            label="ชื่อโต๊ะแรก"
+            label={t('organization.setupFirstTable')}
             value={form.tables.tables[0]?.name ?? ''}
             required
             onChange={(name) =>
@@ -679,7 +824,7 @@ function SetupStepFields({
             }
           />
           <SetupInput
-            label="จำนวนที่นั่งโต๊ะแรก"
+            label={t('organization.setupFirstSeats')}
             value={
               form.tables.tables[0]?.seats
                 ? String(form.tables.tables[0].seats)
@@ -708,21 +853,17 @@ function SetupStepFields({
         </div>
         <div className="setup-choice-grid">
           <SetupToggle
-            label="เปิดใช้ QR สำหรับโต๊ะ"
+            label={t('organization.setupTableQr')}
             checked={form.tables.qr_enabled}
             onChange={(qr_enabled) =>
               update('tables', { ...form.tables, qr_enabled })
             }
           />
         </div>
-        <p className="setup-hint">
-          เมื่อเปิดใช้ QR การบันทึกจะหมุนเวียนรหัสลับของโต๊ะที่บันทึก
-          รหัสเดิมจะใช้ไม่ได้
-          การส่งคำขอเดิมซ้ำอาจได้รหัสที่หมดอายุแล้วหากมีการหมุนเวียนภายหลัง
-        </p>
+        <p className="setup-hint">{t('organization.setupQrRotationHint')}</p>
         <p className="setup-hint">
           <QrCode size={16} aria-hidden="true" />{' '}
-          สามารถเพิ่มโซนและโต๊ะเพิ่มเติมได้จากเมนูจัดการหลังเปิดใช้งาน
+          {t('organization.setupAddTablesHint')}
         </p>
       </div>
     );
@@ -731,7 +872,7 @@ function SetupStepFields({
       <div className="setup-form-section">
         <div className="setup-form-grid">
           <SetupInput
-            label="หมวดหมู่เมนูแรก"
+            label={t('organization.setupFirstCategory')}
             value={form.menu.categories[0]?.name ?? ''}
             required
             onChange={(name) =>
@@ -750,7 +891,7 @@ function SetupStepFields({
             }
           />
           <SetupInput
-            label="ชื่อเมนูแรก"
+            label={t('organization.setupFirstItem')}
             value={form.menu.items[0]?.name ?? ''}
             required
             onChange={(name) =>
@@ -770,7 +911,7 @@ function SetupStepFields({
             }
           />
           <SetupInput
-            label="ราคาเมนูแรก (บาท)"
+            label={t('organization.setupFirstPrice')}
             value={form.menu.items[0]?.price ?? ''}
             required
             type="number"
@@ -795,7 +936,7 @@ function SetupStepFields({
         </div>
         <p className="setup-hint">
           <Utensils size={16} aria-hidden="true" />{' '}
-          ราคาจะถูกตรวจสอบอีกครั้งโดยเซิร์ฟเวอร์ก่อนบันทึก
+          {t('organization.setupPriceHint')}
         </p>
       </div>
     );
@@ -803,7 +944,7 @@ function SetupStepFields({
     return (
       <div className="setup-form-section">
         <p className="setup-section-lead">
-          เลือกช่องทางที่ร้านรับเงินจริงในวันเปิดร้าน
+          {t('organization.setupPaymentLead')}
         </p>
         <div className="setup-payment-grid">
           <label className="setup-payment-option">
@@ -819,8 +960,8 @@ function SetupStepFields({
             />
             <Banknote size={22} aria-hidden="true" />
             <span>
-              <strong>เงินสด</strong>
-              <small>พร้อมใช้งาน</small>
+              <strong>{t('organization.setupCash')}</strong>
+              <small>{t('organization.setupAvailable')}</small>
             </span>
           </label>
           <label className="setup-payment-option">
@@ -836,8 +977,8 @@ function SetupStepFields({
             />
             <WalletCards size={22} aria-hidden="true" />
             <span>
-              <strong>โอนเงิน</strong>
-              <small>พร้อมใช้งาน</small>
+              <strong>{t('organization.setupTransfer')}</strong>
+              <small>{t('organization.setupAvailable')}</small>
             </span>
           </label>
           <label
@@ -858,9 +999,9 @@ function SetupStepFields({
             <QrCode size={22} aria-hidden="true" />
             <span>
               <strong>PromptPay</strong>
-              <small>ยังไม่พร้อมใช้งาน · ต้องตั้งค่า Merchant ID</small>
+              <small>{t('organization.setupPromptpayUnavailable')}</small>
             </span>
-            <Tag>ยังไม่พร้อม</Tag>
+            <Tag>{t('organization.setupUnavailable')}</Tag>
           </label>
           <label
             className="setup-payment-option setup-payment-option-disabled"
@@ -869,10 +1010,10 @@ function SetupStepFields({
             <input type="checkbox" checked={false} disabled />
             <CreditCard size={22} aria-hidden="true" />
             <span>
-              <strong>บัตรเครดิต</strong>
-              <small>ยังไม่พร้อมใช้งาน · รอเชื่อมต่อผู้ให้บริการ</small>
+              <strong>{t('organization.setupCard')}</strong>
+              <small>{t('organization.setupCardUnavailable')}</small>
             </span>
-            <Tag>ยังไม่พร้อม</Tag>
+            <Tag>{t('organization.setupUnavailable')}</Tag>
           </label>
         </div>
       </div>
@@ -882,21 +1023,21 @@ function SetupStepFields({
       <div className="setup-form-section">
         <div className="setup-choice-grid">
           <SetupToggle
-            label="รับออเดอร์ผ่าน QR"
+            label={t('organization.setupQrOrders')}
             checked={form.orders.qr_ordering}
             onChange={(qr_ordering) =>
               update('orders', { ...form.orders, qr_ordering })
             }
           />
           <SetupToggle
-            label="ใช้คิวครัว"
+            label={t('organization.setupKitchenQueue')}
             checked={form.orders.kitchen_queue}
             onChange={(kitchen_queue) =>
               update('orders', { ...form.orders, kitchen_queue })
             }
           />
           <SetupToggle
-            label="ยืนยันออเดอร์อัตโนมัติ"
+            label={t('organization.setupAutoConfirm')}
             checked={form.orders.auto_confirm}
             onChange={(auto_confirm) =>
               update('orders', { ...form.orders, auto_confirm })
@@ -916,7 +1057,7 @@ function SetupStepFields({
             }
           />
           <SetupInput
-            label="ค่าบริการ (%)"
+            label={t('organization.setupServiceCharge')}
             value={form.orders.service_charge_percent}
             required
             type="number"
@@ -954,6 +1095,7 @@ function ScopedSetupPage() {
   const [step, setStep] = useState<SetupStepIndex>(0);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
+  const [rotationUncertain, setRotationUncertain] = useState(false);
   const [serverState, setServerState] = useState<SetupState | null>(null);
   const [issuedTokens, setIssuedTokens] = useState<IssuedTableQRToken[]>([]);
   const [copyStatus, setCopyStatus] = useState('');
@@ -996,6 +1138,7 @@ function ScopedSetupPage() {
         setServerState(null);
         setStep(0);
         setError('');
+        setRotationUncertain(false);
       });
     }
   }, [orgID, branchID, hydratedScope]);
@@ -1033,40 +1176,51 @@ function ScopedSetupPage() {
   }, [step]);
 
   if (state.status === 'loading')
-    return <Loading>{t('organization.checkingAccount')}</Loading>;
+    return (
+      <main className="setup-page-wrapper">
+        <Loading>{t('organization.checkingAccount')}</Loading>
+      </main>
+    );
   if (state.status !== 'authenticated')
     return (
-      <Card className="tenant-page">
-        <h1>{t('organization.setUpStore')}</h1>
-        <p>{t('organization.signInWithTheRecipientSEmail')}</p>
-        <Link className="button" to="/login?returnTo=%2Fsetup">
-          {t('auth.signIn')}
-        </Link>
-        <Link className="button button-secondary" to="/register">
-          {t('organization.registerAccount')}
-        </Link>
-      </Card>
+      <main className="setup-page-wrapper">
+        <Card className="tenant-page">
+          <h1>{t('organization.setUpStore')}</h1>
+          <p>{t('organization.signInWithTheRecipientSEmail')}</p>
+          <Link className="button" to="/login?returnTo=%2Fsetup">
+            {t('auth.signIn')}
+          </Link>
+          <Link className="button button-secondary" to="/register">
+            {t('organization.registerAccount')}
+          </Link>
+        </Card>
+      </main>
     );
   if (tenant.loading)
-    return <Loading>{t('organization.checkingStoreModeAndAccess')}</Loading>;
+    return (
+      <main className="setup-page-wrapper">
+        <Loading>{t('organization.checkingStoreModeAndAccess')}</Loading>
+      </main>
+    );
   if (tenant.error)
     return (
-      <div className="tenant-page">
-        <ErrorMessage message={localize(tenant.error)} />
-        <Button onClick={() => void tenant.refresh()}>
-          {t('organization.refreshPermissions')}
-        </Button>
-      </div>
+      <main className="setup-page-wrapper">
+        <div className="tenant-page">
+          <ErrorMessage message={localize(tenant.error)} />
+          <Button onClick={() => void tenant.refresh()}>
+            {t('organization.refreshPermissions')}
+          </Button>
+        </div>
+      </main>
     );
   if (
     (tenant.context && tenant.context.membership.role !== 'OWNER') ||
     (!tenant.context && tenant.storeMode !== 'multi')
   )
     return <Navigate to="/account" replace />;
-  if (setupQuery.data?.complete)
-    return <Navigate to="/manage/dashboard" replace />;
+  if (setupQuery.data?.complete) return <Navigate to="/dashboard" replace />;
 
-  const localIncomplete = localReadiness(form);
+  const localIncomplete = localReadiness(form, t);
   const readinessItems = serverState?.readiness?.incomplete ?? localIncomplete;
   const isReady = Boolean(
     hydratedScope === `${orgID}:${branchID}` &&
@@ -1081,15 +1235,17 @@ function ScopedSetupPage() {
     setIsDirty(true);
     setForm((current) => ({ ...current, [key]: value }));
     setError('');
+    setRotationUncertain(false);
   };
   const validationMessage = () => {
     if (step === 0) {
       const { organization } = form.profile;
-      if (!organization.name.trim()) return 'กรอกชื่อร้านให้ครบ';
-      if (!organization.business_type.trim()) return 'กรอกประเภทร้านให้ครบ';
+      if (!organization.name.trim()) return t('organization.setupNameRequired');
+      if (!organization.business_type.trim())
+        return t('organization.setupTypeRequired');
     }
     if (step === 1 && !Object.values(form.services.service_modes).some(Boolean))
-      return 'เลือกช่องทางบริการอย่างน้อยหนึ่งรูปแบบ';
+      return t('organization.setupServiceRequired');
     if (
       step === 2 &&
       (!form.tables.zones[0]?.name.trim() ||
@@ -1097,21 +1253,21 @@ function ScopedSetupPage() {
         !Number.isSafeInteger(form.tables.tables[0]?.seats) ||
         form.tables.tables[0].seats < 1)
     )
-      return 'กรอกชื่อโซน โต๊ะ และจำนวนที่นั่งให้ครบ';
+      return t('organization.setupTableRequired');
     if (
       step === 3 &&
       (!form.menu.categories[0]?.name.trim() ||
         !form.menu.items[0]?.name.trim() ||
         !decimalValid(form.menu.items[0]?.price ?? ''))
     )
-      return 'กรอกหมวดหมู่ เมนู และราคาที่ถูกต้อง';
+      return t('organization.setupMenuRequired');
     if (step === 4 && !form.payments.cash && !form.payments.bank_transfer)
-      return 'เลือกช่องทางรับชำระอย่างน้อยหนึ่งช่องทาง';
+      return t('organization.setupPaymentRequired');
     if (
       step === 5 &&
-      localReadiness(form).some((item) => item.key === 'orders')
+      localReadiness(form, t).some((item) => item.key === 'orders')
     )
-      return 'VAT และค่าบริการต้องอยู่ระหว่าง 0 ถึง 100';
+      return t('organization.setupChargesInvalid');
     return '';
   };
   const downloadIssuedTokens = () => {
@@ -1125,9 +1281,10 @@ function ScopedSetupPage() {
       link.href = objectURL;
       link.download = 'table-qr-secrets.json';
       link.click();
-      if (activeRef.current) setCopyStatus('ดาวน์โหลดแล้ว');
+      if (activeRef.current) setCopyStatus(t('organization.setupDownloaded'));
     } catch {
-      if (activeRef.current) setCopyStatus('ดาวน์โหลดไม่สำเร็จ กรุณาลองใหม่');
+      if (activeRef.current)
+        setCopyStatus(t('organization.setupDownloadFailed'));
     } finally {
       if (objectURL) {
         const issuedURL = objectURL;
@@ -1136,7 +1293,7 @@ function ScopedSetupPage() {
             URL.revokeObjectURL(issuedURL);
           } catch {
             if (activeRef.current)
-              setCopyStatus('ดาวน์โหลดไม่สำเร็จ กรุณาลองใหม่');
+              setCopyStatus(t('organization.setupDownloadFailed'));
           }
         }, 0);
       }
@@ -1145,13 +1302,14 @@ function ScopedSetupPage() {
   const saveStep = async (event: FormEvent) => {
     event.preventDefault();
     setError('');
+    setRotationUncertain(false);
     if (step === 6) {
       if (!isReady) {
-        setError('ยังมีรายการที่ต้องทำให้ครบก่อนเปิดใช้งานร้าน');
+        setError(t('organization.setupIncomplete'));
         return;
       }
       if (!setupContext) {
-        setError('ไม่พบองค์กรหรือสาขาที่ใช้งาน กรุณาโหลดข้อมูลร้านใหม่');
+        setError(t('organization.setupNoContext'));
         return;
       }
       setPending(true);
@@ -1168,20 +1326,18 @@ function ScopedSetupPage() {
         );
         if (!activeRef.current) return;
         if (!result.ready) {
-          setError(
-            'เซิร์ฟเวอร์ยังไม่ยืนยันความพร้อมของร้าน กรุณาตรวจสอบรายการอีกครั้ง',
-          );
+          setError(t('organization.setupServerNotReady'));
           await setupQuery.refetch();
           return;
         }
         await tenant.refresh();
         if (!activeRef.current) return;
-        navigate(result.dashboard || '/manage/dashboard', { replace: true });
+        navigate(result.dashboard || '/dashboard', { replace: true });
       } catch (failure) {
         setError(
           failure instanceof Error
             ? failure.message
-            : 'เปิดใช้งานร้านไม่สำเร็จ กรุณาลองใหม่',
+            : t('organization.setupCompleteFailed'),
         );
       } finally {
         setPending(false);
@@ -1259,8 +1415,7 @@ function ScopedSetupPage() {
           payload: encodedStep,
           key: setupKey(),
         };
-      if (!requestContext)
-        throw new Error('ไม่พบองค์กรหรือสาขาที่ใช้งาน กรุณาโหลดข้อมูลร้านใหม่');
+      if (!requestContext) throw new Error(t('organization.setupNoContext'));
       const result = await saveSetupStep(
         stepKey,
         stepPayload,
@@ -1285,12 +1440,9 @@ function ScopedSetupPage() {
       const message =
         failure instanceof Error
           ? failure.message
-          : 'บันทึกขั้นตอนไม่สำเร็จ กรุณาลองใหม่';
-      setError(
-        step === 2
-          ? `${message} สถานะการหมุนเวียนรหัสอาจไม่แน่นอน กรุณาลองคำขอเดิมอีกครั้ง และตรวจสอบว่ารหัสที่ได้รับยังเป็นรหัสล่าสุด`
-          : message,
-      );
+          : t('organization.setupSaveFailed');
+      setError(message);
+      setRotationUncertain(step === 2);
     } finally {
       setPending(false);
     }
@@ -1298,20 +1450,52 @@ function ScopedSetupPage() {
 
   return (
     <div className="setup-page-wrapper">
+      <header className="topbar setup-topbar">
+        <div className="setup-topbar-left">
+          <Link
+            to="/"
+            className="setup-topbar-brand"
+            aria-label={`VELO SmartPOS · ${t('shell.accountAndAccess')}`}
+          >
+            <Brand />
+          </Link>
+          <span className="setup-topbar-divider" aria-hidden="true" />
+          <div className="breadcrumb">
+            <span className="breadcrumb-home" aria-hidden="true">
+              <House size={15} />
+            </span>
+            <span>{t('shell.accountAndAccess')}</span>
+            <ChevronRight
+              size={15}
+              className="breadcrumb-separator"
+              aria-hidden="true"
+            />
+            <strong>{t('organization.setupHeading')}</strong>
+          </div>
+        </div>
+        <div className="topbar-right setup-topbar-actions">
+          <LanguageSwitcher />
+          <Link
+            to={paths.help}
+            className="icon-button topbar-help"
+            aria-label={t('landing.help')}
+          >
+            <CircleHelp size={20} aria-hidden="true" />
+          </Link>
+          <AccountMenu />
+        </div>
+      </header>
+
       <main className="setup-page" aria-labelledby="setup-title">
-        <header>
-          <StandardPageHeader
-            icon={<Store size={26} />}
-            title={<span id="setup-title">เริ่มต้นใช้งานร้านอาหาร</span>}
-            description="ตั้งค่าร้านอาหารครั้งแรกเพื่อเริ่มใช้งานร้านของคุณ"
-          />
-        </header>
+        <h1 id="setup-title" className="visually-hidden">
+          {t('organization.setupHeading')}
+        </h1>
 
         {tenant.organizations.length > 0 && !tenant.context && (
           <Card className="setup-existing-card">
             <div>
-              <strong>มีร้านที่เข้าถึงได้อยู่แล้ว</strong>
-              <p>เลือกร้านเพื่อตรวจสอบการตั้งค่า</p>
+              <strong>{t('organization.setupExistingStore')}</strong>
+              <p>{t('organization.setupChooseStore')}</p>
             </div>
             <div className="tenant-actions">
               {tenant.organizations.map((item) => (
@@ -1330,78 +1514,69 @@ function ScopedSetupPage() {
           <ErrorMessage message={setupQuery.error.message} />
         )}
 
+        <aside
+          className="setup-top-stepper"
+          aria-label={t('organization.setupProgress')}
+        >
+          <div className="setup-top-stepper-line" aria-hidden="true">
+            <div
+              className="setup-top-stepper-line-fill"
+              style={{ width: `${(step / (setupMeta.length - 1)) * 100}%` }}
+            />
+          </div>
+          <ol className="setup-top-stepper-list">
+            {setupMeta.map((item, index) => {
+              const StepIcon = item.icon;
+              const complete =
+                index < step ||
+                Boolean(
+                  serverState?.steps?.find((entry) => entry.key === item.key)
+                    ?.complete,
+                );
+              const isActive = index === step;
+              return (
+                <li
+                  key={item.key}
+                  className={`setup-top-step-item ${isActive ? 'is-active' : ''} ${complete ? 'is-complete' : ''}`}
+                >
+                  <button
+                    type="button"
+                    onClick={() =>
+                      index <= step && setStep(index as SetupStepIndex)
+                    }
+                    disabled={pending || index > step}
+                    aria-current={isActive ? 'step' : undefined}
+                    className="setup-top-step-button"
+                  >
+                    <span className="setup-top-step-media">
+                      <span className="setup-top-step-badge">{index + 1} </span>
+                      <span className="setup-top-step-icon" aria-hidden="true">
+                        <StepIcon size={20} strokeWidth={1.9} />
+                      </span>
+                    </span>
+                    <span className="setup-top-step-copy">
+                      <strong className="setup-top-step-title">
+                        {t(item.label)}
+                      </strong>{' '}
+                      <small className="setup-top-step-subtitle">
+                        {t(item.sidebarSubtitle)}
+                      </small>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        </aside>
+
         <div className="setup-layout">
-          <aside className="card setup-rail" aria-label="ความคืบหน้าการตั้งค่า">
-            <div className="setup-rail-header">
-              <h2 className="setup-rail-title">ขั้นตอนตั้งค่าร้าน</h2>
-              <p className="setup-rail-subtitle">
-                ตั้งค่า 7 ขั้นตอน เพื่อเริ่มใช้งานร้านอาหาร
-              </p>
-            </div>
-            <div className="setup-stepper-container">
-              <div className="setup-stepper-line" aria-hidden="true" />
-              <ol className="setup-stepper-list">
-                {setupMeta.map((item, index) => {
-                  const StepIcon = item.icon;
-                  const complete =
-                    index < step ||
-                    Boolean(
-                      serverState?.steps?.find(
-                        (entry) => entry.key === item.key,
-                      )?.complete,
-                    );
-                  const isActive = index === step;
-                  return (
-                    <li
-                      key={item.key}
-                      className={`setup-step-item ${isActive ? 'is-active' : ''} ${complete ? 'is-complete' : ''}`}
-                    >
-                      <button
-                        type="button"
-                        onClick={() =>
-                          index <= step && setStep(index as SetupStepIndex)
-                        }
-                        disabled={pending || index > step}
-                        aria-current={isActive ? 'step' : undefined}
-                        className="setup-step-button"
-                      >
-                        <span className="setup-step-circle">
-                          {complete && !isActive ? (
-                            <Check
-                              size={14}
-                              strokeWidth={3}
-                              aria-hidden="true"
-                            />
-                          ) : (
-                            index + 1
-                          )}
-                        </span>
-                        <span className="setup-step-icon" aria-hidden="true">
-                          <StepIcon size={22} strokeWidth={1.8} />
-                        </span>
-                        <div className="setup-step-text">
-                          <strong className="setup-step-name">
-                            {item.label}
-                          </strong>
-                          <small className="setup-step-desc">
-                            {item.sidebarSubtitle}
-                          </small>
-                        </div>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ol>
-            </div>
-          </aside>
+          <SetupHeroPanel />
 
           <section className="setup-main">
             <Card className="setup-card">
-              <div className="setup-card-top-row">
-                <span className="setup-step-pill">
-                  ขั้นตอนที่ {step + 1} จาก 7
-                </span>
-              </div>
+              <span className="visually-hidden">
+                {t('organization.setupStepCount', { step: step + 1 })}
+              </span>
               <div className="setup-card-heading">
                 <div className="setup-card-heading-left">
                   <span className="setup-card-icon-squircle" aria-hidden="true">
@@ -1416,31 +1591,31 @@ function ScopedSetupPage() {
                       tabIndex={-1}
                       className="setup-card-title"
                     >
-                      {setupMeta[step].label}
+                      {t(setupMeta[step].label)}
                     </h2>
                     <p className="setup-card-subtitle">
-                      {setupMeta[step].cardSubtitle}
+                      {t(setupMeta[step].cardSubtitle)}
                     </p>
                   </div>
                 </div>
               </div>
 
               {setupQuery.isPending && orgID && (
-                <Loading>กำลังโหลดความคืบหน้าที่บันทึกไว้…</Loading>
+                <Loading>{t('organization.setupLoading')}</Loading>
               )}
               {setupQuery.error && (
                 <div className="setup-retry">
                   <CircleAlert size={18} aria-hidden="true" />
                   <span>
                     {hydratedScope
-                      ? 'โหลดความคืบหน้าไม่สำเร็จ คุณยังกรอกข้อมูลต่อได้'
-                      : 'โหลดความคืบหน้าไม่สำเร็จ กรุณาลองใหม่ก่อนแก้ไขข้อมูล'}
+                      ? t('organization.setupLoadFailedEditable')
+                      : t('organization.setupLoadFailedRetry')}
                   </span>
                   <Button
                     className="button-secondary"
                     onClick={() => void setupQuery.refetch()}
                   >
-                    ลองใหม่
+                    {t('organization.setupRetry')}
                   </Button>
                 </div>
               )}
@@ -1478,14 +1653,12 @@ function ScopedSetupPage() {
                   )}
                   {issuedTokens.length > 0 && (
                     <section aria-labelledby="issued-table-tokens">
-                      <h3 id="issued-table-tokens">รหัสลับ QR โต๊ะที่ออกให้</h3>
-                      <p>
-                        เก็บรหัสลับนี้อย่างปลอดภัย
-                        คัดลอกหรือดาวน์โหลดก่อนออกจากหน้านี้
-                        รหัสจากการส่งคำขอเดิมซ้ำอาจใช้ไม่ได้หากมีการหมุนเวียนภายหลัง
-                      </p>
+                      <h3 id="issued-table-tokens">
+                        {t('organization.setupIssuedTokens')}
+                      </h3>
+                      <p>{t('organization.setupTokenInstructions')}</p>
                       <label className="tenant-field setup-field">
-                        <span>รหัสลับโต๊ะ</span>
+                        <span>{t('organization.setupTableSecret')}</span>
                         <textarea
                           readOnly
                           rows={5}
@@ -1502,35 +1675,40 @@ function ScopedSetupPage() {
                                   JSON.stringify(issuedTokens, null, 2),
                                 );
                                 if (activeRef.current)
-                                  setCopyStatus('คัดลอกแล้ว');
+                                  setCopyStatus(t('organization.setupCopied'));
                               } catch {
                                 if (activeRef.current)
                                   setCopyStatus(
-                                    'คัดลอกไม่สำเร็จ กรุณาเลือกข้อความเพื่อคัดลอก',
+                                    t('organization.setupCopyFailed'),
                                   );
                               }
                             })();
                           }}
                         >
-                          คัดลอกรหัสลับ
+                          {t('organization.setupCopyTokens')}
                         </Button>
                         <Button
                           className="button-secondary"
                           onClick={downloadIssuedTokens}
                         >
-                          ดาวน์โหลดรหัสลับ
+                          {t('organization.setupDownloadTokens')}
                         </Button>
                       </div>
-                      <p role="status">{copyStatus}</p>
+                      <p role="status">{localize(copyStatus)}</p>
                     </section>
                   )}
-                  {error && <ErrorMessage message={localize(error)} />}
+                  {(error || rotationUncertain) && (
+                    <ErrorMessage
+                      message={`${localize(error)}${rotationUncertain ? ` ${t('organization.setupRotationUncertain')}` : ''}`}
+                    />
+                  )}
                   <div className="setup-actions">
                     <Button
                       type="button"
                       className="button-secondary setup-btn-back"
                       onClick={() => {
                         setError('');
+                        setRotationUncertain(false);
                         setStep(
                           (current) =>
                             Math.max(0, current - 1) as SetupStepIndex,
@@ -1538,22 +1716,32 @@ function ScopedSetupPage() {
                       }}
                       disabled={step === 0 || pending}
                     >
-                      <ArrowLeft size={16} aria-hidden="true" /> ย้อนกลับ
+                      <ArrowLeft size={16} aria-hidden="true" />{' '}
+                      {t('organization.setupBack')}
                     </Button>
                     <Button
                       type="submit"
                       className="setup-btn-next"
+                      aria-label={
+                        pending
+                          ? t('organization.setupSaving')
+                          : step === 6
+                            ? t('organization.setupActivate')
+                            : t('organization.setupSaveContinue')
+                      }
                       disabled={
                         pending ||
                         (Boolean(setupContext) && setupQuery.isPending) ||
                         (step === 6 && !isReady)
                       }
                     >
-                      {pending
-                        ? 'กำลังบันทึก…'
-                        : step === 6
-                          ? 'เปิดใช้งานร้าน'
-                          : 'บันทึกและถัดไป'}
+                      <span>
+                        {pending
+                          ? t('organization.setupSaving')
+                          : step === 6
+                            ? t('organization.setupActivate')
+                            : t('organization.setupNext')}
+                      </span>
                       {step === 6 ? (
                         <CheckCircle2 size={16} aria-hidden="true" />
                       ) : (
@@ -1580,40 +1768,45 @@ function ReadinessReview({
   form: SetupFormState;
   ready: boolean;
 }) {
+  const { t } = useLanguage();
   const checks = [
     {
       key: 'profile',
-      label: 'ข้อมูลร้าน',
+      label: t('organization.metaProfile'),
       done: !items.some((item) => item.key === 'profile'),
-      detail: form.profile.organization.name || 'ยังไม่ได้ระบุชื่อร้าน',
+      detail:
+        form.profile.organization.name || t('organization.setupNoStoreName'),
     },
     {
       key: 'tables',
-      label: 'พื้นที่และโต๊ะ',
+      label: t('organization.metaTables'),
       done: !items.some((item) => item.key === 'tables'),
-      detail: `${form.tables.zones[0]?.name || 'ยังไม่มีโซน'} · ${form.tables.tables[0]?.name || 'ยังไม่มีโต๊ะ'}`,
+      detail: `${form.tables.zones[0]?.name || t('organization.setupNoZone')} · ${form.tables.tables[0]?.name || t('organization.setupNoTable')}`,
     },
     {
       key: 'menu',
-      label: 'เมนูและราคา',
+      label: t('organization.setupMenuPrice'),
       done: !items.some((item) => item.key === 'menu'),
-      detail: form.menu.items[0]?.name || 'ยังไม่มีเมนู',
+      detail: form.menu.items[0]?.name || t('organization.setupNoMenu'),
     },
     {
       key: 'payments',
-      label: 'ช่องทางการชำระเงิน',
+      label: t('organization.setupPaymentMethods'),
       done: !items.some((item) => item.key === 'payments'),
       detail: form.payments.cash
-        ? 'เงินสด'
+        ? t('organization.setupCash')
         : form.payments.bank_transfer
-          ? 'โอนเงิน'
-          : 'ยังไม่ได้เลือก',
+          ? t('organization.setupTransfer')
+          : t('organization.setupNotSelected'),
     },
     {
       key: 'orders',
-      label: 'การสั่งซื้อและค่าบริการ',
+      label: t('organization.setupOrdersFees'),
       done: !items.some((item) => item.key === 'orders'),
-      detail: `VAT ${form.orders.vat_percent}% · ค่าบริการ ${form.orders.service_charge_percent}%`,
+      detail: t('organization.setupFeeSummary', {
+        vat: form.orders.vat_percent,
+        service: form.orders.service_charge_percent,
+      }),
     },
   ];
   return (
@@ -1627,15 +1820,22 @@ function ReadinessReview({
           )}
         </span>
         <div>
-          <strong>{ready ? 'ร้านพร้อมเปิดใช้งาน' : 'ยังตั้งค่าไม่ครบ'}</strong>
+          <strong>
+            {ready
+              ? t('organization.setupReady')
+              : t('organization.setupNotReady')}
+          </strong>
           <p>
             {ready
-              ? 'ข้อมูลสำคัญครบแล้ว ตรวจสอบรายการด้านล่างก่อนเปิดร้าน'
-              : 'แก้ไขรายการที่ยังไม่พร้อม แล้วกลับมาที่หน้านี้อีกครั้ง'}
+              ? t('organization.setupReadyDetails')
+              : t('organization.setupNotReadyDetails')}
           </p>
         </div>
       </div>
-      <div className="setup-checklist" aria-label="รายการตรวจความพร้อม">
+      <div
+        className="setup-checklist"
+        aria-label={t('organization.setupChecklist')}
+      >
         {checks.map((check) => (
           <div
             className={`setup-check ${check.done ? 'is-done' : ''}`}
@@ -1657,14 +1857,16 @@ function ReadinessReview({
               </small>
             </div>
             <Tag tone={check.done ? 'success' : 'amber'}>
-              {check.done ? 'พร้อม' : 'ต้องแก้ไข'}
+              {check.done
+                ? t('organization.setupReadyTag')
+                : t('organization.setupNeedsAttention')}
             </Tag>
           </div>
         ))}
       </div>
       <p className="setup-review-note">
-        <LayoutGrid size={16} aria-hidden="true" /> หลังเปิดใช้งาน
-        คุณยังแก้ไขรายละเอียดร้าน เมนู และการตั้งค่าได้จากแดชบอร์ด
+        <LayoutGrid size={16} aria-hidden="true" />{' '}
+        {t('organization.setupReviewNote')}
       </p>
     </div>
   );

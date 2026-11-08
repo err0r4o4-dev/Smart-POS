@@ -19062,6 +19062,7 @@ components:
         - slug
         - name
         - accepting_orders
+        - business_type
       properties:
         slug:
           type: string
@@ -19069,6 +19070,9 @@ components:
           type: string
         accepting_orders:
           type: boolean
+        business_type:
+          type: string
+          description: Saved organization business type for public directory filtering. Clients must tolerate legacy or unknown values. Not a product category.
     StorefrontCatalogProduct:
       type: object
       additionalProperties: false

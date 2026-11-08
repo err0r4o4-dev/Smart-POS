@@ -144,7 +144,7 @@ function renderSalesPage(receipts = false) {
     <StrictMode>
       <QueryClientProvider client={client}>
         <MemoryRouter
-          initialEntries={[receipts ? '/manage/receipts' : '/manage/sales']}
+          initialEntries={[receipts ? '/receipts' : '/sales']}
         >
           <LanguageSwitcher />
           <SalesPage receipts={receipts} />
@@ -196,10 +196,10 @@ describe('SalesPage standardized design and behavior', () => {
     // Row action links
     expect(
       screen.getAllByRole('link', { name: 'ดูรายละเอียด' })[0],
-    ).toHaveAttribute('href', '/manage/sales/sale-1');
+    ).toHaveAttribute('href', '/sales/sale-1');
     expect(screen.getAllByRole('link', { name: 'พิมพ์' })[0]).toHaveAttribute(
       'href',
-      '/manage/sales/sale-1',
+      '/sales/sale-1',
     );
 
     // Filter by search and reset
@@ -299,9 +299,9 @@ describe('SalesPage standardized design and behavior', () => {
     render(
       <StrictMode>
         <QueryClientProvider client={client}>
-          <MemoryRouter initialEntries={['/manage/sales/sale-1']}>
+          <MemoryRouter initialEntries={['/sales/sale-1']}>
             <Routes>
-              <Route path="/manage/sales/:id" element={<SaleDetailsPage />} />
+              <Route path="/sales/:id" element={<SaleDetailsPage />} />
             </Routes>
           </MemoryRouter>
         </QueryClientProvider>
@@ -317,7 +317,7 @@ describe('SalesPage standardized design and behavior', () => {
     expect(screen.getAllByText('น้ำดื่มคริสตัล')[0]).toBeVisible();
     expect(
       screen.getByRole('link', { name: 'กลับประวัติขาย' }),
-    ).toHaveAttribute('href', '/manage/sales');
+    ).toHaveAttribute('href', '/sales');
     expect(screen.getByText(/EX-001/)).toBeVisible();
     expect(screen.getByText(/RET-001/)).toBeVisible();
     for (const path of [
@@ -327,7 +327,7 @@ describe('SalesPage standardized design and behavior', () => {
       '/pos/returns',
     ]) {
       expect(
-        document.querySelector(`a[href^="/manage${path}"]`),
+        document.querySelector(`a[href^="${path}"]`),
       ).not.toBeInTheDocument();
     }
   });

@@ -1,3 +1,64 @@
+# Swap shop directory heading and menu (2026-11-08)
+
+Scope: Place the search heading before the shop-type menu; preserve search,
+filters and view controls, with matching desktop/mobile grid columns.
+
+- [x] Inspect instructions, existing changes, toolbar styles and tests.
+- [ ] Update the toolbar-order regression and confirm RED.
+- [ ] Swap heading/menu and corresponding grid columns.
+- [ ] Run focused tests, web checks and proportional browser verification.
+- [ ] Review the diff and remove only this task section after verification.
+
+# Shared header proportions baseline (2026-11-08)
+
+Scope: Reuse the approved setup header proportions across shared web layouts.
+Keep routes, permissions, controls, page content and responsive navigation unchanged.
+No API, database, dependencies, external services or deployment changes.
+
+- [x] Centralize 72px desktop / 64px mobile header and 36px / 32px brand marks.
+- [x] Apply shared values to management, setup, storefront, landing, auth and POS.
+- [x] Verify mocked Chromium layouts at 320, 640, 641 and 1440px, control bounds,
+  focus outlines and page overflow; focused browser regressions PASS 64/64.
+  Latest log: `.local/shared-header-recheck.log`; screenshots in matching folder.
+- [x] Typecheck/build PASS; lint PASS with 0 errors / 9 warnings; contracts PASS
+  (18 modules / 114 routes), log tests PASS 10/10 and dev-stack tests PASS 6/6.
+  `git diff --check` PASS. Design detector: 1 warning / 2 advisories outside
+  changed header rules; report `.local/shared-header-design-detect.json`.
+- [?] Full web suite: 547 passed / 4 failed across restaurant-scope.test.tsx,
+  SettingsPage.test.tsx (2) and StorefrontSettingsPage.test.tsx. Not repaired
+  under header scope; details in `.local/shared-header-tests.log`.
+- [ ] Separate visual issue: register form content clips inside its card at
+  320px; header fits. Form layout is outside this task; no repair performed.
+- [ ] Remove this section after unresolved acceptance items are settled.
+
+# Shop directory business-type toolbar (2026-11-08)
+
+Scope: Move category toggle, heading, search and layout controls into the results
+toolbar. Filter real published shops by saved business type, not product category.
+Add only business_type to directory responses; preserve visibility, tenant scope,
+sorting, limits and function grants. No database execution without a confirmed
+isolated disposable target. Rollback: migration 33 down restores directory shape;
+no stored data is changed.
+
+- [/] Add regression tests and implement API metadata plus migration 33.
+- [ ] Implement responsive toolbar and accessible shop-type filters.
+- [ ] Run focused Go/web tests, contracts, typecheck, build and browser checks.
+- [ ] Obtain authorized independent scoped review and address findings.
+- [?] Database upgrade, runtime isolation and rollback acceptance require a confirmed isolated target.
+- [ ] Remove this section only after all required acceptance passes.
+
+# Storeless account onboarding redirect (2026-11-08)
+
+Scope: Redirect authenticated multi-store users without an organization from
+`/account` to `/setup`. Preserve loading/error handling, existing memberships,
+single-store restrictions, authentication and server-side authorization.
+
+- [x] Reproduce account landing with focused routing regression tests.
+  RED: direct `/account` routing test fails because Account remains visible.
+- [x] Add the onboarding redirect without changing access checks.
+- [/] Run focused regression tests, web tests and typecheck; review the diff.
+- [ ] Remove this section after verification passes.
+
 # Warm Gold application-wide UI (2026-11-07)
 
 Approved scope: Apply the supplied white/cream/gold reference across the web UI,
@@ -45,19 +106,23 @@ database, external assets, new dependencies, publication or deployment changes.
 - [ ] 2. Verify typecheck and web build succeed
 - [ ] 3. Remove this temporary task section
 
-# Restaurant Setup UI Redesign (/setup) (2026-11-06)
+# Standalone Restaurant Setup Redesign (/setup) without Sidebar Navigation (2026-11-08)
 
-Approved scope: Redesign `/setup` page UI to match the user's VELOPOS screenshot reference.
-Includes VELOPOS branding header bar with top warm glow, 2-column layout with left 7-step vertical stepper card,
-right step card with step pill badge ("ขั้นตอนที่ 1 จาก 7"), icon squircle and decorative illustration,
-exact field layout and placeholders for Step 1 ("ข้อมูลร้าน"), info notice callout, and action buttons.
+Approved scope: Redesign `/setup` page UI to match the user's standalone mockup reference (Image 2), completely decoupled from the sidebar menu / workspace navigation.
+Includes moving `/setup` out of `RoleWorkspaceLayout` in `router.tsx`, 2-column layout with left hero panel (title "ตั้งค่าร้านอาหารของคุณ / เริ่มใช้งาน VELOPOS", subtitle, POS illustration, 3 value propositions: "ตั้งค่าร้านง่าย", "รองรับการสั่งซื้อหลายรูปแบบ", "ดูรายงานและยอดขาย"), and right step card (icon squircle, "ข้อมูลร้าน", exact form fields, placeholders, info notice callout, "ย้อนกลับ" and "ถัดไป →" buttons).
 Preserve all functional logic, step validations, API contracts, and tests.
 
-- [x] 1. Update `setup.css` with exact layout, color tokens, typography, stepper styles, decorative badges, and responsive behavior
-- [x] 2. Update `OrganizationPages.tsx` to implement VELOPOS header bar, 7-step stepper rail, exact form fields and placeholders, and card layout
-- [x] 3. Update `OrganizationPages.test.tsx` to reflect the 7-step count ("ขั้นตอนที่ 1 จาก 7")
-- [/] 4. Run tests, typecheck, and lint verification
-- [ ] 5. Verify visual integrity and responsive behavior (320px, 768px, 1440px)
+- [x] 1. Move `/setup` route outside `RoleWorkspaceLayout` in `router.tsx` to remove the sidebar menu
+- [x] 2. Update `OrganizationPages.tsx` with left hero panel and right step card layout matching Image 2
+- [x] 3. Update `setup.css` with standalone ambient shell, 2-column split layout, typography, squircles, and responsive styling
+- [x] 4. Add centered 7-step horizontal stepper bar above `.setup-layout` matching Image 3, with standard `.topbar` header, step number badges (`1`–`7`), and horizontal connecting line (TDD)
+- [x] 5. Reconcile `OrganizationPages.test.tsx`, `tests/e2e/restaurant-setup.spec.ts`, and `tests/e2e/warm-gold-theme.spec.ts` for standalone `/setup` with top stepper
+- [x] Header follow-up: remove storefront link and role badge from `/setup` only; retain shared language, help and AccountMenu controls. Preserve other workspace headers.
+  Fresh verification: 46 setup unit tests passed; 3 mocked Playwright layout cases passed at 320/768/1440px, including header absence assertions, keyboard focus and page overflow. Inspected desktop and mobile screenshots; removed sticky positioning after mobile capture showed the header covering content. Browser evidence uses synthetic APIs, not live database acceptance.
+- [/] 6. Run tests, typecheck, lint, and build verification
+  PASS: focused setup Vitest (46 tests), `npm run typecheck`, `npm run build`, and `git diff --check`. `npm run lint` completed with 0 errors / 9 warnings in other files. No blanket IDE-diagnostics pass is claimed. Broader earlier acceptance remains separate.
+- [ ] 7. Complete broader visual acceptance; header layout checks at 320/768/1440px passed as recorded above
+- [ ] 8. Clean up completed task section from TODO.md upon full verification
 
 # Onboarding simplification (2026-11-06)
 
@@ -398,3 +463,4 @@ Execution decisions:
   - [ ] Run `vitest run AuthPages`
   - [ ] Run `npm run build`
   - [ ] Cleanup TODO.md
+

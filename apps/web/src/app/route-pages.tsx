@@ -137,11 +137,6 @@ export const SettingsPage = lazy(() =>
     default: module.SettingsPage,
   })),
 );
-export const AccountPage = lazy(() =>
-  import('../features/auth/AuthPages').then((module) => ({
-    default: module.AccountPage,
-  })),
-);
 export const ForgotPasswordPage = lazy(() =>
   import('../features/auth/AuthPages').then((module) => ({
     default: module.ForgotPasswordPage,

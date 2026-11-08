@@ -48,7 +48,7 @@ const ok = (data: unknown) => ({
   status: 200,
   json: async () => ({ data }),
 });
-function view(path = '/manage/settings/storefront/payments') {
+function view(path = '/settings/payments') {
   return render(
     <QueryClientProvider
       client={
@@ -133,7 +133,7 @@ describe('Stripe sandbox management page', () => {
       ok(url.endsWith('/checkouts/cs_test_fixture') ? checkout : status),
     );
     view(
-      '/manage/settings/storefront/payments?session_id=cs_test_fixture&success=1',
+      '/settings/payments?session_id=cs_test_fixture&success=1',
     );
     expect(await screen.findByText('ยังไม่ชำระ')).toBeInTheDocument();
     expect(
@@ -160,7 +160,7 @@ describe('Stripe sandbox management page', () => {
           : status,
       ),
     );
-    view('/manage/settings/storefront/payments?session_id=cs_test_fixture');
+    view('/settings/payments?session_id=cs_test_fixture');
     expect(await screen.findByText('คืนเงิน: รอดำเนินการ')).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: 'ขอคืนเงินทดสอบเต็มจำนวน' }),
@@ -174,7 +174,7 @@ describe('Stripe sandbox management page', () => {
           : status,
       ),
     );
-    view('/manage/settings/storefront/payments?session_id=cs_test_fixture');
+    view('/settings/payments?session_id=cs_test_fixture');
     expect(await screen.findByRole('alert')).toHaveTextContent('ข้อมูล');
     expect(
       screen.queryByRole('link', { name: 'เปิดหน้าชำระเงินทดสอบของ Stripe' }),

@@ -22,9 +22,13 @@ import { shared } from './shared';
 import { returnOperations } from './returnOperations';
 import { adjustmentOperations } from './adjustmentOperations';
 import { statuses } from './statuses';
+import { restaurant } from './restaurant';
+import { assistant } from './assistant';
 export type Language = 'th' | 'en';
 export const messages = {
   th: {
+    assistant: assistant.th,
+    restaurant: restaurant.th,
     statuses: statuses.th,
     returnOperations: returnOperations.th,
     adjustmentOperations: adjustmentOperations.th,
@@ -50,6 +54,8 @@ export const messages = {
     shared: shared.th,
   },
   en: {
+    assistant: assistant.en,
+    restaurant: restaurant.en,
     statuses: statuses.en,
     returnOperations: returnOperations.en,
     adjustmentOperations: adjustmentOperations.en,
@@ -101,6 +107,29 @@ for (const [source, key] of Object.entries(legacyLabels))
 export function localize(language: Language, value: string) {
   const key = sourceKeys.get(value);
   return key ? translate(language, key) : value;
+}
+
+export function errorMessage(language: Language, error: unknown): string {
+  if (error instanceof Error) {
+    const key = sourceKeys.get(error.message);
+    if (key) return translate(language, key);
+    if (error.message.trim()) return error.message;
+  }
+  const status =
+    error && typeof error === 'object' && 'status' in error
+      ? error.status
+      : undefined;
+  const key: TranslationKey =
+    status === 401
+      ? 'shared.sessionExpired'
+      : status === 403
+        ? 'shared.accessDenied'
+        : status === 404
+          ? 'shared.recordUnavailable'
+          : status === 409
+            ? 'shared.requestConflict'
+            : 'shared.requestFailed';
+  return translate(language, key);
 }
 
 function lookup(resource: object, key: string): string | undefined {

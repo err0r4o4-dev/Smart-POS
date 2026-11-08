@@ -7,6 +7,9 @@ export interface ShopSummary {
   name: string;
   accepting_orders: boolean;
 }
+export interface ShopDirectoryEntry extends ShopSummary {
+  business_type?: string;
+}
 export interface ShopSettings extends ShopSummary {
   description: string;
   contact_phone: string;

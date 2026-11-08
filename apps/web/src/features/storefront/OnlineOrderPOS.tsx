@@ -80,7 +80,7 @@ export function OnlineOrderPOS() {
       {sourceMatches && !pos.shift && (
         <p>
           {t('pos.youMust')}{' '}
-          <Link to="/pos/register/open">{t('pos.openYourRegisterShift')}</Link>{' '}
+          <Link to="/pos/shifts/open">{t('pos.openYourRegisterShift')}</Link>{' '}
           {t('storefront.thenReopenTheOrderFromTheList')}
         </p>
       )}
@@ -115,7 +115,7 @@ export function OnlineOrderPOS() {
         >
           {t('storefront.openThisOrderSCart')}
         </Button>
-        <Link to={`/online-orders/${value.id}`}>
+        <Link to={`/orders/${value.id}`}>
           {t('storefront.backToOrderDetails')}
         </Link>
       </div>

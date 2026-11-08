@@ -49,6 +49,33 @@
   --font-text: 16px;
   --font-caption: 14px;
   --font-label: 12px;
+  --header-height: 72px;
+  --header-padding-block: 12px;
+  --header-padding-inline: 24px;
+  --header-gap: 24px;
+  --header-actions-gap: 12px;
+  --brand-size: 36px;
+  --brand-icon-size: 24px;
+  --brand-font-size: 22px;
+}
+
+@media (max-width: 640px) {
+  :root {
+    --header-height: 64px;
+    --header-padding-block: 9px;
+    --header-padding-inline: 16px;
+    --header-gap: 12px;
+    --header-actions-gap: 8px;
+    --brand-size: 32px;
+    --brand-icon-size: 22px;
+    --brand-font-size: 20px;
+  }
+}
+
+@media (max-width: 640px) and (pointer: coarse) {
+  :root {
+    --header-padding-block: 5px;
+  }
 }
 
 @theme inline {

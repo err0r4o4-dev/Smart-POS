@@ -1,6 +1,5 @@
 import { useLanguage } from '../../app/language';
-import { useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Navigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { PackageOpen, ShoppingBag } from 'lucide-react';
 import { Card, Loading, Tag } from '../../components/ui/primitives';
@@ -8,6 +7,7 @@ import { storefrontRequest, type ShopSummary } from '../../lib/storefront-api';
 import { ShopCatalog } from './ShopCatalog';
 import { ShopError } from './shop-feedback';
 export { ShopError, ShopPagination } from './shop-feedback';
+import { ApiError } from '../../lib/api';
 import './storefront.css';
 
 export function StorefrontPage() {
@@ -16,7 +16,6 @@ export function StorefrontPage() {
 }
 function ShopEntry() {
   const { t } = useLanguage();
-  const [search, setSearch] = useState('');
 
   const shops = useQuery({
     queryKey: ['storefront-directory'],
@@ -25,17 +24,22 @@ function ShopEntry() {
         signal,
         storeMode: () => {},
       });
+      if (items.length > 1)
+        throw new ApiError(
+          502,
+          t('shell.invalidSingleStoreConfigurationCheckSystemSettings'),
+        );
       return items;
     },
     retry: false,
   });
-
-  const visibleShops = useMemo(() => {
-    const query = search.trim().toLocaleLowerCase();
-    return (shops.data ?? []).filter(
-      (shop) => !query || shop.name.toLocaleLowerCase().includes(query),
+  if (shops.data?.length === 1)
+    return (
+      <Navigate
+        to={`/shop/${encodeURIComponent(shops.data[0].slug)}`}
+        replace
+      />
     );
-  }, [search, shops.data]);
   return (
     <>
       <section className="storefront-hero" aria-labelledby="storefront-title">
@@ -55,46 +59,6 @@ function ShopEntry() {
         )}
         {shops.error && (
           <ShopError error={shops.error} retry={() => void shops.refetch()} />
-        )}
-        {shops.data && shops.data.length > 0 && (
-          <>
-            <label className="shop-search" htmlFor="storefront-search">
-              <span>{t('storefront.searchStores')}</span>
-              <input
-                id="storefront-search"
-                type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={t('storefront.searchStoresPlaceholder')}
-              />
-            </label>
-            {visibleShops.length > 0 ? (
-              <div className="shop-grid" aria-live="polite">
-                {visibleShops.map((shop) => (
-                  <Card className="shop-product" key={shop.slug}>
-                    <ShoppingBag size={30} aria-hidden="true" />
-                    <h2>{shop.name}</h2>
-                    <Tag tone={shop.accepting_orders ? 'success' : 'neutral'}>
-                      {shop.accepting_orders
-                        ? t('storefront.acceptingOrders')
-                        : t('storefront.notAcceptingOrders')}
-                    </Tag>
-                    <a
-                      className="button"
-                      href={`/shop/${encodeURIComponent(shop.slug)}`}
-                      aria-disabled={!shop.accepting_orders}
-                    >
-                      {t('storefront.viewStore')}
-                    </a>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <Card className="storefront-status">
-                <p>{t('storefront.noMatchingStores')}</p>
-              </Card>
-            )}
-          </>
         )}
         {shops.data?.length === 0 && (
           <Card className="storefront-status">

@@ -357,7 +357,7 @@ for (const width of [320, 768, 1440]) {
       main.getByRole('heading', { level: 1, name: 'ภาพรวม', exact: true }),
     ).toBeVisible();
     await expect(
-      main.getByRole('link', { name: 'สูตรอาหาร', exact: true }),
+      main.getByRole('link', { name: 'หน้าจอคิวอาหาร', exact: true }),
     ).toBeVisible();
     await expect(
       main.getByRole('link', { name: 'ออเดอร์และคิว', exact: true }),
@@ -370,6 +370,7 @@ for (const width of [320, 768, 1440]) {
       '/loyalty',
       '/pricing',
       '/inventory/balances',
+      '/restaurant/recipes',
     ]) {
       await expect(page.locator(`a[href^="/manage${path}"]`)).toHaveCount(0);
     }
@@ -381,11 +382,11 @@ for (const width of [320, 768, 1440]) {
     await main.getByRole('link', { name: 'เมนูอาหาร', exact: true }).click();
     await expect(page).toHaveURL(/\/manage\/products$/);
     await expect(
-      page.locator('.catalog-nav a[href="/manage/restaurant/recipes"]'),
+      page.locator('.catalog-nav a[href="/manage/categories"]'),
     ).toBeVisible();
     await expect(
       page.locator(
-        'a[href="/manage/products/import"], a[href="/manage/products/labels"], a[href="/manage/brands"]',
+        'a[href="/manage/products/import"], a[href="/manage/products/labels"], a[href="/manage/brands"], a[href="/manage/restaurant/recipes"]',
       ),
     ).toHaveCount(0);
     await expect(page.locator('body')).toHaveJSProperty('scrollWidth', width);

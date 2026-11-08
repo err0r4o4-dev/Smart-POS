@@ -83,29 +83,32 @@ function view(path: string) {
     </QueryClientProvider>,
   );
 }
-it('renders a storefront directory with one or more published shops', async () => {
-  fetchMock.mockResolvedValue({
-    ...response([
-      { slug: settings.slug, name: settings.name, accepting_orders: true },
-      {
-        slug: 'closed-shop',
-        name: 'ร้านปิดรับออเดอร์',
-        accepting_orders: false,
-      },
-    ]),
-    headers: new Headers({ 'X-SmartPOS-Store-Mode': 'multi' }),
-  });
-  view('/shop');
-  expect(
-    await screen.findByRole('heading', { name: settings.name }),
-  ).toBeVisible();
-  expect(screen.getByText('ร้านปิดรับออเดอร์')).toBeVisible();
-  expect(screen.getByText('กำลังรับออเดอร์')).toBeVisible();
-  expect(screen.getByText('ปิดรับออเดอร์ชั่วคราว')).toBeVisible();
-  expect(
-    screen.getAllByRole('link', { name: 'ดูหน้าร้าน' })[0],
-  ).toHaveAttribute('href', `/shop/${settings.slug}`);
-});
+it.each(['single', 'multi', undefined])(
+  'opens the only store directly without a public store selector (mode: %s)',
+  async (mode) => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === '/api/v1/storefronts')
+        return {
+          ...response([
+            {
+              slug: settings.slug,
+              name: settings.name,
+              accepting_orders: true,
+            },
+          ]),
+          headers: new Headers(mode ? { 'X-SmartPOS-Store-Mode': mode } : {}),
+        };
+      if (url.endsWith('/products?search=&page=1'))
+        return response({ items: [product], total: 1, page: 1, page_size: 24 });
+      return response(settings);
+    });
+    view('/shop');
+    expect(await screen.findByText('กาแฟ')).toBeVisible();
+    expect(
+      screen.queryByRole('link', { name: 'ดูสินค้า' }),
+    ).not.toBeInTheDocument();
+  },
+);
 it('does not fall back to another store when the configured store is unpublished', async () => {
   fetchMock.mockResolvedValue({
     ...response([]),
@@ -119,6 +122,25 @@ it('does not fall back to another store when the configured store is unpublished
   expect(fetchMock).toHaveBeenCalledTimes(1);
 });
 
+it.each(['single', 'multi', undefined])(
+  'rejects multiple shops instead of presenting a selector (mode: %s)',
+  async (mode) => {
+    fetchMock.mockResolvedValue({
+      ...response([
+        { slug: 'first', name: 'First', accepting_orders: true },
+        { slug: 'second', name: 'Second', accepting_orders: true },
+      ]),
+      headers: new Headers(mode ? { 'X-SmartPOS-Store-Mode': mode } : {}),
+    });
+    view('/shop');
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'ข้อมูลร้านเดียวไม่ถูกต้อง',
+    );
+    expect(
+      screen.queryByRole('link', { name: 'ดูสินค้า' }),
+    ).not.toBeInTheDocument();
+  },
+);
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();

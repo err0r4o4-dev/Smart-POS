@@ -336,7 +336,7 @@ function CartContents({ slug }: { slug: string }) {
       ),
   });
 
-  const trackingPath = `/shop/${slug}/track/${identity.key}#access=${identity.token}`;
+  const trackingPath = `/shop/${slug}/orders/${identity.key}#access=${identity.token}`;
 
   const submission = useMutation({
     mutationFn: (input: ShopOrderInput) =>
@@ -713,9 +713,15 @@ function CartContents({ slug }: { slug: string }) {
               ? 'ตรวจสอบการชำระเงินหลังส่งออเดอร์'
               : 'Check payment after submitting the order'}
           </p>
-          {quote.data.table_code && <p>โต๊ะ {quote.data.table_code}</p>}
+          {quote.data.table_code && (
+            <p>{t('storefront.tableLabel', { code: quote.data.table_code })}</p>
+          )}
           {diningType === 'delivery' && quote.data.shipping_fee && (
-            <p>ค่าจัดส่ง ฿{moneyText(quote.data.shipping_fee)}</p>
+            <p>
+              {t('storefront.deliveryFeeLabel', {
+                amount: moneyText(quote.data.shipping_fee),
+              })}
+            </p>
           )}
         </section>
 
@@ -889,7 +895,7 @@ function CartContents({ slug }: { slug: string }) {
         <Steps active={1} language={language} />
 
         {tableToken === null && (
-          <p role="alert">ลิงก์โต๊ะไม่ถูกต้อง กรุณาสแกน QR ที่โต๊ะอีกครั้ง</p>
+          <p role="alert">{t('storefront.invalidTableLink')}</p>
         )}
 
         {shop.isPending && (

@@ -37,15 +37,15 @@ export function CatalogNav() {
 
   return (
     <nav className="catalog-nav" aria-label={t('catalog.catalog')}>
-      <Link to="/products">
+      <Link to="/menu">
         <Package size={15} aria-hidden="true" />
         <span>{t('catalog.restaurantItems')}</span>
       </Link>
-      <Link to="/categories">
+      <Link to="/menu/categories">
         <Layers size={15} aria-hidden="true" />
         <span>{t('catalog.categories')}</span>
       </Link>
-      <Link to="/units">
+      <Link to="/menu/units">
         <Ruler size={15} aria-hidden="true" />
         <span>{t('catalog.units')}</span>
       </Link>

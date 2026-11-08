@@ -110,10 +110,10 @@ it('requires physical confirmation before applying tracked lot to cart', async (
   });
 });
 it('shows load failure without fabricating options', async () => {
-  mocks.request.mockRejectedValue(new Error('Quality unavailable'));
+  mocks.request.mockRejectedValue(new Error('โหลดข้อมูลไม่สำเร็จ'));
   show();
   expect(await screen.findByRole('alert')).toHaveTextContent(
-    'Quality unavailable',
+    'โหลดข้อมูลไม่สำเร็จ',
   );
   expect(
     screen.queryByRole('option', { name: /OBSERVED/ }),

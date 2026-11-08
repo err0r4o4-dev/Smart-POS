@@ -89,7 +89,7 @@ export function LabelsPage() {
         title={t('catalog.barcodeLabelsPrintPreview')}
         icon={<Printer size={24} />}
       >
-        <Link className="button button-secondary" to="/products">
+        <Link className="button button-secondary" to="/menu">
           <ArrowLeft size={16} aria-hidden="true" />
           {t('catalog.backReturnToList')}
         </Link>

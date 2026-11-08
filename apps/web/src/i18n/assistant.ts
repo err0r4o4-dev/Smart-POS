@@ -1,0 +1,73 @@
+import { defineMessages } from './defineMessages';
+
+export const assistant = defineMessages({
+  th: {
+    open: 'เปิดผู้ช่วย VELO Assistant',
+    subtitle: 'สอบถามเกี่ยวกับร้านค้า เมนู หรือคำสั่งซื้อ',
+    online: 'ออนไลน์',
+    minimize: 'ย่อหน้าต่างแชท',
+    close: 'ปิดแชท',
+    today: 'วันนี้',
+    greeting: 'สวัสดี! ฉันช่วยคุณค้นหาร้านอาหารหรือแนะนำเมนูได้',
+    examples:
+      'ลองถามเกี่ยวกับเมนูก๋วยเตี๋ยว ร้านที่เปิดอยู่ หรืออาหารมังสวิรัติได้เลย',
+    promptOpen: 'แสดงร้านที่เปิดอยู่ตอนนี้',
+    promptPopular: 'แนะนำเมนูยอดนิยม',
+    promptTrack: 'ฉันจะติดตามคำสั่งซื้อได้อย่างไร',
+    openResults: 'ร้านที่เปิดอยู่ตอนนี้มีดังนี้:',
+    recommendations:
+      'เมนูยอดนิยมวันนี้ประกอบด้วย ก๋วยเตี๋ยวต้มยำโบราณ, ข้าวราดกะเพราเนื้อ, และชาเขียวมัทฉะลาเต้! คุณสามารถเลือกดูร้านค้าเพื่อเริ่มสั่งได้ทันที',
+    trackingReply: 'คุณสามารถติดตามสถานะคำสั่งซื้อแบบเรียลไทม์ได้ที่นี่:',
+    foundStore: 'พบร้านค้าที่คุณกำลังค้นหา: {name}',
+    fallback:
+      'ยินดีให้ความช่วยเหลือครับ! คุณสามารถสอบถามเกี่ยวกับร้านค้าที่เปิดอยู่ เมนูแนะนำ หรือติดตามคำสั่งซื้อได้เลยครับ',
+    accepting: 'รับคำสั่งซื้อ',
+    notAccepting: 'ไม่รับคำสั่งซื้อ',
+    trackingPage: 'หน้าติดตามคำสั่งซื้อ',
+    trackingHint: 'ใส่รหัสคำสั่งซื้อเพื่อดูสถานะ',
+    sentRead: 'ส่งแล้วและอ่านแล้ว',
+    suggestions: 'คำถามแนะนำ',
+    openNow: 'เปิดอยู่ตอนนี้',
+    popularDishes: 'เมนูยอดนิยม',
+    trackOrder: 'ติดตามคำสั่งซื้อ',
+    attach: 'แนบไฟล์',
+    placeholder: 'พิมพ์ข้อความ...',
+    inputLabel: 'พิมพ์ข้อความ',
+    send: 'ส่งข้อความ',
+  },
+  en: {
+    open: 'Open VELO Assistant chat',
+    subtitle: 'Ask about stores, menus, or orders',
+    online: 'Online',
+    minimize: 'Minimize chat',
+    close: 'Close chat',
+    today: 'Today',
+    greeting: 'Hi! I can help you find a restaurant or recommend dishes.',
+    examples:
+      'You can ask things like: best noodles, open stores, or vegetarian options.',
+    promptOpen: 'Show me stores that are open now.',
+    promptPopular: 'Show me popular dishes.',
+    promptTrack: 'How can I track my order?',
+    openResults: 'Here are stores that are open now:',
+    recommendations:
+      'Popular recommendations today include signature noodles, basil bowls, and handcrafted matcha lattes! Choose an open store to explore its full menu.',
+    trackingReply:
+      'You can check your order status anytime using our live tracking page:',
+    foundStore: 'I found this store matching your search: {name}',
+    fallback:
+      "I'm here to help! You can ask about stores that are open now, popular dishes, or how to track your order.",
+    accepting: 'Accepting orders',
+    notAccepting: 'Not accepting orders',
+    trackingPage: 'Track Order Page',
+    trackingHint: 'Enter token to see live status',
+    sentRead: 'Sent and read',
+    suggestions: 'Suggested questions',
+    openNow: 'Open now',
+    popularDishes: 'Popular dishes',
+    trackOrder: 'Track order',
+    attach: 'Attach file',
+    placeholder: 'Type your message...',
+    inputLabel: 'Type your message',
+    send: 'Send message',
+  },
+});

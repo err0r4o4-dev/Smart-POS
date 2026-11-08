@@ -1,13 +1,10 @@
 import { expect, it } from 'vitest';
 import { safeReturnTo } from './AuthPages';
 
-it('keeps an explicitly requested account destination', () => {
-  expect(safeReturnTo('/account')).toBe('/account');
-});
-
 it.each([
   null,
   '',
+  '/account',
   '/dashboard',
   '/staff',
   '/manage/dashboard',

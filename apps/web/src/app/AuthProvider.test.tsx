@@ -6,6 +6,7 @@ import type { AuthSession } from '../lib/api';
 const requests = vi.hoisted(() => ({
   getSession: vi.fn(),
   login: vi.fn(),
+  linkGoogle: vi.fn(),
   logout: vi.fn(),
 }));
 
@@ -23,7 +24,8 @@ const session: AuthSession = {
 };
 
 function Probe() {
-  const { state, signIn, signOut, refresh, clear } = useAuth();
+  const { state, signIn, signInWithGoogleLink, signOut, refresh, clear } =
+    useAuth();
   return (
     <div>
       <output>{state.status}</output>
@@ -31,6 +33,13 @@ function Probe() {
         Sign in
       </button>
       <button onClick={() => void signOut()}>Sign out</button>
+      <button
+        onClick={() =>
+          void signInWithGoogleLink('person@example.test', 'password')
+        }
+      >
+        Link Google
+      </button>
       <button onClick={() => void refresh()}>Refresh</button>
       <button onClick={clear}>Clear</button>
     </div>
@@ -130,4 +139,47 @@ it('clears an expired session when explicitly refreshed', async () => {
   expect(await screen.findByText('authenticated')).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
   expect(await screen.findByText('anonymous')).toBeVisible();
+});
+
+it('establishes a linked Google session and ignores an older lookup', async () => {
+  let resolveLookup!: (value: AuthSession | null) => void;
+  requests.getSession.mockReturnValue(
+    new Promise<AuthSession | null>((resolve) => {
+      resolveLookup = resolve;
+    }),
+  );
+  requests.linkGoogle.mockResolvedValue(session);
+  render(
+    <AuthProvider>
+      <Probe />
+    </AuthProvider>,
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Link Google' }));
+  expect(await screen.findByText('authenticated')).toBeVisible();
+  expect(requests.linkGoogle).toHaveBeenCalledWith(
+    'person@example.test',
+    'password',
+  );
+  await act(async () => resolveLookup(null));
+  expect(screen.getByText('authenticated')).toBeVisible();
+});
+
+it('ignores a pending Google link response after reset clears the session', async () => {
+  let resolveLink!: (value: AuthSession) => void;
+  requests.getSession.mockResolvedValue(null);
+  requests.linkGoogle.mockReturnValue(
+    new Promise<AuthSession>((resolve) => {
+      resolveLink = resolve;
+    }),
+  );
+  render(
+    <AuthProvider>
+      <Probe />
+    </AuthProvider>,
+  );
+  expect(await screen.findByText('anonymous')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Link Google' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+  await act(async () => resolveLink(session));
+  expect(screen.getByText('anonymous')).toBeVisible();
 });

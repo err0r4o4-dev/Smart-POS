@@ -74,11 +74,11 @@ export function BarcodeScanner() {
       <CatalogError error={error} />
       {unknown && (
         <div className="catalog-actions">
-          <Link to={`/products?search=${encodeURIComponent(code)}`}>
+          <Link to={`/menu?search=${encodeURIComponent(code)}`}>
             {t('catalog.findAnExistingProductToLinkThis')}
           </Link>
           {catalog.tenant.can('catalog.create') && (
-            <Link to={`/products/new?barcode=${encodeURIComponent(code)}`}>
+            <Link to={`/menu/new?barcode=${encodeURIComponent(code)}`}>
               {t('catalog.createProduct')}
             </Link>
           )}
@@ -86,7 +86,7 @@ export function BarcodeScanner() {
       )}
       {result && (
         <p role="status">
-          <Link to={`/products/${result.product.id}`}>
+          <Link to={`/menu/${result.product.id}`}>
             {result.product.name}
           </Link>{' '}
           •{' '}

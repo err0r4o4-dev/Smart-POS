@@ -145,6 +145,14 @@ export function login(email: string, password: string) {
   return authRequest<AuthSession>('login', { email, password });
 }
 
+export function getGoogleConfig() {
+  return authRequest<{ enabled: boolean }>('google/config');
+}
+
+export function linkGoogle(email: string, password: string) {
+  return authRequest<AuthSession>('google/link', { email, password });
+}
+
 export function register(
   email: string,
   password: string,

@@ -98,7 +98,7 @@ export function ProductsPage() {
       <CatalogHeader title={t('catalog.restaurantItems')}>
         <>
           {catalog.tenant.can('catalog.create') && (
-            <Link className="button sales-new-sale-btn" to="/products/new">
+            <Link className="button sales-new-sale-btn" to="/menu/new">
               <Plus size={16} aria-hidden="true" />
               <span>{t('catalog.addProduct')}</span>
             </Link>
@@ -274,7 +274,7 @@ export function ProductsPage() {
                           >
                             <Package size={18} aria-hidden="true" />
                           </span>
-                          <Link to={`/products/${product.id}`}>
+                          <Link to={`/menu/${product.id}`}>
                             <strong>{product.name}</strong>
                           </Link>
                         </div>
@@ -311,7 +311,7 @@ export function ProductsPage() {
                       <td>
                         <div className="sales-row-actions">
                           <Link
-                            to={`/products/${product.id}`}
+                            to={`/menu/${product.id}`}
                             className="button button-secondary sales-detail-link"
                           >
                             <Eye size={15} aria-hidden="true" />
@@ -345,18 +345,12 @@ export function ProductDetailsPage() {
   return (
     <div className="catalog-page">
       <CatalogHeader title={t('catalog.productDetails')}>
-        <Link
-          className="button button-secondary sales-export-btn"
-          to="/products"
-        >
+        <Link className="button button-secondary sales-export-btn" to="/menu">
           <ArrowLeft size={16} aria-hidden="true" />
           <span>{t('catalog.backToProducts')}</span>
         </Link>
         {catalog.tenant.can('catalog.update') && (
-          <Link
-            className="button sales-new-sale-btn"
-            to={`/products/${id}/edit`}
-          >
+          <Link className="button sales-new-sale-btn" to={`/menu/${id}/edit`}>
             <span>{t('catalog.editProduct')}</span>
           </Link>
         )}
@@ -482,7 +476,7 @@ function ProductEditor({
         setSaved(true);
       } else
         navigate(
-          `/products/${product.id}${params.get('barcode') ? `?barcode=${encodeURIComponent(params.get('barcode')!)}` : ''}`,
+          `/menu/${product.id}${params.get('barcode') ? `?barcode=${encodeURIComponent(params.get('barcode')!)}` : ''}`,
         );
     } catch (problem) {
       setError(
@@ -499,7 +493,7 @@ function ProductEditor({
       >
         <Link
           className="button button-secondary"
-          to={initial ? `/products/${initial.id}` : '/products'}
+          to={initial ? `/menu/${initial.id}` : '/menu'}
         >
           <ArrowLeft size={16} aria-hidden="true" />
           {t('catalog.backReturnToList')}
@@ -544,8 +538,7 @@ function ProductEditor({
                         )
                       }
                     >
-                      {t('catalog.removeVariant')} {index + 1}{' '}
-                      {t('catalog.remove2')}
+                      {t('catalog.removeVariant', { number: index + 1 })}
                     </Button>
                   )}
                 </fieldset>
@@ -572,7 +565,7 @@ function ProductEditor({
           {!units.length && (
             <p role="alert">
               {t('catalog.create')}{' '}
-              <Link to="/units">{t('catalog.units')}</Link>{' '}
+              <Link to="/menu/units">{t('catalog.units')}</Link>{' '}
               {t('catalog.beforeAddingProducts')}
             </p>
           )}

@@ -160,7 +160,7 @@ export function POSTerminalPage() {
       {!pos.shift && (
         <p className="notice">
           {t('pos.youMust')}{' '}
-          <Link to="/pos/register/open">{t('pos.openYourRegisterShift')}</Link>{' '}
+          <Link to="/pos/shifts/open">{t('pos.openYourRegisterShift')}</Link>{' '}
           {t('pos.beforeSelling')}
         </p>
       )}

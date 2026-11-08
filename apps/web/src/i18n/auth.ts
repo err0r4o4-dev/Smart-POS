@@ -1,6 +1,34 @@
 import { defineMessages } from './defineMessages';
 export const auth = defineMessages({
   th: {
+    registerStoryTitle: 'เริ่มต้นร้านของคุณไปด้วยกัน',
+    registerStorySummary:
+      'สร้างบัญชี ยืนยันอีเมล แล้วค่อยตั้งค่าร้านในขั้นตอนถัดไป',
+    verifyStoryTitle: 'อีกขั้นเดียวก่อนเริ่มต้น',
+    verifyStorySummary:
+      'ยืนยันอีเมลเพื่อให้บัญชีของคุณพร้อมสำหรับการตั้งค่าร้าน',
+    recoverStoryTitle: 'กลับมาดูแลร้านได้อีกครั้ง',
+    recoverStorySummary:
+      'ขอลิงก์ทางอีเมลเพื่อตั้งรหัสผ่านใหม่ แล้วกลับมาใช้งานบัญชีของคุณ',
+    resetStoryTitle: 'เริ่มใหม่ด้วยบัญชีเดิม',
+    resetStorySummary:
+      'ตั้งรหัสผ่านใหม่เพื่อกลับเข้าใช้งาน ข้อมูลร้านและสิทธิ์ของคุณยังอยู่เหมือนเดิม',
+    or: 'หรือ',
+    googleSignIn: 'เข้าสู่ระบบด้วย Google',
+    googleSignUp: 'สมัครด้วย Google',
+    googleChecking: 'กำลังตรวจสอบ Google Login…',
+    googleUnavailable:
+      'Google Login ยังไม่พร้อมใช้งาน กรุณาใช้อีเมลและรหัสผ่าน',
+    googleCheckFailed: 'ตรวจสอบ Google Login ไม่สำเร็จ',
+    googleRetry: 'ลองตรวจสอบอีกครั้ง',
+    googleCancelled: 'ยกเลิกการเข้าสู่ระบบด้วย Google แล้ว คุณสามารถลองใหม่ได้',
+    googleFailed:
+      'เข้าสู่ระบบด้วย Google ไม่สำเร็จ กรุณาลองใหม่หรือใช้อีเมลและรหัสผ่าน',
+    googleLinkRequired:
+      'ยืนยันอีเมลและรหัสผ่านของบัญชีเดิมเพื่อเชื่อมกับ Google ที่คุณเพิ่งเลือก',
+    googleLinkAction: 'ยืนยันบัญชีและเชื่อม Google',
+    checkInbox: 'ตรวจสอบกล่องจดหมายและโฟลเดอร์สแปม แล้วเปิดลิงก์ยืนยันอีเมล',
+    requestAnotherReset: 'ขอลิงก์ตั้งรหัสผ่านใหม่',
     storeSimplified: 'จัดการร้านให้ง่ายขึ้น',
     storeSummary:
       'ครบทุกการจัดการร้านค้า ตั้งแต่สินค้า สต็อก ไปจนถึงการขาย และรายงานยอดขาย',
@@ -53,6 +81,8 @@ export const auth = defineMessages({
     changePassword: 'เปลี่ยนรหัสผ่าน',
     logoutUnavailable: 'ไม่สามารถออกจากระบบได้',
     yourAccount: 'บัญชีของคุณ',
+    profile: 'โปรไฟล์',
+    settings: 'การตั้งค่า',
     email: 'อีเมล',
     status: 'สถานะ',
     openYourRoleBasedWorkspace: 'เข้าสู่พื้นที่จัดการร้าน',
@@ -68,6 +98,35 @@ export const auth = defineMessages({
     account: 'บัญชี',
   },
   en: {
+    registerStoryTitle: 'A fresh start for your store.',
+    registerStorySummary:
+      'Create your account, verify your email, then set up your store when you are ready.',
+    verifyStoryTitle: 'One step closer to your store.',
+    verifyStorySummary:
+      'Verify your email to get your account ready for store setup.',
+    recoverStoryTitle: 'Find your way back.',
+    recoverStorySummary:
+      'Request an email link, choose a new password, and return to your account.',
+    resetStoryTitle: 'A fresh password. Your same store.',
+    resetStorySummary:
+      'Choose a new password to return. Your store data and permissions stay unchanged.',
+    or: 'or',
+    googleSignIn: 'Sign in with Google',
+    googleSignUp: 'Sign up with Google',
+    googleChecking: 'Checking Google sign-in…',
+    googleUnavailable:
+      'Google sign-in is not available. Use your email and password.',
+    googleCheckFailed: 'Could not check Google sign-in availability.',
+    googleRetry: 'Check again',
+    googleCancelled: 'Google sign-in was cancelled. You can try again.',
+    googleFailed:
+      'Google sign-in failed. Try again or use your email and password.',
+    googleLinkRequired:
+      'Confirm your existing account email and password to link the Google account you just selected.',
+    googleLinkAction: 'Confirm account and link Google',
+    checkInbox:
+      'Check your inbox and spam folder, then open the email verification link.',
+    requestAnotherReset: 'Request a new reset link',
     storeSimplified: 'Run your store, simply.',
     storeSummary:
       'Everything for your store, from products and inventory to sales and reporting.',
@@ -119,6 +178,8 @@ export const auth = defineMessages({
     changePassword: 'Change password',
     logoutUnavailable: 'Logout unavailable',
     yourAccount: 'Your account',
+    profile: 'Profile',
+    settings: 'Settings',
     email: 'Email',
     status: 'Status',
     openYourRoleBasedWorkspace: 'Open store management',

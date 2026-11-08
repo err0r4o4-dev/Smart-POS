@@ -83,10 +83,9 @@ it('renders the complete storefront settings layout matching the mockup', () => 
     'velocafe',
   );
   expect(screen.getByText('.velopos.com')).toBeInTheDocument();
-  expect(screen.getByLabelText(/คำอธิบายร้าน/)).toHaveValue(
-    'ร้านอาหารและคาเฟ่ อาหารไทย เครื่องดื่ม และเบเกอรี่',
-  );
-  expect(screen.getByText(/50 \/ 200/)).toBeInTheDocument();
+  const description = 'ร้านอาหารและคาเฟ่ อาหารไทย เครื่องดื่ม และเบเกอรี่';
+  expect(screen.getByLabelText(/คำอธิบายร้าน/)).toHaveValue(description);
+  expect(screen.getByText(`${description.length} / 200`)).toBeInTheDocument();
 
   // Card 3: ช่องทางรับออเดอร์
   expect(

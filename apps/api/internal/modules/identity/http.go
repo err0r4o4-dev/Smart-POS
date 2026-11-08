@@ -20,6 +20,7 @@ import (
 
 type Handler struct {
 	Service        *Service
+	Google         *GoogleAuth
 	Origins        []string
 	Production     bool
 	TrustedProxyIP netip.Addr
@@ -123,6 +124,10 @@ func (handler Handler) clientIP(request *http.Request) string {
 
 func (handler Handler) Routes(router chi.Router) {
 	router.Route("/auth", func(auth chi.Router) {
+		auth.Get("/google/config", handler.googleConfig)
+		auth.Get("/google/start", handler.googleStart)
+		auth.Get("/google/callback", handler.googleCallback)
+		auth.Post("/google/link", handler.googleLink)
 		auth.Post("/register", handler.register)
 		auth.Post("/login", handler.login)
 		auth.Post("/email/verify", handler.verifyEmail)

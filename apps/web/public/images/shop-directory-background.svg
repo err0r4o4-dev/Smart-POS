@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1659 948" preserveAspectRatio="xMidYMid slice" fill="none">
+  <defs>
+    <radialGradient id="glow" cx=".76" cy="0" r=".88">
+      <stop stop-color="#ffe6a0" stop-opacity=".56"/>
+      <stop offset=".64" stop-color="#fff8e9" stop-opacity=".15"/>
+      <stop offset="1" stop-color="#fffaf3" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="640" x2="0" y2="948" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffdb83" stop-opacity=".6"/>
+      <stop offset="1" stop-color="#fff2ce" stop-opacity=".18"/>
+    </linearGradient>
+    <linearGradient id="veil" x1="0" y1="500" x2="0" y2="948" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff0c5" stop-opacity=".72"/>
+      <stop offset="1" stop-color="#fff8e9" stop-opacity=".16"/>
+    </linearGradient>
+    <linearGradient id="dots" x1="0" y1="0" x2="190" y2="0" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffcd64" stop-opacity=".8"/>
+      <stop offset="1" stop-color="#ffcd64" stop-opacity="0"/>
+    </linearGradient>
+    <pattern id="top-dots" width="21" height="22" patternUnits="userSpaceOnUse">
+      <circle cx="16" cy="7" r="3.2" fill="white"/>
+    </pattern>
+    <pattern id="bottom-dots" width="22" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="8" cy="6" r="2" fill="white" fill-opacity=".8"/>
+    </pattern>
+    <mask id="dot-mask"><path fill="url(#top-dots)" d="M0 20h190v150H0z"/></mask>
+  </defs>
+  <path fill="#fffbf5" d="M0 0h1659v948H0z"/>
+  <path fill="url(#glow)" d="M0 0h1659v948H0z"/>
+  <path d="M902 0h688c-51 150-202 255-365 284C1048 315 881 173 902 0Z" fill="white" fill-opacity=".43"/>
+  <path fill="url(#dots)" mask="url(#dot-mask)" d="M0 20h190v150H0z"/>
+  <path d="M0 881c170-12 307-129 452-97 118 26 177 77 301 28 146-58 230-148 401-137 202 13 285 161 505 150v123H0Z" fill="url(#gold)"/>
+  <path d="M0 643c200-6 309 134 497 199 286 99 554 65 740-51 176-110 172-285 422-293v450H0Z" fill="url(#veil)" stroke="#ffd277" stroke-width=".5" stroke-opacity=".2"/>
+  <path d="M0 815c170-127 295-33 486 27 287 91 504 61 701-27 207-93 314-191 472-187v320H0Z" fill="url(#gold)" stroke="#ffd277" stroke-width=".5" stroke-opacity=".2"/>
+  <path fill="url(#bottom-dots)" d="M1474 704h185v210h-185z"/>
+</svg>

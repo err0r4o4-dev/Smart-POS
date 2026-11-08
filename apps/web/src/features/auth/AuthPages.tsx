@@ -7,9 +7,9 @@ import { AuthLayout } from '../../layouts/AuthLayout';
 import { LoginLayout } from '../../layouts/LoginLayout';
 import { forgotPassword, register, resetPassword } from '../../lib/api';
 import { useAuth } from '../../app/AuthProvider';
-import { useOrganization } from '../../app/OrganizationProvider';
 import { paths } from '../../app/routes';
 import { ResendVerification } from './VerificationFlow';
+import { GoogleAuth } from './GoogleAuth';
 
 function ErrorMessage({ message }: { message: string }) {
   const { localize } = useLanguage();
@@ -66,9 +66,7 @@ function PasswordField({
 }
 
 export function safeReturnTo(value: string | null) {
-  return value === '/account' || value === paths.setup
-    ? value
-    : paths.workspace;
+  return value === paths.setup ? value : paths.workspace;
 }
 
 export function LoginPage() {
@@ -80,13 +78,15 @@ export function LoginPage() {
   const [pending, setPending] = useState(false);
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { signIn } = useAuth();
+  const { signIn, signInWithGoogleLink } = useAuth();
+  const linkingGoogle = params.get('google') === 'link_required';
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
     setPending(true);
     try {
-      await signIn(email, password);
+      if (linkingGoogle) await signInWithGoogleLink(email, password);
+      else await signIn(email, password);
       navigate(safeReturnTo(params.get('returnTo')), { replace: true });
     } catch (failure) {
       setError(
@@ -108,6 +108,17 @@ export function LoginPage() {
       {params.has('registered') && (
         <p role="status" className="auth-status-banner">
           {t('auth.accountCreatedSignInToContinue')}
+        </p>
+      )}
+      {params.has('google') && (
+        <p role="status" className="auth-status-banner">
+          {t(
+            linkingGoogle
+              ? 'auth.googleLinkRequired'
+              : params.get('google') === 'cancelled'
+                ? 'auth.googleCancelled'
+                : 'auth.googleFailed',
+          )}
         </p>
       )}
       <form onSubmit={submit} className="auth-form-body">
@@ -139,12 +150,19 @@ export function LoginPage() {
               </>
             ) : (
               <>
-                <LogIn size={18} /> {t('auth.signIn')}
+                <LogIn size={18} />{' '}
+                {t(linkingGoogle ? 'auth.googleLinkAction' : 'auth.signIn')}
               </>
             )}
           </Button>
         </fieldset>
       </form>
+      {!linkingGoogle && (
+        <GoogleAuth
+          disabled={pending}
+          returnTo={safeReturnTo(params.get('returnTo'))}
+        />
+      )}
       <div className="auth-links">
         <Link to="/forgot-password" className="auth-link-subtle">
           {t('auth.forgotPassword')}
@@ -191,7 +209,7 @@ export function RegisterPage() {
   };
   if (registered)
     return (
-      <LoginLayout titleId="verify-title">
+      <LoginLayout titleId="verify-title" story="verify">
         <div className="auth-header-card">
           <Tag tone="amber">{t('auth.createAccount2')}</Tag>
           <h2 id="verify-title">
@@ -204,6 +222,7 @@ export function RegisterPage() {
           </p>
         </div>
         <div className="auth-form-body">
+          <p className="auth-status-banner">{t('auth.checkInbox')}</p>
           <ResendVerification initialEmail={email} />
         </div>
         <div className="auth-links auth-links-single">
@@ -212,7 +231,7 @@ export function RegisterPage() {
       </LoginLayout>
     );
   return (
-    <LoginLayout titleId="register-title">
+    <LoginLayout titleId="register-title" story="register">
       <div className="auth-header-card">
         <Tag tone="amber">{t('auth.createAccount2')}</Tag>
         <h2 id="register-title">{t('auth.getStarted')}</h2>
@@ -289,6 +308,7 @@ export function RegisterPage() {
           </Button>
         </fieldset>
       </form>
+      <GoogleAuth mode="register" disabled={pending} returnTo="/setup" />
       <div className="auth-links auth-links-single">
         <div className="auth-link-register-prompt">
           <Link to="/login">{t('auth.alreadyHaveAnAccountSignIn')}</Link>
@@ -322,11 +342,13 @@ export function ForgotPasswordPage() {
     }
   };
   return (
-    <AuthLayout>
-      <Tag tone="amber">{t('auth.accountRecovery')}</Tag>
-      <h2>{t('auth.resetYourPassword')}</h2>
-      <p>{t('auth.enterYourEmailIfAnEligibleAccount')}</p>
-      <form onSubmit={submit}>
+    <AuthLayout titleId="forgot-title" story="recover">
+      <div className="auth-header-card">
+        <Tag tone="amber">{t('auth.accountRecovery')}</Tag>
+        <h2 id="forgot-title">{t('auth.resetYourPassword')}</h2>
+        <p>{t('auth.enterYourEmailIfAnEligibleAccount')}</p>
+      </div>
+      <form onSubmit={submit} className="auth-form-body">
         <fieldset disabled={pending}>
           <label htmlFor="email">{t('auth.emailAddress')}</label>
           <input
@@ -339,12 +361,16 @@ export function ForgotPasswordPage() {
             maxLength={254}
           />
           <ErrorMessage message={localize(error ?? '')} />
-          <Button type="submit">
+          <Button type="submit" className="auth-submit-btn">
             {pending ? t('auth.sending') : t('auth.requestResetLink')}
           </Button>
         </fieldset>
       </form>
-      {message && <p role="status">{localize(message)}</p>}
+      {message && (
+        <p role="status" className="auth-status-banner">
+          {localize(message)}
+        </p>
+      )}
       <p className="auth-links">
         <Link to="/login">{t('auth.backToSignIn')}</Link>
       </p>
@@ -390,11 +416,13 @@ export function ResetPasswordPage() {
     }
   };
   return (
-    <AuthLayout>
-      <Tag tone="amber">{t('auth.secureReset')}</Tag>
-      <h2>{t('auth.chooseANewPassword')}</h2>
+    <AuthLayout titleId="reset-title" story="reset">
+      <div className="auth-header-card">
+        <Tag tone="amber">{t('auth.secureReset')}</Tag>
+        <h2 id="reset-title">{t('auth.chooseANewPassword')}</h2>
+      </div>
       {done ? (
-        <p role="status">
+        <p role="status" className="auth-status-banner">
           {t('auth.passwordChangedExistingSessionsWereRevoked')}{' '}
           <Link to="/login">{t('auth.signInAgain')}</Link>.
         </p>
@@ -403,7 +431,7 @@ export function ResetPasswordPage() {
           {!token && (
             <p role="alert">{t('auth.thisResetLinkIsMissingAToken')}</p>
           )}
-          <form onSubmit={submit}>
+          <form onSubmit={submit} className="auth-form-body">
             <fieldset disabled={pending || !token}>
               <PasswordField
                 value={password}
@@ -423,96 +451,19 @@ export function ResetPasswordPage() {
                 required
               />
               <ErrorMessage message={localize(error ?? '')} />
-              <Button type="submit">
+              <Button type="submit" className="auth-submit-btn">
                 {pending ? t('auth.resetting') : t('auth.changePassword')}
               </Button>
             </fieldset>
           </form>
+          <Link className="auth-recovery-link" to="/forgot-password">
+            {t('auth.requestAnotherReset')}
+          </Link>
         </>
       )}
       <p className="auth-links">
         <Link to="/login">{t('auth.backToSignIn')}</Link>
       </p>
     </AuthLayout>
-  );
-}
-
-export function AccountPage() {
-  const { t, localize, labelCode } = useLanguage();
-
-  const tenant = useOrganization();
-  const { state, signOut } = useAuth();
-  const [error, setError] = useState('');
-  const [pending, setPending] = useState(false);
-  const navigate = useNavigate();
-  if (state.status !== 'authenticated') return <Loading />;
-  const logout = async () => {
-    setPending(true);
-    setError('');
-    try {
-      await signOut();
-      navigate('/login', { replace: true });
-    } catch (failure) {
-      setError(
-        failure instanceof Error
-          ? failure.message
-          : t('auth.logoutUnavailable'),
-      );
-    } finally {
-      setPending(false);
-    }
-  };
-  return (
-    <div>
-      <section className="card account-card">
-        <Tag tone="amber">{t('auth.account')}</Tag>
-        <h1>{t('auth.yourAccount')}</h1>
-        <dl>
-          <dt>{t('auth.displayName')}</dt>
-          <dd>{state.session.user.display_name}</dd>
-          <dt>{t('auth.email')}</dt>
-          <dd>{state.session.user.email}</dd>
-          <dt>{t('auth.status')}</dt>
-          <dd>{labelCode(state.session.user.status)}</dd>
-        </dl>
-        {tenant.context?.membership.role === 'OWNER' ? (
-          <p>
-            <Link to={paths.dashboard}>
-              {t('auth.openYourRoleBasedWorkspace')}
-            </Link>
-            {' · '}
-            <Link to="/setup">{t('organization.setUpStore')}</Link>
-          </p>
-        ) : !tenant.loading && !tenant.error ? (
-          <div role="status">
-            <p>
-              {t(
-                !tenant.context && tenant.storeMode === 'multi'
-                  ? 'auth.noOwnedStore'
-                  : 'auth.ownerOnlyAccess',
-              )}
-            </p>
-            {!tenant.context && tenant.storeMode === 'multi' && (
-              <p>
-                <Link to="/setup">{t('organization.setUpStore')}</Link>
-              </p>
-            )}
-          </div>
-        ) : tenant.error ? (
-          <p role="alert">
-            {localize(tenant.error)}{' '}
-            <Button onClick={() => void tenant.refresh()}>
-              {t('organization.refreshPermissions')}
-            </Button>
-          </p>
-        ) : (
-          <Loading />
-        )}
-        <ErrorMessage message={localize(error ?? '')} />
-        <Button onClick={() => void logout()} disabled={pending}>
-          {pending ? t('auth.signingOut') : t('auth.signOut')}
-        </Button>
-      </section>
-    </div>
   );
 }

@@ -30,6 +30,9 @@ type Config struct {
 	PaymentSandbox            *stripe.Client
 	CustomerPayments          *stripe.CustomerClient
 	SingleStoreOrganizationID string
+	GoogleClientID            string
+	GoogleClientSecret        string
+	GoogleRedirectURI         string
 }
 
 func Load() (Config, error) { return Parse(os.Getenv) }
@@ -64,6 +67,18 @@ func Parse(getenv func(string) string) (Config, error) {
 	}
 	if parsedOrigin.User != nil || (environment == "development" && parsedOrigin.Scheme == "http" && parsedOrigin.Hostname() != "localhost" && parsedOrigin.Hostname() != "127.0.0.1") {
 		return Config{}, errors.New("development HTTP origin must be loopback")
+	}
+	googleID, googleSecret, googleRedirect := getenv("GOOGLE_CLIENT_ID"), getenv("GOOGLE_CLIENT_SECRET"), getenv("GOOGLE_REDIRECT_URI")
+	if googleID != "" || googleSecret != "" || googleRedirect != "" {
+		if googleID == "" || strings.TrimSpace(googleID) != googleID {
+			return Config{}, errors.New("GOOGLE_CLIENT_ID is required and must not have surrounding whitespace")
+		}
+		if googleSecret == "" || strings.TrimSpace(googleSecret) != googleSecret {
+			return Config{}, errors.New("GOOGLE_CLIENT_SECRET is required and must not have surrounding whitespace")
+		}
+		if googleRedirect != origin+"/api/v1/auth/google/callback" {
+			return Config{}, errors.New("GOOGLE_REDIRECT_URI must equal PUBLIC_ORIGIN plus /api/v1/auth/google/callback")
+		}
 	}
 	origins := []string{origin}
 	if environment == "development" {
@@ -128,5 +143,5 @@ func Parse(getenv func(string) string) (Config, error) {
 	if singleStore != "" && !organizationIDPattern.MatchString(singleStore) {
 		return Config{}, errors.New("SINGLE_STORE_ORGANIZATION_ID must be one organization UUID")
 	}
-	return Config{Address: address, DatabaseURL: databaseURL, Environment: environment, PublicOrigin: origin, AllowedOrigins: origins, SessionTTL: time.Duration(hours) * time.Hour, SMTPAddr: smtpAddr, SMTPUser: getenv("SMTP_USER"), SMTPPassword: getenv("SMTP_PASSWORD"), MailFrom: mailFrom, TrustedProxyIP: trustedProxyIP, PaymentSandbox: sandbox, CustomerPayments: customerPayments, SingleStoreOrganizationID: strings.ToLower(singleStore)}, nil
+	return Config{Address: address, DatabaseURL: databaseURL, Environment: environment, PublicOrigin: origin, AllowedOrigins: origins, SessionTTL: time.Duration(hours) * time.Hour, SMTPAddr: smtpAddr, SMTPUser: getenv("SMTP_USER"), SMTPPassword: getenv("SMTP_PASSWORD"), MailFrom: mailFrom, TrustedProxyIP: trustedProxyIP, PaymentSandbox: sandbox, CustomerPayments: customerPayments, SingleStoreOrganizationID: strings.ToLower(singleStore), GoogleClientID: googleID, GoogleClientSecret: googleSecret, GoogleRedirectURI: googleRedirect}, nil
 }

@@ -5,6 +5,31 @@ import (
 	"testing"
 )
 
+func TestGoogleConfiguration(test *testing.T) {
+	for _, tc := range []struct {
+		name, clientID, secret, redirect, missing string
+		valid                                     bool
+	}{
+		{"disabled", "", "", "", "", true},
+		{"configured", "test-client", "test-secret", "https://example.test/api/v1/auth/google/callback", "", true},
+		{"missing secret", "test-client", "", "https://example.test/api/v1/auth/google/callback", "GOOGLE_CLIENT_SECRET", false},
+		{"missing client", "", "test-secret", "https://example.test/api/v1/auth/google/callback", "GOOGLE_CLIENT_ID", false},
+		{"missing redirect", "test-client", "test-secret", "", "GOOGLE_REDIRECT_URI", false},
+		{"foreign redirect", "test-client", "test-secret", "https://evil.test/api/v1/auth/google/callback", "GOOGLE_REDIRECT_URI", false},
+	} {
+		test.Run(tc.name, func(test *testing.T) {
+			values := map[string]string{"DATABASE_URL": "postgres://localhost/smartpos", "APP_ENV": "development", "PUBLIC_ORIGIN": "https://example.test", "SMTP_ADDR": "localhost:1025", "MAIL_FROM": "noreply@example.test", "GOOGLE_CLIENT_ID": tc.clientID, "GOOGLE_CLIENT_SECRET": tc.secret, "GOOGLE_REDIRECT_URI": tc.redirect}
+			_, err := Parse(func(key string) string { return values[key] })
+			if (err == nil) != tc.valid {
+				test.Fatalf("valid=%v error=%v", tc.valid, err)
+			}
+			if err != nil && (!strings.Contains(err.Error(), tc.missing) || (tc.secret != "" && strings.Contains(err.Error(), tc.secret))) {
+				test.Fatalf("unsafe or non-actionable error: %v", err)
+			}
+		})
+	}
+}
+
 func TestStripeSandboxConfiguration(t *testing.T) {
 	for _, item := range []struct {
 		name, environment, key string

@@ -45,7 +45,7 @@ export function WorkspaceEntryPage() {
   if (!tenant.context)
     return (
       <Navigate
-        to={tenant.storeMode === 'multi' ? paths.setup : paths.account}
+        to={tenant.storeMode === 'multi' ? paths.setup : paths.forbidden}
         replace
       />
     );

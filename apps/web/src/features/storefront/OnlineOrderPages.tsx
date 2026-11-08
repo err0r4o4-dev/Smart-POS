@@ -145,12 +145,12 @@ export function StorefrontSettingsPage() {
           <>
             <Link
               className="button button-secondary sales-export-btn"
-              to="/settings/storefront/payments"
+              to="/settings/payments"
             >
               <CreditCard size={15} aria-hidden="true" />
               <span>{t('storefront.testStripeSandbox')}</span>
             </Link>
-            <Link className="button sales-new-sale-btn" to="/online-orders">
+            <Link className="button sales-new-sale-btn" to="/orders">
               <ShoppingBag size={15} aria-hidden="true" />
               <span>{t('storefront.manageOrders')}</span>
             </Link>
@@ -662,7 +662,7 @@ export function OnlineOrdersPage() {
                 </span>
                 <div>
                   <h2>
-                    <Link to={`/online-orders/${order.id}`}>
+                    <Link to={`/orders/${order.id}`}>
                       {order.number}
                     </Link>
                   </h2>
@@ -686,7 +686,7 @@ export function OnlineOrdersPage() {
                 </p>
               </div>
               <Link
-                to={`/online-orders/${order.id}`}
+                to={`/orders/${order.id}`}
                 className="button button-secondary sales-detail-link"
               >
                 <Eye size={15} aria-hidden="true" />
@@ -724,7 +724,7 @@ export function OnlineOrderPage() {
         actions={
           <Link
             className="button button-secondary sales-export-btn"
-            to="/online-orders"
+            to="/orders"
           >
             <ArrowLeft size={15} aria-hidden="true" />
             <span>{t('storefront.backToOrders')}</span>

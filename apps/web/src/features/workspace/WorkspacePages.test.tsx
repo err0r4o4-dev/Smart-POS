@@ -8,7 +8,7 @@ import { managementRoles, workspaceHome, type Role } from '../../app/access';
 import type { OrganizationContext } from '../../lib/organization-api';
 import { RequireSession } from '../../app/ProtectedRoute';
 import { OrganizationGate } from '../organization/OrganizationGate';
-import { LegacyWorkspaceRedirect, WorkspaceAreaGate } from './WorkspaceRouting';
+import { WorkspaceAreaGate } from './WorkspaceRouting';
 import { RoleWorkspaceLayout } from '../../layouts/RoleWorkspaceLayout';
 import { ManagementHomePage, WorkspaceEntryPage } from './WorkspacePages';
 
@@ -104,45 +104,18 @@ function Harness({ path }: { path: string }) {
             <Route path="/setup" element={<h1>Setup</h1>} />
             <Route element={<RequireSession />}>
               <Route path="/workspace" element={<WorkspaceEntryPage />} />
-              <Route
-                path="/dashboard"
-                element={<LegacyWorkspaceRedirect path="/dashboard" />}
-              />
-              <Route
-                path="/staff"
-                element={<LegacyWorkspaceRedirect path="/staff" />}
-              />
-              <Route path="/account" element={<h1>Account</h1>} />
               <Route element={<OrganizationGate />}>
-                <Route
-                  path="/manage/dashboard"
-                  element={<ManagementHomePage />}
-                />
+                <Route path="/dashboard" element={<ManagementHomePage />} />
               </Route>
               <Route element={<OrganizationGate permission="pos.access" />}>
-                <Route path="/manage/pos" element={<h1>POS</h1>} />
-                <Route
-                  path="/pos"
-                  element={<LegacyWorkspaceRedirect path="/pos" />}
-                />
+                <Route path="/pos" element={<h1>POS</h1>} />
               </Route>
               <Route element={<OrganizationGate permission="catalog.read" />}>
-                <Route
-                  path="/products/:id"
-                  element={<LegacyWorkspaceRedirect path="/products/:id" />}
-                />
-                <Route
-                  path="/work/products/:id"
-                  element={<h1>Product details</h1>}
-                />
-                <Route
-                  path="/manage/products/:id"
-                  element={<h1>Product details</h1>}
-                />
+                <Route path="/menu/:id" element={<h1>Product details</h1>} />
               </Route>
               <Route element={<OrganizationGate roles={managementRoles} />}>
                 <Route
-                  path="/manage/settings"
+                  path="/settings"
                   element={<h1>Private store settings</h1>}
                 />
               </Route>
@@ -151,6 +124,7 @@ function Harness({ path }: { path: string }) {
         </Route>
         <Route path="/403" element={<h1>Forbidden</h1>} />
         <Route path="/login" element={<h1>Sign in</h1>} />
+        <Route path="*" element={<h1>Not found</h1>} />
       </Routes>
       <LocationProbe />
     </MemoryRouter>
@@ -187,7 +161,7 @@ it.each<Role>(['OWNER'])(
   'renders restaurant tasks for %s without fabricated retail metrics or retired links',
   (role) => {
     selectRole(role, allPermissions);
-    expect(workspaceHome(role)).toBe('/manage/dashboard');
+    expect(workspaceHome(role)).toBe('/dashboard');
     renderWorkspace();
     expect(screen.getByRole('heading', { name: 'ภาพรวม' })).toBeVisible();
     expect(
@@ -196,7 +170,7 @@ it.each<Role>(['OWNER'])(
     const main = within(screen.getByRole('main'));
     expect(main.getByRole('link', { name: 'ออเดอร์และคิว' })).toHaveAttribute(
       'href',
-      '/manage/online-orders',
+      '/orders',
     );
     expect(
       main.queryByRole('link', { name: 'สูตรอาหาร' }),
@@ -218,18 +192,18 @@ it.each<Role>(['OWNER'])(
       '/inventory/balances',
     ]) {
       expect(
-        document.querySelector(`a[href="/manage${path}"]`),
+        document.querySelector(`a[href="${path}"]`),
       ).not.toBeInTheDocument();
     }
   },
 );
 
 it.each<Role>(['MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'PURCHASING_STAFF'])(
-  'keeps %s in account and denies management despite broad permissions',
+  'denies %s management despite broad permissions',
   (role) => {
     selectRole(role, allPermissions);
     renderWorkspace();
-    expect(screen.getByRole('heading', { name: 'Account' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Forbidden' })).toBeVisible();
     expect(
       document.querySelector('[data-workspace="management"]'),
     ).not.toBeInTheDocument();
@@ -240,7 +214,7 @@ it.each<Role>(['MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'PURCHASING_STAFF'])(
   'denies management settings on a direct link for %s',
   (role) => {
     selectRole(role, allPermissions);
-    renderWorkspace('/manage/settings');
+    renderWorkspace('/settings');
     expect(screen.getByRole('heading', { name: 'Forbidden' })).toBeVisible();
     expect(
       screen.queryByText('Private store settings'),
@@ -255,23 +229,18 @@ it('redirects a signed-in user without a store to setup in multi-store mode', ()
 });
 
 it.each(['single', null, 'unknown'])(
-  'leaves a signed-in user without membership in account when store mode is %s',
+  'denies workspace entry for a signed-in user without membership when store mode is %s',
   (storeMode) => {
     mocks.storeMode = storeMode;
     renderWorkspace();
-    expect(screen.getByRole('heading', { name: 'Account' })).toBeVisible();
-    expect(
-      document.querySelector('[data-workspace="account"]'),
-    ).toBeInTheDocument();
-    expect(
-      document.querySelector('a[href="/manage/employees"]'),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Forbidden' })).toBeVisible();
+    expect(screen.getByLabelText('Location')).toHaveTextContent('/403');
   },
 );
 
-it('keeps direct account access available without a store in multi-store mode', () => {
+it('routes /account to 404 Not found', () => {
   renderWorkspace('/account');
-  expect(screen.getByRole('heading', { name: 'Account' })).toBeVisible();
+  expect(screen.getByRole('heading', { name: 'Not found' })).toBeVisible();
   expect(screen.getByLabelText('Location')).toHaveTextContent('/account');
 });
 
@@ -306,33 +275,34 @@ it('shows a context failure instead of pretending a role is available', () => {
 
 it('denies access when owner membership changes to cashier', () => {
   selectRole('OWNER', allPermissions);
-  const view = renderWorkspace('/manage/dashboard');
+  const view = renderWorkspace('/dashboard');
   expect(screen.getByRole('heading', { name: 'ภาพรวม' })).toBeVisible();
   selectRole('CASHIER', allPermissions);
-  view.rerender(<Harness path="/manage/dashboard" />);
+  view.rerender(<Harness path="/dashboard" />);
   expect(screen.getByRole('heading', { name: 'Forbidden' })).toBeVisible();
 });
 
-it('redirects an owner legacy product path with query and hash', () => {
+it('renders an owner menu path with query and hash intact', () => {
   selectRole('OWNER', ['catalog.read']);
-  renderWorkspace('/products/item-1?search=abc#details');
+  renderWorkspace('/menu/item-1?search=abc#details');
+  expect(screen.getByRole('heading', { name: 'Product details' })).toBeVisible();
   expect(screen.getByLabelText('Location')).toHaveTextContent(
-    '/manage/products/item-1?search=abc#details',
+    '/menu/item-1?search=abc#details',
   );
 });
 
 it.each<Role>(['MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'PURCHASING_STAFF'])(
-  'denies %s legacy product paths even with permission',
+  'denies %s menu paths even with permission',
   (role) => {
     selectRole(role, allPermissions);
-    renderWorkspace('/products/item-1');
+    renderWorkspace('/menu/item-1');
     expect(screen.getByRole('heading', { name: 'Forbidden' })).toBeVisible();
   },
 );
 
-it('denies management product paths to a cashier even with catalog permission', () => {
+it('denies menu paths to a cashier even with catalog permission', () => {
   selectRole('CASHIER', allPermissions);
-  renderWorkspace('/manage/products/item-1');
+  renderWorkspace('/menu/item-1');
   expect(screen.getByRole('heading', { name: 'Forbidden' })).toBeVisible();
   expect(
     screen.queryByRole('heading', { name: 'Product details' }),
@@ -341,13 +311,13 @@ it('denies management product paths to a cashier even with catalog permission', 
 
 it('keeps operational permission checks authoritative in management', () => {
   selectRole('OWNER', []);
-  renderWorkspace('/manage/products/item-1');
+  renderWorkspace('/menu/item-1');
   expect(screen.getByRole('heading', { name: 'Forbidden' })).toBeVisible();
 });
 
 it('filters restaurant dashboard shortcuts by permission without fabricating reports', () => {
   selectRole('OWNER', ['catalog.read']);
-  renderWorkspace('/manage/dashboard');
+  renderWorkspace('/dashboard');
   const main = within(screen.getByRole('main'));
   expect(main.getByRole('link', { name: 'เมนูอาหาร' })).toBeVisible();
   expect(
@@ -365,12 +335,9 @@ it('filters restaurant dashboard shortcuts by permission without fabricating rep
 });
 
 it.each([
-  '/manage/dashboard',
-  '/manage/products/item-1',
-  '/manage/settings',
-  '/work',
-  '/work/products/item-1',
-  '/account',
+  '/dashboard',
+  '/menu/item-1',
+  '/settings',
 ])('does not render the tenant-switchers bar on %s', (path) => {
   selectRole('OWNER', allPermissions);
   renderWorkspace(path);
@@ -385,17 +352,14 @@ it.each([
 
 it('allows an owner with POS permission to access POS', () => {
   selectRole('OWNER', ['pos.access']);
-  renderWorkspace('/manage/pos');
+  renderWorkspace('/pos');
   expect(screen.getByRole('heading', { name: 'POS' })).toBeVisible();
 });
 
 it.each<Role>(['MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'PURCHASING_STAFF'])(
-  'denies %s direct and unprefixed POS access',
+  'denies %s direct POS access',
   (role) => {
     selectRole(role, ['pos.access']);
-    const view = renderWorkspace('/manage/pos');
-    expect(screen.getByRole('heading', { name: 'Forbidden' })).toBeVisible();
-    view.unmount();
     renderWorkspace('/pos');
     expect(screen.getByRole('heading', { name: 'Forbidden' })).toBeVisible();
   },

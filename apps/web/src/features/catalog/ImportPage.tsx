@@ -125,7 +125,7 @@ export function ImportPage() {
         title={t('catalog.importProductsCsvXlsx')}
         icon={<UploadCloud size={24} />}
       >
-        <Link className="button button-secondary" to="/products">
+        <Link className="button button-secondary" to="/menu">
           <ArrowLeft size={16} aria-hidden="true" />
           {t('catalog.backReturnToList')}
         </Link>

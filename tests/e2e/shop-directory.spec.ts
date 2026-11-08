@@ -73,7 +73,7 @@ for (const width of [320, 390, 540, 541, 767, 768, 1024, 1279, 1280, 1672]) {
           .fontSize,
       ),
       footer: Number.parseFloat(
-        getComputedStyle(document.querySelector('.shop-directory-footer > a')!)
+        getComputedStyle(document.querySelector('.shop-directory-footer > small')!)
           .fontSize,
       ),
       footerHeight: document
@@ -82,6 +82,28 @@ for (const width of [320, 390, 540, 541, 767, 768, 1024, 1279, 1280, 1672]) {
     }));
     expect(detailSizes.description).toBe(14);
     expect(detailSizes.footer).toBe(13);
+    const footer = page.locator('.shop-directory-footer');
+    await expect(footer.getByRole('navigation')).toBeVisible();
+    await expect(footer.getByRole('navigation').getByRole('link')).toHaveCount(2);
+    await expect(footer).toContainText('VELOPOS · Smart POS Platform');
+    await expect(footer.getByRole('link', { name: 'เงื่อนไขการให้บริการ' })).toBeVisible();
+    await expect(footer.getByRole('link', { name: 'นโยบายความเป็นส่วนตัว' })).toBeVisible();
+    const surfaces = await page.evaluate(() => {
+      const shell = document.querySelector('.shop-directory-shell')!;
+      const footer = document.querySelector('.shop-directory-footer')!;
+      return {
+        background: getComputedStyle(shell).backgroundImage,
+        footerBackground: getComputedStyle(footer).backgroundColor,
+        headerBackground: getComputedStyle(document.querySelector('.storefront-header')!).backgroundColor,
+        shellBottom: shell.getBoundingClientRect().bottom + window.scrollY,
+        footerBottom: footer.getBoundingClientRect().bottom + window.scrollY,
+        pageHeight: document.documentElement.scrollHeight,
+      };
+    });
+    expect(surfaces.background).not.toContain('url(');
+    expect(surfaces.footerBackground).toBe(surfaces.headerBackground);
+    expect(Math.abs(surfaces.shellBottom - surfaces.footerBottom)).toBeLessThanOrEqual(1);
+    expect(Math.abs(surfaces.pageHeight - surfaces.footerBottom)).toBeLessThanOrEqual(1);
     if (width >= 768) expect(detailSizes.footerHeight).toBeLessThanOrEqual(64);
     expect(sizes.targets.every((height) => height >= 44)).toBe(true);
     if (width >= 1280) expect(sizes.header).toBeLessThanOrEqual(80);
@@ -158,6 +180,43 @@ for (const width of [320, 390, 540, 541, 767, 768, 1024, 1279, 1280, 1672]) {
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(width);
+  });
+}
+
+for (const width of [320, 768, 1440]) {
+  test(`platform footer stays flush and usable at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/shop');
+    await expect(page.getByRole('heading', { name: 'yam', exact: true })).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    const footer = page.locator('.shop-directory-footer');
+    await footer.scrollIntoViewIfNeeded();
+    const navigation = footer.getByRole('navigation');
+    await navigation.getByRole('link').first().focus();
+    await expect(navigation.getByRole('link').first()).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(navigation.getByRole('link').last()).toBeFocused();
+    const launcher = await page.getByRole('button', { name: /VELO Assistant/i }).boundingBox();
+    for (const link of await footer.getByRole('link').all()) {
+      const bounds = await link.boundingBox();
+      expect(bounds!.height).toBeGreaterThanOrEqual(44);
+      const overlaps = bounds!.x < launcher!.x + launcher!.width &&
+        bounds!.x + bounds!.width > launcher!.x &&
+        bounds!.y < launcher!.y + launcher!.height &&
+        bounds!.y + bounds!.height > launcher!.y;
+      expect(overlaps).toBe(false);
+    }
+    await page.screenshot({
+      path: `.local/shop-directory/platform-footer-${width}.png`,
+      fullPage: true,
+    });
+    await page.getByRole('searchbox', { name: 'ค้นหาร้าน' }).fill('no-matching-store');
+    await expect(page.getByRole('heading', { name: 'yam', exact: true })).toHaveCount(0);
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    const bottomGap = await footer.evaluate((element) =>
+      Math.abs(element.getBoundingClientRect().bottom - window.innerHeight),
+    );
+    expect(bottomGap).toBeLessThanOrEqual(1);
   });
 }
 

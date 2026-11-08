@@ -25,8 +25,9 @@
 
 .topbar.setup-topbar {
   width: 100%;
-  min-height: 80px;
-  padding: 12px 32px;
+  min-height: 72px;
+  gap: 24px;
+  padding: 12px 24px;
   box-sizing: border-box;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
@@ -46,6 +47,36 @@
   min-width: 0;
 }
 
+.setup-topbar .brand {
+  gap: 8px;
+  font-size: 22px;
+}
+
+.setup-topbar .brand-mark {
+  width: 36px;
+  height: 36px;
+}
+
+.setup-topbar .brand-mark-img {
+  width: 24px;
+  height: 24px;
+}
+
+.setup-topbar .brand small {
+  margin-top: 6px;
+}
+
+.setup-topbar .breadcrumb {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.setup-topbar .breadcrumb-home {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+}
+
 .setup-topbar-brand {
   display: inline-flex;
   align-items: center;
@@ -54,7 +85,7 @@
 
 .setup-topbar-divider {
   width: 1px;
-  height: 28px;
+  height: 24px;
   background: var(--border);
   flex-shrink: 0;
 }
@@ -63,7 +94,8 @@
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  gap: 14px;
+  gap: 12px;
+  margin-right: 0;
 }
 
 .setup-page {
@@ -999,6 +1031,35 @@
 }
 
 @media (max-width: 640px) {
+  .topbar.setup-topbar {
+    min-height: 64px;
+    gap: 12px;
+    padding: 9px 16px;
+  }
+
+  .setup-topbar .brand {
+    font-size: 20px;
+  }
+
+  .setup-topbar .brand-mark {
+    width: 32px;
+    height: 32px;
+  }
+
+  .setup-topbar .brand-mark-img {
+    width: 22px;
+    height: 22px;
+  }
+
+  .setup-topbar-actions {
+    gap: 8px;
+  }
+
+  .setup-topbar-divider,
+  .setup-topbar .breadcrumb {
+    display: none;
+  }
+
   .setup-page-wrapper {
     padding: 0 0 32px;
   }

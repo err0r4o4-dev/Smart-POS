@@ -1,7 +1,7 @@
 import { LanguageSwitcher } from '../components/ui/LanguageSwitcher';
 import { useLanguage } from '../app/language';
 import { Link, Outlet, useParams, useSearchParams } from 'react-router-dom';
-import { CircleHelp, Info, Menu, ShoppingCart } from 'lucide-react';
+import { Menu, ShoppingCart } from 'lucide-react';
 import { Brand } from '../components/ui/primitives';
 import { paths } from '../app/routes';
 import { useShopCart } from '../features/storefront/shop-cart';
@@ -71,20 +71,16 @@ export function StorefrontLayout() {
       </main>
       {!slug ? (
         <footer className="shop-directory-footer">
-          <Link to="/">
-            <Info size={24} aria-hidden="true" />
-            {language === 'th' ? 'เกี่ยวกับระบบ VELOPOS' : 'About VELOPOS'}
-          </Link>
-          <Link to={paths.help}>
-            <CircleHelp size={24} aria-hidden="true" />
-            {language === 'th' ? 'ช่วยเหลือและสนับสนุน' : 'Help & Support'}
-          </Link>
-          <Link to="/" className="shop-directory-footer-brand">
-            <Brand compact />
-            <span>
-              <strong>VELOPOS</strong> — Smart POS Platform
-            </span>
-          </Link>
+          <small>© {new Date().getFullYear()} VELOPOS · Smart POS Platform</small>
+          <nav aria-label={language === 'th' ? 'ข้อมูลแพลตฟอร์ม' : 'Platform links'}>
+            <Link to={paths.help}>
+              {language === 'th' ? 'เงื่อนไขการให้บริการ' : 'Terms of Service'}
+            </Link>
+            <span aria-hidden="true">·</span>
+            <Link to={paths.help}>
+              {language === 'th' ? 'นโยบายความเป็นส่วนตัว' : 'Privacy Policy'}
+            </Link>
+          </nav>
         </footer>
       ) : (
         <footer className="storefront-footer">

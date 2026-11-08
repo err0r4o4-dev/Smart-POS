@@ -1,8 +1,7 @@
 .storefront-shell.shop-directory-shell {
-  background:
-    url('/images/shop-directory-waves.svg') center calc(100% - 94px) / 100%
-      350px no-repeat,
-    #fdfaf6;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: linear-gradient(180deg, #fffcf7 0%, var(--canvas) 60%, #f8f3e9 100%);
   color: var(--text-primary);
 }
 .storefront-shell.shop-directory-shell .storefront-header {
@@ -376,44 +375,44 @@
 }
 .shop-directory-footer {
   display: grid;
-  grid-template-columns: 1fr 1fr 1.25fr;
+  grid-template-columns: auto 1fr;
   align-items: center;
-  gap: 16px;
+  gap: 24px;
   min-height: 60px;
-  padding: 8px max(24px, calc((100% - 1280px) / 2));
+  padding: 8px max(24px, calc((100% - 1072px) / 2));
+  padding-right: max(88px, calc((100% - 1072px) / 2));
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
   border-top: 1px solid var(--border);
   background: var(--surface);
+  color: var(--text-secondary);
 }
-.shop-directory-footer > a {
+.shop-directory-footer > small {
+  font-size: 13px;
+  font-weight: 400;
+}
+.shop-directory-footer nav {
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  min-width: 0;
+}
+.shop-directory-footer a {
+  display: flex;
   align-items: center;
   gap: 8px;
   min-height: 44px;
-  color: inherit;
+  color: var(--text-secondary);
   text-decoration: none;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 400;
 }
-.shop-directory-footer > a + a {
-  border-left: 1px solid #d9dce3;
-}
-.shop-directory-footer > a:hover {
+.shop-directory-footer a:hover {
   color: var(--primary-strong);
 }
-.shop-directory-footer > a > svg {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-}
-.storefront-shell.shop-directory-shell .shop-directory-footer .brand-mark {
-  width: 24px;
-  height: 24px;
-  border-radius: 8px;
-}
-.shop-directory-footer-brand > span:last-child {
-  font-size: 13px;
-  font-weight: 400;
+.shop-directory-footer nav > span {
+  color: var(--text-tertiary);
 }
 .storefront-shell.shop-directory-shell :is(a, button, summary):focus-visible {
   outline: 2px solid var(--primary-strong);
@@ -539,14 +538,17 @@
     grid-template-columns: 1fr;
   }
   .shop-directory-footer {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 4px 16px;
-    padding: 12px 16px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+    padding: 12px 20px max(12px, env(safe-area-inset-bottom));
   }
-  .shop-directory-footer > a + a {
-    border-left: 0;
+  .shop-directory-footer nav {
+    justify-content: flex-start;
+    gap: 0 12px;
+    padding-right: 68px;
+  }
+  .shop-directory-footer nav > span {
+    display: none;
   }
 }
 @media (max-width: 540px) {

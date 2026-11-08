@@ -1,3 +1,20 @@
+# Search-first shop directory toolbar (2026-11-08)
+
+Approved scope: Separate the heading from the primary search row; replace the
+hamburger with a visible Thai/English shop-type label and chevron. On mobile,
+place view controls beside the heading, full-width search below, then the filter.
+Preserve existing search, filtering, Escape/focus, links and view behavior.
+
+- [x] Inspect current changes, component/styles and safe mocked browser tests.
+- [x] Update unit/browser regressions and confirm RED: 4 unit failures for
+  missing labelled filter; 768px browser fails because heading shares search row.
+- [x] Implement the approved layout using existing tokens and Lucide icons.
+- [x] Verify focused Vitest 30/30 (ShopDirectory + StorefrontPage) and mocked
+  Playwright across 10 viewports (320, 390, 540, 541, 767, 768, 1024, 1279,
+  1280, 1672px) all PASS (10/10).
+- [ ] Rerun full typecheck/lint/build once terminal safety classifier is available.
+- [ ] Remove this section after final full-suite verification is settled.
+
 # Shared header proportions baseline (2026-11-08)
 
 Scope: Reuse the approved setup header proportions across shared web layouts.

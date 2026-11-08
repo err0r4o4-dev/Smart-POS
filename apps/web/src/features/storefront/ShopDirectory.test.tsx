@@ -58,9 +58,9 @@ it('searches real shops from the results toolbar and recovers from no matches', 
   expect(search.closest('header')).toBeNull();
   const toolbar = screen.getByRole('group', { name: 'ค้นหาร้าน' });
   expect(Array.from(toolbar.children)).toEqual([
-    screen.getByRole('button', { name: 'เมนูประเภทร้าน' }),
     screen.getByRole('heading', { name: 'ค้นหาร้าน' }),
     search.closest('label'),
+    screen.getByRole('button', { name: 'ประเภทร้าน' }),
     screen.getByRole('group', { name: 'รูปแบบการแสดงร้าน' }),
   ]);
   fireEvent.change(search, { target: { value: ' YAM ' } });
@@ -106,6 +106,9 @@ it('switches directory controls and reference copy to English', async () => {
     screen.getByRole('searchbox', { name: 'Search stores' }),
   ).toBeVisible();
   expect(screen.getByRole('button', { name: 'List view' })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Shop type' })).toHaveTextContent(
+    'Shop type',
+  );
   expect(
     screen.getByText('Choose a restaurant and start your order.'),
   ).toBeVisible();
@@ -151,7 +154,8 @@ it('recovers from directory failures without losing the search', async () => {
 it('filters by saved business type alongside search without treating closed stores as a category', async () => {
   view();
   await screen.findByRole('heading', { name: 'yam' });
-  const toggle = screen.getByRole('button', { name: 'เมนูประเภทร้าน' });
+  const toggle = screen.getByRole('button', { name: 'ประเภทร้าน' });
+  expect(toggle).toHaveTextContent('ประเภทร้าน');
   expect(toggle).toHaveAttribute('aria-expanded', 'false');
   fireEvent.click(toggle);
   expect(toggle).toHaveAttribute('aria-expanded', 'true');
@@ -197,17 +201,13 @@ it('preserves unknown and missing types without inventing a restaurant classific
   });
   view();
   await screen.findByRole('heading', { name: 'Unknown type' });
-  fireEvent.click(screen.getByRole('button', { name: 'เมนูประเภทร้าน' }));
-  fireEvent.click(
-    screen.getByRole('button', { name: 'OTHER_TYPE' }),
-  );
+  fireEvent.click(screen.getByRole('button', { name: 'ประเภทร้าน' }));
+  fireEvent.click(screen.getByRole('button', { name: 'OTHER_TYPE' }));
   expect(screen.getByRole('heading', { name: 'Unknown type' })).toBeVisible();
   expect(
     screen.queryByRole('heading', { name: 'yam' }),
   ).not.toBeInTheDocument();
-  fireEvent.click(
-    screen.getByRole('button', { name: 'ไม่ระบุประเภท' }),
-  );
+  fireEvent.click(screen.getByRole('button', { name: 'ไม่ระบุประเภท' }));
   expect(screen.getByRole('heading', { name: 'Missing type' })).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'คาเฟ่' }));
   expect(screen.getByRole('heading', { name: 'ร้านพัก' })).toBeVisible();
@@ -217,6 +217,6 @@ it('preserves unknown and missing types without inventing a restaurant classific
     screen.getByRole('button', { name: 'Cafe' }),
   ).toHaveAttribute('aria-pressed', 'true');
   expect(
-    screen.getByRole('button', { name: 'Shop type menu' }),
+    screen.getByRole('button', { name: 'Shop type' }),
   ).toHaveAttribute('aria-expanded', 'true');
 });

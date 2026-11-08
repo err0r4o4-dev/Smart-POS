@@ -58,7 +58,7 @@ for (const width of [320, 390, 540, 541, 767, 768, 1024, 1279, 1280, 1672]) {
           .getBoundingClientRect().height,
         targets: Array.from(
           document.querySelectorAll(
-            '.shop-directory-view button, .language-switcher button, .storefront-menu-btn, .shop-directory-card > .button',
+            '.shop-directory-view button, .language-switcher button, .shop-directory-type-toggle, .shop-directory-card > .button',
           ),
         ).map((element) => element.getBoundingClientRect().height),
       };
@@ -134,26 +134,43 @@ for (const width of [320, 390, 540, 541, 767, 768, 1024, 1279, 1280, 1672]) {
     if (width >= 768) expect(detailSizes.footerHeight).toBeLessThanOrEqual(64);
     expect(sizes.targets.every((height) => height >= 44)).toBe(true);
     if (width >= 1280) expect(sizes.header).toBeLessThanOrEqual(80);
-    const toolbarItems = await page
-      .locator('.shop-directory-toolbar > *')
-      .evaluateAll((elements) =>
-        elements.map((element) => {
-          const { x, y, height } = element.getBoundingClientRect();
-          return { x, center: y + height / 2 };
-        }),
-      );
-    expect(toolbarItems).toHaveLength(4);
-    if (width >= 768) {
+    const toolbar = page.locator('.shop-directory-toolbar');
+    const checkToolbarLayout = async () => {
+      const [heading, search, filter, view] = await toolbar
+        .locator(':scope > *')
+        .evaluateAll((elements) =>
+          elements.map((element) => {
+            const { x, y, width, height, bottom, right } =
+              element.getBoundingClientRect();
+            return { x, y, width, height, bottom, right, center: y + height / 2 };
+          }),
+        );
+      expect(heading.bottom).toBeLessThanOrEqual(search.y);
+      if (width >= 768) {
+        expect(Math.abs(search.center - filter.center)).toBeLessThanOrEqual(1);
+        expect(Math.abs(search.center - view.center)).toBeLessThanOrEqual(1);
+        expect(search.right).toBeLessThanOrEqual(filter.x);
+        expect(filter.right).toBeLessThanOrEqual(view.x);
+        expect(search.width).toBeGreaterThan(filter.width);
+      } else {
+        expect(Math.abs(heading.center - view.center)).toBeLessThanOrEqual(1);
+        expect(heading.right).toBeLessThanOrEqual(view.x);
+        expect(view.bottom).toBeLessThanOrEqual(search.y);
+        expect(search.bottom).toBeLessThanOrEqual(filter.y);
+        expect(search.width).toBeGreaterThanOrEqual(
+          (await toolbar.boundingBox())!.width - 1,
+        );
+      }
       expect(
-        toolbarItems.every(
-          (item) => Math.abs(item.center - toolbarItems[0].center) <= 1,
-        ),
-      ).toBe(true);
-      expect(toolbarItems.map((item) => item.x)).toEqual(
-        toolbarItems.map((item) => item.x).sort((left, right) => left - right),
-      );
-    }
-    const categoryToggle = page.getByRole('button', { name: 'เมนูประเภทร้าน' });
+        await page.evaluate(() => document.documentElement.scrollWidth),
+      ).toBeLessThanOrEqual(width);
+    };
+    await checkToolbarLayout();
+    const categoryToggle = page.getByRole('button', {
+      name: 'ประเภทร้าน',
+      exact: true,
+    });
+    await expect(categoryToggle).toHaveText('ประเภทร้าน');
     await categoryToggle.click();
     await page.getByRole('button', { name: 'คาเฟ่', exact: true }).click();
     await expect(
@@ -167,6 +184,12 @@ for (const width of [320, 390, 540, 541, 767, 768, 1024, 1279, 1280, 1672]) {
     await expect(
       page.getByRole('group', { name: 'ประเภทร้าน', exact: true }),
     ).toBeHidden();
+    await categoryToggle.focus();
+    await page.keyboard.press('Enter');
+    await page.getByRole('button', { name: 'คาเฟ่', exact: true }).focus();
+    await page.keyboard.press('Escape');
+    await expect(categoryToggle).toBeFocused();
+    await expect(categoryToggle).toHaveAttribute('aria-expanded', 'false');
     await expect(
       page.getByRole('searchbox', { name: 'ค้นหาร้าน' }),
     ).toBeVisible();
@@ -207,6 +230,17 @@ for (const width of [320, 390, 540, 541, 767, 768, 1024, 1279, 1280, 1672]) {
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(width);
+    await page.getByRole('button', { name: 'English' }).click();
+    await expect(
+      page.getByRole('button', { name: 'Shop type', exact: true }),
+    ).toHaveText('Shop type');
+    await checkToolbarLayout();
+    if ([320, 768, 1672].includes(width)) {
+      await page.screenshot({
+        path: `.local/shop-directory/search-first-${width}.png`,
+        fullPage: true,
+      });
+    }
   });
 }
 

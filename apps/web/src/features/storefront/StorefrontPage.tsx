@@ -4,9 +4,9 @@ import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   ArrowRight,
+  ChevronDown,
   LayoutGrid,
   List,
-  Menu,
   PackageOpen,
   Search,
   ShieldCheck,
@@ -144,20 +144,6 @@ function ShopEntry() {
           role="group"
           aria-label={t('storefront.searchStores')}
         >
-          <button
-            ref={categoryToggle}
-            type="button"
-            className="storefront-menu-btn"
-            aria-label={language === 'th' ? 'เมนูประเภทร้าน' : 'Shop type menu'}
-            aria-expanded={categoriesOpen}
-            aria-controls={categoryPanelId}
-            onClick={() => setCategoriesOpen((open) => !open)}
-            onKeyDown={(event) => {
-              if (event.key === 'Escape') setCategoriesOpen(false);
-            }}
-          >
-            <Menu size={23} aria-hidden="true" />
-          </button>
           <h2 className="shop-directory-heading">
             {t('storefront.searchStores')}
           </h2>
@@ -175,6 +161,20 @@ function ShopEntry() {
               onChange={(event) => setSearch(event.target.value)}
             />
           </label>
+          <button
+            ref={categoryToggle}
+            type="button"
+            className="shop-directory-type-toggle"
+            aria-expanded={categoriesOpen}
+            aria-controls={categoryPanelId}
+            onClick={() => setCategoriesOpen((open) => !open)}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') setCategoriesOpen(false);
+            }}
+          >
+            {language === 'th' ? 'ประเภทร้าน' : 'Shop type'}
+            <ChevronDown size={18} aria-hidden="true" />
+          </button>
           <div
             className="shop-directory-view"
             role="group"

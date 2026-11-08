@@ -73,8 +73,9 @@ for (const width of [320, 390, 540, 541, 767, 768, 1024, 1279, 1280, 1672]) {
           .fontSize,
       ),
       footer: Number.parseFloat(
-        getComputedStyle(document.querySelector('.shop-directory-footer > small')!)
-          .fontSize,
+        getComputedStyle(
+          document.querySelector('.shop-directory-footer > small')!,
+        ).fontSize,
       ),
       footerHeight: document
         .querySelector('.shop-directory-footer')!
@@ -84,26 +85,52 @@ for (const width of [320, 390, 540, 541, 767, 768, 1024, 1279, 1280, 1672]) {
     expect(detailSizes.footer).toBe(13);
     const footer = page.locator('.shop-directory-footer');
     await expect(footer.getByRole('navigation')).toBeVisible();
-    await expect(footer.getByRole('navigation').getByRole('link')).toHaveCount(2);
+    await expect(footer.getByRole('navigation').getByRole('link')).toHaveCount(
+      2,
+    );
     await expect(footer).toContainText('VELOPOS · Smart POS Platform');
-    await expect(footer.getByRole('link', { name: 'เงื่อนไขการให้บริการ' })).toBeVisible();
-    await expect(footer.getByRole('link', { name: 'นโยบายความเป็นส่วนตัว' })).toBeVisible();
+    await expect(
+      footer.getByRole('link', { name: 'เงื่อนไขการให้บริการ' }),
+    ).toBeVisible();
+    await expect(
+      footer.getByRole('link', { name: 'นโยบายความเป็นส่วนตัว' }),
+    ).toBeVisible();
     const surfaces = await page.evaluate(() => {
       const shell = document.querySelector('.shop-directory-shell')!;
       const footer = document.querySelector('.shop-directory-footer')!;
       return {
         background: getComputedStyle(shell).backgroundImage,
         footerBackground: getComputedStyle(footer).backgroundColor,
-        headerBackground: getComputedStyle(document.querySelector('.storefront-header')!).backgroundColor,
+        footerImage: getComputedStyle(footer).backgroundImage,
+        headerImage: getComputedStyle(
+          document.querySelector('.storefront-header')!,
+        ).backgroundImage,
+        headerBackground: getComputedStyle(
+          document.querySelector('.storefront-header')!,
+        ).backgroundColor,
         shellBottom: shell.getBoundingClientRect().bottom + window.scrollY,
         footerBottom: footer.getBoundingClientRect().bottom + window.scrollY,
         pageHeight: document.documentElement.scrollHeight,
       };
     });
-    expect(surfaces.background).not.toContain('url(');
+    expect(surfaces.background).toContain(
+      '/images/shop-directory-background.svg',
+    );
+    expect(surfaces.footerBackground).toBe('rgb(255, 255, 255)');
+    expect(surfaces.headerImage).toBe('none');
+    expect(surfaces.footerImage).toBe('none');
+    const background = await page.request.get(
+      '/images/shop-directory-background.svg',
+    );
+    expect(background.ok()).toBe(true);
+    expect(background.headers()['content-type']).toContain('image/svg+xml');
     expect(surfaces.footerBackground).toBe(surfaces.headerBackground);
-    expect(Math.abs(surfaces.shellBottom - surfaces.footerBottom)).toBeLessThanOrEqual(1);
-    expect(Math.abs(surfaces.pageHeight - surfaces.footerBottom)).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(surfaces.shellBottom - surfaces.footerBottom),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(surfaces.pageHeight - surfaces.footerBottom),
+    ).toBeLessThanOrEqual(1);
     if (width >= 768) expect(detailSizes.footerHeight).toBeLessThanOrEqual(64);
     expect(sizes.targets.every((height) => height >= 44)).toBe(true);
     if (width >= 1280) expect(sizes.header).toBeLessThanOrEqual(80);
@@ -184,10 +211,14 @@ for (const width of [320, 390, 540, 541, 767, 768, 1024, 1279, 1280, 1672]) {
 }
 
 for (const width of [320, 768, 1440]) {
-  test(`platform footer stays flush and usable at ${width}px`, async ({ page }) => {
+  test(`platform footer stays flush and usable at ${width}px`, async ({
+    page,
+  }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/shop');
-    await expect(page.getByRole('heading', { name: 'yam', exact: true })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'yam', exact: true }),
+    ).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
     const footer = page.locator('.shop-directory-footer');
     await footer.scrollIntoViewIfNeeded();
@@ -196,11 +227,14 @@ for (const width of [320, 768, 1440]) {
     await expect(navigation.getByRole('link').first()).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(navigation.getByRole('link').last()).toBeFocused();
-    const launcher = await page.getByRole('button', { name: /VELO Assistant/i }).boundingBox();
+    const launcher = await page
+      .getByRole('button', { name: /VELO Assistant/i })
+      .boundingBox();
     for (const link of await footer.getByRole('link').all()) {
       const bounds = await link.boundingBox();
       expect(bounds!.height).toBeGreaterThanOrEqual(44);
-      const overlaps = bounds!.x < launcher!.x + launcher!.width &&
+      const overlaps =
+        bounds!.x < launcher!.x + launcher!.width &&
         bounds!.x + bounds!.width > launcher!.x &&
         bounds!.y < launcher!.y + launcher!.height &&
         bounds!.y + bounds!.height > launcher!.y;
@@ -210,8 +244,12 @@ for (const width of [320, 768, 1440]) {
       path: `.local/shop-directory/platform-footer-${width}.png`,
       fullPage: true,
     });
-    await page.getByRole('searchbox', { name: 'ค้นหาร้าน' }).fill('no-matching-store');
-    await expect(page.getByRole('heading', { name: 'yam', exact: true })).toHaveCount(0);
+    await page
+      .getByRole('searchbox', { name: 'ค้นหาร้าน' })
+      .fill('no-matching-store');
+    await expect(
+      page.getByRole('heading', { name: 'yam', exact: true }),
+    ).toHaveCount(0);
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     const bottomGap = await footer.evaluate((element) =>
       Math.abs(element.getBoundingClientRect().bottom - window.innerHeight),
@@ -315,11 +353,15 @@ test('velo assistant chat opens, renders reference layout and can be closed', as
   await expect(yamCard).toHaveAttribute('href', '/shop/yam');
 
   // Quick suggestions
-  await expect(chatDialog.getByRole('button', { name: 'Open now' })).toBeVisible();
+  await expect(
+    chatDialog.getByRole('button', { name: 'Open now' }),
+  ).toBeVisible();
   await expect(
     chatDialog.getByRole('button', { name: 'Popular dishes' }),
   ).toBeVisible();
-  await expect(chatDialog.getByRole('button', { name: 'Track order' })).toBeVisible();
+  await expect(
+    chatDialog.getByRole('button', { name: 'Track order' }),
+  ).toBeVisible();
 
   // Input area
   await expect(
@@ -333,6 +375,8 @@ test('velo assistant chat opens, renders reference layout and can be closed', as
   });
 
   // Close with minimize or close button
-  await chatDialog.getByRole('button', { name: /Minimize chat|ย่อหน้าต่าง/i }).click();
+  await chatDialog
+    .getByRole('button', { name: /Minimize chat|ย่อหน้าต่าง/i })
+    .click();
   await expect(chatDialog).toHaveCount(0);
 });

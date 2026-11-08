@@ -12,6 +12,7 @@
   margin-inline: auto;
 }
 .landing-header {
+  min-height: var(--header-height);
   position: sticky;
   top: 0;
   z-index: 20;
@@ -22,8 +23,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 20px;
-  min-height: 84px;
+  gap: var(--header-gap);
+  min-height: calc(var(--header-height) - 1px);
 }
 .landing-brand-link {
   display: inline-flex;
@@ -762,8 +763,8 @@
     width: calc(100% - 40px);
   }
   .landing-header-inner {
-    min-height: 76px;
-    gap: 12px;
+    min-height: calc(var(--header-height) - 1px);
+    gap: var(--header-gap);
   }
   .landing-navigation {
     gap: 12px;
@@ -773,7 +774,7 @@
   }
   .landing-page .brand {
     gap: 8px;
-    font-size: 21px;
+    font-size: var(--brand-font-size);
   }
   .landing-header .button {
     padding-inline: 14px;
@@ -859,11 +860,11 @@
 }
 @media (max-width: 374px) {
   .landing-header .brand-mark {
-    width: 34px;
-    height: 34px;
+    width: var(--brand-size);
+    height: var(--brand-size);
   }
   .landing-header .brand {
-    font-size: 18px;
+    font-size: var(--brand-font-size);
   }
   .landing-header .brand small {
     font-size: 7px;

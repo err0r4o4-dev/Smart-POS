@@ -44,6 +44,8 @@ async function mockNetwork(
       return route.abort();
     }
     if (url.origin !== origin) return route.abort();
+    if (url.pathname === '/health/ready')
+      return route.fulfill({ json: { status: 'ready' } });
     if (!url.pathname.startsWith('/api/')) return route.continue();
     if (url.pathname === '/api/v1/auth/me') {
       if (!authenticated)
@@ -341,6 +343,79 @@ for (const width of widths) {
       await expectNoOverflow(page);
       await expectWarmTokens(page);
     });
+  }
+}
+
+for (const width of [320, 640, 641, 1440]) {
+  for (const path of [
+    '/setup',
+    '/dashboard',
+    '/settings',
+    '/pos',
+    '/login',
+    '/register',
+    '/forgot-password',
+    '/shop',
+    '/',
+  ]) {
+    test(
+      'shared header proportions ' + path + ' at ' + width + 'px',
+      async ({ page, baseURL }, testInfo) => {
+        await page.setViewportSize({ width, height: 900 });
+        await mockNetwork(
+          page,
+          baseURL!,
+          ['/setup', '/dashboard', '/settings', '/pos'].includes(path),
+        );
+        await page.goto(path);
+        const header = page
+          .locator('header')
+          .filter({ has: page.locator('.language-switcher') })
+          .first();
+        await expect(header).toBeVisible();
+        await expect(header).toHaveCSS(
+          'min-height',
+          width <= 640 ? '64px' : '72px',
+        );
+        await expect(header.locator('.language-switcher')).toBeVisible();
+        const mark = header.locator('.brand-mark');
+        if (await mark.count()) {
+          await expect(mark).toHaveCSS('width', width <= 640 ? '32px' : '36px');
+          await expect(mark).toHaveCSS(
+            'height',
+            width <= 640 ? '32px' : '36px',
+          );
+        }
+        await page.evaluate(() => document.fonts.ready);
+        const headerBox = await header.boundingBox();
+        const languageBox = await header
+          .locator('.language-switcher')
+          .boundingBox();
+        expect(languageBox!.x).toBeGreaterThanOrEqual(headerBox!.x);
+        expect(languageBox!.x + languageBox!.width).toBeLessThanOrEqual(
+          headerBox!.x + headerBox!.width,
+        );
+        const languageButton = header
+          .locator('.language-switcher button')
+          .first();
+        await languageButton.focus();
+        await expect(languageButton).toBeFocused();
+        await expect(languageButton).toHaveCSS('outline-style', 'solid');
+        expect(headerBox!.height).toBeGreaterThanOrEqual(
+          width <= 640 ? 64 : 72,
+        );
+        await expectNoOverflow(page);
+        await screenshot(
+          page,
+          testInfo,
+          'shared-header-' +
+            (path.replaceAll('/', '-') || 'landing') +
+            '-' +
+            width +
+            '.png',
+        );
+      },
+    );
   }
 }
 

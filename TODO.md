@@ -1,3 +1,25 @@
+# Shared header proportions baseline (2026-11-08)
+
+Scope: Reuse the approved setup header proportions across shared web layouts.
+Keep routes, permissions, controls, page content and responsive navigation unchanged.
+No API, database, dependencies, external services or deployment changes.
+
+- [x] Centralize 72px desktop / 64px mobile header and 36px / 32px brand marks.
+- [x] Apply shared values to management, setup, storefront, landing, auth and POS.
+- [x] Verify mocked Chromium layouts at 320, 640, 641 and 1440px, control bounds,
+  focus outlines and page overflow; focused browser regressions PASS 64/64.
+  Latest log: `.local/shared-header-recheck.log`; screenshots in matching folder.
+- [x] Typecheck/build PASS; lint PASS with 0 errors / 9 warnings; contracts PASS
+  (18 modules / 114 routes), log tests PASS 10/10 and dev-stack tests PASS 6/6.
+  `git diff --check` PASS. Design detector: 1 warning / 2 advisories outside
+  changed header rules; report `.local/shared-header-design-detect.json`.
+- [?] Full web suite: 547 passed / 4 failed across restaurant-scope.test.tsx,
+  SettingsPage.test.tsx (2) and StorefrontSettingsPage.test.tsx. Not repaired
+  under header scope; details in `.local/shared-header-tests.log`.
+- [ ] Separate visual issue: register form content clips inside its card at
+  320px; header fits. Form layout is outside this task; no repair performed.
+- [ ] Remove this section after unresolved acceptance items are settled.
+
 # Shop directory business-type toolbar (2026-11-08)
 
 Scope: Move category toggle, heading, search and layout controls into the results

@@ -25,9 +25,9 @@
 
 .topbar.setup-topbar {
   width: 100%;
-  min-height: 72px;
-  gap: 24px;
-  padding: 12px 24px;
+  min-height: var(--header-height);
+  gap: var(--header-gap);
+  padding: var(--header-padding-block) var(--header-padding-inline);
   box-sizing: border-box;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
@@ -49,17 +49,17 @@
 
 .setup-topbar .brand {
   gap: 8px;
-  font-size: 22px;
+  font-size: var(--brand-font-size);
 }
 
 .setup-topbar .brand-mark {
-  width: 36px;
-  height: 36px;
+  width: var(--brand-size);
+  height: var(--brand-size);
 }
 
 .setup-topbar .brand-mark-img {
-  width: 24px;
-  height: 24px;
+  width: var(--brand-icon-size);
+  height: var(--brand-icon-size);
 }
 
 .setup-topbar .brand small {
@@ -1032,23 +1032,23 @@
 
 @media (max-width: 640px) {
   .topbar.setup-topbar {
-    min-height: 64px;
-    gap: 12px;
-    padding: 9px 16px;
+    min-height: var(--header-height);
+    gap: var(--header-gap);
+    padding: var(--header-padding-block) var(--header-padding-inline);
   }
 
   .setup-topbar .brand {
-    font-size: 20px;
+    font-size: var(--brand-font-size);
   }
 
   .setup-topbar .brand-mark {
-    width: 32px;
-    height: 32px;
+    width: var(--brand-size);
+    height: var(--brand-size);
   }
 
   .setup-topbar .brand-mark-img {
-    width: 22px;
-    height: 22px;
+    width: var(--brand-icon-size);
+    height: var(--brand-icon-size);
   }
 
   .setup-topbar-actions {

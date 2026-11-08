@@ -13,6 +13,12 @@
   flex-wrap: wrap;
   margin-bottom: 20px;
 }
+.pos-header {
+  min-height: var(--header-height);
+  gap: var(--header-gap);
+  padding-block: var(--header-padding-block);
+  box-sizing: border-box;
+}
 .pos-navigation {
   padding: 6px;
   background: var(--surface);

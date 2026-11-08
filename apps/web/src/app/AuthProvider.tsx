@@ -7,7 +7,13 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { getSession, login, logout, type AuthSession } from '../lib/api';
+import {
+  getSession,
+  login,
+  linkGoogle,
+  logout,
+  type AuthSession,
+} from '../lib/api';
 import {
   captureVerificationLink,
   VerificationFlow,
@@ -23,6 +29,7 @@ interface AuthContextValue {
   state: AuthState;
   refresh: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
+  signInWithGoogleLink: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   clear: () => void;
 }
@@ -106,12 +113,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (current === generation.current)
       setState({ status: 'anonymous', session: null });
   };
+  const signInWithGoogleLink = async (email: string, password: string) => {
+    const current = ++generation.current;
+    const session = await linkGoogle(email, password);
+    if (current === generation.current)
+      setState({ status: 'authenticated', session });
+  };
   return (
     <AuthContext.Provider
       value={{
         state,
         refresh,
         signIn,
+        signInWithGoogleLink,
         signOut,
         clear: () => {
           ++generation.current;

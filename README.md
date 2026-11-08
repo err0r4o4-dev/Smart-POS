@@ -306,6 +306,23 @@ Use [root `.env.example`](.env.example) for Compose, [API `.env.example`](apps/a
 
 ### Compose and application configuration
 
+Optional Google sign-in/sign-up uses server-only `GOOGLE_CLIENT_ID`,
+`GOOGLE_CLIENT_SECRET` and `GOOGLE_REDIRECT_URI`. Leave all three empty to keep
+Google disabled; partial configuration fails startup. The redirect URI must equal
+`PUBLIC_ORIGIN` plus `/api/v1/auth/google/callback`, and match the Google web OAuth
+client configuration. Use the public gateway origin for browser testing so the
+flow and session cookies stay on the same host. Never put the client secret in
+`VITE_*` values or source code. No Google resources or credentials are created by
+this repository change.
+
+Migration 34 adds durable one-use Google flows and external identities; existing
+accounts require password confirmation before linking. New Google accounts gain
+no organization or membership automatically. Disable Google configuration for
+recovery while retaining password login and identity data. The down migration
+refuses to drop populated tables; use forward recovery after identities exist.
+Runtime database and real-provider acceptance remain required before release;
+unit tests and mocked browser checks do not establish either.
+
 | Variable                     | Purpose                                                             | Safe local example / default                                                                   |
 | ---------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | `APP_ENV`                    | Go mode: `development` or `production`                              | `development`                                                                                  |

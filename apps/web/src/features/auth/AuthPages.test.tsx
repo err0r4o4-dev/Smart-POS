@@ -15,6 +15,7 @@ vi.mock('../../app/AuthProvider', () => ({
 }));
 vi.mock('../../lib/api', () => ({
   resetPassword: mocks.resetPassword,
+  getGoogleConfig: vi.fn().mockResolvedValue({ enabled: false }),
 }));
 
 beforeEach(() => {
@@ -112,7 +113,7 @@ it('renders the register page in the split layout and validates mismatched passw
     </BrowserRouter>,
   );
   const introduction = screen.getByRole('region', {
-    name: 'Run your store, simply.',
+    name: 'A fresh start for your store.',
   });
   const registerPanel = screen.getByRole('region', { name: 'Get started.' });
   expect(

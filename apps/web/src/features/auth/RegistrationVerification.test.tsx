@@ -5,6 +5,7 @@ import { renderInEnglish as render } from '../../test/render';
 import { RegisterPage } from './AuthPages';
 
 const api = vi.hoisted(() => ({
+  getGoogleConfig: vi.fn().mockResolvedValue({ enabled: false }),
   register: vi.fn(),
   resendVerification: vi.fn(),
 }));

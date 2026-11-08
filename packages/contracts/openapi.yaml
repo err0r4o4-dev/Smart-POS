@@ -3686,6 +3686,87 @@ paths:
         '400': { $ref: '#/components/responses/InvalidInput' }
         '409': { $ref: '#/components/responses/AuthError' }
         '429': { $ref: '#/components/responses/AuthError' }
+  /api/v1/auth/google/config:
+    get:
+      operationId: googleAuthConfig
+      security: []
+      description: Returns capability only, never OAuth credentials. Disabled when Google configuration is absent.
+      responses:
+        '200':
+          description: Google capability, not cached.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [enabled]
+                    properties:
+                      enabled: { type: boolean }
+  /api/v1/auth/google/start:
+    get:
+      operationId: startGoogleAuth
+      security: []
+      description: Starts a browser-bound, expiring, one-use authorization code flow with state, nonce and PKCE S256. No organization or membership is created.
+      parameters:
+        - in: query
+          name: returnTo
+          required: true
+          schema: { type: string, enum: [/workspace, /setup] }
+      responses:
+        '302':
+          description: Redirects to Google with a browser-bound HttpOnly flow cookie.
+          headers:
+            Location: { schema: { type: string, format: uri } }
+            Set-Cookie: { schema: { type: string } }
+        '400': { $ref: '#/components/responses/InvalidInput' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '429': { $ref: '#/components/responses/AuthError' }
+        '503': { $ref: '#/components/responses/AuthError' }
+  /api/v1/auth/google/callback:
+    get:
+      operationId: completeGoogleAuth
+      security: []
+      description: Validates state, nonce, PKCE, signed ID token, verified email and durable one-use flow. Existing email matches require explicit password confirmation; they are never auto-linked. Redirect URLs contain no tokens or account data.
+      parameters:
+        - { in: query, name: state, schema: { type: string } }
+        - { in: query, name: code, schema: { type: string } }
+        - { in: query, name: error, schema: { type: string } }
+      responses:
+        '302':
+          description: Redirects to the stored allowlisted destination, or login with google=link_required, cancelled or error. Success establishes a server session; pending link retains the flow cookie.
+          headers:
+            Location: { schema: { type: string } }
+            Set-Cookie: { schema: { type: string } }
+  /api/v1/auth/google/link:
+    post:
+      operationId: linkGoogleAuth
+      security: []
+      description: Requires allowed Origin, JSON, LOGIN throttling, pending browser-bound Google flow and explicit password reauthentication. Atomically links identity and creates a session. No email-only auto-merge.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, writeOnly: true }
+      responses:
+        '200':
+          description: Identity linked and session established.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionResponse' }
+        '400': { $ref: '#/components/responses/InvalidInput' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '429': { $ref: '#/components/responses/AuthError' }
+        '503': { $ref: '#/components/responses/AuthError' }
   /api/v1/auth/login:
     post:
       operationId: login

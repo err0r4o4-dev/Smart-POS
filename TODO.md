@@ -1,3 +1,39 @@
+# Account UI and Google authentication (2026-11-09)
+
+Approved scope: shared login, register, verification, recovery and reset UI;
+standard header, separate back-home link, smooth Warm Gold background;
+Google sign-in/sign-up below the email form.
+
+Size: Large. Risk: High. Main owns frontend/contracts/integration; backend owns
+Go auth/config; database owns migration 34. Independent security review required.
+
+- [x] Add failing UI tests, implement shared shell, preserve existing auth flows.
+- [x] Implement Google code flow, state/PKCE/nonce, replay/expiry protection,
+  password-confirmed linking and no organization grants on signup.
+- [x] Integrate additive migration, schema version and optional safe config.
+- [x] Integrate capability/error/linking UI, translations and API contracts.
+- [x] Local checks on 2026-11-09: web tests 606/606 (72 files), focused account
+  checks 46/46, mocked Chromium browser checks 30/30, Go tests all packages and
+  go vet PASS. Typecheck, build, contracts and scoped formatting PASS; lint has
+  0 errors / 9 warnings. Log tests 10/10 and dev-stack tests 6/6 PASS.
+- [x] Independent read-only source review: no actionable security/correctness
+  defects verified in the supplied scoped source and evidence package. This
+  is not live provider, database, dependency-scan or release acceptance.
+- [?] PostgreSQL acceptance: no confirmed isolated disposable target; Docker,
+  psql and postgres are unavailable locally. Migration/runtime-role grants,
+  real rollback and concurrent consume/link tests remain unverified. Protect
+  all primary/retained databases and volumes; do not run automatic cleanup.
+- [?] Live Google acceptance needs OAuth credentials configured outside source
+  code and an authorized test account. No Google resource or secret was changed.
+- [?] Dependency vulnerability status is unknown; no scan ran. Go race detector
+  did not run (CGO disabled; no C compiler available).
+
+Acceptance: consistent routes; no email-based auto-merge; safe disabled/partial
+config; no secret/token leaks; retain session, verification/reset and tenant guards.
+Recovery: disable Google, retain password login and identity data; forward-fix
+populated tables. No production changes, remote resources, deployment, push/commit.
+Remove this section only after required verification and review pass.
+
 # Swap shop directory heading and menu (2026-11-08)
 
 Scope: Place the search heading before the shop-type menu; preserve search,

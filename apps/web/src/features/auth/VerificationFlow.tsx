@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useLanguage } from '../../app/language';
 import { ApiError, resendVerification, verifyEmail } from '../../lib/api';
+import { LoginLayout } from '../../layouts/LoginLayout';
 
 // Called before the browser router is created, so the token is absent from rendered routes.
 export function captureVerificationLink(): string | null {
@@ -59,7 +60,7 @@ export function ResendVerification({
     }
   }
   return (
-    <form onSubmit={submit}>
+    <form onSubmit={submit} className="auth-form-body">
       <fieldset disabled={pending}>
         <label htmlFor="verification-email">
           {en ? 'Email address' : 'อีเมล'}
@@ -73,7 +74,7 @@ export function ResendVerification({
           value={email}
           onChange={(event) => setEmail(event.target.value)}
         />
-        <button type="submit">
+        <button type="submit" className="button auth-submit-btn">
           {pending
             ? en
               ? 'Sending…'
@@ -83,8 +84,16 @@ export function ResendVerification({
               : 'ส่งอีเมลยืนยันอีกครั้ง'}
         </button>
       </fieldset>
-      {message && <p role="status">{message}</p>}
-      {error && <p role="alert">{error}</p>}
+      {message && (
+        <p role="status" className="auth-status-banner">
+          {message}
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="auth-error">
+          {error}
+        </p>
+      )}
     </form>
   );
 }
@@ -144,56 +153,62 @@ export function VerificationFlow({
     }
   }
   return (
-    <main id="main-content" className="auth-centered-stage">
-      <section className="auth-glass-card">
-        <h1>{en ? 'Verify your email' : 'ยืนยันอีเมล'}</h1>
-        {status === 'loading' ? (
-          <p role="status">
-            {en ? 'Verifying your email…' : 'กำลังยืนยันอีเมล…'}
-          </p>
-        ) : (
-          <>
-            <p role="alert">
-              {status === 'invalid'
+    <LoginLayout titleId="verification-title" story="verify">
+      <div className="auth-header-card">
+        <h2 id="verification-title">
+          {en ? 'Verify your email' : 'ยืนยันอีเมล'}
+        </h2>
+      </div>
+      {status === 'loading' ? (
+        <p role="status">
+          {en ? 'Verifying your email…' : 'กำลังยืนยันอีเมล…'}
+        </p>
+      ) : (
+        <>
+          <p role="alert">
+            {status === 'invalid'
+              ? en
+                ? 'This link is invalid or expired.'
+                : 'ลิงก์ไม่ถูกต้องหรือหมดอายุ'
+              : status === 'refreshError'
                 ? en
-                  ? 'This link is invalid or expired.'
-                  : 'ลิงก์ไม่ถูกต้องหรือหมดอายุ'
-                : status === 'refreshError'
-                  ? en
-                    ? 'Email verified, but the session could not be refreshed. Sign in to the verified account and try again.'
-                    : 'ยืนยันอีเมลแล้ว แต่โหลดเซสชันไม่สำเร็จ กรุณาเข้าสู่ระบบด้วยบัญชีที่ยืนยัน'
-                  : en
-                    ? 'Verification could not be completed. The link may be invalid or expired, or the service may be unavailable.'
-                    : 'ไม่สามารถยืนยันได้ ลิงก์อาจหมดอายุหรือระบบไม่พร้อมใช้งาน'}
-            </p>
-            {status === 'refreshError' ? (
-              <button onClick={() => void retryRefresh()}>
-                {en ? 'Retry session' : 'ลองโหลดเซสชันอีกครั้ง'}
-              </button>
-            ) : (
-              <>
-                {status === 'error' && (
-                  <button
-                    onClick={() => {
-                      request.current = null;
-                      setStatus('loading');
-                      setAttempt((value) => value + 1);
-                    }}
-                  >
-                    {en ? 'Retry verification' : 'ลองยืนยันอีกครั้ง'}
-                  </button>
-                )}
-                <ResendVerification />
-              </>
-            )}
-            <p>
-              <a href="/login?returnTo=%2Fsetup">
-                {en ? 'Sign in' : 'เข้าสู่ระบบ'}
-              </a>
-            </p>
-          </>
-        )}
-      </section>
-    </main>
+                  ? 'Email verified, but the session could not be refreshed. Sign in to the verified account and try again.'
+                  : 'ยืนยันอีเมลแล้ว แต่โหลดเซสชันไม่สำเร็จ กรุณาเข้าสู่ระบบด้วยบัญชีที่ยืนยัน'
+                : en
+                  ? 'Verification could not be completed. The link may be invalid or expired, or the service may be unavailable.'
+                  : 'ไม่สามารถยืนยันได้ ลิงก์อาจหมดอายุหรือระบบไม่พร้อมใช้งาน'}
+          </p>
+          {status === 'refreshError' ? (
+            <button
+              className="button auth-submit-btn"
+              onClick={() => void retryRefresh()}
+            >
+              {en ? 'Retry session' : 'ลองโหลดเซสชันอีกครั้ง'}
+            </button>
+          ) : (
+            <>
+              {status === 'error' && (
+                <button
+                  className="button auth-submit-btn"
+                  onClick={() => {
+                    request.current = null;
+                    setStatus('loading');
+                    setAttempt((value) => value + 1);
+                  }}
+                >
+                  {en ? 'Retry verification' : 'ลองยืนยันอีกครั้ง'}
+                </button>
+              )}
+              <ResendVerification />
+            </>
+          )}
+          <p className="auth-links auth-links-single">
+            <a href="/login?returnTo=%2Fsetup">
+              {en ? 'Sign in' : 'เข้าสู่ระบบ'}
+            </a>
+          </p>
+        </>
+      )}
+    </LoginLayout>
   );
 }

@@ -1,7 +1,40 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { getReadiness, getSession, login, logout } from './api';
+import {
+  getReadiness,
+  getSession,
+  getGoogleConfig,
+  linkGoogle,
+  login,
+  logout,
+} from './api';
 
 afterEach(() => vi.unstubAllGlobals());
+it('checks Google capability and links with same-origin browser cookies', async () => {
+  const fetcher = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({ data: { enabled: true } }),
+  });
+  vi.stubGlobal('fetch', fetcher);
+  await expect(getGoogleConfig()).resolves.toEqual({ enabled: true });
+  await linkGoogle('person@example.test', 'synthetic-password');
+  expect(fetcher).toHaveBeenNthCalledWith(
+    1,
+    '/api/v1/auth/google/config',
+    expect.objectContaining({ method: 'GET', credentials: 'same-origin' }),
+  );
+  expect(fetcher).toHaveBeenNthCalledWith(
+    2,
+    '/api/v1/auth/google/link',
+    expect.objectContaining({
+      method: 'POST',
+      credentials: 'same-origin',
+      body: JSON.stringify({
+        email: 'person@example.test',
+        password: 'synthetic-password',
+      }),
+    }),
+  );
+});
 it('accepts actual readiness', async () => {
   vi.stubGlobal(
     'fetch',

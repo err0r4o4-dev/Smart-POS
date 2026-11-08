@@ -1,4 +1,5 @@
 import { useLanguage } from '../../app/language';
+import { Link, useSearchParams } from 'react-router-dom';
 import type { UiMessage } from '../../i18n';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -15,12 +16,17 @@ import {
   PackageOpen,
   Plus,
   Search,
+  ArrowRight,
   ShoppingCart,
+  UtensilsCrossed,
   SlidersHorizontal,
 } from 'lucide-react';
 import { Button, Card, Loading } from '../../components/ui/primitives';
 import { exactDecimal, moneyText } from '../../lib/pos-api';
 import {
+  centsText,
+  estimatedLine,
+  readTableToken,
   storefrontRequest,
   type ShopCatalogPage,
   type ShopProduct,
@@ -90,6 +96,37 @@ export function ShopCatalog({ slug }: { slug: string }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [message, setMessage] = useState<UiMessage>('');
+
+  const [searchParams] = useSearchParams();
+  const rawTableParam = readTableToken(searchParams.toString());
+  const tableToken = useMemo(() => {
+    if (rawTableParam) {
+      try {
+        sessionStorage.setItem('smartpos-table:' + slug, rawTableParam);
+      } catch (err) {
+        void err;
+      }
+      return rawTableParam;
+    }
+    try {
+      return sessionStorage.getItem('smartpos-table:' + slug);
+    } catch (err) {
+      void err;
+      return null;
+    }
+  }, [rawTableParam, slug]);
+
+  const cartTotal = cart.items.reduce(
+    (total, item) => total + (estimatedLine(item.unit_price, item.quantity) ?? 0n),
+    0n,
+  );
+  const cartItemCount = cart.items.reduce((total, item) => {
+    const qty = exactDecimal(item.quantity, 3) ?? 0n;
+    return total + Number(qty / 1000n || 1n);
+  }, 0);
+  const cartPath = tableToken
+    ? '/shop/' + slug + '/cart?table=' + tableToken
+    : '/shop/' + slug + '/cart';
 
   useEffect(() => {
     const onToggle = () => setSidebarCollapsed((v) => !v);
@@ -230,6 +267,61 @@ export function ShopCatalog({ slug }: { slug: string }) {
           className="catalog-main"
           aria-label={t('landing.yourProducts')}
         >
+          {tableToken && (
+            <section className="catalog-dinein-hero" aria-label="สั่งอาหารที่โต๊ะ">
+              <div className="catalog-dinein-hero-card">
+                <div className="catalog-dinein-badge">
+                  <UtensilsCrossed size={16} aria-hidden="true" />
+                  <span>{language === "th" ? "สั่งอาหารที่โต๊ะ (Dine-in)" : "Dine-in Order"}</span>
+                </div>
+                <h2 className="catalog-dinein-title">
+                  {language === "th" ? "ยินดีต้อนรับ สั่งอาหารภายในร้าน" : "Welcome to Dine-in Ordering"}
+                </h2>
+                <p className="catalog-dinein-subtitle">
+                  {language === "th"
+                    ? "เลือกเมนูอาหาร ชำระเงินผ่าน QR Code และติดตามสถานะคิวรับอาหารที่โต๊ะ"
+                    : "Select menu items, pay with QR code, and track your kitchen queue in real-time."}
+                </p>
+                <div className="catalog-dinein-table-pill">
+                  <span>🛒 {language === "th" ? "สั่งสำหรับโต๊ะอาหาร" : "Dining Table"}</span>
+                </div>
+                <a href="#menu-catalog" className="catalog-dinein-cta">
+                  {language === "th" ? "ดูเมนูอาหาร ➔" : "View Food Menu ➔"}
+                </a>
+              </div>
+            </section>
+          )}
+
+          <div
+            id="menu-catalog"
+            className="catalog-category-pills"
+            role="tablist"
+            aria-label={t('catalog.categories')}
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={!filters.category}
+              className={'catalog-category-pill ' + (!filters.category ? 'catalog-category-pill-active' : '')}
+              onClick={() => changeFilters({ category: '' })}
+            >
+              {t('common.all')}
+              <span className="catalog-pill-count">{allCount}</span>
+            </button>
+            {categories.map((category) => (
+              <button
+                key={category.id}
+                type="button"
+                role="tab"
+                aria-selected={filters.category === category.id}
+                className={'catalog-category-pill ' + (filters.category === category.id ? 'catalog-category-pill-active' : '')}
+                onClick={() => changeFilters({ category: category.id })}
+              >
+                {translateCategory(category.name, language)}
+                <span className="catalog-pill-count">{category.count}</span>
+              </button>
+            ))}
+          </div>
           <form
             className="catalog-search"
             onSubmit={(event) => {
@@ -469,6 +561,27 @@ export function ShopCatalog({ slug }: { slug: string }) {
               />
             ))}
           </div>
+          {cart.items.length > 0 && (
+            <aside className="catalog-floating-cart-bar" aria-label="สรุปตะกร้าสินค้า">
+              <div className="catalog-floating-cart-info">
+                <div className="catalog-floating-cart-icon-wrap">
+                  <ShoppingCart size={20} aria-hidden="true" />
+                  <span className="catalog-floating-cart-badge">{cartItemCount}</span>
+                </div>
+                <div className="catalog-floating-cart-text">
+                  <span className="catalog-floating-cart-label">
+                    {language === "th" ? "ยอดรวม" : "Total"}
+                  </span>
+                  <strong className="catalog-floating-cart-price">฿{moneyText(centsText(cartTotal))}</strong>
+                </div>
+              </div>
+              <Link to={cartPath} className="catalog-floating-cart-btn">
+                <span>{language === "th" ? ("ดูรายการที่เลือก (" + cartItemCount + ")") : ("View Order (" + cartItemCount + ")")}</span>
+                <ArrowRight size={18} aria-hidden="true" />
+              </Link>
+            </aside>
+          )}
+
           {products.data && (
             <ShopPagination
               page={page}
@@ -476,7 +589,7 @@ export function ShopCatalog({ slug }: { slug: string }) {
               total={products.data.total}
               change={(next) => {
                 setPage(next);
-                setMessage('');
+                setMessage("");
               }}
             />
           )}
@@ -578,6 +691,13 @@ function CatalogProductCard({
           </span>
           <h2 id={`product-${product.variant_id}`}>{translateProduct(product.product_name, language)}</h2>
           <p className="catalog-variant">{product.variant_name}</p>
+          {(exactDecimal(cartQuantity, 3) ?? 0n) > 0n && (
+            <span className="catalog-product-in-cart-tag">
+              {language === "th"
+                ? ("ในตะกร้า " + quantityText(exactDecimal(cartQuantity, 3) ?? 0n) + " " + product.unit)
+                : ("In cart: " + quantityText(exactDecimal(cartQuantity, 3) ?? 0n))}
+            </span>
+          )}
         </div>
         <div className="catalog-product-meta-actions">
           <div className="catalog-product-price-stock">

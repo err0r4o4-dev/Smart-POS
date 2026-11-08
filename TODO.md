@@ -1,3 +1,19 @@
+# Dine-in QR Ordering & Kitchen Queue Management (2026-11-07)
+
+Approved scope: Implement complete Dine-in QR Ordering Flow and Kitchen Queue Board according to approved architecture plan (Phases 1-5).
+Features: Table QR detection, mobile food catalog with category tabs & quick counter, order review, PromptPay QR payment simulation and status polling, order confirmation screen, 4-step live order tracking timeline, queue board TV display (preparing vs ready columns, audio chime, Thai date and digital clock), and table QR stand tent card generator.
+
+- [x] Phase 1: Customer Dine-in Flow (Table detection, food menu catalog UI, order review)
+  - Verified: Table QR token persistence across sessions, dynamic category pills ('ทั้งหมด', categories with badge counts), +/- quick counters on menu cards, in-cart badges, floating bottom cart bar (e.g., '1 รายการ | รวม ฿60.00 | ดูตะกร้า ➔'), Dine-in cart review with table code badge.
+- [x] Phase 2: In-App PromptPay QR Payment (Dynamic PromptPay QR, payment simulation & status polling)
+  - Verified: Dynamic EMVCo PromptPay QR generation (generatePromptPayPayload, CRC16 ISO/IEC 13239 verified with unit tests in promptpay.test.ts), pure SVG QR renderer in qr-code.tsx with unit tests in qr-code.test.tsx, payment amount & table badge, simulate payment success button ('จำลองการชำระเงินสำเร็จ (Test Pay)'), and alternative pay-at-counter button.
+- [x] Phase 3: Order Confirmation & Live Tracking (Order confirmation screen with #queue/table/amount, 4-step live tracking timeline)
+  - Verified: Order confirmation card (green checkmark, order number, table code, amount, 'ติดตามสถานะ ➔'), and 4-step reactive order tracking timeline in OrderDetails.tsx (1. ชำระเงินสำเร็จ ➔ 2. กำลังเตรียมอาหาร ➔ 3. พร้อมเสิร์ฟ ➔ 4. เสิร์ฟแล้ว).
+- [x] Phase 4: Queue Board TV Display (Dual column layout 'กำลังเตรียมอาหาร' vs 'พร้อมรับอาหาร', audio chime, Thai date & clock)
+  - Verified: Dual-column responsive queue board in QueueBoard.tsx with cooking pot / shopping bag icons, badge counters, Web Audio API chime on new ready queue, live Thai date & digital clock ticker, fullscreen toggle, and route integration in /restaurant/queue.
+- [x] Phase 5: POS & Kitchen Workspace Integration (Table QR code generator / printable tent cards, kitchen/POS status transitions)
+  - Verified: Printable Table Tent Stand card modal in StockAndTables.tsx with VELO branding, table code, SVG QR code, and print action (window.print()). Full quality checks pass: 58/58 test suites (423/423 tests), typecheck clean, lint clean (0 errors), build clean.
+
 # Owner-only backoffice (2026-11-05)
 
 Approved scope: restrict backoffice access to active OWNER memberships; reject

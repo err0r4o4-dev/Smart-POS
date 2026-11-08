@@ -144,7 +144,7 @@ export function RegisterPage({
                 >
                   <option value="">{t('pos.selectLocation')}</option>
                   {locations.data?.items
-                    .filter((item) => item.type === 'WAREHOUSE')
+                    .filter((item) => item.type === 'WAREHOUSE' || !locations.data?.items.some((l) => l.type === 'WAREHOUSE'))
                     .map((item) => (
                       <option value={item.id} key={item.id}>
                         {item.name} ({item.type})

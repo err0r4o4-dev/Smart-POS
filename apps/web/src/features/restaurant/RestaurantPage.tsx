@@ -12,6 +12,7 @@ import {
 } from './restaurant-hooks';
 import { RecipesScreen } from './RecipesScreen';
 import { QuickStockScreen, TablesScreen } from './StockAndTables';
+import { QueueBoard } from './QueueBoard';
 import './restaurant.css';
 
 export interface RestaurantSettings {
@@ -144,7 +145,7 @@ function SettingsForm({ settings }: { settings: RestaurantSettings }) {
     </Card>
   );
 }
-interface QueueItem {
+export interface QueueItem {
   order_id: string;
   queue_number: string;
   channel: string;
@@ -159,8 +160,36 @@ function QueueScreen() {
     'online_orders.read',
     true,
   );
+  const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
   return (
-    <Card className="catalog-panel">
+    <div className="queue-screen-wrapper">
+      <div className="catalog-actions" style={{ marginBottom: 16 }}>
+        <Button
+          className={viewMode === 'board' ? 'button' : 'button-secondary'}
+          onClick={() => setViewMode('board')}
+        >
+          🖥️ หน้าจอคิวรับอาหาร (Queue Board TV)
+        </Button>
+        <Button
+          className={viewMode === 'list' ? 'button' : 'button-secondary'}
+          onClick={() => setViewMode('list')}
+        >
+          📋 รายการคิวแบบละเอียด (Staff List)
+        </Button>
+      </div>
+
+      <QueryState query={query} />
+
+      {query.data && !query.error && viewMode === 'board' && (
+        <QueueBoard
+          items={query.data}
+          storeName="VELO Shop"
+          onRefresh={() => void query.refetch()}
+          isFetching={query.isFetching}
+        />
+      )}
+
+      <Card className="catalog-panel" style={{ display: viewMode === 'list' ? 'block' : 'none' }}>
       <p>
         ออเดอร์ที่ยืนยันชำระแล้วในรอบเวลาปิดร้าน อัปเดตทุก 15 วินาที
         เลขลำดับอาจเปลี่ยนเมื่อออเดอร์ออกจากคิว หน้านี้ยังต้องเข้าสู่ระบบ
@@ -207,6 +236,7 @@ function QueueScreen() {
         จัดการออเดอร์และสถานะอาหาร
       </WorkspaceLink>
     </Card>
+    </div>
   );
 }
 function ForecastScreen() {

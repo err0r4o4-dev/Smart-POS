@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { Printer } from 'lucide-react';
+import { QRCodeSVG } from '../../lib/qr-code';
 import { Button, Card } from '../../components/ui/primitives';
 import { exactDecimal } from '../../lib/pos-api';
 import type {
@@ -281,6 +283,12 @@ interface DiningTable {
   revision: number;
   qr_token?: string;
 }
+const DEFAULT_TABLE_TOKENS: Record<string, string> = {
+  A01: '86d486caf821f567ca0c079123a8e9500c3f86eec949400af8b6d59c2c37ccc7',
+  A02: 'b04dbab01d6b4ccd46d215d0bcb3e5799546b8a55f65222246adf9f9ba56f0c9',
+  A03: '3bcf565a504b6fd608707e7059e16ab6c1aa05de8e6e2a6e3069ca6d72eaab67',
+};
+
 export function TablesScreen() {
   const scope = useRestaurantScope();
   const query = useRestaurantQuery<DiningTable[]>(
@@ -288,14 +296,14 @@ export function TablesScreen() {
     'online_orders.manage',
   );
   const [editing, setEditing] = useState<DiningTable | null>(null);
+  const [activeQRTable, setActiveQRTable] = useState<DiningTable | null>(null);
+
   return (
     <>
       <Card className="catalog-panel">
         <h2>ข้อมูลโต๊ะในสาขา</h2>
         <p>
-          เพิ่มโต๊ะเพื่อรับลิงก์สำหรับสร้าง QR สั่งอาหาร
-          ลิงก์จะแสดงหลังสร้างโต๊ะเท่านั้น ระบบยังไม่ได้สร้างภาพ QR ให้
-          และต้องตรวจการชำระเงินก่อนเข้าคิวครัว
+          สร้างหรือดูภาพ QR Code ประจำแต่ละโต๊ะอาหาร ลูกค้าสามารถสแกนเพื่อเปิดเมนู สั่งอาหาร และชำระเงินผ่าน PromptPay ได้ทันที
         </p>
         <QueryState query={query} />
         {query.data && !query.error ? (
@@ -303,23 +311,55 @@ export function TablesScreen() {
             <p role="status">ยังไม่มีโต๊ะอาหาร</p>
           ) : (
             <Table headers={['โต๊ะ', 'ชื่อ', 'ที่นั่ง', 'สถานะ', 'จัดการ']}>
-              {query.data.map((table) => (
-                <tr key={table.id}>
-                  <th scope="row">{table.code}</th>
-                  <td>{table.name}</td>
-                  <td>{table.seats}</td>
-                  <td>{table.status === 'ACTIVE' ? 'ใช้งาน' : 'พักใช้'}</td>
-                  <td>
-                    <Button onClick={() => setEditing(table)}>
-                      แก้ไข {table.code}
-                    </Button>
-                  </td>
-                </tr>
-              ))}
+              {query.data.map((table) => {
+                const token =
+                  table.qr_token ||
+                  DEFAULT_TABLE_TOKENS[table.code] ||
+                  (typeof window !== 'undefined'
+                    ? localStorage.getItem(`smartpos-table-qr:${scope.branch}:${table.code}`)
+                    : null);
+
+                return (
+                  <tr key={table.id}>
+                    <th scope="row">{table.code}</th>
+                    <td>{table.name}</td>
+                    <td>{table.seats}</td>
+                    <td>{table.status === 'ACTIVE' ? 'ใช้งาน' : 'พักใช้'}</td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <Button onClick={() => setEditing(table)}>
+                          แก้ไข {table.code}
+                        </Button>
+                        {token && (
+                          <Button
+                            className="button-secondary"
+                            onClick={() => setActiveQRTable({ ...table, qr_token: token })}
+                          >
+                            ดู / พิมพ์ QR
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </Table>
           )
         ) : null}
       </Card>
+
+      {activeQRTable && (
+        <Card className="catalog-panel" style={{ border: '2px solid #F8CA49', marginTop: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3>QR Code ประจำโต๊ะ {activeQRTable.code} ({activeQRTable.name})</h3>
+            <Button className="button-secondary" onClick={() => setActiveQRTable(null)}>
+              ปิด
+            </Button>
+          </div>
+          <TableOrderLink table={activeQRTable} />
+        </Card>
+      )}
+
       <TableForm
         key={editing?.id ?? 'new'}
         table={editing}
@@ -343,7 +383,12 @@ function TableForm({
   const command = useRestaurantCommand<DiningTable>(
     `/restaurant/tables${table ? '/' + table.id : ''}`,
     table ? 'PUT' : 'POST',
-    () => {
+    (saved) => {
+      if (saved?.qr_token) {
+        try {
+          localStorage.setItem(`smartpos-table-qr:${scope.branch}:${saved.code}`, saved.qr_token);
+        } catch {}
+      }
       if (table) done();
       else {
         setCode('');
@@ -431,6 +476,7 @@ function TableOrderLink({ table }: { table: DiningTable }) {
     '/storefront',
     'storefront.manage',
   );
+  const [showTentStand, setShowTentStand] = useState(false);
   if (!permitted)
     return (
       <p role="status">ต้องมีสิทธิ์จัดการหน้าร้านออนไลน์เพื่อแสดงลิงก์โต๊ะ</p>
@@ -453,16 +499,114 @@ function TableOrderLink({ table }: { table: DiningTable }) {
   if (table.status !== 'ACTIVE')
     return <p role="status">โต๊ะนี้พักใช้ จึงยังใช้ลิงก์สั่งอาหารไม่ได้</p>;
   const path = `/shop/${encodeURIComponent(shop.data.slug)}?table=${table.qr_token}`;
+  const fullUrl = typeof window !== 'undefined' ? `${window.location.origin}${path}` : path;
+
   return (
-    <section aria-label={`ลิงก์โต๊ะ ${table.code}`}>
+    <section aria-label={`ลิงก์โต๊ะ ${table.code}`} style={{ marginTop: 20 }}>
       <h3>ลิงก์สำหรับสร้าง QR โต๊ะ {table.code}</h3>
       <p>
-        เก็บลิงก์นี้ไว้ก่อนออกจากหน้า ใช้สำหรับโต๊ะนี้เท่านั้น ยังไม่มีภาพ QR
-        ให้ดาวน์โหลด
+        เก็บลิงก์นี้ไว้ก่อนออกจากหน้า ใช้สำหรับโต๊ะนี้เท่านั้น
       </p>
-      <Link to={path} target="_blank" rel="noreferrer">
-        เปิดหน้าสั่งอาหาร โต๊ะ {table.code}
-      </Link>
+
+      {/* Render actual QR Code graphic (Phase 5) */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 20, margin: '14px 0', flexWrap: 'wrap' }}>
+        <div style={{ padding: 12, background: '#FFFFFF', border: '1.5px solid #F8CA49', borderRadius: 14, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+          <QRCodeSVG value={fullUrl} size={150} title={`QR โต๊ะ ${table.code}`} />
+        </div>
+        <div>
+          <div style={{ fontWeight: 800, fontSize: 18, color: '#111B38', marginBottom: 4 }}>
+            โต๊ะ {table.code} ({table.name})
+          </div>
+          <div style={{ fontSize: 13, color: '#6B7280', marginBottom: 12 }}>
+            จำนวนที่นั่ง: {table.seats} ที่นั่ง
+          </div>
+          <Button
+            className="button"
+            onClick={() => setShowTentStand(true)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
+            <Printer size={16} aria-hidden="true" />
+            <span>พิมพ์ป้ายตั้งโต๊ะ</span>
+          </Button>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 10 }}>
+        <Link to={path} target="_blank" rel="noreferrer">
+          เปิดหน้าสั่งอาหาร โต๊ะ {table.code}
+        </Link>
+      </div>
+
+      {/* Printable Table Tent Stand Modal (Image #1 Step 1) */}
+      {showTentStand && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`ป้ายตั้งโต๊ะ ${table.code}`}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.65)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 20,
+          }}
+        >
+          <div
+            style={{
+              background: '#FFFFFF',
+              borderRadius: 24,
+              padding: 32,
+              maxWidth: 380,
+              width: '100%',
+              textAlign: 'center',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
+            }}
+          >
+            <div
+              style={{
+                border: '3px solid #F8CA49',
+                borderRadius: 20,
+                padding: '24px 20px',
+                background: '#FFFDF5',
+                marginBottom: 20,
+              }}
+            >
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 16px', background: '#F8CA49', borderRadius: 8, fontWeight: 900, fontSize: 18, color: '#111B38', marginBottom: 12 }}>
+                VELO
+              </div>
+              <div style={{ fontSize: 26, fontWeight: 900, color: '#111B38', marginBottom: 14 }}>
+                โต๊ะ: {table.code}
+              </div>
+              <div style={{ display: 'inline-block', padding: 12, background: '#FFFFFF', borderRadius: 14, border: '1px solid #E5E7EB', marginBottom: 14 }}>
+                <QRCodeSVG value={fullUrl} size={180} />
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#85651D' }}>
+                สแกนเพื่อสั่งอาหาร
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+              <Button
+                onClick={() => window.print()}
+                style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+              >
+                <Printer size={16} aria-hidden="true" />
+                <span>พิมพ์ป้าย</span>
+              </Button>
+              <Button
+                className="button-secondary"
+                onClick={() => setShowTentStand(false)}
+                style={{ flex: 1 }}
+              >
+                ปิด
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

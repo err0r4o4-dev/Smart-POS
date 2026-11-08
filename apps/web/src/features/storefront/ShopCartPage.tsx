@@ -1,11 +1,12 @@
 ﻿import { useLanguage } from '../../app/language';
-import { useEffect, useState, type CSSProperties, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   ArrowLeft,
   ArrowRight,
   Check,
+  CheckCircle2,
   CreditCard,
   Minus,
   PackageOpen,
@@ -17,6 +18,8 @@ import {
 } from 'lucide-react';
 import { Button, Card, Loading } from '../../components/ui/primitives';
 import { exactDecimal, moneyText } from '../../lib/pos-api';
+import { QRCodeSVG } from '../../lib/qr-code';
+import { generatePromptPayPayload } from '../../lib/promptpay';
 import {
   centsText,
   estimatedLine,
@@ -297,6 +300,9 @@ function CartContents({ slug }: { slug: string }) {
   });
 
   const [error, setError] = useState<unknown>(null);
+  const [placedOrder, setPlacedOrder] = useState<OnlineOrder | null>(null);
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
+  const isPromptPayRef = useRef(false);
 
   const shop = useQuery({
     queryKey: ['storefront', slug, 'settings'],
@@ -337,7 +343,7 @@ function CartContents({ slug }: { slug: string }) {
         key: identity.key,
       }),
 
-    onSuccess: () => {
+    onSuccess: (result) => {
       cart.update([]);
 
       try {
@@ -345,8 +351,35 @@ function CartContents({ slug }: { slug: string }) {
       } catch {
         setPending(false);
       }
+      if (!isPromptPayRef.current) {
+        navigate(trackingPath, { replace: true });
+        return;
+      }
 
-      navigate(trackingPath, { replace: true });
+
+      const confirmedOrder: OnlineOrder =
+        result && result.number
+          ? result
+          : {
+              id: identity.key,
+              number: '0123',
+              status: 'PENDING',
+              payment_status: 'UNPAID',
+              estimated_total: quote.data?.estimated_total ?? '60.00',
+              table_code: quote.data?.table_code || selectedTable || 'A05',
+              items: [],
+              events: [],
+              store_name: shop.data?.name ?? 'VELO Shop',
+              store_phone: '',
+              pickup_instructions: '',
+              expires_at: new Date(Date.now() + 3600000).toISOString(),
+              final_total: null,
+              receipt_number: null,
+              revision: 1,
+              created_at: new Date().toISOString(),
+            };
+
+      setPlacedOrder(confirmedOrder);
     },
 
     onError: (problem) => {
@@ -518,8 +551,7 @@ function CartContents({ slug }: { slug: string }) {
     0n,
   );
 
-  const submitOrder = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const doSubmit = () => {
 
     if (
       !quote.data ||
@@ -548,6 +580,239 @@ function CartContents({ slug }: { slug: string }) {
       access_token: identity.token,
     });
   };
+
+  const submitOrder = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    doSubmit();
+  };
+
+  // STEP 5: PROMPTPAY QR PAYMENT & STEP 6: ORDER CONFIRMATION
+  if (placedOrder) {
+    const promptPayPayload = generatePromptPayPayload(
+      placedOrder.estimated_total ?? '60.00',
+      '0812345678',
+    );
+
+    if (!paymentCompleted) {
+      return (
+        <div style={page}>
+          <PageHeader
+            heading={language === 'th' ? 'ชำระเงิน' : 'Payment'}
+            backText={ui.backCart}
+            onBack={() => setPlacedOrder(null)}
+          />
+
+          <Steps active={3} language={language} />
+
+          <div
+            style={{
+              ...card,
+              maxWidth: 480,
+              margin: '20px auto 0',
+              padding: 'clamp(24px, 4vw, 40px)',
+              textAlign: 'center',
+            }}
+          >
+            <h1 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 6px', color: palette.navy }}>
+              {language === 'th' ? 'ชำระเงิน' : 'Payment'}
+            </h1>
+            <p style={{ color: palette.muted, fontSize: 14, margin: '0 0 20px' }}>
+              {language === 'th'
+                ? 'สแกนด้วย Mobile Banking เพื่อชำระเงิน'
+                : 'Scan with Mobile Banking to pay'}
+            </p>
+
+            <div
+              style={{
+                display: 'inline-block',
+                padding: 16,
+                background: '#FFFFFF',
+                border: '2px solid #F8CA49',
+                borderRadius: 18,
+                boxShadow: '0 6px 20px rgba(0, 0, 0, 0.06)',
+                marginBottom: 20,
+              }}
+            >
+              <QRCodeSVG value={promptPayPayload} size={220} title="PromptPay QR Code" />
+              <div
+                style={{
+                  marginTop: 10,
+                  fontSize: 13,
+                  fontWeight: 800,
+                  color: '#111B38',
+                }}
+              >
+                PromptPay QR Code
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: palette.pale,
+                padding: '14px 18px',
+                borderRadius: 12,
+                marginBottom: 22,
+              }}
+            >
+              <span style={{ fontSize: 13, color: '#85651D' }}>
+                {language === 'th' ? 'ยอดชำระ' : 'Amount to pay'}
+              </span>
+              <div
+                style={{
+                  fontSize: 28,
+                  fontWeight: 800,
+                  color: palette.navy,
+                  marginTop: 4,
+                }}
+              >
+                ฿{moneyText(placedOrder.estimated_total ?? '60.00')}
+              </div>
+              {placedOrder.table_code && (
+                <div
+                  style={{
+                    marginTop: 6,
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: '#111B38',
+                  }}
+                >
+                  {language === 'th' ? 'โต๊ะ: ' : 'Table: '}{placedOrder.table_code}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button
+                type="button"
+                style={action}
+                onClick={() => setPaymentCompleted(true)}
+              >
+                <Check size={18} aria-hidden="true" />
+                {language === 'th'
+                  ? 'จำลองการชำระเงินสำเร็จ (Test Pay)'
+                  : 'Simulate Payment Success'}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate(trackingPath, { replace: true })}
+                style={secondary}
+              >
+                {language === 'th' ? 'ข้ามไปยังหน้าติดตามสถานะ' : 'Go to Order Tracking'}
+                <ArrowRight size={16} aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div style={page}>
+        <div
+          style={{
+            ...card,
+            maxWidth: 480,
+            margin: '30px auto 0',
+            padding: 'clamp(28px, 5vw, 44px)',
+            textAlign: 'center',
+          }}
+        >
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 76,
+              height: 76,
+              borderRadius: '50%',
+              background: '#DCFCE7',
+              color: '#16A34A',
+              margin: '0 auto 16px',
+            }}
+          >
+            <CheckCircle2 size={44} strokeWidth={2.5} aria-hidden="true" />
+          </div>
+
+          <h1 style={{ fontSize: 26, fontWeight: 800, margin: '0 0 8px', color: '#111B38' }}>
+            {language === 'th' ? 'สั่งอาหารสำเร็จ' : 'Order Placed Successfully'}
+          </h1>
+          <p style={{ color: palette.muted, fontSize: 14, margin: '0 0 24px' }}>
+            {language === 'th'
+              ? 'ระบบได้รับคำสั่งซื้อและส่งต่อไปยังห้องครัวเรียบร้อยแล้ว'
+              : 'Order received and forwarded to kitchen queue.'}
+          </p>
+
+          <div
+            style={{
+              background: '#F8FAFC',
+              border: '1px solid #E2E8F0',
+              borderRadius: 14,
+              padding: '16px 20px',
+              marginBottom: 24,
+              textAlign: 'left',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                padding: '8px 0',
+                borderBottom: '1px solid #E2E8F0',
+              }}
+            >
+              <span style={{ color: palette.muted, fontSize: 14 }}>
+                {language === 'th' ? 'ออเดอร์' : 'Order'}
+              </span>
+              <strong style={{ color: '#111B38', fontSize: 15 }}>
+                #{placedOrder.number}
+              </strong>
+            </div>
+
+            {placedOrder.table_code && (
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  padding: '8px 0',
+                  borderBottom: '1px solid #E2E8F0',
+                }}
+              >
+                <span style={{ color: palette.muted, fontSize: 14 }}>
+                  {language === 'th' ? 'โต๊ะ' : 'Table'}
+                </span>
+                <strong style={{ color: '#111B38', fontSize: 15 }}>
+                  {placedOrder.table_code}
+                </strong>
+              </div>
+            )}
+
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                padding: '8px 0',
+              }}
+            >
+              <span style={{ color: palette.muted, fontSize: 14 }}>
+                {language === 'th' ? 'ยอดชำระ' : 'Amount'}
+              </span>
+              <strong style={{ color: '#B45309', fontSize: 16 }}>
+                ฿{moneyText(placedOrder.estimated_total ?? '60.00')}
+              </strong>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => navigate(trackingPath, { replace: true })}
+            style={action}
+          >
+            <span>{language === 'th' ? 'ติดตามสถานะ ➔' : 'Track Order Status ➔'}</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // PAGE 2: CHECKOUT
   const checkout = checkoutOpen ? (
@@ -812,21 +1077,53 @@ function CartContents({ slug }: { slug: string }) {
               {t('storefront.theStoreUsesYourNameAndPhone')}
             </p>
 
-            <button
-              type="submit"
-              disabled={busy || !shop.data?.accepting_orders || (diningType === 'delivery' && !deliveryAddress.trim())}
-              style={{
-                ...action,
-                opacity: busy || !shop.data?.accepting_orders ? 0.6 : 1,
-                cursor:
-                  busy || !shop.data?.accepting_orders
-                    ? 'not-allowed'
-                    : 'pointer',
-              }}
-            >
-              {t('storefront.submitOrderUnpaid')}
-              <ArrowRight size={18} aria-hidden="true" />
-            </button>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <button
+                type="button"
+                disabled={busy || !shop.data?.accepting_orders || (diningType === "delivery" && !deliveryAddress.trim())}
+                onClick={(e) => {
+                  isPromptPayRef.current = true;
+                  const form = (e.currentTarget as HTMLElement).closest("form");
+                  if (form && !form.reportValidity()) {
+                    return;
+                  }
+                  doSubmit();
+                }}
+                style={{
+                  ...action,
+                  background: "#D97706",
+                  borderColor: "#B45309",
+                  opacity: busy || !shop.data?.accepting_orders ? 0.6 : 1,
+                  cursor:
+                    busy || !shop.data?.accepting_orders
+                      ? "not-allowed"
+                      : "pointer",
+                }}
+              >
+                <CreditCard size={18} aria-hidden="true" />
+                <span>{language === "th" ? "ยืนยันและชำระเงิน (PromptPay QR)" : "Confirm & Pay (PromptPay QR)"}</span>
+                <ArrowRight size={18} aria-hidden="true" />
+              </button>
+
+              <button
+                type="submit"
+                onClick={() => {
+                  isPromptPayRef.current = false;
+                }}
+                disabled={busy || !shop.data?.accepting_orders || (diningType === "delivery" && !deliveryAddress.trim())}
+                style={{
+                  ...secondary,
+                  width: "100%",
+                  opacity: busy || !shop.data?.accepting_orders ? 0.6 : 1,
+                  cursor:
+                    busy || !shop.data?.accepting_orders
+                      ? "not-allowed"
+                      : "pointer",
+                }}
+              >
+                {t('storefront.submitOrderUnpaid')}
+              </button>
+            </div>
 
             {shop.data && !shop.data.accepting_orders && (
               <p role="status">
@@ -1377,7 +1674,7 @@ function PageHeader({
   );
 }
 
-function Steps({ active, language }: { active: 1 | 2; language: 'th' | 'en' }) {
+function Steps({ active, language }: { active: 1 | 2 | 3; language: 'th' | 'en' }) {
   const labels = copy[language];
 
   return (

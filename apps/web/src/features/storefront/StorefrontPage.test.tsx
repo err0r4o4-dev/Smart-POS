@@ -109,6 +109,31 @@ it('renders a storefront directory with one or more published shops', async () =
     screen.getAllByRole('link', { name: 'ดูหน้าร้าน' })[0],
   ).toHaveAttribute('href', `/shop/${settings.slug}`);
 });
+it.each(['single', 'multi'])(
+  'keeps the directory visible with one published shop in %s mode',
+  async (mode) => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === '/api/v1/storefronts')
+        return {
+          ...response([
+            {
+              slug: settings.slug,
+              name: settings.name,
+              accepting_orders: true,
+            },
+          ]),
+          headers: new Headers({ 'X-SmartPOS-Store-Mode': mode }),
+        };
+      return response(settings);
+    });
+    view('/shop');
+    expect(
+      await screen.findByRole('link', { name: 'ดูหน้าร้าน' }),
+    ).toHaveAttribute('href', `/shop/${settings.slug}`);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  },
+);
+
 it('does not fall back to another store when the configured store is unpublished', async () => {
   fetchMock.mockResolvedValue({
     ...response([]),

@@ -34,10 +34,7 @@ export function OrganizationGate({
     );
   if (!tenant.context)
     return (
-      <Navigate
-        to={tenant.storeMode === 'multi' ? '/setup' : '/403'}
-        replace
-      />
+      <Navigate to={tenant.storeMode === 'multi' ? '/setup' : '/403'} replace />
     );
   if (tenant.context.membership.role !== 'OWNER')
     return <Navigate to="/403" replace />;

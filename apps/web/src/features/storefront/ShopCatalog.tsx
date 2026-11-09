@@ -94,7 +94,7 @@ export function ShopCatalog({ slug }: { slug: string }) {
   const [filters, setFilters] = useState(initialFilters);
   const [priceDraft, setPriceDraft] = useState({ minimum: '', maximum: '' });
   const [priceError, setPriceError] = useState('');
-  const [view, setView] = useState<'grid' | 'list'>('list');
+  const [view, setView] = useState<'grid' | 'list'>('grid');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [message, setMessage] = useState<UiMessage>('');

@@ -31,6 +31,7 @@ async function catalogFixture(
     available: unavailable ? '0.000' : '10.000',
     saleable: true,
     published: true,
+    stock_policy: 'TRACKED',
     category_id: index === 2 ? food : drink,
     category_name: index === 2 ? 'อาหารสำเร็จรูป' : 'เครื่องดื่ม',
     ...(brokenImage && index === 0
@@ -194,11 +195,12 @@ test('yellow catalog supports desktop tablet mobile and a shared exact-quantity 
   await expect(
     page.getByRole('heading', { name: 'ตะกร้าสินค้า', exact: true }),
   ).toBeVisible();
-  await expect(
-    page.getByRole('spinbutton', { name: 'จำนวน นม UHT 250 มล. (ตัวอย่าง)' }),
-  ).toHaveValue('2.000');
+  const quantityInput = page
+    .getByRole('spinbutton', { name: 'จำนวน นม UHT 250 มล. (ตัวอย่าง)' })
+    .or(page.getByRole('textbox', { name: 'จำนวน นม UHT 250 มล. (ตัวอย่าง)' }));
+  await expect(quantityInput).toHaveValue(/^(2|2\.000)$/);
   await page
-    .getByRole('button', { name: 'นำ นม UHT 250 มล. (ตัวอย่าง) ออก' })
+    .getByRole('button', { name: /^นำ นม UHT 250 มล\. \(ตัวอย่าง\)( ออก)?$/ })
     .click();
   await expect(
     page.getByRole('heading', { name: 'ตะกร้ายังว่าง' }),

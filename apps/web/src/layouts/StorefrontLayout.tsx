@@ -71,8 +71,14 @@ export function StorefrontLayout() {
       </main>
       {!slug ? (
         <footer className="shop-directory-footer">
-          <small>© {new Date().getFullYear()} VELOPOS · Smart POS Platform</small>
-          <nav aria-label={language === 'th' ? 'ข้อมูลแพลตฟอร์ม' : 'Platform links'}>
+          <small>
+            © {new Date().getFullYear()} VELOPOS · Smart POS Platform
+          </small>
+          <nav
+            aria-label={
+              language === 'th' ? 'ข้อมูลแพลตฟอร์ม' : 'Platform links'
+            }
+          >
             <Link to={paths.help}>
               {language === 'th' ? 'เงื่อนไขการให้บริการ' : 'Terms of Service'}
             </Link>

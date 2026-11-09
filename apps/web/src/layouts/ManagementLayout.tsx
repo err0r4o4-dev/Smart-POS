@@ -2,7 +2,7 @@ import { LanguageSwitcher } from '../components/ui/LanguageSwitcher';
 import { AccountMenu } from '../components/ui/AccountMenu';
 import { useLanguage } from '../app/language';
 import { useEffect, useRef, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   BarChart3,
   Bell,
@@ -186,9 +186,13 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
       <div className="workspace-main">
         <header className="topbar">
           <div className="breadcrumb">
-            <span className="breadcrumb-home" aria-hidden="true">
-              <House size={15} />
-            </span>
+            <Link
+              to="/"
+              className="breadcrumb-home"
+              aria-label={t('shell.homeAndEntrances')}
+            >
+              <House size={15} aria-hidden="true" />
+            </Link>
             <span>{areaTitle}</span>
             <ChevronRight
               size={15}

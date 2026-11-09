@@ -213,3 +213,11 @@ it('supports ArrowDown/ArrowUp keyboard navigation in the profile dropdown and r
   fireEvent.keyDown(menu, { key: 'ArrowUp' });
   expect(settingsItem).toHaveFocus();
 });
+
+it('renders breadcrumb home icon as a link navigating to home page', () => {
+  renderShell('management', ['/dashboard'], true);
+
+  const homeLink = screen.getByRole('link', { name: 'หน้าหลัก' });
+  expect(homeLink).toHaveClass('breadcrumb-home');
+  expect(homeLink).toHaveAttribute('href', '/');
+});

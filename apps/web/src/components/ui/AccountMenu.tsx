@@ -123,8 +123,7 @@ export function AccountMenu() {
         currentIndex < 0 ? 0 : (currentIndex + 1) % items.length;
       items[nextIndex]?.focus();
     } else if (event.key === 'ArrowUp') {
-      const prevIndex =
-        currentIndex <= 0 ? items.length - 1 : currentIndex - 1;
+      const prevIndex = currentIndex <= 0 ? items.length - 1 : currentIndex - 1;
       items[prevIndex]?.focus();
     }
   };

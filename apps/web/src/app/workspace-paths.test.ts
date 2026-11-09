@@ -1,9 +1,5 @@
 import { expect, it } from 'vitest';
-import {
-  businessArea,
-  isBusinessPath,
-  workspacePath,
-} from './workspace-paths';
+import { businessArea, isBusinessPath, workspacePath } from './workspace-paths';
 
 it.each([
   '/dashboard',
@@ -50,15 +46,21 @@ it.each([
   '/help',
   '/menu-other',
   '//example.test/menu',
-])('does not treat neutral, public, or retired path %s as business area', (path) => {
-  expect(isBusinessPath(path)).toBe(false);
-  expect(businessArea(path)).toBeUndefined();
-});
-
-it.each(['/menu/item?search=abc#details', '/kitchen', '/pos', '/shop', '/settings'])(
-  'keeps clean root path %s without legacy /manage prefix',
+])(
+  'does not treat neutral, public, or retired path %s as business area',
   (path) => {
-    expect(workspacePath(path, 'management')).toBe(path);
-    expect(workspacePath(path)).toBe(path);
+    expect(isBusinessPath(path)).toBe(false);
+    expect(businessArea(path)).toBeUndefined();
   },
 );
+
+it.each([
+  '/menu/item?search=abc#details',
+  '/kitchen',
+  '/pos',
+  '/shop',
+  '/settings',
+])('keeps clean root path %s without legacy /manage prefix', (path) => {
+  expect(workspacePath(path, 'management')).toBe(path);
+  expect(workspacePath(path)).toBe(path);
+});

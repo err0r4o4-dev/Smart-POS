@@ -662,9 +662,7 @@ export function OnlineOrdersPage() {
                 </span>
                 <div>
                   <h2>
-                    <Link to={`/orders/${order.id}`}>
-                      {order.number}
-                    </Link>
+                    <Link to={`/orders/${order.id}`}>{order.number}</Link>
                   </h2>
                   <p>
                     {order.customer_name} · {order.contact_phone}

@@ -306,7 +306,7 @@ for (const width of widths) {
         await expect(page.getByRole('table')).toBeVisible();
         await expect(page.locator('.sales-empty-message')).toBeVisible();
         await expect(
-          page.getByLabel('ค้นหาชื่อเมนู / วัตถุดิบ / SKU', { exact: true }),
+          page.getByLabel('ค้นหาชื่อเมนู / SKU', { exact: true }),
         ).toBeVisible();
       } else if (path === '/manage/restaurant/queue') {
         await expect(page.getByRole('status')).toHaveText(

@@ -1,4 +1,10 @@
-import { ArrowLeft } from 'lucide-react';
+import {
+  ArrowLeft,
+  ChartNoAxesColumnIncreasing,
+  Layers,
+  Package,
+  Tag,
+} from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useLanguage } from '../app/language';
 import { LanguageSwitcher } from '../components/ui/LanguageSwitcher';
@@ -23,7 +29,7 @@ export function LoginLayout({
     story === 'login' ? t('auth.storeSummary') : t(`auth.${story}StorySummary`);
 
   return (
-    <div className="account-shell">
+    <div className="account-shell" data-account-story={story}>
       <a className="skip-link" href="#main-content">
         {t('landing.skipToContent')}
       </a>
@@ -49,13 +55,29 @@ export function LoginLayout({
             <h1 id="login-visual-title">{storyTitle}</h1>
             <p>{storySummary}</p>
           </div>
-          <img
-            className="login-visual-art"
-            src="/images/auth-pos-reference.png"
-            alt={t('auth.storeIllustration')}
-            width={620}
-            height={309}
-          />
+          <div className="login-illustration">
+            <div className="login-feature-orbit" aria-hidden="true">
+              <span>
+                <Package />
+              </span>
+              <span>
+                <Layers />
+              </span>
+              <span>
+                <Tag />
+              </span>
+              <span>
+                <ChartNoAxesColumnIncreasing />
+              </span>
+            </div>
+            <img
+              className="login-visual-art"
+              src="/images/auth-pos-reference.png"
+              alt={t('auth.storeIllustration')}
+              width={620}
+              height={309}
+            />
+          </div>
           <footer className="login-visual-footer">
             VELO - Smart POS Platform
           </footer>

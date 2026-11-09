@@ -1,4 +1,14 @@
-import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
+import {
+  ArrowRight,
+  ChevronRight,
+  KeyRound,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  Store,
+  UserRound,
+} from 'lucide-react';
 import { useLanguage } from '../../app/language';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
@@ -35,11 +45,11 @@ function PasswordField({
   const [visible, setVisible] = useState(false);
   return (
     <div className="auth-field-group">
-      <label htmlFor="password">{t('auth.password')}</label>
+      <label htmlFor="password">
+        <Lock size={18} aria-hidden="true" />
+        {t('auth.password')}
+      </label>
       <div className="password-control auth-input-wrapper">
-        <span className="auth-input-icon" aria-hidden="true">
-          <Lock size={18} />
-        </span>
         <input
           id="password"
           type={visible ? 'text' : 'password'}
@@ -101,7 +111,10 @@ export function LoginPage() {
   return (
     <LoginLayout>
       <div className="auth-header-card">
-        <Tag tone="amber">{t('auth.accountAccess')}</Tag>
+        <Tag tone="amber">
+          <Store size={17} aria-hidden="true" />
+          {t('auth.accountAccess')}
+        </Tag>
         <h2 id="login-title">{t('auth.welcomeBack')}</h2>
         <p>{t('auth.signInForStoreOwnersManagersAnd')}</p>
       </div>
@@ -124,11 +137,11 @@ export function LoginPage() {
       <form onSubmit={submit} className="auth-form-body">
         <fieldset disabled={pending}>
           <div className="auth-field-group">
-            <label htmlFor="email">{t('auth.emailAddress')}</label>
+            <label htmlFor="email">
+              <Mail size={18} aria-hidden="true" />
+              {t('auth.emailAddress')}
+            </label>
             <div className="auth-input-wrapper">
-              <span className="auth-input-icon" aria-hidden="true">
-                <Mail size={18} />
-              </span>
               <input
                 id="email"
                 type="email"
@@ -150,8 +163,8 @@ export function LoginPage() {
               </>
             ) : (
               <>
-                <LogIn size={18} />{' '}
                 {t(linkingGoogle ? 'auth.googleLinkAction' : 'auth.signIn')}
+                <ArrowRight size={22} aria-hidden="true" />
               </>
             )}
           </Button>
@@ -169,7 +182,10 @@ export function LoginPage() {
         </Link>
         <div className="auth-link-register-prompt">
           <span>Don't have an account? </span>
-          <Link to="/register">{t('auth.createAccount')}</Link>
+          <Link to="/register">
+            {t('auth.createAccount')}
+            <ChevronRight size={18} aria-hidden="true" />
+          </Link>
         </div>
       </div>
     </LoginLayout>
@@ -233,7 +249,10 @@ export function RegisterPage() {
   return (
     <LoginLayout titleId="register-title" story="register">
       <div className="auth-header-card">
-        <Tag tone="amber">{t('auth.createAccount2')}</Tag>
+        <Tag tone="amber">
+          <Store size={17} aria-hidden="true" />
+          {t('auth.createAccount2')}
+        </Tag>
         <h2 id="register-title">{t('auth.getStarted')}</h2>
         <p>
           {language === 'en'
@@ -244,7 +263,10 @@ export function RegisterPage() {
       <form onSubmit={submit} className="auth-form-body">
         <fieldset disabled={pending}>
           <div className="auth-field-group">
-            <label htmlFor="display-name">{t('auth.displayName')}</label>
+            <label htmlFor="display-name">
+              <UserRound size={18} aria-hidden="true" />
+              {t('auth.displayName')}
+            </label>
             <div className="auth-input-wrapper">
               <input
                 id="display-name"
@@ -258,7 +280,10 @@ export function RegisterPage() {
             </div>
           </div>
           <div className="auth-field-group">
-            <label htmlFor="email">{t('auth.emailAddress')}</label>
+            <label htmlFor="email">
+              <Mail size={18} aria-hidden="true" />
+              {t('auth.emailAddress')}
+            </label>
             <div className="auth-input-wrapper">
               <input
                 id="email"
@@ -282,6 +307,7 @@ export function RegisterPage() {
           </small>
           <div className="auth-field-group">
             <label htmlFor="confirm-password">
+              <Lock size={18} aria-hidden="true" />
               {t('auth.confirmPassword')}
             </label>
             <div className="auth-input-wrapper">
@@ -303,7 +329,10 @@ export function RegisterPage() {
                 <Loading /> {t('auth.creatingAccount')}
               </>
             ) : (
-              t('auth.createAccount')
+              <>
+                {t('auth.createAccount')}
+                <ArrowRight size={22} aria-hidden="true" />
+              </>
             )}
           </Button>
         </fieldset>
@@ -344,25 +373,43 @@ export function ForgotPasswordPage() {
   return (
     <AuthLayout titleId="forgot-title" story="recover">
       <div className="auth-header-card">
-        <Tag tone="amber">{t('auth.accountRecovery')}</Tag>
+        <Tag tone="amber">
+          <KeyRound size={17} aria-hidden="true" />
+          {t('auth.accountRecovery')}
+        </Tag>
         <h2 id="forgot-title">{t('auth.resetYourPassword')}</h2>
         <p>{t('auth.enterYourEmailIfAnEligibleAccount')}</p>
       </div>
       <form onSubmit={submit} className="auth-form-body">
         <fieldset disabled={pending}>
-          <label htmlFor="email">{t('auth.emailAddress')}</label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            autoComplete="email"
-            required
-            maxLength={254}
-          />
+          <div className="auth-field-group">
+            <label htmlFor="email">
+              <Mail size={18} aria-hidden="true" />
+              {t('auth.emailAddress')}
+            </label>
+            <div className="auth-input-wrapper">
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                autoComplete="email"
+                required
+                maxLength={254}
+                placeholder="name@company.com"
+              />
+            </div>
+          </div>
           <ErrorMessage message={localize(error ?? '')} />
           <Button type="submit" className="auth-submit-btn">
-            {pending ? t('auth.sending') : t('auth.requestResetLink')}
+            {pending ? (
+              t('auth.sending')
+            ) : (
+              <>
+                {t('auth.requestResetLink')}
+                <ArrowRight size={22} aria-hidden="true" />
+              </>
+            )}
           </Button>
         </fieldset>
       </form>

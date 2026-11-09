@@ -1,7 +1,7 @@
 import { defineMessages } from './defineMessages';
 export const auth = defineMessages({
   th: {
-    registerStoryTitle: 'เริ่มต้นร้านของคุณไปด้วยกัน',
+    registerStoryTitle: 'เริ่มต้นร้านของคุณ',
     registerStorySummary:
       'สร้างบัญชี ยืนยันอีเมล แล้วค่อยตั้งค่าร้านในขั้นตอนถัดไป',
     verifyStoryTitle: 'อีกขั้นเดียวก่อนเริ่มต้น',

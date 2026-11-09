@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 test.use({ channel: process.env.E2E_BROWSER_CHANNEL });
 
-for (const width of [320, 375, 700, 701, 768, 1024, 1440]) {
+for (const width of [320, 375, 700, 701, 768, 900, 901, 1024, 1440]) {
   test(`login reference layout and controls at ${width}px`, async ({
     page,
   }, testInfo) => {
@@ -45,7 +45,7 @@ for (const width of [320, 375, 700, 701, 768, 1024, 1440]) {
     const panelBounds = await panel.boundingBox();
     expect(visualBounds).not.toBeNull();
     expect(panelBounds).not.toBeNull();
-    if (width > 700) {
+    if (width > 900) {
       expect(panelBounds!.x).toBeGreaterThanOrEqual(
         visualBounds!.x + visualBounds!.width - 1,
       );

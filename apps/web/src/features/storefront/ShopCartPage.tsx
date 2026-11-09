@@ -37,16 +37,17 @@ import {
 } from '../../lib/storefront-api';
 import { ShopError } from './StorefrontPage';
 import { useShopCart, type CartEntry } from './shop-cart';
+import { ShopOrderSteps } from './ShopOrderSteps';
 
 // Page-specific presentation only.
 // Global header/footer, API, and tracking logic stay unchanged.
 const palette = {
-  navy: '#111B38',
-  muted: '#70798C',
-  yellow: '#F8CA49',
-  pale: '#FFF8E6',
-  border: '#E7EAF0',
-  price: '#A66C13',
+  navy: 'var(--text-primary)',
+  muted: 'var(--text-secondary)',
+  yellow: 'var(--primary)',
+  pale: 'var(--primary-subtle)',
+  border: 'var(--border)',
+  price: 'var(--primary-strong)',
 };
 
 const copy = {
@@ -121,24 +122,13 @@ const copy = {
   },
 } as const;
 
-const page: CSSProperties = {
-  boxSizing: 'border-box',
-  width: '100%',
-  maxWidth: 'var(--layout-content-max, 1232px)',
-  margin: '0 auto',
-  padding: '0 0 24px',
-  color: palette.navy,
-  fontFamily: 'inherit',
-  lineHeight: 1.5,
-};
-
 const card: CSSProperties = {
   boxSizing: 'border-box',
   minWidth: 0,
-  borderRadius: 15,
-  background: '#FFFFFF',
-  border: '1px solid #EDF0F4',
-  boxShadow: '0 6px 22px rgba(17, 27, 56, .05)',
+  borderRadius: 'var(--radius-card)',
+  background: 'var(--surface)',
+  border: '1px solid var(--border)',
+  boxShadow: 'var(--shadow-card)',
 };
 
 const title: CSSProperties = {
@@ -153,7 +143,7 @@ const title: CSSProperties = {
 
 const pale: CSSProperties = {
   background: palette.pale,
-  borderRadius: 11,
+  borderRadius: 'var(--radius-small)',
   padding: 14,
   marginBottom: 14,
 };
@@ -164,8 +154,8 @@ const control: CSSProperties = {
   width: '100%',
   padding: '10px 12px',
   border: `1px solid ${palette.border}`,
-  borderRadius: 9,
-  background: '#FFFFFF',
+  borderRadius: 'var(--radius-control)',
+  background: 'var(--surface)',
   color: palette.navy,
   fontFamily: 'inherit',
   fontSize: 14,
@@ -181,7 +171,7 @@ const action: CSSProperties = {
   width: '100%',
   padding: '10px 14px',
   border: 0,
-  borderRadius: 9,
+  borderRadius: 'var(--radius-control)',
   background: palette.yellow,
   color: palette.navy,
   fontFamily: 'inherit',
@@ -198,9 +188,9 @@ const secondary: CSSProperties = {
   gap: 8,
   minHeight: 42,
   padding: '9px 15px',
-  border: '1px solid #EFC94F',
-  borderRadius: 10,
-  background: '#FFF6D7',
+  border: '1px solid var(--border)',
+  borderRadius: 'var(--radius-control)',
+  background: 'var(--surface)',
   color: palette.navy,
   textDecoration: 'none',
   fontFamily: 'inherit',
@@ -451,7 +441,7 @@ function CartContents({ slug }: { slug: string }) {
   // Existing pending-order recovery.
   if (pending) {
     return (
-      <div style={page}>
+      <div className="shop-cart-page">
         <Card className="shop-checkout">
           <h1>
             {submission.isPending
@@ -564,14 +554,14 @@ function CartContents({ slug }: { slug: string }) {
 
   // PAGE 2: CHECKOUT
   const checkout = checkoutOpen ? (
-    <div style={page}>
+    <div className="shop-cart-page shop-review-page">
       <PageHeader
         heading={ui.checkout}
         backText={ui.backCart}
         onBack={resetReview}
       />
 
-      <Steps active={2} language={language} />
+      <ShopOrderSteps active={2} />
 
       <p
         style={{
@@ -589,15 +579,7 @@ function CartContents({ slug }: { slug: string }) {
 
       {error != null && <ShopError error={error} />}
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns:
-            'repeat(auto-fit, minmax(min(100%, 360px), 1fr))',
-          gap: 'var(--card-gap, 24px)',
-          alignItems: 'start',
-        }}
-      >
+      <div className="shop-review-layout">
         {/* VERIFIED ORDER */}
         <section
           style={{
@@ -727,6 +709,7 @@ function CartContents({ slug }: { slug: string }) {
 
         {/* CUSTOMER FORM */}
         <form
+          className="shop-customer-form"
           onSubmit={submitOrder}
           style={{
             ...card,
@@ -885,14 +868,14 @@ function CartContents({ slug }: { slug: string }) {
   return (
     <>
       {checkout}
-      <div style={page} hidden={checkoutOpen}>
+      <div className="shop-cart-page" hidden={checkoutOpen}>
         <PageHeader
           heading={t('pos.shoppingCart')}
           backText={t('storefront.chooseMoreProducts')}
           to={shopPath}
         />
 
-        <Steps active={1} language={language} />
+        <ShopOrderSteps active={1} />
 
         {tableToken === null && (
           <p role="alert">{t('storefront.invalidTableLink')}</p>
@@ -916,7 +899,7 @@ function CartContents({ slug }: { slug: string }) {
             margin: '15px 0 20px',
             padding: '12px 15px',
             background: palette.pale,
-            border: '1px solid #F0E0AA',
+            border: '1px solid var(--primary-border)',
             borderRadius: 11,
           }}
         >
@@ -937,7 +920,7 @@ function CartContents({ slug }: { slug: string }) {
 
           <span
             style={{
-              color: '#55472B',
+              color: 'var(--primary-strong)',
               fontSize: 13,
             }}
           >
@@ -967,20 +950,13 @@ function CartContents({ slug }: { slug: string }) {
             </Link>
           </div>
         ) : (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: 'var(--card-gap, 24px)',
-              flexWrap: 'wrap',
-            }}
-          >
+          <div className="shop-cart-layout">
             {/* PRODUCTS */}
             <section
+              className="shop-cart-products"
               aria-label={t('storefront.cartItems')}
               style={{
                 display: 'flex',
-                flex: '2 1 530px',
                 flexDirection: 'column',
                 gap: 'var(--card-gap, 24px)',
                 minWidth: 0,
@@ -1017,9 +993,9 @@ function CartContents({ slug }: { slug: string }) {
 
             {/* ORDER SUMMARY */}
             <aside
+              className="shop-cart-summary"
               style={{
                 ...card,
-                flex: '1 1 320px',
                 minWidth: 0,
                 padding: 'var(--card-padding, 24px)',
               }}
@@ -1055,7 +1031,9 @@ function CartContents({ slug }: { slug: string }) {
                           diningType === mode ? palette.yellow : palette.border
                         }`,
                         background:
-                          diningType === mode ? palette.yellow : '#F7F8FA',
+                          diningType === mode
+                            ? palette.yellow
+                            : 'var(--secondary)',
                         color:
                           diningType === mode ? palette.navy : palette.muted,
                       }}
@@ -1084,7 +1062,7 @@ function CartContents({ slug }: { slug: string }) {
                         background:
                           diningType === 'delivery'
                             ? palette.yellow
-                            : '#F7F8FA',
+                            : 'var(--secondary)',
                       }}
                     >
                       {language === 'th' ? 'จัดส่ง' : 'Delivery'}
@@ -1119,9 +1097,13 @@ function CartContents({ slug }: { slug: string }) {
                     style={{
                       ...control,
                       color:
-                        diningType === 'dine-in' ? palette.navy : '#9CA4B2',
+                        diningType === 'dine-in'
+                          ? palette.navy
+                          : 'var(--text-tertiary)',
                       background:
-                        diningType === 'dine-in' ? '#FFFFFF' : '#F7F8FA',
+                        diningType === 'dine-in'
+                          ? 'var(--surface)'
+                          : 'var(--secondary)',
                       cursor:
                         diningType === 'dine-in' ? 'pointer' : 'not-allowed',
                     }}
@@ -1144,7 +1126,7 @@ function CartContents({ slug }: { slug: string }) {
                       style={{
                         margin: '8px 0 0',
                         fontSize: 12,
-                        color: '#85651D',
+                        color: 'var(--primary-strong)',
                       }}
                     >
                       {selectedTable
@@ -1170,7 +1152,7 @@ function CartContents({ slug }: { slug: string }) {
                     alignItems: 'flex-start',
                     gap: 10,
                     fontSize: 13,
-                    color: '#505A6C',
+                    color: 'var(--text-secondary)',
                   }}
                 >
                   <span
@@ -1340,7 +1322,7 @@ function CartContents({ slug }: { slug: string }) {
                   <p
                     style={{
                       fontSize: 12,
-                      color: '#825F19',
+                      color: 'var(--primary-strong)',
                       margin: '10px 0 0',
                     }}
                   >
@@ -1354,7 +1336,7 @@ function CartContents({ slug }: { slug: string }) {
                         ...pale,
                         margin: '10px 0 0',
                         fontSize: 12,
-                        color: '#825F19',
+                        color: 'var(--primary-strong)',
                       }}
                     >
                       {ui.demoSuccess} {demoTable}. {ui.demoNotSent}.
@@ -1405,89 +1387,23 @@ function PageHeader({
   );
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: 14,
-        flexWrap: 'wrap',
-        marginBottom: 17,
-      }}
-    >
-      <h1
-        style={{
-          margin: 0,
-          color: palette.navy,
-          fontSize: 'clamp(26px, 3vw, 34px)',
-          lineHeight: 1.25,
-          fontWeight: 800,
-        }}
-      >
-        {heading}
-      </h1>
+    <div className="shop-page-heading">
+      <h1>{heading}</h1>
 
       {to ? (
-        <Link to={to} style={secondary}>
+        <Link className="shop-secondary-action" to={to}>
           {content}
         </Link>
       ) : (
-        <button type="button" style={secondary} onClick={onBack}>
+        <button
+          className="shop-secondary-action"
+          type="button"
+          onClick={onBack}
+        >
           {content}
         </button>
       )}
     </div>
-  );
-}
-
-function Steps({ active, language }: { active: 1 | 2; language: 'th' | 'en' }) {
-  const labels = copy[language];
-
-  return (
-    <nav
-      aria-label={language === 'th' ? 'ขั้นตอนการสั่งซื้อ' : 'Order steps'}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: 9,
-        fontSize: 12,
-        color: palette.muted,
-      }}
-    >
-      {[labels.cart, labels.checkout, labels.tracking].map((label, index) => (
-        <span
-          key={label}
-          aria-current={index + 1 === active ? 'step' : undefined}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 7,
-            padding: '6px 10px',
-            borderRadius: 20,
-            background: index + 1 === active ? '#FFF1C3' : '#F3F5F8',
-            color: index + 1 === active ? palette.navy : palette.muted,
-            fontWeight: index + 1 === active ? 800 : 500,
-          }}
-        >
-          <span
-            style={{
-              width: 19,
-              height: 19,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '50%',
-              background: index + 1 === active ? palette.yellow : '#E3E6ED',
-              fontSize: 11,
-            }}
-          >
-            {index + 1}
-          </span>
-          {label}
-        </span>
-      ))}
-    </nav>
   );
 }
 
@@ -1550,27 +1466,9 @@ function CartLineItem({
   };
 
   return (
-    <article
-      style={{
-        ...card,
-        display: 'flex',
-        flexWrap: 'wrap',
-        alignItems: 'stretch',
-        gap: 'var(--card-gap, 24px)',
-        padding: 'var(--card-padding, 24px)',
-      }}
-    >
+    <article className="shop-cart-product">
       {/* PRODUCT IMAGE */}
-      <div
-        style={{
-          width: 'clamp(115px, 15vw, 166px)',
-          height: 'clamp(120px, 15vw, 154px)',
-          flexShrink: 1,
-          borderRadius: 10,
-          overflow: 'hidden',
-          background: '#F4F5F7',
-        }}
-      >
+      <div className="shop-cart-product-media">
         {item.image_url && !imageFailed ? (
           <img
             src={item.image_url}
@@ -1593,7 +1491,7 @@ function CartLineItem({
               alignItems: 'center',
               width: '100%',
               height: '100%',
-              color: '#9CA3AF',
+              color: 'var(--text-tertiary)',
             }}
           >
             <PackageOpen size={32} aria-hidden="true" />
@@ -1603,8 +1501,8 @@ function CartLineItem({
 
       {/* PRODUCT INFORMATION */}
       <div
+        className="shop-cart-product-content"
         style={{
-          flex: '1 1 210px',
           minWidth: 0,
           display: 'flex',
           flexDirection: 'column',
@@ -1738,7 +1636,7 @@ function CartLineItem({
               style={{
                 width: 39,
                 border: 0,
-                background: '#F5F7FA',
+                background: 'var(--secondary)',
                 color: palette.navy,
                 cursor:
                   busy || amount === null || amount <= step
@@ -1790,7 +1688,7 @@ function CartLineItem({
                   borderRight: `1px solid ${palette.border}`,
                   borderRadius: 0,
                   padding: '0 2px',
-                  background: '#FFFFFF',
+                  background: 'var(--surface)',
                   color: palette.navy,
                   fontFamily: 'inherit',
                   fontSize: 14,
@@ -1810,7 +1708,7 @@ function CartLineItem({
               style={{
                 width: 39,
                 border: 0,
-                background: '#F5F7FA',
+                background: 'var(--secondary)',
                 color: palette.navy,
                 cursor:
                   busy || amount === null || amount + step > MAX_LINE_QUANTITY

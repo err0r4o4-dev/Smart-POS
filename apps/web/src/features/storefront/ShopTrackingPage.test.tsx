@@ -68,6 +68,19 @@ beforeEach(() => {
   );
 });
 
+it('shows tracking as the third step without starting a payment', async () => {
+  view(undefined, true);
+  const steps = screen.getByRole('navigation', { name: 'Order steps' });
+  expect(steps.querySelector('[aria-current="step"]')).toHaveTextContent(
+    'Track order',
+  );
+  expect(steps.querySelectorAll('li')).toHaveLength(3);
+  await screen.findByText('WEB-TEST');
+  expect(
+    request.mock.calls.every(([path]) => String(path).endsWith('/track')),
+  ).toBe(true);
+});
+
 it.each([
   ['REQUESTED', 'Payment requested'],
   ['OPEN', 'Awaiting payment'],

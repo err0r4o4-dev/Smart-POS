@@ -17,8 +17,9 @@ import {
   Search,
   ShoppingCart,
   SlidersHorizontal,
+  Store,
 } from 'lucide-react';
-import { Button, Card, Loading } from '../../components/ui/primitives';
+import { Button, Card, Loading, Tag } from '../../components/ui/primitives';
 import {
   exactDecimal,
   isKnownStockPolicy,
@@ -170,6 +171,23 @@ export function ShopCatalog({ slug }: { slug: string }) {
   );
   return (
     <div className="shop-catalog">
+      <header className="shop-page-heading shop-store-heading">
+        <div className="shop-store-identity">
+          <span className="shop-store-symbol">
+            <Store size={28} strokeWidth={1.6} aria-hidden="true" />
+          </span>
+          <div>
+            <h1>{store.name}</h1>
+            {store.description && <p>{store.description}</p>}
+          </div>
+        </div>
+        <Tag tone={store.accepting_orders ? 'success' : 'neutral'}>
+          <span className="shop-directory-status-dot" aria-hidden="true" />
+          {store.accepting_orders
+            ? t('storefront.acceptingOrders')
+            : t('storefront.notAcceptingOrders')}
+        </Tag>
+      </header>
       <div
         className={`catalog-layout ${sidebarCollapsed ? 'catalog-layout-sidebar-collapsed' : ''}`}
       >

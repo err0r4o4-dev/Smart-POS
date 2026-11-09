@@ -64,6 +64,31 @@ it('shows the invalid table-link warning in English', async () => {
   );
 });
 
+it('marks the current cart and review steps without navigating to a new route', async () => {
+  view();
+  const steps = screen.getByRole('navigation', { name: 'ขั้นตอนการสั่งซื้อ' });
+  expect(steps.querySelector('[aria-current="step"]')).toHaveTextContent(
+    'ตะกร้าสินค้า',
+  );
+  expect(steps.querySelector('ol')).toBeInTheDocument();
+  const review = await screen.findByRole('button', {
+    name: 'ตรวจรายการและยอดล่าสุด',
+  });
+  await waitFor(() => expect(review).toBeEnabled());
+  fireEvent.click(review);
+  await screen.findByRole('heading', { level: 1, name: 'ยืนยันคำสั่งซื้อ' });
+  const visibleSteps = screen.getByRole('navigation', {
+    name: 'ขั้นตอนการสั่งซื้อ',
+  });
+  expect(visibleSteps.querySelector('[aria-current="step"]')).toHaveTextContent(
+    'ยืนยันคำสั่งซื้อ',
+  );
+  fireEvent.click(screen.getAllByRole('button', { name: 'กลับไปตะกร้า' })[0]);
+  expect(
+    screen.getByRole('heading', { level: 1, name: 'ตะกร้าสินค้า' }),
+  ).toBeVisible();
+});
+
 it('allows QR dine-in review and preserves the token in the quote and order', async () => {
   const token = 'a'.repeat(64);
   view(`?table=${token}`);

@@ -1,18 +1,26 @@
 import { LanguageSwitcher } from '../components/ui/LanguageSwitcher';
 import { useLanguage } from '../app/language';
-import { Link, Outlet, useParams, useSearchParams } from 'react-router-dom';
-import { Menu, ShoppingCart } from 'lucide-react';
+import {
+  Link,
+  Outlet,
+  useLocation,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom';
+import { ArrowLeft, Menu, ShoppingCart } from 'lucide-react';
 import { Brand } from '../components/ui/primitives';
 import { paths } from '../app/routes';
 import { useShopCart } from '../features/storefront/shop-cart';
 import { VeloAssistantChat } from '../features/storefront/VeloAssistantChat';
 import '../features/storefront/catalog.css';
 import '../features/storefront/shop-directory.css';
+import '../features/storefront/shop-customer.css';
 
 export function StorefrontLayout() {
   const { t, language } = useLanguage();
 
   const { slug } = useParams();
+  const { pathname } = useLocation();
   const [searchParams] = useSearchParams();
   const tableQuery = searchParams.has('table')
     ? `?${searchParams.toString()}`
@@ -20,9 +28,13 @@ export function StorefrontLayout() {
   const home = slug ? `/shop/${slug}` : paths.shop;
   const cartPath = slug ? `${home}/cart${tableQuery}` : paths.shop;
   const cart = useShopCart(slug);
+  const catalogPage = !!slug && pathname.replace(/\/$/, '') === home;
   return (
     <div
-      className={'storefront-shell' + (!slug ? ' shop-directory-shell' : '')}
+      className={
+        'storefront-shell shop-directory-shell' +
+        (slug ? ' shop-store-shell' : '')
+      }
       data-workspace="customer"
     >
       <a className="skip-link" href="#main-content">
@@ -31,7 +43,7 @@ export function StorefrontLayout() {
       <header className="storefront-header">
         <div className="storefront-header-inner layout-shell">
           <div className="storefront-header-left">
-            {slug && (
+            {catalogPage && (
               <button
                 type="button"
                 className="storefront-menu-btn"
@@ -73,112 +85,29 @@ export function StorefrontLayout() {
           </nav>
         </div>
       </header>
-      <main id="main-content" className="storefront-content">
+      <main id="main-content" className="storefront-content" tabIndex={-1}>
+        {slug && (
+          <Link className="shop-back-link" to={paths.shop}>
+            <ArrowLeft size={16} aria-hidden="true" />
+            {language === 'th' ? 'ร้านค้าทั้งหมด' : 'All stores'}
+          </Link>
+        )}
         <Outlet />
       </main>
-      {!slug ? (
-        <footer className="shop-directory-footer">
-          <small>
-            © {new Date().getFullYear()} VELOPOS · Smart POS Platform
-          </small>
-          <nav
-            aria-label={
-              language === 'th' ? 'ข้อมูลแพลตฟอร์ม' : 'Platform links'
-            }
-          >
-            <Link to={paths.help}>
-              {language === 'th' ? 'เงื่อนไขการให้บริการ' : 'Terms of Service'}
-            </Link>
-            <span aria-hidden="true">·</span>
-            <Link to={paths.help}>
-              {language === 'th' ? 'นโยบายความเป็นส่วนตัว' : 'Privacy Policy'}
-            </Link>
-          </nav>
-        </footer>
-      ) : (
-        <footer className="storefront-footer">
-          <div className="storefront-footer-container layout-shell">
-            <div className="storefront-footer-columns">
-              <div className="storefront-footer-col">
-                <h3>
-                  {language === 'th' ? 'บริการของ VELOPOS' : 'VELOPOS Services'}
-                </h3>
-                <p className="storefront-footer-links">
-                  <span>
-                    {language === 'th'
-                      ? 'ระบบขายหน้าร้าน (POS)'
-                      : 'Point of Sale (POS)'}
-                  </span>
-                  <span className="dot" aria-hidden="true">
-                    ·
-                  </span>
-                  <span>
-                    {language === 'th'
-                      ? 'จัดการสินค้าและสต็อก'
-                      : 'Inventory & Stock'}
-                  </span>
-                  <span className="dot" aria-hidden="true">
-                    ·
-                  </span>
-                  <span>
-                    {language === 'th' ? 'ร้านค้าออนไลน์' : 'Online Store'}
-                  </span>
-                </p>
-              </div>
-              <div className="storefront-footer-col">
-                <h3>
-                  {language === 'th'
-                    ? 'ช่วยเหลือและสนับสนุน'
-                    : 'Help & Support'}
-                </h3>
-                <p className="storefront-footer-links">
-                  <Link to={paths.help}>
-                    {language === 'th' ? 'ศูนย์ช่วยเหลือ' : 'Help Center'}
-                  </Link>
-                  <span className="dot" aria-hidden="true">
-                    ·
-                  </span>
-                  <Link to={paths.help}>
-                    {language === 'th' ? 'คู่มือการใช้งาน' : 'User Guide'}
-                  </Link>
-                  <span className="dot" aria-hidden="true">
-                    ·
-                  </span>
-                  <Link to={paths.help}>
-                    {language === 'th' ? 'ติดต่อทีมบริการ' : 'Contact Support'}
-                  </Link>
-                </p>
-              </div>
-              <div className="storefront-footer-col">
-                <h3>VELOPOS — Smart POS Platform</h3>
-                <p className="storefront-footer-desc">
-                  {language === 'th'
-                    ? 'โซลูชันช่วยให้ร้านค้าจัดการการขาย สินค้า และคำสั่งซื้อได้สะดวกในระบบเดียว'
-                    : 'All-in-one POS platform helping businesses manage sales, inventory, and orders seamlessly.'}
-                </p>
-              </div>
-            </div>
-            <div className="storefront-footer-bottom">
-              <small>© 2026 VELOPOS · Smart POS Platform</small>
-              <div className="storefront-footer-legal">
-                <Link to={paths.help}>
-                  {language === 'th'
-                    ? 'เงื่อนไขการให้บริการ'
-                    : 'Terms of Service'}
-                </Link>
-                <span className="dot" aria-hidden="true">
-                  ·
-                </span>
-                <Link to={paths.help}>
-                  {language === 'th'
-                    ? 'นโยบายความเป็นส่วนตัว'
-                    : 'Privacy Policy'}
-                </Link>
-              </div>
-            </div>
-          </div>
-        </footer>
-      )}
+      <footer className="shop-directory-footer">
+        <small>© {new Date().getFullYear()} VELOPOS · Smart POS Platform</small>
+        <nav
+          aria-label={language === 'th' ? 'ข้อมูลแพลตฟอร์ม' : 'Platform links'}
+        >
+          <Link to={paths.help}>
+            {language === 'th' ? 'เงื่อนไขการให้บริการ' : 'Terms of Service'}
+          </Link>
+          <span aria-hidden="true">·</span>
+          <Link to={paths.help}>
+            {language === 'th' ? 'นโยบายความเป็นส่วนตัว' : 'Privacy Policy'}
+          </Link>
+        </nav>
+      </footer>
       <VeloAssistantChat />
     </div>
   );

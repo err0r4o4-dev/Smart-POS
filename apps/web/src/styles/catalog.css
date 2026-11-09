@@ -1,6 +1,6 @@
 .catalog-page {
   display: grid;
-  gap: 18px;
+  gap: var(--group-gap);
   min-width: 0;
 }
 .catalog-page h1 {
@@ -12,12 +12,12 @@
 .catalog-page h2 {
   font-size: 18px;
   font-weight: 700;
-  margin-bottom: 14px;
+  margin-bottom: var(--heading-gap);
 }
 .catalog-page h3 {
   font-size: 15px;
   font-weight: 650;
-  margin-bottom: 10px;
+  margin-bottom: var(--heading-gap);
 }
 .catalog-page p {
   overflow-wrap: anywhere;
@@ -32,7 +32,7 @@
 .catalog-header p:not(.eyebrow) {
   color: var(--text-secondary);
   font-size: 13px;
-  margin-top: 4px;
+  margin-top: var(--heading-gap);
 }
 .catalog-actions {
   display: flex;
@@ -90,7 +90,7 @@
 .catalog-page .card {
   min-width: 0;
   border-radius: 20px;
-  padding: clamp(18px, 2.4vw, 24px);
+  padding: var(--card-padding);
 }
 .catalog-page .notice {
   margin-top: 16px;

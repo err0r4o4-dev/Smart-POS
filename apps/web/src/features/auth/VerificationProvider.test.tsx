@@ -1,5 +1,5 @@
 import { StrictMode } from 'react';
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import { renderInEnglish as render } from '../../test/render';
 import { AuthProvider } from '../../app/AuthProvider';
@@ -41,6 +41,11 @@ it('holds setup until a single verification and a refreshed matching session', a
   expect(screen.queryByText('Setup content')).not.toBeInTheDocument();
   expect(requests.verifyEmail).toHaveBeenCalledTimes(1);
   finish({ verified: true, user: { id: 'verified-user' } });
+  await vi.waitFor(() =>
+    expect(screen.getByRole('status')).toHaveTextContent(/email verified/i),
+  );
+  expect(screen.queryByText('Setup content')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /continue/i }));
   expect(await screen.findByText('Setup content')).toBeVisible();
   expect(requests.getSession).toHaveBeenCalledTimes(1);
 });

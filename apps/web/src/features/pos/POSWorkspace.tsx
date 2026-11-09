@@ -1,4 +1,5 @@
 import { LanguageSwitcher } from '../../components/ui/LanguageSwitcher';
+import { ArrowLeft } from 'lucide-react';
 import type { UiMessage } from '../../i18n';
 import { useLanguage } from '../../app/language';
 import { useEffect, useState, useRef, type ReactNode } from 'react';
@@ -42,8 +43,14 @@ export function POSWorkspace() {
         </a>
         <header className="pos-header">
           <LanguageSwitcher />
-          <Link to={workspaceHome(tenant.context.membership.role)}>
-            {t('pos.backToWorkspace')}
+          <Link
+            className="pos-back-link"
+            to={workspaceHome(tenant.context.membership.role)}
+            aria-label={t('pos.backToWorkspace')}
+            title={t('pos.backToWorkspace')}
+          >
+            <ArrowLeft size={18} aria-hidden="true" />
+            <span>{t('pos.backToWorkspace')}</span>
           </Link>
           <Brand />
         </header>

@@ -37,13 +37,32 @@ export interface AuthSession {
   csrf_token: string;
 }
 
+export interface RegistrationResult extends AuthUser {
+  verification_email_sent: boolean;
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    public retryAfterSeconds?: number,
   ) {
     super(message);
   }
+}
+
+function retryAfter(headers?: Headers): number | undefined {
+  const value = headers?.get('Retry-After')?.trim();
+  if (!value) return undefined;
+  const seconds = /^\d+$/.test(value)
+    ? Number(value)
+    : /^[A-Za-z]{3},/.test(value)
+      ? Math.max(0, Math.ceil((Date.parse(value) - Date.now()) / 1000))
+      : NaN;
+  return Number.isSafeInteger(seconds) &&
+    seconds <= Number.MAX_SAFE_INTEGER / 1000
+    ? seconds
+    : undefined;
 }
 
 function responseMessage(status: number) {
@@ -91,6 +110,7 @@ export async function requestData<Result>(
       response.ok
         ? 'อ่านผลตอบกลับไม่สำเร็จ กรุณาตรวจสอบสถานะรายการก่อนทำซ้ำ'
         : responseMessage(response.status),
+      retryAfter(response.headers),
     );
   }
   const envelope =
@@ -103,6 +123,7 @@ export async function requestData<Result>(
       typeof envelope?.error?.message === 'string' && envelope.error.message
         ? envelope.error.message
         : responseMessage(response.status),
+      retryAfter(response.headers),
     );
   }
   if (!envelope || envelope.data === undefined) {
@@ -158,7 +179,11 @@ export function register(
   password: string,
   display_name: string,
 ) {
-  return authRequest<AuthUser>('register', { email, password, display_name });
+  return authRequest<RegistrationResult>('register', {
+    email,
+    password,
+    display_name,
+  });
 }
 
 export function forgotPassword(email: string) {

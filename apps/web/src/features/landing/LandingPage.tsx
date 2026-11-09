@@ -1,4 +1,5 @@
 import { LanguageSwitcher } from '../../components/ui/LanguageSwitcher';
+import { useState } from 'react';
 import { useLanguage } from '../../app/language';
 import { Link } from 'react-router-dom';
 import {
@@ -7,6 +8,7 @@ import {
   Boxes,
   Check,
   Layers3,
+  Menu,
   ReceiptText,
   ShieldCheck,
   Sparkles,
@@ -58,7 +60,8 @@ const features = [
 ] as const;
 
 export function LandingPage() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const landingRef = useLandingReveal();
   const { state } = useAuth();
@@ -70,7 +73,7 @@ export function LandingPage() {
         {t('landing.skipToContent')}
       </a>
       <header className="landing-header">
-        <div className="landing-container landing-header-inner">
+        <div className="layout-shell landing-header-inner">
           <Link
             className="landing-brand-link"
             to="/"
@@ -78,30 +81,30 @@ export function LandingPage() {
           >
             <Brand />
           </Link>
-          <nav
-            className="landing-navigation"
-            aria-label={t('landing.homeNavigation')}
+          <div className="landing-desktop-navigation">
+            <LandingNavigation
+              t={t}
+              loading={loading}
+              authenticated={authenticated}
+            />
+          </div>
+          <details
+            className="landing-mobile-menu"
+            onToggle={(event) => setMobileMenuOpen(event.currentTarget.open)}
           >
-            <Link className="landing-shop-link" to={paths.shop}>
-              {t('landing.onlineStorefront')}
-            </Link>
-            <a className="landing-nav-guide" href="#how-it-works">
-              {t('landing.howItWorks')}
-            </a>
-            <LanguageSwitcher />
-            {loading ? (
-              <button className="button" type="button" disabled>
-                {t('landing.checking')}
-              </button>
-            ) : (
-              <Link
-                className="button"
-                to={authenticated ? paths.workspace : paths.login}
-              >
-                {authenticated ? t('landing.goToWorkspace') : t('auth.signIn')}
-              </Link>
-            )}
-          </nav>
+            <summary
+              role="button"
+              aria-label={language === 'th' ? 'เมนู' : 'Menu'}
+              aria-expanded={mobileMenuOpen}
+            >
+              <Menu size={22} aria-hidden="true" />
+            </summary>
+            <LandingNavigation
+              t={t}
+              loading={loading}
+              authenticated={authenticated}
+            />
+          </details>
         </div>
       </header>
       <main id="landing-main" tabIndex={-1}>
@@ -234,7 +237,7 @@ export function LandingPage() {
         </section>
       </main>
       <footer className="landing-footer">
-        <div className="landing-container landing-footer-inner">
+        <div className="layout-shell landing-footer-inner">
           <nav
             className="landing-footer-navigation"
             aria-label={t('landing.footerLinks')}
@@ -248,5 +251,48 @@ export function LandingPage() {
         </div>
       </footer>
     </div>
+  );
+}
+
+function LandingNavigation({
+  t,
+  loading,
+  authenticated,
+}: {
+  t: ReturnType<typeof useLanguage>['t'];
+  loading: boolean;
+  authenticated: boolean;
+}) {
+  return (
+    <nav
+      className="landing-navigation"
+      aria-label={t('landing.homeNavigation')}
+    >
+      <Link className="landing-shop-link" to={paths.shop}>
+        {t('landing.onlineStorefront')}
+      </Link>
+      <a
+        className="landing-nav-guide"
+        href="#how-it-works"
+        onClick={(event) =>
+          event.currentTarget.closest('details')?.removeAttribute('open')
+        }
+      >
+        {t('landing.howItWorks')}
+      </a>
+      <LanguageSwitcher />
+      {loading ? (
+        <button className="button" type="button" disabled>
+          {t('landing.checking')}
+        </button>
+      ) : (
+        <Link
+          className="button"
+          to={authenticated ? paths.workspace : paths.login}
+        >
+          {authenticated ? t('landing.goToWorkspace') : t('auth.signIn')}
+        </Link>
+      )}
+    </nav>
   );
 }

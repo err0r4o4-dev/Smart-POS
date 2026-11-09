@@ -5,17 +5,6 @@
   flex-direction: column;
   background: var(--canvas-background, var(--canvas));
 }
-.storefront-shell .storefront-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: var(--header-height);
-  padding: var(--header-padding-block)
-    max(var(--header-padding-inline), calc((100% - 1392px) / 2));
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  gap: var(--header-gap);
-}
 .storefront-header-left {
   display: flex;
   align-items: center;
@@ -25,8 +14,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
   border-radius: var(--radius-small);
   border: 1px solid var(--border);
   background: var(--surface);
@@ -49,8 +39,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
   border-radius: var(--radius-small);
   border: 1px solid var(--border);
   background: var(--surface);
@@ -80,28 +71,19 @@
   place-items: center;
 }
 
-/* Storefront Main Content */
-.storefront-shell .storefront-content {
-  max-width: 1392px;
-  margin: 0 auto;
-  padding: 24px max(24px, calc((100% - 1392px) / 2)) 48px;
-  width: 100%;
-  flex: 1;
-}
-
 /* Catalog Layout & Sidebar */
 .catalog-layout {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
   align-items: start;
-  gap: 24px;
+  gap: var(--card-gap, 24px);
   transition: all 0.2s ease;
 }
 .catalog-layout-sidebar-collapsed {
   grid-template-columns: minmax(0, 1fr);
 }
 .catalog-sidebar {
-  padding: 16px 12px;
+  padding: var(--card-padding, 24px);
   border-radius: 16px;
   border: 1px solid var(--border);
   background: var(--surface);
@@ -417,14 +399,14 @@
 .catalog-products-list {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
+  gap: var(--card-gap, 24px);
 }
 .catalog-products-list .catalog-product {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 16px;
-  padding: 12px 18px;
+  gap: var(--card-gap, 24px);
+  padding: var(--card-padding, 24px);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -678,7 +660,7 @@
 /* Product Card - Grid View (matching screenshot) */
 .catalog-products-grid {
   display: grid;
-  gap: 16px;
+  gap: var(--card-gap, 24px);
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .catalog-products-grid .catalog-product {
@@ -711,7 +693,7 @@
   display: flex;
   flex-direction: column;
   flex: 1;
-  padding: 16px;
+  padding: var(--card-padding, 24px);
 }
 .catalog-products-grid .catalog-product-info {
   display: flex;
@@ -913,15 +895,9 @@
 
 /* Footer (Complete 3-column VELOPOS) */
 .storefront-footer {
-  margin-top: 56px;
-  padding: 40px max(24px, calc((100% - 1392px) / 2)) 28px;
+  padding: 40px 0 28px;
   background: var(--surface);
   border-top: 1px solid var(--border);
-}
-.storefront-footer-container {
-  max-width: 1392px;
-  margin: 0 auto;
-  width: 100%;
 }
 .storefront-footer-columns {
   display: grid;
@@ -1011,10 +987,10 @@
 }
 
 /* Responsive Media Queries */
-@media (max-width: 1024px) {
+@media (max-width: 1023px) {
   .catalog-layout {
     grid-template-columns: 230px minmax(0, 1fr);
-    gap: 16px;
+    gap: var(--card-gap, 24px);
   }
   .catalog-products-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1028,10 +1004,10 @@
     margin-top: 8px;
   }
 }
-@media (max-width: 850px) {
+@media (max-width: 767px) {
   .catalog-layout {
     grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
+    gap: var(--card-gap, 24px);
   }
   .catalog-sidebar {
     padding: 0;
@@ -1061,7 +1037,7 @@
     gap: 24px;
   }
 }
-@media (max-width: 639px) {
+@media (max-width: 767px) {
   .catalog-products-grid {
     grid-template-columns: minmax(0, 1fr);
   }

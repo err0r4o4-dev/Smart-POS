@@ -84,7 +84,7 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, profile := range []identity.Profile{owner, guest} {
+	for _, profile := range []identity.Profile{owner.Profile, guest.Profile} {
 		token := mailbox.verificationTokens[profile.Email]
 		if token == "" {
 			t.Fatalf("verification token missing for %s", profile.Email)
@@ -325,7 +325,7 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 		if problem != nil {
 			t.Fatal(problem)
 		}
-		if _, problem = single.Accept(ctx, guest, mailbox.tokens[guest.Email]); !errors.Is(problem, organization.ErrNotFound) {
+		if _, problem = single.Accept(ctx, guest.Profile, mailbox.tokens[guest.Email]); !errors.Is(problem, organization.ErrNotFound) {
 			t.Fatalf("foreign invitation accepted: %v", problem)
 		}
 		invitations, problem := multi.Invitations(ctx, owner.ID, second.Organization.ID)
@@ -341,7 +341,7 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 		if problem != nil {
 			t.Fatal(problem)
 		}
-		joined, problem := single.Accept(ctx, guest, mailbox.tokens[guest.Email])
+		joined, problem := single.Accept(ctx, guest.Profile, mailbox.tokens[guest.Email])
 		if problem != nil || joined.Membership.Role != "CASHIER" || len(joined.Branches) != 1 || joined.Branches[0].ID != first.Branches[0].ID {
 			t.Fatalf("pinned invitation: %v", problem)
 		}

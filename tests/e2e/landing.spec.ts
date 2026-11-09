@@ -1,13 +1,16 @@
 import { expect, test } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
+  await page.route('**/api/**', (route) => route.abort());
   await page.route('**/api/v1/auth/me', (route) =>
     route.fulfill({ status: 401, json: { error: { code: 'UNAUTHORIZED' } } }),
   );
 });
 
-for (const width of [320, 375, 768, 1024, 1440, 1920]) {
-  test(`landing page fits the viewport at ${width}px`, async ({ page }) => {
+for (const width of [320, 375, 767, 768, 1023, 1024, 1279, 1280, 1440, 1920]) {
+  test(`landing page fits the viewport at ${width}px`, async ({
+    page,
+  }, testInfo) => {
     await page.setViewportSize({ width, height: 1000 });
     const errors: string[] = [];
     page.on('pageerror', (error) => errors.push(error.message));
@@ -30,19 +33,112 @@ for (const width of [320, 375, 768, 1024, 1440, 1920]) {
       const bounds = await container.boundingBox();
       expect(bounds).not.toBeNull();
       if (!bounds) throw new Error('Landing container has no bounding box');
-      const expectedWidth = width >= 768 ? width * 0.7 : width - 40;
+      const expectedWidth = Math.min(1232, width - (width >= 768 ? 48 : 32));
       const expectedMargin = (width - expectedWidth) / 2;
       expect(bounds.width).toBeCloseTo(expectedWidth, 0);
       expect(bounds.x).toBeCloseTo(expectedMargin, 0);
       expect(width - bounds.x - bounds.width).toBeCloseTo(expectedMargin, 0);
     }
     await page.screenshot({
-      path: `test-results/landing-${width}.png`,
+      path: testInfo.outputPath(`landing-${width}.png`),
       fullPage: true,
+      animations: 'disabled',
     });
     expect(errors).toEqual([]);
   });
 }
+
+test('landing container and header follow the layout contract', async ({
+  page,
+}) => {
+  for (const width of [320, 767, 768, 1023, 1024, 1279, 1280, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/');
+    const gutter = width >= 768 ? 24 : 16;
+    const shellInset = (gutter + Math.max(gutter, (width - 1232) / 2)) / 2;
+    const shell = await page.locator('.landing-header-inner').boundingBox();
+    expect(shell).not.toBeNull();
+    expect(shell!.width).toBeCloseTo(width - shellInset * 2, 0);
+    expect(shell!.x).toBeCloseTo(shellInset, 0);
+    const content = await page.locator('.landing-hero-inner').boundingBox();
+    expect(content).not.toBeNull();
+    expect(content!.width).toBeCloseTo(Math.min(1232, width - gutter * 2), 0);
+    expect(content!.x).toBeCloseTo((width - content!.width) / 2, 0);
+    const header = await page.locator('.landing-header').boundingBox();
+    expect(header!.height).toBeCloseTo(66, 0);
+    for (const selector of [
+      '.landing-hero-inner',
+      '.landing-steps',
+      '.landing-feature-grid',
+    ]) {
+      await expect(page.locator(selector)).toHaveCSS('gap', '24px');
+    }
+    for (const card of await page
+      .locator('.landing-step, .landing-feature-panel')
+      .all()) {
+      for (const side of ['top', 'right', 'bottom', 'left']) {
+        await expect(card).toHaveCSS(`padding-${side}`, '24px');
+      }
+    }
+    await expect(page.locator('.landing-hero-inner')).toHaveCSS(
+      'padding-top',
+      '80px',
+    );
+    await expect(page.locator('.landing-hero-inner')).toHaveCSS(
+      'padding-bottom',
+      '40px',
+    );
+    await expect(page.locator('.landing-how')).toHaveCSS('padding-top', '40px');
+    await expect(page.locator('.landing-how')).toHaveCSS(
+      'padding-bottom',
+      '40px',
+    );
+    await expect(page.locator('.landing-features')).toHaveCSS(
+      'padding-top',
+      '40px',
+    );
+    await expect(page.locator('.landing-features')).toHaveCSS(
+      'padding-bottom',
+      '80px',
+    );
+  }
+});
+
+test('mobile navigation exposes all destinations with the keyboard', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.goto('/');
+  const menu = page.getByRole('button', { name: 'เมนู' });
+  await menu.waitFor({ state: 'visible' });
+  await page.keyboard.press('Tab');
+  await expect(
+    page.getByRole('link', { name: 'ข้ามไปเนื้อหาหลัก' }),
+  ).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(
+    page.getByRole('link', { name: 'VELO POS หน้าแรก' }),
+  ).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(menu).toBeFocused();
+  await expect(menu).toHaveAttribute('aria-expanded', 'false');
+  await page.keyboard.press('Enter');
+  await expect(menu).toHaveAttribute('aria-expanded', 'true');
+  const navigation = page.getByRole('navigation', { name: 'เมนูหน้าแรก' });
+  await expect(
+    navigation.getByRole('link', { name: 'หน้าร้านออนไลน์' }),
+  ).toBeVisible();
+  await page.keyboard.press('Tab');
+  await expect(
+    navigation.getByRole('link', { name: 'หน้าร้านออนไลน์' }),
+  ).toBeFocused();
+  await expect(
+    navigation.getByRole('link', { name: 'วิธีใช้งาน' }),
+  ).toBeVisible();
+  await expect(
+    navigation.getByRole('link', { name: 'เข้าสู่ระบบ' }),
+  ).toBeVisible();
+});
 test('landing actions lead to existing routes and the guide anchor', async ({
   page,
 }) => {
@@ -58,7 +154,7 @@ test('landing actions lead to existing routes and the guide anchor', async ({
   await page.getByRole('link', { name: 'เข้าสู่ระบบ' }).click();
   await expect(page).toHaveURL(/\/login$/);
   await page.goto('/');
-  await page.getByRole('link', { name: 'คู่มือการใช้งาน' }).click();
+  await page.getByRole('link', { name: 'คู่มือ', exact: true }).click();
   await expect(page).toHaveURL(/\/help$/);
 });
 test('landing supports keyboard access to the main content', async ({
@@ -128,7 +224,7 @@ for (const width of [375, 1440]) {
       footer.getByRole('link', { name: 'VELO POS หน้าแรก' }),
     ).toHaveCount(0);
     await expect(
-      navigation.getByRole('link', { name: 'คู่มือการใช้งาน' }),
+      navigation.getByRole('link', { name: 'คู่มือ', exact: true }),
     ).toHaveAttribute('href', '/help');
     const container = await footer
       .locator('.landing-footer-inner')
@@ -200,7 +296,7 @@ test('the header logo retains visible keyboard focus and its home destination', 
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/$/);
   await page.goto('/login');
-  await expect(page.locator('.auth-story .brand-mark')).toHaveCSS(
+  await expect(page.locator('.account-brand .brand-mark')).toHaveCSS(
     'animation-name',
     'none',
   );

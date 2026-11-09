@@ -9,8 +9,8 @@
 /* Floating Launcher Button */
 .velo-chat-launcher {
   position: fixed;
-  right: 24px;
-  bottom: 24px;
+  right: max(24px, env(safe-area-inset-right));
+  bottom: max(24px, env(safe-area-inset-bottom));
   z-index: 99;
   width: 58px;
   height: 58px;
@@ -67,13 +67,14 @@
 /* Chat Window Modal */
 .velo-chat-window {
   position: fixed;
-  right: 24px;
-  bottom: 94px;
+  right: max(24px, env(safe-area-inset-right));
+  bottom: calc(max(24px, env(safe-area-inset-bottom)) + 70px);
   z-index: 100;
   width: 388px;
   max-width: calc(100vw - 32px);
   height: 590px;
   max-height: calc(100vh - 120px);
+  max-height: calc(100dvh - max(24px, env(safe-area-inset-bottom)) - 96px);
   background: #fffdfa;
   border: 1.5px solid #ece4d4;
   border-radius: 26px;
@@ -545,9 +546,9 @@
 /* Mobile Responsive */
 @media (max-width: 480px) {
   .velo-chat-window {
-    right: 12px;
-    left: 12px;
-    bottom: 82px;
+    right: max(12px, env(safe-area-inset-right));
+    left: max(12px, env(safe-area-inset-left));
+    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 66px);
     width: auto;
     max-width: none;
     height: 520px;
@@ -555,8 +556,8 @@
   }
 
   .velo-chat-launcher {
-    right: 16px;
-    bottom: 16px;
+    right: max(16px, env(safe-area-inset-right));
+    bottom: max(16px, env(safe-area-inset-bottom));
     width: 52px;
     height: 52px;
   }

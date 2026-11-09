@@ -3679,10 +3679,10 @@ paths:
                 display_name: { type: string, minLength: 1, maxLength: 100 }
       responses:
         '201':
-          description: Registered without a session.
+          description: Account committed without a session. Delivery status reports SMTP acceptance, not inbox delivery; a failed send can be recovered using email/resend without registering again.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/UserResponse' }
+              schema: { $ref: '#/components/schemas/RegistrationResponse' }
         '400': { $ref: '#/components/responses/InvalidInput' }
         '409': { $ref: '#/components/responses/AuthError' }
         '429': { $ref: '#/components/responses/AuthError' }
@@ -23139,6 +23139,33 @@ components:
         status: { type: string, enum: [ACTIVE, DISABLED] }
         email_verified: { type: boolean }
         onboarding: { type: string, const: PENDING_ORGANIZATION }
+    RegistrationResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required:
+            [
+              id,
+              email,
+              display_name,
+              status,
+              email_verified,
+              onboarding,
+              verification_email_sent,
+            ]
+          properties:
+            id: { type: string, format: uuid }
+            email: { type: string, format: email }
+            display_name: { type: string }
+            status: { type: string, enum: [ACTIVE, DISABLED] }
+            email_verified: { type: boolean, const: false }
+            onboarding: { type: string, const: PENDING_ORGANIZATION }
+            verification_email_sent:
+              type: boolean
+              description: True only when SMTP accepted the initial verification email. False preserves the created account and allows a resend; neither value establishes inbox delivery.
     UserResponse:
       type: object
       required: [data]

@@ -28,6 +28,7 @@ import {
   ForgotPasswordPage,
   LoginPage,
   RegisterPage,
+  EmailVerificationPage,
   ResetPasswordPage,
 } from './route-pages';
 import { OrganizationGate } from '../features/organization/OrganizationGate';
@@ -246,6 +247,7 @@ const routes: RouteObject[] = [
   },
   { path: paths.login, element: <LoginPage /> },
   { path: paths.register, element: <RegisterPage /> },
+  { path: paths.verifyEmail, element: <EmailVerificationPage /> },
   { path: paths.forgotPassword, element: <ForgotPasswordPage /> },
   { path: paths.resetPassword, element: <ResetPasswordPage /> },
   { path: paths.forbidden, element: <SystemPage forbidden /> },

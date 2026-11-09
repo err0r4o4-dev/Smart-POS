@@ -19,6 +19,8 @@ export function WorkspaceAreaGate() {
   const { state } = useAuth();
   const tenant = useOrganization();
   const { pathname } = useLocation();
+  if (state.session?.user.email_verified === false && pathname !== paths.help)
+    return <Navigate to={paths.verifyEmail} replace />;
   if (
     businessArea(pathname) === 'management' &&
     state.status === 'authenticated'

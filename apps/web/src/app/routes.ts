@@ -15,6 +15,7 @@ export const paths = {
   refunds: '/refunds',
   login: '/login',
   register: '/register',
+  verifyEmail: '/verify-email',
   forgotPassword: '/forgot-password',
   resetPassword: '/reset-password',
   setup: '/setup',

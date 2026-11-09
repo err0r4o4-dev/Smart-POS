@@ -152,6 +152,11 @@ export const RegisterPage = lazy(() =>
     default: module.RegisterPage,
   })),
 );
+export const EmailVerificationPage = lazy(() =>
+  import('../features/auth/EmailVerificationPage').then((module) => ({
+    default: module.EmailVerificationPage,
+  })),
+);
 export const ResetPasswordPage = lazy(() =>
   import('../features/auth/AuthPages').then((module) => ({
     default: module.ResetPasswordPage,

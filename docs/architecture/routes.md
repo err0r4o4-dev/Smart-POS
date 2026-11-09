@@ -33,6 +33,7 @@ Storefront adds seven logical routes; backoffice routes use the management works
 | Storefront | `/online-orders/:orderId` | Implemented; backoffice workflow / POS entry | 5 | online_orders.read; mutations separately gated |
 | Authentication | `/login` | Implemented Phase 1A | 1 | public Origin-validated entry |
 | Authentication | `/register` | Implemented Phase 1A | 1 | public Origin-validated entry |
+| Authentication | `/verify-email` | Email confirmation and resend; no automatic login | 1 | public; session refresh for signed-in users |
 | Authentication | `/forgot-password` | Implemented Phase 1A | 1 | public Origin-validated entry |
 | Authentication | `/reset-password` | Implemented Phase 1A | 1 | public token + Origin-validated entry |
 | Authentication | `/setup` | Implemented Phase 1B | 1 | session; no existing tenant required for creation |

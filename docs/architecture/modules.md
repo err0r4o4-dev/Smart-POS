@@ -24,11 +24,11 @@ Current status supersedes older introductory scope: Phase0–4 and Phase5.1–5.
 - Boundaries: customer accounts, shipping, customer online payment and costing remain unimplemented. A management-only Stripe sandbox diagnostic can create/check/refund synthetic test payments without touching local orders, sales or stock. See [Storefront](storefront.md) and [sandbox](payment-sandbox.md).
 - Historical inventory at the earlier storefront checkpoint: 17 modules / 114 logical routes; the approved owner-only inventory target is 117 routes.
 
-## Authentication (6 pages)
+## Authentication (7 pages)
 
 - Business purpose: Secure retailer access and onboarding.
 - Responsibilities: Sessions, membership, organization setup, account recovery.
-- Planned pages: `/login`, `/register`, `/forgot-password`, `/reset-password`, `/setup`, `/account`.
+- Planned pages: `/login`, `/register`, `/verify-email`, `/forgot-password`, `/reset-password`, `/setup`, `/account`.
 - Planned API groups: /auth, /organizations, /branches.
 - Domain entities: users, sessions, organizations, branches, organization_members.
 - Dependencies: owning domains/upstream capabilities in [dependency matrix](dependencies.md); authorization through identity and organization for all tenant operations.

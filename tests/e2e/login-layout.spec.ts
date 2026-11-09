@@ -45,7 +45,7 @@ for (const width of [320, 375, 700, 701, 768, 900, 901, 1024, 1440]) {
     const panelBounds = await panel.boundingBox();
     expect(visualBounds).not.toBeNull();
     expect(panelBounds).not.toBeNull();
-    if (width > 900) {
+    if (width >= 1024) {
       expect(panelBounds!.x).toBeGreaterThanOrEqual(
         visualBounds!.x + visualBounds!.width - 1,
       );

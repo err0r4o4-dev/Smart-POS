@@ -6,6 +6,7 @@ import { Brand } from '../components/ui/primitives';
 import { paths } from '../app/routes';
 import { useShopCart } from '../features/storefront/shop-cart';
 import { VeloAssistantChat } from '../features/storefront/VeloAssistantChat';
+import '../features/storefront/catalog.css';
 import '../features/storefront/shop-directory.css';
 
 export function StorefrontLayout() {
@@ -28,43 +29,49 @@ export function StorefrontLayout() {
         {t('pos.skipToContent')}
       </a>
       <header className="storefront-header">
-        <div className="storefront-header-left">
-          {slug && (
-            <button
-              type="button"
-              className="storefront-menu-btn"
-              aria-label={language === 'th' ? 'เมนู' : 'Menu'}
-              onClick={() => {
-                window.dispatchEvent(new CustomEvent('toggle-catalog-sidebar'));
-              }}
-            >
-              <Menu size={20} aria-hidden="true" />
-            </button>
-          )}
-          <Link
-            to={`${home}${tableQuery}`}
-            aria-label={t('landing.onlineStorefront')}
-          >
-            <Brand />
-          </Link>
-        </div>
-        <nav aria-label={t('shell.customerStorefrontNavigation')}>
-          <LanguageSwitcher />
-          {slug && (
+        <div className="storefront-header-inner layout-shell">
+          <div className="storefront-header-left">
+            {slug && (
+              <button
+                type="button"
+                className="storefront-menu-btn"
+                aria-label={language === 'th' ? 'เมนู' : 'Menu'}
+                onClick={() => {
+                  window.dispatchEvent(
+                    new CustomEvent('toggle-catalog-sidebar'),
+                  );
+                }}
+              >
+                <Menu size={20} aria-hidden="true" />
+              </button>
+            )}
             <Link
-              className="storefront-icon-link storefront-cart-link"
-              to={cartPath}
-              aria-label={t('shell.cartValue0', { value0: cart.items.length })}
+              to={`${home}${tableQuery}`}
+              aria-label={t('landing.onlineStorefront')}
             >
-              <ShoppingCart size={20} aria-hidden="true" />
-              {cart.items.length > 0 && (
-                <span className="storefront-cart-count" aria-hidden="true">
-                  {cart.items.length}
-                </span>
-              )}
+              <Brand />
             </Link>
-          )}
-        </nav>
+          </div>
+          <nav aria-label={t('shell.customerStorefrontNavigation')}>
+            <LanguageSwitcher />
+            {slug && (
+              <Link
+                className="storefront-icon-link storefront-cart-link"
+                to={cartPath}
+                aria-label={t('shell.cartValue0', {
+                  value0: cart.items.length,
+                })}
+              >
+                <ShoppingCart size={20} aria-hidden="true" />
+                {cart.items.length > 0 && (
+                  <span className="storefront-cart-count" aria-hidden="true">
+                    {cart.items.length}
+                  </span>
+                )}
+              </Link>
+            )}
+          </nav>
+        </div>
       </header>
       <main id="main-content" className="storefront-content">
         <Outlet />
@@ -90,7 +97,7 @@ export function StorefrontLayout() {
         </footer>
       ) : (
         <footer className="storefront-footer">
-          <div className="storefront-footer-container">
+          <div className="storefront-footer-container layout-shell">
             <div className="storefront-footer-columns">
               <div className="storefront-footer-col">
                 <h3>

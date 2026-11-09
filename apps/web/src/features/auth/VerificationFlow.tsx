@@ -2,6 +2,10 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useLanguage } from '../../app/language';
 import { ApiError, resendVerification, verifyEmail } from '../../lib/api';
 import { LoginLayout } from '../../layouts/LoginLayout';
+import {
+  accountFailure,
+  successFeedback,
+} from '../../components/feedback/feedback';
 
 // Called before the browser router is created, so the token is absent from rendered routes.
 export function captureVerificationLink(): string | null {
@@ -36,26 +40,57 @@ export function ResendVerification({
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [cooldown, setCooldown] = useState(0);
+  const [remaining, setRemaining] = useState(0);
+  const submitting = useRef(false);
+  useEffect(() => {
+    if (!cooldown) return;
+    const timer = window.setInterval(() => {
+      const seconds = Math.max(0, Math.ceil((cooldown - Date.now()) / 1000));
+      setRemaining(seconds);
+      if (!seconds) setCooldown(0);
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [cooldown]);
+  function wait(seconds: number) {
+    setRemaining(seconds);
+    setCooldown(seconds ? Date.now() + seconds * 1000 : 0);
+  }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (pending) return;
+    if (submitting.current || cooldown) return;
+    submitting.current = true;
     setPending(true);
     setError('');
     setMessage('');
     try {
       await resendVerification(email);
+      wait(60);
+      successFeedback(
+        en ? 'Request received' : 'รับคำขอแล้ว',
+        en ? 'Close notification' : 'ปิดการแจ้งเตือน',
+        en
+          ? 'If an eligible account exists, check your email for verification instructions.'
+          : 'หากบัญชีมีสิทธิ์ โปรดตรวจสอบอีเมลเพื่อยืนยันบัญชี',
+      );
       setMessage(
         en
           ? 'If an eligible account exists, check your email for verification instructions.'
           : 'หากบัญชีมีสิทธิ์ โปรดตรวจสอบอีเมลเพื่อยืนยันบัญชี',
       );
-    } catch {
-      setError(
-        en
-          ? 'Could not request a verification email. Please try again.'
-          : 'ส่งอีเมลยืนยันไม่สำเร็จ กรุณาลองอีกครั้ง',
-      );
+    } catch (failure) {
+      if (failure instanceof ApiError && failure.status === 429) {
+        wait(failure.retryAfterSeconds ?? 60);
+        setError(accountFailure(failure, en));
+      } else {
+        setError(
+          en
+            ? 'Could not request a verification email. The result is unconfirmed. Check your connection and inbox before trying again.'
+            : 'ยังยืนยันผลคำขอส่งอีเมลไม่ได้ กรุณาตรวจสอบการเชื่อมต่อและกล่องอีเมลก่อนลองอีกครั้ง',
+        );
+      }
     } finally {
+      submitting.current = false;
       setPending(false);
     }
   }
@@ -74,21 +109,25 @@ export function ResendVerification({
           value={email}
           onChange={(event) => setEmail(event.target.value)}
         />
-        <button type="submit" className="button auth-submit-btn">
+        <button
+          type="submit"
+          className="button auth-submit-btn"
+          disabled={cooldown > 0}
+        >
           {pending
             ? en
               ? 'Sending…'
               : 'กำลังส่ง…'
-            : en
-              ? 'Resend verification email'
-              : 'ส่งอีเมลยืนยันอีกครั้ง'}
+            : cooldown
+              ? en
+                ? `Resend: suggested wait before retrying: ${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}`
+                : `แนะนำให้รอก่อนลองอีกครั้ง: ${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}`
+              : en
+                ? 'Resend verification email'
+                : 'ส่งอีเมลยืนยันอีกครั้ง'}
         </button>
       </fieldset>
-      {message && (
-        <p role="status" className="auth-status-banner">
-          {message}
-        </p>
-      )}
+      {message && <p className="auth-status-banner">{message}</p>}
       {error && (
         <p role="alert" className="auth-error">
           {error}
@@ -101,18 +140,20 @@ export function ResendVerification({
 export function VerificationFlow({
   token,
   onComplete,
+  onContinue,
 }: {
   token: string;
   onComplete: (userId: string) => Promise<void>;
+  onContinue?: () => void;
 }) {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const en = language === 'en';
   const request = useRef<Promise<{
     verified: boolean;
     user: { id: string };
   }> | null>(null);
   const [status, setStatus] = useState<
-    'loading' | 'invalid' | 'error' | 'refreshError'
+    'loading' | 'verified' | 'invalid' | 'error' | 'refreshError'
   >(token ? 'loading' : 'invalid');
   const [verifiedId, setVerifiedId] = useState('');
   const [attempt, setAttempt] = useState(0);
@@ -128,6 +169,7 @@ export function VerificationFlow({
         setVerifiedId(result.user.id);
         try {
           await onComplete(result.user.id);
+          if (active) setStatus('verified');
         } catch {
           if (active) setStatus('refreshError');
         }
@@ -148,6 +190,7 @@ export function VerificationFlow({
     setStatus('loading');
     try {
       await onComplete(verifiedId);
+      setStatus('verified');
     } catch {
       setStatus('refreshError');
     }
@@ -159,7 +202,27 @@ export function VerificationFlow({
           {en ? 'Verify your email' : 'ยืนยันอีเมล'}
         </h2>
       </div>
-      {status === 'loading' ? (
+      {status === 'verified' ? (
+        <>
+          <p role="status" className="auth-status-banner">
+            {t('auth.verificationSuccess')}
+          </p>
+          {onContinue && (
+            <button
+              type="button"
+              className="button auth-submit-btn"
+              onClick={onContinue}
+            >
+              {t('auth.verificationContinue')}
+            </button>
+          )}
+          <p className="auth-links auth-links-single">
+            <a href="/login?verified=1&returnTo=%2Fsetup">
+              {en ? 'Sign in' : 'เข้าสู่ระบบ'}
+            </a>
+          </p>
+        </>
+      ) : status === 'loading' ? (
         <p role="status">
           {en ? 'Verifying your email…' : 'กำลังยืนยันอีเมล…'}
         </p>

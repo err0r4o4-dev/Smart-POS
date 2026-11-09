@@ -97,8 +97,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ? { status: 'authenticated', session }
         : { status: 'anonymous', session: null },
     );
-    initialVerificationToken = null;
-    setVerificationToken(null);
   }, []);
   const signIn = async (email: string, password: string) => {
     const current = ++generation.current;
@@ -137,6 +135,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         <VerificationFlow
           token={verificationToken}
           onComplete={completeVerification}
+          onContinue={
+            state.status === 'authenticated'
+              ? () => {
+                  initialVerificationToken = null;
+                  setVerificationToken(null);
+                }
+              : undefined
+          }
         />
       ) : (
         children

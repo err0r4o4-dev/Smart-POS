@@ -285,16 +285,13 @@ for (const width of [320, 640, 641, 768, 1024, 1440]) {
       page.locator('.setup-topbar .language-switcher'),
     ).toBeVisible();
     const header = page.locator('.setup-topbar');
-    await expect(header).toHaveCSS(
-      'min-height',
-      width <= 640 ? '64px' : '72px',
-    );
+    await expect(header).toHaveCSS('min-height', '66px');
     await expect(header.locator('.brand-mark')).toHaveCSS(
       'height',
-      width <= 640 ? '32px' : '36px',
+      width < 768 ? '32px' : '36px',
     );
     const headerBox = await header.boundingBox();
-    expect(headerBox?.height).toBe(width <= 640 ? 64 : 72);
+    expect(headerBox?.height).toBe(66);
     const brandBox = await header.locator('.setup-topbar-brand').boundingBox();
     const actionsBox = await header
       .locator('.setup-topbar-actions')

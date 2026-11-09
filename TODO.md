@@ -1,3 +1,228 @@
+# PR #40 merge conflict resolution (2026-11-09)
+
+Scope: integrate origin/develop b293708 into feature/add-auth 03a4e44 locally,
+without commit or push. Preserve auth behavior and approved layout assertions.
+Size: Medium. Risk: Medium. Main resolves the three conflicted tracker/E2E files;
+incoming changes remain intact. No auth/security policy edits are authorized.
+
+- [x] Resolve conflicts while retaining both task lists and current layout tests.
+- [x] Verify no conflict markers or unmerged entries; focused units 171/171 PASS,
+  typecheck/build PASS, lint 0 errors/9 warnings, formatting/diff checks PASS.
+- [x] Review merge delta: conflict resolutions retain HEAD's layout tests;
+  incoming shop-directory changes only reformat the superseded test block.
+- [?] Full regression: web units 625/630 PASS (5 Auth failures, one missing
+  ApiError mock error); mocked browser regression 224/245 PASS, plus setup 9/9.
+  Browser failures include catalog list visibility and workspace route/assertion
+  mismatches. Logs: .local/pr40-merge-unit.log and pr40-merge-regression.log.
+  Do not claim release readiness or repair auth/access behavior in this scope.
+- [ ] Merge commit and push require explicit authorization; PR remains unchanged.
+
+# VELOPOS layout standards (2026-11-09)
+
+Approved proposal, implementation, frontend specialist and independent review.
+Size: Large. Risk: Medium (shared presentation/navigation). Preserve business
+logic, API/auth/data boundaries, Warm Gold, fonts, logos and print dimensions.
+
+Contract: content width = min(1232px, available width minus two gutters).
+Management available width excludes sidebar. Gutters: 16px below 768px, 24px
+otherwise. Breakpoints: 768/1024/1280px. Normal primary header: 66px including
+border; allow text zoom to expand it. Major section separation: 80px. Standard
+card padding and grid gap: 24px. Operational groups: 24px; fields: 16px;
+labels/hints: 8px. Spacing base: 4px. Full-width backgrounds, no forced section
+height, no blanket overflow hiding; wide tables scroll within bounded regions.
+
+Superseded edge-alignment continuation: primary shell headers and page footers use their own
+16/24px edge gutters, independent of the 1232px content cap. Management chrome
+fills only the workspace beside the existing sidebar. Preserve desktop/sidebar
+and mobile navigation behavior; do not add a catalog drawer. POS internal toolbar
+and panel-local footers remain inside their existing operational containers.
+
+Latest approved refinement: non-sidebar page families (landing, storefront,
+account and setup) place header/footer contents halfway between the safe edge
+gutter and the centered 1232px content edge. At 1920px the normal inset is 184px;
+at 1440px it is 64px; compact screens retain 16/24px gutters. Management chrome
+keeps its workspace edge alignment, including when its sidebar is collapsed.
+Preserve directory assistant clearance without adding redundant wide-screen
+padding. No business/auth changes, dependencies or external publication.
+Size: Medium. Risk: Medium. Main owns the bounded CSS/token/test changes.
+Dependencies: token rule before public consumers; rendered geometry before review.
+Recovery: remove only this refinement's delta if requested; preserve earlier work.
+
+- [x] Establish failing midpoint geometry tests, retaining management edge coverage.
+- [x] Apply public/account/setup midpoint insets without changing content widths.
+- [x] Run scoped browser/static/unit checks and independent package review.
+- [?] Close only after the full web regression passes; Auth failures remain.
+
+Latest midpoint evidence: mocked Chromium responsive regression 275/275 PASS,
+plus 4/4 synthetic doubled-text header/footer checks at 1920px. RED geometry
+showed four public failures and management PASS; GREEN passed all five.
+Focused units 257/257 in 25 files PASS. Typecheck/build PASS; lint 0 errors and
+9 warnings; explicit-path formatting and diff checks PASS. Current logs in
+`.local`: `velopos-midpoint-red.log`, `velopos-midpoint-green.log`,
+`velopos-midpoint-browser.log`, `velopos-midpoint-text.log`,
+`velopos-midpoint-focused-unit.log`, `velopos-midpoint-typecheck.log`,
+`velopos-midpoint-lint.log` and `velopos-midpoint-build.log`.
+
+Full web units FAIL: 619/625 passed, 6 failures in 5 Auth files and one unhandled
+missing ApiError mock (`.local/velopos-midpoint-unit.log`). Failures include
+AccountFlow, AuthPages, GoogleAuth, RecoveryFlow and RegistrationVerification.
+Do not attribute the additional failure to an earlier run or change Auth here.
+No repository/release readiness claim. Preserve the other session's work.
+
+Independent midpoint review: no confirmed actionable findings in supplied
+source excerpts/delta and result summaries; reviewer ran no checks and did not
+inspect the complete repository. Main inspected current desktop landing/catalog/
+account/setup and mobile landing screenshots. Responsive tests cover 320 through
+1920px, including breakpoint boundaries and management edge preservation.
+Text enlargement is synthetic, not actual browser zoom. Real devices, Safari,
+Firefox, actual safe areas and on-screen keyboard remain unverified. Mechanical
+scan reports one rounded border warning in login.css, confirmed unchanged in
+HEAD; no new visual-world or branding changes were authorized.
+
+- [x] Separate shell chrome from content, with failing geometry regressions first.
+- [x] Verify updated geometry and responsive interactions in mocked Chromium.
+- [x] Independently review the supplied continuation source and check evidence.
+- [?] Full web regression fails in Auth tests; retain this section until PASS.
+
+Ownership: Main owns shared tokens/styles, account/setup/management/POS shells,
+layout regression tests and tracker. Frontend specialist owns landing,
+storefront, directory and cart composition/styles, their browser tests and
+language-switcher header styling. Reviewer gets only scoped source evidence,
+diffs, contracts and checks; no shell, writes, network or sub-delegation.
+
+- [x] Establish failing rendered layout tests before presentation changes.
+- [x] Shared spacing/container/header contract and rendered geometry checks.
+- [x] Public page families and navigation (specialist; consumes shared tokens).
+- [x] Account/setup, management and POS; preserve routes and interactions.
+- [x] Remove only superseded layout declarations, retaining print geometry.
+- [x] Focused safe local checks and synthetic browser regressions at
+  320/390/767/768/1023/1024/1279/1280/1440/1920px and short heights.
+- [x] Check alignment, header/card/section spacing, keyboard/focus, Thai/English,
+  table-local scrolling, no page overflow and loading/empty/error states.
+- [x] Independent scoped source review; resolved landing gap and account-menu
+  cutoff regressions. Reviewer inspected supplied source/log excerpts, not the
+  complete diff or logs, and did not execute tests. Main reviewed the scoped diff.
+- [?] Full web unit regression remains FAIL in concurrent Auth scope. Keep this
+  section until the integration check passes; do not claim release readiness.
+
+Historical edge-alignment evidence: mocked Chromium browser 265/265; scoped web unit tests
+257/257 in 25 files; typecheck/build PASS; lint 0 errors/9 warnings. Logs:
+`.local/velopos-shell-final-browser.log`, `velopos-shell-focused-unit.log`,
+`velopos-shell-typecheck.log`, `velopos-shell-lint.log` and
+`velopos-shell-build.log` (all in `.local`). Inspected current landing, management,
+menu, directory, catalog and account screenshots at representative desktop/mobile
+widths. Real Safari/Firefox/devices and on-screen keyboard not run.
+
+Continuation reviewer found no confirmed actionable findings in the supplied
+source excerpts/delta and reported checks, not the complete repository. Reviewer
+did not execute tests or establish the cause of the Auth failures. Rendered footer
+edge checks resolve the cascade concern; header height assertions pass. Main
+updated the older landing header test to the approved uncapped shell contract,
+retaining separate content-cap coverage. Scoped formatting and diff checks PASS.
+
+Previous repository-wide web unit result: 620 passed/5 failed in 625 tests,
+4 failed files and one unhandled missing ApiError mock in concurrent Auth work.
+Preserve that session's source; do not claim repository/release readiness.
+Evidence: `.local/velopos-shell-all-unit.log`. Auth failures are in AuthPages,
+GoogleAuth, RecoveryFlow and RegistrationVerification; no Auth fixes in this scope.
+Contract inventory 18 modules/115 routes, log tests 10/10 and dev-stack tests 6/6
+PASS (`velopos-shell-contracts.log`, `velopos-shell-log-tests.log`,
+`velopos-shell-dev-stack-retry.log` in `.local`). Initial dev-stack sandbox run
+failed on temporary-directory permissions; the approved escalated rerun passed.
+
+Historical initial layout evidence: browser 225/225. Account access at
+641/700/767px failed before preserving the original 640px visibility cutoff and
+passed after the CSS-only fix; full browser regression rerun passed. No auth or
+navigation business logic changed. Contract inventory 18 modules/115 routes,
+log tests 10/10, scoped formatting and diff checks PASS. Design detector retains
+two existing easing advisories and one existing login border warning, confirmed
+in HEAD; unchanged branding is intentional. Final global.css detector is clear.
+
+Recovery: revert only task-owned reviewed delta when requested. No dependencies,
+real transactions, DB changes, commits, pushes or deployment. Existing tracker
+records the approved plan; no duplicate plan or handoff file.
+
+# Password account flow completion (2026-11-09)
+
+Approved flow: email/password registration, email-link verification, login routing
+and password recovery. Work on feature/add-auth from ec42c32; preserve its UI and
+Google behavior. Size: Medium. Risk: High (authentication).
+
+Main owns bounded frontend/provider, Go delivery metadata, the login/reset
+credential revalidation guard, contracts and tests.
+No schema change, real email, database mutation, dependency install, commit,
+push or deployment. Recovery: remove only this task's source delta; no stored
+accounts, sessions or historical data are rewritten by development checks.
+
+- [x] Reproduce unverified login routing and missing delivery/recovery feedback.
+- [x] Complete verification routing, explicit success, resend cooldown, signup
+  recovery link and session error recovery. Preserve Google flow and UI.
+- [x] Expose registration SMTP acceptance without undoing a committed account;
+  update Go callers, client and public schema together.
+- [/] Reset error/generic response/local-session recovery checks pass. Existing
+  transactional revocation and token expiry inspected; real DB proof is blocked.
+- [x] Fresh local checks (2026-11-09): focused auth 49/49; full `npm run test`
+  PASS (web 618/618 in 75 files, contracts 18 modules/115 routes, log tests 10/10,
+  dev-stack tests 6/6). Typecheck, web build and lint PASS (0 errors/9 warnings).
+- [x] `go -C apps/api test ./...`, `go -C apps/api vet ./...` and
+  `go -C apps/api build ./...` PASS with dependency downloads disabled and
+  integration DSN/browser flags unset. PostgreSQL protocol stub is not a real DB.
+  Initial full Go compile found two remaining RegistrationResult/Profile fixture
+  callers; both corrected before the passing run.
+- [x] Local mocked Chromium checks 39/39: 16 password-flow cases at 390/1440px
+  plus 23 existing auth/Google/layout regressions at 320/700/701/1440px.
+  APIs intercepted; dev proxy pointed to an unused local port, no real service
+  writes. Covers keyboard/focus, token URL removal, anonymous and wrong-account
+  verification, explicit Continue, resend, expired links and recovery errors.
+  Four synthetic mobile/desktop screenshots inspected. Vite task process stopped.
+- [x] Scoped Prettier, gofmt and `git diff --check` PASS. Logs:
+  `.local/password-account-all-tests-final.log`, `password-account-web.log`,
+  `password-account-browser-final.log`, `password-account-go.log`,
+  `password-account-vet.log`, `password-account-go-build.log`,
+  `password-account-typecheck.log`, `password-account-lint.log`,
+  `password-account-build.log`, `password-account-format.log` (all in `.local`).
+  First dev-stack/vet attempts hit sandbox cache/temp permissions; native
+  escalated reruns passed. Original failure logs retained.
+- [?] Go race check requires CGO/toolchain support (current CGO_ENABLED=0;
+  gcc/clang not found). No compiler installation or global setting change.
+- [x] Authorized independent read-only security review covered the scoped
+  password-flow source/contracts and reset boundary. It found an existing
+  login/reset race, confirmed against HEAD and current source. Login now
+  revalidates the active user's password hash under a transaction row lock
+  before inserting a session. Final source-delta review PASS; no additional
+  actionable defect identified. This is not database or release acceptance.
+- [x] Login/reset orchestration regression: RED before the guard; GREEN after
+  it, covering unchanged and replaced credentials without exposing tokens.
+  The net.Pipe PostgreSQL protocol stub does not validate SQL lock semantics.
+  Fresh post-fix `go -C apps/api test ./... -count=1`, vet and build PASS;
+  gofmt and `git diff --check` PASS. Initial sandbox cache-access failures
+  remain in separate logs; the native approved reruns passed.
+- [x] Review-time web checks rerun: 12 files/49 tests PASS; contract inventory
+  PASS (18 modules/115 routes). Frontend source stayed unchanged during the
+  backend fix. Logs: `.local/password-account-review-web-current.log`,
+  `.local/password-account-review-contracts-current.log`,
+  `.local/password-account-login-reset-red.log`,
+  `.local/password-account-login-reset-green.log`,
+  `.local/password-account-login-reset-go-all-approved.log`,
+  `.local/password-account-login-reset-vet-approved.log` and
+  `.local/password-account-login-reset-build-approved.log`.
+- [?] Real PostgreSQL and inbox acceptance need an authorized isolated target
+  and test mailbox/provider. Verify expiry/reuse, rollback, user isolation,
+  session revocation and both concurrent login/reset lock orderings there.
+  User selected the existing isolated environment after committing the source
+  as d725cea. Read-only discovery found Docker 29.9.2 outside PATH and retained
+  volume `smartpos-auth-test_postgres-data`, but no containers or networks for
+  that test project. The running `smartpos` project uses a different volume and
+  must not receive acceptance fixtures. Await confirmation to restore the test
+  services without migrations, resets or changes to retained data. No database
+  test, service start or real mail send occurred during this discovery.
+
+Acceptance: unverified accounts cannot enter setup/management through the UI;
+existing server permissions remain authoritative; verification never logs in an
+anonymous visitor; expired/reused links recover safely; no token/secret storage
+or logging. SMTP acceptance is not proof of inbox delivery. Remove this section
+only when implementation, required checks, independent review and acceptance pass.
+
 # Account UI and Google authentication (2026-11-09)
 
 Approved scope: shared login, register, verification, recovery and reset UI;
@@ -499,6 +724,18 @@ Execution decisions:
   - [ ] Run `vitest run AuthPages`
   - [ ] Run `npm run build`
   - [ ] Cleanup TODO.md
+
+# Account feedback with SweetAlert2 (2026-11-09)
+
+Approved scope: shared text-only feedback and account-page presentation, including
+email resend. Medium size/risk; no auth, permissions, quota, backend, database,
+real mail, deployment or financial workflow changes. Preserve user edits.
+Recovery: remove only task-owned source delta and the added dependency.
+
+- [/] Add focused failing tests, then safe feedback and Retry-After presentation.
+- [ ] Integrate account successes and actionable inline failures; retain validation.
+- [ ] Run focused regressions, typecheck/lint/build and mocked browser checks.
+- [ ] Review actual diff; remove this section only after verified acceptance.
 
 # Task: Fix E2E Test Failures in CI (workspace-areas.spec.ts)
 

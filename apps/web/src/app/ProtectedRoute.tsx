@@ -3,6 +3,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import type { Role, Session } from './access';
 import { canAccess } from './access';
 import { useAuth } from './AuthProvider';
+import { paths } from './routes';
 import { ErrorState, Loading } from '../components/ui/primitives';
 
 export function ProtectedRoute({
@@ -42,5 +43,7 @@ export function RequireSession() {
         replace
       />
     );
+  if (state.session?.user.email_verified === false)
+    return <Navigate to={paths.verifyEmail} replace />;
   return <Outlet />;
 }

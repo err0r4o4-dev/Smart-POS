@@ -41,6 +41,17 @@
   outline: 2px solid var(--primary-strong);
   outline-offset: 2px;
 }
+
+.landing-header .language-switcher,
+.storefront-header .language-switcher {
+  padding: 0;
+  border: 0;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.landing-header .language-switcher button,
+.storefront-header .language-switcher button {
+  min-height: 44px;
+}
 .auth-toolbar {
   display: flex;
   align-items: center;

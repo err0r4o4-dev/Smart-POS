@@ -28,7 +28,7 @@
 }
 .management-shell .topbar-right {
   flex-shrink: 0;
-  gap: 14px;
+  gap: var(--header-actions-gap);
 }
 .mobile-workspace-links {
   display: flex;
@@ -44,7 +44,7 @@
 }
 .workspace-home {
   display: grid;
-  gap: 28px;
+  gap: var(--group-gap);
   min-width: 0;
 }
 .workspace-home .page-heading {
@@ -79,7 +79,7 @@
 .workspace-task-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
-  gap: 14px;
+  gap: var(--card-gap);
 }
 .workspace-task {
   display: flex;
@@ -87,7 +87,7 @@
   align-items: center;
   gap: 16px;
   min-height: 76px;
-  padding: 20px;
+  padding: var(--card-padding);
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
   background: var(--surface);
@@ -104,7 +104,7 @@
 .workspace-information-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
+  gap: var(--card-gap);
 }
 .workspace-information-grid .card {
   display: grid;
@@ -121,7 +121,7 @@
    ========================================================= */
 .dashboard-overview {
   display: grid;
-  gap: 20px;
+  gap: var(--group-gap);
   min-width: 0;
 }
 .dashboard-overview h2 {
@@ -215,7 +215,7 @@
 .dashboard-kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  gap: var(--card-gap);
   min-width: 0;
 }
 .dashboard-kpi-card {
@@ -223,7 +223,7 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 10px;
-  padding: 18px 20px;
+  padding: var(--card-padding);
   border-radius: 20px;
   min-width: 0;
   overflow: hidden;
@@ -304,12 +304,12 @@
 .dashboard-middle-grid,
 .dashboard-bottom-grid {
   display: grid;
-  grid-template-columns: 1.48fr 1.05fr 1fr;
-  gap: 16px;
+  grid-template-columns: minmax(0, 1.48fr) minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: var(--card-gap);
   min-width: 0;
 }
 .dashboard-panel {
-  padding: 20px 22px;
+  padding: var(--card-padding);
   border-radius: 20px;
   display: flex;
   flex-direction: column;
@@ -772,43 +772,6 @@ a.dashboard-alert-row:hover {
   font-size: 13px;
   white-space: nowrap;
 }
-.storefront-shell {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--canvas);
-}
-.storefront-header {
-  min-height: var(--header-height);
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  gap: var(--header-gap);
-  padding: var(--header-padding-block)
-    max(var(--header-padding-inline), calc((100% - 1180px) / 2));
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-}
-.storefront-header nav {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 24px;
-  margin-left: auto;
-  font-size: 14px;
-}
-.storefront-header nav a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-}
-.storefront-content {
-  width: 100%;
-  max-width: 1228px;
-  margin: 0 auto;
-  padding: 40px 24px;
-  flex: 1;
-}
 .storefront-hero {
   display: flex;
   justify-content: space-between;
@@ -899,18 +862,6 @@ a.dashboard-alert-row:hover {
   .dashboard-donut-wrap {
     margin: 0 auto;
   }
-  .storefront-header {
-    flex-wrap: wrap;
-    gap: var(--header-gap);
-    padding: var(--header-padding-block) var(--header-padding-inline);
-  }
-  .storefront-header nav {
-    width: 100%;
-    margin-left: 0;
-  }
-  .storefront-content {
-    padding: 24px 16px;
-  }
   .storefront-illustration,
   .storefront-hero > svg {
     display: none;
@@ -919,9 +870,6 @@ a.dashboard-alert-row:hover {
 @media (max-width: 639px) {
   .management-shell .topbar-right > .tag,
   .management-shell .breadcrumb > span:not(.breadcrumb-home) {
-    display: none;
-  }
-  .landing-navigation .landing-shop-link {
     display: none;
   }
   .workspace-intro {
@@ -933,9 +881,6 @@ a.dashboard-alert-row:hover {
   }
   .dashboard-overview-header h1 {
     font-size: 24px;
-  }
-  .dashboard-panel {
-    padding: 16px;
   }
   .dashboard-shortcuts-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

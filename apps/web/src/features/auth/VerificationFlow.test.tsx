@@ -1,7 +1,12 @@
 import { fireEvent, screen } from '@testing-library/react';
-import { beforeEach, expect, it, vi } from 'vitest';
+import { act, cleanup } from '@testing-library/react';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { renderInEnglish as render } from '../../test/render';
-import { captureVerificationLink, VerificationFlow } from './VerificationFlow';
+import {
+  captureVerificationLink,
+  ResendVerification,
+  VerificationFlow,
+} from './VerificationFlow';
 
 const requests = vi.hoisted(() => ({
   verifyEmail: vi.fn(),
@@ -24,6 +29,58 @@ beforeEach(() => {
   window.history.replaceState(null, '', '/');
 });
 
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
+
+it('shows an explicit success confirmation after verification and session refresh', async () => {
+  requests.verifyEmail.mockResolvedValue({
+    verified: true,
+    user: { id: 'one' },
+  });
+  render(
+    <VerificationFlow
+      token="secret"
+      onComplete={vi.fn().mockResolvedValue(undefined)}
+    />,
+  );
+  await vi.waitFor(() =>
+    expect(screen.getByRole('status')).toHaveTextContent(/email verified/i),
+  );
+  expect(screen.getByRole('link', { name: /sign in/i })).toHaveAttribute(
+    'href',
+    '/login?verified=1&returnTo=%2Fsetup',
+  );
+  expect(
+    screen.queryByRole('button', { name: /resend/i }),
+  ).not.toBeInTheDocument();
+});
+
+it('waits before resending again without losing the email address', async () => {
+  vi.useFakeTimers();
+  requests.resendVerification.mockResolvedValue({ message: 'accepted' });
+  render(<ResendVerification initialEmail="person@example.test" />);
+  await act(async () => {
+    fireEvent.click(
+      screen.getByRole('button', { name: /resend verification/i }),
+    );
+  });
+  expect(screen.getByRole('button', { name: /resend/i })).toBeDisabled();
+  expect(screen.getByRole('status')).toHaveTextContent(
+    /if an eligible account/i,
+  );
+  await act(async () => {
+    vi.advanceTimersByTime(60_000);
+  });
+  expect(
+    screen.getByRole('button', { name: /resend verification/i }),
+  ).toBeEnabled();
+  expect(screen.getByLabelText(/email address/i)).toHaveValue(
+    'person@example.test',
+  );
+});
+
 it('removes a query token immediately and preserves other location data', () => {
   window.history.replaceState(null, '', '/setup?verify=secret&other=1#section');
   expect(captureVerificationLink()).toBe('secret');
@@ -44,7 +101,7 @@ it('verifies once and refreshes the session before continuing', async () => {
   });
   const complete = vi.fn().mockResolvedValue(undefined);
   render(<VerificationFlow token="secret" onComplete={complete} />);
-  expect(await screen.findByText(/verifying/i)).toBeVisible();
+  expect(screen.getByText(/verifying/i)).toBeVisible();
   await vi.waitFor(() => expect(complete).toHaveBeenCalledWith('one'));
   expect(requests.verifyEmail).toHaveBeenCalledTimes(1);
   expect(requests.verifyEmail).toHaveBeenCalledWith('secret');

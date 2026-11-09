@@ -56,18 +56,18 @@ func NewService(ctx context.Context, pool *pgxpool.Pool, mailer Mailer, logger *
 	return service, nil
 }
 
-func (service *Service) Register(ctx context.Context, email, password, displayName string) (Profile, error) {
+func (service *Service) Register(ctx context.Context, email, password, displayName string) (RegistrationResult, error) {
 	normalized, err := NormalizeEmail(email)
 	if err != nil || ValidatePassword(password) != nil || ValidateDisplayName(displayName) != nil {
-		return Profile{}, ErrInvalidInput
+		return RegistrationResult{}, ErrInvalidInput
 	}
 	hash, err := HashPassword(password)
 	if err != nil {
-		return Profile{}, err
+		return RegistrationResult{}, err
 	}
 	tx, err := service.Pool.Begin(ctx)
 	if err != nil {
-		return Profile{}, err
+		return RegistrationResult{}, err
 	}
 	defer tx.Rollback(ctx)
 	profile := Profile{Email: normalized, DisplayName: displayName, Status: "ACTIVE", EmailVerified: false, Onboarding: "PENDING_ORGANIZATION"}
@@ -75,38 +75,41 @@ func (service *Service) Register(ctx context.Context, email, password, displayNa
 	err = tx.QueryRow(ctx, "INSERT INTO users (email, email_normalized, password_hash, display_name) VALUES ($1,$2,$3,$4) RETURNING id", normalized, normalized, hash, displayName).Scan(&profile.ID)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-		return Profile{}, ErrEmailUnavailable
+		return RegistrationResult{}, ErrEmailUnavailable
 	}
 	if err != nil {
-		return Profile{}, err
+		return RegistrationResult{}, err
 	}
 	if _, err = tx.Exec(ctx, "INSERT INTO auth_audit_events (user_id,event_type) VALUES ($1,'REGISTER')", profile.ID); err != nil {
-		return Profile{}, err
+		return RegistrationResult{}, err
 	}
 	if _, ok := service.Mailer.(VerificationMailer); ok {
 		var tokenHash [32]byte
 		var tokenErr error
 		verificationToken, tokenHash, tokenErr = RandomToken()
 		if tokenErr != nil {
-			return Profile{}, tokenErr
+			return RegistrationResult{}, tokenErr
 		}
 		if _, err = tx.Exec(ctx, "INSERT INTO email_verification_tokens (user_id,token_hash,expires_at) VALUES ($1,$2,now()+interval '24 hours')", profile.ID, tokenHash[:]); err != nil {
-			return Profile{}, verificationDatabaseError(err)
+			return RegistrationResult{}, verificationDatabaseError(err)
 		}
 	}
 	if err = tx.Commit(ctx); err != nil {
-		return Profile{}, err
+		return RegistrationResult{}, err
 	}
+	result := RegistrationResult{Profile: profile}
 	if verificationToken != "" {
 		if mailer, ok := service.Mailer.(VerificationMailer); ok {
 			if err = mailer.SendEmailVerification(ctx, normalized, verificationToken); err != nil {
 				if service.Logger != nil {
 					service.Logger.Error("registration verification delivery failed")
 				}
+			} else {
+				result.VerificationEmailSent = true
 			}
 		}
 	}
-	return profile, nil
+	return result, nil
 }
 
 func (service *Service) Login(ctx context.Context, email, password string) (Profile, string, string, error) {
@@ -144,6 +147,14 @@ func (service *Service) Login(ctx context.Context, email, password string) (Prof
 		return Profile{}, "", "", err
 	}
 	defer tx.Rollback(ctx)
+	var lockedUserID string
+	err = tx.QueryRow(ctx, "SELECT id FROM users WHERE id=$1 AND password_hash=$2 AND status='ACTIVE' FOR UPDATE", profile.ID, hash).Scan(&lockedUserID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Profile{}, "", "", ErrInvalidCredentials
+	}
+	if err != nil {
+		return Profile{}, "", "", err
+	}
 	if _, err = tx.Exec(ctx, "INSERT INTO auth_sessions (user_id,token_hash,csrf_hash,expires_at) VALUES ($1,$2,$3,now()+$4::interval)", profile.ID, tokenHash[:], csrfHash[:], service.SessionTTL); err != nil {
 		return Profile{}, "", "", err
 	}

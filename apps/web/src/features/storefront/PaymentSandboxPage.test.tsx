@@ -132,9 +132,7 @@ describe('Stripe sandbox management page', () => {
     fetchMock.mockImplementation(async (url: string) =>
       ok(url.endsWith('/checkouts/cs_test_fixture') ? checkout : status),
     );
-    view(
-      '/settings/payments?session_id=cs_test_fixture&success=1',
-    );
+    view('/settings/payments?session_id=cs_test_fixture&success=1');
     expect(await screen.findByText('ยังไม่ชำระ')).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: 'ขอคืนเงินทดสอบเต็มจำนวน' }),

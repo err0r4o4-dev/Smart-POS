@@ -22,7 +22,8 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+  transition:
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
     box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   padding: 0;
 }
@@ -76,7 +77,8 @@
   background: #fffdfa;
   border: 1.5px solid #ece4d4;
   border-radius: 26px;
-  box-shadow: 0 20px 48px -10px rgba(90, 60, 20, 0.18),
+  box-shadow:
+    0 20px 48px -10px rgba(90, 60, 20, 0.18),
     0 2px 12px rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
@@ -183,7 +185,9 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .velo-chat-icon-btn:hover {
@@ -455,7 +459,9 @@
   border: 1.5px solid #e8e0d2;
   border-radius: 24px;
   padding: 4px 6px 4px 12px;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .velo-chat-input-wrapper:focus-within {
@@ -474,7 +480,9 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: color 0.15s ease, background 0.15s ease;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
   padding: 0;
 }
 
@@ -513,7 +521,9 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.15s ease;
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease;
   padding: 0;
   flex-shrink: 0;
 }

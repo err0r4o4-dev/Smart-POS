@@ -21,12 +21,7 @@ import { StandardPageHeader } from '../../components/ui/StandardPage';
 import './help.css';
 
 type CategoryKey =
-  | 'all'
-  | 'getting-started'
-  | 'pos'
-  | 'kitchen'
-  | 'menu'
-  | 'faq';
+  'all' | 'getting-started' | 'pos' | 'kitchen' | 'menu' | 'faq';
 
 interface GuideItem {
   id: string;
@@ -415,10 +410,7 @@ export function HelpPage() {
       )}
 
       {/* Support Card */}
-      <aside
-        className="help-support-card"
-        aria-label={t('help.supportTitle')}
-      >
+      <aside className="help-support-card" aria-label={t('help.supportTitle')}>
         <div className="help-support-left">
           <div className="help-support-icon" aria-hidden="true">
             <LifeBuoy size={26} />

@@ -679,7 +679,11 @@ ul {
   flex-shrink: 0;
   text-decoration: none;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    box-shadow 0.15s;
 }
 .breadcrumb-home:hover {
   background: var(--surface);
@@ -958,7 +962,9 @@ ul {
 .account-menu-item-chevron {
   color: var(--text-tertiary);
   flex-shrink: 0;
-  transition: transform 0.14s ease, color 0.14s ease;
+  transition:
+    transform 0.14s ease,
+    color 0.14s ease;
 }
 .account-menu-item:hover,
 .account-menu-item:focus-visible,

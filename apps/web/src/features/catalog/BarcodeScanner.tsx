@@ -86,10 +86,7 @@ export function BarcodeScanner() {
       )}
       {result && (
         <p role="status">
-          <Link to={`/menu/${result.product.id}`}>
-            {result.product.name}
-          </Link>{' '}
-          •{' '}
+          <Link to={`/menu/${result.product.id}`}>{result.product.name}</Link> •{' '}
           {
             result.product.variants.find(
               (item) => item.id === result.variant_id,

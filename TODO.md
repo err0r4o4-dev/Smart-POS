@@ -9,16 +9,16 @@ Go auth/config; database owns migration 34. Independent security review required
 
 - [x] Add failing UI tests, implement shared shell, preserve existing auth flows.
 - [x] Implement Google code flow, state/PKCE/nonce, replay/expiry protection,
-  password-confirmed linking and no organization grants on signup.
+      password-confirmed linking and no organization grants on signup.
 - [x] Integrate additive migration, schema version and optional safe config.
 - [x] Integrate capability/error/linking UI, translations and API contracts.
 - [x] Local checks on 2026-11-09: web tests 606/606 (72 files), focused account
-  checks 46/46, mocked Chromium browser checks 30/30, Go tests all packages and
-  go vet PASS. Typecheck, build, contracts and scoped formatting PASS; lint has
-  0 errors / 9 warnings. Log tests 10/10 and dev-stack tests 6/6 PASS.
+      checks 46/46, mocked Chromium browser checks 30/30, Go tests all packages and
+      go vet PASS. Typecheck, build, contracts and scoped formatting PASS; lint has
+      0 errors / 9 warnings. Log tests 10/10 and dev-stack tests 6/6 PASS.
 - [x] Independent read-only source review: no actionable security/correctness
-  defects verified in the supplied scoped source and evidence package. This
-  is not live provider, database, dependency-scan or release acceptance.
+      defects verified in the supplied scoped source and evidence package. This
+      is not live provider, database, dependency-scan or release acceptance.
 - [?] PostgreSQL acceptance: no confirmed isolated disposable target; Docker,
   psql and postgres are unavailable locally. Migration/runtime-role grants,
   real rollback and concurrent consume/link tests remain unverified. Protect
@@ -54,17 +54,17 @@ No API, database, dependencies, external services or deployment changes.
 - [x] Centralize 72px desktop / 64px mobile header and 36px / 32px brand marks.
 - [x] Apply shared values to management, setup, storefront, landing, auth and POS.
 - [x] Verify mocked Chromium layouts at 320, 640, 641 and 1440px, control bounds,
-  focus outlines and page overflow; focused browser regressions PASS 64/64.
-  Latest log: `.local/shared-header-recheck.log`; screenshots in matching folder.
+      focus outlines and page overflow; focused browser regressions PASS 64/64.
+      Latest log: `.local/shared-header-recheck.log`; screenshots in matching folder.
 - [x] Typecheck/build PASS; lint PASS with 0 errors / 9 warnings; contracts PASS
-  (18 modules / 114 routes), log tests PASS 10/10 and dev-stack tests PASS 6/6.
-  `git diff --check` PASS. Design detector: 1 warning / 2 advisories outside
-  changed header rules; report `.local/shared-header-design-detect.json`.
+      (18 modules / 114 routes), log tests PASS 10/10 and dev-stack tests PASS 6/6.
+      `git diff --check` PASS. Design detector: 1 warning / 2 advisories outside
+      changed header rules; report `.local/shared-header-design-detect.json`.
 - [?] Full web suite: 547 passed / 4 failed across restaurant-scope.test.tsx,
   SettingsPage.test.tsx (2) and StorefrontSettingsPage.test.tsx. Not repaired
   under header scope; details in `.local/shared-header-tests.log`.
 - [ ] Separate visual issue: register form content clips inside its card at
-  320px; header fits. Form layout is outside this task; no repair performed.
+      320px; header fits. Form layout is outside this task; no repair performed.
 - [ ] Remove this section after unresolved acceptance items are settled.
 
 # Shop directory business-type toolbar (2026-11-08)
@@ -90,7 +90,7 @@ Scope: Redirect authenticated multi-store users without an organization from
 single-store restrictions, authentication and server-side authorization.
 
 - [x] Reproduce account landing with focused routing regression tests.
-  RED: direct `/account` routing test fails because Account remains visible.
+      RED: direct `/account` routing test fails because Account remains visible.
 - [x] Add the onboarding redirect without changing access checks.
 - [/] Run focused regression tests, web tests and typecheck; review the diff.
 - [ ] Remove this section after verification passes.
@@ -154,7 +154,7 @@ Preserve all functional logic, step validations, API contracts, and tests.
 - [x] 4. Add centered 7-step horizontal stepper bar above `.setup-layout` matching Image 3, with standard `.topbar` header, step number badges (`1`–`7`), and horizontal connecting line (TDD)
 - [x] 5. Reconcile `OrganizationPages.test.tsx`, `tests/e2e/restaurant-setup.spec.ts`, and `tests/e2e/warm-gold-theme.spec.ts` for standalone `/setup` with top stepper
 - [x] Header follow-up: remove storefront link and role badge from `/setup` only; retain shared language, help and AccountMenu controls. Preserve other workspace headers.
-  Fresh verification: 46 setup unit tests passed; 3 mocked Playwright layout cases passed at 320/768/1440px, including header absence assertions, keyboard focus and page overflow. Inspected desktop and mobile screenshots; removed sticky positioning after mobile capture showed the header covering content. Browser evidence uses synthetic APIs, not live database acceptance.
+      Fresh verification: 46 setup unit tests passed; 3 mocked Playwright layout cases passed at 320/768/1440px, including header absence assertions, keyboard focus and page overflow. Inspected desktop and mobile screenshots; removed sticky positioning after mobile capture showed the header covering content. Browser evidence uses synthetic APIs, not live database acceptance.
 - [/] 6. Run tests, typecheck, lint, and build verification
   PASS: focused setup Vitest (46 tests), `npm run typecheck`, `npm run build`, and `git diff --check`. `npm run lint` completed with 0 errors / 9 warnings in other files. No blanket IDE-diagnostics pass is claimed. Broader earlier acceptance remains separate.
 - [ ] 7. Complete broader visual acceptance; header layout checks at 320/768/1440px passed as recorded above
@@ -503,13 +503,16 @@ Execution decisions:
 # Task: Fix E2E Test Failures in CI (workspace-areas.spec.ts)
 
 ## Objective
-- Diagnose and fix the failing E2E tests in 	ests/e2e/workspace-areas.spec.ts shown in GitHub Actions CI run (customer layout isolation and restaurant-only dashboard).
+
+- Diagnose and fix the failing E2E tests in ests/e2e/workspace-areas.spec.ts shown in GitHub Actions CI run (customer layout isolation and restaurant-only dashboard).
 
 ## Scope & Affected Components
-- 	ests/e2e/workspace-areas.spec.ts
+
+- ests/e2e/workspace-areas.spec.ts
 - Relevant frontend layouts/components/translations if applicable (StorefrontLayout.tsx, ShopCatalog.tsx, ManagementLayout.tsx, DashboardPage.tsx)
 
 ## Implementation Checklist
+
 - [x] Phase 1: Reproduce failures locally
   - [x] Launch web server on port 8088 and run playwright test tests/e2e/workspace-areas.spec.ts
   - [x] Capture the exact failure messages and causes
@@ -524,5 +527,6 @@ Execution decisions:
   - [x] Verify no regressions
 
 ## Risks & Architecture Notes
+
 - Maintain bilingual (Thai/English) compatibility if test assertions or UI text are sensitive to language.
 - Ensure viewport responsiveness across 320px, 768px, and 1440px.

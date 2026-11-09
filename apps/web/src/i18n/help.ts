@@ -31,7 +31,8 @@ export const help = defineMessages({
     setupTitle: 'เตรียมร้านให้พร้อม',
     setupBody:
       'เลือกองค์กรและสาขาที่ต้องการทำงาน ตรวจสอบข้อมูลร้าน เวลาเปิดปิด และช่องทางรับออเดอร์ในหน้าตั้งค่า',
-    setupStep1: 'ตั้งค่าสาขา: ตรวจสอบที่อยู่ หมายเลขโทรศัพท์ และเวลาทำการของร้าน',
+    setupStep1:
+      'ตั้งค่าสาขา: ตรวจสอบที่อยู่ หมายเลขโทรศัพท์ และเวลาทำการของร้าน',
     setupStep2:
       'สิทธิ์การใช้งาน: กำหนดบทบาทพนักงานให้เหมาะสม (เจ้าของร้าน, ผู้จัดการ, แคชเชียร์, ครัว)',
     menuTitle: 'จัดการเมนูอาหารและสินค้า',
@@ -84,8 +85,7 @@ export const help = defineMessages({
     supportDescription:
       'ทีมสนับสนุนพร้อมช่วยเหลือและตอบคำถามในการใช้งานระบบร้านค้าของคุณ',
     supportHours: 'เวลาทำการ: ทุกวัน 08:00 - 22:00 น.',
-    supportContact:
-      'ติดต่อผู้ดูแลระบบร้านค้า หรือสอบถามผ่านอีเมลฝ่ายช่วยเหลือ',
+    supportContact: 'ติดต่อผู้ดูแลระบบร้านค้า หรือสอบถามผ่านอีเมลฝ่ายช่วยเหลือ',
   },
   en: {
     title: 'Store help',
@@ -163,7 +163,8 @@ export const help = defineMessages({
       'What should I do if drawer cash does not match shift reconciliation?',
     faqShiftA:
       'Review starting float, cash sales, refund receipts and cancelled orders in the sales report.',
-    faqOfflineQ: 'What should I do if the connection drops or a screen freezes?',
+    faqOfflineQ:
+      'What should I do if the connection drops or a screen freezes?',
     faqOfflineA:
       'Check internet connectivity, then tap "Retry" or refresh your browser. Confirmed records remain safe.',
     faqOnlineOrderQ: 'How do customers place online storefront orders?',

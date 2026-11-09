@@ -342,11 +342,21 @@ export function saveSetupStep(
   }));
 }
 
-export function completeSetup(context: SetupContext, csrf: string, key: string) {
-  return organizationRequest<BackendSetupState>(setupPath(context, '/complete'), {
-    method: 'POST',
-    body: { branch_id: context.branchID },
-    csrf,
-    key,
-  }).then((state) => ({ ready: normalizeState(state).complete && state.readiness.ready, dashboard: '/dashboard' }));
+export function completeSetup(
+  context: SetupContext,
+  csrf: string,
+  key: string,
+) {
+  return organizationRequest<BackendSetupState>(
+    setupPath(context, '/complete'),
+    {
+      method: 'POST',
+      body: { branch_id: context.branchID },
+      csrf,
+      key,
+    },
+  ).then((state) => ({
+    ready: normalizeState(state).complete && state.readiness.ready,
+    dashboard: '/dashboard',
+  }));
 }

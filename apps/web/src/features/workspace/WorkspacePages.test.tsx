@@ -285,7 +285,9 @@ it('denies access when owner membership changes to cashier', () => {
 it('renders an owner menu path with query and hash intact', () => {
   selectRole('OWNER', ['catalog.read']);
   renderWorkspace('/menu/item-1?search=abc#details');
-  expect(screen.getByRole('heading', { name: 'Product details' })).toBeVisible();
+  expect(
+    screen.getByRole('heading', { name: 'Product details' }),
+  ).toBeVisible();
   expect(screen.getByLabelText('Location')).toHaveTextContent(
     '/menu/item-1?search=abc#details',
   );
@@ -334,21 +336,20 @@ it('filters restaurant dashboard shortcuts by permission without fabricating rep
   ).not.toBeInTheDocument();
 });
 
-it.each([
-  '/dashboard',
-  '/menu/item-1',
-  '/settings',
-])('does not render the tenant-switchers bar on %s', (path) => {
-  selectRole('OWNER', allPermissions);
-  renderWorkspace(path);
-  expect(document.querySelector('.tenant-switchers')).not.toBeInTheDocument();
-  expect(
-    screen.queryByRole('combobox', { name: 'องค์กรที่ใช้งาน' }),
-  ).not.toBeInTheDocument();
-  expect(
-    screen.queryByRole('combobox', { name: 'สาขาที่ใช้งาน' }),
-  ).not.toBeInTheDocument();
-});
+it.each(['/dashboard', '/menu/item-1', '/settings'])(
+  'does not render the tenant-switchers bar on %s',
+  (path) => {
+    selectRole('OWNER', allPermissions);
+    renderWorkspace(path);
+    expect(document.querySelector('.tenant-switchers')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('combobox', { name: 'องค์กรที่ใช้งาน' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('combobox', { name: 'สาขาที่ใช้งาน' }),
+    ).not.toBeInTheDocument();
+  },
+);
 
 it('allows an owner with POS permission to access POS', () => {
   selectRole('OWNER', ['pos.access']);

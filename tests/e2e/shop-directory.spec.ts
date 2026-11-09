@@ -142,7 +142,15 @@ for (const width of [320, 390, 540, 541, 767, 768, 1024, 1279, 1280, 1672]) {
           elements.map((element) => {
             const { x, y, width, height, bottom, right } =
               element.getBoundingClientRect();
-            return { x, y, width, height, bottom, right, center: y + height / 2 };
+            return {
+              x,
+              y,
+              width,
+              height,
+              bottom,
+              right,
+              center: y + height / 2,
+            };
           }),
         );
       expect(heading.bottom).toBeLessThanOrEqual(search.y);

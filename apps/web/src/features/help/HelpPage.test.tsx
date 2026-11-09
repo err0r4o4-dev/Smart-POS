@@ -48,7 +48,9 @@ describe('store help', () => {
     // Type "เปิดกะ"
     fireEvent.change(searchInput, { target: { value: 'เปิดกะ' } });
     expect(
-      screen.getByRole('heading', { name: 'การเปิดกะขายและการคิดเงินหน้าร้าน' }),
+      screen.getByRole('heading', {
+        name: 'การเปิดกะขายและการคิดเงินหน้าร้าน',
+      }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole('heading', { name: 'เตรียมร้านให้พร้อม' }),
@@ -128,10 +130,9 @@ describe('store help', () => {
       </LanguageProvider>,
     );
 
-    expect(screen.getByRole('link', { name: /แคชเชียร์ POS/i })).toHaveAttribute(
-      'href',
-      '/pos',
-    );
+    expect(
+      screen.getByRole('link', { name: /แคชเชียร์ POS/i }),
+    ).toHaveAttribute('href', '/pos');
     expect(screen.getByRole('link', { name: /คิวครัว/i })).toHaveAttribute(
       'href',
       '/kitchen',
@@ -140,9 +141,8 @@ describe('store help', () => {
       'href',
       '/menu',
     );
-    expect(screen.getByRole('link', { name: /ตั้งค่าร้านค้า/i })).toHaveAttribute(
-      'href',
-      '/settings',
-    );
+    expect(
+      screen.getByRole('link', { name: /ตั้งค่าร้านค้า/i }),
+    ).toHaveAttribute('href', '/settings');
   });
 });

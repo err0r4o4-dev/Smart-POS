@@ -4,8 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   Grid2X2,
   Heart,
   LayoutGrid,
@@ -106,6 +104,14 @@ export function ShopCatalog({ slug }: { slug: string }) {
     return () => window.removeEventListener('toggle-catalog-sidebar', onToggle);
   }, []);
 
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent('catalog-sidebar-state', {
+        detail: { open: !sidebarCollapsed },
+      }),
+    );
+  }, [sidebarCollapsed]);
+
   const shop = useQuery({
     queryKey: ['storefront', slug, 'settings'],
     queryFn: ({ signal }) =>
@@ -193,6 +199,7 @@ export function ShopCatalog({ slug }: { slug: string }) {
       >
         <aside
           className={`catalog-sidebar ${sidebarCollapsed ? 'catalog-sidebar-collapsed' : ''}`}
+          id="catalog-sidebar"
           aria-label={t('catalog.productCategory')}
         >
           <div className="catalog-sidebar-header">
@@ -201,26 +208,6 @@ export function ShopCatalog({ slug }: { slug: string }) {
                 ? 'หมวดหมู่เมนู'
                 : t('catalog.productCategory')}
             </h2>
-            <button
-              type="button"
-              className="catalog-sidebar-collapse-btn"
-              aria-label={
-                sidebarCollapsed
-                  ? language === 'th'
-                    ? 'ขยายหมวดหมู่'
-                    : 'Expand categories'
-                  : language === 'th'
-                    ? 'ย่อหมวดหมู่'
-                    : 'Collapse categories'
-              }
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            >
-              {sidebarCollapsed ? (
-                <ChevronRight size={16} aria-hidden="true" />
-              ) : (
-                <ChevronLeft size={16} aria-hidden="true" />
-              )}
-            </button>
           </div>
           <Button
             className="button-secondary catalog-category-toggle"
@@ -335,12 +322,7 @@ export function ShopCatalog({ slug }: { slug: string }) {
                 </option>
               </select>
             </div>
-            <details className="catalog-price-filter">
-              <summary>
-                <SlidersHorizontal size={15} aria-hidden="true" />{' '}
-                {t('storefront.priceRange')}{' '}
-                <ChevronDown size={15} aria-hidden="true" />
-              </summary>
+            <div className="catalog-price-filter">
               <form
                 className="catalog-price-panel"
                 onSubmit={(event) => {
@@ -368,11 +350,11 @@ export function ShopCatalog({ slug }: { slug: string }) {
                   }
                   setPriceError('');
                   changeFilters(priceDraft);
-                  event.currentTarget
-                    .closest('details')
-                    ?.removeAttribute('open');
                 }}
               >
+                <span className="catalog-price-filter-title">
+                  {t('storefront.priceRange')}
+                </span>
                 <label>
                   {t('storefront.minimumPrice')}
                   <input
@@ -408,7 +390,7 @@ export function ShopCatalog({ slug }: { slug: string }) {
                   {t('storefront.applyPriceRange')}
                 </Button>
               </form>
-            </details>
+            </div>
             {filtered && (
               <Button className="catalog-clear" onClick={clear}>
                 {t('storefront.clearFilters')}
@@ -442,6 +424,13 @@ export function ShopCatalog({ slug }: { slug: string }) {
               {t('storefront.categoryPriceAndSortingFiltersRequireA')}
             </p>
           )}
+          <p
+            role="status"
+            aria-label={t('storefront.addProductResult')}
+            className="catalog-feedback"
+          >
+            {messageText(message)}
+          </p>
           {products.isPending && (
             <Loading>{t('storefront.loadingProducts')}</Loading>
           )}

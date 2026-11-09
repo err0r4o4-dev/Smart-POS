@@ -1072,8 +1072,15 @@ function CartContents({ slug }: { slug: string }) {
               </section>
 
               {/* TABLE SELECTION */}
-              {!tableToken && (
-                <section style={pale}>
+              {!tableToken && diningType === 'dine-in' && (
+                <section
+                  className="shop-cart-table-section"
+                  style={{
+                    marginBottom: 15,
+                    paddingBottom: 15,
+                    borderBottom: `1px solid ${palette.border}`,
+                  }}
+                >
                   <label
                     htmlFor="shop-cart-table"
                     style={{
@@ -1241,8 +1248,8 @@ function CartContents({ slug }: { slug: string }) {
                 </div>
 
                 <div
+                  className="shop-cart-estimated-total"
                   style={{
-                    ...pale,
                     marginBottom: 0,
                     display: 'flex',
                     justifyContent: 'space-between',

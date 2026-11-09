@@ -64,6 +64,14 @@ it('shows the invalid table-link warning in English', async () => {
   );
 });
 
+it('hides table selection for takeaway carts', async () => {
+  view();
+  expect(
+    await screen.findByRole('button', { name: 'ซื้อกลับบ้าน' }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.queryByLabelText('โต๊ะ')).not.toBeInTheDocument();
+});
+
 it('marks the current cart and review steps without navigating to a new route', async () => {
   view();
   const steps = screen.getByRole('navigation', { name: 'ขั้นตอนการสั่งซื้อ' });

@@ -124,9 +124,9 @@ const copy = {
 const page: CSSProperties = {
   boxSizing: 'border-box',
   width: '100%',
-  maxWidth: 1360,
+  maxWidth: 'var(--layout-content-max, 1232px)',
   margin: '0 auto',
-  padding: 'clamp(12px, 1.8vw, 24px) 0 24px',
+  padding: '0 0 24px',
   color: palette.navy,
   fontFamily: 'inherit',
   lineHeight: 1.5,
@@ -594,7 +594,7 @@ function CartContents({ slug }: { slug: string }) {
           display: 'grid',
           gridTemplateColumns:
             'repeat(auto-fit, minmax(min(100%, 360px), 1fr))',
-          gap: 18,
+          gap: 'var(--card-gap, 24px)',
           alignItems: 'start',
         }}
       >
@@ -602,7 +602,7 @@ function CartContents({ slug }: { slug: string }) {
         <section
           style={{
             ...card,
-            padding: 'clamp(16px, 2vw, 24px)',
+            padding: 'var(--card-padding, 24px)',
           }}
         >
           <h2 style={title}>
@@ -730,10 +730,10 @@ function CartContents({ slug }: { slug: string }) {
           onSubmit={submitOrder}
           style={{
             ...card,
-            padding: 'clamp(16px, 2vw, 24px)',
+            padding: 'var(--card-padding, 24px)',
             display: 'flex',
             flexDirection: 'column',
-            gap: 18,
+            gap: 'var(--card-gap, 24px)',
           }}
         >
           <h2 style={{ ...title, marginBottom: 0 }}>{ui.customer}</h2>
@@ -949,8 +949,7 @@ function CartContents({ slug }: { slug: string }) {
           <div
             style={{
               ...card,
-              padding: '50px 20px',
-              minHeight: 230,
+              padding: 'var(--card-padding, 24px)',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -972,7 +971,7 @@ function CartContents({ slug }: { slug: string }) {
             style={{
               display: 'flex',
               alignItems: 'flex-start',
-              gap: 18,
+              gap: 'var(--card-gap, 24px)',
               flexWrap: 'wrap',
             }}
           >
@@ -983,7 +982,7 @@ function CartContents({ slug }: { slug: string }) {
                 display: 'flex',
                 flex: '2 1 530px',
                 flexDirection: 'column',
-                gap: 16,
+                gap: 'var(--card-gap, 24px)',
                 minWidth: 0,
               }}
             >
@@ -1022,7 +1021,7 @@ function CartContents({ slug }: { slug: string }) {
                 ...card,
                 flex: '1 1 320px',
                 minWidth: 0,
-                padding: 'clamp(14px, 1.5vw, 20px)',
+                padding: 'var(--card-padding, 24px)',
               }}
             >
               {/* DINING OPTION */}
@@ -1557,8 +1556,8 @@ function CartLineItem({
         display: 'flex',
         flexWrap: 'wrap',
         alignItems: 'stretch',
-        gap: 16,
-        padding: 15,
+        gap: 'var(--card-gap, 24px)',
+        padding: 'var(--card-padding, 24px)',
       }}
     >
       {/* PRODUCT IMAGE */}

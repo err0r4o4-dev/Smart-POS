@@ -9,7 +9,10 @@ const api = vi.hoisted(() => ({
   register: vi.fn(),
   resendVerification: vi.fn(),
 }));
-vi.mock('../../lib/api', () => ({ ...api }));
+vi.mock('../../lib/api', async (original) => ({
+  ...(await original<typeof import('../../lib/api')>()),
+  ...api,
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();

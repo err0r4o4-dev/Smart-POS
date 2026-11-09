@@ -20,6 +20,10 @@ import { useAuth } from '../../app/AuthProvider';
 import { paths } from '../../app/routes';
 import { ResendVerification } from './VerificationFlow';
 import { GoogleAuth } from './GoogleAuth';
+import {
+  accountFailure,
+  successFeedback,
+} from '../../components/feedback/feedback';
 
 function ErrorMessage({ message }: { message: string }) {
   const { localize } = useLanguage();
@@ -80,7 +84,7 @@ export function safeReturnTo(value: string | null) {
 }
 
 export function LoginPage() {
-  const { t, localize } = useLanguage();
+  const { t, localize, language } = useLanguage();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -98,13 +102,13 @@ export function LoginPage() {
     try {
       if (linkingGoogle) await signInWithGoogleLink(email, password);
       else await signIn(email, password);
+      successFeedback(
+        language === 'en' ? 'Signed in' : 'เข้าสู่ระบบแล้ว',
+        language === 'en' ? 'Close notification' : 'ปิดการแจ้งเตือน',
+      );
       navigate(safeReturnTo(params.get('returnTo')), { replace: true });
     } catch (failure) {
-      setError(
-        failure instanceof Error
-          ? failure.message
-          : t('auth.signInUnavailable'),
-      );
+      setError(accountFailure(failure, language === 'en'));
     } finally {
       setPending(false);
     }
@@ -222,12 +226,12 @@ export function RegisterPage() {
       const result = await register(email, password, name);
       setVerificationEmailSent(result.verification_email_sent !== false);
       setRegistered(true);
-    } catch (failure) {
-      setError(
-        failure instanceof Error
-          ? failure.message
-          : t('auth.registrationUnavailable'),
+      successFeedback(
+        language === 'en' ? 'Account created' : 'สร้างบัญชีแล้ว',
+        language === 'en' ? 'Close notification' : 'ปิดการแจ้งเตือน',
       );
+    } catch (failure) {
+      setError(accountFailure(failure, language === 'en'));
     } finally {
       setPending(false);
     }
@@ -363,7 +367,7 @@ export function RegisterPage() {
 }
 
 export function ForgotPasswordPage() {
-  const { t, localize } = useLanguage();
+  const { t, localize, language } = useLanguage();
 
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
@@ -376,13 +380,19 @@ export function ForgotPasswordPage() {
     setMessage('');
     setPending(true);
     try {
-      setMessage((await forgotPassword(email)).message);
-    } catch (failure) {
-      setError(
-        failure instanceof Error
-          ? failure.message
-          : t('auth.resetRequestUnavailable'),
+      await forgotPassword(email);
+      const instructions =
+        language === 'en'
+          ? 'If an eligible account exists, check your email for reset instructions.'
+          : 'หากบัญชีมีสิทธิ์ โปรดตรวจสอบอีเมลสำหรับคำแนะนำในการตั้งรหัสผ่านใหม่';
+      setMessage(instructions);
+      successFeedback(
+        language === 'en' ? 'Request received' : 'รับคำขอแล้ว',
+        language === 'en' ? 'Close notification' : 'ปิดการแจ้งเตือน',
+        instructions,
       );
+    } catch (failure) {
+      setError(accountFailure(failure, language === 'en'));
     } finally {
       setPending(false);
     }
@@ -430,11 +440,7 @@ export function ForgotPasswordPage() {
           </Button>
         </fieldset>
       </form>
-      {message && (
-        <p role="status" className="auth-status-banner">
-          {localize(message)}
-        </p>
-      )}
+      {message && <p className="auth-status-banner">{localize(message)}</p>}
       <p className="auth-links">
         <Link to="/login">{t('auth.backToSignIn')}</Link>
       </p>
@@ -443,7 +449,7 @@ export function ForgotPasswordPage() {
 }
 
 export function ResetPasswordPage() {
-  const { t, localize } = useLanguage();
+  const { t, localize, language } = useLanguage();
 
   const [params] = useSearchParams();
   const [token] = useState(() => params.get('token') || '');
@@ -470,12 +476,12 @@ export function ResetPasswordPage() {
       await resetPassword(token, password);
       clear();
       setDone(true);
-    } catch (failure) {
-      setError(
-        failure instanceof Error
-          ? failure.message
-          : t('auth.passwordResetUnavailable'),
+      successFeedback(
+        language === 'en' ? 'Password changed' : 'เปลี่ยนรหัสผ่านแล้ว',
+        language === 'en' ? 'Close notification' : 'ปิดการแจ้งเตือน',
       );
+    } catch (failure) {
+      setError(accountFailure(failure, language === 'en'));
     } finally {
       setPending(false);
     }

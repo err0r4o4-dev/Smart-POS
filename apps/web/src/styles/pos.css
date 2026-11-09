@@ -1,7 +1,8 @@
 .pos-workspace {
-  max-width: 1920px;
+  width: 100%;
+  max-width: var(--layout-container-max);
   margin: auto;
-  padding: 20px;
+  padding: 0 var(--layout-gutter) var(--space-8);
 }
 .pos-header,
 .pos-context,
@@ -18,6 +19,27 @@
   gap: var(--header-gap);
   padding-block: var(--header-padding-block);
   box-sizing: border-box;
+  flex-wrap: nowrap;
+  margin-bottom: 0;
+}
+.pos-header .brand {
+  order: -1;
+  margin-right: auto;
+  flex-shrink: 0;
+}
+.pos-back-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-width: 44px;
+  min-height: 44px;
+  color: var(--primary-strong);
+  flex-shrink: 0;
+}
+.pos-back-link:focus-visible {
+  outline: 2px solid var(--primary-strong);
+  outline-offset: 2px;
 }
 .pos-navigation {
   padding: 6px;
@@ -26,6 +48,7 @@
   border-radius: 16px;
   box-shadow: var(--shadow-card);
   gap: 8px;
+  margin-bottom: 0;
 }
 .pos-navigation a {
   display: inline-flex;
@@ -146,12 +169,12 @@
 .sales-kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  gap: var(--card-gap);
   min-width: 0;
 }
 .sales-kpi-card,
 .sales-page .sales-kpi-card {
-  padding: 18px 20px;
+  padding: var(--card-padding);
   border-radius: var(--radius-card);
   display: flex;
   align-items: center;
@@ -244,7 +267,7 @@
 .sales-table-card,
 .sales-page .sales-filter-card,
 .sales-page .sales-table-card {
-  padding: 20px 24px;
+  padding: var(--card-padding);
   border-radius: var(--radius-card);
   display: grid;
   gap: 16px;
@@ -670,7 +693,7 @@
   min-height: 20px;
 }
 .pos-workspace .card {
-  margin-bottom: 20px;
+  margin-bottom: 0;
 }
 .pos-history-filters {
   display: grid;
@@ -687,7 +710,7 @@
 .pos-sale-detail {
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
-  gap: 20px;
+  gap: var(--card-gap);
 }
 .pos-sale-detail p {
   overflow-wrap: anywhere;
@@ -778,10 +801,7 @@
   flex-shrink: 0;
   white-space: nowrap;
 }
-@media (max-width: 768px) {
-  .pos-workspace {
-    padding: 12px;
-  }
+@media (max-width: 1023px) {
   .pos-workspace .pos-grid,
   .pos-sale-detail {
     grid-template-columns: minmax(0, 1fr);
@@ -794,7 +814,7 @@
   }
   .sales-page .sales-filter-card,
   .sales-page .sales-table-card {
-    padding: 16px;
+    padding: var(--card-padding);
   }
   .sales-context-selectors {
     grid-template-columns: minmax(0, 1fr);
@@ -805,7 +825,17 @@
     margin-left: 0;
   }
 }
-@media (max-width: 640px) {
+@media (max-width: 767px) {
+  .pos-back-link span {
+    display: none;
+  }
+  .pos-header .brand small {
+    display: none;
+  }
+  .pos-header .language-switcher button {
+    min-width: 36px;
+    padding-inline: var(--space-2);
+  }
   .sales-kpi-grid {
     grid-template-columns: minmax(0, 1fr);
   }

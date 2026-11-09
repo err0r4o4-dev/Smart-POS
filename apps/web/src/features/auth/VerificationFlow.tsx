@@ -2,6 +2,10 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useLanguage } from '../../app/language';
 import { ApiError, resendVerification, verifyEmail } from '../../lib/api';
 import { LoginLayout } from '../../layouts/LoginLayout';
+import {
+  accountFailure,
+  successFeedback,
+} from '../../components/feedback/feedback';
 
 // Called before the browser router is created, so the token is absent from rendered routes.
 export function captureVerificationLink(): string | null {
@@ -37,34 +41,56 @@ export function ResendVerification({
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [cooldown, setCooldown] = useState(0);
+  const [remaining, setRemaining] = useState(0);
+  const submitting = useRef(false);
   useEffect(() => {
     if (!cooldown) return;
-    const timer = window.setTimeout(() => setCooldown(0), cooldown);
-    return () => window.clearTimeout(timer);
+    const timer = window.setInterval(() => {
+      const seconds = Math.max(0, Math.ceil((cooldown - Date.now()) / 1000));
+      setRemaining(seconds);
+      if (!seconds) setCooldown(0);
+    }, 1000);
+    return () => window.clearInterval(timer);
   }, [cooldown]);
+  function wait(seconds: number) {
+    setRemaining(seconds);
+    setCooldown(seconds ? Date.now() + seconds * 1000 : 0);
+  }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (pending || cooldown) return;
+    if (submitting.current || cooldown) return;
+    submitting.current = true;
     setPending(true);
     setError('');
     setMessage('');
     try {
       await resendVerification(email);
-      setCooldown(60_000);
+      wait(60);
+      successFeedback(
+        en ? 'Request received' : 'รับคำขอแล้ว',
+        en ? 'Close notification' : 'ปิดการแจ้งเตือน',
+        en
+          ? 'If an eligible account exists, check your email for verification instructions.'
+          : 'หากบัญชีมีสิทธิ์ โปรดตรวจสอบอีเมลเพื่อยืนยันบัญชี',
+      );
       setMessage(
         en
           ? 'If an eligible account exists, check your email for verification instructions.'
           : 'หากบัญชีมีสิทธิ์ โปรดตรวจสอบอีเมลเพื่อยืนยันบัญชี',
       );
     } catch (failure) {
-      if (failure instanceof ApiError && failure.status === 429)
-        setCooldown(60_000);
-      setError(
-        en
-          ? 'Could not request a verification email. Please try again.'
-          : 'ส่งอีเมลยืนยันไม่สำเร็จ กรุณาลองอีกครั้ง',
-      );
+      if (failure instanceof ApiError && failure.status === 429) {
+        wait(failure.retryAfterSeconds ?? 60);
+        setError(accountFailure(failure, en));
+      } else {
+        setError(
+          en
+            ? 'Could not request a verification email. The result is unconfirmed. Check your connection and inbox before trying again.'
+            : 'ยังยืนยันผลคำขอส่งอีเมลไม่ได้ กรุณาตรวจสอบการเชื่อมต่อและกล่องอีเมลก่อนลองอีกครั้ง',
+        );
+      }
     } finally {
+      submitting.current = false;
       setPending(false);
     }
   }
@@ -94,18 +120,14 @@ export function ResendVerification({
               : 'กำลังส่ง…'
             : cooldown
               ? en
-                ? 'Resend: wait one minute before retrying'
-                : 'กรุณารอหนึ่งนาทีก่อนลองส่งซ้ำ'
+                ? `Resend: suggested wait before retrying: ${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}`
+                : `แนะนำให้รอก่อนลองอีกครั้ง: ${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}`
               : en
                 ? 'Resend verification email'
                 : 'ส่งอีเมลยืนยันอีกครั้ง'}
         </button>
       </fieldset>
-      {message && (
-        <p role="status" className="auth-status-banner">
-          {message}
-        </p>
-      )}
+      {message && <p className="auth-status-banner">{message}</p>}
       {error && (
         <p role="alert" className="auth-error">
           {error}

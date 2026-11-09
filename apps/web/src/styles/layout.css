@@ -1,0 +1,17 @@
+.layout-container {
+  width: min(var(--layout-content-max), calc(100% - var(--layout-gutter) * 2));
+  min-width: 0;
+  margin-inline: auto;
+}
+
+.layout-shell {
+  width: calc(100% - var(--layout-public-start) - var(--layout-public-end));
+  min-width: 0;
+  margin-inline: var(--layout-public-start) var(--layout-public-end);
+}
+
+:is(.topbar, .account-header, .pos-header) .language-switcher {
+  padding: 0;
+  border: 0;
+  box-shadow: inset 0 0 0 1px var(--border);
+}

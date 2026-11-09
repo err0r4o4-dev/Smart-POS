@@ -8,8 +8,12 @@
   letter-spacing: -0.025em;
 }
 .landing-container {
-  width: 70%;
+  width: min(
+    var(--layout-content-max, 1232px),
+    calc(100% - var(--layout-gutter, 24px) * 2)
+  );
   margin-inline: auto;
+  min-width: 0;
 }
 .landing-header {
   min-height: var(--header-height);
@@ -25,6 +29,11 @@
   align-items: center;
   gap: var(--header-gap);
   min-height: calc(var(--header-height) - 1px);
+  padding-block: var(--header-padding-block);
+  box-sizing: border-box;
+}
+.landing-mobile-menu {
+  display: none;
 }
 .landing-brand-link {
   display: inline-flex;
@@ -122,6 +131,10 @@
   min-height: 48px;
   padding-inline: 24px;
 }
+.landing-header .button {
+  min-height: 44px;
+  padding-block: 8px;
+}
 .landing-hero {
   position: relative;
   isolation: isolate;
@@ -140,9 +153,9 @@
   display: grid;
   grid-template-columns: 1.08fr 1fr;
   align-items: center;
-  gap: 56px;
-  min-height: 610px;
-  padding-block: 90px;
+  gap: var(--card-gap, 24px);
+  padding-block: var(--section-spacing, 80px)
+    calc(var(--section-spacing, 80px) / 2);
 }
 .landing-eyebrow {
   color: var(--primary-strong);
@@ -208,7 +221,7 @@
   color: var(--primary-strong);
 }
 .landing-how {
-  padding-block: 80px;
+  padding-block: calc(var(--section-spacing, 80px) / 2);
   scroll-margin-top: 110px;
 }
 .landing-section-heading {
@@ -230,13 +243,13 @@
 .landing-steps {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  gap: var(--card-gap, 24px);
   padding: 0;
   margin: 36px 0 18px;
   list-style: none;
 }
 .landing-step {
-  padding: 24px;
+  padding: var(--card-padding, 24px);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background: var(--surface);
@@ -287,11 +300,12 @@
   font-weight: 650;
 }
 .landing-features {
-  padding-block: 76px;
+  padding-block: calc(var(--section-spacing, 80px) / 2)
+    var(--section-spacing, 80px);
   background: var(--canvas);
 }
 .landing-feature-panel {
-  padding: 36px;
+  padding: var(--card-padding, 24px);
   border: 1px solid var(--border);
   border-radius: 28px;
   background: var(--surface);
@@ -303,7 +317,7 @@
 .landing-feature-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 32px;
+  gap: var(--card-gap, 24px);
   margin-top: 34px;
 }
 .landing-feature-icon {
@@ -717,11 +731,51 @@
   }
 }
 @media (max-width: 1023px) {
+  .landing-desktop-navigation {
+    display: none;
+  }
+  .landing-mobile-menu {
+    display: block;
+  }
+  .landing-mobile-menu summary {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-small);
+    list-style: none;
+  }
+  .landing-mobile-menu summary::-webkit-details-marker {
+    display: none;
+  }
+  .landing-mobile-menu summary:focus-visible {
+    outline: 2px solid var(--primary-strong);
+    outline-offset: 3px;
+  }
+  .landing-mobile-menu .landing-navigation {
+    position: absolute;
+    top: 100%;
+    right: var(--layout-gutter, 24px);
+    display: flex;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+    width: min(280px, calc(100vw - 2 * var(--layout-gutter, 24px)));
+    padding: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-floating);
+  }
+  .landing-mobile-menu .landing-navigation > a {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
   .landing-hero-inner {
     grid-template-columns: minmax(0, 1fr);
-    gap: 32px;
-    padding-block: 64px;
-    min-height: 560px;
   }
   .landing-hero h1 {
     font-size: 36px;
@@ -748,29 +802,17 @@
   .landing-product-art {
     aspect-ratio: 1;
   }
-  .landing-step {
-    padding: 20px;
-  }
-  .landing-feature-panel {
-    padding: 28px;
-  }
   .landing-feature-grid {
     gap: 24px;
   }
 }
 @media (max-width: 767px) {
-  .landing-container {
-    width: calc(100% - 40px);
-  }
   .landing-header-inner {
     min-height: calc(var(--header-height) - 1px);
     gap: var(--header-gap);
   }
   .landing-navigation {
     gap: 12px;
-  }
-  .landing-nav-guide {
-    display: none;
   }
   .landing-page .brand {
     gap: 8px;
@@ -779,11 +821,6 @@
   .landing-header .button {
     padding-inline: 14px;
     font-size: 12px;
-  }
-  .landing-hero-inner {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 36px;
-    padding-block: 48px 52px;
   }
   .landing-hero h1 {
     font-size: clamp(30px, 6.4vw, 44px);
@@ -810,10 +847,6 @@
   }
   .landing-pos-cart {
     display: flex;
-  }
-  .landing-how,
-  .landing-features {
-    padding-block: 48px;
   }
   .landing-how {
     scroll-margin-top: 92px;
@@ -845,7 +878,7 @@
     border-radius: var(--radius-feature);
   }
   .landing-feature-grid {
-    gap: 28px;
+    gap: var(--card-gap, 24px);
     margin-top: 28px;
   }
   .landing-footer-inner {

@@ -1,6 +1,6 @@
 .restaurant-page {
   display: grid;
-  gap: var(--space-4, 1rem);
+  gap: var(--group-gap);
   min-width: 0;
 }
 .restaurant-form {
@@ -46,11 +46,11 @@
   max-width: 100%;
   min-width: 0;
 }
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   .restaurant-page .catalog-actions > .button {
     flex: 1 1 auto;
   }
   .restaurant-page .catalog-panel {
-    padding: 1rem;
+    padding: var(--card-padding);
   }
 }

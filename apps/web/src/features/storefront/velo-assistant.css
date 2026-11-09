@@ -9,8 +9,8 @@
 /* Floating Launcher Button */
 .velo-chat-launcher {
   position: fixed;
-  right: 24px;
-  bottom: 24px;
+  right: max(24px, env(safe-area-inset-right));
+  bottom: max(24px, env(safe-area-inset-bottom));
   z-index: 99;
   width: 58px;
   height: 58px;
@@ -22,7 +22,8 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+  transition:
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
     box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   padding: 0;
 }
@@ -66,17 +67,19 @@
 /* Chat Window Modal */
 .velo-chat-window {
   position: fixed;
-  right: 24px;
-  bottom: 94px;
+  right: max(24px, env(safe-area-inset-right));
+  bottom: calc(max(24px, env(safe-area-inset-bottom)) + 70px);
   z-index: 100;
   width: 388px;
   max-width: calc(100vw - 32px);
   height: 590px;
   max-height: calc(100vh - 120px);
+  max-height: calc(100dvh - max(24px, env(safe-area-inset-bottom)) - 96px);
   background: #fffdfa;
   border: 1.5px solid #ece4d4;
   border-radius: 26px;
-  box-shadow: 0 20px 48px -10px rgba(90, 60, 20, 0.18),
+  box-shadow:
+    0 20px 48px -10px rgba(90, 60, 20, 0.18),
     0 2px 12px rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
@@ -183,7 +186,9 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .velo-chat-icon-btn:hover {
@@ -455,7 +460,9 @@
   border: 1.5px solid #e8e0d2;
   border-radius: 24px;
   padding: 4px 6px 4px 12px;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .velo-chat-input-wrapper:focus-within {
@@ -474,7 +481,9 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: color 0.15s ease, background 0.15s ease;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
   padding: 0;
 }
 
@@ -513,7 +522,9 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.15s ease;
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease;
   padding: 0;
   flex-shrink: 0;
 }
@@ -535,9 +546,9 @@
 /* Mobile Responsive */
 @media (max-width: 480px) {
   .velo-chat-window {
-    right: 12px;
-    left: 12px;
-    bottom: 82px;
+    right: max(12px, env(safe-area-inset-right));
+    left: max(12px, env(safe-area-inset-left));
+    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 66px);
     width: auto;
     max-width: none;
     height: 520px;
@@ -545,8 +556,8 @@
   }
 
   .velo-chat-launcher {
-    right: 16px;
-    bottom: 16px;
+    right: max(16px, env(safe-area-inset-right));
+    bottom: max(16px, env(safe-area-inset-bottom));
     width: 52px;
     height: 52px;
   }

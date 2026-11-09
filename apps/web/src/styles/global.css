@@ -1,14 +1,15 @@
 @import 'tailwindcss';
 @import './tokens.css';
+@import './layout.css';
 
 .tenant-page {
   display: grid;
-  gap: 20px;
+  gap: var(--group-gap);
   min-width: 0;
 }
 .tenant-page header {
   display: grid;
-  gap: 6px;
+  gap: var(--heading-gap);
 }
 .tenant-page header h1 {
   font-size: clamp(22px, 2.4vw, 28px);
@@ -20,7 +21,7 @@
   color: var(--text-secondary);
 }
 .tenant-page .card {
-  padding: clamp(18px, 2.5vw, 24px);
+  padding: var(--card-padding);
   border-radius: 20px;
   display: grid;
   gap: 16px;
@@ -371,7 +372,7 @@ ul {
   border-color: #fecaca;
 }
 .card {
-  padding: 26px;
+  padding: var(--card-padding);
   background: var(--surface);
   border: 1px solid rgba(229, 231, 238, 0.6);
   border-radius: var(--radius-card);
@@ -640,6 +641,13 @@ ul {
   display: flex;
   flex-direction: column;
   background: var(--canvas);
+  background-image: var(--canvas-art), var(--canvas-background);
+  background-repeat: no-repeat;
+  background-size:
+    100% 100%,
+    auto,
+    auto,
+    auto;
 }
 .topbar {
   min-height: var(--header-height);
@@ -650,7 +658,8 @@ ul {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--header-padding-block) var(--header-padding-inline);
+  padding: var(--header-padding-block) var(--layout-shell-end)
+    var(--header-padding-block) var(--layout-shell-start);
   background: var(--surface);
 }
 @supports (backdrop-filter: blur(16px)) {
@@ -666,6 +675,7 @@ ul {
   color: var(--text-secondary);
   font-size: 13px;
   min-width: 0;
+  flex: 1;
 }
 .breadcrumb-home {
   width: 32px;
@@ -946,7 +956,9 @@ ul {
 .account-menu-item-chevron {
   color: var(--text-tertiary);
   flex-shrink: 0;
-  transition: transform 0.14s ease, color 0.14s ease;
+  transition:
+    transform 0.14s ease,
+    color 0.14s ease;
 }
 .account-menu-item:hover,
 .account-menu-item:focus-visible,
@@ -1002,19 +1014,12 @@ ul {
   display: none;
 }
 .content {
-  max-width: 1600px;
+  max-width: var(--layout-container-max);
   margin: 0 auto;
   width: 100%;
   flex: 1;
   min-width: 0;
-  padding: 28px 32px 36px;
-  background-image: var(--canvas-art), var(--canvas-background);
-  background-repeat: no-repeat;
-  background-size:
-    100% 100%,
-    auto,
-    auto,
-    auto;
+  padding: var(--space-8) var(--layout-gutter);
 }
 .page-heading {
   display: flex;
@@ -1381,9 +1386,11 @@ ul {
   font-size: 11px;
 }
 .footer {
-  padding: 20px 38px;
+  padding: var(--space-5) var(--layout-shell-end) var(--space-5)
+    var(--layout-shell-start);
   border-top: 1px solid var(--border);
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 10px;
   color: var(--text-strong);
@@ -1440,7 +1447,7 @@ ul {
 .pos-grid {
   display: grid;
   grid-template-columns: 1.7fr 1fr;
-  gap: 24px;
+  gap: var(--card-gap);
 }
 .pos-grid h2 {
   font-size: 20px;
@@ -2085,18 +2092,15 @@ pre {
     font-size: 13px;
   }
 }
-@media (max-width: 1200px) {
+@media (max-width: 1279px) {
   .management-shell {
     --sidebar-width: 240px;
   }
   .sidebar {
     padding: 25px 14px;
   }
-  .content {
-    padding: 30px 25px;
-  }
-  .topbar {
-    padding: var(--header-padding-block) var(--header-padding-inline);
+  .topbar-search {
+    display: none;
   }
   .module-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2122,9 +2126,6 @@ pre {
     grid-template-columns: 1.3fr 1fr;
     gap: 18px;
   }
-  .card {
-    padding: 22px;
-  }
   .service-ready {
     flex-wrap: wrap;
   }
@@ -2135,7 +2136,7 @@ pre {
     grid-template-columns: 1fr;
   }
 }
-@media (max-width: 900px) {
+@media (max-width: 1023px) {
   .management-shell {
     grid-template-columns: 1fr;
   }
@@ -2169,13 +2170,17 @@ pre {
   }
 }
 @media (max-width: 640px) {
+  .topbar-right .avatar,
+  .topbar-right .account-menu,
+  .topbar-right .topbar-bell,
+  .topbar-right .topbar-help {
+    display: none;
+  }
+}
+@media (max-width: 767px) {
   h1 {
     font-size: var(--font-page-mobile);
     letter-spacing: -0.8px;
-  }
-  .topbar {
-    min-height: var(--header-height);
-    padding: var(--header-padding-block) var(--header-padding-inline);
   }
   .breadcrumb {
     font-size: 12px;
@@ -2197,12 +2202,6 @@ pre {
     height: 34px;
     border-radius: 11px;
   }
-  .topbar-right .avatar,
-  .topbar-right .account-menu,
-  .topbar-right .topbar-bell,
-  .topbar-right .topbar-help {
-    display: none;
-  }
   .topbar-right {
     margin-right: 0;
   }
@@ -2215,9 +2214,6 @@ pre {
   }
   .topbar-right .tag {
     font-size: 10px;
-  }
-  .content {
-    padding: 25px 18px;
   }
   .page-heading {
     align-items: flex-start;
@@ -2298,7 +2294,6 @@ pre {
     font-size: 11px;
   }
   .footer {
-    padding: 20px 18px;
     flex-direction: column;
   }
   .pos-grid {
@@ -2348,9 +2343,6 @@ pre {
   }
   .section-heading h2 {
     font-size: 18px;
-  }
-  .card {
-    padding: 20px;
   }
   .service-ready .tag {
     margin-left: 0;

@@ -677,6 +677,18 @@ ul {
   display: inline-grid;
   place-items: center;
   flex-shrink: 0;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+.breadcrumb-home:hover {
+  background: var(--surface);
+  border-color: var(--primary-border);
+  color: var(--primary-strong);
+}
+.breadcrumb-home:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 .breadcrumb strong {
   color: var(--text-primary);

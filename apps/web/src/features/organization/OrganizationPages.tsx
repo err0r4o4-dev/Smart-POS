@@ -1461,9 +1461,13 @@ function ScopedSetupPage() {
           </Link>
           <span className="setup-topbar-divider" aria-hidden="true" />
           <div className="breadcrumb">
-            <span className="breadcrumb-home" aria-hidden="true">
-              <House size={15} />
-            </span>
+            <Link
+              to="/"
+              className="breadcrumb-home"
+              aria-label={t('shell.homeAndEntrances')}
+            >
+              <House size={15} aria-hidden="true" />
+            </Link>
             <span>{t('shell.accountAndAccess')}</span>
             <ChevronRight
               size={15}

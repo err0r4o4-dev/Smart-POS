@@ -388,6 +388,7 @@ export function POSTerminalPage() {
         <Card className="cart-panel">
           <CartPanel />
           <Button
+            className="pos-checkout-action-btn"
             disabled={!pos.cart?.items.length || !pos.shift || pos.busy || invalidCartPolicy}
             onClick={() => navigate('/pos/checkout')}
           >

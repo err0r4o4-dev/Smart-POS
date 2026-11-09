@@ -22,10 +22,17 @@ import { usePOS } from './POSContext';
 
 export function POSWorkspace() {
   const { t } = useLanguage();
+  const location = useLocation();
 
   const tenant = useOrganization();
   const { state } = useAuth();
   if (!tenant.context || !state.session) return null;
+
+  const isTerminal =
+    location.pathname === '/pos' ||
+      location.pathname === '/manage/pos' ||
+      location.pathname.endsWith('/pos');
+
   return (
     <WorkspaceProvider
       key={`${state.session.user.id}:${tenant.context.organization.id}:${tenant.branchID}`}
@@ -35,38 +42,36 @@ export function POSWorkspace() {
       csrf={state.session.csrf_token}
     >
       <div className="pos-workspace catalog-page">
-        <nav className="pos-navigation" aria-label={t('pos.salesNavigation')}>
-          <Link to="/pos">{t('pos.sellProducts')}</Link>
-          <Link to="/pos/held-carts">
-            {t('pos.heldCarts')} <span className="shortcut-badge">F4</span>
-          </Link>
-          <Link to="/pos/checkout">{t('pos.checkout')}</Link>
-          <Link to="/pos/register/open">{t('pos.openShift')}</Link>
-          <Link to="/pos/register/close">{t('pos.closeShift')}</Link>
-          <Link to="/pos/register/history">{t('pos.shiftHistory')}</Link>
-          <Link to="/pos/shifts">{t('pos.paymentReview')}</Link>
-          <Link to="/sales">{t('pos.salesHistory')}</Link>
-          <Link to="/receipts">{t('pos.receipts')}</Link>
-          {tenant.can('online_orders.read') && (
-            <Link to="/online-orders">{t('pos.onlineOrders')}</Link>
-          )}
-        </nav>
+        {!isTerminal && (
+          <nav className="pos-navigation" aria-label={t('pos.salesNavigation')}>
+            <Link to="/pos">{t('pos.sellProducts')}</Link>
+            <Link to="/pos/held-carts">
+              {t('pos.heldCarts')} <span className="shortcut-badge">F4</span>
+            </Link>
+            <Link to="/pos/checkout">{t('pos.checkout')}</Link>
+            <Link to="/pos/register/open">{t('pos.openShift')}</Link>
+            <Link to="/pos/register/close">{t('pos.closeShift')}</Link>
+            <Link to="/pos/register/history">{t('pos.shiftHistory')}</Link>
+            <Link to="/pos/shifts">{t('pos.paymentReview')}</Link>
+          </nav>
+        )}
         <div className="pos-workspace-content">
-          <WorkspaceStatus />
+          <WorkspaceStatus isTerminal={isTerminal} />
           <Outlet />
         </div>
       </div>
     </WorkspaceProvider>
   );
 }
-function WorkspaceStatus() {
+function WorkspaceStatus({ isTerminal: isTerminalProp }: { isTerminal?: boolean } = {}) {
   const { t, localize, messageText } = useLanguage();
   const location = useLocation();
   const pos = usePOS();
   const isTerminal =
-    location.pathname === '/pos' ||
-    location.pathname === '/manage/pos' ||
-    location.pathname.endsWith('/pos');
+    isTerminalProp ??
+    (location.pathname === '/pos' ||
+      location.pathname === '/manage/pos' ||
+      location.pathname.endsWith('/pos'));
 
   return (
     <>

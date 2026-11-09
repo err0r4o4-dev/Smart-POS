@@ -613,6 +613,22 @@
 .pos-search label {
   flex: 1;
   min-width: 0;
+  display: block;
+}
+.pos-search label input,
+.pos-search input {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+}
+.product-panel > label {
+  display: block;
+  margin-bottom: 16px;
+}
+.product-panel > label select {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
 }
 .pos-products {
   display: grid;
@@ -949,4 +965,26 @@
   border: 1px solid var(--border, #cbd5e1);
   border-radius: 4px;
   margin-left: 6px;
+  vertical-align: middle;
+}
+
+.pos-workspace .cart-panel {
+  display: flex;
+  flex-direction: column;
+}
+.pos-checkout-action-btn {
+  width: 100%;
+  min-height: 48px;
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 16px;
+  background: var(--primary, #f59e0b);
+  color: var(--primary-contrast, #1e293b);
+  border-radius: var(--radius-medium, 12px);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25);
+  transition: all 0.15s ease-in-out;
+}
+.pos-checkout-action-btn:hover:not(:disabled) {
+  background: var(--primary-hover, #d97706);
+  transform: translateY(-1px);
 }

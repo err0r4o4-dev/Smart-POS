@@ -85,6 +85,85 @@ test.beforeEach(async ({ page, baseURL }) => {
   });
 });
 
+for (const width of [320, 768, 1440, 1920, 2560]) {
+  test(`background composition stays stable as content grows at ${width}px`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width, height: 600 });
+    await page.goto('/shop');
+    await expect(page.getByRole('heading', { name: store.name })).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    const content = page.locator('.storefront-content');
+    await content.evaluate((element) => {
+      element.style.minHeight = '1000px';
+    });
+    await page.addStyleTag({
+      content: '.shop-directory-shell > * { visibility: hidden !important; }',
+    });
+    const captureBackground = async () => {
+      const styles = await page.evaluate(() => {
+        const shell = document.querySelector('.storefront-shell')!;
+        const shellStyle = getComputedStyle(shell);
+        const wavesStyle = getComputedStyle(shell, '::before');
+        return {
+          shellHeight: shell.getBoundingClientRect().height,
+          backgroundImage: shellStyle.backgroundImage,
+          backgroundPosition: shellStyle.backgroundPosition,
+          backgroundSize: shellStyle.backgroundSize,
+          backgroundRepeat: shellStyle.backgroundRepeat,
+          wavesContent: wavesStyle.content,
+          wavesImage: wavesStyle.backgroundImage,
+          wavesPosition: wavesStyle.backgroundPosition,
+          wavesSize: wavesStyle.backgroundSize,
+          wavesHeight: wavesStyle.height,
+        };
+      });
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth),
+      ).toBeLessThanOrEqual(width);
+      return styles;
+    };
+    const short = await captureBackground();
+    await content.evaluate((element) => {
+      element.style.minHeight = '4000px';
+    });
+    const long = await captureBackground();
+    expect(short.backgroundImage).toContain(
+      '/images/shop-directory-background.svg',
+    );
+    expect(short.backgroundSize).toBe('max(100%, 960px) auto');
+    expect(short.backgroundPosition).toBe('50% 0%');
+    expect(short.backgroundRepeat).toBe('no-repeat');
+    expect(short.wavesContent).toBe('""');
+    expect(short.wavesImage).toContain(
+      '/images/shop-directory-bottom-waves.svg',
+    );
+    expect(short.wavesPosition).toBe('50% 100%');
+    expect(short.wavesSize).toBe('cover');
+    expect(short.wavesHeight).not.toBe('0px');
+    for (const asset of [
+      '/images/shop-directory-background.svg',
+      '/images/shop-directory-bottom-waves.svg',
+    ]) {
+      const response = await page.request.get(asset);
+      expect(response.ok(), `${asset} should be served`).toBe(true);
+      expect(response.headers()['content-type']).toContain('image/svg+xml');
+    }
+    expect(long.backgroundSize).toBe(short.backgroundSize);
+    expect(long.backgroundPosition).toBe(short.backgroundPosition);
+    expect(long.wavesHeight).toBe(short.wavesHeight);
+    await page.setViewportSize({ width, height: 1200 });
+    const tall = await captureBackground();
+    expect(tall.backgroundSize).toBe(long.backgroundSize);
+    expect(tall.backgroundPosition).toBe(long.backgroundPosition);
+    expect(tall.wavesHeight).toBe(long.wavesHeight);
+    await testInfo.attach('background-contract', {
+      body: Buffer.from(JSON.stringify({ short, long, tall }, null, 2)),
+      contentType: 'application/json',
+    });
+  });
+}
+
 async function assertPage(
   page: Page,
   width: number,

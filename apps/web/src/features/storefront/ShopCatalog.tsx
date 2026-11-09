@@ -442,13 +442,6 @@ export function ShopCatalog({ slug }: { slug: string }) {
               {t('storefront.categoryPriceAndSortingFiltersRequireA')}
             </p>
           )}
-          <p
-            role="status"
-            aria-label={t('storefront.addProductResult')}
-            className="catalog-feedback"
-          >
-            {messageText(message)}
-          </p>
           {products.isPending && (
             <Loading>{t('storefront.loadingProducts')}</Loading>
           )}

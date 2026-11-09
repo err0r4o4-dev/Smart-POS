@@ -31,10 +31,12 @@
 ### Task 1: Update Routes and Navigation Groups in `routes.ts`
 
 **Files:**
+
 - Modify: `apps/web/src/app/routes.ts:35-135`
 - Test: `apps/web/src/layouts/NavigationMenu.test.tsx`
 
 **Interfaces:**
+
 - Consumes: `paths`, `managementRoles`, `workspacePath`
 - Produces: `navigation: NavigationItem[]`, `navigationGroups: NavigationGroup[]`
 
@@ -70,6 +72,7 @@ Expected: FAIL with mismatch in group IDs or paths.
 - [ ] **Step 3: Update `managementItems` and `managementGroups` in `apps/web/src/app/routes.ts`**
 
 Add `/settings/storefront` to `managementItems`:
+
 ```typescript
 {
   to: paths.storefrontSettings,
@@ -78,7 +81,9 @@ Add `/settings/storefront` to `managementItems`:
   permission: 'storefront.manage',
 },
 ```
+
 Update `managementGroups`:
+
 ```typescript
 const managementGroups: NavigationGroup[] = [
   {
@@ -116,10 +121,12 @@ git commit -m "feat(web): update navigation route groups for restaurant operatio
 ### Task 2: Redesign `NavigationMenu.tsx` to Flat Sectioned Layout
 
 **Files:**
+
 - Modify: `apps/web/src/layouts/NavigationMenu.tsx`
 - Test: `apps/web/src/layouts/NavigationMenu.test.tsx`
 
 **Interfaces:**
+
 - Consumes: `items: NavigationItem[]`, `access: Session`, `groups?: NavigationGroup[]`, `homePath?: string`, `onNavigate?: () => void`
 - Produces: Clean flat navigation menu component with section headers and direct links
 
@@ -132,8 +139,13 @@ it('renders all grouped links directly under section headers without accordion b
   expect(screen.getByText('การขายและหน้าร้าน')).toBeVisible();
   expect(screen.getByText('จัดการร้าน')).toBeVisible();
   expect(screen.getByText('ตั้งค่าระบบ')).toBeVisible();
-  expect(screen.getByRole('link', { name: 'ภาพรวม' })).toHaveAttribute('aria-current', 'page');
-  expect(screen.getByRole('link', { name: 'รับออเดอร์หน้าร้าน' })).toBeVisible();
+  expect(screen.getByRole('link', { name: 'ภาพรวม' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  expect(
+    screen.getByRole('link', { name: 'รับออเดอร์หน้าร้าน' }),
+  ).toBeVisible();
   expect(screen.getByRole('link', { name: 'เมนูอาหาร' })).toBeVisible();
   expect(screen.getByRole('link', { name: 'การตั้งค่า' })).toBeVisible();
   expect(screen.getByRole('link', { name: 'หน้าร้านออนไลน์' })).toBeVisible();
@@ -185,11 +197,13 @@ git commit -m "feat(web): render flat navigation menu with section headers"
 ### Task 3: Add Section Header Styles in `global.css`
 
 **Files:**
+
 - Modify: `apps/web/src/styles/global.css`
 
 - [ ] **Step 1: Inspect and add `.nav-section` and `.nav-section-title` rules**
 
 In `apps/web/src/styles/global.css`:
+
 ```css
 .nav-section {
   margin: 12px 0 4px;
@@ -219,6 +233,7 @@ In `apps/web/src/styles/global.css`:
   flex-direction: column;
 }
 ```
+
 Clean up or deprecate obsolete `.nav-group-toggle` styles while keeping `.nav-item` styling intact.
 
 - [ ] **Step 2: Verify visually that spacing, hierarchy, and active states render cleanly**
@@ -235,11 +250,13 @@ git commit -m "style(web): add styling for flat navigation section headers"
 ### Task 4: Complete Unit Tests in `NavigationMenu.test.tsx`
 
 **Files:**
+
 - Modify: `apps/web/src/layouts/NavigationMenu.test.tsx`
 
 - [ ] **Step 1: Replace obsolete accordion toggle tests with comprehensive flat navigation tests**
 
 Write tests covering:
+
 - Every grouped route belongs to exactly one group.
 - All links render without accordion buttons.
 - Active item highlighting on root and nested routes (e.g. `/manage/products/item-1`).
@@ -265,6 +282,7 @@ git commit -m "test(web): update NavigationMenu tests for flat sectioned structu
 ### Task 5: Full Verification and Cleanup
 
 **Files:**
+
 - None created; verify entire project builds and tests pass.
 
 - [ ] **Step 1: Run WorkspacePages tests**

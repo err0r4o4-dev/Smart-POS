@@ -2,7 +2,7 @@ import { defineMessages } from './defineMessages';
 export const shell = defineMessages({
   th: {
     invalidSingleStoreConfigurationCheckSystemSettings:
-      'ตั้งค่าร้านไม่ถูกต้อง ตรวจสอบระบบ',
+      'ข้อมูลร้านเดียวไม่ถูกต้อง กรุณาตรวจการตั้งค่าระบบ',
     checkingYourSession: 'กำลังตรวจสอบเซสชัน…',
     couldNotVerifyYourSession: 'ไม่สามารถตรวจสอบเซสชันได้',
     openingPage: 'กำลังเปิดหน้า…',

@@ -9,6 +9,7 @@
 **Tech Stack:** React 18, React Router 6, TanStack Query, Lucide icons, Vanilla CSS variables (Warm Gold tokens).
 
 **Spec:** User reference screenshot (Image 2) showing:
+
 1. No application sidebar or navigation menu.
 2. Centered split container on warm ambient background.
 3. Left hero panel:
@@ -44,14 +45,16 @@
 ### Task 1: Decouple `/setup` Route from `RoleWorkspaceLayout`
 
 **Files:**
+
 - Modify: `apps/web/src/app/router.tsx:106-120`
 - Test: `apps/web/src/app/router.tsx`
 
 - [ ] **Step 1: Inspect `router.tsx` route tree**
-Move `{ path: paths.setup, element: <SetupPage /> }` outside `RoleWorkspaceLayout` so it is a direct child of `OrganizationWorkspaceProvider`.
+      Move `{ path: paths.setup, element: <SetupPage /> }` outside `RoleWorkspaceLayout` so it is a direct child of `OrganizationWorkspaceProvider`.
 
 - [ ] **Step 2: Update `router.tsx`**
-Place `/setup` under `OrganizationWorkspaceProvider` as a sibling to `RoleWorkspaceLayout`:
+      Place `/setup` under `OrganizationWorkspaceProvider` as a sibling to `RoleWorkspaceLayout`:
+
 ```tsx
   {
     element: <OrganizationWorkspaceProvider />,
@@ -66,24 +69,25 @@ Place `/setup` under `OrganizationWorkspaceProvider` as a sibling to `RoleWorksp
 ```
 
 - [ ] **Step 3: Verify with unit tests**
-Run `npx vitest run WorkspacePages` to verify routing tests pass.
+      Run `npx vitest run WorkspacePages` to verify routing tests pass.
 
 ---
 
 ### Task 2: Implement 2-Column Hero & Form Structure in `OrganizationPages.tsx`
 
 **Files:**
+
 - Modify: `apps/web/src/features/organization/OrganizationPages.tsx`
 
 - [ ] **Step 1: Add SetupHeroPanel Component**
-Implement the left hero visual panel with:
+      Implement the left hero visual panel with:
 - Title: "ตั้งค่าร้านอาหารของคุณ" & "เริ่มใช้งาน VELOPOS"
 - Description: "ระบบ POS ร้านอาหารครบวงจร จัดการเมนู ออเดอร์ โต๊ะ และการขาย ในที่เดียว"
 - Image illustration: `/images/auth-pos-reference.png`
 - 3 Value proposition highlights with Store, LayoutGrid, and TrendingUp icons.
 
 - [ ] **Step 2: Refine Step 0 Fields & Notice Callout in `OrganizationPages.tsx`**
-Update Step 0 field layout, placeholders, and callout text:
+      Update Step 0 field layout, placeholders, and callout text:
 - Placeholder for store name: "เช่น ร้านอาหารของคุณ"
 - Business type options: "ร้านอาหาร (Restaurant)"
 - Placeholder for email: "เช่น contact@velocafe.com"
@@ -93,7 +97,7 @@ Update Step 0 field layout, placeholders, and callout text:
 - Notice text: "คุณสามารถแก้ไขข้อมูลเหล่านี้ได้ในภายหลัง เช่น ชื่อร้าน ที่อยู่ รูปภาพ และคำอธิบายร้าน"
 
 - [ ] **Step 3: Update Action Buttons**
-Render:
+      Render:
 - Secondary button: `← ย้อนกลับ`
 - Primary button: `ถัดไป →` (with `aria-label="บันทึกและถัดไป"` so both visual "ถัดไป" and test regex `บันทึกและถัดไป` are satisfied).
 
@@ -102,10 +106,11 @@ Render:
 ### Task 3: Style `/setup` with Pixel-Perfect Warm Gold Tokens (`setup.css`)
 
 **Files:**
+
 - Modify: `apps/web/src/features/organization/setup.css`
 
 - [ ] **Step 1: Define standalone stage & layout**
-Create `.setup-standalone-shell`:
+      Create `.setup-standalone-shell`:
 - Ambient background with subtle warm radial glow.
 - Centered container `.setup-stage-container` (max-width 1200px, border-radius 24px, subtle box-shadow).
 - Two-column grid `.setup-split-grid` (`minmax(380px, 440px) 1fr`, gap 24px).
@@ -129,18 +134,19 @@ Create `.setup-standalone-shell`:
 ### Task 4: Verification and Quality Checks
 
 **Files:**
+
 - Test: `apps/web/src/features/organization/OrganizationPages.test.tsx`
 
 - [ ] **Step 1: Run focused unit tests**
-Run: `npx vitest run OrganizationPages`
-Expected: ALL PASS.
+      Run: `npx vitest run OrganizationPages`
+      Expected: ALL PASS.
 
 - [ ] **Step 2: Run typecheck**
-Run: `npm run typecheck`
-Expected: 0 errors.
+      Run: `npm run typecheck`
+      Expected: 0 errors.
 
 - [ ] **Step 3: Run lint**
-Run: `npm run lint`
-Expected: 0 errors.
+      Run: `npm run lint`
+      Expected: 0 errors.
 
 - [ ] **Step 4: Update TODO.md and close active task**

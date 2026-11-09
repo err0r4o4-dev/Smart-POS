@@ -7,6 +7,7 @@ export default defineConfig({
   workers: process.env.CI ? 2 : 4,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
+    ...(process.env.PW_CHANNEL ? { channel: process.env.PW_CHANNEL } : {}),
     baseURL: process.env.E2E_BASE_URL ?? 'http://127.0.0.1:8088',
     trace: 'retain-on-failure',
     ...(process.env.AUTH_TEST_PROXY

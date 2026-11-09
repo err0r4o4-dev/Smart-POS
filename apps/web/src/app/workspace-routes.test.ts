@@ -9,9 +9,7 @@ it('preserves clean root restaurant routes and permission parents without /manag
     { element: gate, children: [{ path: '/menu/:id', element: page }] },
   ]);
   expect(routes[0].element).toBe(gate);
-  expect(routes[0].children?.map((route) => route.path)).toEqual([
-    '/menu/:id',
-  ]);
+  expect(routes[0].children?.map((route) => route.path)).toEqual(['/menu/:id']);
   expect(routes[0].children?.[0].element).toBe(page);
 });
 

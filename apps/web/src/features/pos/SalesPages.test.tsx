@@ -143,9 +143,7 @@ function renderSalesPage(receipts = false) {
   return render(
     <StrictMode>
       <QueryClientProvider client={client}>
-        <MemoryRouter
-          initialEntries={[receipts ? '/receipts' : '/sales']}
-        >
+        <MemoryRouter initialEntries={[receipts ? '/receipts' : '/sales']}>
           <LanguageSwitcher />
           <SalesPage receipts={receipts} />
         </MemoryRouter>

@@ -65,7 +65,13 @@ accounts, sessions or historical data are rewritten by development checks.
 - [?] Real PostgreSQL and inbox acceptance need an authorized isolated target
   and test mailbox/provider. Verify expiry/reuse, rollback, user isolation,
   session revocation and both concurrent login/reset lock orderings there.
-  Docker/psql/postgres remain absent from the current PATH. No real mail sent.
+  User selected the existing isolated environment after committing the source
+  as d725cea. Read-only discovery found Docker 29.9.2 outside PATH and retained
+  volume `smartpos-auth-test_postgres-data`, but no containers or networks for
+  that test project. The running `smartpos` project uses a different volume and
+  must not receive acceptance fixtures. Await confirmation to restore the test
+  services without migrations, resets or changes to retained data. No database
+  test, service start or real mail send occurred during this discovery.
 
 Acceptance: unverified accounts cannot enter setup/management through the UI;
 existing server permissions remain authoritative; verification never logs in an

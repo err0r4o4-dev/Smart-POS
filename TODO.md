@@ -1,3 +1,78 @@
+# Password account flow completion (2026-11-09)
+
+Approved flow: email/password registration, email-link verification, login routing
+and password recovery. Work on feature/add-auth from ec42c32; preserve its UI and
+Google behavior. Size: Medium. Risk: High (authentication).
+
+Main owns bounded frontend/provider, Go delivery metadata, the login/reset
+credential revalidation guard, contracts and tests.
+No schema change, real email, database mutation, dependency install, commit,
+push or deployment. Recovery: remove only this task's source delta; no stored
+accounts, sessions or historical data are rewritten by development checks.
+
+- [x] Reproduce unverified login routing and missing delivery/recovery feedback.
+- [x] Complete verification routing, explicit success, resend cooldown, signup
+  recovery link and session error recovery. Preserve Google flow and UI.
+- [x] Expose registration SMTP acceptance without undoing a committed account;
+  update Go callers, client and public schema together.
+- [/] Reset error/generic response/local-session recovery checks pass. Existing
+  transactional revocation and token expiry inspected; real DB proof is blocked.
+- [x] Fresh local checks (2026-11-09): focused auth 49/49; full `npm run test`
+  PASS (web 618/618 in 75 files, contracts 18 modules/115 routes, log tests 10/10,
+  dev-stack tests 6/6). Typecheck, web build and lint PASS (0 errors/9 warnings).
+- [x] `go -C apps/api test ./...`, `go -C apps/api vet ./...` and
+  `go -C apps/api build ./...` PASS with dependency downloads disabled and
+  integration DSN/browser flags unset. PostgreSQL protocol stub is not a real DB.
+  Initial full Go compile found two remaining RegistrationResult/Profile fixture
+  callers; both corrected before the passing run.
+- [x] Local mocked Chromium checks 39/39: 16 password-flow cases at 390/1440px
+  plus 23 existing auth/Google/layout regressions at 320/700/701/1440px.
+  APIs intercepted; dev proxy pointed to an unused local port, no real service
+  writes. Covers keyboard/focus, token URL removal, anonymous and wrong-account
+  verification, explicit Continue, resend, expired links and recovery errors.
+  Four synthetic mobile/desktop screenshots inspected. Vite task process stopped.
+- [x] Scoped Prettier, gofmt and `git diff --check` PASS. Logs:
+  `.local/password-account-all-tests-final.log`, `password-account-web.log`,
+  `password-account-browser-final.log`, `password-account-go.log`,
+  `password-account-vet.log`, `password-account-go-build.log`,
+  `password-account-typecheck.log`, `password-account-lint.log`,
+  `password-account-build.log`, `password-account-format.log` (all in `.local`).
+  First dev-stack/vet attempts hit sandbox cache/temp permissions; native
+  escalated reruns passed. Original failure logs retained.
+- [?] Go race check requires CGO/toolchain support (current CGO_ENABLED=0;
+  gcc/clang not found). No compiler installation or global setting change.
+- [x] Authorized independent read-only security review covered the scoped
+  password-flow source/contracts and reset boundary. It found an existing
+  login/reset race, confirmed against HEAD and current source. Login now
+  revalidates the active user's password hash under a transaction row lock
+  before inserting a session. Final source-delta review PASS; no additional
+  actionable defect identified. This is not database or release acceptance.
+- [x] Login/reset orchestration regression: RED before the guard; GREEN after
+  it, covering unchanged and replaced credentials without exposing tokens.
+  The net.Pipe PostgreSQL protocol stub does not validate SQL lock semantics.
+  Fresh post-fix `go -C apps/api test ./... -count=1`, vet and build PASS;
+  gofmt and `git diff --check` PASS. Initial sandbox cache-access failures
+  remain in separate logs; the native approved reruns passed.
+- [x] Review-time web checks rerun: 12 files/49 tests PASS; contract inventory
+  PASS (18 modules/115 routes). Frontend source stayed unchanged during the
+  backend fix. Logs: `.local/password-account-review-web-current.log`,
+  `.local/password-account-review-contracts-current.log`,
+  `.local/password-account-login-reset-red.log`,
+  `.local/password-account-login-reset-green.log`,
+  `.local/password-account-login-reset-go-all-approved.log`,
+  `.local/password-account-login-reset-vet-approved.log` and
+  `.local/password-account-login-reset-build-approved.log`.
+- [?] Real PostgreSQL and inbox acceptance need an authorized isolated target
+  and test mailbox/provider. Verify expiry/reuse, rollback, user isolation,
+  session revocation and both concurrent login/reset lock orderings there.
+  Docker/psql/postgres remain absent from the current PATH. No real mail sent.
+
+Acceptance: unverified accounts cannot enter setup/management through the UI;
+existing server permissions remain authoritative; verification never logs in an
+anonymous visitor; expired/reused links recover safely; no token/secret storage
+or logging. SMTP acceptance is not proof of inbox delivery. Remove this section
+only when implementation, required checks, independent review and acceptance pass.
+
 # Account UI and Google authentication (2026-11-09)
 
 Approved scope: shared login, register, verification, recovery and reset UI;

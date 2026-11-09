@@ -12,15 +12,15 @@ assert.ok(
   ),
   'Employee and role management must not be part of the active route inventory',
 );
-const expected = [6, 4, 9, 6, 9, 11, 7, 8, 5, 5, 4, 6, 7, 2, 10, 4, 8, 3];
+const expected = [7, 4, 9, 6, 9, 11, 7, 8, 5, 5, 4, 6, 7, 2, 10, 4, 8, 3];
 assert.equal(modules.length, 18);
 assert.deepEqual(
   modules.map((item) => item.routes.length),
   expected,
 );
 const routes = modules.flatMap((item) => item.routes);
-assert.equal(routes.length, 114);
-assert.equal(new Set(routes).size, 114);
+assert.equal(routes.length, 115);
+assert.equal(new Set(routes).size, 115);
 for (const route of [
   '/restaurant/recipes',
   '/restaurant/quick-stock',
@@ -41,6 +41,17 @@ for (const item of modules) {
     assert.ok(routeDocs.includes('`' + route + '`'), `Missing route ${route}`);
 }
 const api = YAML.parse(readFileSync('packages/contracts/openapi.yaml', 'utf8'));
+assert.equal(
+  api.paths['/api/v1/auth/register'].post.responses['201'].content[
+    'application/json'
+  ].schema.$ref,
+  '#/components/schemas/RegistrationResponse',
+);
+const registration =
+  api.components.schemas.RegistrationResponse.properties.data;
+assert.ok(registration.required.includes('verification_email_sent'));
+assert.equal(registration.properties.verification_email_sent.type, 'boolean');
+assert.equal(registration.properties.email_verified.const, false);
 const retiredIngredientPaths = [
   '/recipes',
   '/recipes/{recipeId}',
@@ -1057,5 +1068,5 @@ assert.ok(
   'Internal AI must not publish a host port',
 );
 console.log(
-  'PASS: 18 modules, 114 unique documented routes, owner-only access, Stripe sandbox/storefront/POS contracts and service health wiring',
+  'PASS: 18 modules, 115 unique documented routes, owner-only access, Stripe sandbox/storefront/POS contracts and service health wiring',
 );

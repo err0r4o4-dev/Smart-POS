@@ -37,6 +37,10 @@ export interface AuthSession {
   csrf_token: string;
 }
 
+export interface RegistrationResult extends AuthUser {
+  verification_email_sent: boolean;
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -158,7 +162,11 @@ export function register(
   password: string,
   display_name: string,
 ) {
-  return authRequest<AuthUser>('register', { email, password, display_name });
+  return authRequest<RegistrationResult>('register', {
+    email,
+    password,
+    display_name,
+  });
 }
 
 export function forgotPassword(email: string) {

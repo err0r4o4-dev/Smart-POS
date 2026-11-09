@@ -1,6 +1,16 @@
 import { defineMessages } from './defineMessages';
 export const auth = defineMessages({
   th: {
+    verificationTitle: 'ยืนยันอีเมล',
+    verificationRequired:
+      'กรุณายืนยันอีเมลก่อนตั้งค่าหรือจัดการร้าน ลิงก์มีอายุ 24 ชั่วโมง',
+    verificationSuccess:
+      'ยืนยันอีเมลแล้ว กรุณาเข้าสู่ระบบหากยังไม่ได้เข้าสู่ระบบ',
+    verificationContinue: 'ดำเนินการต่อ',
+    verificationCheck: 'ยืนยันอีเมลแล้ว ตรวจสอบอีกครั้ง',
+    verificationRecovery: 'สมัครแล้วแต่ยังไม่ได้ยืนยันอีเมล? ส่งอีเมลอีกครั้ง',
+    verificationDeliveryFailed:
+      'สร้างบัญชีแล้ว แต่ส่งอีเมลยืนยันไม่สำเร็จ กรุณากดส่งอีเมลอีกครั้ง ไม่ต้องสมัครใหม่',
     registerStoryTitle: 'เริ่มต้นร้านของคุณ',
     registerStorySummary:
       'สร้างบัญชี ยืนยันอีเมล แล้วค่อยตั้งค่าร้านในขั้นตอนถัดไป',
@@ -98,6 +108,16 @@ export const auth = defineMessages({
     account: 'บัญชี',
   },
   en: {
+    verificationTitle: 'Verify your email',
+    verificationRequired:
+      'Verify your email before setting up or managing your store. The link expires in 24 hours.',
+    verificationSuccess:
+      'Email verified. Sign in if you are not already signed in.',
+    verificationContinue: 'Continue',
+    verificationCheck: "I've verified my email. Check again",
+    verificationRecovery: 'Already registered? Resend verification email',
+    verificationDeliveryFailed:
+      'Your account was created, but we could not send the verification email. Request another email; do not register again.',
     registerStoryTitle: 'A fresh start for your store.',
     registerStorySummary:
       'Create your account, verify your email, then set up your store when you are ready.',

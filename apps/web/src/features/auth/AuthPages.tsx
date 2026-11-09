@@ -92,6 +92,7 @@ export function LoginPage() {
   const linkingGoogle = params.get('google') === 'link_required';
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (pending) return;
     setError('');
     setPending(true);
     try {
@@ -121,6 +122,11 @@ export function LoginPage() {
       {params.has('registered') && (
         <p role="status" className="auth-status-banner">
           {t('auth.accountCreatedSignInToContinue')}
+        </p>
+      )}
+      {params.has('verified') && (
+        <p role="status" className="auth-status-banner">
+          {t('auth.verificationSuccess')}
         </p>
       )}
       {params.has('google') && (
@@ -202,8 +208,10 @@ export function RegisterPage() {
   const [error, setError] = useState('');
   const [pending, setPending] = useState(false);
   const [registered, setRegistered] = useState(false);
+  const [verificationEmailSent, setVerificationEmailSent] = useState(true);
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (pending) return;
     if (password !== confirm) {
       setError(t('auth.passwordsDoNotMatch'));
       return;
@@ -211,7 +219,8 @@ export function RegisterPage() {
     setError('');
     setPending(true);
     try {
-      await register(email, password, name);
+      const result = await register(email, password, name);
+      setVerificationEmailSent(result.verification_email_sent !== false);
       setRegistered(true);
     } catch (failure) {
       setError(
@@ -238,6 +247,11 @@ export function RegisterPage() {
           </p>
         </div>
         <div className="auth-form-body">
+          {!verificationEmailSent && (
+            <p role="alert" className="auth-error">
+              {t('auth.verificationDeliveryFailed')}
+            </p>
+          )}
           <p className="auth-status-banner">{t('auth.checkInbox')}</p>
           <ResendVerification initialEmail={email} />
         </div>
@@ -342,6 +356,7 @@ export function RegisterPage() {
         <div className="auth-link-register-prompt">
           <Link to="/login">{t('auth.alreadyHaveAnAccountSignIn')}</Link>
         </div>
+        <Link to={paths.verifyEmail}>{t('auth.verificationRecovery')}</Link>
       </div>
     </LoginLayout>
   );
@@ -356,7 +371,9 @@ export function ForgotPasswordPage() {
   const [pending, setPending] = useState(false);
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (pending) return;
     setError('');
+    setMessage('');
     setPending(true);
     try {
       setMessage((await forgotPassword(email)).message);
@@ -442,6 +459,7 @@ export function ResetPasswordPage() {
   }, [token]);
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (pending || !token) return;
     if (password !== confirm) {
       setError(t('auth.passwordsDoNotMatch'));
       return;

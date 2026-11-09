@@ -2,6 +2,7 @@ package identity
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net"
 	"strings"
@@ -13,6 +14,13 @@ import (
 )
 
 type failingVerificationMailer struct{}
+
+type acceptingVerificationMailer struct{}
+
+func (acceptingVerificationMailer) SendReset(context.Context, string, string) error { return nil }
+func (acceptingVerificationMailer) SendEmailVerification(context.Context, string, string) error {
+	return nil
+}
 
 func (failingVerificationMailer) SendReset(context.Context, string, string) error { return nil }
 func (failingVerificationMailer) SendEmailVerification(context.Context, string, string) error {
@@ -79,12 +87,34 @@ func TestRegisterReturnsCreatedProfileWhenDeliveryFails(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer pool.Close()
-	service := &Service{Pool: pool, Mailer: failingVerificationMailer{}}
-	profile, err := service.Register(context.Background(), "person@example.test", "A-long-password-123!", "Person")
-	if err != nil {
-		t.Fatalf("committed registration returned error: %v", err)
-	}
-	if profile.ID != "user-id" || profile.EmailVerified {
-		t.Fatalf("unexpected created profile: %+v", profile)
+	for _, scenario := range []struct {
+		name   string
+		mailer Mailer
+		sent   bool
+	}{
+		{"delivery unavailable", failingVerificationMailer{}, false},
+		{"SMTP accepted", acceptingVerificationMailer{}, true},
+	} {
+		t.Run(scenario.name, func(t *testing.T) {
+			service := &Service{Pool: pool, Mailer: scenario.mailer}
+			profile, err := service.Register(context.Background(), "person@example.test", "A-long-password-123!", "Person")
+			if err != nil {
+				t.Fatalf("committed registration returned error: %v", err)
+			}
+			if profile.ID != "user-id" || profile.EmailVerified {
+				t.Fatalf("unexpected created profile: %+v", profile)
+			}
+			body, err := json.Marshal(profile)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var result map[string]any
+			if err := json.Unmarshal(body, &result); err != nil {
+				t.Fatal(err)
+			}
+			if sent, ok := result["verification_email_sent"].(bool); !ok || sent != scenario.sent {
+				t.Fatalf("delivery status = %v, want %v", result["verification_email_sent"], scenario.sent)
+			}
+		})
 	}
 }

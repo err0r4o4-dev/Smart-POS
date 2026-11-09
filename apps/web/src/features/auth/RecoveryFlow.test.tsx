@@ -3,6 +3,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { renderInEnglish as render } from '../../test/render';
 import { ForgotPasswordPage, ResetPasswordPage } from './AuthPages';
+import { ApiError } from '../../lib/api';
 
 const requests = vi.hoisted(() => ({
   forgotPassword: vi.fn(),
@@ -44,7 +45,7 @@ it('does not leave an earlier accepted reset message visible after a failed retr
   );
   fireEvent.click(screen.getByRole('button', { name: 'Request reset link' }));
   expect(await screen.findByRole('alert')).toHaveTextContent(
-    'Reset request unavailable',
+    /check your connection/i,
   );
   expect(screen.queryByRole('status')).not.toBeInTheDocument();
   expect(screen.getByLabelText('Email address')).toHaveValue(
@@ -55,7 +56,7 @@ it('does not leave an earlier accepted reset message visible after a failed retr
 it('offers a replacement for an expired reset link without clearing the session', async () => {
   window.history.replaceState(null, '', '/reset-password?token=expired-token');
   requests.resetPassword.mockRejectedValue(
-    new Error('Reset link is invalid or expired'),
+    new ApiError(400, 'Reset link is invalid or expired'),
   );
   render(
     <BrowserRouter>

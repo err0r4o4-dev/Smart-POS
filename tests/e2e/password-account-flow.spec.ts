@@ -119,7 +119,9 @@ for (const width of [390, 1440]) {
       await page.getByRole('button', { name: /resend verification/i }).click();
       await expect(page.getByRole('status')).toContainText(/eligible account/i);
       await expect(
-        page.getByRole('button', { name: /wait one minute/i }),
+        page.getByRole('button', {
+          name: /suggested wait before retrying: 0:[0-5][0-9]|suggested wait before retrying: 1:00/i,
+        }),
       ).toBeDisabled();
       expect(state.posts).toEqual(['register', 'email/resend']);
       expect(
@@ -264,8 +266,9 @@ for (const width of [390, 1440]) {
       state.forgotError = true;
       await page.getByRole('button', { name: 'Request reset link' }).click();
       await expect(page.getByRole('alert')).toContainText(
-        'Reset request unavailable',
+        'Could not confirm the result. Check your connection and the account status before trying again.',
       );
+      await expect(page.getByText('Reset request unavailable')).toHaveCount(0);
       await expect(page.getByRole('status')).toHaveCount(0);
     });
 

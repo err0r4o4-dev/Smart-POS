@@ -19,8 +19,10 @@ it('renders notification titles as text, not HTML, without taking focus', async 
 
 it('cancels a meaningful confirmation without confirming an action', async () => {
   const result = confirmFeedback({
-    title: 'Discard draft?', text: 'Unsaved draft changes will be lost.',
-    confirmLabel: 'Discard draft', cancelLabel: 'Keep editing',
+    title: 'Discard draft?',
+    text: 'Unsaved draft changes will be lost.',
+    confirmLabel: 'Discard draft',
+    cancelLabel: 'Keep editing',
   });
   const cancel = await screen.findByRole('button', { name: 'Keep editing' });
   fireEvent.click(cancel);
@@ -28,5 +30,7 @@ it('cancels a meaningful confirmation without confirming an action', async () =>
 });
 
 it('does not expose arbitrary failure details', () => {
-  expect(accountFailure(new Error('private host and credential'), true)).not.toContain('private');
+  expect(
+    accountFailure(new Error('private host and credential'), true),
+  ).not.toContain('private');
 });

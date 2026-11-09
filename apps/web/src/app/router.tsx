@@ -43,13 +43,13 @@ import {
 import { RoleWorkspaceLayout } from '../layouts/RoleWorkspaceLayout';
 import { StorefrontLayout } from '../layouts/StorefrontLayout';
 import {
-  ManagementHomePage,
   WorkspaceEntryPage,
   OrganizationWorkspaceProvider,
 } from '../features/workspace/WorkspacePages';
 import { managementRoles } from './access';
 import { paths } from './routes';
 import { RequireSession } from './ProtectedRoute';
+import { ManagementOverviewPage } from '../features/workspace/ManagementOverviewPage';
 
 function CustomerOrderRedirect() {
   const { slug = '', orderId = '' } = useParams();
@@ -99,7 +99,10 @@ const routes: RouteObject[] = [
               {
                 element: <OrganizationGate />,
                 children: [
-                  { path: paths.dashboard, element: <ManagementHomePage /> },
+                  {
+                    path: paths.dashboard,
+                    element: <ManagementOverviewPage />,
+                  },
                 ],
               },
               {

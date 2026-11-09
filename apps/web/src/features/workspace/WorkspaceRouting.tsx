@@ -1,3 +1,4 @@
+
 import { useLanguage } from '../../app/language';
 import {
   generatePath,
@@ -10,68 +11,119 @@ import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
 import { isManagementRole } from '../../app/access';
 import { paths } from '../../app/routes';
-import { businessArea, workspacePath } from '../../app/workspace-paths';
-import { ErrorState, Loading } from '../../components/ui/primitives';
+import {
+  businessArea,
+  workspacePath,
+} from '../../app/workspace-paths';
+import {
+  ErrorState,
+  Loading,
+} from '../../components/ui/primitives';
 
 export function WorkspaceAreaGate() {
   const { t, localize } = useLanguage();
-
   const { state } = useAuth();
   const tenant = useOrganization();
   const { pathname } = useLocation();
+
   if (
     businessArea(pathname) === 'management' &&
     state.status === 'authenticated'
   ) {
-    if (tenant.loading)
-      return <Loading>{t('workspace.checkingManagementWorkspace')}</Loading>;
-    if (tenant.error)
+    if (tenant.loading) {
+      return (
+        <Loading>
+          {t('workspace.checkingManagementWorkspace')}
+        </Loading>
+      );
+    }
+
+    if (tenant.error) {
       return (
         <ErrorState
           message={localize(tenant.error ?? '')}
           retry={() => void tenant.refresh()}
         />
       );
-    if (!tenant.context)
+    }
+
+    if (!tenant.context) {
       return (
         <Navigate
-          to={tenant.storeMode === 'multi' ? paths.setup : paths.forbidden}
+          to={
+            tenant.storeMode === 'multi'
+              ? paths.setup
+              : paths.forbidden
+          }
           replace
         />
       );
-    if (!isManagementRole(tenant.context.membership.role))
+    }
+
+    if (!isManagementRole(tenant.context.membership.role)) {
       return <Navigate to={paths.forbidden} replace />;
+    }
   }
+
   return <Outlet />;
 }
 
-export function LegacyWorkspaceRedirect({ path }: { path: string }) {
+export function LegacyWorkspaceRedirect({
+  path,
+}: {
+  path: string;
+}) {
   const { t, localize } = useLanguage();
-
   const tenant = useOrganization();
   const params = useParams();
   const { search, hash } = useLocation();
-  if (tenant.loading)
-    return <Loading>{t('workspace.selectingWorkspace')}</Loading>;
-  if (tenant.error)
+
+  if (tenant.loading) {
+    return (
+      <Loading>
+        {t('workspace.selectingWorkspace')}
+      </Loading>
+    );
+  }
+
+  if (tenant.error) {
     return (
       <ErrorState
         message={localize(tenant.error ?? '')}
         retry={() => void tenant.refresh()}
       />
     );
-  if (!tenant.context)
+  }
+
+  if (!tenant.context) {
     return (
       <Navigate
-        to={tenant.storeMode === 'multi' ? paths.setup : paths.forbidden}
+        to={
+          tenant.storeMode === 'multi'
+            ? paths.setup
+            : paths.forbidden
+        }
         replace
       />
     );
-  if (!isManagementRole(tenant.context.membership.role))
+  }
+
+  if (!isManagementRole(tenant.context.membership.role)) {
     return <Navigate to={paths.forbidden} replace />;
+  }
+
   const destination =
     path === '/dashboard'
       ? paths.dashboard
-      : workspacePath(generatePath(path, params), 'management');
-  return <Navigate to={destination + search + hash} replace />;
+      : workspacePath(
+          generatePath(path, params),
+          'management',
+        );
+
+  return (
+    <Navigate
+      to={destination + search + hash}
+      replace
+    />
+  );
 }

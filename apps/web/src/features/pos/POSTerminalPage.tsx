@@ -3,9 +3,9 @@ import { useEffect, useRef, useState } from 'react';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavigate';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart } from 'lucide-react';
+import { Clock, Monitor, PauseCircle, Plus, PowerOff, ShoppingCart } from 'lucide-react';
 import { Button, Card } from '../../components/ui/primitives';
-import { StandardPageHeader } from '../../components/ui/StandardPage';
+import { StandardPageHeader, StandardKpiGrid } from '../../components/ui/StandardPage';
 import { QueryFeedback } from '../../components/feedback/QueryFeedback';
 import {
   posRequest,
@@ -145,7 +145,131 @@ export function POSTerminalPage() {
         icon={<ShoppingCart size={24} />}
         title={t('pos.sellProducts')}
         description={t('pos.stockShowsRecordedBalancesAtTheSelling')}
+        actions={
+          <>
+            <Link
+              to="/pos/register/history"
+              className="button button-secondary sales-export-btn"
+            >
+              <Clock size={16} aria-hidden="true" />
+              <span>{t('pos.shiftHistory')}</span>
+            </Link>
+            {pos.shift ? (
+              <Link to="/pos/register/close" className="button sales-new-sale-btn">
+                <PowerOff size={16} aria-hidden="true" />
+                <span>{t('pos.closeShift')}</span>
+              </Link>
+            ) : (
+              <Link to="/pos/register/open" className="button sales-new-sale-btn">
+                <Plus size={16} aria-hidden="true" />
+                <span>{t('pos.openShift')}</span>
+              </Link>
+            )}
+          </>
+        }
       />
+      <StandardKpiGrid label={t('pos.salesSummaryRegion')}>
+        <Card className="sales-kpi-card pos-kpi-card">
+          <div className="sales-kpi-content">
+            <span
+              className="sales-kpi-icon sales-kpi-icon-amber"
+              aria-hidden="true"
+            >
+              <Monitor size={20} />
+            </span>
+            <div className="sales-kpi-body">
+              <span className="sales-kpi-label">{t('pos.activeTerminal')}</span>
+              <div className="pos-kpi-select-wrap">
+                <select
+                  aria-label={t('pos.activeTerminal')}
+                  value={pos.terminal?.id ?? ''}
+                  disabled={pos.busy}
+                  onChange={(event) => pos.setTerminal(event.target.value)}
+                  className="pos-kpi-select"
+                >
+                  <option value="" disabled>
+                    {t('pos.selectTerminal')}
+                  </option>
+                  {(pos.terminals ?? []).map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name} · {item.code}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <span className="sales-kpi-trend">
+                <small>{pos.terminal?.name ?? t('pos.selectTerminal')}</small>
+              </span>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="sales-kpi-card pos-kpi-card">
+          <div className="sales-kpi-content">
+            <span
+              className={`sales-kpi-icon sales-kpi-icon-${pos.shift ? 'success' : 'amber'}`}
+              aria-hidden="true"
+            >
+              <Clock size={20} />
+            </span>
+            <div className="sales-kpi-body">
+              <span className="sales-kpi-label">{t('common.status')}</span>
+              <strong className="sales-kpi-value">
+                {pos.shift ? t('pos.shiftOpen') : t('pos.youHaveNoOpenShift')}
+              </strong>
+              <span className="sales-kpi-trend">
+                <small>
+                  {t('pos.cashier')} {pos.user ? pos.user.slice(0, 8) : '—'}
+                </small>
+              </span>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="sales-kpi-card pos-kpi-card">
+          <div className="sales-kpi-content">
+            <span
+              className="sales-kpi-icon sales-kpi-icon-info"
+              aria-hidden="true"
+            >
+              <PauseCircle size={20} />
+            </span>
+            <div className="sales-kpi-body">
+              <span className="sales-kpi-label">{t('pos.heldCarts')} (F4)</span>
+              <strong className="sales-kpi-value">
+                <Link to="/pos/held-carts" className="pos-kpi-link">
+                  {t('pos.heldCarts')}
+                </Link>
+              </strong>
+              <span className="sales-kpi-trend">
+                <small>F4</small>
+              </span>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="sales-kpi-card pos-kpi-card">
+          <div className="sales-kpi-content">
+            <span
+              className="sales-kpi-icon sales-kpi-icon-amber"
+              aria-hidden="true"
+            >
+              <ShoppingCart size={20} />
+            </span>
+            <div className="sales-kpi-body">
+              <span className="sales-kpi-label">{t('pos.shoppingCart')}</span>
+              <strong className="sales-kpi-value">
+                {moneyText(pos.cart?.total ?? '0.00')} ฿
+              </strong>
+              <span className="sales-kpi-trend">
+                <small>
+                  {pos.cart?.items?.length ?? 0} {t('pos.itemsUnit')}
+                </small>
+              </span>
+            </div>
+          </div>
+        </Card>
+      </StandardKpiGrid>
       {!pos.shift && (
         <p className="notice">
           {t('pos.youMust')}{' '}

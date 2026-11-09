@@ -1,4 +1,3 @@
-import { LanguageSwitcher } from '../../components/ui/LanguageSwitcher';
 import type { UiMessage } from '../../i18n';
 import { useLanguage } from '../../app/language';
 import { useEffect, useState, useRef, type ReactNode } from 'react';
@@ -8,7 +7,7 @@ import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavig
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
-import { Brand, ErrorState, Loading } from '../../components/ui/primitives';
+import { ErrorState, Loading } from '../../components/ui/primitives';
 import {
   posRequest,
   type POSPage,
@@ -20,7 +19,6 @@ import {
 
 import { WorkspaceContext } from './POSContext';
 import { usePOS } from './POSContext';
-import { workspaceHome } from '../../app/access';
 
 export function POSWorkspace() {
   const { t } = useLanguage();
@@ -37,16 +35,6 @@ export function POSWorkspace() {
       csrf={state.session.csrf_token}
     >
       <div className="pos-workspace catalog-page">
-        <a className="skip-link" href="#main-content">
-          {t('pos.skipToContent')}
-        </a>
-        <header className="pos-header">
-          <LanguageSwitcher />
-          <Link to={workspaceHome(tenant.context.membership.role)}>
-            {t('pos.backToWorkspace')}
-          </Link>
-          <Brand />
-        </header>
         <nav className="pos-navigation" aria-label={t('pos.salesNavigation')}>
           <Link to="/pos">{t('pos.sellProducts')}</Link>
           <Link to="/pos/held-carts">
@@ -63,44 +51,51 @@ export function POSWorkspace() {
             <Link to="/online-orders">{t('pos.onlineOrders')}</Link>
           )}
         </nav>
-        <main id="main-content">
+        <div className="pos-workspace-content">
           <WorkspaceStatus />
           <Outlet />
-        </main>
+        </div>
       </div>
     </WorkspaceProvider>
   );
 }
 function WorkspaceStatus() {
   const { t, localize, messageText } = useLanguage();
-
+  const location = useLocation();
   const pos = usePOS();
+  const isTerminal =
+    location.pathname === '/pos' ||
+    location.pathname === '/manage/pos' ||
+    location.pathname.endsWith('/pos');
+
   return (
     <>
-      <div className="pos-context">
-        <label>
-          {t('pos.terminal')}
-          <select
-            aria-label={t('pos.activeTerminal')}
-            value={pos.terminal?.id ?? ''}
-            disabled={pos.busy}
-            onChange={(event) => pos.setTerminal(event.target.value)}
-          >
-            <option value="" disabled>
-              {t('pos.selectTerminal')}
-            </option>
-            {pos.terminals.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name} · {item.code}
+      {!isTerminal && (
+        <div className="pos-context">
+          <label>
+            {t('pos.terminal')}
+            <select
+              aria-label={t('pos.activeTerminal')}
+              value={pos.terminal?.id ?? ''}
+              disabled={pos.busy}
+              onChange={(event) => pos.setTerminal(event.target.value)}
+            >
+              <option value="" disabled>
+                {t('pos.selectTerminal')}
               </option>
-            ))}
-          </select>
-        </label>
-        <span>
-          {t('pos.cashier')} {pos.user.slice(0, 8)} ·{' '}
-          {pos.shift ? t('pos.shiftOpen') : t('pos.youHaveNoOpenShift')}
-        </span>
-      </div>
+              {pos.terminals.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name} · {item.code}
+                </option>
+              ))}
+            </select>
+          </label>
+          <span>
+            {t('pos.cashier')} {pos.user.slice(0, 8)} ·{' '}
+            {pos.shift ? t('pos.shiftOpen') : t('pos.youHaveNoOpenShift')}
+          </span>
+        </div>
+      )}
       {pos.loading && <Loading>{t('pos.loadingTerminalsAndShifts')}</Loading>}
       {pos.error && (
         <ErrorState

@@ -242,39 +242,34 @@ const routes: RouteObject[] = [
                   },
                 ],
               },
-            ],
-          },
-        ],
-      },
-      {
-        element: <RequireSession />,
-        children: [
-          {
-            element: <OrganizationGate permission="pos.access" />,
-            children: [
               {
-                element: <POSWorkspace />,
+                element: <OrganizationGate permission="pos.access" />,
                 children: [
-                  { path: '/pos', element: <POSTerminalPage /> },
-                  { path: '/pos/held-carts', element: <HeldCartsPage /> },
-                  { path: '/pos/checkout', element: <CheckoutPage /> },
                   {
-                    path: '/pos/register/open',
-                    element: <POSRegisterPage key="open" section="open" />,
-                  },
-                  {
-                    path: '/pos/register/close',
-                    element: <POSRegisterPage key="close" section="close" />,
-                  },
-                  {
-                    path: '/pos/register/history',
-                    element: (
-                      <POSRegisterPage key="history" section="history" />
-                    ),
-                  },
-                  {
-                    path: '/pos/shifts',
-                    element: <POSRegisterPage key="shifts" section="shifts" />,
+                    element: <POSWorkspace />,
+                    children: [
+                      { path: '/pos', element: <POSTerminalPage /> },
+                      { path: '/pos/held-carts', element: <HeldCartsPage /> },
+                      { path: '/pos/checkout', element: <CheckoutPage /> },
+                      {
+                        path: '/pos/register/open',
+                        element: <POSRegisterPage key="open" section="open" />,
+                      },
+                      {
+                        path: '/pos/register/close',
+                        element: <POSRegisterPage key="close" section="close" />,
+                      },
+                      {
+                        path: '/pos/register/history',
+                        element: (
+                          <POSRegisterPage key="history" section="history" />
+                        ),
+                      },
+                      {
+                        path: '/pos/shifts',
+                        element: <POSRegisterPage key="shifts" section="shifts" />,
+                      },
+                    ],
                   },
                 ],
               },

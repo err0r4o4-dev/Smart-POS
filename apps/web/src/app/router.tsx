@@ -77,6 +77,7 @@ const routes: RouteObject[] = [
       { index: true, element: <StorefrontPage /> },
       { path: ':slug', element: <StorefrontPage /> },
       { path: ':slug/cart', element: <ShopCartPage /> },
+      { path: ':slug/checkout', element: <ShopCartPage /> },
       { path: ':slug/orders/:orderId', element: <ShopTrackingPage /> },
       { path: ':slug/track/:orderId', element: <CustomerOrderRedirect /> },
     ],

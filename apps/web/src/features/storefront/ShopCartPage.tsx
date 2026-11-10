@@ -1,4 +1,4 @@
-﻿import { useLanguage } from '../../app/language';
+import { useLanguage } from '../../app/language';
 import { useEffect, useState, type CSSProperties, type FormEvent } from 'react';
 import {
   Link,
@@ -53,19 +53,19 @@ const palette = {
 const copy = {
   th: {
     cart: 'ตะกร้าสินค้า',
-    checkout: 'ยืนยันคำสั่งซื้อ',
+    checkout: 'ตรวจสอบและยืนยันคำสั่งซื้อ',
     tracking: 'ติดตามออเดอร์',
     backCart: 'กลับไปตะกร้า',
     dining: 'รูปแบบการรับประทาน',
     takeaway: 'ซื้อกลับบ้าน',
     dineIn: 'ทานที่ร้าน',
     table: 'โต๊ะ',
-    tableFirst: 'เลือกทานที่ร้านก่อน',
-    tableChoose: 'เลือกโต๊ะ (ตัวอย่าง)',
-    tableDemo: 'โต๊ะเป็นข้อมูลตัวอย่าง ยังไม่เชื่อมต่อระบบร้าน',
+    tableFirst: 'ต้องเปิดจาก QR โต๊ะ',
+    tableChoose: 'ต้องเปิดจาก QR ที่โต๊ะ',
+    tableDemo: 'ทานที่ร้านต้องเปิดหน้านี้จาก QR ที่โต๊ะ',
     tableSelected: 'โต๊ะที่เลือก',
-    payment: 'วิธีการชำระเงิน',
-    dineInPayment: 'ชำระเงินที่ร้าน (UI ตัวอย่าง)',
+    payment: 'สถานะการชำระเงิน',
+    dineInPayment: 'ยังไม่ชำระเงิน ร้านจะตรวจสอบยอดหลังส่งออเดอร์',
     summary: 'สรุปคำสั่งซื้อ',
     items: 'รายการสินค้า',
     discount: 'ส่วนลด',
@@ -73,33 +73,33 @@ const copy = {
     added: 'เพิ่มลงตะกร้าแล้ว',
     decrease: 'ลดจำนวน',
     increase: 'เพิ่มจำนวน',
-    dineInDemo: 'สั่งอาหารทานที่ร้าน (ตัวอย่าง)',
-    demoNote: 'โหมดทานที่ร้านเป็นตัวอย่าง UI ยังไม่ส่งออเดอร์จริง',
-    tableRequired: 'กรุณาเลือกโต๊ะก่อน',
-    demoSuccess: 'ทดลองเลือกสั่งอาหารสำหรับโต๊ะ',
-    demoNotSent: 'ยังไม่มีการส่งออเดอร์ไปยังร้าน',
-    checkoutHint: 'ตรวจสอบยอดล่าสุดและกรอกข้อมูลก่อนส่งคำสั่งซื้อ',
+    dineInDemo: 'สั่งอาหารที่โต๊ะ',
+    demoNote: 'กรุณาเปิดหน้านี้จาก QR ที่โต๊ะเพื่อสั่งอาหาร',
+    tableRequired: 'กรุณาเปิดหน้านี้จาก QR ที่โต๊ะเพื่อสั่งอาหาร',
+    demoSuccess: 'พร้อมสั่งอาหารสำหรับโต๊ะ',
+    demoNotSent: 'ยืนยันคำสั่งซื้อเพื่อส่งออเดอร์ไปยังร้าน',
+    checkoutHint: 'ตรวจสอบรายการ ยอดล่าสุด และข้อมูลก่อนยืนยันคำสั่งซื้อ',
     priceReviewed: 'ยอดล่าสุดจากระบบร้าน',
     orderItems: 'รายการที่ตรวจสอบแล้ว',
-    customer: 'ข้อมูลผู้รับสินค้า',
+    customer: 'ข้อมูลผู้สั่งซื้อ',
     pickup: 'รับสินค้าและชำระเงินที่ร้าน',
-    orderWaiting: 'กำลังตรวจสอบยอดล่าสุด...',
+    orderWaiting: 'กำลังตรวจสอบยอดล่าสุด…',
   },
   en: {
     cart: 'Shopping cart',
-    checkout: 'Confirm order',
+    checkout: 'Review and confirm order',
     tracking: 'Track order',
     backCart: 'Back to cart',
     dining: 'Dining option',
     takeaway: 'Takeaway',
     dineIn: 'Dine in',
     table: 'Table',
-    tableFirst: 'Select dine in first',
-    tableChoose: 'Choose a table (demo)',
-    tableDemo: 'Sample tables only; not connected to the restaurant',
+    tableFirst: 'Open from a table QR',
+    tableChoose: 'Open from a table QR',
+    tableDemo: 'Dine-in ordering must start from a table QR code',
     tableSelected: 'Selected table',
-    payment: 'Payment method',
-    dineInPayment: 'Pay at restaurant (UI demo)',
+    payment: 'Payment status',
+    dineInPayment: 'Unpaid. The store will confirm the total after submission.',
     summary: 'Order summary',
     items: 'Products',
     discount: 'Discount',
@@ -107,18 +107,18 @@ const copy = {
     added: 'Added to cart',
     decrease: 'Decrease quantity',
     increase: 'Increase quantity',
-    dineInDemo: 'Dine-in order (demo)',
-    demoNote: 'Dine-in is a UI demo. No real order will be placed.',
-    tableRequired: 'Please choose a table first',
-    demoSuccess: 'Demo order selected for table',
-    demoNotSent: 'No order was sent to the store',
+    dineInDemo: 'Order at table',
+    demoNote: 'Open this page from a table QR code to order dine-in.',
+    tableRequired: 'Open this page from a table QR code to order dine-in.',
+    demoSuccess: 'Ready to order for table',
+    demoNotSent: 'Confirm the order to send it to the store.',
     checkoutHint:
-      'Review the latest total and provide your details before placing an order',
+      'Review the items, latest total and your details before confirming the order',
     priceReviewed: 'Latest total from the store',
     orderItems: 'Verified items',
-    customer: 'Pickup details',
+    customer: 'Customer details',
     pickup: 'Pick up and pay at the store',
-    orderWaiting: 'Checking the latest total...',
+    orderWaiting: 'Checking the latest total…',
   },
 } as const;
 
@@ -200,24 +200,17 @@ const secondary: CSSProperties = {
   cursor: 'pointer',
 };
 
-const tables = [
-  'A1',
-  'A2',
-  'A3',
-  'A4',
-  'A5',
-  'A6',
-  'A7',
-  'A8',
-  'A9',
-  'A10',
-  'A11',
-  'A12',
-];
-
 interface RequestIdentity {
   key: string;
   token: string;
+}
+
+type DiningType = 'takeaway' | 'dine-in' | 'delivery';
+type ShopQuoteWithShipping = ShopQuote & { shipping_fee?: string };
+
+interface CheckoutNavigationState {
+  diningType?: DiningType;
+  quote?: ShopQuoteWithShipping;
 }
 
 function pendingIdentity(slug: string): RequestIdentity | null {
@@ -255,8 +248,13 @@ function displayQuantity(quantity: string): string {
 
 export function ShopCartPage() {
   const { slug = '' } = useParams();
-  const { search } = useLocation();
-  return <CartContents key={`${slug}:${search}`} slug={slug} />;
+  const location = useLocation();
+  return (
+    <CartContents
+      key={`${slug}:${location.pathname}:${location.search}`}
+      slug={slug}
+    />
+  );
 }
 
 function CartContents({ slug }: { slug: string }) {
@@ -265,16 +263,36 @@ function CartContents({ slug }: { slug: string }) {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const tableToken = readTableToken(searchParams.toString());
-  const shopPath = location.pathname.replace(/\/cart$/, '') + location.search;
+  const isCheckout = location.pathname.endsWith('/checkout');
+  const baseShopPath = location.pathname.replace(/\/(?:cart|checkout)$/, '');
+  const cartPath = `${baseShopPath}/cart${location.search}`;
+  const shopPath = `${baseShopPath}${location.search}`;
   const navigate = useNavigate();
   const cart = useShopCart(slug);
-  const [diningType, setDiningType] = useState<
-    'takeaway' | 'dine-in' | 'delivery'
-  >(tableToken ? 'dine-in' : 'takeaway');
+  const navigationState = (location.state ??
+    null) as CheckoutNavigationState | null;
+  const requestedFulfillment = searchParams.get('fulfillment');
+  const [diningType, setDiningType] = useState<DiningType>(
+    navigationState?.diningType ??
+      (tableToken
+        ? 'dine-in'
+        : requestedFulfillment === 'DELIVERY'
+          ? 'delivery'
+          : 'takeaway'),
+  );
   const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [reviewedQuote, setReviewedQuote] =
+    useState<ShopQuoteWithShipping | null>(navigationState?.quote ?? null);
 
-  const [selectedTable, setSelectedTable] = useState('');
-  const [demoTable, setDemoTable] = useState<string | null>(null);
+  const checkoutParams = new URLSearchParams(searchParams);
+  if (diningType === 'delivery') {
+    checkoutParams.set('fulfillment', 'DELIVERY');
+  } else {
+    checkoutParams.delete('fulfillment');
+  }
+  const checkoutPath = `${baseShopPath}/checkout${
+    checkoutParams.toString() ? `?${checkoutParams.toString()}` : ''
+  }`;
 
   const [identity] = useState<RequestIdentity>(
     () =>
@@ -308,22 +326,26 @@ function CartContents({ slug }: { slug: string }) {
 
   const quote = useMutation({
     mutationFn: () =>
-      storefrontRequest<ShopQuote & { shipping_fee?: string }>(
-        `/${slug}/quote`,
-        {
-          body: {
-            ...(tableToken
-              ? { fulfillment: 'PICKUP', table_token: tableToken }
-              : diningType === 'delivery'
-                ? { fulfillment: 'DELIVERY' }
-                : {}),
-            items: cart.items.map(({ variant_id, quantity }) => ({
-              variant_id,
-              quantity,
-            })),
-          },
+      storefrontRequest<ShopQuoteWithShipping>(`/${slug}/quote`, {
+        body: {
+          ...(tableToken
+            ? { fulfillment: 'PICKUP', table_token: tableToken }
+            : diningType === 'delivery'
+              ? { fulfillment: 'DELIVERY' }
+              : {}),
+          items: cart.items.map(({ variant_id, quantity }) => ({
+            variant_id,
+            quantity,
+          })),
         },
-      ),
+      }),
+    onSuccess: (result) => {
+      setReviewedQuote(result);
+
+      if (!isCheckout) {
+        navigate(checkoutPath);
+      }
+    },
   });
 
   const trackingPath = `/shop/${slug}/orders/${identity.key}#access=${identity.token}`;
@@ -391,7 +413,7 @@ function CartContents({ slug }: { slug: string }) {
     onError: (problem) => setError(problem),
   });
 
-  const send = (input: ShopOrderInput & { delivery_address?: string }) => {
+  const send = (input: ShopOrderInput) => {
     if (submission.isPending) return;
 
     try {
@@ -409,34 +431,26 @@ function CartContents({ slug }: { slug: string }) {
 
   const resetReview = () => {
     quote.reset();
-    setDemoTable(null);
+    setReviewedQuote(null);
     setError(null);
   };
 
-  const selectDining = (mode: 'takeaway' | 'dine-in' | 'delivery') => {
+  const selectDining = (mode: DiningType) => {
     if (mode !== diningType) {
       setDiningType(mode);
-
-      if (mode === 'takeaway') {
-        setSelectedTable('');
-      }
-
       resetReview();
     }
   };
 
-  const checkoutOpen =
-    (diningType !== 'dine-in' || !!tableToken) && !!quote.data;
-
   useEffect(() => {
-    if (checkoutOpen) {
+    if (isCheckout) {
       try {
         window.scrollTo({ top: 0, behavior: 'auto' });
       } catch {
         // Ignore scrolling in non-browser test environments.
       }
     }
-  }, [checkoutOpen]);
+  }, [isCheckout]);
 
   // Existing pending-order recovery.
   if (pending) {
@@ -518,11 +532,47 @@ function CartContents({ slug }: { slug: string }) {
     0n,
   );
 
+  const reviewDisabled =
+    busy ||
+    !valid ||
+    tableToken === null ||
+    (diningType === 'dine-in' && !tableToken) ||
+    !shop.data?.accepting_orders;
+  const submitDisabled =
+    busy ||
+    !shop.data?.accepting_orders ||
+    (diningType === 'delivery' && !deliveryAddress.trim());
+
+  useEffect(() => {
+    if (
+      !isCheckout ||
+      reviewedQuote ||
+      quote.isPending ||
+      !shop.data ||
+      !valid ||
+      tableToken === null ||
+      (diningType === 'dine-in' && !tableToken)
+    ) {
+      return;
+    }
+
+    quote.mutate();
+  }, [
+    diningType,
+    isCheckout,
+    quote.isPending,
+    reviewedQuote,
+    shop.data,
+    tableToken,
+    valid,
+  ]);
+
   const submitOrder = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (
-      !quote.data ||
+      !reviewedQuote ||
+      !isCheckout ||
       busy ||
       (diningType === 'dine-in' && !tableToken) ||
       tableToken === null ||
@@ -539,7 +589,7 @@ function CartContents({ slug }: { slug: string }) {
         variant_id,
         quantity,
       })),
-      quote_id: quote.data.quote_id,
+      quote_id: reviewedQuote.quote_id,
       ...(tableToken
         ? { fulfillment: 'PICKUP', table_token: tableToken }
         : diningType === 'delivery'
@@ -553,322 +603,372 @@ function CartContents({ slug }: { slug: string }) {
   };
 
   // PAGE 2: CHECKOUT
-  const checkout = checkoutOpen ? (
-    <div className="shop-cart-page shop-review-page">
-      <PageHeader
-        heading={ui.checkout}
-        backText={ui.backCart}
-        onBack={resetReview}
-      />
+  if (isCheckout && !reviewedQuote) {
+    return (
+      <div className="shop-cart-page shop-review-page">
+        <PageHeader
+          heading={ui.checkout}
+          backText={ui.backCart}
+          onBack={() => navigate(cartPath)}
+        />
 
-      <ShopOrderSteps active={2} />
+        <ShopOrderSteps active={2} />
 
-      <p
-        style={{
-          margin: '6px 0 18px',
-          fontSize: 14,
-          color: palette.muted,
-        }}
-      >
-        {ui.checkoutHint}
-      </p>
+        {shop.isPending || quote.isPending ? (
+          <Loading>{ui.orderWaiting}</Loading>
+        ) : (
+          <>
+            {shop.error && (
+              <ShopError error={shop.error} retry={() => void shop.refetch()} />
+            )}
+            {quote.error && (
+              <ShopError error={quote.error} retry={() => quote.mutate()} />
+            )}
+            {!valid && (
+              <p role="alert">
+                {t('storefront.enterValidQuantitiesPiecePackProductsRequire')}
+              </p>
+            )}
+            {diningType === 'dine-in' && !tableToken && (
+              <p role="alert">{ui.tableRequired}</p>
+            )}
+          </>
+        )}
 
-      {shop.error && (
-        <ShopError error={shop.error} retry={() => void shop.refetch()} />
-      )}
+        <button
+          type="button"
+          onClick={() => navigate(cartPath)}
+          style={{ ...secondary, width: '100%' }}
+        >
+          <ArrowLeft size={16} aria-hidden="true" />
+          {ui.backCart}
+        </button>
+      </div>
+    );
+  }
 
-      {error != null && <ShopError error={error} />}
+  const checkout =
+    isCheckout && reviewedQuote ? (
+      <div className="shop-cart-page shop-review-page">
+        <PageHeader
+          heading={ui.checkout}
+          backText={ui.backCart}
+          onBack={() => navigate(cartPath)}
+        />
 
-      <div className="shop-review-layout">
-        {/* VERIFIED ORDER */}
-        <section
+        <ShopOrderSteps active={2} />
+
+        <p
           style={{
-            ...card,
-            padding: 'var(--card-padding, 24px)',
+            margin: '6px 0 18px',
+            fontSize: 14,
+            color: palette.muted,
           }}
         >
-          <h2 style={title}>
-            <ShoppingBag size={21} aria-hidden="true" />
-            {ui.orderItems}
-          </h2>
+          {ui.checkoutHint}
+        </p>
 
-          {quote.data.items.map((item) => (
-            <div
-              key={item.variant_id}
-              style={{
-                borderBottom: `1px solid ${palette.border}`,
-                padding: '12px 0',
-              }}
-            >
+        {shop.error && (
+          <ShopError error={shop.error} retry={() => void shop.refetch()} />
+        )}
+
+        {error != null && <ShopError error={error} />}
+
+        <div className="shop-review-layout">
+          {/* VERIFIED ORDER */}
+          <section
+            style={{
+              ...card,
+              padding: 'var(--card-padding, 24px)',
+            }}
+          >
+            <h2 style={title}>
+              <ShoppingBag size={21} aria-hidden="true" />
+              {ui.orderItems}
+            </h2>
+
+            {reviewedQuote.items.map((item) => (
               <div
+                key={item.variant_id}
                 style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  gap: 12,
-                  alignItems: 'start',
+                  borderBottom: `1px solid ${palette.border}`,
+                  padding: '12px 0',
                 }}
               >
-                <div style={{ minWidth: 0 }}>
-                  <strong style={{ overflowWrap: 'anywhere' }}>
-                    {item.product_name}
-                  </strong>
-
-                  <div
-                    style={{
-                      fontSize: 13,
-                      color: palette.muted,
-                      marginTop: 3,
-                    }}
-                  >
-                    {item.variant_name} · {displayQuantity(item.quantity)}{' '}
-                    {item.unit}
-                  </div>
-                </div>
-
-                <strong
+                <div
                   style={{
-                    color: palette.price,
-                    whiteSpace: 'nowrap',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    alignItems: 'start',
                   }}
                 >
-                  ฿{moneyText(item.line_total)}
-                </strong>
+                  <div style={{ minWidth: 0 }}>
+                    <strong style={{ overflowWrap: 'anywhere' }}>
+                      {item.product_name}
+                    </strong>
+
+                    <div
+                      style={{
+                        fontSize: 13,
+                        color: palette.muted,
+                        marginTop: 3,
+                      }}
+                    >
+                      {item.variant_name} · {displayQuantity(item.quantity)}{' '}
+                      {item.unit}
+                    </div>
+                  </div>
+
+                  <strong
+                    style={{
+                      color: palette.price,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    ฿{moneyText(item.line_total)}
+                  </strong>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
 
-          <div
-            style={{
-              ...pale,
-              marginTop: 18,
-              marginBottom: 0,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: 8,
-            }}
-          >
-            <strong>{ui.priceReviewed}</strong>
-
-            <h3
+            <div
               style={{
-                color: palette.price,
-                fontSize: 24,
-                margin: 0,
+                ...pale,
+                marginTop: 18,
+                marginBottom: 0,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: 8,
               }}
             >
-              ฿{moneyText(quote.data.estimated_total)}
-            </h3>
-          </div>
+              <strong>{ui.priceReviewed}</strong>
 
-          <p
-            style={{
-              margin: '11px 0 0',
-              fontSize: 12,
-              color: palette.muted,
-            }}
-          >
-            {diningType === 'delivery'
-              ? language === 'th'
-                ? 'ยอดรวมรวมค่าจัดส่งแล้ว ยังไม่รวมส่วนลด/รางวัลที่อาจใช้ได้ที่ POS'
-                : 'Total includes the quoted shipping fee. Excludes discounts / rewards that may apply at POS.'
-              : t('storefront.excludesDiscountsRewardsThatMayApplyAt')}
-          </p>
+              <h3
+                style={{
+                  color: palette.price,
+                  fontSize: 24,
+                  margin: 0,
+                }}
+              >
+                ฿{moneyText(reviewedQuote.estimated_total)}
+              </h3>
+            </div>
 
-          <p
-            style={{
-              margin: '12px 0 0',
-              fontSize: 13,
-              color: palette.muted,
-            }}
-          >
-            <Check
-              size={16}
-              aria-hidden="true"
+            <p
               style={{
-                verticalAlign: 'middle',
-                marginRight: 6,
+                margin: '11px 0 0',
+                fontSize: 12,
+                color: palette.muted,
               }}
-            />
-            {language === 'th'
-              ? 'ตรวจสอบการชำระเงินหลังส่งออเดอร์'
-              : 'Check payment after submitting the order'}
-          </p>
-          {quote.data.table_code && (
-            <p>{t('storefront.tableLabel', { code: quote.data.table_code })}</p>
-          )}
-          {diningType === 'delivery' && quote.data.shipping_fee && (
-            <p>
-              {t('storefront.deliveryFeeLabel', {
-                amount: moneyText(quote.data.shipping_fee),
-              })}
+            >
+              {diningType === 'delivery'
+                ? language === 'th'
+                  ? 'ยอดรวมรวมค่าจัดส่งแล้ว ยังไม่รวมส่วนลด/รางวัลที่อาจใช้ได้ที่ POS'
+                  : 'Total includes the quoted shipping fee. Excludes discounts / rewards that may apply at POS.'
+                : t('storefront.excludesDiscountsRewardsThatMayApplyAt')}
             </p>
-          )}
-        </section>
 
-        {/* CUSTOMER FORM */}
-        <form
-          className="shop-customer-form"
-          onSubmit={submitOrder}
-          style={{
-            ...card,
-            padding: 'var(--card-padding, 24px)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 'var(--card-gap, 24px)',
-          }}
-        >
-          <h2 style={{ ...title, marginBottom: 0 }}>{ui.customer}</h2>
+            <p
+              style={{
+                margin: '12px 0 0',
+                fontSize: 13,
+                color: palette.muted,
+              }}
+            >
+              <Check
+                size={16}
+                aria-hidden="true"
+                style={{
+                  verticalAlign: 'middle',
+                  marginRight: 6,
+                }}
+              />
+              {language === 'th'
+                ? 'ยังไม่ชำระเงิน ร้านจะตรวจสอบยอดหลังส่งคำสั่งซื้อ'
+                : 'Unpaid. The store will confirm the total after submission.'}
+            </p>
+            {reviewedQuote.table_code && (
+              <p>
+                {t('storefront.tableLabel', { code: reviewedQuote.table_code })}
+              </p>
+            )}
+            {diningType === 'delivery' && reviewedQuote.shipping_fee && (
+              <p>
+                {t('storefront.deliveryFeeLabel', {
+                  amount: moneyText(reviewedQuote.shipping_fee),
+                })}
+              </p>
+            )}
+          </section>
 
-          <label style={{ fontSize: 14, fontWeight: 600 }}>
-            {t('storefront.pickupRecipientName')}
-            <input
-              style={control}
-              required
-              maxLength={200}
-              autoComplete="name"
-              value={customer.customer_name}
-              onChange={(event) =>
-                setCustomer({
-                  ...customer,
-                  customer_name: event.target.value,
-                })
-              }
-            />
-          </label>
+          {/* CUSTOMER FORM */}
+          <form
+            className="shop-customer-form"
+            onSubmit={submitOrder}
+            style={{
+              ...card,
+              padding: 'var(--card-padding, 24px)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'var(--card-gap, 24px)',
+            }}
+          >
+            <h2 style={{ ...title, marginBottom: 0 }}>{ui.customer}</h2>
 
-          <label style={{ fontSize: 14, fontWeight: 600 }}>
-            {t('storefront.contactPhone')}
-            <input
-              style={control}
-              required
-              type="tel"
-              minLength={3}
-              maxLength={30}
-              autoComplete="tel"
-              value={customer.contact_phone}
-              onChange={(event) =>
-                setCustomer({
-                  ...customer,
-                  contact_phone: event.target.value,
-                })
-              }
-            />
-          </label>
-
-          {diningType === 'delivery' && (
             <label style={{ fontSize: 14, fontWeight: 600 }}>
-              {language === 'th' ? 'ที่อยู่จัดส่ง' : 'Delivery address'}
+              {t('storefront.pickupRecipientName')}
               <input
-                required
-                maxLength={2000}
                 style={control}
-                value={deliveryAddress}
-                onChange={(event) => setDeliveryAddress(event.target.value)}
+                required
+                maxLength={200}
+                autoComplete="name"
+                value={customer.customer_name}
+                onChange={(event) =>
+                  setCustomer({
+                    ...customer,
+                    customer_name: event.target.value,
+                  })
+                }
               />
             </label>
-          )}
 
-          <label style={{ fontSize: 14, fontWeight: 600 }}>
-            {t('storefront.noteToStore')}
-            <textarea
-              rows={3}
-              maxLength={1000}
+            <label style={{ fontSize: 14, fontWeight: 600 }}>
+              {t('storefront.contactPhone')}
+              <input
+                style={control}
+                required
+                type="tel"
+                minLength={3}
+                maxLength={30}
+                autoComplete="tel"
+                value={customer.contact_phone}
+                onChange={(event) =>
+                  setCustomer({
+                    ...customer,
+                    contact_phone: event.target.value,
+                  })
+                }
+              />
+            </label>
+
+            {diningType === 'delivery' && (
+              <label style={{ fontSize: 14, fontWeight: 600 }}>
+                {language === 'th'
+                  ? 'ที่อยู่จัดส่งโดยละเอียด'
+                  : 'Detailed delivery address'}
+                <textarea
+                  rows={4}
+                  required
+                  maxLength={2000}
+                  autoComplete="street-address"
+                  placeholder={
+                    language === 'th'
+                      ? 'บ้านเลขที่ ถนน แขวง/ตำบล เขต/อำเภอ จังหวัด รหัสไปรษณีย์'
+                      : 'House number, street, district, province and postal code'
+                  }
+                  style={control}
+                  value={deliveryAddress}
+                  onChange={(event) => setDeliveryAddress(event.target.value)}
+                />
+              </label>
+            )}
+
+            <label style={{ fontSize: 14, fontWeight: 600 }}>
+              {t('storefront.noteToStore')}
+              <textarea
+                rows={3}
+                maxLength={1000}
+                style={{
+                  ...control,
+                  resize: 'vertical',
+                }}
+                value={customer.customer_note}
+                onChange={(event) =>
+                  setCustomer({
+                    ...customer,
+                    customer_note: event.target.value,
+                  })
+                }
+              />
+            </label>
+
+            <label
+              className="shop-consent"
               style={{
-                ...control,
-                resize: 'vertical',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 10,
+                fontSize: 13,
+                fontWeight: 400,
+                lineHeight: 1.65,
               }}
-              value={customer.customer_note}
-              onChange={(event) =>
-                setCustomer({
-                  ...customer,
-                  customer_note: event.target.value,
-                })
-              }
-            />
-          </label>
+            >
+              <input
+                type="checkbox"
+                required
+                style={{
+                  marginTop: 4,
+                  flexShrink: 0,
+                }}
+              />
+              {t('storefront.iUnderstandStockIsReservedAfterSuccessful')}
+            </label>
 
-          <label
-            className="shop-consent"
-            style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: 10,
-              fontSize: 13,
-              fontWeight: 400,
-              lineHeight: 1.65,
-            }}
-          >
-            <input
-              type="checkbox"
-              required
+            <p
               style={{
-                marginTop: 4,
-                flexShrink: 0,
+                margin: 0,
+                fontSize: 12,
+                lineHeight: 1.6,
+                color: palette.muted,
               }}
-            />
-            {t('storefront.iUnderstandStockIsReservedAfterSuccessful')}
-          </label>
-
-          <p
-            style={{
-              margin: 0,
-              fontSize: 12,
-              lineHeight: 1.6,
-              color: palette.muted,
-            }}
-          >
-            {t('storefront.theStoreUsesYourNameAndPhone')}
-          </p>
-
-          <button
-            type="submit"
-            disabled={
-              busy ||
-              !shop.data?.accepting_orders ||
-              (diningType === 'delivery' && !deliveryAddress.trim())
-            }
-            style={{
-              ...action,
-              opacity: busy || !shop.data?.accepting_orders ? 0.6 : 1,
-              cursor:
-                busy || !shop.data?.accepting_orders
-                  ? 'not-allowed'
-                  : 'pointer',
-            }}
-          >
-            {t('storefront.submitOrderUnpaid')}
-            <ArrowRight size={18} aria-hidden="true" />
-          </button>
-
-          {shop.data && !shop.data.accepting_orders && (
-            <p role="status">
-              {t('storefront.theStoreHasTemporarilyPausedOrders')}
+            >
+              {t('storefront.theStoreUsesYourNameAndPhone')}
             </p>
-          )}
 
-          <button
-            type="button"
-            onClick={resetReview}
-            style={{
-              ...secondary,
-              width: '100%',
-            }}
-          >
-            <ArrowLeft size={16} aria-hidden="true" />
-            {ui.backCart}
-          </button>
-        </form>
+            <button
+              className="shop-checkout-submit"
+              type="submit"
+              disabled={submitDisabled}
+              style={{
+                ...action,
+                opacity: submitDisabled ? 0.6 : 1,
+                cursor: submitDisabled ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {t('storefront.submitOrderUnpaid')}
+              <ArrowRight size={18} aria-hidden="true" />
+            </button>
+
+            {shop.data && !shop.data.accepting_orders && (
+              <p role="status">
+                {t('storefront.theStoreHasTemporarilyPausedOrders')}
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={resetReview}
+              style={{
+                ...secondary,
+                width: '100%',
+              }}
+            >
+              <ArrowLeft size={16} aria-hidden="true" />
+              {ui.backCart}
+            </button>
+          </form>
+        </div>
       </div>
-    </div>
-  ) : null;
+    ) : null;
 
   // PAGE 1: CART
   return (
     <>
       {checkout}
-      <div className="shop-cart-page" hidden={checkoutOpen}>
+      <div className="shop-cart-page" hidden={isCheckout}>
         <PageHeader
           heading={t('pos.shoppingCart')}
           backText={t('storefront.chooseMoreProducts')}
@@ -888,45 +988,6 @@ function CartContents({ slug }: { slug: string }) {
         {shop.error && (
           <ShopError error={shop.error} retry={() => void shop.refetch()} />
         )}
-
-        {/* CART NOTICE */}
-        <div
-          role="note"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 13,
-            margin: '15px 0 20px',
-            padding: '12px 15px',
-            background: palette.pale,
-            border: '1px solid var(--primary-border)',
-            borderRadius: 11,
-          }}
-        >
-          <span
-            style={{
-              display: 'inline-flex',
-              width: 38,
-              height: 38,
-              flexShrink: 0,
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '50%',
-              background: palette.yellow,
-            }}
-          >
-            <ShoppingCart size={20} aria-hidden="true" />
-          </span>
-
-          <span
-            style={{
-              color: 'var(--primary-strong)',
-              fontSize: 13,
-            }}
-          >
-            {t('storefront.cartItemsAreNotReservedStockIs')}
-          </span>
-        </div>
 
         {cart.items.length === 0 ? (
           <div
@@ -1071,7 +1132,7 @@ function CartContents({ slug }: { slug: string }) {
                 </div>
               </section>
 
-              {/* TABLE SELECTION */}
+              {/* TABLE CONTEXT */}
               {!tableToken && diningType === 'dine-in' && (
                 <section
                   className="shop-cart-table-section"
@@ -1081,68 +1142,21 @@ function CartContents({ slug }: { slug: string }) {
                     borderBottom: `1px solid ${palette.border}`,
                   }}
                 >
-                  <label
-                    htmlFor="shop-cart-table"
-                    style={{
-                      ...title,
-                      fontSize: 15,
-                      marginBottom: 8,
-                    }}
-                  >
+                  <h2 style={{ ...title, fontSize: 15, marginBottom: 8 }}>
                     <UtensilsCrossed size={19} aria-hidden="true" />
                     {ui.table}
-                  </label>
+                  </h2>
 
-                  <select
-                    id="shop-cart-table"
-                    value={selectedTable}
-                    disabled={diningType !== 'dine-in'}
-                    onChange={(event) => {
-                      setSelectedTable(event.target.value);
-                      setDemoTable(null);
-                    }}
+                  <p
+                    role="status"
                     style={{
-                      ...control,
-                      color:
-                        diningType === 'dine-in'
-                          ? palette.navy
-                          : 'var(--text-tertiary)',
-                      background:
-                        diningType === 'dine-in'
-                          ? 'var(--surface)'
-                          : 'var(--secondary)',
-                      cursor:
-                        diningType === 'dine-in' ? 'pointer' : 'not-allowed',
+                      margin: 0,
+                      fontSize: 13,
+                      color: 'var(--primary-strong)',
                     }}
                   >
-                    <option value="">
-                      {diningType === 'dine-in'
-                        ? ui.tableChoose
-                        : ui.tableFirst}
-                    </option>
-
-                    {tables.map((table) => (
-                      <option key={table} value={table}>
-                        {ui.table} {table}
-                      </option>
-                    ))}
-                  </select>
-
-                  {diningType === 'dine-in' && (
-                    <p
-                      style={{
-                        margin: '8px 0 0',
-                        fontSize: 12,
-                        color: 'var(--primary-strong)',
-                      }}
-                    >
-                      {selectedTable
-                        ? `${ui.tableSelected}: ${selectedTable} (${
-                            language === 'th' ? 'ตัวอย่าง UI' : 'UI demo'
-                          })`
-                        : ui.tableDemo}
-                    </p>
-                  )}
+                    {ui.tableRequired}
+                  </p>
                 </section>
               )}
 
@@ -1177,8 +1191,8 @@ function CartContents({ slug }: { slug: string }) {
 
                   <span>
                     {language === 'th'
-                      ? 'ตรวจสอบการชำระเงินหลังส่งออเดอร์'
-                      : 'Check payment after submitting the order'}
+                      ? 'ยังไม่ชำระเงิน ร้านจะตรวจสอบยอดหลังส่งคำสั่งซื้อ'
+                      : 'Unpaid. The store will confirm the total after submission.'}
                   </span>
                 </div>
 
@@ -1274,82 +1288,36 @@ function CartContents({ slug }: { slug: string }) {
               </section>
 
               {/* ACTION BUTTON */}
-              {diningType !== 'dine-in' || !!tableToken ? (
-                <button
-                  type="button"
-                  disabled={
-                    busy ||
-                    !valid ||
-                    tableToken === null ||
-                    !shop.data?.accepting_orders
-                  }
-                  onClick={() => {
-                    setError(null);
-                    quote.mutate();
-                  }}
+              <button
+                type="button"
+                disabled={reviewDisabled}
+                onClick={() => {
+                  setError(null);
+                  quote.mutate();
+                }}
+                style={{
+                  ...action,
+                  opacity: reviewDisabled ? 0.6 : 1,
+                  cursor: reviewDisabled ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {quote.isPending
+                  ? ui.orderWaiting
+                  : t('storefront.reviewItemsAndLatestTotal')}
+                <ArrowRight size={17} aria-hidden="true" />
+              </button>
+
+              {diningType === 'dine-in' && !tableToken && (
+                <p
+                  role="status"
                   style={{
-                    ...action,
-                    opacity:
-                      busy || !valid || !shop.data?.accepting_orders ? 0.6 : 1,
+                    margin: '10px 0 0',
+                    fontSize: 12,
+                    color: 'var(--primary-strong)',
                   }}
                 >
-                  {quote.isPending
-                    ? ui.orderWaiting
-                    : t('storefront.reviewItemsAndLatestTotal')}
-                  <ArrowRight size={17} aria-hidden="true" />
-                </button>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    disabled={busy || !valid || !selectedTable}
-                    onClick={() => setDemoTable(selectedTable)}
-                    style={{
-                      ...action,
-                      opacity: busy || !valid || !selectedTable ? 0.6 : 1,
-                      cursor:
-                        busy || !valid || !selectedTable
-                          ? 'not-allowed'
-                          : 'pointer',
-                    }}
-                  >
-                    <UtensilsCrossed size={17} aria-hidden="true" />
-                    {ui.dineInDemo}
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled
-                    style={{ ...action, opacity: 0.6 }}
-                  >
-                    {t('storefront.reviewItemsAndLatestTotal')}
-                    <ArrowRight size={17} aria-hidden="true" />
-                  </button>
-
-                  <p
-                    style={{
-                      fontSize: 12,
-                      color: 'var(--primary-strong)',
-                      margin: '10px 0 0',
-                    }}
-                  >
-                    {selectedTable ? ui.demoNote : ui.tableRequired}
-                  </p>
-
-                  {demoTable && (
-                    <p
-                      role="status"
-                      style={{
-                        ...pale,
-                        margin: '10px 0 0',
-                        fontSize: 12,
-                        color: 'var(--primary-strong)',
-                      }}
-                    >
-                      {ui.demoSuccess} {demoTable}. {ui.demoNotSent}.
-                    </p>
-                  )}
-                </>
+                  {ui.tableRequired}
+                </p>
               )}
 
               {shop.data && !shop.data.accepting_orders && (
@@ -1507,16 +1475,7 @@ function CartLineItem({
       </div>
 
       {/* PRODUCT INFORMATION */}
-      <div
-        className="shop-cart-product-content"
-        style={{
-          minWidth: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          gap: 12,
-        }}
-      >
+      <div className="shop-cart-product-content">
         <div
           style={{
             display: 'flex',
@@ -1538,15 +1497,18 @@ function CartLineItem({
               {item.product_name}
             </h2>
 
-            <p
-              style={{
-                margin: '0 0 7px',
-                color: palette.muted,
-                fontSize: 13,
-              }}
-            >
-              {item.variant_name}
-            </p>
+            {item.variant_name.trim() &&
+              item.variant_name.trim().toLowerCase() !== 'default' && (
+                <p
+                  style={{
+                    margin: '0 0 7px',
+                    color: palette.muted,
+                    fontSize: 13,
+                  }}
+                >
+                  {item.variant_name}
+                </p>
+              )}
 
             <div
               style={{
@@ -1566,67 +1528,23 @@ function CartLineItem({
                 / {item.unit}
               </span>
             </div>
-
-            <p
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 7,
-                margin: '7px 0 0',
-                color: palette.muted,
-                fontSize: 12,
-              }}
-            >
-              <span
-                style={{
-                  display: 'inline-block',
-                  flexShrink: 0,
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  background: '#25BE69',
-                }}
-              />
-              {ui.added}
-            </p>
           </div>
+        </div>
 
-          {/* REMOVE PRODUCT */}
+        {/* QUANTITY AND PRICE */}
+        <div className="shop-cart-line-actions">
           <button
             type="button"
             disabled={busy}
             onClick={onRemove}
-            aria-label={`${t('storefront.remove')} ${item.product_name}`}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 5,
-              flexShrink: 0,
-              padding: 4,
-              border: 0,
-              background: 'transparent',
-              fontFamily: 'inherit',
-              fontSize: 12,
-              color: palette.muted,
-              cursor: busy ? 'not-allowed' : 'pointer',
-            }}
+            aria-label={`${language === 'th' ? 'ลบสินค้า' : 'Remove item'} ${item.product_name}`}
+            className="shop-cart-remove-button"
           >
             <Trash2 size={16} aria-hidden="true" />
-            {t('storefront.remove')}
+            {language === 'th' ? 'ลบสินค้า' : 'Remove'}
           </button>
-        </div>
-
-        {/* QUANTITY AND PRICE */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            gap: 14,
-            flexWrap: 'wrap',
-          }}
-        >
           <div
+            className="shop-cart-quantity-control"
             style={{
               display: 'inline-flex',
               minHeight: 42,
@@ -1640,7 +1558,11 @@ function CartLineItem({
               disabled={busy || amount === null || amount <= step}
               onClick={() => changeBy(-1n)}
               aria-label={`${ui.decrease}: ${item.product_name}`}
+              className="shop-cart-quantity-button"
               style={{
+                alignItems: 'center',
+                display: 'inline-flex',
+                justifyContent: 'center',
                 width: 39,
                 border: 0,
                 background: 'var(--secondary)',
@@ -1712,7 +1634,11 @@ function CartLineItem({
               }
               onClick={() => changeBy(1n)}
               aria-label={`${ui.increase}: ${item.product_name}`}
+              className="shop-cart-quantity-button"
               style={{
+                alignItems: 'center',
+                display: 'inline-flex',
+                justifyContent: 'center',
                 width: 39,
                 border: 0,
                 background: 'var(--secondary)',

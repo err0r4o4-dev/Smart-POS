@@ -1,3 +1,24 @@
+# Cart presentation refinement (2026-11-10)
+
+Scope: cart item presentation and shared order-step connectors only. Small/Low.
+Preserve existing uncommitted storefront work and quantity/order behavior.
+
+- [x] Hide placeholder variants; center quantity icons; align controls beside details.
+  Below 480px, retain readable details and wrap actions into a compact lower row.
+- [x] Make removal explicit; connect order steps without crossing labels.
+- [x] New component checks 2/2 and cart-state checks 5/5 PASS. Typecheck/build PASS.
+  Chromium 156.0.8078.4 on Windows, mocked API only: browser checks 4/4 PASS
+  at 320/375/768/1440px; inspected screenshots at 320 and 1440px. No DB writes.
+  Evidence: .local/cart-controls-unit.log, cart-controls-cart-unit.log,
+  cart-controls-browser.log, cart-controls-typecheck.log and cart-controls-build.log.
+- [?] Combined cart suites: 12/15 PASS; checkout-step copy assertion fails and
+  QR/delivery submission tests raise "Rendered fewer hooks than expected".
+  Scoped ESLint: conditional useEffect error plus missing quote dependency warning.
+  Evidence: .local/cart-presentation-tests.log and .local/cart-controls-lint.log.
+  Checkout logic repair is outside this presentation scope; do not claim all checks pass.
+- [x] Main reviewed presentation delta; no API/auth/payment behavior edits intended.
+  Leave task section open until the failing regression/lint checks are resolved.
+
 # PR #40 merge conflict resolution (2026-11-09)
 
 Scope: integrate origin/develop b293708 into feature/add-auth 03a4e44 locally,

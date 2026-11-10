@@ -112,6 +112,8 @@ type SettingsInput = Pick<
   | 'description'
   | 'contact_phone'
   | 'pickup_instructions'
+  | 'delivery_enabled'
+  | 'shipping_fee'
   | 'published'
   | 'accepting_orders'
   | 'revision'
@@ -353,12 +355,15 @@ function SettingsForm({
     description: initial?.description ?? '',
     contact_phone: initial?.contact_phone ?? '',
     pickup_instructions: initial?.pickup_instructions ?? '',
+    delivery_enabled: initial?.delivery_enabled ?? false,
+    shipping_fee: initial?.shipping_fee ?? '0.00',
     terminal_id: initial?.terminal_id ?? '',
     online_terminal_id: initial?.online_terminal_id ?? '',
     published: initial?.published ?? false,
     accepting_orders: initial?.accepting_orders ?? false,
     revision: initial?.revision ?? 0,
   }));
+  const [saved, setSaved] = useState(false);
   const set = (key: keyof SettingsInput, value: string | boolean) =>
     setForm({ ...form, [key]: value });
   const frontTerminal = terminals.find(
@@ -371,7 +376,14 @@ function SettingsForm({
   );
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    command.mutate({ path: '/storefront', body: form, method: 'PUT' });
+    setSaved(false);
+    command.mutate(
+      { path: '/storefront', body: form, method: 'PUT' },
+      {
+        onSuccess: () => setSaved(true),
+        onError: () => setSaved(false),
+      },
+    );
   };
   return (
     <Card>
@@ -467,6 +479,27 @@ function SettingsForm({
         <label className="shop-consent">
           <input
             type="checkbox"
+            checked={form.delivery_enabled}
+            onChange={(event) => set('delivery_enabled', event.target.checked)}
+          />
+          {t('storefront.enableDelivery')}
+        </label>
+        <label>
+          {t('storefront.deliveryFee')}
+          <input
+            inputMode="decimal"
+            pattern="(0|[1-9][0-9]{0,7})(\.[0-9]{1,2})?"
+            value={form.shipping_fee}
+            onChange={(event) => set('shipping_fee', event.target.value)}
+            aria-describedby="storefront-delivery-fee-help"
+          />
+          <small id="storefront-delivery-fee-help">
+            {t('storefront.deliveryFeeHelp')}
+          </small>
+        </label>
+        <label className="shop-consent">
+          <input
+            type="checkbox"
             checked={form.published}
             onChange={(event) =>
               setForm({
@@ -500,6 +533,7 @@ function SettingsForm({
             ? t('catalog.saving')
             : t('storefront.saveSettings')}
         </Button>
+        {saved && <p role="status">{t('storefront.settingsSaved')}</p>}
       </form>
     </Card>
   );

@@ -19071,6 +19071,11 @@ components:
         pickup_instructions:
           type: string
           maxLength: 1000
+        delivery_enabled:
+          type: boolean
+          description: Whether customers may choose delivery for online orders.
+        shipping_fee:
+          $ref: '#/components/schemas/POSMoney'
         published:
           type: boolean
         accepting_orders:
@@ -19122,6 +19127,11 @@ components:
         pickup_instructions:
           type: string
           maxLength: 1000
+        delivery_enabled:
+          type: boolean
+          description: Whether customers may choose delivery for online orders.
+        shipping_fee:
+          $ref: '#/components/schemas/POSMoney'
         published:
           type: boolean
         accepting_orders:

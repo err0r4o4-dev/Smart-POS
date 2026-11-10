@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"smartpos/api/internal/modules/inventory"
 	"smartpos/api/internal/modules/organization"
 	"smartpos/api/internal/platform/stripe"
+	"strings"
 	"time"
 )
 
@@ -154,6 +156,27 @@ func (service *Service) Settings(ctx context.Context, user, org string) (*Settin
 	}
 	return &result, nil
 }
+func uniqueAutoSlug(ctx context.Context, tx pgx.Tx, base string) (string, error) {
+	for suffix := 0; suffix < 10000; suffix++ {
+		candidate := base
+		if suffix > 0 {
+			tag := fmt.Sprintf("-%d", suffix+1)
+			limit := 50 - len(tag)
+			if limit < 1 {
+				return "", ErrConflict
+			}
+			candidate = strings.TrimRight(base[:min(len(base), limit)], "-") + tag
+		}
+		var exists bool
+		if err := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM storefronts WHERE slug=$1)", candidate).Scan(&exists); err != nil {
+			return "", err
+		}
+		if !exists {
+			return candidate, nil
+		}
+	}
+	return "", ErrConflict
+}
 func (service *Service) SaveSettings(ctx context.Context, user, org string, input SettingsInput) (Settings, error) {
 	tx, actor, err := service.authorized(ctx, user, org, "storefront.manage")
 	if err != nil {
@@ -193,6 +216,16 @@ func (service *Service) SaveSettings(ctx context.Context, user, org string, inpu
 	current, err := settings(ctx, tx, org)
 	if err != nil && !errors.Is(err, ErrNotFound) {
 		return Settings{}, err
+	}
+	if input.Slug == "" {
+		if err == nil {
+			input.Slug = current.Slug
+		} else {
+			input.Slug, err = uniqueAutoSlug(ctx, tx, autoSlug(input.Name))
+			if err != nil {
+				return Settings{}, dbError(err)
+			}
+		}
 	}
 	if err == nil && (!branchAllowed(actor, current.BranchID) || current.Revision != input.Revision) {
 		return Settings{}, ErrConflict

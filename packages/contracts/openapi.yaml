@@ -19059,6 +19059,7 @@ components:
         slug:
           type: string
           pattern: ^[a-z][a-z0-9-]{2,49}$
+          description: Optional custom URL slug. Leave empty to generate one from the store name.
         name:
           type: string
           maxLength: 200
@@ -19102,7 +19103,6 @@ components:
       type: object
       additionalProperties: false
       required:
-        - slug
         - name
         - description
         - contact_phone

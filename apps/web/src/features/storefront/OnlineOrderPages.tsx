@@ -400,7 +400,6 @@ function SettingsForm({
         <label>
           {t('storefront.urlNameSlug')}
           <input
-            required
             pattern="[a-z][a-z0-9\-]{2,49}"
             minLength={3}
             maxLength={50}
@@ -408,6 +407,9 @@ function SettingsForm({
             onChange={(event) => set('slug', event.target.value)}
             placeholder="my-shop"
           />
+          <small id="storefront-slug-help">
+            {t('storefront.slugAutoGenerationHelp')}
+          </small>
           <small>/shop/{form.slug || 'my-shop'}</small>
         </label>
         <label>

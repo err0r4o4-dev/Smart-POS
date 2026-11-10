@@ -129,6 +129,32 @@ it('allows initial store setup when settings do not exist', async () => {
     ),
   );
 });
+it('allows an empty slug so the server can generate it', async () => {
+  mocks.request.mockImplementation(
+    async (_org: string, path: string, options: { method?: string }) => {
+      if (path.startsWith('/pos/terminals')) return { items: [terminal] };
+      if (path === '/storefront' && options.method !== 'PUT')
+        throw new ApiError(404, 'Not configured');
+      return {};
+    },
+  );
+  view(true);
+  const save = await screen.findByRole('button', { name: 'บันทึกการตั้งค่า' });
+  fireEvent.change(screen.getByLabelText(/เครื่องขาย \/ สาขา/), {
+    target: { value: 'terminal' },
+  });
+  fireEvent.click(save);
+  await waitFor(() =>
+    expect(mocks.request).toHaveBeenCalledWith(
+      'org',
+      '/storefront',
+      expect.objectContaining({
+        method: 'PUT',
+        body: expect.objectContaining({ slug: '' }),
+      }),
+    ),
+  );
+});
 it('round-trips delivery settings including explicit disabled and zero fee values', async () => {
   mocks.request.mockImplementation(
     async (_org: string, path: string, options: { method?: string }) => {

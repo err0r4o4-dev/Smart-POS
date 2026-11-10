@@ -32,6 +32,8 @@ export const storefront = defineMessages({
     publishProduct: 'เผยแพร่สินค้า',
     storeDisplayName: 'ชื่อร้านที่แสดง',
     urlNameSlug: 'ชื่อใน URL (slug)',
+    slugAutoGenerationHelp:
+      'เว้นว่างเพื่อให้ระบบสร้างจากชื่อร้านอัตโนมัติ และยังแก้ไขได้ก่อนมีออเดอร์ออนไลน์',
     terminalBranchStockSource: 'เครื่องขาย / สาขา / แหล่งสต็อก',
     selectATerminalInTheCurrentBranch: 'เลือกเครื่องขายของสาขาปัจจุบัน',
     inStoreStockSourceAndDefaultOnline:
@@ -285,6 +287,8 @@ export const storefront = defineMessages({
     publishProduct: 'Publish product',
     storeDisplayName: 'Store display name',
     urlNameSlug: 'URL name (slug)',
+    slugAutoGenerationHelp:
+      'Leave blank to generate it from the store name. You can edit it before the first online order.',
     terminalBranchStockSource: 'Terminal / Branch / Stock source',
     selectATerminalInTheCurrentBranch:
       'Select a terminal in the current branch',

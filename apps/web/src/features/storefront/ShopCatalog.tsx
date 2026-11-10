@@ -636,6 +636,9 @@ function CatalogProductCard({
             {translateProduct(product.product_name, language)}
           </h2>
           <p className="catalog-variant">{product.variant_name}</p>
+          {product.is_sold_out && (
+            <Tag tone="amber">{t('storefront.soldOut')}</Tag>
+          )}
         </div>
         <div className="catalog-product-meta-actions">
           <div className="catalog-product-price-stock">
@@ -645,13 +648,15 @@ function CatalogProductCard({
             <p className="catalog-product-stock" data-ready={ready}>
               <span className="catalog-stock-dot" aria-hidden="true" />
               <span className="catalog-stock-text">
-                {ready
-                  ? language === 'th'
-                    ? 'พร้อมจำหน่าย'
-                    : menuOnly
-                      ? 'Available'
-                      : 'In stock'
-                  : t('storefront.productUnavailableForSale')}
+                {product.is_sold_out
+                  ? t('storefront.soldOut')
+                  : ready
+                    ? language === 'th'
+                      ? 'พร้อมจำหน่าย'
+                      : menuOnly
+                        ? 'Available'
+                        : 'In stock'
+                    : t('storefront.productUnavailableForSale')}
               </span>
               <span className="catalog-visually-hidden">
                 {ready && !menuOnly

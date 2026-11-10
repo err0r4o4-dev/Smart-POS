@@ -110,8 +110,8 @@ const catalogBrowseSQL = `WITH listed AS (
  SELECT variant.id::text AS variant_id, product.name AS product_name, variant.name AS variant_name, variant.sku,
  unit.name AS unit, unit.unit_type, COALESCE(category.id::text,'uncategorized') AS category_id,
  COALESCE(category.name,'ไม่มีหมวดหมู่') AS category_name, COALESCE(variant.attributes->>'storefront_image_url','') AS image_url,
- effective.price,
- (unit.status='ACTIVE' AND variant.currency='THB' AND effective.price>0 AND NOT EXISTS(SELECT 1 FROM quality_recalls recall WHERE recall.organization_id=variant.organization_id AND recall.variant_id=variant.id AND recall.batch_id IS NULL)) AS saleable
+ effective.price, publication.is_sold_out,
+ (unit.status='ACTIVE' AND variant.currency='THB' AND effective.price>0 AND NOT publication.is_sold_out AND NOT EXISTS(SELECT 1 FROM quality_recalls recall WHERE recall.organization_id=variant.organization_id AND recall.variant_id=variant.id AND recall.batch_id IS NULL)) AS saleable
  FROM product_variants variant
  JOIN products product ON product.organization_id=variant.organization_id AND product.id=variant.product_id
  JOIN units unit ON unit.organization_id=variant.organization_id AND unit.id=variant.unit_id
@@ -136,7 +136,7 @@ const catalogBrowseSQL = `WITH listed AS (
  SELECT * FROM filtered WHERE ($8='' OR category_id=$8)
 ), page_items AS (
  SELECT row_number() OVER (ORDER BY %s) AS ordinal,variant_id,product_name,variant_name,sku,unit,unit_type,price::text AS unit_price,
- NULL::text AS available,'MENU_ONLY'::text AS stock_policy,saleable,true AS published,category_id,category_name,image_url
+ NULL::text AS available,'MENU_ONLY'::text AS stock_policy,saleable,true AS published,is_sold_out,category_id,category_name,image_url
  FROM selected ORDER BY %s LIMIT 24 OFFSET $9
 ), facets AS (
  SELECT category_id AS id,category_name AS name,count(*)::int AS count FROM filtered GROUP BY category_id,category_name

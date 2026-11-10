@@ -100,6 +100,7 @@ type Product struct {
 	StockPolicy string  `json:"stock_policy"`
 	Saleable    bool    `json:"saleable"`
 	Published   bool    `json:"published"`
+	IsSoldOut   bool    `json:"is_sold_out"`
 }
 type Page[T any] struct {
 	Items    []T `json:"items"`
@@ -194,6 +195,7 @@ type TransitionInput struct {
 }
 type PublishInput struct {
 	Published bool  `json:"published"`
+	IsSoldOut bool  `json:"is_sold_out"`
 	Revision  int64 `json:"revision"`
 }
 

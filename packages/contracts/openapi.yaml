@@ -19179,6 +19179,7 @@ components:
         - available
         - saleable
         - published
+        - is_sold_out
         - category_id
         - category_name
       properties:
@@ -19213,6 +19214,9 @@ components:
           type: boolean
         published:
           type: boolean
+        is_sold_out:
+          type: boolean
+          description: Staff-controlled temporary sold-out state for the published menu item.
         category_id:
           type: string
           description: Same-store category UUID or uncategorized.
@@ -19270,6 +19274,7 @@ components:
         - available
         - saleable
         - published
+        - is_sold_out
       properties:
         stock_policy:
           $ref: '#/components/schemas/StockPolicy'
@@ -19302,6 +19307,9 @@ components:
           type: boolean
         published:
           type: boolean
+        is_sold_out:
+          type: boolean
+          description: Staff-controlled temporary sold-out state for the published menu item.
     StorefrontItemInput:
       type: object
       additionalProperties: false
@@ -19738,6 +19746,8 @@ components:
         - revision
       properties:
         published:
+          type: boolean
+        is_sold_out:
           type: boolean
         revision:
           type: integer

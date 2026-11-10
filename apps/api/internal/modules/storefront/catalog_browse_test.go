@@ -42,7 +42,7 @@ func TestCatalogImageURL(test *testing.T) {
 
 func TestCatalogPageJSON(test *testing.T) {
 	available := "2.000"
-	value := CatalogPage{Page: Page[CatalogProduct]{Items: []CatalogProduct{{Product: Product{VariantID: "22222222-2222-4222-8222-222222222222", UnitPrice: "19.99", Available: &available, StockPolicy: "TRACKED"}, CategoryID: "uncategorized", CategoryName: "ไม่มีหมวดหมู่"}}, Page: 1, PageSize: 24, Total: 1}, Categories: []CatalogCategory{{ID: "uncategorized", Name: "ไม่มีหมวดหมู่", Count: 1}}}
+	value := CatalogPage{Page: Page[CatalogProduct]{Items: []CatalogProduct{{Product: Product{VariantID: "22222222-2222-4222-8222-222222222222", UnitPrice: "19.99", Available: &available, StockPolicy: "TRACKED", IsSoldOut: true}, CategoryID: "uncategorized", CategoryName: "ไม่มีหมวดหมู่"}}, Page: 1, PageSize: 24, Total: 1}, Categories: []CatalogCategory{{ID: "uncategorized", Name: "ไม่มีหมวดหมู่", Count: 1}}}
 	encoded, err := json.Marshal(value)
 	if err != nil {
 		test.Fatal(err)
@@ -52,7 +52,7 @@ func TestCatalogPageJSON(test *testing.T) {
 		test.Fatal(err)
 	}
 	product := result["items"].([]any)[0].(map[string]any)
-	if product["unit_price"] != "19.99" || product["available"] != "2.000" || product["category_id"] != "uncategorized" || result["categories"].([]any)[0].(map[string]any)["count"] != float64(1) {
+	if product["unit_price"] != "19.99" || product["available"] != "2.000" || product["is_sold_out"] != true || product["category_id"] != "uncategorized" || result["categories"].([]any)[0].(map[string]any)["count"] != float64(1) {
 		test.Fatalf("incorrect public catalog shape: %s", encoded)
 	}
 	if _, exists := product["image_url"]; exists {

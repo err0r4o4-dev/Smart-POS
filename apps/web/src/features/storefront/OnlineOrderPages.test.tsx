@@ -200,6 +200,64 @@ it('round-trips delivery settings including explicit disabled and zero fee value
   );
   expect(await screen.findByText('บันทึกการตั้งค่าหน้าร้านแล้ว')).toBeVisible();
 });
+it('lets staff mark a published menu item sold out', async () => {
+  mocks.request.mockImplementation(
+    async (_org: string, path: string, options: { method?: string }) => {
+      if (path.startsWith('/pos/terminals')) return { items: [terminal] };
+      if (path.startsWith('/storefront/products?'))
+        return {
+          items: [
+            {
+              variant_id: 'variant-1',
+              product_name: 'กาแฟ',
+              variant_name: 'ร้อน',
+              sku: 'COFFEE-1',
+              unit: 'แก้ว',
+              unit_type: 'COUNT',
+              unit_price: '50.00',
+              available: null,
+              stock_policy: 'MENU_ONLY',
+              saleable: true,
+              published: true,
+              is_sold_out: false,
+            },
+          ],
+          total: 1,
+          page: 1,
+          page_size: 24,
+        };
+      if (path === '/storefront' && options.method === 'PUT') return {};
+      if (path === '/storefront')
+        return {
+          slug: 'test-shop',
+          name: 'ร้านทดสอบ',
+          description: '',
+          contact_phone: '',
+          pickup_instructions: '',
+          delivery_enabled: false,
+          shipping_fee: '0.00',
+          terminal_id: 'terminal',
+          published: true,
+          accepting_orders: true,
+          revision: 2,
+        };
+      return {};
+    },
+  );
+  view(true);
+  await screen.findByText('กาแฟ');
+  fireEvent.click(screen.getByRole('button', { name: 'ทำเครื่องหมายหมด' }));
+  await waitFor(() =>
+    expect(mocks.request).toHaveBeenCalledWith(
+      'org',
+      '/storefront/products/variant-1',
+      expect.objectContaining({
+        method: 'PUT',
+        body: { published: true, is_sold_out: true, revision: 2 },
+      }),
+    ),
+  );
+});
 it('does not show a saved status when storefront settings fail to save', async () => {
   mocks.request.mockImplementation(
     async (_org: string, path: string, options: { method?: string }) => {

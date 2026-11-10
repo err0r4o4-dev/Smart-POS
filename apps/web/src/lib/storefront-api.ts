@@ -35,6 +35,7 @@ export interface ShopProduct {
   stock_policy: StockPolicy;
   saleable: boolean;
   published: boolean;
+  is_sold_out?: boolean;
   category_id?: string;
   category_name?: string;
   image_url?: string;

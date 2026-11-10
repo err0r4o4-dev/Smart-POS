@@ -295,31 +295,58 @@ export function StorefrontSettingsPage() {
                     )}
                   </small>
                 </div>
-                <Tag tone={item.published ? 'success' : 'neutral'}>
-                  {item.published
-                    ? t('storefront.published')
-                    : t('storefront.unpublished')}
-                </Tag>
-                <Button
-                  className="button-secondary"
-                  disabled={
-                    command.isPending || (!item.published && !item.saleable)
-                  }
-                  onClick={() =>
-                    command.mutate({
-                      path: `/storefront/products/${item.variant_id}`,
-                      method: 'PUT',
-                      body: {
-                        published: !item.published,
-                        revision: settings.data!.revision,
-                      },
-                    })
-                  }
-                >
-                  {item.published
-                    ? t('storefront.unpublish')
-                    : t('storefront.publishProduct')}
-                </Button>
+                <div>
+                  <Tag tone={item.published ? 'success' : 'neutral'}>
+                    {item.published
+                      ? t('storefront.published')
+                      : t('storefront.unpublished')}
+                  </Tag>{' '}
+                  {(item.is_sold_out ?? false) && (
+                    <Tag tone="amber">{t('storefront.soldOut')}</Tag>
+                  )}
+                </div>
+                <div className="sales-row-actions">
+                  <Button
+                    className="button-secondary"
+                    disabled={
+                      command.isPending || (!item.published && !item.saleable)
+                    }
+                    onClick={() =>
+                      command.mutate({
+                        path: `/storefront/products/${item.variant_id}`,
+                        method: 'PUT',
+                        body: {
+                          published: !item.published,
+                          is_sold_out: item.is_sold_out ?? false,
+                          revision: settings.data!.revision,
+                        },
+                      })
+                    }
+                  >
+                    {item.published
+                      ? t('storefront.unpublish')
+                      : t('storefront.publishProduct')}
+                  </Button>
+                  <Button
+                    className="button-secondary"
+                    disabled={command.isPending || !item.published}
+                    onClick={() =>
+                      command.mutate({
+                        path: `/storefront/products/${item.variant_id}`,
+                        method: 'PUT',
+                        body: {
+                          published: item.published,
+                          is_sold_out: !(item.is_sold_out ?? false),
+                          revision: settings.data!.revision,
+                        },
+                      })
+                    }
+                  >
+                    {(item.is_sold_out ?? false)
+                      ? t('storefront.markAvailable')
+                      : t('storefront.markSoldOut')}
+                  </Button>
+                </div>
               </Card>
             ))}
           </div>

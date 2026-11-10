@@ -1,3 +1,11 @@
+# Fix Mailpit UI access on http://localhost:8025/ (2026-11-10)
+
+Scope: Enable host access to Mailpit Web UI at http://localhost:8025/ by updating docker-compose configuration.
+- [x] 1. Root Cause Investigation: Verify why Mailpit container does not publish port 8025 to the host
+- [x] 2. Update docker-compose.yml to expose Mailpit port 8025 to host (uncomment # internal: true on intelligence)
+- [ ] 3. Recreate Mailpit service in Docker (`docker compose up -d mailpit`)
+- [ ] 4. Verify host connectivity to http://localhost:8025/
+
 # Cart presentation refinement (2026-11-10)
 
 Scope: cart item presentation and shared order-step connectors only. Small/Low.

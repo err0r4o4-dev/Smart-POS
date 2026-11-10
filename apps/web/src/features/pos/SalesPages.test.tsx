@@ -186,7 +186,15 @@ describe('SalesPage standardized design and behavior', () => {
     expect(screen.getByRole('tab', { name: /คืนสินค้า/ })).toBeVisible();
 
     // Cashier avatar and name
-    expect(screen.getAllByText('Thirawat Duangta')).toHaveLength(3);
+    const cashierNames = screen.getAllByText('Thirawat Duangta');
+    expect(cashierNames).toHaveLength(3);
+    expect(cashierNames[0]).toHaveClass('sales-cashier-name');
+    expect(cashierNames[0].closest('.sales-cashier-cell')).toBeInTheDocument();
+    expect(
+      cashierNames[0]
+        .closest('.sales-cashier-cell')
+        ?.querySelector('.sales-cashier-avatar'),
+    ).toHaveTextContent('T');
     expect(screen.getByText('฿28.00')).toBeVisible();
     expect(screen.getByText('฿36.00')).toBeVisible();
     expect(screen.getByText('฿57.00')).toBeVisible();

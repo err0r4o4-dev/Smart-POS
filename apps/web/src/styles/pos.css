@@ -257,11 +257,16 @@
   font-weight: 400;
   font-size: 11px;
 }
+.sales-kpi-card-featured .sales-kpi-content {
+  width: 100%;
+}
 .sales-kpi-sparkline {
-  width: 96px;
-  height: 48px;
-  flex-shrink: 0;
-  align-self: flex-end;
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  width: 76px;
+  height: 38px;
+  pointer-events: none;
 }
 .sales-filter-card,
 .sales-table-card,
@@ -466,27 +471,55 @@
   place-items: center;
   flex-shrink: 0;
 }
+.sales-page .table-scroll.sales-history-table table,
+.sales-history-table table {
+  min-width: 960px;
+}
+.sales-history-table .sales-branch-col,
+.sales-history-table .sales-branch {
+  min-width: 130px;
+}
 .sales-branch-name {
   font-weight: 600;
   color: var(--text-primary);
+}
+.sales-history-table .sales-cashier-col,
+.sales-history-table .sales-cashier {
+  min-width: 150px;
+  white-space: nowrap;
 }
 .sales-cashier-cell {
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  white-space: nowrap;
+  vertical-align: middle;
 }
 .sales-cashier-avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: var(--secondary);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(145deg, var(--surface), var(--secondary));
   border: 1px solid var(--border);
   color: var(--text-strong);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   display: grid;
   place-items: center;
   flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.sales-cashier-name {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 170px;
+  display: inline-block;
+  vertical-align: middle;
+  line-height: 1.3;
 }
 .sales-history-table .sales-date,
 .sales-history-table .sales-amount {
@@ -849,8 +882,10 @@
     flex: 1;
   }
   .sales-kpi-sparkline {
-    width: 76px;
-    height: 40px;
+    top: 14px;
+    right: 14px;
+    width: 68px;
+    height: 34px;
   }
 }
 @media (max-width: 375px) {

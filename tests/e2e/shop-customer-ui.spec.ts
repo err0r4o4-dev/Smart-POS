@@ -85,6 +85,89 @@ test.beforeEach(async ({ page, baseURL }) => {
   });
 });
 
+for (const width of [320, 375, 768, 1440]) {
+  test(`cart controls stay compact and centered at ${width}px`, async ({
+    page,
+  }, testInfo) => {
+    const errors: string[] = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    await page.setViewportSize({ width, height: 900 });
+    await page.addInitScript(
+      (item) => {
+        localStorage.setItem('shop-cart:ui-test', JSON.stringify([item]));
+      },
+      { ...product, variant_name: 'Default' },
+    );
+    await page.goto('/shop/ui-test/cart');
+    const line = page.locator('.shop-cart-product');
+    await expect(
+      line.getByRole('heading', { name: product.product_name }),
+    ).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    await expect(line.getByText('Default', { exact: true })).toHaveCount(0);
+    const details = (await line
+      .locator('.shop-cart-product-content > div:first-child')
+      .boundingBox())!;
+    const actions = (await line
+      .locator('.shop-cart-line-actions')
+      .boundingBox())!;
+    if (width < 480) {
+      expect(details.y + details.height).toBeLessThanOrEqual(actions.y);
+    } else {
+      expect(details.x + details.width).toBeLessThanOrEqual(actions.x);
+    }
+    for (const button of await line
+      .locator('.shop-cart-quantity-button')
+      .all()) {
+      const bounds = (await button.boundingBox())!;
+      const icon = (await button.locator('svg').boundingBox())!;
+      expect(
+        Math.abs(bounds.x + bounds.width / 2 - icon.x - icon.width / 2),
+      ).toBeLessThanOrEqual(1);
+      expect(
+        Math.abs(bounds.y + bounds.height / 2 - icon.y - icon.height / 2),
+      ).toBeLessThanOrEqual(1);
+    }
+    const quantity = line.getByRole('textbox', {
+      name: `จำนวน ${product.product_name}`,
+    });
+    const decrease = line.getByRole('button', {
+      name: `ลดจำนวน: ${product.product_name}`,
+    });
+    await expect(decrease).toBeDisabled();
+    await line
+      .getByRole('button', { name: `เพิ่มจำนวน: ${product.product_name}` })
+      .click();
+    await expect(quantity).toHaveValue('2');
+    await decrease.click();
+    await expect(quantity).toHaveValue('1');
+    const remove = line.getByRole('button', {
+      name: `ลบสินค้า ${product.product_name}`,
+    });
+    await remove.focus();
+    await expect(remove).toBeFocused();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(width);
+    expect(
+      await page
+        .locator('.shop-order-steps li')
+        .first()
+        .evaluate((element) => {
+          const style = getComputedStyle(element, '::after');
+          return parseFloat(style.width);
+        }),
+    ).toBeGreaterThan(0);
+    await page.screenshot({
+      path: testInfo.outputPath(`cart-controls-${width}.png`),
+      fullPage: true,
+    });
+    await remove.press('Enter');
+    await expect(line).toHaveCount(0);
+    expect(errors).toEqual([]);
+  });
+}
+
 for (const width of [320, 768, 1440, 1920, 2560]) {
   test(`background composition stays stable as content grows at ${width}px`, async ({
     page,

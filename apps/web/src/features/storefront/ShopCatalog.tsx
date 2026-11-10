@@ -1,6 +1,6 @@
 import { useLanguage } from '../../app/language';
 import type { UiMessage } from '../../i18n';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   ChevronDown,
@@ -9,6 +9,7 @@ import {
   LayoutGrid,
   List,
   Minus,
+  Menu,
   Package,
   PackageOpen,
   Plus,
@@ -16,6 +17,7 @@ import {
   ShoppingCart,
   SlidersHorizontal,
   Store,
+  X,
 } from 'lucide-react';
 import { Button, Card, Loading, Tag } from '../../components/ui/primitives';
 import {
@@ -97,20 +99,6 @@ export function ShopCatalog({ slug }: { slug: string }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [message, setMessage] = useState<UiMessage>('');
-
-  useEffect(() => {
-    const onToggle = () => setSidebarCollapsed((v) => !v);
-    window.addEventListener('toggle-catalog-sidebar', onToggle);
-    return () => window.removeEventListener('toggle-catalog-sidebar', onToggle);
-  }, []);
-
-  useEffect(() => {
-    window.dispatchEvent(
-      new CustomEvent('catalog-sidebar-state', {
-        detail: { open: !sidebarCollapsed },
-      }),
-    );
-  }, [sidebarCollapsed]);
 
   const shop = useQuery({
     queryKey: ['storefront', slug, 'settings'],
@@ -265,6 +253,28 @@ export function ShopCatalog({ slug }: { slug: string }) {
               setMessage('');
             }}
           >
+            <button
+              type="button"
+              className="storefront-menu-btn"
+              aria-label={
+                sidebarCollapsed
+                  ? language === 'th'
+                    ? 'เปิดเมนูหมวดหมู่'
+                    : 'Open category menu'
+                  : language === 'th'
+                    ? 'ปิดเมนูหมวดหมู่'
+                    : 'Close category menu'
+              }
+              aria-expanded={!sidebarCollapsed}
+              aria-controls="catalog-sidebar"
+              onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+            >
+              {sidebarCollapsed ? (
+                <Menu size={20} aria-hidden="true" />
+              ) : (
+                <X size={20} aria-hidden="true" />
+              )}
+            </button>
             <label htmlFor="shop-search" className="catalog-search-field">
               <Search size={19} aria-hidden="true" />
               <span className="catalog-visually-hidden">

@@ -168,7 +168,7 @@ export const storefront = defineMessages({
     remove: 'นำ',
     pickUpAndPayInStore: 'รับสินค้าและชำระที่ร้าน',
     estimatedCartTotal: 'ยอดจากตะกร้าโดยประมาณ',
-    reviewItemsAndLatestTotal: 'ตรวจรายการและยอดล่าสุด',
+    reviewItemsAndLatestTotal: 'ตรวจสอบรายการและยอดล่าสุด',
     theStoreHasTemporarilyPausedOrders: 'ร้านปิดรับออเดอร์ชั่วคราว',
     enterValidQuantitiesPiecePackProductsRequire:
       'กรอกจำนวนให้ถูกต้อง สินค้าประเภทชิ้น/แพ็กต้องเป็นจำนวนเต็ม',
@@ -176,14 +176,14 @@ export const storefront = defineMessages({
     label: '— ฿',
     excludesDiscountsRewardsThatMayApplyAt:
       'ยังไม่รวมส่วนลด/รางวัลที่อาจใช้ได้ที่ POS ไม่มีค่าจัดส่ง เพราะรับที่ร้านเท่านั้น',
-    pickupRecipientName: 'ชื่อผู้รับสินค้า',
+    pickupRecipientName: 'ชื่อผู้สั่งซื้อหรือผู้รับสินค้า',
     contactPhone: 'เบอร์ติดต่อ',
     noteToStore: 'หมายเหตุถึงร้าน',
     iUnderstandStockIsReservedAfterSuccessful:
       'ฉันเข้าใจว่ารายการที่ติดตามสต็อกจะถูกกันหลังส่งออเดอร์สำเร็จจนถึงเวลาหมดอายุ และต้องรอร้านตรวจสอบและยืนยันยอดสุดท้ายก่อนชำระที่ร้าน',
     theStoreUsesYourNameAndPhone:
       'ร้านใช้ชื่อและเบอร์เพื่อติดต่อเรื่องออเดอร์นี้ ไม่ใช่การสมัครบัญชีหรือยินยอมรับการตลาด',
-    submitOrderUnpaid: 'ส่งออเดอร์ · ยังไม่ชำระเงิน',
+    submitOrderUnpaid: 'ยืนยันและส่งคำสั่งซื้อ',
     loadingStore: 'กำลังโหลดร้าน…',
     productNameVariantOrSku: 'ชื่อสินค้า ตัวเลือก หรือ SKU',
     productFiltersAndDisplay: 'ตัวกรองและการแสดงสินค้า',
@@ -431,14 +431,14 @@ export const storefront = defineMessages({
     label: '— ฿',
     excludesDiscountsRewardsThatMayApplyAt:
       'Excludes discounts / rewards that may apply at POS. No shipping fee; store pickup only.',
-    pickupRecipientName: 'Pickup recipient name',
+    pickupRecipientName: 'Customer or recipient name',
     contactPhone: 'Contact phone',
     noteToStore: 'Note to store',
     iUnderstandStockIsReservedAfterSuccessful:
       'I understand stock is reserved for tracked items after successful submission until expiry. I must wait for store review and final total confirmation before paying in store.',
     theStoreUsesYourNameAndPhone:
       'The store uses your name and phone to contact you about this order. This does not create an account or opt you into marketing.',
-    submitOrderUnpaid: 'Submit order · Unpaid',
+    submitOrderUnpaid: 'Confirm and submit order',
     loadingStore: 'Loading store…',
     productNameVariantOrSku: 'Product name, variant or SKU',
     productFiltersAndDisplay: 'Product filters and display',

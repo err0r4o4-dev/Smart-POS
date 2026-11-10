@@ -178,6 +178,11 @@
   align-items: stretch;
   gap: 10px;
 }
+.catalog-search > .storefront-menu-btn {
+  align-self: stretch;
+  height: auto;
+  min-height: 48px;
+}
 .catalog-search-field {
   display: flex;
   align-items: center;
@@ -1012,6 +1017,15 @@
   }
 }
 @media (max-width: 767px) {
+  .catalog-search {
+    flex-wrap: wrap;
+  }
+  .catalog-search > .catalog-search-field {
+    flex-basis: calc(100% - 54px);
+  }
+  .catalog-search > .catalog-search-submit {
+    width: 100%;
+  }
   .catalog-products-grid {
     grid-template-columns: minmax(0, 1fr);
   }

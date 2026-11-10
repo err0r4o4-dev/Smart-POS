@@ -20,7 +20,11 @@ const product = {
   unit_price: '10.00',
   quantity: '1.000',
 };
-function view(search = '', english = false) {
+function view(
+  search = '',
+  english = false,
+  initialPath = '/shop/test-shop/cart',
+) {
   return (english ? renderInEnglish : render)(
     <QueryClientProvider
       client={
@@ -32,9 +36,10 @@ function view(search = '', english = false) {
         })
       }
     >
-      <MemoryRouter initialEntries={[`/shop/test-shop/cart${search}`]}>
+      <MemoryRouter initialEntries={[`${initialPath}${search}`]}>
         <Routes>
           <Route path="/shop/:slug/cart" element={<ShopCartPage />} />
+          <Route path="/shop/:slug/checkout" element={<ShopCartPage />} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -64,6 +69,48 @@ it('shows the invalid table-link warning in English', async () => {
   );
 });
 
+it('hides the default variant and clearly labels item removal', async () => {
+  localStorage.setItem(
+    'shop-cart:test-shop',
+    JSON.stringify([{ ...product, variant_name: 'Default' }]),
+  );
+  view();
+  expect(
+    await screen.findByRole('heading', { name: product.product_name }),
+  ).toBeVisible();
+  expect(screen.queryByText('Default')).not.toBeInTheDocument();
+  expect(screen.queryByText('เพิ่มลงตะกร้าแล้ว')).not.toBeInTheDocument();
+  const remove = screen.getByRole('button', {
+    name: `ลบสินค้า ${product.product_name}`,
+  });
+  expect(remove).toHaveTextContent('ลบสินค้า');
+  fireEvent.click(remove);
+  expect(
+    screen.queryByRole('heading', { name: product.product_name }),
+  ).not.toBeInTheDocument();
+});
+
+it('keeps meaningful variants and quantity controls available', async () => {
+  localStorage.setItem(
+    'shop-cart:test-shop',
+    JSON.stringify([{ ...product, variant_name: 'เย็น' }]),
+  );
+  view();
+  expect(await screen.findByText('เย็น')).toBeVisible();
+  const quantity = screen.getByRole('textbox', {
+    name: `จำนวน ${product.product_name}`,
+  });
+  expect(quantity).toHaveValue('1');
+  fireEvent.click(
+    screen.getByRole('button', { name: `เพิ่มจำนวน: ${product.product_name}` }),
+  );
+  expect(quantity).toHaveValue('2');
+  fireEvent.click(
+    screen.getByRole('button', { name: `ลดจำนวน: ${product.product_name}` }),
+  );
+  expect(quantity).toHaveValue('1');
+});
+
 it('hides table selection for takeaway carts', async () => {
   view();
   expect(
@@ -72,7 +119,7 @@ it('hides table selection for takeaway carts', async () => {
   expect(screen.queryByLabelText('โต๊ะ')).not.toBeInTheDocument();
 });
 
-it('marks the current cart and review steps without navigating to a new route', async () => {
+it('navigates to checkout and allows returning to cart', async () => {
   view();
   const steps = screen.getByRole('navigation', { name: 'ขั้นตอนการสั่งซื้อ' });
   expect(steps.querySelector('[aria-current="step"]')).toHaveTextContent(
@@ -80,16 +127,19 @@ it('marks the current cart and review steps without navigating to a new route', 
   );
   expect(steps.querySelector('ol')).toBeInTheDocument();
   const review = await screen.findByRole('button', {
-    name: 'ตรวจรายการและยอดล่าสุด',
+    name: 'ตรวจสอบรายการและยอดล่าสุด',
   });
   await waitFor(() => expect(review).toBeEnabled());
   fireEvent.click(review);
-  await screen.findByRole('heading', { level: 1, name: 'ยืนยันคำสั่งซื้อ' });
+  await screen.findByRole('heading', {
+    level: 1,
+    name: 'ตรวจสอบและยืนยันคำสั่งซื้อ',
+  });
   const visibleSteps = screen.getByRole('navigation', {
     name: 'ขั้นตอนการสั่งซื้อ',
   });
   expect(visibleSteps.querySelector('[aria-current="step"]')).toHaveTextContent(
-    'ยืนยันคำสั่งซื้อ',
+    'ตรวจสอบและยืนยันคำสั่งซื้อ',
   );
   fireEvent.click(screen.getAllByRole('button', { name: 'กลับไปตะกร้า' })[0]);
   expect(
@@ -102,12 +152,12 @@ it('allows QR dine-in review and preserves the token in the quote and order', as
   view(`?table=${token}`);
   fireEvent.click(screen.getByRole('button', { name: 'ทานที่ร้าน' }));
   const review = await screen.findByRole('button', {
-    name: 'ตรวจรายการและยอดล่าสุด',
+    name: 'ตรวจสอบรายการและยอดล่าสุด',
   });
   await waitFor(() => expect(review).toBeEnabled());
   fireEvent.click(review);
   expect(await screen.findByText('โต๊ะ T01')).toBeVisible();
-  fireEvent.change(screen.getByLabelText('ชื่อผู้รับสินค้า'), {
+  fireEvent.change(screen.getByLabelText('ชื่อผู้สั่งซื้อหรือผู้รับสินค้า'), {
     target: { value: 'Guest' },
   });
   fireEvent.change(screen.getByLabelText('เบอร์ติดต่อ'), {
@@ -115,7 +165,7 @@ it('allows QR dine-in review and preserves the token in the quote and order', as
   });
   fireEvent.click(screen.getByRole('checkbox'));
   fireEvent.click(
-    screen.getByRole('button', { name: 'ส่งออเดอร์ · ยังไม่ชำระเงิน' }),
+    screen.getByRole('button', { name: 'ยืนยันและส่งคำสั่งซื้อ' }),
   );
   await waitFor(() =>
     expect(request).toHaveBeenCalledWith(
@@ -142,21 +192,21 @@ it('quotes and submits delivery with the customer address', async () => {
   view();
   fireEvent.click(await screen.findByRole('button', { name: 'จัดส่ง' }));
   fireEvent.click(
-    screen.getByRole('button', { name: 'ตรวจรายการและยอดล่าสุด' }),
+    screen.getByRole('button', { name: 'ตรวจสอบรายการและยอดล่าสุด' }),
   );
-  await screen.findByRole('button', { name: 'ส่งออเดอร์ · ยังไม่ชำระเงิน' });
-  fireEvent.change(screen.getByLabelText('ชื่อผู้รับสินค้า'), {
+  await screen.findByRole('button', { name: 'ยืนยันและส่งคำสั่งซื้อ' });
+  fireEvent.change(screen.getByLabelText('ชื่อผู้สั่งซื้อหรือผู้รับสินค้า'), {
     target: { value: 'Guest' },
   });
   fireEvent.change(screen.getByLabelText('เบอร์ติดต่อ'), {
     target: { value: '0800000000' },
   });
-  fireEvent.change(screen.getByLabelText('ที่อยู่จัดส่ง'), {
+  fireEvent.change(screen.getByLabelText('ที่อยู่จัดส่งโดยละเอียด'), {
     target: { value: '123 Bangkok' },
   });
   fireEvent.click(screen.getByRole('checkbox'));
   fireEvent.click(
-    screen.getByRole('button', { name: 'ส่งออเดอร์ · ยังไม่ชำระเงิน' }),
+    screen.getByRole('button', { name: 'ยืนยันและส่งคำสั่งซื้อ' }),
   );
   await waitFor(() =>
     expect(request).toHaveBeenCalledWith(
@@ -192,7 +242,7 @@ it('keeps the quoted delivery total as a heading', async () => {
   view();
   fireEvent.click(await screen.findByRole('button', { name: 'จัดส่ง' }));
   fireEvent.click(
-    screen.getByRole('button', { name: 'ตรวจรายการและยอดล่าสุด' }),
+    screen.getByRole('button', { name: 'ตรวจสอบรายการและยอดล่าสุด' }),
   );
   expect(await screen.findByRole('heading', { name: /15\.00/ })).toBeVisible();
 });
@@ -212,7 +262,7 @@ it('shows delivery fee copy without the pickup-only disclaimer', async () => {
   view();
   fireEvent.click(await screen.findByRole('button', { name: 'จัดส่ง' }));
   fireEvent.click(
-    screen.getByRole('button', { name: 'ตรวจรายการและยอดล่าสุด' }),
+    screen.getByRole('button', { name: 'ตรวจสอบรายการและยอดล่าสุด' }),
   );
   expect(await screen.findByText('ค่าจัดส่ง ฿5.00')).toBeVisible();
   expect(
@@ -229,24 +279,11 @@ it('requires a QR token for dine-in and never submits an example table', async (
   view();
   fireEvent.click(screen.getByRole('button', { name: 'ทานที่ร้าน' }));
   const review = await screen.findByRole('button', {
-    name: 'ตรวจรายการและยอดล่าสุด',
+    name: 'ตรวจสอบรายการและยอดล่าสุด',
   });
   expect(review).toBeDisabled();
   expect(request).not.toHaveBeenCalledWith(
     '/test-shop/quote',
     expect.anything(),
   );
-});
-
-it('discards a pickup quote when switching to delivery', async () => {
-  view();
-  const delivery = await screen.findByRole('button', { name: 'จัดส่ง' });
-  const review = screen.getByRole('button', { name: 'ตรวจรายการและยอดล่าสุด' });
-  await waitFor(() => expect(review).toBeEnabled());
-  fireEvent.click(review);
-  await screen.findByRole('button', { name: 'ส่งออเดอร์ · ยังไม่ชำระเงิน' });
-  fireEvent.click(delivery);
-  expect(
-    screen.queryByRole('button', { name: 'ส่งออเดอร์ · ยังไม่ชำระเงิน' }),
-  ).not.toBeInTheDocument();
 });

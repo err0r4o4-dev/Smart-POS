@@ -1,14 +1,7 @@
 import { LanguageSwitcher } from '../components/ui/LanguageSwitcher';
 import { useLanguage } from '../app/language';
-import {
-  Link,
-  Outlet,
-  useLocation,
-  useParams,
-  useSearchParams,
-} from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { ArrowLeft, Menu, ShoppingCart, X } from 'lucide-react';
+import { Link, Outlet, useParams, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, ShoppingCart } from 'lucide-react';
 import { Brand } from '../components/ui/primitives';
 import { paths } from '../app/routes';
 import { useShopCart } from '../features/storefront/shop-cart';
@@ -21,7 +14,6 @@ export function StorefrontLayout() {
   const { t, language } = useLanguage();
 
   const { slug } = useParams();
-  const { pathname } = useLocation();
   const [searchParams] = useSearchParams();
   const tableQuery = searchParams.has('table')
     ? `?${searchParams.toString()}`
@@ -29,16 +21,6 @@ export function StorefrontLayout() {
   const home = slug ? `/shop/${slug}` : paths.shop;
   const cartPath = slug ? `${home}/cart${tableQuery}` : paths.shop;
   const cart = useShopCart(slug);
-  const catalogPage = !!slug && pathname.replace(/\/$/, '') === home;
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  useEffect(() => {
-    const onSidebarState = (event: Event) => {
-      setSidebarOpen((event as CustomEvent<{ open: boolean }>).detail.open);
-    };
-    window.addEventListener('catalog-sidebar-state', onSidebarState);
-    return () =>
-      window.removeEventListener('catalog-sidebar-state', onSidebarState);
-  }, []);
   return (
     <div
       className={
@@ -53,35 +35,6 @@ export function StorefrontLayout() {
       <header className="storefront-header">
         <div className="storefront-header-inner layout-shell">
           <div className="storefront-header-left">
-            {catalogPage && (
-              <button
-                type="button"
-                className="storefront-menu-btn"
-                aria-label={
-                  sidebarOpen
-                    ? language === 'th'
-                      ? 'ปิดเมนูหมวดหมู่'
-                      : 'Close category menu'
-                    : language === 'th'
-                      ? 'เปิดเมนูหมวดหมู่'
-                      : 'Open category menu'
-                }
-                aria-expanded={sidebarOpen}
-                aria-controls="catalog-sidebar"
-                onClick={() => {
-                  setSidebarOpen((open) => !open);
-                  window.dispatchEvent(
-                    new CustomEvent('toggle-catalog-sidebar'),
-                  );
-                }}
-              >
-                {sidebarOpen ? (
-                  <X size={20} aria-hidden="true" />
-                ) : (
-                  <Menu size={20} aria-hidden="true" />
-                )}
-              </button>
-            )}
             <Link
               to={`${home}${tableQuery}`}
               aria-label={t('landing.onlineStorefront')}

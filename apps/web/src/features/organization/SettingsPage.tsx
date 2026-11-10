@@ -1,5 +1,6 @@
 import { useState, useRef, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   Check,
   CheckCircle2,
@@ -20,9 +21,11 @@ import {
 import { useLanguage } from '../../app/language';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
+import { paths } from '../../app/routes';
 import { StandardPageHeader } from '../../components/ui/StandardPage';
 import { posRequest } from '../../lib/pos-api';
 import { organizationRequest } from '../../lib/organization-api';
+import type { ShopSettings } from '../../lib/storefront-api';
 import './settings.css';
 
 export interface RestaurantSettingsData {
@@ -37,10 +40,12 @@ export function SettingsPage({
   initialSettings,
   branchId,
   onSaveHours,
+  initialStorefront,
 }: {
   initialSettings?: RestaurantSettingsData;
   branchId?: string;
   onSaveHours?: (closing: string) => void;
+  initialStorefront?: Partial<ShopSettings> | null;
 }) {
   const { t, localize, language } = useLanguage();
   const { state: authState } = useAuth();
@@ -52,6 +57,25 @@ export function SettingsPage({
   const currentBranchId =
     branchId || tenant.branchID || initialSettings?.branch_id || 'branch-1';
   const orgId = tenant.context?.organization.id || 'org';
+
+  // Active storefront settings for public link
+  const storefrontQuery = useQuery({
+    queryKey: ['storefront-settings', orgId],
+    queryFn: async ({ signal }) => {
+      try {
+        return await posRequest<ShopSettings>(orgId, '/storefront', { signal });
+      } catch {
+        return null;
+      }
+    },
+    initialData: initialStorefront ?? undefined,
+    enabled: Boolean(orgId && orgId !== 'org'),
+    retry: false,
+  });
+
+  const storefrontPath = storefrontQuery.data?.slug
+    ? `/shop/${encodeURIComponent(storefrontQuery.data.slug)}`
+    : paths.shop;
 
   // State for all settings sections
   const [name, setName] = useState(org?.name || 'VELO Cafe & Restaurant');
@@ -218,7 +242,12 @@ export function SettingsPage({
         description={t('organization.settingsDescription')}
         actions={
           <div className="settings-heading-actions">
-            <Link to="/settings/storefront" className="settings-btn-secondary">
+            <Link
+              to={storefrontPath}
+              className="settings-btn-secondary"
+              target="_blank"
+              rel="noreferrer"
+            >
               <Store size={17} aria-hidden="true" />
               <span>{t('organization.settingsStorefront')}</span>
             </Link>

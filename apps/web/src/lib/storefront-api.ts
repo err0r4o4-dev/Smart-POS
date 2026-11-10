@@ -104,6 +104,7 @@ export interface OnlineOrder {
 }
 export interface ShopOrderInput {
   fulfillment?: 'PICKUP' | 'DELIVERY';
+  delivery_address?: string;
   table_token?: string;
   items: { variant_id: string; quantity: string }[];
   quote_id: string;

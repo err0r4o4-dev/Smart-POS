@@ -9,7 +9,7 @@ import {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { SetupPage } from './OrganizationPages';
+import { SetupPage, setupKey } from './OrganizationPages';
 import {
   saveSetupStep,
   type SetupProfileInput,
@@ -18,6 +18,20 @@ import {
   type SetupPaymentsInput,
   type SetupOrdersInput,
 } from './setup-api';
+
+it('creates UUID idempotency keys when randomUUID is unavailable', () => {
+  const originalCrypto = globalThis.crypto;
+  vi.stubGlobal('crypto', {
+    getRandomValues: (bytes: Uint8Array) => bytes.fill(0xab),
+  });
+
+  const key = setupKey();
+  vi.stubGlobal('crypto', originalCrypto);
+
+  expect(key).toMatch(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+  );
+});
 
 const setupState = {
   organization_id: 'org-1',

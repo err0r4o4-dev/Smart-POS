@@ -1,6 +1,6 @@
 import { useLanguage } from '../../app/language';
 import { useId, useMemo, useRef, useState } from 'react';
-import { Navigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   ArrowRight,
@@ -87,13 +87,6 @@ function ShopEntry() {
     );
   }, [search, businessType, shops.data]);
 
-  if (shops.data?.length === 1)
-    return (
-      <Navigate
-        to={`/shop/${encodeURIComponent(shops.data[0].slug)}`}
-        replace
-      />
-    );
   return (
     <>
       <section

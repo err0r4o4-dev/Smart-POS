@@ -4,6 +4,7 @@ import { ApiError, resendVerification, verifyEmail } from '../../lib/api';
 import { LoginLayout } from '../../layouts/LoginLayout';
 import {
   accountFailure,
+  dismissSuccessFeedback,
   successFeedback,
 } from '../../components/feedback/feedback';
 
@@ -60,6 +61,7 @@ export function ResendVerification({
     event.preventDefault();
     if (submitting.current || cooldown) return;
     submitting.current = true;
+    dismissSuccessFeedback();
     setPending(true);
     setError('');
     setMessage('');

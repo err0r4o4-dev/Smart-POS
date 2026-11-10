@@ -109,6 +109,31 @@ it('renders a storefront directory with one or more published shops', async () =
     screen.getAllByRole('link', { name: 'ดูหน้าร้าน' })[0],
   ).toHaveAttribute('href', `/shop/${settings.slug}`);
 });
+it.each(['single', 'multi'])(
+  'keeps the directory visible with one published shop in %s mode',
+  async (mode) => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === '/api/v1/storefronts')
+        return {
+          ...response([
+            {
+              slug: settings.slug,
+              name: settings.name,
+              accepting_orders: true,
+            },
+          ]),
+          headers: new Headers({ 'X-SmartPOS-Store-Mode': mode }),
+        };
+      return response(settings);
+    });
+    view('/shop');
+    expect(
+      await screen.findByRole('link', { name: 'ดูหน้าร้าน' }),
+    ).toHaveAttribute('href', `/shop/${settings.slug}`);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  },
+);
+
 it('does not fall back to another store when the configured store is unpublished', async () => {
   fetchMock.mockResolvedValue({
     ...response([]),
@@ -138,6 +163,32 @@ beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock);
 });
 afterEach(() => vi.unstubAllGlobals());
+
+it.each([
+  '/shop/test-shop',
+  '/shop/test-shop/cart',
+  '/shop/test-shop/orders/order',
+])('uses the directory visual shell and compact footer on %s', async (path) => {
+  view(path);
+  expect(document.querySelector('.storefront-shell')).toHaveClass(
+    'shop-directory-shell',
+  );
+  expect(screen.getByRole('contentinfo')).toHaveClass('shop-directory-footer');
+  expect(
+    screen.getByRole('link', { name: 'เงื่อนไขการให้บริการ' }),
+  ).toBeVisible();
+  if (path.endsWith('/test-shop')) {
+    expect(
+      await screen.findByRole('heading', { level: 1, name: settings.name }),
+    ).toBeVisible();
+    expect(screen.getByText(settings.description)).toBeVisible();
+    expect(screen.getByText('กำลังรับออเดอร์')).toBeVisible();
+  } else {
+    expect(
+      screen.queryByRole('button', { name: 'เมนู' }),
+    ).not.toBeInTheDocument();
+  }
+});
 
 it('keeps the customer area independent of auth and organization providers', async () => {
   view('/shop');

@@ -94,7 +94,9 @@ it('shows verification instructions and allows resend after registration', async
     'person@example.test',
   );
   fireEvent.click(screen.getByRole('button', { name: /resend verification/i }));
-  expect(await screen.findByRole('status')).toHaveTextContent(
-    /if an eligible account/i,
+  await vi.waitFor(() =>
+    expect(screen.getByRole('status')).toHaveTextContent(
+      /if an eligible account/i,
+    ),
   );
 });

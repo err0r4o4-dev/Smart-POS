@@ -4,8 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   Grid2X2,
   Heart,
   LayoutGrid,
@@ -17,8 +15,9 @@ import {
   Search,
   ShoppingCart,
   SlidersHorizontal,
+  Store,
 } from 'lucide-react';
-import { Button, Card, Loading } from '../../components/ui/primitives';
+import { Button, Card, Loading, Tag } from '../../components/ui/primitives';
 import {
   exactDecimal,
   isKnownStockPolicy,
@@ -105,6 +104,14 @@ export function ShopCatalog({ slug }: { slug: string }) {
     return () => window.removeEventListener('toggle-catalog-sidebar', onToggle);
   }, []);
 
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent('catalog-sidebar-state', {
+        detail: { open: !sidebarCollapsed },
+      }),
+    );
+  }, [sidebarCollapsed]);
+
   const shop = useQuery({
     queryKey: ['storefront', slug, 'settings'],
     queryFn: ({ signal }) =>
@@ -170,11 +177,29 @@ export function ShopCatalog({ slug }: { slug: string }) {
   );
   return (
     <div className="shop-catalog">
+      <header className="shop-page-heading shop-store-heading">
+        <div className="shop-store-identity">
+          <span className="shop-store-symbol">
+            <Store size={28} strokeWidth={1.6} aria-hidden="true" />
+          </span>
+          <div>
+            <h1>{store.name}</h1>
+            {store.description && <p>{store.description}</p>}
+          </div>
+        </div>
+        <Tag tone={store.accepting_orders ? 'success' : 'neutral'}>
+          <span className="shop-directory-status-dot" aria-hidden="true" />
+          {store.accepting_orders
+            ? t('storefront.acceptingOrders')
+            : t('storefront.notAcceptingOrders')}
+        </Tag>
+      </header>
       <div
         className={`catalog-layout ${sidebarCollapsed ? 'catalog-layout-sidebar-collapsed' : ''}`}
       >
         <aside
           className={`catalog-sidebar ${sidebarCollapsed ? 'catalog-sidebar-collapsed' : ''}`}
+          id="catalog-sidebar"
           aria-label={t('catalog.productCategory')}
         >
           <div className="catalog-sidebar-header">
@@ -183,26 +208,6 @@ export function ShopCatalog({ slug }: { slug: string }) {
                 ? 'หมวดหมู่เมนู'
                 : t('catalog.productCategory')}
             </h2>
-            <button
-              type="button"
-              className="catalog-sidebar-collapse-btn"
-              aria-label={
-                sidebarCollapsed
-                  ? language === 'th'
-                    ? 'ขยายหมวดหมู่'
-                    : 'Expand categories'
-                  : language === 'th'
-                    ? 'ย่อหมวดหมู่'
-                    : 'Collapse categories'
-              }
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            >
-              {sidebarCollapsed ? (
-                <ChevronRight size={16} aria-hidden="true" />
-              ) : (
-                <ChevronLeft size={16} aria-hidden="true" />
-              )}
-            </button>
           </div>
           <Button
             className="button-secondary catalog-category-toggle"
@@ -317,12 +322,7 @@ export function ShopCatalog({ slug }: { slug: string }) {
                 </option>
               </select>
             </div>
-            <details className="catalog-price-filter">
-              <summary>
-                <SlidersHorizontal size={15} aria-hidden="true" />{' '}
-                {t('storefront.priceRange')}{' '}
-                <ChevronDown size={15} aria-hidden="true" />
-              </summary>
+            <div className="catalog-price-filter">
               <form
                 className="catalog-price-panel"
                 onSubmit={(event) => {
@@ -350,11 +350,11 @@ export function ShopCatalog({ slug }: { slug: string }) {
                   }
                   setPriceError('');
                   changeFilters(priceDraft);
-                  event.currentTarget
-                    .closest('details')
-                    ?.removeAttribute('open');
                 }}
               >
+                <span className="catalog-price-filter-title">
+                  {t('storefront.priceRange')}
+                </span>
                 <label>
                   {t('storefront.minimumPrice')}
                   <input
@@ -390,7 +390,7 @@ export function ShopCatalog({ slug }: { slug: string }) {
                   {t('storefront.applyPriceRange')}
                 </Button>
               </form>
-            </details>
+            </div>
             {filtered && (
               <Button className="catalog-clear" onClick={clear}>
                 {t('storefront.clearFilters')}

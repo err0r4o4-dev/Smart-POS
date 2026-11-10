@@ -160,6 +160,15 @@ test('yellow catalog supports desktop tablet mobile and a shared exact-quantity 
       fullPage: true,
     });
   }
+  const closeMenu = page.getByRole('button', { name: 'ปิดเมนูหมวดหมู่' });
+  await expect(closeMenu).toHaveAttribute('aria-expanded', 'true');
+  await closeMenu.click();
+  await expect(page.locator('#catalog-sidebar')).toBeHidden();
+  const openMenu = page.getByRole('button', { name: 'เปิดเมนูหมวดหมู่' });
+  await expect(openMenu).toHaveAttribute('aria-expanded', 'false');
+  await openMenu.click();
+  await expect(page.locator('#catalog-sidebar')).toBeVisible();
+
   await page.getByRole('button', { name: 'หมวดหมู่', exact: true }).click();
   await expect(
     page.getByRole('button', { name: 'เครื่องดื่ม 2' }),
@@ -221,7 +230,6 @@ test('global catalog filters reset pagination and sorting before rendering (API 
   await expect(page.getByText('หน้า 2 · 27 รายการ')).toBeVisible();
   await page.getByRole('button', { name: 'เครื่องดื่ม 26' }).click();
   await expect(page.getByText('หน้า 1 · 26 รายการ')).toBeVisible();
-  await page.getByText('ช่วงราคา', { exact: true }).click();
   await page.getByLabel('ราคาต่ำสุด').fill('10');
   await page.getByLabel('ราคาสูงสุด').fill('20');
   await page.getByRole('button', { name: 'ใช้ช่วงราคา' }).click();

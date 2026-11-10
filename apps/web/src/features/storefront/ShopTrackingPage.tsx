@@ -6,6 +6,8 @@ import { Button, Card, Loading } from '../../components/ui/primitives';
 import { storefrontRequest, type OnlineOrder } from '../../lib/storefront-api';
 import { ShopError } from './StorefrontPage';
 import { OrderDetails } from './OrderDetails';
+import { ShopOrderSteps } from './ShopOrderSteps';
+import { ArrowLeft } from 'lucide-react';
 
 type PaymentState = 'REQUESTED' | 'OPEN' | 'PROCESSING' | 'EXPIRED' | 'PAID';
 type PaymentStatus = {
@@ -183,33 +185,19 @@ function TrackingContents({
     },
   });
   return (
-    <>
-      <div className="shop-heading">
+    <div className="shop-tracking-page">
+      <div className="shop-page-heading">
         <h1>{t('storefront.trackOrder')}</h1>
 
-        <Link
-          to={`/shop/${slug}`}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '10px 16px',
-            borderRadius: 11,
-            border: '1px solid #F0C542',
-            background: '#FFF3CA',
-            color: '#111B38',
-            fontFamily: 'inherit',
-            fontSize: 14,
-            fontWeight: 700,
-            textDecoration: 'none',
-            lineHeight: 1.5,
-          }}
-        >
+        <Link className="shop-secondary-action" to={`/shop/${slug}`}>
+          <ArrowLeft size={16} aria-hidden="true" />
           {t('storefront.backToStorefront')}
         </Link>
       </div>
 
-      <p className="notice">
+      <ShopOrderSteps active={3} />
+
+      <p className="notice shop-tracking-privacy">
         {language === 'th'
           ? 'เก็บลิงก์นี้เป็นส่วนตัว ผู้ที่มีลิงก์สามารถดูออเดอร์ได้'
           : 'Keep this link private. Anyone with it can view the order.'}
@@ -232,11 +220,12 @@ function TrackingContents({
           )}
 
           {order.data && (
-            <Card>
+            <Card className="shop-tracking-card">
               <OrderDetails order={order.data} />
               {order.data.status === 'PENDING' &&
                 order.data.payment_status === 'UNPAID' && (
                   <section
+                    className="shop-payment-panel"
                     aria-label={language === 'th' ? 'ชำระเงิน' : 'Payment'}
                   >
                     <div className="shop-actions">
@@ -337,6 +326,6 @@ function TrackingContents({
           )}
         </>
       )}
-    </>
+    </div>
   );
 }

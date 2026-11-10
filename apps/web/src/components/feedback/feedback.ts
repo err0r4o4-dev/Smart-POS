@@ -12,34 +12,45 @@ function escapedText(value: string) {
   return element.innerHTML;
 }
 
-export function successFeedback(title: string, closeLabel: string, text?: string) {
-  if (Swal.isVisible() && !Swal.getPopup()?.classList.contains('swal2-toast'))
+export async function successFeedback(
+  title: string,
+  closeLabel: string,
+  text?: string,
+) {
+  try {
+    if (Swal.isVisible() && !Swal.getPopup()?.classList.contains('swal2-toast'))
+      return;
+    await Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      titleText: title,
+      text,
+      showConfirmButton: false,
+      showCloseButton: true,
+      closeButtonAriaLabel: closeLabel,
+      timer: 5000,
+      timerProgressBar: true,
+      customClass: { popup: 'smartpos-feedback' },
+      willOpen: (popup) => popup.setAttribute('role', 'status'),
+      didOpen: (popup) => {
+        popup.addEventListener('mouseenter', () => Swal.stopTimer());
+        popup.addEventListener('mouseleave', () => {
+          if (!popup.contains(document.activeElement)) Swal.resumeTimer();
+        });
+        popup.addEventListener('focusin', () => Swal.stopTimer());
+        popup.addEventListener('focusout', (event) => {
+          if (
+            !popup.contains(event.relatedTarget as Node | null) &&
+            !popup.matches(':hover')
+          )
+            Swal.resumeTimer();
+        });
+      },
+    });
+  } catch {
     return;
-  void Swal.fire({
-    toast: true,
-    position: 'top-end',
-    icon: 'success',
-    titleText: title,
-    text,
-    showConfirmButton: false,
-    showCloseButton: true,
-    closeButtonAriaLabel: closeLabel,
-    timer: 5000,
-    timerProgressBar: true,
-    customClass: { popup: 'smartpos-feedback' },
-    willOpen: (popup) => popup.setAttribute('role', 'status'),
-    didOpen: (popup) => {
-      popup.addEventListener('mouseenter', () => Swal.stopTimer());
-      popup.addEventListener('mouseleave', () => {
-        if (!popup.contains(document.activeElement)) Swal.resumeTimer();
-      });
-      popup.addEventListener('focusin', () => Swal.stopTimer());
-      popup.addEventListener('focusout', (event) => {
-        if (!popup.contains(event.relatedTarget as Node | null) && !popup.matches(':hover'))
-          Swal.resumeTimer();
-      });
-    },
-  });
+  }
 }
 
 export async function confirmFeedback(options: {

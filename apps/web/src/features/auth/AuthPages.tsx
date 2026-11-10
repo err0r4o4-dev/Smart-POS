@@ -22,6 +22,7 @@ import { ResendVerification } from './VerificationFlow';
 import { GoogleAuth } from './GoogleAuth';
 import {
   accountFailure,
+  dismissSuccessFeedback,
   successFeedback,
 } from '../../components/feedback/feedback';
 
@@ -97,6 +98,7 @@ export function LoginPage() {
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (pending) return;
+    dismissSuccessFeedback();
     setError('');
     setPending(true);
     try {
@@ -216,6 +218,7 @@ export function RegisterPage() {
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (pending) return;
+    dismissSuccessFeedback();
     if (password !== confirm) {
       setError(t('auth.passwordsDoNotMatch'));
       return;
@@ -376,6 +379,7 @@ export function ForgotPasswordPage() {
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (pending) return;
+    dismissSuccessFeedback();
     setError('');
     setMessage('');
     setPending(true);
@@ -466,6 +470,7 @@ export function ResetPasswordPage() {
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (pending || !token) return;
+    dismissSuccessFeedback();
     if (password !== confirm) {
       setError(t('auth.passwordsDoNotMatch'));
       return;
@@ -479,6 +484,7 @@ export function ResetPasswordPage() {
       successFeedback(
         language === 'en' ? 'Password changed' : 'เปลี่ยนรหัสผ่านแล้ว',
         language === 'en' ? 'Close notification' : 'ปิดการแจ้งเตือน',
+        t('auth.passwordChangedExistingSessionsWereRevoked'),
       );
     } catch (failure) {
       setError(accountFailure(failure, language === 'en'));
@@ -493,7 +499,7 @@ export function ResetPasswordPage() {
         <h2 id="reset-title">{t('auth.chooseANewPassword')}</h2>
       </div>
       {done ? (
-        <p role="status" className="auth-status-banner">
+        <p className="auth-status-banner">
           {t('auth.passwordChangedExistingSessionsWereRevoked')}{' '}
           <Link to="/login">{t('auth.signInAgain')}</Link>.
         </p>

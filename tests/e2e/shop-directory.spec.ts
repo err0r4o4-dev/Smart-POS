@@ -155,6 +155,9 @@ test('catalog fits at public layout breakpoints', async ({
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/shop/layout-catalog');
     await expect(page.getByRole('heading', { name: 'กาแฟ' })).toBeVisible();
+    await page
+      .getByRole('button', { name: 'แสดงแบบรายการ', exact: true })
+      .click();
     await page.evaluate(() => document.fonts.ready);
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),

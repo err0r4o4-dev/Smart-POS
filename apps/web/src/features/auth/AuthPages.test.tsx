@@ -13,7 +13,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../../app/AuthProvider', () => ({
   useAuth: () => ({ clear: mocks.clear, signIn: mocks.signIn }),
 }));
-vi.mock('../../lib/api', () => ({
+vi.mock('../../lib/api', async (original) => ({
+  ...(await original<typeof import('../../lib/api')>()),
   resetPassword: mocks.resetPassword,
   getGoogleConfig: vi.fn().mockResolvedValue({ enabled: false }),
 }));
@@ -69,7 +70,7 @@ it('keeps password visibility and recoverable sign-in errors working in the rede
   expect(screen.getByLabelText('Password')).toHaveAttribute('type', 'password');
   fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
   expect(await screen.findByRole('alert')).toHaveTextContent(
-    'Sign in unavailable',
+    /check your connection/i,
   );
   expect(screen.getByLabelText('Email address')).toHaveValue(
     'synthetic@example.test',
@@ -98,7 +99,9 @@ it('removes the reset token from the URL before submission but retains it for th
     target: { value: 'a long valid password' },
   });
   fireEvent.click(screen.getByRole('button', { name: 'Change password' }));
-  expect(await screen.findByText(/Password changed/)).toBeVisible();
+  expect(
+    (await screen.findByRole('link', { name: 'Sign in again' })).closest('p'),
+  ).toHaveTextContent(/Password changed/);
   expect(mocks.resetPassword).toHaveBeenCalledWith(
     'secret-token',
     'a long valid password',

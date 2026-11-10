@@ -89,7 +89,7 @@ it('requires password confirmation to link a pending Google account', async () =
     screen.getByRole('button', { name: 'Confirm account and link Google' }),
   );
   expect(await screen.findByRole('alert')).toHaveTextContent(
-    'Confirm your credentials',
+    /check your connection/i,
   );
   expect(mocks.signInWithGoogleLink).toHaveBeenCalledWith(
     'person@example.test',

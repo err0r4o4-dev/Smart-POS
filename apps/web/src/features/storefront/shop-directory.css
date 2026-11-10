@@ -1,9 +1,23 @@
 .storefront-shell.shop-directory-shell {
+  position: relative;
+  isolation: isolate;
   min-height: 100vh;
   min-height: 100dvh;
-  background: #fffbf5 url('/images/shop-directory-background.svg') center / 100%
-    100% no-repeat;
+  background: var(--canvas) url('/images/shop-directory-background.svg') center
+    top / max(100%, 960px) auto no-repeat;
   color: var(--text-primary);
+}
+.storefront-shell.shop-directory-shell::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  inset-inline: 0;
+  bottom: 0;
+  height: clamp(260px, 30vw, 540px);
+  background: url('/images/shop-directory-bottom-waves.svg') center bottom /
+    cover no-repeat;
+  mask-image: linear-gradient(to bottom, transparent, #000 48px);
 }
 .storefront-shell .storefront-header {
   position: relative;

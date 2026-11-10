@@ -107,24 +107,6 @@
   font-weight: 700;
   color: var(--text-primary);
 }
-.catalog-sidebar-collapse-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--canvas);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.catalog-sidebar-collapse-btn:hover {
-  background: var(--primary-soft);
-  color: var(--primary-strong);
-  border-color: var(--primary-border);
-}
 .catalog-category-toggle {
   display: none;
 }
@@ -283,44 +265,26 @@
   width: auto;
 }
 .catalog-price-filter {
-  position: relative;
-}
-.catalog-price-filter summary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 40px;
-  padding: 0 14px;
-  cursor: pointer;
-  list-style: none;
-  font-size: 13px;
-  font-weight: 500;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
-  color: var(--text-primary);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
-}
-.catalog-price-filter summary::-webkit-details-marker {
-  display: none;
+  min-width: 0;
 }
 .catalog-price-panel {
-  position: absolute;
-  z-index: 20;
-  top: calc(100% + 8px);
-  left: 0;
-  width: min(290px, calc(100vw - 32px));
-  padding: 18px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--surface);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
   display: grid;
-  gap: 12px;
+  grid-template-columns: auto minmax(110px, 1fr) minmax(110px, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+  min-height: 40px;
+}
+.catalog-price-filter-title {
+  align-self: center;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 .catalog-price-panel label {
   display: grid;
   gap: 6px;
+  min-width: 0;
   font-size: 13px;
   color: var(--text-primary);
 }
@@ -1031,6 +995,16 @@
   }
   .catalog-category-list[data-expanded='false'] {
     display: none;
+  }
+  .catalog-price-panel {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .catalog-price-filter-title {
+    grid-column: 1 / -1;
+  }
+  .catalog-price-panel > .button {
+    grid-column: 1 / -1;
+    width: 100%;
   }
   .storefront-footer-columns {
     grid-template-columns: minmax(0, 1fr);

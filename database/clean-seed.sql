@@ -20,6 +20,35 @@ BEGIN
       PERFORM set_config('app.user_id', v_user_id::text, true);
     END IF;
 
+    -- ปิด Triggers ชั่วคราวเพื่อลบข้อมูล immutable
+    ALTER TABLE sales DISABLE TRIGGER ALL;
+    ALTER TABLE sale_items DISABLE TRIGGER ALL;
+    ALTER TABLE sale_payments DISABLE TRIGGER ALL;
+    ALTER TABLE receipts DISABLE TRIGGER ALL;
+    ALTER TABLE stock_movements DISABLE TRIGGER ALL;
+    ALTER TABLE pos_checkouts DISABLE TRIGGER ALL;
+    ALTER TABLE register_shifts DISABLE TRIGGER ALL;
+    ALTER TABLE pos_carts DISABLE TRIGGER ALL;
+
+    -- ล้างข้อมูลการขายและประวัติกะ
+    DELETE FROM receipts WHERE organization_id = v_org_id;
+    DELETE FROM sale_payments WHERE organization_id = v_org_id;
+    DELETE FROM sale_items WHERE organization_id = v_org_id;
+    DELETE FROM sales WHERE organization_id = v_org_id;
+    DELETE FROM pos_checkouts WHERE organization_id = v_org_id;
+    DELETE FROM pos_cart_items WHERE organization_id = v_org_id;
+    DELETE FROM pos_carts WHERE organization_id = v_org_id;
+    DELETE FROM register_shifts WHERE organization_id = v_org_id;
+
+    ALTER TABLE sales ENABLE TRIGGER ALL;
+    ALTER TABLE sale_items ENABLE TRIGGER ALL;
+    ALTER TABLE sale_payments ENABLE TRIGGER ALL;
+    ALTER TABLE receipts ENABLE TRIGGER ALL;
+    ALTER TABLE stock_movements ENABLE TRIGGER ALL;
+    ALTER TABLE pos_checkouts ENABLE TRIGGER ALL;
+    ALTER TABLE register_shifts ENABLE TRIGGER ALL;
+    ALTER TABLE pos_carts ENABLE TRIGGER ALL;
+
     DELETE FROM storefront_products WHERE organization_id = v_org_id;
     DELETE FROM storefronts WHERE organization_id = v_org_id;
     DELETE FROM pos_terminals WHERE organization_id = v_org_id AND code = 'TERM-01';
@@ -43,4 +72,3 @@ BEGIN
     RAISE NOTICE 'Sample data cleaned successfully for organization %', v_org_id;
   END IF;
 END $$;
-

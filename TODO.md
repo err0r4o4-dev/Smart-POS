@@ -49,13 +49,13 @@ database, external assets, new dependencies, publication or deployment changes.
 
 Approved scope: Redesign `/setup` page UI to match the user's VELOPOS screenshot reference.
 Includes VELOPOS branding header bar with top warm glow, 2-column layout with left 7-step vertical stepper card,
-right step card with step pill badge ("ขั้นตอนที่ 1 จาก 7"), icon squircle and decorative illustration,
-exact field layout and placeholders for Step 1 ("ข้อมูลร้าน"), info notice callout, and action buttons.
+right step card with step pill badge ("à¸‚à¸±à¹‰à¸™à¸•à¸­à¸™à¸—à¸µà¹ˆ 1 à¸ˆà¸²à¸ 7"), icon squircle and decorative illustration,
+exact field layout and placeholders for Step 1 ("à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸£à¹‰à¸²à¸™"), info notice callout, and action buttons.
 Preserve all functional logic, step validations, API contracts, and tests.
 
 - [x] 1. Update `setup.css` with exact layout, color tokens, typography, stepper styles, decorative badges, and responsive behavior
 - [x] 2. Update `OrganizationPages.tsx` to implement VELOPOS header bar, 7-step stepper rail, exact form fields and placeholders, and card layout
-- [x] 3. Update `OrganizationPages.test.tsx` to reflect the 7-step count ("ขั้นตอนที่ 1 จาก 7")
+- [x] 3. Update `OrganizationPages.test.tsx` to reflect the 7-step count ("à¸‚à¸±à¹‰à¸™à¸•à¸­à¸™à¸—à¸µà¹ˆ 1 à¸ˆà¸²à¸ 7")
 - [/] 4. Run tests, typecheck, and lint verification
 - [ ] 5. Verify visual integrity and responsive behavior (320px, 768px, 1440px)
 
@@ -291,7 +291,7 @@ Preserve existing tests and contracts.
 - [x] 4. Add unit tests for SettingsPage covering rendering, field updates, and interactions
 - [x] 5. Verify all frontend tests pass and visual integrity is preserved
 - [x] Obtain authorized independent review for payment, permissions and data integrity.
-  - User explicitly authorized independent review agent ("อนุญาตให้ใช้ independent reviewer agent").
+  - User explicitly authorized independent review agent ("à¸­à¸™à¸¸à¸à¸²à¸•à¹ƒà¸«à¹‰à¹ƒà¸Šà¹‰ independent reviewer agent").
   - Independent review agent (Copernicus) completed architectural and safety review:
     1. P1: Recipe ingredient reservation gap identified.
     2. P1: Paid-only kitchen enforcement gap identified -> implemented and verified in queueQuery and Transition.
@@ -299,7 +299,7 @@ Preserve existing tests and contracts.
 
 # Online storefront settings (2026-11-06)
 
-Approved scope: Add a dedicated "หน้าร้านออนไลน์" (Online Storefront Settings) page at `/settings/storefront` matching the VELOPOS UI design with a responsive 2-column layout, and add a navigation button from the main `/settings` page.
+Approved scope: Add a dedicated "à¸«à¸™à¹‰à¸²à¸£à¹‰à¸²à¸™à¸­à¸­à¸™à¹„à¸¥à¸™à¹Œ" (Online Storefront Settings) page at `/settings/storefront` matching the VELOPOS UI design with a responsive 2-column layout, and add a navigation button from the main `/settings` page.
 Includes Storefront Enable/Disable toggle, Details (store name, slug URL with .velopos.com suffix, description with char counter), Order Channels (Takeaway, Delivery, Dine-in), Storefront Appearance (6 theme colors, logo/cover upload), Online Order Hours (store hours vs custom online hours), and Store Link & QR Code display (copy URL and download QR code).
 Preserve existing tests and contracts.
 
@@ -375,13 +375,13 @@ Execution decisions:
 ## Objective
 
 - Match the exact visual layout from user screenshot:
-  1. Left Column (`auth-split-visual`): Warm beige/cream background, Brand logo at top, Thai slogan "จัดการร้านให้ง่ายขึ้น" with subtle yellow hand-drawn underline accent, sub-headline, and 3D retail POS counter illustration (Monitor + thermal receipt printer + receipt paper + potted plant + shop canopy in background).
-  2. Right Column (`auth-split-form`): Clean white panel with top toolbar (Back link "<- กลับหน้าหลัก", Language switcher pill), centered modern rounded Card containing:
-     - Heading: "ยินดีต้อนรับกลับ"
-     - Subheading: "เข้าสู่ระบบสำหรับเจ้าของร้าน ผู้จัดการ และพนักงานเพื่อจัดการร้านค้าและยอดขายของคุณ"
-     - Soft tinted input fields (`#f0f4f9` background, no borders/soft border, no hard icons in the input box) with labels "ที่อยู่อีเมล", "รหัสผ่าน" and internal "แสดง" toggle button
-     - Warm golden primary button: "เข้าสู่ระบบ" with subtle rounded corners and shadow
-     - Bottom row: "ลืมรหัสผ่าน?" on left, "สร้างบัญชี" on right.
+  1. Left Column (`auth-split-visual`): Warm beige/cream background, Brand logo at top, Thai slogan "à¸ˆà¸±à¸”à¸à¸²à¸£à¸£à¹‰à¸²à¸™à¹ƒà¸«à¹‰à¸‡à¹ˆà¸²à¸¢à¸‚à¸¶à¹‰à¸™" with subtle yellow hand-drawn underline accent, sub-headline, and 3D retail POS counter illustration (Monitor + thermal receipt printer + receipt paper + potted plant + shop canopy in background).
+  2. Right Column (`auth-split-form`): Clean white panel with top toolbar (Back link "<- à¸à¸¥à¸±à¸šà¸«à¸™à¹‰à¸²à¸«à¸¥à¸±à¸", Language switcher pill), centered modern rounded Card containing:
+     - Heading: "à¸¢à¸´à¸™à¸”à¸µà¸•à¹‰à¸­à¸™à¸£à¸±à¸šà¸à¸¥à¸±à¸š"
+     - Subheading: "à¹€à¸‚à¹‰à¸²à¸ªà¸¹à¹ˆà¸£à¸°à¸šà¸šà¸ªà¸³à¸«à¸£à¸±à¸šà¹€à¸ˆà¹‰à¸²à¸‚à¸­à¸‡à¸£à¹‰à¸²à¸™ à¸œà¸¹à¹‰à¸ˆà¸±à¸”à¸à¸²à¸£ à¹à¸¥à¸°à¸žà¸™à¸±à¸à¸‡à¸²à¸™à¹€à¸žà¸·à¹ˆà¸­à¸ˆà¸±à¸”à¸à¸²à¸£à¸£à¹‰à¸²à¸™à¸„à¹‰à¸²à¹à¸¥à¸°à¸¢à¸­à¸”à¸‚à¸²à¸¢à¸‚à¸­à¸‡à¸„à¸¸à¸“"
+     - Soft tinted input fields (`#f0f4f9` background, no borders/soft border, no hard icons in the input box) with labels "à¸—à¸µà¹ˆà¸­à¸¢à¸¹à¹ˆà¸­à¸µà¹€à¸¡à¸¥", "à¸£à¸«à¸±à¸ªà¸œà¹ˆà¸²à¸™" and internal "à¹à¸ªà¸”à¸‡" toggle button
+     - Warm golden primary button: "à¹€à¸‚à¹‰à¸²à¸ªà¸¹à¹ˆà¸£à¸°à¸šà¸š" with subtle rounded corners and shadow
+     - Bottom row: "à¸¥à¸·à¸¡à¸£à¸«à¸±à¸ªà¸œà¹ˆà¸²à¸™?" on left, "à¸ªà¸£à¹‰à¸²à¸‡à¸šà¸±à¸à¸Šà¸µ" on right.
 
 ## Scope & Affected Components
 
@@ -401,3 +401,6 @@ Execution decisions:
   - [ ] Run `vitest run AuthPages`
   - [ ] Run `npm run build`
   - [ ] Cleanup TODO.md
+
+
+

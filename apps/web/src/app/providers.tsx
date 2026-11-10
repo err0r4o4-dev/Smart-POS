@@ -1,8 +1,13 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { ErrorBoundary } from '../components/feedback/ErrorBoundary';
+import { MockModeBadge } from '../components/feedback/MockModeBadge';
+import { initMockApi } from '../mocks/mock-service';
 import { AuthProvider } from './AuthProvider';
 import { LanguageProvider } from './language';
+
+// Activate mock API fetch interceptor when enabled
+initMockApi();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -14,7 +19,10 @@ export function Providers({ children }: { children: ReactNode }) {
     <LanguageProvider>
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            {children}
+            <MockModeBadge />
+          </AuthProvider>
         </QueryClientProvider>
       </ErrorBoundary>
     </LanguageProvider>

@@ -2,6 +2,7 @@ import type { UiMessage } from '../../i18n';
 import { useLanguage } from '../../app/language';
 import { useEffect, useState, useRef, type ReactNode } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import { ArrowLeft, Monitor, User, CheckCircle2, AlertCircle } from 'lucide-react';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavigate';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -44,15 +45,25 @@ export function POSWorkspace() {
       <div className="pos-workspace catalog-page">
         {!isTerminal && (
           <nav className="pos-navigation" aria-label={t('pos.salesNavigation')}>
-            <Link to="/pos">{t('pos.sellProducts')}</Link>
-            <Link to="/pos/held-carts">
-              {t('pos.heldCarts')} <span className="shortcut-badge">F4</span>
+            <Link to="/pos" className="pos-nav-back-btn">
+              <ArrowLeft size={16} aria-hidden="true" />
+              <span>{t('pos.backToSale')}</span>
             </Link>
-            <Link to="/pos/checkout">{t('pos.checkout')}</Link>
-            <Link to="/pos/register/open">{t('pos.openShift')}</Link>
-            <Link to="/pos/register/close">{t('pos.closeShift')}</Link>
-            <Link to="/pos/register/history">{t('pos.shiftHistory')}</Link>
-            <Link to="/pos/shifts">{t('pos.paymentReview')}</Link>
+            <span className="pos-nav-divider" aria-hidden="true" />
+            <div className="pos-nav-links">
+              <Link to="/pos/register/open">{t('pos.openShift')}</Link>
+              <Link to="/pos/register/close">{t('pos.closeShift')}</Link>
+              <Link to="/pos/register/history">{t('pos.shiftHistory')}</Link>
+              <Link to="/pos/shifts">{t('pos.paymentReview')}</Link>
+              {location.pathname.endsWith('/held-carts') && (
+                <Link to="/pos/held-carts">
+                  {t('pos.heldCarts')} <span className="shortcut-badge">F4</span>
+                </Link>
+              )}
+              {location.pathname.endsWith('/checkout') && (
+                <Link to="/pos/checkout">{t('pos.checkout')}</Link>
+              )}
+            </div>
           </nav>
         )}
         <div className="pos-workspace-content">
@@ -77,28 +88,50 @@ function WorkspaceStatus({ isTerminal: isTerminalProp }: { isTerminal?: boolean 
     <>
       {!isTerminal && (
         <div className="pos-context">
-          <label>
-            {t('pos.terminal')}
-            <select
-              aria-label={t('pos.activeTerminal')}
-              value={pos.terminal?.id ?? ''}
-              disabled={pos.busy}
-              onChange={(event) => pos.setTerminal(event.target.value)}
-            >
-              <option value="" disabled>
-                {t('pos.selectTerminal')}
-              </option>
-              {pos.terminals.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name} · {item.code}
+          <div className="pos-context-item">
+            <label className="pos-context-terminal-label">
+              <span className="pos-context-icon" aria-hidden="true">
+                <Monitor size={16} />
+              </span>
+              <span className="pos-context-title">{t('pos.terminal')}</span>
+              <select
+                aria-label={t('pos.activeTerminal')}
+                value={pos.terminal?.id ?? ''}
+                disabled={pos.busy}
+                onChange={(event) => pos.setTerminal(event.target.value)}
+              >
+                <option value="" disabled>
+                  {t('pos.selectTerminal')}
                 </option>
-              ))}
-            </select>
-          </label>
-          <span>
-            {t('pos.cashier')} {pos.user.slice(0, 8)} ·{' '}
-            {pos.shift ? t('pos.shiftOpen') : t('pos.youHaveNoOpenShift')}
-          </span>
+                {pos.terminals.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name} · {item.code}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="pos-context-cashier">
+            <span className="pos-context-user">
+              <User size={15} aria-hidden="true" />
+              <span>
+                {t('pos.cashier')} <strong>{pos.user.slice(0, 8)}</strong>
+              </span>
+            </span>
+            <span
+              className={"pos-shift-status-pill " + (pos.shift ? "is-open" : "is-closed")}
+            >
+              {pos.shift ? (
+                <CheckCircle2 size={13} aria-hidden="true" />
+              ) : (
+                <AlertCircle size={13} aria-hidden="true" />
+              )}
+              <span>
+                {pos.shift ? t('pos.shiftOpen') : t('pos.youHaveNoOpenShift')}
+              </span>
+            </span>
+          </div>
         </div>
       )}
       {pos.loading && <Loading>{t('pos.loadingTerminalsAndShifts')}</Loading>}

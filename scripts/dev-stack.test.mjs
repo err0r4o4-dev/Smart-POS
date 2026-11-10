@@ -164,6 +164,21 @@ test('development CSP is isolated and keeps gateway routing and headers', () => 
   ]);
 });
 
+test('setup mapping allows only the tile host and same-origin GPS', () => {
+  for (const path of ['infra/caddy/Caddyfile', 'infra/caddy/Caddyfile.dev']) {
+    const gateway = read(path);
+    assert.match(
+      gateway,
+      /img-src 'self' data: https:\/\/tile\.openstreetmap\.org;/,
+    );
+    assert.match(
+      gateway,
+      /Permissions-Policy "camera=\(\), microphone=\(\), geolocation=\(self\)"/,
+    );
+    assert.doesNotMatch(gateway, /img-src[^;]*\*/);
+  }
+});
+
 test('development startup never starts database or migration dependencies', () => {
   for (const name of ['stack:dev', 'stack:dev:up']) {
     assert.match(manifest.scripts[name], /--no-deps api web caddy$/);

@@ -18587,7 +18587,17 @@ components:
         current_step:
           {
             type: string,
-            enum: [profile, services, tables, menu, payments, orders, review],
+            enum:
+              [
+                profile,
+                services,
+                tables,
+                location,
+                menu,
+                payments,
+                orders,
+                review,
+              ],
           }
         complete: { type: boolean }
         ready: { type: boolean }
@@ -18615,6 +18625,7 @@ components:
             type: array,
             items: { $ref: '#/components/schemas/RestaurantSetupStep' },
           }
+        location: { $ref: '#/components/schemas/RestaurantSetupLocation' }
         profile: { type: object, additionalProperties: true }
         services: { $ref: '#/components/schemas/RestaurantServiceModes' }
         tables: { type: object, additionalProperties: true }
@@ -18646,6 +18657,17 @@ components:
         dine_in: { type: boolean, default: true }
         takeaway: { type: boolean, default: true }
         delivery: { type: boolean, default: false }
+    RestaurantSetupLocation:
+      type: object
+      additionalProperties: false
+      required: [latitude, longitude, address, confirmed]
+      description: Owner-only confirmed store location. Omitted until saved. Not automatically exposed by public storefront APIs.
+      properties:
+        latitude: { type: number, minimum: -90, maximum: 90 }
+        longitude: { type: number, minimum: -180, maximum: 180 }
+        address: { type: string, minLength: 1, maxLength: 1000 }
+        details: { type: string, maxLength: 1000, default: '' }
+        confirmed: { type: boolean, const: true }
     RestaurantSetupProfileInput:
       type: object
       additionalProperties: false
@@ -18654,6 +18676,7 @@ components:
         - required: [name, business_type]
         - required: [organization]
       properties:
+        location: { $ref: '#/components/schemas/RestaurantSetupLocation' }
         branch_id: { type: string, format: uuid }
         name: { type: string, minLength: 1, maxLength: 200 }
         code: { type: string }

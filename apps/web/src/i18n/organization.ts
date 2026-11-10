@@ -1,6 +1,32 @@
 import { defineMessages } from './defineMessages';
 export const organization = defineMessages({
   th: {
+    metaStoreServices: 'ร้านและบริการ',
+    metaLocation: 'ตำแหน่งร้าน',
+    metaMenuPayments: 'เมนูและรับเงิน',
+    locationPrivacy:
+      'เมื่อเปิดแผนที่ พิกัดมุมมองและโดเมนเว็บไซต์จะส่งให้ OpenStreetMap การค้นหาส่งคำค้นให้บริการที่ตั้งค่าไว้ ขอ GPS เฉพาะเมื่อกดใช้ตำแหน่งปัจจุบัน',
+    locationSearch: 'ค้นหาสถานที่หรือที่อยู่',
+    locationSearchAction: 'ค้นหาตำแหน่ง',
+    locationSearching: 'กำลังค้นหา…',
+    locationSearchUnavailable:
+      'ยังไม่ได้ตั้งค่าบริการค้นหาที่อยู่ กรุณาปักหมุดหรือกรอกพิกัดแทน',
+    locationSearchFailed: 'ค้นหาไม่สำเร็จ กรุณาลองใหม่หรือปักหมุดแทน',
+    locationNoResults: 'ไม่พบสถานที่ กรุณาลองคำค้นอื่นหรือปักหมุด',
+    locationLoadMap: 'เปิดแผนที่',
+    locationCloseMap: 'ปิดแผนที่เพื่อเปิดใหม่',
+    locationMap: 'แผนที่เลือกตำแหน่งร้าน',
+    locationMapFailed:
+      'โหลดแผนที่ไม่สำเร็จ ข้อมูลยังอยู่ กรุณาเปิดแผนที่ใหม่หรือกรอกพิกัด',
+    locationUseCurrent: 'ใช้ตำแหน่งปัจจุบัน',
+    locationGpsFailed:
+      'อ่านตำแหน่งไม่ได้ กรุณาอนุญาตตำแหน่งหรือเลือกหมุดบนแผนที่',
+    locationLatitude: 'ละติจูด',
+    locationLongitude: 'ลองจิจูด',
+    locationDetails: 'ชั้น อาคาร หรือจุดสังเกต',
+    locationConfirmed: 'ยืนยันตำแหน่งแล้ว',
+    locationPickHint: 'เลือกหมุดและกรอกที่อยู่ จากนั้นยืนยันตำแหน่งร้าน',
+    locationConfirm: 'ยืนยันตำแหน่งร้าน',
     metaProfile: 'ข้อมูลร้าน',
     metaProfileSidebar: 'ตั้งค่าข้อมูลพื้นฐาน',
     metaProfileCard: 'กรอกข้อมูลพื้นฐานของร้านอาหาร เพื่อเริ่มใช้งานระบบ',
@@ -49,7 +75,7 @@ export const organization = defineMessages({
     setupPriceHint: 'ราคาจะถูกตรวจสอบอีกครั้งโดยเซิร์ฟเวอร์ก่อนบันทึก',
     setupRotationUncertain:
       'สถานะการหมุนเวียนรหัสอาจไม่แน่นอน กรุณาลองคำขอเดิมอีกครั้ง และตรวจสอบว่ารหัสที่ได้รับยังเป็นรหัสล่าสุด',
-    setupStepCount: 'ขั้นตอนที่ {step} จาก 7',
+    setupStepCount: 'ขั้นตอนที่ {step} จาก 4',
     setupNoStoreName: 'ยังไม่ได้ระบุชื่อร้าน',
     setupNoZone: 'ยังไม่มีโซน',
     setupNoTable: 'ยังไม่มีโต๊ะ',
@@ -325,6 +351,33 @@ export const organization = defineMessages({
     organization2: 'องค์กร',
   },
   en: {
+    metaStoreServices: 'Store and services',
+    metaLocation: 'Store location',
+    metaMenuPayments: 'Menu and payments',
+    locationPrivacy:
+      'Opening the map sends viewport coordinates and the website origin to OpenStreetMap. Search sends your query to the configured provider. GPS is requested only when you choose your current location.',
+    locationSearch: 'Search place or address',
+    locationSearchAction: 'Search location',
+    locationSearching: 'Searching…',
+    locationSearchUnavailable:
+      'Address search is not configured. Pick a map pin or enter coordinates instead.',
+    locationSearchFailed: 'Search failed. Retry or pick a map pin.',
+    locationNoResults: 'No places found. Try another search or pick a pin.',
+    locationLoadMap: 'Open map',
+    locationCloseMap: 'Close map to reopen',
+    locationMap: 'Store location map',
+    locationMapFailed:
+      'Map failed to load. Your input is retained. Reopen the map or enter coordinates.',
+    locationUseCurrent: 'Use current location',
+    locationGpsFailed:
+      'Location unavailable. Allow location access or pick a map pin.',
+    locationLatitude: 'Latitude',
+    locationLongitude: 'Longitude',
+    locationDetails: 'Floor, building or landmark',
+    locationConfirmed: 'Location confirmed',
+    locationPickHint:
+      'Choose a pin and enter an address, then confirm the store location.',
+    locationConfirm: 'Confirm store location',
     metaProfile: 'Store information',
     metaProfileSidebar: 'Set up basic information',
     metaProfileCard: 'Enter your restaurant details to get started',
@@ -372,7 +425,7 @@ export const organization = defineMessages({
     setupPriceHint: 'The server checks the price again before saving',
     setupRotationUncertain:
       'The secret rotation status may be uncertain. Retry the same request and check that the returned secrets are still current',
-    setupStepCount: 'Step {step} of 7',
+    setupStepCount: 'Step {step} of 4',
     setupNoStoreName: 'No store name yet',
     setupNoZone: 'No area yet',
     setupNoTable: 'No table yet',

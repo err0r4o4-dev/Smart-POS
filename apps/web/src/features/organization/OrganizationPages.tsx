@@ -12,7 +12,6 @@ import {
   ArrowRight,
   Banknote,
   BarChart3,
-  Bell,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -25,7 +24,6 @@ import {
   Info,
   LayoutGrid,
   QrCode,
-  ShoppingBag,
   Store,
   Utensils,
   WalletCards,
@@ -47,6 +45,13 @@ import { LanguageSwitcher } from '../../components/ui/LanguageSwitcher';
 import { AccountMenu } from '../../components/ui/AccountMenu';
 import { StandardPageHeader } from '../../components/ui/StandardPage';
 import './setup.css';
+import { SetupLocationPicker } from './SetupLocationPicker';
+import {
+  saveSetupSections,
+  seedSavedSetupSection,
+  setupScreenForStep,
+  type SetupSaveCache,
+} from './setup-flow';
 import { SettingsPage } from './SettingsPage';
 import { StorefrontSettingsPage } from './StorefrontSettingsPage';
 import {
@@ -256,85 +261,30 @@ const createSetupForm = (): SetupFormState => ({
   },
 });
 
-function DiningTableIcon({
-  size = 24,
-  strokeWidth = 2,
-}: {
-  size?: number;
-  strokeWidth?: number;
-}) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M3.5 6v12" />
-      <path d="M3.5 13h4.5v5" />
-      <path d="M20.5 6v12" />
-      <path d="M20.5 13H16v5" />
-      <path d="M8.5 9.5h7" />
-      <path d="M12 9.5V18" />
-      <path d="M10 18h4" />
-    </svg>
-  );
-}
-
 const setupMeta = [
   {
     key: 'profile',
-    label: 'organization.metaProfile',
+    label: 'organization.metaStoreServices',
     sidebarSubtitle: 'organization.metaProfileSidebar',
     cardSubtitle: 'organization.metaProfileCard',
     description: 'organization.metaProfileCard',
     icon: Store,
   },
   {
-    key: 'services',
-    label: 'organization.metaServices',
-    sidebarSubtitle: 'organization.metaServicesSidebar',
-    cardSubtitle: 'organization.metaServicesSidebar',
-    description: 'organization.metaServicesDescription',
-    icon: Bell,
-  },
-  {
-    key: 'tables',
-    label: 'organization.metaTables',
-    sidebarSubtitle: 'organization.metaTablesSidebar',
-    cardSubtitle: 'organization.metaTablesSidebar',
-    description: 'organization.metaTablesDescription',
-    icon: DiningTableIcon,
+    key: 'location',
+    label: 'organization.metaLocation',
+    sidebarSubtitle: 'organization.metaLocation',
+    cardSubtitle: 'organization.locationPickHint',
+    description: 'organization.locationPickHint',
+    icon: House,
   },
   {
     key: 'menu',
-    label: 'organization.metaMenu',
+    label: 'organization.metaMenuPayments',
     sidebarSubtitle: 'organization.metaMenuSidebar',
     cardSubtitle: 'organization.metaMenuSidebar',
     description: 'organization.metaMenuDescription',
     icon: Utensils,
-  },
-  {
-    key: 'payments',
-    label: 'organization.metaPayments',
-    sidebarSubtitle: 'organization.metaPaymentsSidebar',
-    cardSubtitle: 'organization.metaPaymentsSidebar',
-    description: 'organization.metaPaymentsDescription',
-    icon: CreditCard,
-  },
-  {
-    key: 'orders',
-    label: 'organization.metaOrders',
-    sidebarSubtitle: 'organization.metaOrdersSidebar',
-    cardSubtitle: 'organization.metaOrdersSidebar',
-    description: 'organization.metaOrdersDescription',
-    icon: ShoppingBag,
   },
   {
     key: 'review',
@@ -346,7 +296,7 @@ const setupMeta = [
   },
 ] as const;
 
-type SetupStepIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+type SetupStepIndex = 0 | 1 | 2 | 3;
 
 export function setupKey() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
@@ -606,8 +556,9 @@ function localReadiness(
       reason: t('organization.setupProfileIncomplete'),
     });
   if (
-    !form.tables.zones.some((zone) => zone.name.trim()) ||
-    !form.tables.tables.some((table) => table.name.trim())
+    form.services.service_modes.dine_in &&
+    (!form.tables.zones.some((zone) => zone.name.trim()) ||
+      !form.tables.tables.some((table) => table.name.trim()))
   )
     incomplete.push({
       key: 'tables',
@@ -657,7 +608,7 @@ function SetupStepFields({
   update,
   promptPayAvailable,
 }: {
-  step: SetupStepIndex;
+  step: number;
   form: SetupFormState;
   update: <Key extends keyof SetupFormState>(
     key: Key,
@@ -1034,56 +985,60 @@ function SetupStepFields({
         </div>
       </div>
     );
-  if (step === 5)
+  if (step === 5 || step === 6)
     return (
       <div className="setup-form-section">
-        <div className="setup-choice-grid">
-          <SetupToggle
-            label={t('organization.setupQrOrders')}
-            checked={form.orders.qr_ordering}
-            onChange={(qr_ordering) =>
-              update('orders', { ...form.orders, qr_ordering })
-            }
-          />
-          <SetupToggle
-            label={t('organization.setupKitchenQueue')}
-            checked={form.orders.kitchen_queue}
-            onChange={(kitchen_queue) =>
-              update('orders', { ...form.orders, kitchen_queue })
-            }
-          />
-          <SetupToggle
-            label={t('organization.setupAutoConfirm')}
-            checked={form.orders.auto_confirm}
-            onChange={(auto_confirm) =>
-              update('orders', { ...form.orders, auto_confirm })
-            }
-          />
-        </div>
-        <div className="setup-form-grid">
-          <SetupInput
-            label="VAT (%)"
-            value={form.orders.vat_percent}
-            required
-            type="number"
-            min="0"
-            step="0.01"
-            onChange={(vat_percent) =>
-              update('orders', { ...form.orders, vat_percent })
-            }
-          />
-          <SetupInput
-            label={t('organization.setupServiceCharge')}
-            value={form.orders.service_charge_percent}
-            required
-            type="number"
-            min="0"
-            step="0.01"
-            onChange={(service_charge_percent) =>
-              update('orders', { ...form.orders, service_charge_percent })
-            }
-          />
-        </div>
+        {step === 5 && (
+          <div className="setup-choice-grid">
+            <SetupToggle
+              label={t('organization.setupQrOrders')}
+              checked={form.orders.qr_ordering}
+              onChange={(qr_ordering) =>
+                update('orders', { ...form.orders, qr_ordering })
+              }
+            />
+            <SetupToggle
+              label={t('organization.setupKitchenQueue')}
+              checked={form.orders.kitchen_queue}
+              onChange={(kitchen_queue) =>
+                update('orders', { ...form.orders, kitchen_queue })
+              }
+            />
+            <SetupToggle
+              label={t('organization.setupAutoConfirm')}
+              checked={form.orders.auto_confirm}
+              onChange={(auto_confirm) =>
+                update('orders', { ...form.orders, auto_confirm })
+              }
+            />
+          </div>
+        )}
+        {step === 6 && (
+          <div className="setup-form-grid">
+            <SetupInput
+              label="VAT (%)"
+              value={form.orders.vat_percent}
+              required
+              type="number"
+              min="0"
+              step="0.01"
+              onChange={(vat_percent) =>
+                update('orders', { ...form.orders, vat_percent })
+              }
+            />
+            <SetupInput
+              label={t('organization.setupServiceCharge')}
+              value={form.orders.service_charge_percent}
+              required
+              type="number"
+              min="0"
+              step="0.01"
+              onChange={(service_charge_percent) =>
+                update('orders', { ...form.orders, service_charge_percent })
+              }
+            />
+          </div>
+        )}
       </div>
     );
   return null;
@@ -1120,7 +1075,7 @@ function ScopedSetupPage() {
     branchID: string;
   } | null>(null);
   const creationRef = useRef({ key: '', payload: '' });
-  const stepRetryRef = useRef({ step: '', payload: '', key: '' });
+  const saveCache = useRef<SetupSaveCache>({});
   const completionRef = useRef({ key: '', orgID: '' });
   const stepHeadingRef = useRef<HTMLHeadingElement>(null);
   const activeRef = useRef(true);
@@ -1168,6 +1123,13 @@ function ScopedSetupPage() {
     }
     startTransition(() => setHydratedScope(scope));
     const data = setupQuery.data as SetupState & Partial<SetupFormState>;
+    if (
+      !isDirty &&
+      data.tables &&
+      data.steps.some((section) => section.key === 'tables' && section.complete)
+    ) {
+      seedSavedSetupSection(saveCache.current, 'tables', data.tables);
+    }
     startTransition(() => {
       setServerState(setupQuery.data);
       if (!isDirty)
@@ -1180,10 +1142,12 @@ function ScopedSetupPage() {
           ...(data.payments ? { payments: data.payments } : {}),
           ...(data.orders ? { orders: data.orders } : {}),
         }));
-      const resume = setupMeta.findIndex(
-        (item) => item.key === data.current_step,
+      setStep(
+        setupScreenForStep(
+          data.current_step,
+          Boolean(data.profile?.location?.confirmed),
+        ),
       );
-      if (resume >= 0) setStep(resume as SetupStepIndex);
     });
   }, [setupQuery.data, orgID, branchID, hydratedScope, isDirty]);
 
@@ -1239,6 +1203,7 @@ function ScopedSetupPage() {
   const localIncomplete = localReadiness(form, t);
   const readinessItems = serverState?.readiness?.incomplete ?? localIncomplete;
   const isReady = Boolean(
+    form.profile.location?.confirmed &&
     hydratedScope === `${orgID}:${branchID}` &&
     serverState?.readiness?.ready &&
     !setupQuery.isError &&
@@ -1249,7 +1214,24 @@ function ScopedSetupPage() {
     value: SetupFormState[Key],
   ) => {
     setIsDirty(true);
-    setForm((current) => ({ ...current, [key]: value }));
+    setForm((current) => {
+      const next = { ...current, [key]: value };
+      if (
+        key === 'profile' &&
+        next.profile.location &&
+        next.profile.organization.address !== next.profile.location.address
+      ) {
+        next.profile = {
+          ...next.profile,
+          location: {
+            ...next.profile.location,
+            address: next.profile.organization.address,
+            confirmed: false,
+          },
+        };
+      }
+      return next;
+    });
     setError('');
     setRotationUncertain(false);
   };
@@ -1260,10 +1242,11 @@ function ScopedSetupPage() {
       if (!organization.business_type.trim())
         return t('organization.setupTypeRequired');
     }
-    if (step === 1 && !Object.values(form.services.service_modes).some(Boolean))
+    if (step === 0 && !Object.values(form.services.service_modes).some(Boolean))
       return t('organization.setupServiceRequired');
     if (
-      step === 2 &&
+      step === 0 &&
+      form.services.service_modes.dine_in &&
       (!form.tables.zones[0]?.name.trim() ||
         !form.tables.tables[0]?.name.trim() ||
         !Number.isSafeInteger(form.tables.tables[0]?.seats) ||
@@ -1271,19 +1254,29 @@ function ScopedSetupPage() {
     )
       return t('organization.setupTableRequired');
     if (
-      step === 3 &&
+      step === 0 &&
+      form.services.service_modes.dine_in &&
+      form.tables.tables.some(
+        (table) => !form.tables.zones.some((zone) => zone.name === table.zone),
+      )
+    )
+      return t('organization.setupTableRequired');
+    if (
+      step === 2 &&
       (!form.menu.categories[0]?.name.trim() ||
         !form.menu.items[0]?.name.trim() ||
         !decimalValid(form.menu.items[0]?.price ?? ''))
     )
       return t('organization.setupMenuRequired');
-    if (step === 4 && !form.payments.cash && !form.payments.bank_transfer)
+    if (step === 2 && !form.payments.cash && !form.payments.bank_transfer)
       return t('organization.setupPaymentRequired');
     if (
-      step === 5 &&
+      step === 2 &&
       localReadiness(form, t).some((item) => item.key === 'orders')
     )
       return t('organization.setupChargesInvalid');
+    if (step === 1 && !form.profile.location?.confirmed)
+      return t('organization.locationPickHint');
     return '';
   };
   const downloadIssuedTokens = () => {
@@ -1319,7 +1312,7 @@ function ScopedSetupPage() {
     event.preventDefault();
     setError('');
     setRotationUncertain(false);
-    if (step === 6) {
+    if (step === 3) {
       if (!isReady) {
         setError(t('organization.setupIncomplete'));
         return;
@@ -1401,54 +1394,89 @@ function ScopedSetupPage() {
         }
         requestContext = nextContext;
       }
-      const stepKey = (
-        ['profile', 'services', 'tables', 'menu', 'payments', 'orders'] as const
-      )[step];
       const cleanOrg = { ...form.profile.organization };
       delete cleanOrg.description;
-      const stepPayload =
-        stepKey === 'profile'
-          ? {
-              ...form.profile,
-              organization: cleanOrg,
-              service_modes: form.services.service_modes,
-            }
-          : form[stepKey];
-      if (stepKey === 'tables') {
-        setIssuedTokens([]);
-        setCopyStatus('');
-      }
-      const encodedStep = JSON.stringify({
-        step: stepKey,
-        payload: stepPayload,
-      });
-      if (
-        stepRetryRef.current.step !== stepKey ||
-        stepRetryRef.current.payload !== encodedStep
-      )
-        stepRetryRef.current = {
-          step: stepKey,
-          payload: encodedStep,
-          key: setupKey(),
-        };
       if (!requestContext) throw new Error(t('organization.setupNoContext'));
-      const result = await saveSetupStep(
-        stepKey,
-        stepPayload,
-        requestContext,
-        state.session.csrf_token,
-        stepRetryRef.current.key,
+      const profilePayload: SetupProfileInput = {
+        organization: cleanOrg,
+        service_modes: form.services.service_modes,
+        ...(form.profile.location?.confirmed
+          ? { location: form.profile.location }
+          : {}),
+      };
+      const sections: Array<{
+        key: Parameters<typeof saveSetupStep>[0];
+        payload: Parameters<typeof saveSetupStep>[1];
+      }> =
+        step === 0
+          ? [
+              { key: 'profile' as const, payload: profilePayload },
+              { key: 'services' as const, payload: form.services },
+              ...(form.services.service_modes.dine_in
+                ? [{ key: 'tables' as const, payload: form.tables }]
+                : [
+                    {
+                      key: 'tables' as const,
+                      payload: { zones: [], tables: [], qr_enabled: false },
+                    },
+                  ]),
+              { key: 'orders' as const, payload: form.orders },
+            ]
+          : step === 1
+            ? [{ key: 'profile' as const, payload: profilePayload }]
+            : [
+                { key: 'menu' as const, payload: form.menu },
+                { key: 'payments' as const, payload: form.payments },
+                { key: 'orders' as const, payload: form.orders },
+              ];
+      let safeResult: SetupState | null = null;
+      await saveSetupSections(
+        sections,
+        saveCache.current,
+        setupKey,
+        async (section, key) => {
+          if (!activeRef.current)
+            throw new Error(t('organization.setupNoContext'));
+          if (section.key === 'tables') {
+            setIssuedTokens([]);
+            setCopyStatus('');
+          }
+          let result: SetupState;
+          try {
+            result = await saveSetupStep(
+              section.key,
+              section.payload,
+              requestContext,
+              state.session.csrf_token,
+              key,
+            );
+          } catch (failure) {
+            if (
+              activeRef.current &&
+              section.key === 'tables' &&
+              form.tables.qr_enabled &&
+              form.services.service_modes.dine_in
+            )
+              setRotationUncertain(true);
+            throw failure;
+          }
+          if (!activeRef.current) return;
+          const { issued_table_qr_tokens, ...saved } = result;
+          safeResult = saved;
+          if (section.key === 'tables') {
+            setIssuedTokens(issued_table_qr_tokens ?? []);
+            setCopyStatus('');
+          }
+        },
       );
       if (!activeRef.current) return;
-      const { issued_table_qr_tokens, ...safeResult } = result;
-      if (stepKey === 'tables') setIssuedTokens(issued_table_qr_tokens ?? []);
       if (step === 0 && !tenant.context) {
         await tenant.refresh();
         if (!activeRef.current) return;
         tenant.select(requestContext.organizationID, requestContext.branchID);
       }
       setIsDirty(false);
-      setServerState(safeResult);
+      if (safeResult) setServerState(safeResult);
       await queryClient.invalidateQueries({ queryKey: ['restaurant-setup'] });
       if (!activeRef.current) return;
       setStep((current) => (current + 1) as SetupStepIndex);
@@ -1458,7 +1486,6 @@ function ScopedSetupPage() {
           ? failure.message
           : t('organization.setupSaveFailed');
       setError(message);
-      setRotationUncertain(step === 2);
     } finally {
       setPending(false);
     }
@@ -1646,15 +1673,62 @@ function ScopedSetupPage() {
                     pending || (Boolean(setupContext) && !hydratedScope)
                   }
                 >
-                  {step < 6 ? (
-                    <SetupStepFields
-                      step={step}
-                      form={form}
-                      update={update}
-                      promptPayAvailable={Boolean(
-                        serverState?.capabilities.promptPay,
-                      )}
-                    />
+                  {step < 3 ? (
+                    step === 1 ? (
+                      <SetupLocationPicker
+                        value={form.profile.location}
+                        onChange={(location) =>
+                          update('profile', {
+                            ...form.profile,
+                            location,
+                            organization: {
+                              ...form.profile.organization,
+                              address: location.address,
+                            },
+                          })
+                        }
+                      />
+                    ) : (
+                      <div className="setup-grouped-fields">
+                        {(step === 0
+                          ? [
+                              0,
+                              1,
+                              ...(form.services.service_modes.dine_in
+                                ? [2]
+                                : []),
+                              5,
+                            ]
+                          : [3, 4, 6]
+                        ).map((section) => (
+                          <section key={section}>
+                            {section !== 0 && (
+                              <h3>
+                                {t(
+                                  section === 1
+                                    ? 'organization.metaServices'
+                                    : section === 2
+                                      ? 'organization.metaTables'
+                                      : section === 3
+                                        ? 'organization.metaMenu'
+                                        : section === 4
+                                          ? 'organization.metaPayments'
+                                          : 'organization.metaOrders',
+                                )}
+                              </h3>
+                            )}
+                            <SetupStepFields
+                              step={section}
+                              form={form}
+                              update={update}
+                              promptPayAvailable={Boolean(
+                                serverState?.capabilities.promptPay,
+                              )}
+                            />
+                          </section>
+                        ))}
+                      </div>
+                    )
                   ) : (
                     <>
                       <ReadinessReview
@@ -1745,24 +1819,24 @@ function ScopedSetupPage() {
                       aria-label={
                         pending
                           ? t('organization.setupSaving')
-                          : step === 6
+                          : step === 3
                             ? t('organization.setupActivate')
                             : t('organization.setupSaveContinue')
                       }
                       disabled={
                         pending ||
                         (Boolean(setupContext) && setupQuery.isPending) ||
-                        (step === 6 && !isReady)
+                        (step === 3 && !isReady)
                       }
                     >
                       <span>
                         {pending
                           ? t('organization.setupSaving')
-                          : step === 6
+                          : step === 3
                             ? t('organization.setupActivate')
                             : t('organization.setupNext')}
                       </span>
-                      {step === 6 ? (
+                      {step === 3 ? (
                         <CheckCircle2 size={16} aria-hidden="true" />
                       ) : (
                         <ArrowRight size={16} aria-hidden="true" />
@@ -1790,6 +1864,14 @@ function ReadinessReview({
 }) {
   const { t } = useLanguage();
   const checks = [
+    {
+      key: 'location',
+      label: t('organization.metaLocation'),
+      done: Boolean(form.profile.location?.confirmed),
+      detail: form.profile.location
+        ? `${form.profile.location.address} · ${form.profile.location.latitude}, ${form.profile.location.longitude}`
+        : t('organization.locationPickHint'),
+    },
     {
       key: 'profile',
       label: t('organization.metaProfile'),

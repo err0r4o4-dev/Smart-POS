@@ -66,6 +66,7 @@ type SetupState struct {
 	Capabilities        SetupCapabilities    `json:"capabilities"`
 	Steps               []SetupStep          `json:"steps"`
 	Profile             any                  `json:"profile,omitempty"`
+	Location            *SetupLocationInput  `json:"location,omitempty"`
 	Services            ServiceModes         `json:"services"`
 	Tables              any                  `json:"tables,omitempty"`
 	Menu                any                  `json:"menu,omitempty"`
@@ -92,14 +93,15 @@ type SetupServicesInput struct {
 }
 
 type SetupProfileInput struct {
-	BranchID     string       `json:"branch_id"`
-	Name         string       `json:"name"`
-	Code         string       `json:"code,omitempty"`
-	BusinessType string       `json:"business_type"`
-	ContactEmail string       `json:"contact_email"`
-	ContactPhone string       `json:"contact_phone"`
-	Address      string       `json:"address"`
-	ServiceModes ServiceModes `json:"service_modes"`
+	Location     *SetupLocationInput `json:"location,omitempty"`
+	BranchID     string              `json:"branch_id"`
+	Name         string              `json:"name"`
+	Code         string              `json:"code,omitempty"`
+	BusinessType string              `json:"business_type"`
+	ContactEmail string              `json:"contact_email"`
+	ContactPhone string              `json:"contact_phone"`
+	Address      string              `json:"address"`
+	ServiceModes ServiceModes        `json:"service_modes"`
 	Organization *struct {
 		Name         string `json:"name"`
 		Code         string `json:"code"`
@@ -184,9 +186,17 @@ type SetupCompleteInput struct {
 }
 
 func (input *SetupProfileInput) normalize(branch string) error {
+	if input.Location != nil {
+		if err := input.Location.Validate(); err != nil {
+			return err
+		}
+	}
 	if input.Organization != nil {
 		input.Name, input.Code, input.BusinessType = input.Organization.Name, input.Organization.Code, input.Organization.BusinessType
 		input.ContactEmail, input.ContactPhone, input.Address = input.Organization.ContactEmail, input.Organization.ContactPhone, input.Organization.Address
+	}
+	if input.Location != nil && input.Location.Address != input.Address {
+		return ErrInput
 	}
 	if input.BranchID == "" {
 		input.BranchID = branch
@@ -440,6 +450,13 @@ func readSetupState(ctx context.Context, tx pgx.Tx, org, branch string) (SetupSt
 	applySetupReadiness(&state, steps, live)
 	state.Complete = status == "COMPLETED"
 	state.Completed = state.Complete
+	if !state.Completed && state.Location == nil {
+		state.Readiness.Incomplete = append(state.Readiness.Incomplete, SetupReadinessItem{Key: "location", Label: "Store location", Reason: "Confirm the store address and map pin"})
+		state.Ready, state.Readiness.Ready = false, false
+		if state.CurrentStep == "review" {
+			state.CurrentStep = "location"
+		}
+	}
 	return state, nil
 }
 
@@ -525,6 +542,20 @@ func populateSetupData(ctx context.Context, tx pgx.Tx, state *SetupState) error 
 		return dbError(err)
 	}
 	profile["branch"] = map[string]any{"name": branchName, "code": branchCode, "address": branchAddress, "phone": branchPhone, "email": branchEmail}
+	var locationJSON []byte
+	if err := tx.QueryRow(ctx, "SELECT setup_location FROM branches WHERE organization_id=$1 AND id=$2", state.OrganizationID, state.BranchID).Scan(&locationJSON); err != nil {
+		return dbError(err)
+	}
+	if len(locationJSON) > 0 {
+		var location SetupLocationInput
+		if err := json.Unmarshal(locationJSON, &location); err != nil {
+			return err
+		}
+		if err := location.Validate(); err != nil {
+			return err
+		}
+		state.Location = &location
+	}
 	modeRows, err := tx.Query(ctx, "SELECT mode,enabled FROM restaurant_service_modes WHERE organization_id=$1 AND branch_id=$2", state.OrganizationID, state.BranchID)
 	if err != nil {
 		return dbError(err)
@@ -800,6 +831,17 @@ func (service *Service) SaveProfile(ctx context.Context, user, org, key string, 
 		if err = saveServiceModes(ctx, tx, org, branch, user, input.ServiceModes); err != nil {
 			return SetupState{}, err
 		}
+	}
+	if input.Location != nil {
+		locationJSON, marshalErr := json.Marshal(input.Location)
+		if marshalErr != nil {
+			return SetupState{}, marshalErr
+		}
+		if _, err = tx.Exec(ctx, "UPDATE branches SET setup_location=$3,address=$4 WHERE organization_id=$1 AND id=$2", org, branch, locationJSON, input.Location.Address); err != nil {
+			return SetupState{}, dbError(err)
+		}
+	} else if _, err = tx.Exec(ctx, "UPDATE branches SET setup_location=NULL WHERE organization_id=$1 AND id=$2 AND setup_location IS NOT NULL AND setup_location->>'address' IS DISTINCT FROM $3", org, branch, input.Address); err != nil {
+		return SetupState{}, dbError(err)
 	}
 	if err = ensureSetupProgress(ctx, tx, org, branch, user); err != nil {
 		return SetupState{}, err

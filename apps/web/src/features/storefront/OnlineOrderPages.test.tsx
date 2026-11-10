@@ -129,6 +129,167 @@ it('allows initial store setup when settings do not exist', async () => {
     ),
   );
 });
+it('allows an empty slug so the server can generate it', async () => {
+  mocks.request.mockImplementation(
+    async (_org: string, path: string, options: { method?: string }) => {
+      if (path.startsWith('/pos/terminals')) return { items: [terminal] };
+      if (path === '/storefront' && options.method !== 'PUT')
+        throw new ApiError(404, 'Not configured');
+      return {};
+    },
+  );
+  view(true);
+  const save = await screen.findByRole('button', { name: 'บันทึกการตั้งค่า' });
+  fireEvent.change(screen.getByLabelText(/เครื่องขาย \/ สาขา/), {
+    target: { value: 'terminal' },
+  });
+  fireEvent.click(save);
+  await waitFor(() =>
+    expect(mocks.request).toHaveBeenCalledWith(
+      'org',
+      '/storefront',
+      expect.objectContaining({
+        method: 'PUT',
+        body: expect.objectContaining({ slug: '' }),
+      }),
+    ),
+  );
+});
+it('round-trips delivery settings including explicit disabled and zero fee values', async () => {
+  mocks.request.mockImplementation(
+    async (_org: string, path: string, options: { method?: string }) => {
+      if (path.startsWith('/pos/terminals')) return { items: [terminal] };
+      if (path === '/storefront' && options.method === 'PUT') return {};
+      if (path === '/storefront')
+        return {
+          slug: 'test-shop',
+          name: 'ร้านทดสอบ',
+          description: '',
+          contact_phone: '',
+          pickup_instructions: '',
+          delivery_enabled: true,
+          shipping_fee: '25.00',
+          terminal_id: 'terminal',
+          published: true,
+          accepting_orders: true,
+          revision: 2,
+        };
+      return { items: [] };
+    },
+  );
+  view(true);
+  const delivery = await screen.findByLabelText('เปิดรับออเดอร์จัดส่ง');
+  expect(delivery).toBeChecked();
+  fireEvent.click(delivery);
+  fireEvent.change(screen.getByDisplayValue('25.00'), {
+    target: { value: '0.00' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'บันทึกการตั้งค่า' }));
+  await waitFor(() =>
+    expect(mocks.request).toHaveBeenCalledWith(
+      'org',
+      '/storefront',
+      expect.objectContaining({
+        method: 'PUT',
+        body: expect.objectContaining({
+          delivery_enabled: false,
+          shipping_fee: '0.00',
+        }),
+      }),
+    ),
+  );
+  expect(await screen.findByText('บันทึกการตั้งค่าหน้าร้านแล้ว')).toBeVisible();
+});
+it('lets staff mark a published menu item sold out', async () => {
+  mocks.request.mockImplementation(
+    async (_org: string, path: string, options: { method?: string }) => {
+      if (path.startsWith('/pos/terminals')) return { items: [terminal] };
+      if (path.startsWith('/storefront/products?'))
+        return {
+          items: [
+            {
+              variant_id: 'variant-1',
+              product_name: 'กาแฟ',
+              variant_name: 'ร้อน',
+              sku: 'COFFEE-1',
+              unit: 'แก้ว',
+              unit_type: 'COUNT',
+              unit_price: '50.00',
+              available: null,
+              stock_policy: 'MENU_ONLY',
+              saleable: true,
+              published: true,
+              is_sold_out: false,
+            },
+          ],
+          total: 1,
+          page: 1,
+          page_size: 24,
+        };
+      if (path === '/storefront' && options.method === 'PUT') return {};
+      if (path === '/storefront')
+        return {
+          slug: 'test-shop',
+          name: 'ร้านทดสอบ',
+          description: '',
+          contact_phone: '',
+          pickup_instructions: '',
+          delivery_enabled: false,
+          shipping_fee: '0.00',
+          terminal_id: 'terminal',
+          published: true,
+          accepting_orders: true,
+          revision: 2,
+        };
+      return {};
+    },
+  );
+  view(true);
+  await screen.findByText('กาแฟ');
+  fireEvent.click(screen.getByRole('button', { name: 'ทำเครื่องหมายหมด' }));
+  await waitFor(() =>
+    expect(mocks.request).toHaveBeenCalledWith(
+      'org',
+      '/storefront/products/variant-1',
+      expect.objectContaining({
+        method: 'PUT',
+        body: { published: true, is_sold_out: true, revision: 2 },
+      }),
+    ),
+  );
+});
+it('does not show a saved status when storefront settings fail to save', async () => {
+  mocks.request.mockImplementation(
+    async (_org: string, path: string, options: { method?: string }) => {
+      if (path.startsWith('/pos/terminals')) return { items: [terminal] };
+      if (path === '/storefront' && options.method === 'PUT')
+        throw new ApiError(500, 'บันทึกไม่สำเร็จ');
+      if (path === '/storefront')
+        return {
+          slug: 'test-shop',
+          name: 'ร้านทดสอบ',
+          description: '',
+          contact_phone: '',
+          pickup_instructions: '',
+          delivery_enabled: false,
+          shipping_fee: '0.00',
+          terminal_id: 'terminal',
+          published: false,
+          accepting_orders: false,
+          revision: 2,
+        };
+      return { items: [] };
+    },
+  );
+  view(true);
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'บันทึกการตั้งค่า' }),
+  );
+  expect(await screen.findByRole('alert')).toHaveTextContent('บันทึกไม่สำเร็จ');
+  expect(
+    screen.queryByText('บันทึกการตั้งค่าหน้าร้านแล้ว'),
+  ).not.toBeInTheDocument();
+});
 it('does not turn settings permission failure into a create form', async () => {
   mocks.request.mockImplementation(async (_org: string, path: string) => {
     if (path === '/storefront') throw new ApiError(403, 'ไม่มีสิทธิ์');

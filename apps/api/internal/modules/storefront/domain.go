@@ -23,6 +23,39 @@ var ErrStock = errors.New("storefront stock unavailable")
 var uuidPattern = regexp.MustCompile(`^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$`)
 var tokenPattern = regexp.MustCompile(`^[a-f0-9]{64}$`)
 var slugPattern = regexp.MustCompile(`^[a-z][a-z0-9-]{2,49}$`)
+
+func autoSlug(name string) string {
+	var builder strings.Builder
+	separator := false
+	for _, character := range strings.ToLower(name) {
+		if character >= 'a' && character <= 'z' || character >= '0' && character <= '9' {
+			builder.WriteRune(character)
+			separator = false
+			continue
+		}
+		if builder.Len() > 0 {
+			separator = true
+		}
+		if separator && !strings.HasSuffix(builder.String(), "-") {
+			builder.WriteByte('-')
+		}
+	}
+	base := strings.Trim(builder.String(), "-")
+	if base == "" {
+		return "shop"
+	}
+	if base[0] < 'a' || base[0] > 'z' {
+		base = "shop-" + base
+	}
+	if len(base) < 3 {
+		return "shop"
+	}
+	if len(base) > 50 {
+		base = strings.TrimRight(base[:50], "-")
+	}
+	return base
+}
+
 var phonePattern = regexp.MustCompile(`^[0-9+() .-]{3,30}$`)
 
 type Settings struct {
@@ -67,6 +100,7 @@ type Product struct {
 	StockPolicy string  `json:"stock_policy"`
 	Saleable    bool    `json:"saleable"`
 	Published   bool    `json:"published"`
+	IsSoldOut   bool    `json:"is_sold_out"`
 }
 type Page[T any] struct {
 	Items    []T `json:"items"`
@@ -161,6 +195,7 @@ type TransitionInput struct {
 }
 type PublishInput struct {
 	Published bool  `json:"published"`
+	IsSoldOut bool  `json:"is_sold_out"`
 	Revision  int64 `json:"revision"`
 }
 
@@ -209,7 +244,7 @@ func (input *SettingsInput) validate() error {
 	if input.OnlineTerminalID != "" && (!uuidPattern.MatchString(input.OnlineTerminalID) || input.OnlineTerminalID == input.TerminalID) {
 		return ErrInput
 	}
-	if !slugPattern.MatchString(input.Slug) || strings.HasSuffix(input.Slug, "-") || strings.Contains(input.Slug, "--") || !text(input.Name, 200, true) || !text(input.Description, 1000, false) || !text(input.PickupInstructions, 1000, false) || !text(input.ContactPhone, 30, false) || !uuidPattern.MatchString(input.TerminalID) || input.Revision < 0 || (input.AcceptingOrders && !input.Published) {
+	if (input.Slug != "" && (!slugPattern.MatchString(input.Slug) || strings.HasSuffix(input.Slug, "-") || strings.Contains(input.Slug, "--"))) || !text(input.Name, 200, true) || !text(input.Description, 1000, false) || !text(input.PickupInstructions, 1000, false) || !text(input.ContactPhone, 30, false) || !uuidPattern.MatchString(input.TerminalID) || input.Revision < 0 || (input.AcceptingOrders && !input.Published) {
 		return ErrInput
 	}
 	return nil

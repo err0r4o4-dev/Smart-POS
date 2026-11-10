@@ -59,12 +59,29 @@ func TestSeparateSourceInputAndTerminalSelection(t *testing.T) {
 		}
 	}
 }
+func TestAutoSlug(t *testing.T) {
+	cases := map[string]string{
+		"My Cafe":                         "my-cafe",
+		"  Fresh 2 Go! ":                  "fresh-2-go",
+		"ร้านกาแฟ":                        "shop",
+		"":                                "shop",
+		"ab":                              "shop",
+		"123 Cafe":                        "shop-123-cafe",
+		"Cafe" + strings.Repeat(" x", 30): "cafe-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x-x",
+	}
+	for name, want := range cases {
+		if got := autoSlug(name); got != want {
+			t.Fatalf("autoSlug(%q) = %q, want %q", name, got, want)
+		}
+	}
+}
+
 func TestSettingsValidation(t *testing.T) {
 	input := SettingsInput{Slug: "test-shop", Name: "ร้านทดสอบ", TerminalID: "11111111-1111-4111-8111-111111111111"}
 	if input.validate() != nil {
 		t.Fatal("valid settings rejected")
 	}
-	for _, slug := range []string{"", "ab", "UPPERCASE", "shop--name", "shop-", "../shop", "ร้านค้า"} {
+	for _, slug := range []string{"ab", "UPPERCASE", "shop--name", "shop-", "../shop", "ร้านค้า"} {
 		next := input
 		next.Slug = slug
 		if next.validate() == nil {

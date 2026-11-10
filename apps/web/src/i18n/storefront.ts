@@ -28,10 +28,15 @@ export const storefront = defineMessages({
     stock: '· สต็อก',
     published: 'เผยแพร่แล้ว',
     unpublished: 'ยังไม่เผยแพร่',
+    soldOut: 'หมดชั่วคราว',
+    markSoldOut: 'ทำเครื่องหมายหมด',
+    markAvailable: 'ทำให้พร้อมขาย',
     unpublish: 'หยุดเผยแพร่',
     publishProduct: 'เผยแพร่สินค้า',
     storeDisplayName: 'ชื่อร้านที่แสดง',
     urlNameSlug: 'ชื่อใน URL (slug)',
+    slugAutoGenerationHelp:
+      'เว้นว่างเพื่อให้ระบบสร้างจากชื่อร้านอัตโนมัติ และยังแก้ไขได้ก่อนมีออเดอร์ออนไลน์',
     terminalBranchStockSource: 'เครื่องขาย / สาขา / แหล่งสต็อก',
     selectATerminalInTheCurrentBranch: 'เลือกเครื่องขายของสาขาปัจจุบัน',
     inStoreStockSourceAndDefaultOnline:
@@ -46,6 +51,10 @@ export const storefront = defineMessages({
     pickupLocationHoursAndInstructions: 'สถานที่ เวลา และวิธีรับสินค้า',
     addressPickupPointAndContactHours:
       'ที่อยู่ จุดรับสินค้า และเวลาที่ติดต่อร้านได้',
+    enableDelivery: 'เปิดรับออเดอร์จัดส่ง',
+    deliveryFee: 'ค่าจัดส่ง (บาท)',
+    deliveryFeeHelp:
+      'ใช้ 0 หากไม่มีค่าจัดส่ง ระบบจะตรวจสอบรูปแบบและจำนวนเงินอีกครั้ง',
     publishStorefront: 'เผยแพร่หน้าร้าน',
     acceptOrders: 'เปิดรับออเดอร์',
     ifOrdersArePendingPauseNewOrders:
@@ -53,6 +62,7 @@ export const storefront = defineMessages({
     noActiveTerminalsInThisBranchConfigure:
       'ยังไม่มีเครื่องขายที่ใช้งานได้ในสาขานี้ กรุณาตั้งค่า POS ก่อน',
     saveSettings: 'บันทึกการตั้งค่า',
+    settingsSaved: 'บันทึกการตั้งค่าหน้าร้านแล้ว',
     storePickupPayThroughPos: 'รับที่ร้าน · ชำระผ่าน POS',
     storefrontSettings: 'ตั้งค่าหน้าร้าน',
     refreshList: 'อัปเดตรายการ',
@@ -276,10 +286,15 @@ export const storefront = defineMessages({
     stock: '· Stock',
     published: 'Published',
     unpublished: 'Unpublished',
+    soldOut: 'Sold out',
+    markSoldOut: 'Mark sold out',
+    markAvailable: 'Mark available',
     unpublish: 'Unpublish',
     publishProduct: 'Publish product',
     storeDisplayName: 'Store display name',
     urlNameSlug: 'URL name (slug)',
+    slugAutoGenerationHelp:
+      'Leave blank to generate it from the store name. You can edit it before the first online order.',
     terminalBranchStockSource: 'Terminal / Branch / Stock source',
     selectATerminalInTheCurrentBranch:
       'Select a terminal in the current branch',
@@ -296,6 +311,10 @@ export const storefront = defineMessages({
       'Pickup location, hours and instructions',
     addressPickupPointAndContactHours:
       'Address, pickup point and contact hours',
+    enableDelivery: 'Enable delivery orders',
+    deliveryFee: 'Delivery fee (THB)',
+    deliveryFeeHelp:
+      'Use 0 when delivery is free. The server validates the amount before saving.',
     publishStorefront: 'Publish storefront',
     acceptOrders: 'Accept orders',
     ifOrdersArePendingPauseNewOrders:
@@ -303,6 +322,7 @@ export const storefront = defineMessages({
     noActiveTerminalsInThisBranchConfigure:
       'No active terminals in this branch. Configure POS first.',
     saveSettings: 'Save settings',
+    settingsSaved: 'Storefront settings saved',
     storePickupPayThroughPos: 'Store pickup · Pay through POS',
     storefrontSettings: 'Storefront settings',
     refreshList: 'Refresh list',

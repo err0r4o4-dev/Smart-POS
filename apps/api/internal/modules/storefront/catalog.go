@@ -40,10 +40,11 @@ func productForOrder(ctx context.Context, tx pgx.Tx, org string, shop Settings, 
 		return result, dbError(err)
 	}
 	result.Saleable = result.Saleable && !recalled
-	err = tx.QueryRow(ctx, `SELECT COALESCE((SELECT published FROM storefront_products WHERE organization_id=$1 AND variant_id=$2),false)`, org, id).Scan(&result.Published)
+	err = tx.QueryRow(ctx, `SELECT COALESCE((SELECT published FROM storefront_products WHERE organization_id=$1 AND variant_id=$2),false), COALESCE((SELECT is_sold_out FROM storefront_products WHERE organization_id=$1 AND variant_id=$2),false)`, org, id).Scan(&result.Published, &result.IsSoldOut)
 	if err != nil {
 		return result, dbError(err)
 	}
+	result.Saleable = result.Saleable && !result.IsSoldOut
 	if result.StockPolicy == "MENU_ONLY" {
 		return result, nil
 	}
@@ -154,7 +155,7 @@ func (service *Service) Publish(ctx context.Context, user, org, id string, input
 	if input.Published && !value.Saleable {
 		return value, ErrConflict
 	}
-	if _, err = tx.Exec(ctx, `INSERT INTO storefront_products(organization_id,variant_id,published) VALUES($1,$2,$3) ON CONFLICT(organization_id,variant_id) DO UPDATE SET published=excluded.published`, org, id, input.Published); err != nil {
+	if _, err = tx.Exec(ctx, `INSERT INTO storefront_products(organization_id,variant_id,published,is_sold_out) VALUES($1,$2,$3,$4) ON CONFLICT(organization_id,variant_id) DO UPDATE SET published=excluded.published,is_sold_out=excluded.is_sold_out`, org, id, input.Published, input.IsSoldOut); err != nil {
 		return value, dbError(err)
 	}
 	if _, err = tx.Exec(ctx, "UPDATE storefronts SET revision=revision+1,updated_at=now() WHERE organization_id=$1", org); err != nil {
@@ -164,6 +165,7 @@ func (service *Service) Publish(ctx context.Context, user, org, id string, input
 		return value, err
 	}
 	value.Published = input.Published
+	value.IsSoldOut = input.IsSoldOut
 	return value, dbError(tx.Commit(ctx))
 }
 func quote(ctx context.Context, tx pgx.Tx, org string, shop Settings, items []ItemInput, modes ...string) (Quote, error) {

@@ -97,6 +97,10 @@ export function ProductsPage() {
     <div className="catalog-page">
       <CatalogHeader title={t('catalog.restaurantItems')}>
         <>
+          <Link className="button button-secondary" to="/settings/storefront">
+            <Eye size={15} aria-hidden="true" />
+            <span>{t('storefront.publishedProducts')}</span>
+          </Link>
           {catalog.tenant.can('catalog.create') && (
             <Link className="button sales-new-sale-btn" to="/menu/new">
               <Plus size={16} aria-hidden="true" />
@@ -349,6 +353,10 @@ export function ProductDetailsPage() {
           <ArrowLeft size={16} aria-hidden="true" />
           <span>{t('catalog.backToProducts')}</span>
         </Link>
+        <Link className="button button-secondary" to="/settings/storefront">
+          <Eye size={15} aria-hidden="true" />
+          <span>{t('storefront.publishedProducts')}</span>
+        </Link>
         {catalog.tenant.can('catalog.update') && (
           <Link className="button sales-new-sale-btn" to={`/menu/${id}/edit`}>
             <span>{t('catalog.editProduct')}</span>
@@ -491,6 +499,10 @@ function ProductEditor({
       <CatalogHeader
         title={initial ? t('catalog.editProduct') : t('catalog.addProduct')}
       >
+        <Link className="button button-secondary" to="/settings/storefront">
+          <Eye size={15} aria-hidden="true" />
+          <span>{t('storefront.publishedProducts')}</span>
+        </Link>
         <Link
           className="button button-secondary"
           to={initial ? `/menu/${initial.id}` : '/menu'}

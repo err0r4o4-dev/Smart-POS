@@ -19059,6 +19059,7 @@ components:
         slug:
           type: string
           pattern: ^[a-z][a-z0-9-]{2,49}$
+          description: Optional custom URL slug. Leave empty to generate one from the store name.
         name:
           type: string
           maxLength: 200
@@ -19071,6 +19072,11 @@ components:
         pickup_instructions:
           type: string
           maxLength: 1000
+        delivery_enabled:
+          type: boolean
+          description: Whether customers may choose delivery for online orders.
+        shipping_fee:
+          $ref: '#/components/schemas/POSMoney'
         published:
           type: boolean
         accepting_orders:
@@ -19097,7 +19103,6 @@ components:
       type: object
       additionalProperties: false
       required:
-        - slug
         - name
         - description
         - contact_phone
@@ -19122,6 +19127,11 @@ components:
         pickup_instructions:
           type: string
           maxLength: 1000
+        delivery_enabled:
+          type: boolean
+          description: Whether customers may choose delivery for online orders.
+        shipping_fee:
+          $ref: '#/components/schemas/POSMoney'
         published:
           type: boolean
         accepting_orders:
@@ -19169,6 +19179,7 @@ components:
         - available
         - saleable
         - published
+        - is_sold_out
         - category_id
         - category_name
       properties:
@@ -19203,6 +19214,9 @@ components:
           type: boolean
         published:
           type: boolean
+        is_sold_out:
+          type: boolean
+          description: Staff-controlled temporary sold-out state for the published menu item.
         category_id:
           type: string
           description: Same-store category UUID or uncategorized.
@@ -19260,6 +19274,7 @@ components:
         - available
         - saleable
         - published
+        - is_sold_out
       properties:
         stock_policy:
           $ref: '#/components/schemas/StockPolicy'
@@ -19292,6 +19307,9 @@ components:
           type: boolean
         published:
           type: boolean
+        is_sold_out:
+          type: boolean
+          description: Staff-controlled temporary sold-out state for the published menu item.
     StorefrontItemInput:
       type: object
       additionalProperties: false
@@ -19728,6 +19746,8 @@ components:
         - revision
       properties:
         published:
+          type: boolean
+        is_sold_out:
           type: boolean
         revision:
           type: integer

@@ -112,6 +112,8 @@ type SettingsInput = Pick<
   | 'description'
   | 'contact_phone'
   | 'pickup_instructions'
+  | 'delivery_enabled'
+  | 'shipping_fee'
   | 'published'
   | 'accepting_orders'
   | 'revision'
@@ -293,31 +295,58 @@ export function StorefrontSettingsPage() {
                     )}
                   </small>
                 </div>
-                <Tag tone={item.published ? 'success' : 'neutral'}>
-                  {item.published
-                    ? t('storefront.published')
-                    : t('storefront.unpublished')}
-                </Tag>
-                <Button
-                  className="button-secondary"
-                  disabled={
-                    command.isPending || (!item.published && !item.saleable)
-                  }
-                  onClick={() =>
-                    command.mutate({
-                      path: `/storefront/products/${item.variant_id}`,
-                      method: 'PUT',
-                      body: {
-                        published: !item.published,
-                        revision: settings.data!.revision,
-                      },
-                    })
-                  }
-                >
-                  {item.published
-                    ? t('storefront.unpublish')
-                    : t('storefront.publishProduct')}
-                </Button>
+                <div>
+                  <Tag tone={item.published ? 'success' : 'neutral'}>
+                    {item.published
+                      ? t('storefront.published')
+                      : t('storefront.unpublished')}
+                  </Tag>{' '}
+                  {(item.is_sold_out ?? false) && (
+                    <Tag tone="amber">{t('storefront.soldOut')}</Tag>
+                  )}
+                </div>
+                <div className="sales-row-actions">
+                  <Button
+                    className="button-secondary"
+                    disabled={
+                      command.isPending || (!item.published && !item.saleable)
+                    }
+                    onClick={() =>
+                      command.mutate({
+                        path: `/storefront/products/${item.variant_id}`,
+                        method: 'PUT',
+                        body: {
+                          published: !item.published,
+                          is_sold_out: item.is_sold_out ?? false,
+                          revision: settings.data!.revision,
+                        },
+                      })
+                    }
+                  >
+                    {item.published
+                      ? t('storefront.unpublish')
+                      : t('storefront.publishProduct')}
+                  </Button>
+                  <Button
+                    className="button-secondary"
+                    disabled={command.isPending || !item.published}
+                    onClick={() =>
+                      command.mutate({
+                        path: `/storefront/products/${item.variant_id}`,
+                        method: 'PUT',
+                        body: {
+                          published: item.published,
+                          is_sold_out: !(item.is_sold_out ?? false),
+                          revision: settings.data!.revision,
+                        },
+                      })
+                    }
+                  >
+                    {(item.is_sold_out ?? false)
+                      ? t('storefront.markAvailable')
+                      : t('storefront.markSoldOut')}
+                  </Button>
+                </div>
               </Card>
             ))}
           </div>
@@ -353,12 +382,15 @@ function SettingsForm({
     description: initial?.description ?? '',
     contact_phone: initial?.contact_phone ?? '',
     pickup_instructions: initial?.pickup_instructions ?? '',
+    delivery_enabled: initial?.delivery_enabled ?? false,
+    shipping_fee: initial?.shipping_fee ?? '0.00',
     terminal_id: initial?.terminal_id ?? '',
     online_terminal_id: initial?.online_terminal_id ?? '',
     published: initial?.published ?? false,
     accepting_orders: initial?.accepting_orders ?? false,
     revision: initial?.revision ?? 0,
   }));
+  const [saved, setSaved] = useState(false);
   const set = (key: keyof SettingsInput, value: string | boolean) =>
     setForm({ ...form, [key]: value });
   const frontTerminal = terminals.find(
@@ -371,7 +403,14 @@ function SettingsForm({
   );
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    command.mutate({ path: '/storefront', body: form, method: 'PUT' });
+    setSaved(false);
+    command.mutate(
+      { path: '/storefront', body: form, method: 'PUT' },
+      {
+        onSuccess: () => setSaved(true),
+        onError: () => setSaved(false),
+      },
+    );
   };
   return (
     <Card>
@@ -388,7 +427,6 @@ function SettingsForm({
         <label>
           {t('storefront.urlNameSlug')}
           <input
-            required
             pattern="[a-z][a-z0-9\-]{2,49}"
             minLength={3}
             maxLength={50}
@@ -396,6 +434,9 @@ function SettingsForm({
             onChange={(event) => set('slug', event.target.value)}
             placeholder="my-shop"
           />
+          <small id="storefront-slug-help">
+            {t('storefront.slugAutoGenerationHelp')}
+          </small>
           <small>/shop/{form.slug || 'my-shop'}</small>
         </label>
         <label>
@@ -467,6 +508,27 @@ function SettingsForm({
         <label className="shop-consent">
           <input
             type="checkbox"
+            checked={form.delivery_enabled}
+            onChange={(event) => set('delivery_enabled', event.target.checked)}
+          />
+          {t('storefront.enableDelivery')}
+        </label>
+        <label>
+          {t('storefront.deliveryFee')}
+          <input
+            inputMode="decimal"
+            pattern="(0|[1-9][0-9]{0,7})(\.[0-9]{1,2})?"
+            value={form.shipping_fee}
+            onChange={(event) => set('shipping_fee', event.target.value)}
+            aria-describedby="storefront-delivery-fee-help"
+          />
+          <small id="storefront-delivery-fee-help">
+            {t('storefront.deliveryFeeHelp')}
+          </small>
+        </label>
+        <label className="shop-consent">
+          <input
+            type="checkbox"
             checked={form.published}
             onChange={(event) =>
               setForm({
@@ -500,6 +562,7 @@ function SettingsForm({
             ? t('catalog.saving')
             : t('storefront.saveSettings')}
         </Button>
+        {saved && <p role="status">{t('storefront.settingsSaved')}</p>}
       </form>
     </Card>
   );

@@ -169,8 +169,8 @@ it('renders the complete settings layout matching the mockup', () => {
   );
   expect(screen.getByText('รายละเอียดการตั้งค่าร้านอาหาร')).toBeInTheDocument();
   expect(
-    screen.getByRole('link', { name: 'ตั้งค่าหน้าร้านออนไลน์' }),
-  ).toHaveAttribute('href', '/settings/storefront');
+    screen.getByRole('link', { name: 'ดูหน้าร้าน' }),
+  ).toHaveAttribute('href', '/shop');
   expect(
     screen.getByRole('button', { name: 'บันทึกการเปลี่ยนแปลง' }),
   ).toBeInTheDocument();
@@ -323,3 +323,28 @@ it('saves all settings when clicking "บันทึกการเปลี่
     await screen.findByText('บันทึกการเปลี่ยนแปลงเรียบร้อยแล้ว'),
   ).toBeInTheDocument();
 });
+
+it('links the storefront button to the store website using active slug', async () => {
+  mocks.posRequest.mockImplementation((_org: string, path: string) => {
+    if (path === '/storefront') {
+      return Promise.resolve({ slug: 'velocafe', name: 'VELO Cafe' });
+    }
+    return Promise.resolve({});
+  });
+  renderPage();
+
+  const link = await screen.findByRole('link', { name: 'ดูหน้าร้าน' });
+  expect(link).toHaveAttribute('href', '/shop/velocafe');
+  expect(link).toHaveAttribute('target', '_blank');
+  expect(link).toHaveAttribute('rel', 'noreferrer');
+});
+
+it('shows the storefront button in English linking to the store website', async () => {
+  renderPage({ initialStorefront: { slug: 'my-shop' } }, true);
+
+  const link = screen.getByRole('link', { name: 'View storefront' });
+  expect(link).toHaveAttribute('href', '/shop/my-shop');
+  expect(link).toHaveAttribute('target', '_blank');
+  expect(link).toHaveAttribute('rel', 'noreferrer');
+});
+

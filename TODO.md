@@ -1,3 +1,17 @@
+# Link Settings Page Header Button to Storefront Website (2026-11-10)
+
+Scope: Update the storefront action button in SettingsPage header (`.settings-heading-actions`)
+to link to the store's own online website (`/shop/:slug` if slug is available, falling back to `/shop`),
+with `target="_blank" rel="noreferrer"` and appropriate "ดูหน้าร้าน" / "View storefront" text.
+Preserve section 6 navigation to `/settings/storefront`.
+Size: Small. Risk: Low.
+
+- [x] 1. Update `SettingsPage.test.tsx` with regression tests for the storefront website link
+- [x] 2. Update `SettingsPage.tsx` to link header button to `/shop/:slug` (or `/shop`)
+- [x] 3. Update translations in `apps/web/src/i18n/organization.ts` for `settingsStorefront`
+- [ ] 4. Terminal verification blocked: `titunnn_anti[1m]` safety classifier unavailable for shell/terminal commands
+- [ ] 5. Clean up completed task section from TODO.md upon full terminal verification
+
 # Fix Mailpit UI access on http://localhost:8025/ (2026-11-10)
 
 Scope: Enable host access to Mailpit Web UI at http://localhost:8025/ by updating docker-compose configuration.

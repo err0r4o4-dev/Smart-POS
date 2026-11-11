@@ -1500,7 +1500,7 @@ it.each(['MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'PURCHASING_STAFF'])(
   },
 );
 
-it('renders standalone VELOPOS hero panel and form layout without backoffice sidebar', () => {
+it('renders standalone form layout without backoffice sidebar or hero panel', () => {
   mocks.role = null;
   renderSetup();
 
@@ -1537,14 +1537,12 @@ it('renders standalone VELOPOS hero panel and form layout without backoffice sid
   expect(within(stepper).getByText('ตั้งค่าข้อมูลพื้นฐาน')).toBeVisible();
   expect(within(stepper).getByText('ตรวจทานและเริ่มใช้งาน')).toBeVisible();
 
-  const hero = screen.getByRole('complementary', {
-    name: 'จุดเด่นและบริการ VELOPOS',
-  });
-  expect(within(hero).getByText(/ตั้งค่าร้านอาหารของคุณ/)).toBeVisible();
-  expect(within(hero).getByText(/เริ่มใช้งาน VELOPOS/)).toBeVisible();
-  expect(within(hero).getByText('ตั้งค่าร้านง่าย')).toBeVisible();
-  expect(within(hero).getByText('รองรับการสั่งซื้อหลายรูปแบบ')).toBeVisible();
-  expect(within(hero).getByText('ดูรายงานและยอดขาย')).toBeVisible();
+  expect(
+    screen.queryByRole('complementary', {
+      name: 'จุดเด่นและบริการ VELOPOS',
+    }),
+  ).not.toBeInTheDocument();
+  expect(document.querySelector('.setup-hero-card')).not.toBeInTheDocument();
 
   expect(screen.getByPlaceholderText('เช่น ร้านอาหารของคุณ')).toBeVisible();
   expect(

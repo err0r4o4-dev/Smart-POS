@@ -11,7 +11,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Banknote,
-  BarChart3,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -449,73 +448,6 @@ function SetupSelect({
         )}
       </div>
     </div>
-  );
-}
-
-function SetupHeroPanel() {
-  const { t } = useLanguage();
-  return (
-    <aside
-      className="setup-hero-card"
-      aria-label={t('organization.setupHeroLabel')}
-    >
-      <div className="setup-hero-header">
-        <div className="setup-hero-title">
-          {t('organization.setupHeroTitle')}
-          <br />
-          <span>{t('organization.setupHeroStart')}</span>
-        </div>
-        <p className="setup-hero-subtitle">
-          {t('organization.setupHeroLine1')}
-          <br />
-          {t('organization.setupHeroLine2')}
-          <br />
-          {t('organization.setupHeroLine3')}
-        </p>
-      </div>
-
-      <div className="setup-hero-visual" aria-hidden="true">
-        <img
-          src="/images/auth-pos-reference.png"
-          alt=""
-          className="setup-hero-img"
-          width={520}
-          height={260}
-        />
-      </div>
-
-      <div className="setup-hero-highlights">
-        <div className="setup-hero-feature">
-          <div className="setup-feature-icon">
-            <Store size={20} strokeWidth={2} aria-hidden="true" />
-          </div>
-          <div className="setup-feature-text">
-            <strong>{t('organization.setupHeroEasy')}</strong>
-            <p>{t('organization.setupHeroMinutes')}</p>
-          </div>
-        </div>
-
-        <div className="setup-hero-feature">
-          <div className="setup-feature-icon">
-            <LayoutGrid size={20} strokeWidth={2} aria-hidden="true" />
-          </div>
-          <div className="setup-feature-text">
-            <strong>{t('organization.setupHeroOrdering')}</strong>
-            <p>{t('organization.setupHeroOrderingDetail')}</p>
-          </div>
-        </div>
-
-        <div className="setup-hero-feature">
-          <div className="setup-feature-icon">
-            <BarChart3 size={20} strokeWidth={2} aria-hidden="true" />
-          </div>
-          <div className="setup-feature-text">
-            <strong>{t('organization.setupHeroReports')}</strong>
-            <p>{t('organization.setupHeroReportsDetail')}</p>
-          </div>
-        </div>
-      </div>
-    </aside>
   );
 }
 
@@ -1617,8 +1549,6 @@ function ScopedSetupPage() {
         </aside>
 
         <div className="setup-layout">
-          <SetupHeroPanel />
-
           <section className="setup-main">
             <Card className="setup-card">
               <span className="visually-hidden">

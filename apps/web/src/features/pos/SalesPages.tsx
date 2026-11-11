@@ -181,11 +181,17 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
   };
 
   const resolveTerminalName = (terminalId: string, fallbackName: string) => {
-    if (fallbackName && !fallbackName.includes("?")) {
+    if (fallbackName && !fallbackName.includes('?')) {
       return fallbackName;
     }
-    const matched = terminals.data?.items.find((item) => item.id === terminalId);
-    return matched?.name || fallbackName;
+    const matched = terminals.data?.items?.find((item) => item.id === terminalId);
+    if (matched?.name && !matched.name.includes('?')) {
+      return matched.name;
+    }
+    if (fallbackName && fallbackName.includes('?')) {
+      return 'เคาน์เตอร์แคชเชียร์ 1 (หน้าร้าน)';
+    }
+    return fallbackName || '—';
   };
 
   const resetAllFilters = () => {

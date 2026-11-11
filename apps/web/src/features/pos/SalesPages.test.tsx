@@ -337,4 +337,49 @@ describe('SalesPage standardized design and behavior', () => {
       ).not.toBeInTheDocument();
     }
   });
+
+  it('resolves corrupted terminal names containing question marks using active terminals list', async () => {
+    mocks.request.mockImplementation(async (path: string) => {
+      if (path.includes('/pos/terminals')) {
+        return {
+          items: [
+            {
+              id: 'term-1',
+              branch_id: 'branch-main',
+              code: 'TERM-01',
+              name: 'เคาน์เตอร์แคชเชียร์ 1 (หน้าร้าน)',
+              stock_location_id: 'loc-1',
+              status: 'ACTIVE',
+              revision: 1,
+            },
+          ],
+          total: 1,
+          page: 1,
+          page_size: 100,
+        };
+      }
+      return {
+        items: [
+          {
+            ...sampleSales[0],
+            terminal_name: '????????????????????????? 1 (??????????????????????????)',
+          },
+        ],
+        total: 1,
+        page: 1,
+        page_size: 10,
+      };
+    });
+
+    renderSalesPage();
+
+    const matches = await screen.findAllByText('เคาน์เตอร์แคชเชียร์ 1 (หน้าร้าน)');
+    expect(matches.length).toBeGreaterThanOrEqual(2);
+    expect(matches[1]).toBeVisible();
+    expect(
+      screen.queryByText(
+        '????????????????????????? 1 (??????????????????????????)',
+      ),
+    ).not.toBeInTheDocument();
+  });
 });

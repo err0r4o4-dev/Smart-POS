@@ -258,15 +258,18 @@
   font-size: 11px;
 }
 .sales-kpi-card-featured .sales-kpi-content {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
 }
 .sales-kpi-sparkline {
-  position: absolute;
-  top: 16px;
-  right: 18px;
-  width: 76px;
-  height: 38px;
+  position: static;
+  width: 82px;
+  height: 42px;
+  flex-shrink: 0;
+  align-self: center;
+  margin-left: auto;
   pointer-events: none;
+  filter: drop-shadow(0 2px 6px rgba(234, 179, 8, 0.16));
 }
 .sales-filter-card,
 .sales-table-card,
@@ -451,14 +454,49 @@
   line-height: 1.5;
 }
 .sales-history-table .sales-number {
-  min-width: 210px;
-  max-width: 280px;
-  overflow-wrap: anywhere;
+  min-width: 250px;
+  white-space: nowrap;
 }
 .sales-number-cell {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.sales-number-value {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.sales-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm, 6px);
+  color: var(--text-secondary);
+  cursor: pointer;
+  opacity: 0.45;
+  transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+.sales-copy-btn:hover,
+.sales-copy-btn:focus-visible {
+  opacity: 1;
+  background: var(--surface-hover, rgba(0, 0, 0, 0.05));
+  color: var(--text-primary);
+}
+.sales-copy-btn.copied {
+  opacity: 1;
+  color: var(--success, #16a34a);
 }
 .sales-doc-icon {
   width: 38px;
@@ -884,10 +922,31 @@
     flex: 1;
   }
   .sales-kpi-sparkline {
-    top: 14px;
-    right: 14px;
     width: 68px;
-    height: 34px;
+    height: 36px;
+  }
+  .sales-history-table .sales-number {
+    min-width: 215px;
+  }
+  .sales-number-cell {
+    gap: 8px;
+  }
+  .sales-history-table .sales-doc-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+  }
+  .sales-history-table .sales-doc-icon svg {
+    width: 15px;
+    height: 15px;
+  }
+  .sales-number-value {
+    font-size: 12.5px;
+  }
+  .sales-copy-btn {
+    width: 24px;
+    height: 24px;
+    opacity: 0.7;
   }
 }
 @media (max-width: 375px) {

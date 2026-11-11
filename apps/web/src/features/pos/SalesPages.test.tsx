@@ -382,4 +382,28 @@ describe('SalesPage standardized design and behavior', () => {
       ),
     ).not.toBeInTheDocument();
   });
+
+  it('renders sale number with copy button and copies sale number to clipboard', async () => {
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: writeTextMock,
+      },
+    });
+
+    renderSalesPage();
+
+    const saleNumberEl = await screen.findByText('SAL-75b94e59-6859-490d-95ab-efb082b376b8');
+    expect(saleNumberEl).toHaveClass('sales-number-value');
+
+    const copyButtons = screen.getAllByRole('button', { name: 'คัดลอกเลขรายการ' });
+    expect(copyButtons.length).toBeGreaterThan(0);
+
+    fireEvent.click(copyButtons[0]);
+    expect(writeTextMock).toHaveBeenCalledWith('SAL-75b94e59-6859-490d-95ab-efb082b376b8');
+
+    await waitFor(() => {
+      expect(copyButtons[0]).toHaveAttribute('title', 'คัดลอกแล้ว');
+    });
+  });
 });

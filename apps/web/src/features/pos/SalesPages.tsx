@@ -16,6 +16,7 @@ import {
   ChevronsRight,
   ClipboardList,
   Coins,
+  Copy,
   CreditCard,
   Download,
   Eye,
@@ -67,6 +68,57 @@ function toInputDateString(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function SaleNumberCell({
+  value,
+  copyLabel,
+  copiedLabel,
+}: {
+  value: string;
+  copyLabel: string;
+  copiedLabel: string;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(value);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    }
+  };
+
+  return (
+    <div className="sales-number-cell">
+      <span className="sales-doc-icon" aria-hidden="true">
+        <FileText size={18} />
+      </span>
+      <strong className="sales-number-value" title={value}>
+        {value}
+      </strong>
+      <button
+        type="button"
+        className={`sales-copy-btn ${copied ? 'copied' : ''}`.trim()}
+        onClick={handleCopy}
+        title={copied ? copiedLabel : copyLabel}
+        aria-label={copied ? copiedLabel : copyLabel}
+      >
+        {copied ? (
+          <Check size={13} aria-hidden="true" />
+        ) : (
+          <Copy size={13} aria-hidden="true" />
+        )}
+      </button>
+    </div>
+  );
 }
 
 export function SalesPage({ receipts = false }: { receipts?: boolean }) {
@@ -370,9 +422,11 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
               d="M4,46 C22,45 28,28 46,32 C64,36 72,18 90,24 C102,28 110,10 116,8"
               fill="none"
               stroke="#eab308"
-              strokeWidth="2.5"
+              strokeWidth="1.8"
               strokeLinecap="round"
             />
+            <circle cx="116" cy="8" r="5" fill="#f4c542" fillOpacity="0.35" />
+            <circle cx="116" cy="8" r="2.5" fill="#eab308" />
           </svg>
         </Card>
 
@@ -732,14 +786,11 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
                 return (
                   <tr key={item.id}>
                     <td className="sales-number">
-                      <div className="sales-number-cell">
-                        <span className="sales-doc-icon" aria-hidden="true">
-                          <FileText size={18} />
-                        </span>
-                        <strong>
-                          {receipts ? item.receipt_number : item.sale_number}
-                        </strong>
-                      </div>
+                      <SaleNumberCell
+                        value={receipts ? item.receipt_number : item.sale_number}
+                        copyLabel={t('pos.copyNumber')}
+                        copiedLabel={t('pos.copiedNumber')}
+                      />
                     </td>
                     <td className="sales-date">
                       <time dateTime={item.completed_at}>

@@ -151,9 +151,11 @@ export function StandardKpiCard({
             d="M4,46 C22,45 28,28 46,32 C64,36 72,18 90,24 C102,28 110,10 116,8"
             fill="none"
             stroke="#eab308"
-            strokeWidth="2.5"
+            strokeWidth="1.8"
             strokeLinecap="round"
           />
+          <circle cx="116" cy="8" r="5" fill="#f4c542" fillOpacity="0.35" />
+          <circle cx="116" cy="8" r="2.5" fill="#eab308" />
         </svg>
       )}
     </Card>

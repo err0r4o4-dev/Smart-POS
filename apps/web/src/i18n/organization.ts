@@ -35,7 +35,7 @@ export const organization = defineMessages({
     metaServicesDescription: 'เลือกช่องทางบริการของร้าน',
     metaTables: 'พื้นที่และโต๊ะ',
     metaTablesSidebar: 'จัดการพื้นที่และโต๊ะ',
-    metaTablesDescription: 'จัดโซน โต๊ะ และ QR สำหรับหน้าร้าน',
+    metaTablesDescription: 'จัดการชื่อโต๊ะและ QR สำหรับหน้าร้าน',
     metaMenu: 'เมนู',
     metaMenuSidebar: 'เพิ่มและจัดการเมนู',
     metaMenuDescription: 'เพิ่มหมวดหมู่และเมนูแรกของร้าน',
@@ -50,7 +50,7 @@ export const organization = defineMessages({
     metaReviewCard: 'ตรวจทานข้อมูลก่อนเริ่มใช้งาน',
     metaReviewDescription: 'ตรวจรายการก่อนเปิดใช้งานร้าน',
     setupProfileIncomplete: 'กรอกชื่อและประเภทร้านให้ครบ',
-    setupTablesIncomplete: 'เพิ่มอย่างน้อยหนึ่งโซนและหนึ่งโต๊ะ',
+    setupTablesIncomplete: 'เพิ่มอย่างน้อยหนึ่งโต๊ะพร้อมชื่อโต๊ะ',
     setupMenuIncomplete: 'เพิ่มเมนูแรกพร้อมราคาที่ถูกต้อง',
     setupPercentIncomplete: 'ค่าภาษีและค่าบริการต้องอยู่ระหว่าง 0 ถึง 100',
     setupProfileHint:
@@ -58,7 +58,7 @@ export const organization = defineMessages({
     setupQrRotationHint:
       'เมื่อเปิดใช้ QR การบันทึกจะหมุนเวียนรหัสลับของโต๊ะที่บันทึก รหัสเดิมจะใช้ไม่ได้ การส่งคำขอเดิมซ้ำอาจได้รหัสที่หมดอายุแล้วหากมีการหมุนเวียนภายหลัง',
     setupAddTablesHint:
-      'สามารถเพิ่มโซนและโต๊ะเพิ่มเติมได้จากเมนูจัดการหลังเปิดใช้งาน',
+      'สามารถเพิ่มโต๊ะเพิ่มเติมได้จากเมนูจัดการหลังเปิดใช้งาน',
     setupPriceHint: 'ราคาจะถูกตรวจสอบอีกครั้งโดยเซิร์ฟเวอร์ก่อนบันทึก',
     setupRotationUncertain:
       'สถานะการหมุนเวียนรหัสอาจไม่แน่นอน กรุณาลองคำขอเดิมอีกครั้ง และตรวจสอบว่ารหัสที่ได้รับยังเป็นรหัสล่าสุด',
@@ -101,12 +101,34 @@ export const organization = defineMessages({
     setupDescriptionExample:
       'เช่น ร้านอาหารและคาเฟ่ อาหารไทย เครื่องดื่ม และเบเกอรี่',
     setupServiceModes: 'รูปแบบบริการ',
+    setupServicesHint:
+      'เลือกได้มากกว่าหนึ่งรูปแบบ และต้องเลือกอย่างน้อยหนึ่งรูปแบบ',
+    setupDineInHint: 'รับลูกค้าที่โต๊ะ พร้อมเพิ่มชื่อโต๊ะด้านล่าง',
+    setupTakeawayHint: 'ลูกค้ารับอาหารกลับ ไม่ต้องตั้งค่าโต๊ะ',
+    setupDeliveryHint: 'จัดส่งอาหารให้ลูกค้า ไม่ต้องตั้งค่าโต๊ะ',
+    setupDefaultZone: 'พื้นที่หลัก',
+    setupDefaultZoneNumber: 'โซน {number}',
+    setupDefaultTable: 'โต๊ะ {number}',
+    setupTablesHint:
+      'ระบบตั้งชื่อโต๊ะให้แล้ว แก้ไขชื่อได้ และเพิ่มโต๊ะตามที่ร้านใช้งาน',
+    setupTableName: 'ชื่อ/เลขโต๊ะ',
+    setupTableActions: 'จัดการโต๊ะ',
+    setupTableNameNumber: 'ชื่อ/เลขโต๊ะ {number}',
+    setupZoneNameNumber: 'ชื่อโซน {number}',
+    setupChooseZone: 'เลือกโซน',
+    setupAddTable: 'เพิ่มโต๊ะ',
+    setupRemoveTable: 'ลบโต๊ะ {number}',
+    setupTablesEmpty:
+      'ยังไม่มีโต๊ะ เพิ่มอย่างน้อยหนึ่งโต๊ะสำหรับบริการทานที่ร้าน',
+    setupSavedTablesHint:
+      'ลบได้เฉพาะโต๊ะที่เพิ่มใหม่และยังไม่บันทึก โต๊ะที่บันทึกแล้วจะไม่ถูกลบในหน้านี้',
+    setupZoneNamesInvalid:
+      'ชื่อโซนต้องไม่ว่างหรือซ้ำกัน และยาวไม่เกิน 100 ตัวอักษร',
     setupDineIn: 'ทานที่ร้าน',
     setupTakeaway: 'ซื้อกลับบ้าน',
     setupDelivery: 'เดลิเวอรี',
     setupFirstZone: 'ชื่อโซนแรก',
     setupFirstTable: 'ชื่อโต๊ะแรก',
-    setupFirstSeats: 'จำนวนที่นั่งโต๊ะแรก',
     setupTableQr: 'เปิดใช้ QR สำหรับโต๊ะ',
     setupFirstCategory: 'หมวดหมู่เมนูแรก',
     setupFirstItem: 'ชื่อเมนูแรก',
@@ -126,7 +148,7 @@ export const organization = defineMessages({
     setupNameRequired: 'กรอกชื่อร้านให้ครบ',
     setupTypeRequired: 'กรอกประเภทร้านให้ครบ',
     setupServiceRequired: 'เลือกช่องทางบริการอย่างน้อยหนึ่งรูปแบบ',
-    setupTableRequired: 'กรอกชื่อโซน โต๊ะ และจำนวนที่นั่งให้ครบ',
+    setupTableRequired: 'เพิ่มอย่างน้อยหนึ่งโต๊ะ และกรอกชื่อโต๊ะให้ครบ',
     setupMenuRequired: 'กรอกหมวดหมู่ เมนู และราคาที่ถูกต้อง',
     setupPaymentRequired: 'เลือกช่องทางรับชำระอย่างน้อยหนึ่งช่องทาง',
     setupChargesInvalid: 'VAT และค่าบริการต้องอยู่ระหว่าง 0 ถึง 100',
@@ -373,7 +395,7 @@ export const organization = defineMessages({
     metaServicesDescription: 'Choose how your store serves customers',
     metaTables: 'Areas and tables',
     metaTablesSidebar: 'Manage areas and tables',
-    metaTablesDescription: 'Set up areas, tables and QR codes',
+    metaTablesDescription: 'Set up table names and QR codes',
     metaMenu: 'Menu',
     metaMenuSidebar: 'Add and manage menu items',
     metaMenuDescription: 'Add your first category and menu item',
@@ -388,15 +410,14 @@ export const organization = defineMessages({
     metaReviewCard: 'Review your information before getting started',
     metaReviewDescription: 'Check the items before opening your store',
     setupProfileIncomplete: 'Enter the store name and type',
-    setupTablesIncomplete: 'Add at least one area and one table',
+    setupTablesIncomplete: 'Add at least one named table',
     setupMenuIncomplete: 'Add your first menu item with a valid price',
     setupPercentIncomplete: 'Tax and service charge must be between 0 and 100',
     setupProfileHint:
       'You can edit these details later, including the store name, address, image and description',
     setupQrRotationHint:
       'When QR is enabled, saving rotates the secrets for saved tables and invalidates previous secrets. A repeated request may return expired secrets if they were rotated again later',
-    setupAddTablesHint:
-      'You can add more areas and tables from management after opening',
+    setupAddTablesHint: 'You can add more tables from management after opening',
     setupPriceHint: 'The server checks the price again before saving',
     setupRotationUncertain:
       'The secret rotation status may be uncertain. Retry the same request and check that the returned secrets are still current',
@@ -438,12 +459,33 @@ export const organization = defineMessages({
     setupDescriptionExample:
       'For example, a restaurant and cafe serving food and drinks',
     setupServiceModes: 'Service modes',
+    setupServicesHint: 'Select one or more service modes',
+    setupDineInHint: 'Serve customers at tables; add table names below',
+    setupTakeawayHint: 'Customers collect their food; no tables needed',
+    setupDeliveryHint: 'Deliver food to customers; no tables needed',
+    setupDefaultZone: 'Main area',
+    setupDefaultZoneNumber: 'Zone {number}',
+    setupDefaultTable: 'Table {number}',
+    setupTablesHint:
+      'Table names are filled in for you and can be edited. Add the tables your store uses.',
+    setupTableName: 'Table name / number',
+    setupTableActions: 'Table actions',
+    setupTableNameNumber: 'Table name / number {number}',
+    setupZoneNameNumber: 'Zone name {number}',
+    setupChooseZone: 'Choose a zone',
+    setupAddTable: 'Add table',
+    setupRemoveTable: 'Remove table {number}',
+    setupTablesEmpty:
+      'No tables yet. Add at least one table for dine-in service.',
+    setupSavedTablesHint:
+      'Only new, unsaved tables can be removed here. Saved tables are kept.',
+    setupZoneNamesInvalid:
+      'Zone names must be unique, non-empty and no longer than 100 characters',
     setupDineIn: 'Dine in',
     setupTakeaway: 'Takeaway',
     setupDelivery: 'Delivery',
     setupFirstZone: 'First zone name',
     setupFirstTable: 'First table name',
-    setupFirstSeats: 'Seats at the first table',
     setupTableQr: 'Enable table QR codes',
     setupFirstCategory: 'First menu category',
     setupFirstItem: 'First menu item',
@@ -464,7 +506,8 @@ export const organization = defineMessages({
     setupNameRequired: 'Enter a store name',
     setupTypeRequired: 'Enter a store type',
     setupServiceRequired: 'Select at least one service mode',
-    setupTableRequired: 'Enter a zone, table name and number of seats',
+    setupTableRequired:
+      'Add at least one table and enter a name for every table',
     setupMenuRequired: 'Enter a category, menu item and valid price',
     setupPaymentRequired: 'Select at least one payment method',
     setupChargesInvalid: 'VAT and service charge must be between 0 and 100',

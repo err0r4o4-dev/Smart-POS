@@ -624,6 +624,126 @@
   gap: 12px;
 }
 
+.setup-toggle-description {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.setup-tables-editor {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.setup-tables-grid {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.setup-tables-grid th {
+  text-align: start;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.setup-tables-grid :is(th, td) {
+  padding: 8px 4px;
+  vertical-align: top;
+}
+
+.setup-tables-grid :is(th, td):last-child {
+  width: 48px;
+}
+.setup-tables-grid button {
+  min-width: 40px;
+  min-height: 44px;
+  padding: 8px;
+}
+.setup-table-mobile-label {
+  display: none;
+}
+.setup-table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.setup-tables-empty {
+  padding: 16px;
+  background: var(--secondary);
+  border-radius: var(--radius-small);
+}
+.setup-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.setup-field select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13.5px;
+}
+
+.setup-field select:focus-visible,
+.setup-tables-editor :is(button, summary):focus-visible {
+  outline: 2px solid var(--primary-strong);
+  outline-offset: 2px;
+}
+
+@media (max-width: 767px) {
+  .setup-tables-grid,
+  .setup-tables-grid tbody {
+    display: block;
+  }
+  .setup-tables-grid thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .setup-tables-grid tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 48px;
+    gap: 12px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .setup-tables-grid :is(th, td) {
+    display: block;
+    padding: 0;
+  }
+  .setup-tables-grid td:first-child {
+    grid-column: 1;
+  }
+  .setup-tables-grid td:last-child {
+    width: auto;
+    grid-column: 2;
+    align-self: end;
+    justify-self: end;
+  }
+  .setup-table-mobile-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+  }
+}
+
 .setup-toggle,
 .setup-payment-option {
   display: flex;

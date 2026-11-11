@@ -2,6 +2,7 @@ import { useLanguage } from '../../app/language';
 import {
   startTransition,
   useEffect,
+  useId,
   useRef,
   useState,
   type FormEvent,
@@ -45,6 +46,7 @@ import { AccountMenu } from '../../components/ui/AccountMenu';
 import { StandardPageHeader } from '../../components/ui/StandardPage';
 import './setup.css';
 import { SetupLocationPicker } from './SetupLocationPicker';
+import { SetupTablesEditor } from './SetupTablesEditor';
 import {
   saveSetupSections,
   seedSavedSetupSection,
@@ -242,8 +244,8 @@ const createSetupForm = (): SetupFormState => ({
     service_modes: { dine_in: true, takeaway: true, delivery: false },
   },
   tables: {
-    zones: [{ name: 'โซนหลัก' }],
-    tables: [{ name: 'โต๊ะ 1', zone: 'โซนหลัก', seats: 0 }],
+    zones: [{ name: 'พื้นที่หลัก' }],
+    tables: [{ name: 'โต๊ะ 1', zone: 'พื้นที่หลัก', seats: 2 }],
     qr_enabled: true,
   },
   menu: {
@@ -453,21 +455,33 @@ function SetupSelect({
 
 function SetupToggle({
   label,
+  description,
   checked,
   onChange,
 }: {
   label: string;
+  description?: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
 }) {
+  const descriptionID = useId();
   return (
     <label className="setup-toggle">
       <input
         type="checkbox"
+        aria-label={label}
+        aria-describedby={description ? descriptionID : undefined}
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
       />
-      <span>{label}</span>
+      <span>
+        {label}
+        {description && (
+          <small className="setup-toggle-description" id={descriptionID}>
+            {description}
+          </small>
+        )}
+      </span>
     </label>
   );
 }
@@ -489,8 +503,7 @@ function localReadiness(
     });
   if (
     form.services.service_modes.dine_in &&
-    (!form.tables.zones.some((zone) => zone.name.trim()) ||
-      !form.tables.tables.some((table) => table.name.trim()))
+    !form.tables.tables.some((table) => table.name.trim())
   )
     incomplete.push({
       key: 'tables',
@@ -539,6 +552,7 @@ function SetupStepFields({
   form,
   update,
   promptPayAvailable,
+  savedTableCount,
 }: {
   step: number;
   form: SetupFormState;
@@ -547,6 +561,7 @@ function SetupStepFields({
     value: SetupFormState[Key],
   ) => void;
   promptPayAvailable: boolean;
+  savedTableCount: number;
 }) {
   const profile = form.profile;
   const { t } = useLanguage();
@@ -646,11 +661,18 @@ function SetupStepFields({
     );
   if (step === 1)
     return (
-      <fieldset className="setup-choice-group">
+      <fieldset
+        className="setup-choice-group"
+        aria-describedby="setup-services-hint"
+      >
         <legend>{t('organization.setupServiceModes')}</legend>
+        <p id="setup-services-hint" className="setup-hint">
+          {t('organization.setupServicesHint')}
+        </p>
         <div className="setup-choice-grid">
           <SetupToggle
             label={t('organization.setupDineIn')}
+            description={t('organization.setupDineInHint')}
             checked={form.services.service_modes.dine_in}
             onChange={(dine_in) =>
               update('services', {
@@ -660,6 +682,7 @@ function SetupStepFields({
           />
           <SetupToggle
             label={t('organization.setupTakeaway')}
+            description={t('organization.setupTakeawayHint')}
             checked={form.services.service_modes.takeaway}
             onChange={(takeaway) =>
               update('services', {
@@ -669,6 +692,7 @@ function SetupStepFields({
           />
           <SetupToggle
             label={t('organization.setupDelivery')}
+            description={t('organization.setupDeliveryHint')}
             checked={form.services.service_modes.delivery}
             onChange={(delivery) =>
               update('services', {
@@ -682,84 +706,11 @@ function SetupStepFields({
   if (step === 2)
     return (
       <div className="setup-form-section">
-        <div className="setup-form-grid">
-          <SetupInput
-            label={t('organization.setupFirstZone')}
-            value={form.tables.zones[0]?.name ?? ''}
-            required
-            onChange={(name) =>
-              update('tables', {
-                ...form.tables,
-                zones: [
-                  { ...form.tables.zones[0], name },
-                  ...form.tables.zones.slice(1),
-                ],
-                tables: form.tables.tables.map((table) =>
-                  table.zone === form.tables.zones[0]?.name
-                    ? { ...table, zone: name }
-                    : table,
-                ),
-              })
-            }
-          />
-          <SetupInput
-            label={t('organization.setupFirstTable')}
-            value={form.tables.tables[0]?.name ?? ''}
-            required
-            onChange={(name) =>
-              update('tables', {
-                ...form.tables,
-                tables: [
-                  {
-                    ...(form.tables.tables[0] ?? {
-                      zone: form.tables.zones[0]?.name ?? '',
-                      seats: 0,
-                    }),
-                    name,
-                  },
-                  ...form.tables.tables.slice(1),
-                ],
-              })
-            }
-          />
-          <SetupInput
-            label={t('organization.setupFirstSeats')}
-            value={
-              form.tables.tables[0]?.seats
-                ? String(form.tables.tables[0].seats)
-                : ''
-            }
-            required
-            type="number"
-            min="1"
-            step="1"
-            onChange={(seats) =>
-              update('tables', {
-                ...form.tables,
-                tables: [
-                  {
-                    ...(form.tables.tables[0] ?? {
-                      name: '',
-                      zone: form.tables.zones[0]?.name ?? '',
-                    }),
-                    seats: Number(seats),
-                  },
-                  ...form.tables.tables.slice(1),
-                ],
-              })
-            }
-          />
-        </div>
-        <div className="setup-choice-grid">
-          <SetupToggle
-            label={t('organization.setupTableQr')}
-            checked={form.tables.qr_enabled}
-            onChange={(qr_enabled) =>
-              update('tables', { ...form.tables, qr_enabled })
-            }
-          />
-        </div>
-        <p className="setup-hint">{t('organization.setupQrRotationHint')}</p>
+        <SetupTablesEditor
+          value={form.tables}
+          savedTableCount={savedTableCount}
+          onChange={(tables) => update('tables', tables)}
+        />
         <p className="setup-hint">
           <QrCode size={16} aria-hidden="true" />{' '}
           {t('organization.setupAddTablesHint')}
@@ -917,62 +868,6 @@ function SetupStepFields({
         </div>
       </div>
     );
-  if (step === 5 || step === 6)
-    return (
-      <div className="setup-form-section">
-        {step === 5 && (
-          <div className="setup-choice-grid">
-            <SetupToggle
-              label={t('organization.setupQrOrders')}
-              checked={form.orders.qr_ordering}
-              onChange={(qr_ordering) =>
-                update('orders', { ...form.orders, qr_ordering })
-              }
-            />
-            <SetupToggle
-              label={t('organization.setupKitchenQueue')}
-              checked={form.orders.kitchen_queue}
-              onChange={(kitchen_queue) =>
-                update('orders', { ...form.orders, kitchen_queue })
-              }
-            />
-            <SetupToggle
-              label={t('organization.setupAutoConfirm')}
-              checked={form.orders.auto_confirm}
-              onChange={(auto_confirm) =>
-                update('orders', { ...form.orders, auto_confirm })
-              }
-            />
-          </div>
-        )}
-        {step === 6 && (
-          <div className="setup-form-grid">
-            <SetupInput
-              label="VAT (%)"
-              value={form.orders.vat_percent}
-              required
-              type="number"
-              min="0"
-              step="0.01"
-              onChange={(vat_percent) =>
-                update('orders', { ...form.orders, vat_percent })
-              }
-            />
-            <SetupInput
-              label={t('organization.setupServiceCharge')}
-              value={form.orders.service_charge_percent}
-              required
-              type="number"
-              min="0"
-              step="0.01"
-              onChange={(service_charge_percent) =>
-                update('orders', { ...form.orders, service_charge_percent })
-              }
-            />
-          </div>
-        )}
-      </div>
-    );
   return null;
 }
 
@@ -995,6 +890,7 @@ function ScopedSetupPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [form, setForm] = useState<SetupFormState>(createSetupForm);
+  const [savedTableCount, setSavedTableCount] = useState(0);
   const [step, setStep] = useState<SetupStepIndex>(0);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
@@ -1038,6 +934,7 @@ function ScopedSetupPage() {
         setHydratedScope('');
         setIsDirty(false);
         setForm(createSetupForm());
+        setSavedTableCount(0);
         setServerState(null);
         setStep(0);
         setError('');
@@ -1064,6 +961,7 @@ function ScopedSetupPage() {
     }
     startTransition(() => {
       setServerState(setupQuery.data);
+      setSavedTableCount(data.tables?.tables.length ?? 0);
       if (!isDirty)
         setForm((current) => ({
           ...current,
@@ -1179,18 +1077,8 @@ function ScopedSetupPage() {
     if (
       step === 0 &&
       form.services.service_modes.dine_in &&
-      (!form.tables.zones[0]?.name.trim() ||
-        !form.tables.tables[0]?.name.trim() ||
-        !Number.isSafeInteger(form.tables.tables[0]?.seats) ||
-        form.tables.tables[0].seats < 1)
-    )
-      return t('organization.setupTableRequired');
-    if (
-      step === 0 &&
-      form.services.service_modes.dine_in &&
-      form.tables.tables.some(
-        (table) => !form.tables.zones.some((zone) => zone.name === table.zone),
-      )
+      (!form.tables.tables.length ||
+        form.tables.tables.some((table) => !table.name.trim()))
     )
       return t('organization.setupTableRequired');
     if (
@@ -1345,7 +1233,15 @@ function ScopedSetupPage() {
               { key: 'profile' as const, payload: profilePayload },
               { key: 'services' as const, payload: form.services },
               ...(form.services.service_modes.dine_in
-                ? [{ key: 'tables' as const, payload: form.tables }]
+                ? [
+                    {
+                      key: 'tables' as const,
+                      payload: {
+                        ...form.tables,
+                        qr_enabled: form.tables.tables.length > 0,
+                      },
+                    },
+                  ]
                 : [
                     {
                       key: 'tables' as const,
@@ -1397,6 +1293,8 @@ function ScopedSetupPage() {
           safeResult = saved;
           if (section.key === 'tables') {
             setIssuedTokens(issued_table_qr_tokens ?? []);
+            if (form.services.service_modes.dine_in)
+              setSavedTableCount(form.tables.tables.length);
             setCopyStatus('');
           }
         },
@@ -1627,12 +1525,11 @@ function ScopedSetupPage() {
                               ...(form.services.service_modes.dine_in
                                 ? [2]
                                 : []),
-                              5,
                             ]
-                          : [3, 4, 6]
+                          : [3, 4]
                         ).map((section) => (
                           <section key={section}>
-                            {section !== 0 && (
+                            {section !== 0 && section !== 1 && (
                               <h3>
                                 {t(
                                   section === 1
@@ -1649,6 +1546,7 @@ function ScopedSetupPage() {
                             )}
                             <SetupStepFields
                               step={section}
+                              savedTableCount={savedTableCount}
                               form={form}
                               update={update}
                               promptPayAvailable={Boolean(
@@ -1813,7 +1711,7 @@ function ReadinessReview({
       key: 'tables',
       label: t('organization.metaTables'),
       done: !items.some((item) => item.key === 'tables'),
-      detail: `${form.tables.zones[0]?.name || t('organization.setupNoZone')} · ${form.tables.tables[0]?.name || t('organization.setupNoTable')}`,
+      detail: form.tables.tables[0]?.name || t('organization.setupNoTable'),
     },
     {
       key: 'menu',
@@ -1868,33 +1766,38 @@ function ReadinessReview({
         className="setup-checklist"
         aria-label={t('organization.setupChecklist')}
       >
-        {checks.map((check) => (
-          <div
-            className={`setup-check ${check.done ? 'is-done' : ''}`}
-            key={check.key}
-          >
-            <span>
-              {check.done ? (
-                <Check size={16} aria-hidden="true" />
-              ) : (
-                <CircleAlert size={16} aria-hidden="true" />
-              )}
-            </span>
-            <div>
-              <strong>{check.label}</strong>
-              <small>
+        {checks
+          .filter(
+            (check) =>
+              check.key !== 'tables' || form.services.service_modes.dine_in,
+          )
+          .map((check) => (
+            <div
+              className={`setup-check ${check.done ? 'is-done' : ''}`}
+              key={check.key}
+            >
+              <span>
+                {check.done ? (
+                  <Check size={16} aria-hidden="true" />
+                ) : (
+                  <CircleAlert size={16} aria-hidden="true" />
+                )}
+              </span>
+              <div>
+                <strong>{check.label}</strong>
+                <small>
+                  {check.done
+                    ? check.detail
+                    : items.find((item) => item.key === check.key)?.reason}
+                </small>
+              </div>
+              <Tag tone={check.done ? 'success' : 'amber'}>
                 {check.done
-                  ? check.detail
-                  : items.find((item) => item.key === check.key)?.reason}
-              </small>
+                  ? t('organization.setupReadyTag')
+                  : t('organization.setupNeedsAttention')}
+              </Tag>
             </div>
-            <Tag tone={check.done ? 'success' : 'amber'}>
-              {check.done
-                ? t('organization.setupReadyTag')
-                : t('organization.setupNeedsAttention')}
-            </Tag>
-          </div>
-        ))}
+          ))}
       </div>
       <p className="setup-review-note">
         <LayoutGrid size={16} aria-hidden="true" />{' '}

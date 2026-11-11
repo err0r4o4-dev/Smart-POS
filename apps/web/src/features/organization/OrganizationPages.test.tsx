@@ -274,6 +274,129 @@ function renderSetup(initialEntries = ['/setup'], english = false) {
   return { ...result, client, refreshView: () => result.rerender(page()) };
 }
 
+it('adds and removes draft tables while preserving rows when dine-in is toggled', () => {
+  renderSetup();
+  fireEvent.click(screen.getByRole('button', { name: 'เพิ่มโต๊ะ' }));
+  expect(screen.getByLabelText('ชื่อ/เลขโต๊ะ 2')).toHaveValue('โต๊ะ 2');
+  fireEvent.change(screen.getByLabelText('ชื่อ/เลขโต๊ะ 2'), {
+    target: { value: 'A2' },
+  });
+  fireEvent.click(screen.getByLabelText('ทานที่ร้าน'));
+  expect(screen.queryByLabelText('ชื่อ/เลขโต๊ะ 2')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByLabelText('ทานที่ร้าน'));
+  expect(screen.getByLabelText('ชื่อ/เลขโต๊ะ 2')).toHaveValue('A2');
+  fireEvent.click(screen.getByRole('button', { name: 'ลบโต๊ะ 2' }));
+  expect(screen.queryByLabelText('ชื่อ/เลขโต๊ะ 2')).not.toBeInTheDocument();
+  expect(screen.getByLabelText('ชื่อ/เลขโต๊ะ 1')).toHaveValue('โต๊ะ 1');
+});
+
+it('hides ordering and charge inputs without changing hydrated settings on save', async () => {
+  mocks.context = {
+    organization: { id: 'org-1' },
+    membership: { role: 'OWNER' },
+  };
+  mocks.request.mockResolvedValue({
+    ...setupState,
+    orders: {
+      qr_ordering: false,
+      kitchen_queue: true,
+      auto_confirm: false,
+      vat_percent: '7',
+      service_charge_percent: '10',
+    },
+  });
+  renderSetup();
+  await waitFor(() =>
+    expect(screen.getByLabelText('ชื่อร้าน')).toHaveValue('ร้านเดิม'),
+  );
+  expect(screen.queryByLabelText('รับออเดอร์ผ่าน QR')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('ใช้คิวครัว')).not.toBeInTheDocument();
+  expect(
+    screen.queryByLabelText('ยืนยันออเดอร์อัตโนมัติ'),
+  ).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
+  await screen.findByText('ขั้นตอนที่ 2 จาก 4');
+  await completeServicesAndTables();
+  expect(screen.queryByLabelText('VAT (%)')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('ค่าบริการ (%)')).not.toBeInTheDocument();
+  expect(mocks.request).toHaveBeenCalledWith(
+    '/organizations/org-1/restaurant/setup/orders',
+    expect.objectContaining({
+      body: {
+        branch_id: 'branch',
+        qr_ordering: false,
+        kitchen_queue: true,
+        auto_confirm: false,
+        vat_rate: '7',
+        service_charge_rate: '10',
+      },
+    }),
+  );
+});
+
+it('validates table rows and enables QR automatically', async () => {
+  mocks.context = {
+    organization: { id: 'org-1' },
+    membership: { role: 'OWNER' },
+  };
+  renderSetup();
+  await waitFor(() =>
+    expect(screen.getByLabelText('ชื่อร้าน')).toHaveValue('ร้านเดิม'),
+  );
+  expect(screen.getByRole('button', { name: 'ลบโต๊ะ 1' })).toBeDisabled();
+  expect(
+    screen.queryByRole('button', { name: 'เพิ่มโซน' }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByLabelText('เปิดใช้ QR สำหรับโต๊ะ'),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('จำนวนที่นั่ง 1')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('โซนของโต๊ะ 1')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'เพิ่มโต๊ะ' }));
+  expect(screen.getByLabelText('ชื่อ/เลขโต๊ะ 2')).toHaveFocus();
+  fireEvent.change(screen.getByLabelText('ชื่อ/เลขโต๊ะ 2'), {
+    target: { value: ' ' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
+  expect(screen.getByRole('alert')).toHaveTextContent('ชื่อโต๊ะ');
+  expect(
+    mocks.request.mock.calls.some(([path]) => path.endsWith('/tables')),
+  ).toBe(false);
+  fireEvent.change(screen.getByLabelText('ชื่อ/เลขโต๊ะ 2'), {
+    target: { value: 'โต๊ะ 2' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
+  await screen.findByText('ขั้นตอนที่ 2 จาก 4');
+  expect(mocks.request).toHaveBeenCalledWith(
+    '/organizations/org-1/restaurant/setup/tables',
+    expect.objectContaining({
+      body: expect.objectContaining({
+        generate_qr: true,
+        zones: [{ name: 'โซนหลัก', code: 'ZONE_1' }],
+        tables: [
+          { name: 'โต๊ะ 1', code: 'TABLE_1', zone_code: 'ZONE_1', seats: 4 },
+          { name: 'โต๊ะ 2', code: 'TABLE_2', zone_code: 'ZONE_1', seats: 2 },
+        ],
+      }),
+    }),
+  );
+});
+
+it('requires a service mode and a table only when dine-in is selected', () => {
+  renderSetup();
+  fireEvent.change(screen.getByLabelText('ชื่อร้าน'), {
+    target: { value: 'ร้านใหม่' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'ลบโต๊ะ 1' }));
+  expect(screen.getByRole('status')).toHaveTextContent('ยังไม่มีโต๊ะ');
+  fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
+  expect(screen.getByRole('alert')).toHaveTextContent('ชื่อโต๊ะ');
+  fireEvent.click(screen.getByLabelText('ทานที่ร้าน'));
+  fireEvent.click(screen.getByLabelText('ซื้อกลับบ้าน'));
+  fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
+  expect(screen.getByRole('alert')).toHaveTextContent('อย่างน้อยหนึ่งรูปแบบ');
+});
+
 it('shows setup labels and validation in English', () => {
   mocks.role = null;
   renderSetup(['/setup'], true);
@@ -282,7 +405,7 @@ it('shows setup labels and validation in English', () => {
   expect(screen.getByText('Enter a store name')).toBeInTheDocument();
 });
 
-it('shows setup progress and QR rotation instructions in English', async () => {
+it('shows name-only tables and setup progress in English', async () => {
   mocks.context = {
     organization: { id: 'org-1' },
     membership: { role: 'OWNER' },
@@ -290,12 +413,20 @@ it('shows setup progress and QR rotation instructions in English', async () => {
   mocks.request.mockResolvedValue(tableSetup);
   renderSetup(['/setup'], true);
   await waitFor(() =>
-    expect(screen.getByLabelText('First table name')).toHaveValue('โต๊ะ'),
+    expect(screen.getByLabelText('Table name / number 1')).toHaveValue('โต๊ะ'),
   );
   expect(
     screen.getByRole('complementary', { name: 'Setup progress' }),
   ).toHaveTextContent('Store and services');
-  expect(screen.getByText(/saving rotates the secrets/)).toBeInTheDocument();
+  expect(
+    screen.queryByRole('combobox', { name: /Zone/ }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('spinbutton', { name: /Seats/ }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByLabelText('Enable QR for tables'),
+  ).not.toBeInTheDocument();
 });
 
 it('shows the readiness review in English', async () => {
@@ -353,9 +484,7 @@ it('creates and saves a profile using only visible store fields', async () => {
   fireEvent.change(screen.getByLabelText('ที่อยู่ร้าน'), {
     target: { value: 'Bangkok' },
   });
-  fireEvent.change(screen.getByLabelText('จำนวนที่นั่งโต๊ะแรก'), {
-    target: { value: '4' },
-  });
+
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
   const organization = {
     name: 'ร้านใหม่',
@@ -470,7 +599,7 @@ it('does not rotate existing completed tables when advancing without table edits
   });
   renderSetup();
   await waitFor(() =>
-    expect(screen.getByLabelText('ชื่อโต๊ะแรก')).toHaveValue('โต๊ะ'),
+    expect(screen.getByLabelText('ชื่อ/เลขโต๊ะ 1')).toHaveValue('โต๊ะ'),
   );
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
   await screen.findByLabelText('ละติจูด');
@@ -481,7 +610,7 @@ it('does not rotate existing completed tables when advancing without table edits
     ),
   ).toHaveLength(0);
   fireEvent.click(screen.getByRole('button', { name: /ย้อนกลับ/ }));
-  fireEvent.change(screen.getByLabelText('ชื่อโต๊ะแรก'), {
+  fireEvent.change(screen.getByLabelText('ชื่อ/เลขโต๊ะ 1'), {
     target: { value: 'โต๊ะใหม่' },
   });
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
@@ -551,9 +680,11 @@ it.each(['user', 'organization', 'branch'])(
     );
     const view = renderSetup();
     await waitFor(() =>
-      expect(screen.getByLabelText('ชื่อโต๊ะแรก')).toHaveValue('โต๊ะ'),
+      expect(screen.getByLabelText('ชื่อ/เลขโต๊ะ 1')).toHaveValue('โต๊ะ'),
     );
-    expect(screen.getByText(/หมุนเวียน/)).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText('เปิดใช้ QR สำหรับโต๊ะ'),
+    ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
     expect(
       await screen.findByDisplayValue(/test-secret-token/),
@@ -598,7 +729,7 @@ it('never displays or caches a deferred table token response after the user chan
   );
   const view = renderSetup();
   await waitFor(() =>
-    expect(screen.getByLabelText('ชื่อโต๊ะแรก')).toHaveValue('โต๊ะ'),
+    expect(screen.getByLabelText('ชื่อ/เลขโต๊ะ 1')).toHaveValue('โต๊ะ'),
   );
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
   await waitFor(() => expect(finishSave).toBeDefined());
@@ -608,7 +739,7 @@ it('never displays or caches a deferred table token response after the user chan
     finishSave({ ...tableSetup, issued_table_qr_tokens: issuedTokens });
     await Promise.resolve();
   });
-  await screen.findByLabelText('ชื่อโต๊ะแรก');
+  await screen.findByLabelText('ชื่อ/เลขโต๊ะ 1');
   await waitFor(() =>
     expect(
       screen.queryByDisplayValue(/test-secret-token/),
@@ -651,12 +782,12 @@ it.each(['บันทึกไม่สำเร็จ', ''])(
     );
     renderSetup();
     await waitFor(() =>
-      expect(screen.getByLabelText('ชื่อโต๊ะแรก')).toHaveValue('โต๊ะ'),
+      expect(screen.getByLabelText('ชื่อ/เลขโต๊ะ 1')).toHaveValue('โต๊ะ'),
     );
     fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
     await screen.findByDisplayValue(/test-secret-token/);
     fireEvent.click(screen.getByRole('button', { name: /ย้อนกลับ/ }));
-    fireEvent.change(screen.getByLabelText('ชื่อโต๊ะแรก'), {
+    fireEvent.change(screen.getByLabelText('ชื่อ/เลขโต๊ะ 1'), {
       target: { value: 'โต๊ะใหม่' },
     });
     fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
@@ -724,7 +855,7 @@ it('offers manual selection when copying issued secrets fails', async () => {
   });
   renderSetup();
   await waitFor(() =>
-    expect(screen.getByLabelText('ชื่อโต๊ะแรก')).toHaveValue('โต๊ะ'),
+    expect(screen.getByLabelText('ชื่อ/เลขโต๊ะ 1')).toHaveValue('โต๊ะ'),
   );
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
   await screen.findByDisplayValue(/test-secret-token/);
@@ -761,7 +892,7 @@ it('shows download failure when creating the local secret export fails', async (
   });
   renderSetup();
   await waitFor(() =>
-    expect(screen.getByLabelText('ชื่อโต๊ะแรก')).toHaveValue('โต๊ะ'),
+    expect(screen.getByLabelText('ชื่อ/เลขโต๊ะ 1')).toHaveValue('โต๊ะ'),
   );
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
   await screen.findByDisplayValue(/test-secret-token/);
@@ -797,7 +928,7 @@ it('shows download failure when revoking the local secret export URL fails', asy
   });
   renderSetup();
   await waitFor(() =>
-    expect(screen.getByLabelText('ชื่อโต๊ะแรก')).toHaveValue('โต๊ะ'),
+    expect(screen.getByLabelText('ชื่อ/เลขโต๊ะ 1')).toHaveValue('โต๊ะ'),
   );
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
   await screen.findByDisplayValue(/test-secret-token/);
@@ -827,7 +958,7 @@ it('does not export deferred secrets after an owner becomes a non-owner', async 
   );
   const view = renderSetup();
   await waitFor(() =>
-    expect(screen.getByLabelText('ชื่อโต๊ะแรก')).toHaveValue('โต๊ะ'),
+    expect(screen.getByLabelText('ชื่อ/เลขโต๊ะ 1')).toHaveValue('โต๊ะ'),
   );
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
   await waitFor(() => expect(finishSave).toBeDefined());
@@ -964,9 +1095,7 @@ it('does not select or save a newly created store after the user changes', async
   fireEvent.change(screen.getByLabelText('ชื่อร้าน'), {
     target: { value: 'ร้านเดิม' },
   });
-  fireEvent.change(screen.getByLabelText('จำนวนที่นั่งโต๊ะแรก'), {
-    target: { value: '4' },
-  });
+
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
   mocks.userID = 'another-user';
   view.refreshView();
@@ -1002,9 +1131,7 @@ it('saves the profile before a refreshed organization selection remounts the wiz
   fireEvent.change(screen.getByLabelText('ชื่อร้าน'), {
     target: { value: 'ร้านใหม่' },
   });
-  fireEvent.change(screen.getByLabelText('จำนวนที่นั่งโต๊ะแรก'), {
-    target: { value: '4' },
-  });
+
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
   await waitFor(() =>
     expect(mocks.request).toHaveBeenCalledWith(
@@ -1088,12 +1215,10 @@ it('preserves server table and zone codes on save', async () => {
   });
   renderSetup();
   await waitFor(() =>
-    expect(screen.getByLabelText('ชื่อโซนแรก')).toHaveValue('นอกอาคาร'),
+    expect(screen.getByLabelText('ชื่อ/เลขโต๊ะ 1')).toHaveValue('แปด'),
   );
-  fireEvent.change(await screen.findByLabelText('ชื่อโซนแรก'), {
-    target: { value: 'ระเบียง' },
-  });
-  fireEvent.change(screen.getByLabelText('ชื่อโต๊ะแรก'), {
+  expect(screen.queryByLabelText('ชื่อโซน 1')).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('ชื่อ/เลขโต๊ะ 1'), {
     target: { value: 'โต๊ะแปด' },
   });
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
@@ -1103,7 +1228,7 @@ it('preserves server table and zone codes on save', async () => {
       expect.objectContaining({
         body: expect.objectContaining({
           zones: [
-            { code: 'PATIO', name: 'ระเบียง' },
+            { code: 'PATIO', name: 'นอกอาคาร' },
             { code: 'INSIDE', name: 'ในอาคาร' },
           ],
           tables: [
@@ -1128,9 +1253,7 @@ async function completeProfile() {
   fireEvent.change(screen.getByLabelText('ชื่อร้าน'), {
     target: { value: 'ร้านตัวอย่าง' },
   });
-  fireEvent.change(screen.getByLabelText('จำนวนที่นั่งโต๊ะแรก'), {
-    target: { value: '4' },
-  });
+
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
   await screen.findByText('ขั้นตอนที่ 2 จาก 4');
 }

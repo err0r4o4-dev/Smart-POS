@@ -226,7 +226,7 @@ for (const width of [320, 768, 1440]) {
       branch_id: 'branch',
       location: { confirmed: true, address: 'Bangkok' },
     });
-    await expect(page.getByLabel('VAT (%)', { exact: true })).toBeVisible();
+    await expect(page.getByLabel('VAT (%)', { exact: true })).toHaveCount(0);
     await page.reload();
     await expect(
       page.getByRole('heading', { name: 'เมนูและรับเงิน', exact: true }),

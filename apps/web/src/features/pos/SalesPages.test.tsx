@@ -362,7 +362,8 @@ describe('SalesPage standardized design and behavior', () => {
         items: [
           {
             ...sampleSales[0],
-            terminal_name: '????????????????????????? 1 (??????????????????????????)',
+            terminal_name:
+              '????????????????????????? 1 (??????????????????????????)',
           },
         ],
         total: 1,
@@ -373,7 +374,9 @@ describe('SalesPage standardized design and behavior', () => {
 
     renderSalesPage();
 
-    const matches = await screen.findAllByText('เคาน์เตอร์แคชเชียร์ 1 (หน้าร้าน)');
+    const matches = await screen.findAllByText(
+      'เคาน์เตอร์แคชเชียร์ 1 (หน้าร้าน)',
+    );
     expect(matches.length).toBeGreaterThanOrEqual(2);
     expect(matches[1]).toBeVisible();
     expect(
@@ -393,14 +396,20 @@ describe('SalesPage standardized design and behavior', () => {
 
     renderSalesPage();
 
-    const saleNumberEl = await screen.findByText('SAL-75b94e59-6859-490d-95ab-efb082b376b8');
+    const saleNumberEl = await screen.findByText(
+      'SAL-75b94e59-6859-490d-95ab-efb082b376b8',
+    );
     expect(saleNumberEl).toHaveClass('sales-number-value');
 
-    const copyButtons = screen.getAllByRole('button', { name: 'คัดลอกเลขรายการ' });
+    const copyButtons = screen.getAllByRole('button', {
+      name: 'คัดลอกเลขรายการ',
+    });
     expect(copyButtons.length).toBeGreaterThan(0);
 
     fireEvent.click(copyButtons[0]);
-    expect(writeTextMock).toHaveBeenCalledWith('SAL-75b94e59-6859-490d-95ab-efb082b376b8');
+    expect(writeTextMock).toHaveBeenCalledWith(
+      'SAL-75b94e59-6859-490d-95ab-efb082b376b8',
+    );
 
     await waitFor(() => {
       expect(copyButtons[0]).toHaveAttribute('title', 'คัดลอกแล้ว');

@@ -485,7 +485,10 @@
   color: var(--text-secondary);
   cursor: pointer;
   opacity: 0.45;
-  transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    background-color 0.15s ease,
+    color 0.15s ease;
   flex-shrink: 0;
 }
 .sales-copy-btn:hover,

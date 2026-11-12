@@ -236,7 +236,9 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
     if (fallbackName && !fallbackName.includes('?')) {
       return fallbackName;
     }
-    const matched = terminals.data?.items?.find((item) => item.id === terminalId);
+    const matched = terminals.data?.items?.find(
+      (item) => item.id === terminalId,
+    );
     if (matched?.name && !matched.name.includes('?')) {
       return matched.name;
     }
@@ -787,7 +789,9 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
                   <tr key={item.id}>
                     <td className="sales-number">
                       <SaleNumberCell
-                        value={receipts ? item.receipt_number : item.sale_number}
+                        value={
+                          receipts ? item.receipt_number : item.sale_number
+                        }
                         copyLabel={t('pos.copyNumber')}
                         copiedLabel={t('pos.copiedNumber')}
                       />
@@ -806,7 +810,10 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
                         {item.branch_name}
                       </strong>
                       <span className="sales-secondary">
-                        {resolveTerminalName(item.terminal_id, item.terminal_name)}
+                        {resolveTerminalName(
+                          item.terminal_id,
+                          item.terminal_name,
+                        )}
                       </span>
                     </td>
                     <td className="sales-cashier">

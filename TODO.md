@@ -1,3 +1,39 @@
+# Setup flow correctness (2026-11-12)
+
+Scope: frontend-only alignment of /setup with the existing four-screen flow and
+current restaurant API. Medium size / Medium risk. Preserve API contracts,
+authorization, scoped persistence, QR retries and existing saved settings.
+No database writes, external map/search calls, commit, push or deployment.
+Recovery: revert only this task's frontend/test delta; no data/schema changes.
+
+- [x] Trace current UI, server readiness, supported business type and test seams.
+- [x] Reproduce incorrect readiness and unsupported store types in focused tests.
+- [x] Correct frontend readiness, store validation and location status feedback.
+- [x] Focused setup/i18n regressions: 79/79 PASS, including RED/GREEN reproduction.
+- [x] Browser: existing setup scenarios 10/10 and new readiness scenarios 3/3 PASS.
+      Chromium 156.0.8078.4 on Windows; synthetic APIs only, external requests
+      blocked. Readiness checked at 320/768/1440px, keyboard recheck and no overflow;
+      320/1440px blocked-state screenshots inspected. No database/provider acceptance.
+- [x] npm run build, npm run typecheck, npm run contracts:check and git diff --check PASS.
+      Scoped ESLint: 0 errors, 1 react-refresh warning at OrganizationPages.tsx:301.
+      Log tests 10/10 PASS. Dev-stack tests 7/7 PASS on approved escalated retry;
+      initial sandbox run failed because Git Bash could not access its temporary path.
+- [x] Main reviewed actual scoped diff; no API/auth/QR persistence changes.
+- [?] Full npm test FAIL: 673 passed, 10 failed across SettingsPage.test.tsx,
+      ShopCartPage.test.tsx and StorefrontPage.test.tsx. These failures are outside
+      this setup patch; repairing those flows requires separately authorized scope.
+      Do not claim the full suite passes or remove this section while unresolved.
+
+Evidence: `.local/setup-correctness-red.json`, `.local/setup-recheck-red.json`,
+`.local/setup-correctness-final.json`, `.local/setup-correctness-browser.json`,
+`.local/setup-correctness-browser-retry.json`, `.local/setup-correctness-full-test.log`,
+`.local/setup-correctness-build-final.log`, `.local/setup-correctness-typecheck-final.log`,
+`.local/setup-correctness-lint-final.json`, `.local/setup-correctness-contracts.log`,
+`.local/setup-correctness-log-tests.log` and `.local/setup-correctness-dev-stack-retry.log`.
+The first readiness browser run had three selector failures: exact text included a
+new adjacent management link. Corrected only that locator; all three reruns passed.
+The task-owned Vite server was stopped after browser verification.
+
 # PR #46 local merge (2026-11-12)
 
 Scope: merge origin/feature/Dine-in (3d4019f) into develop (8eaed0b) locally.

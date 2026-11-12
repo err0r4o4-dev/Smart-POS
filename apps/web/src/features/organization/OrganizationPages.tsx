@@ -493,7 +493,7 @@ function localReadiness(
   const profile = form.profile;
   if (
     !profile.organization.name.trim() ||
-    !profile.organization.business_type.trim()
+    profile.organization.business_type !== 'RESTAURANT'
   )
     incomplete.push({
       key: 'profile',
@@ -577,10 +577,6 @@ function SetupStepFields({
             required
             options={[
               { value: 'RESTAURANT', label: t('organization.setupRestaurant') },
-              { value: 'CAFE', label: t('organization.setupCafe') },
-              { value: 'BAKERY', label: t('organization.setupBakery') },
-              { value: 'FAST_FOOD', label: t('organization.setupFastFood') },
-              { value: 'BAR', label: t('organization.setupBar') },
             ]}
             onChange={(business_type) =>
               update('profile', {
@@ -946,13 +942,14 @@ function ScopedSetupPage() {
   if (setupQuery.data?.complete) return <Navigate to="/dashboard" replace />;
 
   const localIncomplete = localReadiness(form, t);
-  const readinessItems = (
-    serverState?.readiness?.incomplete ?? localIncomplete
-  ).filter((item) => item.key !== 'menu');
+  const readinessItems = serverState?.readiness.incomplete ?? localIncomplete;
   const isReady = Boolean(
     form.profile.location?.confirmed &&
     hydratedScope === `${orgID}:${branchID}` &&
-    (serverState?.readiness?.ready || readinessItems.length === 0) &&
+    serverState?.readiness.ready &&
+    readinessItems.length === 0 &&
+    localIncomplete.length === 0 &&
+    !setupQuery.isFetching &&
     !setupQuery.isError &&
     !isDirty,
   );
@@ -988,6 +985,8 @@ function ScopedSetupPage() {
       if (!organization.name.trim()) return t('organization.setupNameRequired');
       if (!organization.business_type.trim())
         return t('organization.setupTypeRequired');
+      if (organization.business_type !== 'RESTAURANT')
+        return t('organization.setupRestaurantOnly');
     }
     if (step === 0 && !Object.values(form.services.service_modes).some(Boolean))
       return t('organization.setupServiceRequired');
@@ -1473,9 +1472,33 @@ function ScopedSetupPage() {
                         {readinessItems.map((item, index) => (
                           <li key={`${item.key}-${index}`}>
                             {item.label}: {item.reason}
+                            {item.key === 'menu' && (
+                              <Link
+                                to={paths.menu}
+                                className="button button-secondary"
+                              >
+                                {t('organization.setupManageMenu')}
+                              </Link>
+                            )}
+                            {(item.key === 'storefront' ||
+                              item.key === 'storefront_menu') && (
+                              <Link
+                                to={paths.storefrontSettings}
+                                className="button button-secondary"
+                              >
+                                {t('organization.setupManageStorefront')}
+                              </Link>
+                            )}
                           </li>
                         ))}
                       </ul>
+                      <Button
+                        className="button-secondary"
+                        disabled={pending || setupQuery.isFetching}
+                        onClick={() => void setupQuery.refetch()}
+                      >
+                        {t('organization.setupRecheckReadiness')}
+                      </Button>
                     </>
                   )}
                   {issuedTokens.length > 0 && (

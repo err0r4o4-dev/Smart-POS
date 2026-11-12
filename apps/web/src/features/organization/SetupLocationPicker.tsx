@@ -327,6 +327,11 @@ export function SetupLocationPicker({
           />
         </label>
       </div>
+      <p role="status">
+        {value?.confirmed
+          ? t('organization.locationConfirmed')
+          : t('organization.locationPickHint')}
+      </p>
       {error && <p role="alert">{error}</p>}
     </section>
   );

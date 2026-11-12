@@ -76,8 +76,16 @@ export interface SetupTablesInput {
 }
 
 export interface SetupMenuInput {
-  categories: Array<{ name: string }>;
-  items: Array<{ name: string; price: string; category: string }>;
+  categories: Array<{ id?: string; name: string }>;
+  items: Array<{
+    product_id?: string;
+    variant_id?: string;
+    category_id?: string;
+    sku?: string;
+    name: string;
+    price: string;
+    category: string;
+  }>;
 }
 
 export interface SetupPaymentsInput {

@@ -46,6 +46,8 @@ import { StandardPageHeader } from '../../components/ui/StandardPage';
 import './setup.css';
 import { SetupLocationPicker } from './SetupLocationPicker';
 import { SetupTablesEditor } from './SetupTablesEditor';
+import { SetupResources, type SetupResource } from './SetupResources';
+import { exactDecimal } from '../../lib/pos-api';
 import {
   saveSetupSections,
   seedSavedSetupSection,
@@ -280,7 +282,7 @@ const setupMeta = [
   },
   {
     key: 'payments',
-    label: 'organization.metaPayments',
+    label: 'organization.metaMenuPayments',
     sidebarSubtitle: 'organization.metaPayments',
     cardSubtitle: 'organization.setupPaymentLead',
     description: 'organization.setupPaymentLead',
@@ -515,6 +517,23 @@ function localReadiness(
       label: t('organization.metaPayments'),
       reason: t('organization.setupPaymentRequired'),
     });
+  if (
+    !form.menu.items.length ||
+    form.menu.items.some(
+      (item) =>
+        !item.name.trim() ||
+        !item.category.trim() ||
+        !form.menu.categories.some(
+          (category) => category.name === item.category,
+        ) ||
+        (exactDecimal(item.price, 2) ?? 0n) <= 0n,
+    )
+  )
+    incomplete.push({
+      key: 'menu',
+      label: t('organization.metaMenu'),
+      reason: t('organization.setupMenuRequired'),
+    });
   const vat = Number(form.orders.vat_percent);
   const service = Number(form.orders.service_charge_percent);
   if (
@@ -704,6 +723,13 @@ function SetupStepFields({
   if (step === 4)
     return (
       <div className="setup-form-section">
+        <SetupToggle
+          label={t('organization.setupQrOrders')}
+          checked={form.orders.qr_ordering}
+          onChange={(qr_ordering) =>
+            update('orders', { ...form.orders, qr_ordering })
+          }
+        />
         <p className="setup-section-lead">
           {t('organization.setupPaymentLead')}
         </p>
@@ -779,6 +805,97 @@ function SetupStepFields({
         </div>
       </div>
     );
+  if (step === 3)
+    return (
+      <div className="setup-form-section">
+        {form.menu.items.map((item, index) => {
+          const change = (patch: Partial<SetupMenuInput['items'][number]>) => {
+            const items = form.menu.items.map((entry, position) =>
+              position === index
+                ? {
+                    ...entry,
+                    ...patch,
+                    ...(patch.category !== undefined
+                      ? { category_id: undefined }
+                      : {}),
+                  }
+                : entry,
+            );
+            update('menu', {
+              categories: [
+                ...new Set(items.map((entry) => entry.category)),
+              ].map(
+                (name) =>
+                  form.menu.categories.find(
+                    (category) => category.name === name,
+                  ) ?? { name },
+              ),
+              items,
+            });
+          };
+          return (
+            <fieldset key={index}>
+              <legend>
+                {t('organization.metaMenu')} {index + 1}
+              </legend>
+              <SetupInput
+                label={
+                  index === 0
+                    ? t('organization.setupFirstCategory')
+                    : `${t('organization.setupFirstCategory')} ${index + 1}`
+                }
+                value={item.category}
+                required
+                onChange={(category) => change({ category })}
+              />
+              <SetupInput
+                label={
+                  index === 0
+                    ? t('organization.setupFirstItem')
+                    : `${t('organization.setupFirstItem')} ${index + 1}`
+                }
+                value={item.name}
+                required
+                onChange={(name) => change({ name })}
+              />
+              <SetupInput
+                label={
+                  index === 0
+                    ? t('organization.setupFirstPrice')
+                    : `${t('organization.setupFirstPrice')} ${index + 1}`
+                }
+                value={item.price}
+                type="number"
+                min="0.01"
+                step="0.01"
+                required
+                onChange={(price) => change({ price })}
+              />
+            </fieldset>
+          );
+        })}
+        <Button
+          type="button"
+          className="button-secondary"
+          disabled={form.menu.items.length >= 500}
+          onClick={() =>
+            update('menu', {
+              ...form.menu,
+              items: [
+                ...form.menu.items,
+                {
+                  name: '',
+                  price: '',
+                  category: form.menu.categories[0]?.name ?? '',
+                },
+              ],
+            })
+          }
+        >
+          {t('organization.setupAddMenu')}
+        </Button>
+      </div>
+    );
   return null;
 }
 
@@ -803,6 +920,7 @@ function ScopedSetupPage() {
   const [form, setForm] = useState<SetupFormState>(createSetupForm);
   const [savedTableCount, setSavedTableCount] = useState(0);
   const [step, setStep] = useState<SetupStepIndex>(0);
+  const [resource, setResource] = useState<SetupResource | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const [rotationUncertain, setRotationUncertain] = useState(false);
@@ -817,6 +935,11 @@ function ScopedSetupPage() {
   const saveCache = useRef<SetupSaveCache>({});
   const completionRef = useRef({ key: '', orgID: '' });
   const stepHeadingRef = useRef<HTMLHeadingElement>(null);
+  const resourceHeadingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (resource) resourceHeadingRef.current?.focus();
+    else stepHeadingRef.current?.focus();
+  }, [resource]);
   const activeRef = useRef(true);
   useEffect(() => {
     activeRef.current = true;
@@ -879,7 +1002,13 @@ function ScopedSetupPage() {
           ...(data.profile ? { profile: data.profile } : {}),
           ...(data.services ? { services: data.services } : {}),
           ...(data.tables ? { tables: data.tables } : {}),
-          ...(data.menu ? { menu: data.menu } : {}),
+          ...(data.menu
+            ? {
+                menu: data.menu.items.length
+                  ? data.menu
+                  : createSetupForm().menu,
+              }
+            : {}),
           ...(data.payments ? { payments: data.payments } : {}),
           ...(data.orders ? { orders: data.orders } : {}),
         }));
@@ -939,7 +1068,8 @@ function ScopedSetupPage() {
     (!tenant.context && tenant.storeMode !== 'multi')
   )
     return <Navigate to="/account" replace />;
-  if (setupQuery.data?.complete) return <Navigate to="/dashboard" replace />;
+  if (setupQuery.data?.complete === true)
+    return <Navigate to="/dashboard" replace />;
 
   const localIncomplete = localReadiness(form, t);
   const readinessItems = serverState?.readiness.incomplete ?? localIncomplete;
@@ -999,6 +1129,11 @@ function ScopedSetupPage() {
       return t('organization.setupTableRequired');
     if (step === 2 && !form.payments.cash && !form.payments.bank_transfer)
       return t('organization.setupPaymentRequired');
+    if (
+      step === 2 &&
+      localReadiness(form, t).some((item) => item.key === 'menu')
+    )
+      return t('organization.setupMenuRequired');
     if (
       step === 2 &&
       localReadiness(form, t).some((item) => item.key === 'orders')
@@ -1069,6 +1204,15 @@ function ScopedSetupPage() {
           return;
         }
         await tenant.refresh();
+        if (!activeRef.current) return;
+        await queryClient.invalidateQueries({
+          queryKey: [
+            'restaurant-setup',
+            state.session.user.id,
+            orgID,
+            branchID,
+          ],
+        });
         if (!activeRef.current) return;
         navigate(result.dashboard || '/dashboard', { replace: true });
       } catch (failure) {
@@ -1162,6 +1306,7 @@ function ScopedSetupPage() {
           : step === 1
             ? [{ key: 'profile' as const, payload: profilePayload }]
             : [
+                { key: 'menu' as const, payload: form.menu },
                 { key: 'payments' as const, payload: form.payments },
                 { key: 'orders' as const, payload: form.orders },
               ];
@@ -1199,6 +1344,11 @@ function ScopedSetupPage() {
           if (!activeRef.current) return;
           const { issued_table_qr_tokens, ...saved } = result;
           safeResult = saved;
+          if (section.key === 'menu' && result.menu) {
+            const menu = result.menu;
+            setForm((current) => ({ ...current, menu }));
+            seedSavedSetupSection(saveCache.current, 'menu', menu);
+          }
           if (section.key === 'tables') {
             setIssuedTokens(issued_table_qr_tokens ?? []);
             if (form.services.service_modes.dine_in)
@@ -1434,7 +1584,7 @@ function ScopedSetupPage() {
                                 ? [2]
                                 : []),
                             ]
-                          : [4]
+                          : [3, 4]
                         ).map((section) => (
                           <section key={section}>
                             {section !== 0 && section !== 1 && (
@@ -1444,7 +1594,9 @@ function ScopedSetupPage() {
                                     ? 'organization.metaServices'
                                     : section === 2
                                       ? 'organization.metaTables'
-                                      : 'organization.metaPayments',
+                                      : section === 3
+                                        ? 'organization.metaMenu'
+                                        : 'organization.metaPayments',
                                 )}
                               </h3>
                             )}
@@ -1473,21 +1625,41 @@ function ScopedSetupPage() {
                           <li key={`${item.key}-${index}`}>
                             {item.label}: {item.reason}
                             {item.key === 'menu' && (
-                              <Link
-                                to={paths.menu}
-                                className="button button-secondary"
+                              <Button
+                                type="button"
+                                onClick={() => setStep(2)}
+                                className="button-secondary"
                               >
                                 {t('organization.setupManageMenu')}
-                              </Link>
+                              </Button>
                             )}
                             {(item.key === 'storefront' ||
                               item.key === 'storefront_menu') && (
-                              <Link
-                                to={paths.storefrontSettings}
-                                className="button button-secondary"
+                              <Button
+                                type="button"
+                                onClick={() => setResource('storefront')}
+                                className="button-secondary"
                               >
                                 {t('organization.setupManageStorefront')}
-                              </Link>
+                              </Button>
+                            )}
+                            {item.key === 'pos_source' && (
+                              <Button
+                                type="button"
+                                className="button-secondary"
+                                onClick={() => setResource('source')}
+                              >
+                                {t('organization.setupConfigureSource')}
+                              </Button>
+                            )}
+                            {item.key === 'storefront_menu' && (
+                              <Button
+                                type="button"
+                                className="button-secondary"
+                                onClick={() => setResource('stock')}
+                              >
+                                {t('organization.setupConfigureStock')}
+                              </Button>
                             )}
                           </li>
                         ))}
@@ -1601,6 +1773,54 @@ function ScopedSetupPage() {
                   </div>
                 </fieldset>
               </form>
+              {step === 3 && resource && (
+                <section className="setup-inline-resources">
+                  <h2 ref={resourceHeadingRef} tabIndex={-1}>
+                    {t(
+                      resource === 'source'
+                        ? 'organization.setupConfigureSource'
+                        : resource === 'stock'
+                          ? 'organization.setupConfigureStock'
+                          : 'organization.setupManageStorefront',
+                    )}
+                  </h2>
+                  <div className="tenant-actions">
+                    <Button
+                      type="button"
+                      className="button-secondary"
+                      onClick={() => setResource('source')}
+                    >
+                      {t('organization.setupConfigureSource')}
+                    </Button>
+                    {form.orders.qr_ordering && (
+                      <>
+                        <Button
+                          type="button"
+                          className="button-secondary"
+                          onClick={() => setResource('stock')}
+                        >
+                          {t('organization.setupConfigureStock')}
+                        </Button>
+                        <Button
+                          type="button"
+                          className="button-secondary"
+                          onClick={() => setResource('storefront')}
+                        >
+                          {t('organization.setupManageStorefront')}
+                        </Button>
+                      </>
+                    )}
+                    <Button
+                      type="button"
+                      className="button-secondary"
+                      onClick={() => setResource(null)}
+                    >
+                      {t('organization.setupCloseConfiguration')}
+                    </Button>
+                  </div>
+                  <SetupResources key={resource} resource={resource} />
+                </section>
+              )}
             </Card>
           </section>
         </div>

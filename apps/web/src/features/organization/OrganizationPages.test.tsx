@@ -41,6 +41,10 @@ const setupState = {
   completed: false,
   readiness: { ready: true, incomplete: [] },
   steps: [],
+  menu: {
+    categories: [{ name: 'อาหาร' }],
+    items: [{ name: 'ข้าว', price: '45', category: 'อาหาร' }],
+  },
   profile: {
     organization: {
       name: 'ร้านเดิม',
@@ -683,7 +687,9 @@ it('routes legacy review without location to location confirmation', async () =>
   expect(
     screen.queryByRole('button', { name: /เปิดใช้งานร้าน/ }),
   ).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'ยืนยันตำแหน่งร้าน' })).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'ยืนยันตำแหน่งร้าน' }),
+  ).not.toBeInTheDocument();
 });
 
 it.each(['user', 'organization', 'branch'])(
@@ -1164,7 +1170,7 @@ it('saves the profile before a refreshed organization selection remounts the wiz
   );
 });
 
-it('does not render menu fields during setup', async () => {
+it('edits and saves menu items inside setup without leaving for management', async () => {
   mocks.context = {
     organization: { id: 'org-1' },
     membership: { role: 'OWNER' },
@@ -1182,12 +1188,31 @@ it('does not render menu fields during setup', async () => {
     },
   });
   renderSetup();
-  expect(screen.queryByLabelText('หมวดหมู่เมนูแรก')).not.toBeInTheDocument();
-  expect(screen.queryByLabelText('ชื่อเมนูแรก')).not.toBeInTheDocument();
-  expect(screen.queryByText('เมนูและรับเงิน')).not.toBeInTheDocument();
+  expect(await screen.findByLabelText('ชื่อเมนูแรก')).toHaveValue('ข้าว');
+  expect(screen.getByDisplayValue('ชา')).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('ราคาเมนูแรก (บาท)'), {
+    target: { value: '50.25' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
+  await waitFor(() =>
+    expect(mocks.request).toHaveBeenCalledWith(
+      '/organizations/org-1/restaurant/setup/menu',
+      expect.objectContaining({
+        method: 'PUT',
+        key: expect.any(String),
+        body: expect.objectContaining({
+          branch_id: 'branch',
+          items: [
+            { name: 'ข้าว', price: '50.25', category: 'อาหาร' },
+            { name: 'ชา', price: '30', category: 'เครื่องดื่ม' },
+          ],
+        }),
+      }),
+    ),
+  );
   expect(
-    mocks.request.mock.calls.some(([path]) => path.endsWith('/menu')),
-  ).toBe(false);
+    screen.queryByRole('link', { name: 'จัดการเมนู' }),
+  ).not.toBeInTheDocument();
 });
 
 it('preserves server table and zone codes on save', async () => {
@@ -1439,7 +1464,63 @@ it('recovers from initial setup loading errors with retry before editing', async
   await waitFor(() => expect(screen.getByLabelText('ชื่อร้าน')).toBeEnabled());
 });
 
-it('resumes the payments step without rendering menu configuration', async () => {
+it('retains server-issued menu identity when editing again before setup completion', async () => {
+  mocks.context = {
+    organization: { id: 'org-1' },
+    membership: { role: 'OWNER' },
+  };
+  let savedMenu: SetupMenuInput | undefined;
+  mocks.request.mockImplementation(
+    (path: string, options: { body?: SetupMenuInput }) => {
+      if (path.endsWith('/menu'))
+        savedMenu = {
+          categories: [{ id: 'category', name: 'อาหาร' }],
+          items: [
+            {
+              ...options.body!.items[0],
+              product_id: 'product',
+              variant_id: 'variant',
+              category_id: 'category',
+              sku: 'SETUP-SKU',
+            },
+          ],
+        };
+      return Promise.resolve({
+        ...setupState,
+        current_step: 'menu',
+        menu: savedMenu ?? setupState.menu,
+      });
+    },
+  );
+  renderSetup();
+  await screen.findByLabelText('ชื่อเมนูแรก');
+  fireEvent.click(screen.getByRole('button', { name: 'บันทึกและถัดไป' }));
+  await screen.findByRole('button', { name: 'เปิดใช้งานร้าน' });
+  fireEvent.click(screen.getByRole('button', { name: 'ย้อนกลับ' }));
+  fireEvent.change(screen.getByLabelText('ชื่อเมนูแรก'), {
+    target: { value: 'ข้าวผัด' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'บันทึกและถัดไป' }));
+  await screen.findByRole('button', { name: 'เปิดใช้งานร้าน' });
+  const calls = mocks.request.mock.calls.filter(([path]) =>
+    path.endsWith('/menu'),
+  );
+  expect(calls).toHaveLength(2);
+  expect(calls[1][1].body).toMatchObject({
+    categories: [{ id: 'category', name: 'อาหาร' }],
+    items: [
+      {
+        product_id: 'product',
+        variant_id: 'variant',
+        category_id: 'category',
+        sku: 'SETUP-SKU',
+        name: 'ข้าวผัด',
+      },
+    ],
+  });
+});
+
+it('resumes menu and payments on the same setup screen', async () => {
   mocks.context = {
     organization: { id: 'org-1' },
     membership: { role: 'OWNER' },
@@ -1448,12 +1529,18 @@ it('resumes the payments step without rendering menu configuration', async () =>
     ...setupState,
     current_step: 'menu',
     profile: { ...setupState.profile, location: setupState.location },
-    payments: { cash: true, bank_transfer: true, promptpay: false, card: false },
+    payments: {
+      cash: true,
+      bank_transfer: true,
+      promptpay: false,
+      card: false,
+    },
   });
   renderSetup();
-  expect(screen.queryByLabelText('ชื่อเมนูแรก')).not.toBeInTheDocument();
-  expect(screen.getByRole('complementary', { name: 'ความคืบหน้าการตั้งค่า' }))
-    .toHaveTextContent('การชำระเงิน');
+  expect(await screen.findByLabelText('ชื่อเมนูแรก')).toHaveValue('ข้าว');
+  expect(
+    screen.getByRole('complementary', { name: 'ความคืบหน้าการตั้งค่า' }),
+  ).toHaveTextContent('เมนูและรับเงิน');
 });
 
 it('never enables activation when server readiness is false', async () => {
@@ -1496,7 +1583,7 @@ it('resumes service modes from the flat backend response', async () => {
   expect(screen.getByLabelText('เดลิเวอรี')).toBeChecked();
 });
 
-it('does not validate or save menu prices during setup', async () => {
+it('rejects invalid menu prices before saving setup', async () => {
   mocks.context = {
     organization: { id: 'org-1' },
     membership: { role: 'OWNER' },
@@ -1510,14 +1597,16 @@ it('does not validate or save menu prices during setup', async () => {
     },
   });
   renderSetup();
-  expect(screen.queryByLabelText('ชื่อเมนูแรก')).not.toBeInTheDocument();
+  expect(await screen.findByLabelText('ชื่อเมนูแรก')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
   await waitFor(() =>
     expect(
       mocks.request.mock.calls.some(([path]) => path.endsWith('/menu')),
     ).toBe(false),
   );
-  expect(screen.queryByText('ราคาที่ถูกต้อง')).not.toBeInTheDocument();
+  expect(
+    screen.getByText('กรอกหมวดหมู่ เมนู และราคาที่ถูกต้อง'),
+  ).toBeInTheDocument();
 });
 
 it('shows the exact menu prerequisite and keeps activation disabled', async () => {
@@ -1552,10 +1641,12 @@ it('shows the exact menu prerequisite and keeps activation disabled', async () =
     screen.getByText(/ต้องมีเมนูที่เปิดขายอย่างน้อยหนึ่งรายการ/),
   ).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /เปิดใช้งานร้าน/ })).toBeDisabled();
-  expect(screen.getByRole('link', { name: 'จัดการเมนู' })).toHaveAttribute(
-    'href',
-    '/menu',
-  );
+  expect(
+    screen.queryByRole('link', { name: 'จัดการเมนู' }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByRole('button', { name: 'จัดการเมนู' }),
+  ).toBeInTheDocument();
   fireEvent.submit(
     screen.getByRole('button', { name: /เปิดใช้งานร้าน/ }).closest('form')!,
   );
@@ -1582,6 +1673,54 @@ it('does not infer server readiness from an empty prerequisite list', async () =
   expect(screen.getByText('ยังตั้งค่าไม่ครบ')).toBeInTheDocument();
 });
 
+it('configures a missing POS source inside setup without opening a working page', async () => {
+  mocks.context = {
+    organization: { id: 'org-1' },
+    membership: { role: 'OWNER' },
+  };
+  const incomplete = {
+    ...setupState,
+    current_step: 'review',
+    readiness: {
+      ready: false,
+      incomplete: [
+        {
+          key: 'pos_source',
+          label: 'POS source',
+          reason: 'Choose an active source',
+        },
+      ],
+    },
+  };
+  mocks.request.mockImplementation((path: string) =>
+    Promise.resolve(
+      path.includes('/inventory/locations')
+        ? { items: [], total: 0, page: 1, page_size: 100 }
+        : incomplete,
+    ),
+  );
+  renderSetup();
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'ตั้งค่าจุดขายและสต็อก' }),
+  );
+  expect(
+    await screen.findByRole('heading', { name: 'สร้าง Location' }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole('heading', { name: 'ตั้งค่าจุดขายและสต็อก' }),
+  ).toHaveFocus();
+  fireEvent.click(
+    screen.getByRole('button', { name: 'กลับไปตรวจสอบความพร้อม' }),
+  );
+  expect(
+    screen.queryByRole('heading', { name: 'สร้าง Location' }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('link', { name: 'ตั้งค่าจุดขายและสต็อก' }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /เปิดใช้งานร้าน/ })).toBeDisabled();
+});
+
 it('does not activate with contradictory server readiness', async () => {
   mocks.context = {
     organization: { id: 'org-1' },
@@ -1604,7 +1743,7 @@ it('does not activate with contradictory server readiness', async () => {
   expect(screen.getByText(/Publish a menu item/)).toBeInTheDocument();
 });
 
-it('rechecks readiness after resolving prerequisites in the existing management flow', async () => {
+it('rechecks readiness after resolving prerequisites inside setup', async () => {
   mocks.context = {
     organization: { id: 'org-1' },
     membership: { role: 'OWNER' },
@@ -1628,8 +1767,11 @@ it('rechecks readiness after resolving prerequisites in the existing management 
     await screen.findByRole('button', { name: 'Open store' }),
   ).toBeDisabled();
   expect(
-    screen.getByRole('link', { name: 'Configure storefront' }),
-  ).toHaveAttribute('href', '/settings/storefront');
+    screen.queryByRole('link', { name: 'Configure storefront' }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByRole('button', { name: 'Configure storefront' }),
+  ).toBeInTheDocument();
   mocks.request.mockResolvedValue({ ...setupState, current_step: 'review' });
   fireEvent.click(screen.getByRole('button', { name: 'Recheck readiness' }));
   await waitFor(() =>

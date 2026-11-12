@@ -33,6 +33,11 @@ for (const width of [320, 768, 1440]) {
           label: 'Storefront menu',
           reason: 'Publish a stocked menu item',
         },
+        {
+          key: 'pos_source',
+          label: 'POS source',
+          reason: 'Configure a source',
+        },
       ],
     };
     let completionRequests = 0;
@@ -78,6 +83,10 @@ for (const width of [320, 768, 1440]) {
           ready: readiness.ready,
           readiness,
           steps: [],
+          menu: {
+            categories: [{ name: 'อาหาร' }],
+            items: [{ name: 'ข้าว', price: '45.00', category: 'อาหาร' }],
+          },
           profile: {
             organization,
             service_modes: { dine_in: true, takeaway: true, delivery: false },
@@ -90,6 +99,14 @@ for (const width of [320, 768, 1440]) {
             confirmed: true,
           },
         };
+      } else if (url.pathname.endsWith('/storefront')) {
+        data = null;
+      } else if (
+        url.pathname.includes('/inventory/locations') ||
+        url.pathname.endsWith('/pos/terminals') ||
+        url.pathname === '/api/v1/organizations/org/products'
+      ) {
+        data = { items: [], total: 0 };
       } else {
         if (url.pathname.endsWith('/setup/complete')) completionRequests += 1;
         return route.fulfill({
@@ -106,15 +123,16 @@ for (const width of [320, 768, 1440]) {
       exact: true,
     });
     await expect(activate).toBeDisabled();
+    await expect(page.getByText('Menu: Add a menu item')).toBeVisible();
     await expect(
-      page.getByText('Menu: Add a menu item'),
+      page.getByRole('button', { name: 'จัดการเมนู', exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByRole('link', { name: 'จัดการเมนู', exact: true }),
-    ).toHaveAttribute('href', '/menu');
+      page.getByRole('button', { name: 'ตั้งค่าหน้าร้านออนไลน์', exact: true }),
+    ).toBeVisible();
     await expect(
-      page.getByRole('link', { name: 'ตั้งค่าหน้าร้านออนไลน์', exact: true }),
-    ).toHaveAttribute('href', '/settings/storefront');
+      page.locator('a[href="/menu"], a[href="/settings/storefront"]'),
+    ).toHaveCount(0);
     await page.screenshot({
       path: testInfo.outputPath(`blocked-${width}.png`),
       fullPage: true,
@@ -125,6 +143,46 @@ for (const width of [320, 768, 1440]) {
       ),
     ).toBe(true);
 
+    for (const [button, field] of [
+      ['ตั้งค่าจุดขายและสต็อก', 'รหัสเครื่อง'],
+      ['บันทึกสต็อกตั้งต้น', 'Source / Count Location'],
+      ['ตั้งค่าหน้าร้านออนไลน์', 'ชื่อร้านที่แสดง'],
+    ]) {
+      await page
+        .getByRole('button', { name: button, exact: true })
+        .first()
+        .click();
+      await expect(
+        page.getByRole('heading', { name: button, exact: true }),
+      ).toBeFocused();
+      await expect(
+        page.getByRole(
+          field === 'Source / Count Location' ? 'combobox' : 'textbox',
+          { name: field, exact: true },
+        ),
+      ).toBeVisible();
+      if (field === 'รหัสเครื่อง')
+        await expect(
+          page.getByRole('textbox', { name: 'รหัสสถานที่เก็บ', exact: true }),
+        ).toHaveCSS('border-top-style', 'solid');
+      await expect(page).toHaveURL(/\/setup$/);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      expect(await page.locator('form form').count()).toBe(0);
+      await page.screenshot({
+        path: testInfo.outputPath(
+          `${field === 'รหัสเครื่อง' ? 'source' : field === 'ชื่อร้านที่แสดง' ? 'storefront' : 'stock'}-${width}.png`,
+        ),
+        fullPage: true,
+      });
+      await page
+        .getByRole('button', { name: 'กลับไปตรวจสอบความพร้อม', exact: true })
+        .click();
+    }
+
     readiness = { ready: false, incomplete: [] };
     const emptyResponse = page.waitForResponse((response) =>
       new URL(response.url()).pathname.endsWith('/restaurant/setup'),
@@ -133,9 +191,7 @@ for (const width of [320, 768, 1440]) {
       .getByRole('button', { name: 'ตรวจสอบความพร้อมอีกครั้ง', exact: true })
       .click();
     await emptyResponse;
-    await expect(
-      page.getByText('Menu: Add a menu item'),
-    ).toHaveCount(0);
+    await expect(page.getByText('Menu: Add a menu item')).toHaveCount(0);
     await expect(activate).toBeDisabled();
 
     readiness = { ready: true, incomplete: [] };

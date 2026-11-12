@@ -119,7 +119,9 @@ type SettingsInput = Pick<
   | 'revision'
 > & { terminal_id: string; online_terminal_id: string };
 
-export function StorefrontSettingsPage() {
+export function StorefrontSettingsPage({
+  embedded = false,
+}: { embedded?: boolean } = {}) {
   const { t } = useLanguage();
 
   const scope = useScope();
@@ -138,65 +140,69 @@ export function StorefrontSettingsPage() {
   );
   return (
     <div className="catalog-page online-admin">
-      <StandardPageHeader
-        icon={<Store size={24} />}
-        eyebrow={t('storefront.receiveOnlineOrders')}
-        title={t('storefront.onlineStorefrontSettings')}
-        description={t('storefront.publishSelectedProductsForPickupAndPos')}
-        actions={
-          <>
-            <Link
-              className="button button-secondary sales-export-btn"
-              to="/settings/payments"
-            >
-              <CreditCard size={15} aria-hidden="true" />
-              <span>{t('storefront.testStripeSandbox')}</span>
-            </Link>
-            <Link className="button sales-new-sale-btn" to="/orders">
-              <ShoppingBag size={15} aria-hidden="true" />
-              <span>{t('storefront.manageOrders')}</span>
-            </Link>
-          </>
-        }
-      />
+      {!embedded && (
+        <StandardPageHeader
+          icon={<Store size={24} />}
+          eyebrow={t('storefront.receiveOnlineOrders')}
+          title={t('storefront.onlineStorefrontSettings')}
+          description={t('storefront.publishSelectedProductsForPickupAndPos')}
+          actions={
+            <>
+              <Link
+                className="button button-secondary sales-export-btn"
+                to="/settings/payments"
+              >
+                <CreditCard size={15} aria-hidden="true" />
+                <span>{t('storefront.testStripeSandbox')}</span>
+              </Link>
+              <Link className="button sales-new-sale-btn" to="/orders">
+                <ShoppingBag size={15} aria-hidden="true" />
+                <span>{t('storefront.manageOrders')}</span>
+              </Link>
+            </>
+          }
+        />
+      )}
 
-      <StandardKpiGrid label={t('storefront.onlineStorefrontSettings')}>
-        <StandardKpiCard
-          icon={<Store size={20} />}
-          tone={settings.data?.published ? 'success' : 'amber'}
-          label={t('storefront.publishStorefront')}
-          value={
-            settings.data?.published
-              ? t('storefront.published')
-              : t('storefront.unpublished')
-          }
-          subtext={settings.data?.slug ? `/shop/${settings.data.slug}` : '—'}
-          sparkline
-        />
-        <StandardKpiCard
-          icon={<CheckCircle2 size={20} />}
-          tone={settings.data?.accepting_orders ? 'success' : 'amber'}
-          label={t('storefront.acceptOrders')}
-          value={
-            settings.data?.accepting_orders
-              ? t('storefront.published')
-              : t('storefront.unpublished')
-          }
-          trendUp={Boolean(settings.data?.accepting_orders)}
-        />
-        <StandardKpiCard
-          icon={<Terminal size={20} />}
-          tone="amber"
-          label={t('pos.terminal')}
-          value={`${terminals.data?.items.length ?? 0} ${t('pos.itemsUnit')}`}
-        />
-        <StandardKpiCard
-          icon={<Package size={20} />}
-          tone="info"
-          label={t('storefront.publishedProducts')}
-          value={`${listings.data?.total ?? 0} ${t('pos.itemsUnit')}`}
-        />
-      </StandardKpiGrid>
+      {!embedded && (
+        <StandardKpiGrid label={t('storefront.onlineStorefrontSettings')}>
+          <StandardKpiCard
+            icon={<Store size={20} />}
+            tone={settings.data?.published ? 'success' : 'amber'}
+            label={t('storefront.publishStorefront')}
+            value={
+              settings.data?.published
+                ? t('storefront.published')
+                : t('storefront.unpublished')
+            }
+            subtext={settings.data?.slug ? `/shop/${settings.data.slug}` : '—'}
+            sparkline
+          />
+          <StandardKpiCard
+            icon={<CheckCircle2 size={20} />}
+            tone={settings.data?.accepting_orders ? 'success' : 'amber'}
+            label={t('storefront.acceptOrders')}
+            value={
+              settings.data?.accepting_orders
+                ? t('storefront.published')
+                : t('storefront.unpublished')
+            }
+            trendUp={Boolean(settings.data?.accepting_orders)}
+          />
+          <StandardKpiCard
+            icon={<Terminal size={20} />}
+            tone="amber"
+            label={t('pos.terminal')}
+            value={`${terminals.data?.items.length ?? 0} ${t('pos.itemsUnit')}`}
+          />
+          <StandardKpiCard
+            icon={<Package size={20} />}
+            tone="info"
+            label={t('storefront.publishedProducts')}
+            value={`${listings.data?.total ?? 0} ${t('pos.itemsUnit')}`}
+          />
+        </StandardKpiGrid>
+      )}
 
       <p className="notice">
         {t('storefront.publishSelectedProductsForPickupAndPos')}
@@ -221,6 +227,7 @@ export function StorefrontSettingsPage() {
           organizationName={scope.tenant.context?.organization.name ?? ''}
           terminals={terminals.data.items}
           command={command}
+          embedded={embedded}
         />
       )}
       {settings.data && (
@@ -228,15 +235,17 @@ export function StorefrontSettingsPage() {
           <StandardFilterCard
             title={t('storefront.publishedProducts')}
             headerControls={
-              <a
-                className="button button-secondary sales-detail-link"
-                href={`/shop/${settings.data.slug}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <ExternalLink size={14} aria-hidden="true" />
-                <span>{t('storefront.previewStorefront')}</span>
-              </a>
+              !embedded && (
+                <a
+                  className="button button-secondary sales-detail-link"
+                  href={`/shop/${settings.data.slug}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <ExternalLink size={14} aria-hidden="true" />
+                  <span>{t('storefront.previewStorefront')}</span>
+                </a>
+              )
             }
             useForm
             onSubmit={(event) => {
@@ -368,11 +377,13 @@ function SettingsForm({
   organizationName,
   terminals,
   command,
+  embedded = false,
 }: {
   initial: ShopSettings | null;
   organizationName: string;
   terminals: POSTerminal[];
   command: Command;
+  embedded?: boolean;
 }) {
   const { t, language } = useLanguage();
 
@@ -555,19 +566,21 @@ function SettingsForm({
         {!terminals.length && (
           <p role="status">
             {t('storefront.noActiveTerminalsInThisBranchConfigure')}{' '}
-            <Link
-              to="/pos/register/open"
-              style={{
-                color: '#D97706',
-                fontWeight: 600,
-                textDecoration: 'underline',
-                marginLeft: 8,
-              }}
-            >
-              {language === 'th'
-                ? 'คลิกที่นี่เพื่อไปตั้งค่าเครื่องขาย (POS) ➔'
-                : 'Configure POS Terminal ➔'}
-            </Link>
+            {!embedded && (
+              <Link
+                to="/pos/register/open"
+                style={{
+                  color: '#D97706',
+                  fontWeight: 600,
+                  textDecoration: 'underline',
+                  marginLeft: 8,
+                }}
+              >
+                {language === 'th'
+                  ? 'คลิกที่นี่เพื่อไปตั้งค่าเครื่องขาย (POS) ➔'
+                  : 'Configure POS Terminal ➔'}
+              </Link>
+            )}
           </p>
         )}
         <Button type="submit" disabled={command.isPending || !terminals.length}>

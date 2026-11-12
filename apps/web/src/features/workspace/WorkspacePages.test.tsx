@@ -1,4 +1,5 @@
 import { render } from '../../test/render';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
@@ -31,6 +32,9 @@ vi.mock('../../app/AuthProvider', () => ({
     },
     refresh: mocks.refresh,
   }),
+}));
+vi.mock('../organization/setup-api', () => ({
+  getSetup: vi.fn(async () => ({ complete: true })),
 }));
 vi.mock('../../app/OrganizationProvider', () => ({
   OrganizationProvider: ({ children }: { children: ReactNode }) => children,
@@ -131,7 +135,14 @@ function Harness({ path }: { path: string }) {
   );
 }
 function renderWorkspace(path = '/workspace') {
-  return render(<Harness path={path} />);
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(<Harness path={path} />, {
+    wrapper: ({ children }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    ),
+  });
 }
 const allPermissions = [
   ...new Set(
@@ -159,11 +170,13 @@ beforeEach(() => {
 
 it.each<Role>(['OWNER'])(
   'renders restaurant tasks for %s without fabricated retail metrics or retired links',
-  (role) => {
+  async (role) => {
     selectRole(role, allPermissions);
     expect(workspaceHome(role)).toBe('/dashboard');
     renderWorkspace();
-    expect(screen.getByRole('heading', { name: 'ภาพรวม' })).toBeVisible();
+    expect(
+      await screen.findByRole('heading', { name: 'ภาพรวม' }),
+    ).toBeVisible();
     expect(
       document.querySelector('[data-workspace="management"]'),
     ).toBeInTheDocument();
@@ -249,7 +262,7 @@ it('does not render privileged menus while role context loads', () => {
   mocks.loading = true;
   renderWorkspace();
   expect(screen.getByRole('status')).toHaveTextContent(
-    'กำลังเลือกพื้นที่ตามสิทธิ์',
+    'กำลังตรวจสอบพื้นที่จัดการร้าน',
   );
   expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
 });
@@ -258,7 +271,7 @@ it('stays on workspace while a multi-store account without context loads', () =>
   mocks.loading = true;
   renderWorkspace();
   expect(screen.getByRole('status')).toHaveTextContent(
-    'กำลังเลือกพื้นที่ตามสิทธิ์',
+    'กำลังตรวจสอบพื้นที่จัดการร้าน',
   );
   expect(screen.getByLabelText('Location')).toHaveTextContent('/workspace');
 });
@@ -273,20 +286,20 @@ it('shows a context failure instead of pretending a role is available', () => {
   ).not.toBeInTheDocument();
 });
 
-it('denies access when owner membership changes to cashier', () => {
+it('denies access when owner membership changes to cashier', async () => {
   selectRole('OWNER', allPermissions);
   const view = renderWorkspace('/dashboard');
-  expect(screen.getByRole('heading', { name: 'ภาพรวม' })).toBeVisible();
+  expect(await screen.findByRole('heading', { name: 'ภาพรวม' })).toBeVisible();
   selectRole('CASHIER', allPermissions);
   view.rerender(<Harness path="/dashboard" />);
   expect(screen.getByRole('heading', { name: 'Forbidden' })).toBeVisible();
 });
 
-it('renders an owner menu path with query and hash intact', () => {
+it('renders an owner menu path with query and hash intact', async () => {
   selectRole('OWNER', ['catalog.read']);
   renderWorkspace('/menu/item-1?search=abc#details');
   expect(
-    screen.getByRole('heading', { name: 'Product details' }),
+    await screen.findByRole('heading', { name: 'Product details' }),
   ).toBeVisible();
   expect(screen.getByLabelText('Location')).toHaveTextContent(
     '/menu/item-1?search=abc#details',
@@ -311,16 +324,18 @@ it('denies menu paths to a cashier even with catalog permission', () => {
   ).not.toBeInTheDocument();
 });
 
-it('keeps operational permission checks authoritative in management', () => {
+it('keeps operational permission checks authoritative in management', async () => {
   selectRole('OWNER', []);
   renderWorkspace('/menu/item-1');
-  expect(screen.getByRole('heading', { name: 'Forbidden' })).toBeVisible();
+  expect(
+    await screen.findByRole('heading', { name: 'Forbidden' }),
+  ).toBeVisible();
 });
 
-it('filters restaurant dashboard shortcuts by permission without fabricating reports', () => {
+it('filters restaurant dashboard shortcuts by permission without fabricating reports', async () => {
   selectRole('OWNER', ['catalog.read']);
   renderWorkspace('/dashboard');
-  const main = within(screen.getByRole('main'));
+  const main = within(await screen.findByRole('main'));
   expect(main.getByRole('link', { name: 'เมนูอาหาร' })).toBeVisible();
   expect(
     main.queryByRole('link', { name: 'สูตรอาหาร' }),
@@ -351,10 +366,10 @@ it.each(['/dashboard', '/menu/item-1', '/settings'])(
   },
 );
 
-it('allows an owner with POS permission to access POS', () => {
+it('allows an owner with POS permission to access POS', async () => {
   selectRole('OWNER', ['pos.access']);
   renderWorkspace('/pos');
-  expect(screen.getByRole('heading', { name: 'POS' })).toBeVisible();
+  expect(await screen.findByRole('heading', { name: 'POS' })).toBeVisible();
 });
 
 it.each<Role>(['MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'PURCHASING_STAFF'])(

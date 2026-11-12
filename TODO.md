@@ -1,3 +1,37 @@
+# Complete setup before workspace access (2026-11-13)
+
+Scope: finish required configuration inside /setup and deny management pages
+until the server reports completed setup. Large size / High risk (access gating
+and reuse of stock configuration). Preserve server authorization, readiness,
+tenant/branch scope, exact quantities and existing ledger confirmation.
+No migration, live database writes, external services, commit, push or deployment.
+Recovery: revert only this task's source/test delta; no schema/data changes.
+
+- [x] Trace and reproduce incomplete-setup direct-link access (RED/GREEN).
+- [x] Add user/org/branch-scoped fail-closed workspace gate; retain unsaved work
+      during background checks and revalidate cached completion before mounting.
+- [x] Restore menu entry/save and inline stock source, opening stock and storefront
+      configuration. Retain server-issued menu IDs on subsequent edits (RED/GREEN).
+- [x] Focused regressions: 177/177 PASS across 10 files, including stock confirmation,
+      exact quantity payload, save failure and scoped access/cache checks.
+      Evidence: .local/setup-access-regressions-acceptance.json.
+- [x] Mocked browser: 16/16 PASS; Chromium 156.0.8078.4 on Windows at
+      320/768/1440px (viewport emulation, not real devices). Verify inline forms,
+      keyboard focus/recheck, no overflow or nested forms, direct-link denial,
+      failed/uncommitted completion and delayed successful completion.
+      Evidence: .local/setup-access-browser-acceptance.json and matching screenshots.
+- [x] npm run typecheck, npm run build, npm run contracts:check, scoped ESLint
+      (0 errors, 1 Fast Refresh warning), scoped Prettier and git diff --check PASS.
+      npm run test:logs: 10/10 PASS. npm run test:dev-stack: 7/7 PASS after approved
+      rerun outside sandbox; initial run failed on temporary-directory permissions.
+- [?] npm test: 695 PASS / 10 FAIL in SettingsPage, ShopCartPage and StorefrontPage.
+      Failure names match .local/setup-correctness-full-test.log; unrelated fixes
+      remain out of scope. Current evidence: .local/setup-access-root-test-final.log.
+- [?] Independent access/configuration review requires explicit delegation authorization.
+- [?] Live persistence/ledger acceptance requires an authorized isolated disposable target.
+      All browser API writes were intercepted synthetic fixtures; no real database
+      writes, external map/search requests, commit, push or deployment occurred.
+
 # Setup flow correctness (2026-11-12)
 
 Scope: frontend-only alignment of /setup with the existing four-screen flow and

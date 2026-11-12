@@ -1,3 +1,25 @@
+# Four-Step Restaurant Setup and Interactive Location (2026-11-11)
+
+Approved flow: Store and services -> Store location -> Menu and payments -> Review and open.
+Interactive map: pan, zoom, pin selection, explicit confirmation; no custom 3D model.
+Remove branch-management presentation only; retain existing server scope.
+Size: Large. Risk: High (location privacy, scoped persistence and QR retries).
+
+- [x] Inspect setup steps, API DTOs, progress storage and current web dependencies.
+- [x] Authorize external map/search queries and coordinates; no paid subscription.
+- [x] Implement four screens, legacy-step resume mapping and recoverable sequential saves.
+- [/] Add validated location persistence code, additive schema 36 and synchronized API contracts; database acceptance pending.
+- [/] Implement interactive map with immediate open, hidden raw coordinates, automatic location confirmation and GPS/error recovery; search is opt-in configuration only.
+- [x] Run focused web tests (64/64), browser tests (12/12), typecheck, build and contract inventory (18 modules, 115 routes).
+- [x] Run scoped Go restaurant/database unit tests and gateway policy regressions (2/2); no database integration implied.
+- [?] Independent review of privacy, persistence, gateway controls and QR retry changes requires scoped delegation authorization and an available compliant reviewer.
+- [?] Persistence/isolation acceptance requires a confirmed, explicitly authorized task-owned disposable database.
+- [ ] Remove this section after implementation, required checks and review pass.
+
+Current evidence (2026-11-11): Chromium 156.0.8078.4 checked 320/768/1440px map behavior and responsive setup layouts using synthetic APIs/tiles with the production CSP injected. Final 320/1440px screenshots inspected; mobile stepper uses two columns without horizontal overflow. This is not live OSM, real Caddy or database acceptance. Scoped ESLint: zero errors, one react-refresh warning at OrganizationPages.tsx:301. The initial root ESLint invocation could not locate the workspace config; rerunning from apps/web passed with that warning. git diff --check passed. Evidence logs are task-local under .local/setup-*.log.
+
+Recovery: additive schema only; runtime requires migration 36. Migration has NOT been executed. Preserve branch data and historic progress. No primary DB migration, paid subscription, commit, push or deployment is authorized. Keep per-payload idempotency keys and report partial saves; never rotate QR credentials on navigation. Optional VITE_LOCATION_SEARCH_URL has no default provider; cross-origin search needs a separately reviewed CSP allowance. Required independent review and isolated database acceptance remain unmet; do not mark release-ready or remove this section.
+
 # Link Settings Page Header Button to Storefront Website (2026-11-10)
 
 Scope: Update the storefront action button in SettingsPage header (`.settings-heading-actions`)

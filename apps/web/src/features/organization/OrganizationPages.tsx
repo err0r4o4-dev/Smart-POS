@@ -2,6 +2,7 @@ import { useLanguage } from '../../app/language';
 import {
   startTransition,
   useEffect,
+  useId,
   useRef,
   useState,
   type FormEvent,
@@ -11,8 +12,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Banknote,
-  BarChart3,
-  Bell,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -25,9 +24,7 @@ import {
   Info,
   LayoutGrid,
   QrCode,
-  ShoppingBag,
   Store,
-  Utensils,
   WalletCards,
 } from 'lucide-react';
 import { paths } from '../../app/routes';
@@ -47,6 +44,14 @@ import { LanguageSwitcher } from '../../components/ui/LanguageSwitcher';
 import { AccountMenu } from '../../components/ui/AccountMenu';
 import { StandardPageHeader } from '../../components/ui/StandardPage';
 import './setup.css';
+import { SetupLocationPicker } from './SetupLocationPicker';
+import { SetupTablesEditor } from './SetupTablesEditor';
+import {
+  saveSetupSections,
+  seedSavedSetupSection,
+  setupScreenForStep,
+  type SetupSaveCache,
+} from './setup-flow';
 import { SettingsPage } from './SettingsPage';
 import { StorefrontSettingsPage } from './StorefrontSettingsPage';
 import {
@@ -238,8 +243,8 @@ const createSetupForm = (): SetupFormState => ({
     service_modes: { dine_in: true, takeaway: true, delivery: false },
   },
   tables: {
-    zones: [{ name: 'โซนหลัก' }],
-    tables: [{ name: 'โต๊ะ 1', zone: 'โซนหลัก', seats: 0 }],
+    zones: [{ name: 'พื้นที่หลัก' }],
+    tables: [{ name: 'โต๊ะ 1', zone: 'พื้นที่หลัก', seats: 2 }],
     qr_enabled: true,
   },
   menu: {
@@ -256,85 +261,30 @@ const createSetupForm = (): SetupFormState => ({
   },
 });
 
-function DiningTableIcon({
-  size = 24,
-  strokeWidth = 2,
-}: {
-  size?: number;
-  strokeWidth?: number;
-}) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M3.5 6v12" />
-      <path d="M3.5 13h4.5v5" />
-      <path d="M20.5 6v12" />
-      <path d="M20.5 13H16v5" />
-      <path d="M8.5 9.5h7" />
-      <path d="M12 9.5V18" />
-      <path d="M10 18h4" />
-    </svg>
-  );
-}
-
 const setupMeta = [
   {
     key: 'profile',
-    label: 'organization.metaProfile',
+    label: 'organization.metaStoreServices',
     sidebarSubtitle: 'organization.metaProfileSidebar',
     cardSubtitle: 'organization.metaProfileCard',
     description: 'organization.metaProfileCard',
     icon: Store,
   },
   {
-    key: 'services',
-    label: 'organization.metaServices',
-    sidebarSubtitle: 'organization.metaServicesSidebar',
-    cardSubtitle: 'organization.metaServicesSidebar',
-    description: 'organization.metaServicesDescription',
-    icon: Bell,
-  },
-  {
-    key: 'tables',
-    label: 'organization.metaTables',
-    sidebarSubtitle: 'organization.metaTablesSidebar',
-    cardSubtitle: 'organization.metaTablesSidebar',
-    description: 'organization.metaTablesDescription',
-    icon: DiningTableIcon,
-  },
-  {
-    key: 'menu',
-    label: 'organization.metaMenu',
-    sidebarSubtitle: 'organization.metaMenuSidebar',
-    cardSubtitle: 'organization.metaMenuSidebar',
-    description: 'organization.metaMenuDescription',
-    icon: Utensils,
+    key: 'location',
+    label: 'organization.metaLocation',
+    sidebarSubtitle: 'organization.metaLocation',
+    cardSubtitle: 'organization.locationPickHint',
+    description: 'organization.locationPickHint',
+    icon: House,
   },
   {
     key: 'payments',
     label: 'organization.metaPayments',
-    sidebarSubtitle: 'organization.metaPaymentsSidebar',
-    cardSubtitle: 'organization.metaPaymentsSidebar',
-    description: 'organization.metaPaymentsDescription',
+    sidebarSubtitle: 'organization.metaPayments',
+    cardSubtitle: 'organization.setupPaymentLead',
+    description: 'organization.setupPaymentLead',
     icon: CreditCard,
-  },
-  {
-    key: 'orders',
-    label: 'organization.metaOrders',
-    sidebarSubtitle: 'organization.metaOrdersSidebar',
-    cardSubtitle: 'organization.metaOrdersSidebar',
-    description: 'organization.metaOrdersDescription',
-    icon: ShoppingBag,
   },
   {
     key: 'review',
@@ -346,7 +296,7 @@ const setupMeta = [
   },
 ] as const;
 
-type SetupStepIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+type SetupStepIndex = 0 | 1 | 2 | 3;
 
 export function setupKey() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
@@ -502,90 +452,35 @@ function SetupSelect({
   );
 }
 
-function SetupHeroPanel() {
-  const { t } = useLanguage();
-  return (
-    <aside
-      className="setup-hero-card"
-      aria-label={t('organization.setupHeroLabel')}
-    >
-      <div className="setup-hero-header">
-        <div className="setup-hero-title">
-          {t('organization.setupHeroTitle')}
-          <br />
-          <span>{t('organization.setupHeroStart')}</span>
-        </div>
-        <p className="setup-hero-subtitle">
-          {t('organization.setupHeroLine1')}
-          <br />
-          {t('organization.setupHeroLine2')}
-          <br />
-          {t('organization.setupHeroLine3')}
-        </p>
-      </div>
-
-      <div className="setup-hero-visual" aria-hidden="true">
-        <img
-          src="/images/auth-pos-reference.png"
-          alt=""
-          className="setup-hero-img"
-          width={520}
-          height={260}
-        />
-      </div>
-
-      <div className="setup-hero-highlights">
-        <div className="setup-hero-feature">
-          <div className="setup-feature-icon">
-            <Store size={20} strokeWidth={2} aria-hidden="true" />
-          </div>
-          <div className="setup-feature-text">
-            <strong>{t('organization.setupHeroEasy')}</strong>
-            <p>{t('organization.setupHeroMinutes')}</p>
-          </div>
-        </div>
-
-        <div className="setup-hero-feature">
-          <div className="setup-feature-icon">
-            <LayoutGrid size={20} strokeWidth={2} aria-hidden="true" />
-          </div>
-          <div className="setup-feature-text">
-            <strong>{t('organization.setupHeroOrdering')}</strong>
-            <p>{t('organization.setupHeroOrderingDetail')}</p>
-          </div>
-        </div>
-
-        <div className="setup-hero-feature">
-          <div className="setup-feature-icon">
-            <BarChart3 size={20} strokeWidth={2} aria-hidden="true" />
-          </div>
-          <div className="setup-feature-text">
-            <strong>{t('organization.setupHeroReports')}</strong>
-            <p>{t('organization.setupHeroReportsDetail')}</p>
-          </div>
-        </div>
-      </div>
-    </aside>
-  );
-}
-
 function SetupToggle({
   label,
+  description,
   checked,
   onChange,
 }: {
   label: string;
+  description?: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
 }) {
+  const descriptionID = useId();
   return (
     <label className="setup-toggle">
       <input
         type="checkbox"
+        aria-label={label}
+        aria-describedby={description ? descriptionID : undefined}
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
       />
-      <span>{label}</span>
+      <span>
+        {label}
+        {description && (
+          <small className="setup-toggle-description" id={descriptionID}>
+            {description}
+          </small>
+        )}
+      </span>
     </label>
   );
 }
@@ -606,24 +501,13 @@ function localReadiness(
       reason: t('organization.setupProfileIncomplete'),
     });
   if (
-    !form.tables.zones.some((zone) => zone.name.trim()) ||
+    form.services.service_modes.dine_in &&
     !form.tables.tables.some((table) => table.name.trim())
   )
     incomplete.push({
       key: 'tables',
       label: t('organization.metaTables'),
       reason: t('organization.setupTablesIncomplete'),
-    });
-  if (
-    !form.menu.categories.some((category) => category.name.trim()) ||
-    !form.menu.items.some(
-      (item) => item.name.trim() && decimalValid(item.price),
-    )
-  )
-    incomplete.push({
-      key: 'menu',
-      label: t('organization.metaMenu'),
-      reason: t('organization.setupMenuIncomplete'),
     });
   if (!form.payments.cash && !form.payments.bank_transfer)
     incomplete.push({
@@ -656,14 +540,16 @@ function SetupStepFields({
   form,
   update,
   promptPayAvailable,
+  savedTableCount,
 }: {
-  step: SetupStepIndex;
+  step: number;
   form: SetupFormState;
   update: <Key extends keyof SetupFormState>(
     key: Key,
     value: SetupFormState[Key],
   ) => void;
   promptPayAvailable: boolean;
+  savedTableCount: number;
 }) {
   const profile = form.profile;
   const { t } = useLanguage();
@@ -763,11 +649,18 @@ function SetupStepFields({
     );
   if (step === 1)
     return (
-      <fieldset className="setup-choice-group">
+      <fieldset
+        className="setup-choice-group"
+        aria-describedby="setup-services-hint"
+      >
         <legend>{t('organization.setupServiceModes')}</legend>
+        <p id="setup-services-hint" className="setup-hint">
+          {t('organization.setupServicesHint')}
+        </p>
         <div className="setup-choice-grid">
           <SetupToggle
             label={t('organization.setupDineIn')}
+            description={t('organization.setupDineInHint')}
             checked={form.services.service_modes.dine_in}
             onChange={(dine_in) =>
               update('services', {
@@ -777,6 +670,7 @@ function SetupStepFields({
           />
           <SetupToggle
             label={t('organization.setupTakeaway')}
+            description={t('organization.setupTakeawayHint')}
             checked={form.services.service_modes.takeaway}
             onChange={(takeaway) =>
               update('services', {
@@ -786,6 +680,7 @@ function SetupStepFields({
           />
           <SetupToggle
             label={t('organization.setupDelivery')}
+            description={t('organization.setupDeliveryHint')}
             checked={form.services.service_modes.delivery}
             onChange={(delivery) =>
               update('services', {
@@ -799,160 +694,14 @@ function SetupStepFields({
   if (step === 2)
     return (
       <div className="setup-form-section">
-        <div className="setup-form-grid">
-          <SetupInput
-            label={t('organization.setupFirstZone')}
-            value={form.tables.zones[0]?.name ?? ''}
-            required
-            onChange={(name) =>
-              update('tables', {
-                ...form.tables,
-                zones: [
-                  { ...form.tables.zones[0], name },
-                  ...form.tables.zones.slice(1),
-                ],
-                tables: form.tables.tables.map((table) =>
-                  table.zone === form.tables.zones[0]?.name
-                    ? { ...table, zone: name }
-                    : table,
-                ),
-              })
-            }
-          />
-          <SetupInput
-            label={t('organization.setupFirstTable')}
-            value={form.tables.tables[0]?.name ?? ''}
-            required
-            onChange={(name) =>
-              update('tables', {
-                ...form.tables,
-                tables: [
-                  {
-                    ...(form.tables.tables[0] ?? {
-                      zone: form.tables.zones[0]?.name ?? '',
-                      seats: 0,
-                    }),
-                    name,
-                  },
-                  ...form.tables.tables.slice(1),
-                ],
-              })
-            }
-          />
-          <SetupInput
-            label={t('organization.setupFirstSeats')}
-            value={
-              form.tables.tables[0]?.seats
-                ? String(form.tables.tables[0].seats)
-                : ''
-            }
-            required
-            type="number"
-            min="1"
-            step="1"
-            onChange={(seats) =>
-              update('tables', {
-                ...form.tables,
-                tables: [
-                  {
-                    ...(form.tables.tables[0] ?? {
-                      name: '',
-                      zone: form.tables.zones[0]?.name ?? '',
-                    }),
-                    seats: Number(seats),
-                  },
-                  ...form.tables.tables.slice(1),
-                ],
-              })
-            }
-          />
-        </div>
-        <div className="setup-choice-grid">
-          <SetupToggle
-            label={t('organization.setupTableQr')}
-            checked={form.tables.qr_enabled}
-            onChange={(qr_enabled) =>
-              update('tables', { ...form.tables, qr_enabled })
-            }
-          />
-        </div>
-        <p className="setup-hint">{t('organization.setupQrRotationHint')}</p>
+        <SetupTablesEditor
+          value={form.tables}
+          savedTableCount={savedTableCount}
+          onChange={(tables) => update('tables', tables)}
+        />
         <p className="setup-hint">
           <QrCode size={16} aria-hidden="true" />{' '}
           {t('organization.setupAddTablesHint')}
-        </p>
-      </div>
-    );
-  if (step === 3)
-    return (
-      <div className="setup-form-section">
-        <div className="setup-form-grid">
-          <SetupInput
-            label={t('organization.setupFirstCategory')}
-            value={form.menu.categories[0]?.name ?? ''}
-            required
-            onChange={(name) =>
-              update('menu', {
-                ...form.menu,
-                categories: [
-                  { ...form.menu.categories[0], name },
-                  ...form.menu.categories.slice(1),
-                ],
-                items: form.menu.items.map((item) =>
-                  item.category === form.menu.categories[0]?.name
-                    ? { ...item, category: name }
-                    : item,
-                ),
-              })
-            }
-          />
-          <SetupInput
-            label={t('organization.setupFirstItem')}
-            value={form.menu.items[0]?.name ?? ''}
-            required
-            onChange={(name) =>
-              update('menu', {
-                ...form.menu,
-                items: [
-                  {
-                    ...(form.menu.items[0] ?? {
-                      price: '',
-                      category: form.menu.categories[0]?.name ?? '',
-                    }),
-                    name,
-                  },
-                  ...form.menu.items.slice(1),
-                ],
-              })
-            }
-          />
-          <SetupInput
-            label={t('organization.setupFirstPrice')}
-            value={form.menu.items[0]?.price ?? ''}
-            required
-            type="number"
-            min="0"
-            step="0.01"
-            onChange={(price) =>
-              update('menu', {
-                ...form.menu,
-                items: [
-                  {
-                    ...(form.menu.items[0] ?? {
-                      name: '',
-                      category: form.menu.categories[0]?.name ?? '',
-                    }),
-                    price,
-                  },
-                  ...form.menu.items.slice(1),
-                ],
-              })
-            }
-          />
-        </div>
-        <p className="setup-hint">
-          <Utensils size={16} aria-hidden="true" />{' '}
-          {t('organization.setupPriceHint')}
         </p>
       </div>
     );
@@ -1034,58 +783,6 @@ function SetupStepFields({
         </div>
       </div>
     );
-  if (step === 5)
-    return (
-      <div className="setup-form-section">
-        <div className="setup-choice-grid">
-          <SetupToggle
-            label={t('organization.setupQrOrders')}
-            checked={form.orders.qr_ordering}
-            onChange={(qr_ordering) =>
-              update('orders', { ...form.orders, qr_ordering })
-            }
-          />
-          <SetupToggle
-            label={t('organization.setupKitchenQueue')}
-            checked={form.orders.kitchen_queue}
-            onChange={(kitchen_queue) =>
-              update('orders', { ...form.orders, kitchen_queue })
-            }
-          />
-          <SetupToggle
-            label={t('organization.setupAutoConfirm')}
-            checked={form.orders.auto_confirm}
-            onChange={(auto_confirm) =>
-              update('orders', { ...form.orders, auto_confirm })
-            }
-          />
-        </div>
-        <div className="setup-form-grid">
-          <SetupInput
-            label="VAT (%)"
-            value={form.orders.vat_percent}
-            required
-            type="number"
-            min="0"
-            step="0.01"
-            onChange={(vat_percent) =>
-              update('orders', { ...form.orders, vat_percent })
-            }
-          />
-          <SetupInput
-            label={t('organization.setupServiceCharge')}
-            value={form.orders.service_charge_percent}
-            required
-            type="number"
-            min="0"
-            step="0.01"
-            onChange={(service_charge_percent) =>
-              update('orders', { ...form.orders, service_charge_percent })
-            }
-          />
-        </div>
-      </div>
-    );
   return null;
 }
 
@@ -1108,6 +805,7 @@ function ScopedSetupPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [form, setForm] = useState<SetupFormState>(createSetupForm);
+  const [savedTableCount, setSavedTableCount] = useState(0);
   const [step, setStep] = useState<SetupStepIndex>(0);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
@@ -1120,7 +818,7 @@ function ScopedSetupPage() {
     branchID: string;
   } | null>(null);
   const creationRef = useRef({ key: '', payload: '' });
-  const stepRetryRef = useRef({ step: '', payload: '', key: '' });
+  const saveCache = useRef<SetupSaveCache>({});
   const completionRef = useRef({ key: '', orgID: '' });
   const stepHeadingRef = useRef<HTMLHeadingElement>(null);
   const activeRef = useRef(true);
@@ -1151,6 +849,7 @@ function ScopedSetupPage() {
         setHydratedScope('');
         setIsDirty(false);
         setForm(createSetupForm());
+        setSavedTableCount(0);
         setServerState(null);
         setStep(0);
         setError('');
@@ -1168,8 +867,16 @@ function ScopedSetupPage() {
     }
     startTransition(() => setHydratedScope(scope));
     const data = setupQuery.data as SetupState & Partial<SetupFormState>;
+    if (
+      !isDirty &&
+      data.tables &&
+      data.steps.some((section) => section.key === 'tables' && section.complete)
+    ) {
+      seedSavedSetupSection(saveCache.current, 'tables', data.tables);
+    }
     startTransition(() => {
       setServerState(setupQuery.data);
+      setSavedTableCount(data.tables?.tables.length ?? 0);
       if (!isDirty)
         setForm((current) => ({
           ...current,
@@ -1180,10 +887,12 @@ function ScopedSetupPage() {
           ...(data.payments ? { payments: data.payments } : {}),
           ...(data.orders ? { orders: data.orders } : {}),
         }));
-      const resume = setupMeta.findIndex(
-        (item) => item.key === data.current_step,
+      setStep(
+        setupScreenForStep(
+          data.current_step,
+          Boolean(data.profile?.location?.confirmed),
+        ),
       );
-      if (resume >= 0) setStep(resume as SetupStepIndex);
     });
   }, [setupQuery.data, orgID, branchID, hydratedScope, isDirty]);
 
@@ -1237,10 +946,13 @@ function ScopedSetupPage() {
   if (setupQuery.data?.complete) return <Navigate to="/dashboard" replace />;
 
   const localIncomplete = localReadiness(form, t);
-  const readinessItems = serverState?.readiness?.incomplete ?? localIncomplete;
+  const readinessItems = (
+    serverState?.readiness?.incomplete ?? localIncomplete
+  ).filter((item) => item.key !== 'menu');
   const isReady = Boolean(
+    form.profile.location?.confirmed &&
     hydratedScope === `${orgID}:${branchID}` &&
-    serverState?.readiness?.ready &&
+    (serverState?.readiness?.ready || readinessItems.length === 0) &&
     !setupQuery.isError &&
     !isDirty,
   );
@@ -1249,7 +961,24 @@ function ScopedSetupPage() {
     value: SetupFormState[Key],
   ) => {
     setIsDirty(true);
-    setForm((current) => ({ ...current, [key]: value }));
+    setForm((current) => {
+      const next = { ...current, [key]: value };
+      if (
+        key === 'profile' &&
+        next.profile.location &&
+        next.profile.organization.address !== next.profile.location.address
+      ) {
+        next.profile = {
+          ...next.profile,
+          location: {
+            ...next.profile.location,
+            address: next.profile.organization.address,
+            confirmed: false,
+          },
+        };
+      }
+      return next;
+    });
     setError('');
     setRotationUncertain(false);
   };
@@ -1260,30 +989,24 @@ function ScopedSetupPage() {
       if (!organization.business_type.trim())
         return t('organization.setupTypeRequired');
     }
-    if (step === 1 && !Object.values(form.services.service_modes).some(Boolean))
+    if (step === 0 && !Object.values(form.services.service_modes).some(Boolean))
       return t('organization.setupServiceRequired');
     if (
-      step === 2 &&
-      (!form.tables.zones[0]?.name.trim() ||
-        !form.tables.tables[0]?.name.trim() ||
-        !Number.isSafeInteger(form.tables.tables[0]?.seats) ||
-        form.tables.tables[0].seats < 1)
+      step === 0 &&
+      form.services.service_modes.dine_in &&
+      (!form.tables.tables.length ||
+        form.tables.tables.some((table) => !table.name.trim()))
     )
       return t('organization.setupTableRequired');
-    if (
-      step === 3 &&
-      (!form.menu.categories[0]?.name.trim() ||
-        !form.menu.items[0]?.name.trim() ||
-        !decimalValid(form.menu.items[0]?.price ?? ''))
-    )
-      return t('organization.setupMenuRequired');
-    if (step === 4 && !form.payments.cash && !form.payments.bank_transfer)
+    if (step === 2 && !form.payments.cash && !form.payments.bank_transfer)
       return t('organization.setupPaymentRequired');
     if (
-      step === 5 &&
+      step === 2 &&
       localReadiness(form, t).some((item) => item.key === 'orders')
     )
       return t('organization.setupChargesInvalid');
+    if (step === 1 && !form.profile.location?.confirmed)
+      return t('organization.locationPickHint');
     return '';
   };
   const downloadIssuedTokens = () => {
@@ -1319,7 +1042,7 @@ function ScopedSetupPage() {
     event.preventDefault();
     setError('');
     setRotationUncertain(false);
-    if (step === 6) {
+    if (step === 3) {
       if (!isReady) {
         setError(t('organization.setupIncomplete'));
         return;
@@ -1401,54 +1124,98 @@ function ScopedSetupPage() {
         }
         requestContext = nextContext;
       }
-      const stepKey = (
-        ['profile', 'services', 'tables', 'menu', 'payments', 'orders'] as const
-      )[step];
       const cleanOrg = { ...form.profile.organization };
       delete cleanOrg.description;
-      const stepPayload =
-        stepKey === 'profile'
-          ? {
-              ...form.profile,
-              organization: cleanOrg,
-              service_modes: form.services.service_modes,
-            }
-          : form[stepKey];
-      if (stepKey === 'tables') {
-        setIssuedTokens([]);
-        setCopyStatus('');
-      }
-      const encodedStep = JSON.stringify({
-        step: stepKey,
-        payload: stepPayload,
-      });
-      if (
-        stepRetryRef.current.step !== stepKey ||
-        stepRetryRef.current.payload !== encodedStep
-      )
-        stepRetryRef.current = {
-          step: stepKey,
-          payload: encodedStep,
-          key: setupKey(),
-        };
       if (!requestContext) throw new Error(t('organization.setupNoContext'));
-      const result = await saveSetupStep(
-        stepKey,
-        stepPayload,
-        requestContext,
-        state.session.csrf_token,
-        stepRetryRef.current.key,
+      const profilePayload: SetupProfileInput = {
+        organization: cleanOrg,
+        service_modes: form.services.service_modes,
+        ...(form.profile.location?.confirmed
+          ? { location: form.profile.location }
+          : {}),
+      };
+      const sections: Array<{
+        key: Parameters<typeof saveSetupStep>[0];
+        payload: Parameters<typeof saveSetupStep>[1];
+      }> =
+        step === 0
+          ? [
+              { key: 'profile' as const, payload: profilePayload },
+              { key: 'services' as const, payload: form.services },
+              ...(form.services.service_modes.dine_in
+                ? [
+                    {
+                      key: 'tables' as const,
+                      payload: {
+                        ...form.tables,
+                        qr_enabled: form.tables.tables.length > 0,
+                      },
+                    },
+                  ]
+                : [
+                    {
+                      key: 'tables' as const,
+                      payload: { zones: [], tables: [], qr_enabled: false },
+                    },
+                  ]),
+              { key: 'orders' as const, payload: form.orders },
+            ]
+          : step === 1
+            ? [{ key: 'profile' as const, payload: profilePayload }]
+            : [
+                { key: 'payments' as const, payload: form.payments },
+                { key: 'orders' as const, payload: form.orders },
+              ];
+      let safeResult: SetupState | null = null;
+      await saveSetupSections(
+        sections,
+        saveCache.current,
+        setupKey,
+        async (section, key) => {
+          if (!activeRef.current)
+            throw new Error(t('organization.setupNoContext'));
+          if (section.key === 'tables') {
+            setIssuedTokens([]);
+            setCopyStatus('');
+          }
+          let result: SetupState;
+          try {
+            result = await saveSetupStep(
+              section.key,
+              section.payload,
+              requestContext,
+              state.session.csrf_token,
+              key,
+            );
+          } catch (failure) {
+            if (
+              activeRef.current &&
+              section.key === 'tables' &&
+              form.tables.qr_enabled &&
+              form.services.service_modes.dine_in
+            )
+              setRotationUncertain(true);
+            throw failure;
+          }
+          if (!activeRef.current) return;
+          const { issued_table_qr_tokens, ...saved } = result;
+          safeResult = saved;
+          if (section.key === 'tables') {
+            setIssuedTokens(issued_table_qr_tokens ?? []);
+            if (form.services.service_modes.dine_in)
+              setSavedTableCount(form.tables.tables.length);
+            setCopyStatus('');
+          }
+        },
       );
       if (!activeRef.current) return;
-      const { issued_table_qr_tokens, ...safeResult } = result;
-      if (stepKey === 'tables') setIssuedTokens(issued_table_qr_tokens ?? []);
       if (step === 0 && !tenant.context) {
         await tenant.refresh();
         if (!activeRef.current) return;
         tenant.select(requestContext.organizationID, requestContext.branchID);
       }
       setIsDirty(false);
-      setServerState(safeResult);
+      if (safeResult) setServerState(safeResult);
       await queryClient.invalidateQueries({ queryKey: ['restaurant-setup'] });
       if (!activeRef.current) return;
       setStep((current) => (current + 1) as SetupStepIndex);
@@ -1458,7 +1225,6 @@ function ScopedSetupPage() {
           ? failure.message
           : t('organization.setupSaveFailed');
       setError(message);
-      setRotationUncertain(step === 2);
     } finally {
       setPending(false);
     }
@@ -1590,8 +1356,6 @@ function ScopedSetupPage() {
         </aside>
 
         <div className="setup-layout">
-          <SetupHeroPanel />
-
           <section className="setup-main">
             <Card className="setup-card">
               <span className="visually-hidden">
@@ -1646,15 +1410,58 @@ function ScopedSetupPage() {
                     pending || (Boolean(setupContext) && !hydratedScope)
                   }
                 >
-                  {step < 6 ? (
-                    <SetupStepFields
-                      step={step}
-                      form={form}
-                      update={update}
-                      promptPayAvailable={Boolean(
-                        serverState?.capabilities.promptPay,
-                      )}
-                    />
+                  {step < 3 ? (
+                    step === 1 ? (
+                      <SetupLocationPicker
+                        value={form.profile.location}
+                        onChange={(location) =>
+                          update('profile', {
+                            ...form.profile,
+                            location,
+                            organization: {
+                              ...form.profile.organization,
+                              address: location.address,
+                            },
+                          })
+                        }
+                      />
+                    ) : (
+                      <div className="setup-grouped-fields">
+                        {(step === 0
+                          ? [
+                              0,
+                              1,
+                              ...(form.services.service_modes.dine_in
+                                ? [2]
+                                : []),
+                            ]
+                          : [4]
+                        ).map((section) => (
+                          <section key={section}>
+                            {section !== 0 && section !== 1 && (
+                              <h3>
+                                {t(
+                                  section === 1
+                                    ? 'organization.metaServices'
+                                    : section === 2
+                                      ? 'organization.metaTables'
+                                      : 'organization.metaPayments',
+                                )}
+                              </h3>
+                            )}
+                            <SetupStepFields
+                              step={section}
+                              savedTableCount={savedTableCount}
+                              form={form}
+                              update={update}
+                              promptPayAvailable={Boolean(
+                                serverState?.capabilities.promptPay,
+                              )}
+                            />
+                          </section>
+                        ))}
+                      </div>
+                    )
                   ) : (
                     <>
                       <ReadinessReview
@@ -1745,24 +1552,24 @@ function ScopedSetupPage() {
                       aria-label={
                         pending
                           ? t('organization.setupSaving')
-                          : step === 6
+                          : step === 3
                             ? t('organization.setupActivate')
                             : t('organization.setupSaveContinue')
                       }
                       disabled={
                         pending ||
                         (Boolean(setupContext) && setupQuery.isPending) ||
-                        (step === 6 && !isReady)
+                        (step === 3 && !isReady)
                       }
                     >
                       <span>
                         {pending
                           ? t('organization.setupSaving')
-                          : step === 6
+                          : step === 3
                             ? t('organization.setupActivate')
                             : t('organization.setupNext')}
                       </span>
-                      {step === 6 ? (
+                      {step === 3 ? (
                         <CheckCircle2 size={16} aria-hidden="true" />
                       ) : (
                         <ArrowRight size={16} aria-hidden="true" />
@@ -1791,6 +1598,14 @@ function ReadinessReview({
   const { t } = useLanguage();
   const checks = [
     {
+      key: 'location',
+      label: t('organization.metaLocation'),
+      done: Boolean(form.profile.location?.confirmed),
+      detail: form.profile.location
+        ? form.profile.location.address
+        : t('organization.locationPickHint'),
+    },
+    {
       key: 'profile',
       label: t('organization.metaProfile'),
       done: !items.some((item) => item.key === 'profile'),
@@ -1801,13 +1616,7 @@ function ReadinessReview({
       key: 'tables',
       label: t('organization.metaTables'),
       done: !items.some((item) => item.key === 'tables'),
-      detail: `${form.tables.zones[0]?.name || t('organization.setupNoZone')} · ${form.tables.tables[0]?.name || t('organization.setupNoTable')}`,
-    },
-    {
-      key: 'menu',
-      label: t('organization.setupMenuPrice'),
-      done: !items.some((item) => item.key === 'menu'),
-      detail: form.menu.items[0]?.name || t('organization.setupNoMenu'),
+      detail: form.tables.tables[0]?.name || t('organization.setupNoTable'),
     },
     {
       key: 'payments',
@@ -1856,33 +1665,38 @@ function ReadinessReview({
         className="setup-checklist"
         aria-label={t('organization.setupChecklist')}
       >
-        {checks.map((check) => (
-          <div
-            className={`setup-check ${check.done ? 'is-done' : ''}`}
-            key={check.key}
-          >
-            <span>
-              {check.done ? (
-                <Check size={16} aria-hidden="true" />
-              ) : (
-                <CircleAlert size={16} aria-hidden="true" />
-              )}
-            </span>
-            <div>
-              <strong>{check.label}</strong>
-              <small>
+        {checks
+          .filter(
+            (check) =>
+              check.key !== 'tables' || form.services.service_modes.dine_in,
+          )
+          .map((check) => (
+            <div
+              className={`setup-check ${check.done ? 'is-done' : ''}`}
+              key={check.key}
+            >
+              <span>
+                {check.done ? (
+                  <Check size={16} aria-hidden="true" />
+                ) : (
+                  <CircleAlert size={16} aria-hidden="true" />
+                )}
+              </span>
+              <div>
+                <strong>{check.label}</strong>
+                <small>
+                  {check.done
+                    ? check.detail
+                    : items.find((item) => item.key === check.key)?.reason}
+                </small>
+              </div>
+              <Tag tone={check.done ? 'success' : 'amber'}>
                 {check.done
-                  ? check.detail
-                  : items.find((item) => item.key === check.key)?.reason}
-              </small>
+                  ? t('organization.setupReadyTag')
+                  : t('organization.setupNeedsAttention')}
+              </Tag>
             </div>
-            <Tag tone={check.done ? 'success' : 'amber'}>
-              {check.done
-                ? t('organization.setupReadyTag')
-                : t('organization.setupNeedsAttention')}
-            </Tag>
-          </div>
-        ))}
+          ))}
       </div>
       <p className="setup-review-note">
         <LayoutGrid size={16} aria-hidden="true" />{' '}

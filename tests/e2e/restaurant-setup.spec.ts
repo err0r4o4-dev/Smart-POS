@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-for (const width of [320, 1440]) {
+for (const width of [320, 768, 1440]) {
   test(`new restaurant profile and resume at ${width}px with mocked API`, async ({
     page,
     baseURL,
@@ -47,6 +47,7 @@ for (const width of [320, 1440]) {
     let savedFields = fields;
     const creates: unknown[] = [];
     const profiles: unknown[] = [];
+    const tableSaves: unknown[] = [];
     await page.setViewportSize({ width, height: 900 });
     await page.route('**/*', async (route) => {
       const request = route.request();
@@ -87,7 +88,7 @@ for (const width of [320, 1440]) {
         data = {
           organization_id: 'org',
           branch_id: 'branch',
-          current_step: 'services',
+          current_step: 'menu',
           ready: false,
           completed: false,
           steps: [],
@@ -98,15 +99,35 @@ for (const width of [320, 1440]) {
             service_modes: modes,
           },
         };
-      } else if (url.pathname === '/api/v1/organizations/org/restaurant/setup')
+      } else if (
+        request.method() === 'PUT' &&
+        /\/restaurant\/setup\/(services|tables|orders)$/.test(url.pathname)
+      ) {
+        if (url.pathname.endsWith('/tables'))
+          tableSaves.push(request.postDataJSON());
         data = {
           organization_id: 'org',
           branch_id: 'branch',
-          current_step: saved ? 'services' : 'profile',
+          current_step: 'menu',
           ready: false,
           completed: false,
           steps: [],
           readiness: { ready: false, incomplete: [] },
+        };
+      } else if (url.pathname === '/api/v1/organizations/org/restaurant/setup')
+        data = {
+          organization_id: 'org',
+          branch_id: 'branch',
+          current_step: saved ? 'menu' : 'profile',
+          ready: false,
+          completed: false,
+          steps: [],
+          readiness: { ready: false, incomplete: [] },
+          tables: {
+            zones: [{ name: 'โซนหลัก' }],
+            tables: [{ name: 'โต๊ะ 1', zone: 'โซนหลัก', seats: 4 }],
+            qr_enabled: true,
+          },
           profile: {
             organization: { ...organization, ...savedFields },
             branch,
@@ -134,6 +155,44 @@ for (const width of [320, 1440]) {
     await page.getByLabel('อีเมลร้าน').fill(fields.contact_email);
     await page.getByLabel('โทรศัพท์ร้าน').fill(fields.contact_phone);
     await page.getByLabel('ที่อยู่ร้าน').fill(fields.address);
+    await expect(
+      page.getByLabel('จำนวนที่นั่ง 1', { exact: true }),
+    ).toHaveCount(0);
+    await expect(page.getByLabel('โซนของโต๊ะ 1', { exact: true })).toHaveCount(
+      0,
+    );
+    await expect(
+      page.getByLabel('รับออเดอร์ผ่าน QR', { exact: true }),
+    ).toHaveCount(0);
+    await expect(page.getByLabel('ใช้คิวครัว', { exact: true })).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: 'เพิ่มโซน', exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByLabel('เปิดใช้ QR สำหรับโต๊ะ', { exact: true }),
+    ).toHaveCount(0);
+    await page.getByRole('button', { name: 'เพิ่มโต๊ะ', exact: true }).click();
+    await expect(
+      page.getByLabel('ชื่อ/เลขโต๊ะ 2', { exact: true }),
+    ).toBeFocused();
+    await page.getByLabel('ชื่อ/เลขโต๊ะ 2', { exact: true }).fill('A2');
+    await page.getByLabel('ทานที่ร้าน', { exact: true }).uncheck();
+    await expect(
+      page.getByRole('table', { name: 'พื้นที่และโต๊ะ' }),
+    ).toHaveCount(0);
+    await page.getByLabel('ทานที่ร้าน', { exact: true }).check();
+    await expect(
+      page.getByLabel('ชื่อ/เลขโต๊ะ 2', { exact: true }),
+    ).toHaveValue('A2');
+    await page.getByRole('button', { name: 'เพิ่มโต๊ะ', exact: true }).click();
+    await page.getByRole('button', { name: 'ลบโต๊ะ 3', exact: true }).click();
+    await expect(
+      page.getByRole('button', { name: 'เพิ่มโต๊ะ', exact: true }),
+    ).toBeFocused();
+    await page.screenshot({
+      path: testInfo.outputPath(`table-editor-${width}.png`),
+      fullPage: true,
+    });
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
@@ -141,8 +200,17 @@ for (const width of [320, 1440]) {
     ).toBe(true);
     await page.getByRole('button', { name: /บันทึกและถัดไป/ }).click();
     await expect(
-      page.getByRole('heading', { name: 'รูปแบบบริการ' }),
+      page.getByRole('heading', { name: 'ตำแหน่งร้าน', exact: true }),
     ).toBeVisible();
+    expect(tableSaves[0]).toEqual(
+      expect.objectContaining({
+        generate_qr: true,
+        tables: [
+          expect.objectContaining({ name: 'โต๊ะ 1', seats: 2 }),
+          expect.objectContaining({ name: 'A2', seats: 2 }),
+        ],
+      }),
+    );
     expect(creates).toEqual([fields]);
     expect(profiles).toEqual([
       {
@@ -155,7 +223,7 @@ for (const width of [320, 1440]) {
 
     await page.reload();
     await expect(
-      page.getByRole('heading', { name: 'รูปแบบบริการ' }),
+      page.getByRole('heading', { name: 'ตำแหน่งร้าน', exact: true }),
     ).toBeVisible();
     await page.getByRole('button', { name: /ย้อนกลับ/ }).click();
     await expect(page.getByLabel('ชื่อร้าน')).toHaveValue(fields.name);
@@ -168,7 +236,7 @@ for (const width of [320, 1440]) {
     });
     await page.getByRole('button', { name: /บันทึกและถัดไป/ }).click();
     await expect(
-      page.getByRole('heading', { name: 'รูปแบบบริการ' }),
+      page.getByRole('heading', { name: 'ตำแหน่งร้าน', exact: true }),
     ).toBeVisible();
     const updated = { ...fields, name: 'ร้านแก้ไข' };
     expect(creates).toHaveLength(1);
@@ -313,14 +381,19 @@ for (const width of [320, 640, 641, 768, 1024, 1440]) {
       name: 'ความคืบหน้าการตั้งค่า',
     });
     await expect(progress).toHaveClass(/setup-top-stepper/);
-    await expect(progress.getByRole('listitem')).toHaveCount(7);
+    await expect(progress.getByRole('listitem')).toHaveCount(4);
+    expect(
+      await progress.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth,
+      ),
+    ).toBe(true);
     const progressBox = await progress.boundingBox();
     const layoutBox = await page.locator('.setup-layout').boundingBox();
     expect(progressBox?.y ?? 0).toBeLessThan(layoutBox?.y ?? 0);
     if (width <= 768) {
       expect(progressBox?.height).toBeLessThan(300);
     }
-    await progress.getByRole('button', { name: /1 ข้อมูลร้าน/ }).focus();
+    await progress.getByRole('button', { name: /1 ร้านและบริการ/ }).focus();
     await page.keyboard.press('Tab');
     await expect(page.getByLabel('ชื่อร้าน')).toBeFocused();
     await expect(page.getByLabel('ชื่อร้าน')).toHaveCSS(
@@ -365,6 +438,15 @@ test('issued table secrets can be copied and downloaded from the mocked response
     completed: false,
     steps: [],
     readiness: { ready: false, incomplete: [] },
+    profile: {
+      organization: {
+        ...organization,
+        contact_email: '',
+        contact_phone: '',
+        address: '',
+      },
+      service_modes: { dine_in: true, takeaway: true, delivery: false },
+    },
     tables: {
       zones: [{ code: 'Z1', name: 'โซน' }],
       tables: [{ code: 'T1', name: 'โต๊ะ', zone: 'โซน', seats: 4 }],
@@ -421,6 +503,11 @@ test('issued table secrets can be copied and downloaded from the mocked response
           { table_id: 'table-1', code: 'T1', qr_token: 'synthetic-secret' },
         ],
       };
+    else if (
+      route.request().method() === 'PUT' &&
+      /\/restaurant\/setup\/(profile|services|orders)$/.test(url.pathname)
+    )
+      data = setup;
     else
       return route.fulfill({
         status: 404,
@@ -429,11 +516,14 @@ test('issued table secrets can be copied and downloaded from the mocked response
     return route.fulfill({ json: { data } });
   });
   await page.goto('/setup');
-  await expect(page.getByLabel('ชื่อโต๊ะแรก')).toHaveValue('โต๊ะ');
+  await expect(page.getByLabel('ชื่อ/เลขโต๊ะ 1')).toHaveValue('โต๊ะ');
   await page.getByRole('button', { name: /บันทึกและถัดไป/ }).click();
   await expect(page.getByLabel('รหัสลับโต๊ะ')).toHaveValue(/synthetic-secret/);
   await page.getByRole('button', { name: /คัดลอกรหัสลับ/ }).click();
-  await expect(page.getByRole('status')).toHaveText('คัดลอกแล้ว');
+  await expect(page.getByText('คัดลอกแล้ว', { exact: true })).toHaveAttribute(
+    'role',
+    'status',
+  );
   expect(await page.evaluate(() => navigator.clipboard.readText())).toContain(
     'synthetic-secret',
   );

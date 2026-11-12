@@ -1,5 +1,4 @@
 import { useLanguage } from '../../app/language';
-import type { UiMessage } from '../../i18n';
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -85,7 +84,7 @@ function quantityText(value: bigint) {
 }
 
 export function ShopCatalog({ slug }: { slug: string }) {
-  const { t, messageText, localize, language } = useLanguage();
+  const { t, localize, language } = useLanguage();
 
   const cart = useShopCart(slug);
   const favorites = useShopFavorites(slug);
@@ -98,7 +97,6 @@ export function ShopCatalog({ slug }: { slug: string }) {
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
-  const [message, setMessage] = useState<UiMessage>('');
 
   const shop = useQuery({
     queryKey: ['storefront', slug, 'settings'],
@@ -128,7 +126,6 @@ export function ShopCatalog({ slug }: { slug: string }) {
   const changeFilters = (change: Partial<typeof initialFilters>) => {
     setFilters((previous) => ({ ...previous, ...change }));
     setPage(1);
-    setMessage('');
   };
   const clear = () => {
     setFilters(initialFilters);
@@ -250,7 +247,6 @@ export function ShopCatalog({ slug }: { slug: string }) {
               event.preventDefault();
               setSubmitted(search.trim());
               setPage(1);
-              setMessage('');
             }}
           >
             <button
@@ -434,13 +430,6 @@ export function ShopCatalog({ slug }: { slug: string }) {
               {t('storefront.categoryPriceAndSortingFiltersRequireA')}
             </p>
           )}
-          <p
-            role="status"
-            aria-label={t('storefront.addProductResult')}
-            className="catalog-feedback"
-          >
-            {messageText(message)}
-          </p>
           {products.isPending && (
             <Loading>{t('storefront.loadingProducts')}</Loading>
           )}
@@ -474,16 +463,7 @@ export function ShopCatalog({ slug }: { slug: string }) {
                 }
                 isFavorite={favorites.isFavorite(product.variant_id)}
                 onToggleFavorite={() => {
-                  const added = favorites.toggle(product.variant_id);
-                  setMessage(
-                    added
-                      ? language === 'th'
-                        ? `บันทึก "${product.product_name}" ในรายการโปรดแล้ว`
-                        : `Added "${product.product_name}" to favorites`
-                      : language === 'th'
-                        ? `นำ "${product.product_name}" ออกจากรายการโปรดแล้ว`
-                        : `Removed "${product.product_name}" from favorites`,
-                  );
+                  favorites.toggle(product.variant_id);
                 }}
                 disabled={
                   !store.accepting_orders ||
@@ -493,15 +473,7 @@ export function ShopCatalog({ slug }: { slug: string }) {
                     ))
                 }
                 add={(quantity) => {
-                  if (cart.add(product, quantity))
-                    setMessage({
-                      key: 'storefront.addedValue0ToCart',
-                      params: { value0: product.product_name },
-                    });
-                  else
-                    setMessage(
-                      t('storefront.unableToAddProductCheckQuantityAnd'),
-                    );
+                  cart.add(product, quantity);
                 }}
               />
             ))}
@@ -513,7 +485,6 @@ export function ShopCatalog({ slug }: { slug: string }) {
               total={products.data.total}
               change={(next) => {
                 setPage(next);
-                setMessage('');
               }}
             />
           )}

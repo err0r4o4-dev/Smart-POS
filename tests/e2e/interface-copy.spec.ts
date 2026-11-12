@@ -120,7 +120,7 @@ for (const width of [320, 375, 768, 1440]) {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
       'Set up your restaurant',
     );
-    await expect(page.locator('.setup-hero-card')).not.toContainText(
+    await expect(page.locator('.setup-layout')).not.toContainText(
       /[\u0e01-\u0e3a\u0e40-\u0e5b]/,
     );
     await expect

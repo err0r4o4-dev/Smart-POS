@@ -22,6 +22,46 @@ Historical Phase 1B local implementation gate: **COMPLETED (2026-10-09)**. Evide
 
 ## Onboarding and database changes
 
+### Four-screen restaurant setup (2026-11-11, acceptance pending)
+
+The restaurant wizard groups the existing section APIs into four screens:
+store/services/tables/order settings, location, menu/payments/charges, and review.
+Branch-management fields are absent from this wizard; organization and branch
+authorization, existing branch records, and scoped API requests remain in place.
+Unchanged completed tables are not resaved just by advancing the wizard. Partial
+saves retain successful sections and retry the failed payload with its original
+idempotency key. Editing table settings can still rotate QR secrets.
+
+The location screen loads Leaflet and OpenStreetMap tiles only after the user
+opens the map. Map navigation sends tile coordinates and the website origin
+(not its full path) to OpenStreetMap. GPS runs
+only on an explicit button press; denial leaves manual pin/coordinate entry
+available. Address or pin changes require confirmation again. The gateway allows
+only the exact tile image host and same-origin geolocation; camera, microphone,
+script and connection restrictions remain unchanged.
+
+Address search is optional and hidden without `VITE_LOCATION_SEARCH_URL` in the
+web build environment. A configured endpoint receives explicit GET requests with
+`q`, `format=jsonv2`, and `limit=5`, without cookies or referrer. It must return
+an array of `{ display_name, lat, lon }` with coordinate strings. No provider
+subscription or public search endpoint is enabled by default. Cross-origin search
+also requires a separately reviewed gateway `connect-src` allowance; the default
+gateway permits same-origin connections only. The local browser throttle is not
+a shared provider rate limiter.
+
+Migration 36 adds nullable `branches.setup_location` JSONB. The API requires
+schema 36 and validates confirmed coordinates/address before writing through the
+existing setup profile transaction. Changing a profile address without a matching
+confirmed location clears the saved location. New/incomplete setups cannot open
+until location is confirmed; completed legacy setups retain the server exemption.
+Coordinates are not added to public storefront responses.
+
+This migration has not been applied by this task. Database isolation/persistence
+acceptance and independent review remain required. The migration is additive and
+forward-only: keep stored locations during recovery, use a compatible schema-36
+build, and do not drop the column or alter migration bookkeeping to run an older
+binary. See the active task in `TODO.md` for current verification evidence.
+
 `000003_organization.up.sql` is additive/forward-only. It extends organization details/defaults and branch contacts/main-branch flag; adds organization_memberships, branch_memberships, organization_invitations, organization_audit_events and organization_creation_requests; adds composite FKs/indexes/owner constraints and the runtime role. Readiness requires a clean migration version 3.
 
 Organization creation uses one transaction for organization + active Owner + active main branch + THB/default Asia/Bangkok/th-TH configuration + audit + idempotency record. Per-user UUID `Idempotency-Key`, a normalized payload SHA-256 fingerprint and transaction advisory lock prevent duplicate retry creation; reusing the key with different content returns 409. Creation failure leaves no partial organization. Main branches are unique per organization; no branch is hard-deleted, and the final active branch cannot be deactivated.

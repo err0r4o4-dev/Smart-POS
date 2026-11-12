@@ -610,9 +610,7 @@ for (const width of [320, 390, 767, 768, 1023, 1024, 1279, 1280, 1440, 1920]) {
       await expect(header).toBeVisible();
       expect((await header.boundingBox())!.height).toBe(66);
       for (const card of await page
-        .locator(
-          '.card, .setup-card, .setup-hero-card, .settings-card, .login-card',
-        )
+        .locator('.card, .setup-card, .settings-card, .login-card')
         .all()) {
         if (!(await card.isVisible())) continue;
         for (const side of ['top', 'right', 'bottom', 'left']) {

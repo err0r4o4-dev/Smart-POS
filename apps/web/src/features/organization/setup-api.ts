@@ -37,11 +37,20 @@ export interface IssuedTableQRToken {
 }
 
 export interface SetupProfileInput {
+  location?: SetupLocation;
   organization: Pick<
     OrganizationInput,
     'name' | 'business_type' | 'contact_email' | 'contact_phone' | 'address'
   >;
   service_modes: { dine_in: boolean; takeaway: boolean; delivery: boolean };
+}
+
+export interface SetupLocation {
+  latitude: number;
+  longitude: number;
+  address: string;
+  details: string;
+  confirmed: boolean;
 }
 
 interface SetupProfileState extends SetupProfileInput {
@@ -119,6 +128,7 @@ interface BackendSetupStep {
 }
 
 interface BackendSetupState {
+  location?: SetupLocation;
   organization_id: string;
   branch_id: string;
   current_step: string;
@@ -177,7 +187,9 @@ function normalizeState(raw: BackendSetupState): SetupState {
       cardPayments: Boolean(raw.capabilities?.cardPayments),
       promptPay: Boolean(raw.capabilities?.promptPay),
     },
-    profile: raw.profile,
+    profile: raw.profile
+      ? { ...raw.profile, location: raw.location ?? raw.profile.location }
+      : undefined,
     services: raw.services
       ? { service_modes: raw.services }
       : raw.profile?.service_modes
@@ -246,6 +258,7 @@ function toBackendPayload(
       organization,
       ...organization,
       service_modes: input.service_modes,
+      ...(input.location ? { location: input.location } : {}),
     };
   }
   if (step === 'services') {

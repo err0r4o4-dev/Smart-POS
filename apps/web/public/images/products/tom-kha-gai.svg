@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <rect width="200" height="200" rx="28" fill="#fefce8"/>
+  <ellipse cx="100" cy="142" rx="40" ry="8" fill="#e2e8f0"/>
+  <path d="M46 100 C46 155, 154 155, 154 100 Z" fill="#ffffff" stroke="#e5e7eb" stroke-width="3"/>
+  <ellipse cx="100" cy="100" rx="54" ry="20" fill="#fef3c7"/>
+  <ellipse cx="100" cy="100" rx="48" ry="16" fill="#f8fafc"/>
+  <!-- galangal & chili oil dots -->
+  <circle cx="85" cy="98" r="4" fill="#fb923c"/>
+  <circle cx="115" cy="102" r="3.5" fill="#ea580c"/>
+  <circle cx="100" cy="104" r="3" fill="#16a34a"/>
+  <circle cx="92" cy="102" r="5" fill="#fde68a"/>
+  <text x="100" y="32" font-family="system-ui, sans-serif" font-size="13" font-weight="800" fill="#854d0e" text-anchor="middle">ต้มข่าไก่</text>
+</svg>

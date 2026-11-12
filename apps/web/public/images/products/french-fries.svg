@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <rect width="200" height="200" rx="28" fill="#fee2e2"/>
+  <!-- box -->
+  <path d="M70 100 L76 155 L124 155 L130 100 Z" fill="#dc2626" rx="6"/>
+  <circle cx="100" cy="130" r="14" fill="#fbbf24"/>
+  <!-- fries sticks -->
+  <rect x="75" y="65" width="8" height="42" rx="3" fill="#facc15" transform="rotate(-12 79 86)"/>
+  <rect x="88" y="55" width="8" height="52" rx="3" fill="#fde047" transform="rotate(-4 92 81)"/>
+  <rect x="102" y="52" width="8" height="55" rx="3" fill="#facc15" transform="rotate(5 106 79)"/>
+  <rect x="115" y="62" width="8" height="45" rx="3" fill="#fde047" transform="rotate(15 119 84)"/>
+  <text x="100" y="32" font-family="system-ui, sans-serif" font-size="13" font-weight="800" fill="#991b1b" text-anchor="middle">เฟรนช์ฟรายส์</text>
+</svg>

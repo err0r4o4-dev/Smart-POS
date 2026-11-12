@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <rect width="200" height="200" rx="28" fill="#f3f4f6"/>
+  <circle cx="100" cy="108" r="70" fill="#ffffff" stroke="#e5e7eb" stroke-width="3"/>
+  <ellipse cx="100" cy="112" rx="54" ry="46" fill="#fef08a"/>
+  <ellipse cx="100" cy="105" rx="38" ry="28" fill="#78350f"/>
+  <ellipse cx="100" cy="103" rx="32" ry="22" fill="#92400e"/>
+  <!-- fried garlic crumbs -->
+  <circle cx="90" cy="95" r="2.5" fill="#fde047"/>
+  <circle cx="110" cy="98" r="3" fill="#fde047"/>
+  <circle cx="100" cy="115" r="2.5" fill="#fde047"/>
+  <circle cx="85" cy="108" r="2" fill="#fef08a"/>
+  <!-- cucumber slices -->
+  <ellipse cx="62" cy="108" rx="8" ry="14" fill="#86efac" stroke="#22c55e" stroke-width="2" transform="rotate(-20 62 108)"/>
+  <ellipse cx="68" cy="126" rx="8" ry="14" fill="#86efac" stroke="#22c55e" stroke-width="2" transform="rotate(-10 68 126)"/>
+  <text x="100" y="32" font-family="system-ui, sans-serif" font-size="13" font-weight="800" fill="#4b5563" text-anchor="middle">หมูกระเทียม</text>
+</svg>

@@ -11,8 +11,20 @@ Features: Table QR detection, mobile food catalog with category tabs & quick cou
   - Verified: Order confirmation card (green checkmark, order number, table code, amount, 'ติดตามสถานะ ➔'), and 4-step reactive order tracking timeline in OrderDetails.tsx (1. ชำระเงินสำเร็จ ➔ 2. กำลังเตรียมอาหาร ➔ 3. พร้อมเสิร์ฟ ➔ 4. เสิร์ฟแล้ว).
 - [x] Phase 4: Queue Board TV Display (Dual column layout 'กำลังเตรียมอาหาร' vs 'พร้อมรับอาหาร', audio chime, Thai date & clock)
   - Verified: Dual-column responsive queue board in QueueBoard.tsx with cooking pot / shopping bag icons, badge counters, Web Audio API chime on new ready queue, live Thai date & digital clock ticker, fullscreen toggle, and route integration in /restaurant/queue.
+- [x] Sample Restaurant Menu Seeding (26 items across 6 categories, SVGs, tables A01-A03, verified on Storefront API)
+  - Added 24 high quality vector SVG images in apps/web/public/images/products/.
+  - Created reproducible SQL seed script in database/seed-sample-restaurant-menu.sql.
+  - Seeded 26 food/drink items (single dishes, noodles, soups, snacks, drinks, desserts) with units (จาน, ชาม, แก้ว, ถ้วย, ที่), active stock balances, quality stock balances, and published storefront entries.
+  - Configured dining tables (A01, A02, A03) with SHA-256 token hashes for seamless QR ordering.
+  - Verified live endpoint /api/v1/storefronts/velo-cafe/products returns 26 total items across 6 categories.
+
 - [x] Phase 5: POS & Kitchen Workspace Integration (Table QR code generator / printable tent cards, kitchen/POS status transitions)
-  - Verified: Printable Table Tent Stand card modal in StockAndTables.tsx with VELO branding, table code, SVG QR code, and print action (window.print()). Full quality checks pass: 58/58 test suites (423/423 tests), typecheck clean, lint clean (0 errors), build clean.
+  - Verified: Printable Table Tent Stand card modal in StockAndTables.tsx with VELO branding, table code, SVG QR code, and print action (window.print()).
+  - QR Scanner & Network Fixes Verified:
+    * Standard ISO/IEC 18004 pure TypeScript QR code matrix generator in qr-code.tsx (Nayuki algorithm: byte mode UTF-8, proper Reed-Solomon polynomial division, functional module placement, dark module preservation at (size-8, 8), dual format info copies with correct bit-order, version info for V >= 7, and 8-mask penalty evaluation). Verified scannable by camera/Google Lens/iOS.
+    * Table QR host switcher (Localhost vs Wi-Fi LAN IP 192.168.200.31:8088 vs custom domain) with 'คัดลอกลิงก์' (Copy Link) and direct 'เปิดสั่งอาหาร (เครื่องนี้)'.
+    * Persistent deterministic fallback table token resolution so 'ดู / พิมพ์ QR' button is always shown for every table even after page reload.
+    * Full quality checks pass: 58/58 test suites (424/424 tests), typecheck clean, lint clean (0 errors), build clean.
 
 # Owner-only backoffice (2026-11-05)
 

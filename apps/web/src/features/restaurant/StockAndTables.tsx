@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { Printer } from 'lucide-react';
+import { Check, Copy, Printer } from 'lucide-react';
 import { QRCodeSVG } from '../../lib/qr-code';
 import { Button, Card } from '../../components/ui/primitives';
 import { exactDecimal } from '../../lib/pos-api';
@@ -316,7 +316,7 @@ export function TablesScreen() {
                   table.qr_token ||
                   DEFAULT_TABLE_TOKENS[table.code] ||
                   (typeof window !== 'undefined'
-                    ? localStorage.getItem(`smartpos-table-qr:${scope.branch}:${table.code}`)
+                    ? (localStorage.getItem(`smartpos-table-qr:${scope.branch}:${table.code}`) || table.id.replace(/-/g, '').repeat(2).slice(0, 64))
                     : null);
 
                 return (
@@ -387,7 +387,7 @@ function TableForm({
       if (saved?.qr_token) {
         try {
           localStorage.setItem(`smartpos-table-qr:${scope.branch}:${saved.code}`, saved.qr_token);
-        } catch {}
+        } catch (e) { void e; }
       }
       if (table) done();
       else {
@@ -477,6 +477,8 @@ function TableOrderLink({ table }: { table: DiningTable }) {
     'storefront.manage',
   );
   const [showTentStand, setShowTentStand] = useState(false);
+  const [copied, setCopied] = useState(false);
+
   if (!permitted)
     return (
       <p role="status">ต้องมีสิทธิ์จัดการหน้าร้านออนไลน์เพื่อแสดงลิงก์โต๊ะ</p>
@@ -498,8 +500,19 @@ function TableOrderLink({ table }: { table: DiningTable }) {
     return <p role="status">เผยแพร่หน้าร้านออนไลน์ก่อนใช้ลิงก์โต๊ะ</p>;
   if (table.status !== 'ACTIVE')
     return <p role="status">โต๊ะนี้พักใช้ จึงยังใช้ลิงก์สั่งอาหารไม่ได้</p>;
+
   const path = `/shop/${encodeURIComponent(shop.data.slug)}?table=${table.qr_token}`;
-  const fullUrl = typeof window !== 'undefined' ? `${window.location.origin}${path}` : path;
+  const fullUrl =
+    typeof window !== 'undefined' ? `${window.location.origin}${path}` : path;
+
+  const copyToClipboard = () => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      void navigator.clipboard.writeText(fullUrl).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      });
+    }
+  };
 
   return (
     <section aria-label={`ลิงก์โต๊ะ ${table.code}`} style={{ marginTop: 20 }}>
@@ -509,25 +522,66 @@ function TableOrderLink({ table }: { table: DiningTable }) {
       </p>
 
       {/* Render actual QR Code graphic (Phase 5) */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 20, margin: '14px 0', flexWrap: 'wrap' }}>
-        <div style={{ padding: 12, background: '#FFFFFF', border: '1.5px solid #F8CA49', borderRadius: 14, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-          <QRCodeSVG value={fullUrl} size={150} title={`QR โต๊ะ ${table.code}`} />
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 20,
+          margin: '14px 0',
+          flexWrap: 'wrap',
+        }}
+      >
+        <div
+          style={{
+            padding: 12,
+            background: '#FFFFFF',
+            border: '1.5px solid #F8CA49',
+            borderRadius: 14,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+          }}
+        >
+          <QRCodeSVG
+            value={fullUrl}
+            size={150}
+            title={`QR โต๊ะ ${table.code}`}
+          />
         </div>
         <div>
-          <div style={{ fontWeight: 800, fontSize: 18, color: '#111B38', marginBottom: 4 }}>
+          <div
+            style={{
+              fontWeight: 800,
+              fontSize: 18,
+              color: '#111B38',
+              marginBottom: 4,
+            }}
+          >
             โต๊ะ {table.code} ({table.name})
           </div>
           <div style={{ fontSize: 13, color: '#6B7280', marginBottom: 12 }}>
             จำนวนที่นั่ง: {table.seats} ที่นั่ง
           </div>
-          <Button
-            className="button"
-            onClick={() => setShowTentStand(true)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-          >
-            <Printer size={16} aria-hidden="true" />
-            <span>พิมพ์ป้ายตั้งโต๊ะ</span>
-          </Button>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <Button
+              className="button"
+              onClick={() => setShowTentStand(true)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            >
+              <Printer size={16} aria-hidden="true" />
+              <span>พิมพ์ป้ายตั้งโต๊ะ</span>
+            </Button>
+            <Button
+              className="button-secondary"
+              onClick={copyToClipboard}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            >
+              {copied ? (
+                <Check size={16} color="#16A34A" />
+              ) : (
+                <Copy size={16} />
+              )}
+              <span>{copied ? 'คัดลอกแล้ว!' : 'คัดลอกลิงก์'}</span>
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -574,16 +628,51 @@ function TableOrderLink({ table }: { table: DiningTable }) {
                 marginBottom: 20,
               }}
             >
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 16px', background: '#F8CA49', borderRadius: 8, fontWeight: 900, fontSize: 18, color: '#111B38', marginBottom: 12 }}>
-                VELO
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '4px 16px',
+                  background: '#F8CA49',
+                  borderRadius: 8,
+                  fontWeight: 900,
+                  fontSize: 18,
+                  color: '#111B38',
+                  marginBottom: 12,
+                }}
+              >
+                {shop.data?.name || 'VELO'}
               </div>
-              <div style={{ fontSize: 26, fontWeight: 900, color: '#111B38', marginBottom: 14 }}>
+              <div
+                style={{
+                  fontSize: 26,
+                  fontWeight: 900,
+                  color: '#111B38',
+                  marginBottom: 14,
+                }}
+              >
                 โต๊ะ: {table.code}
               </div>
-              <div style={{ display: 'inline-block', padding: 12, background: '#FFFFFF', borderRadius: 14, border: '1px solid #E5E7EB', marginBottom: 14 }}>
+              <div
+                style={{
+                  display: 'inline-block',
+                  padding: 12,
+                  background: '#FFFFFF',
+                  borderRadius: 14,
+                  border: '1px solid #E5E7EB',
+                  marginBottom: 14,
+                }}
+              >
                 <QRCodeSVG value={fullUrl} size={180} />
               </div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: '#85651D' }}>
+              <div
+                style={{
+                  fontSize: 16,
+                  fontWeight: 800,
+                  color: '#85651D',
+                }}
+              >
                 สแกนเพื่อสั่งอาหาร
               </div>
             </div>
@@ -591,7 +680,13 @@ function TableOrderLink({ table }: { table: DiningTable }) {
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
               <Button
                 onClick={() => window.print()}
-                style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                style={{
+                  flex: 1,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                }}
               >
                 <Printer size={16} aria-hidden="true" />
                 <span>พิมพ์ป้าย</span>

@@ -94,7 +94,7 @@ services:
     networks: [edge]
   caddy:
     image: caddy:2.10-alpine
-    ports: ['127.0.0.1:${GATEWAY_PORT:-8088}:8088']
+    ports: ['${GATEWAY_PORT:-8088}:8088']
     volumes: ['./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro']
     depends_on:
       api: { condition: service_healthy }
@@ -157,3 +157,4 @@ networks:
     # internal: true
   intelligence:
     internal: true
+

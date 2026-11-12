@@ -17,7 +17,7 @@ export function SetupLocationPicker({
   const [longitude, setLongitude] = useState(
     value ? String(value.longitude) : '',
   );
-  const [enabled, setEnabled] = useState(false);
+  const enabled = true;
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState(false);
@@ -48,27 +48,26 @@ export function SetupLocationPicker({
   const change = (patch: Partial<SetupLocation>) => {
     selectionVersion.current += 1;
     setError('');
-    onChange({
+    const next = {
       latitude: latitude.trim() ? Number(latitude) : NaN,
       longitude: longitude.trim() ? Number(longitude) : NaN,
       address: '',
       details: '',
       ...value,
       ...patch,
-      confirmed: false,
+    };
+    onChange({
+      ...next,
+      confirmed:
+        Number.isFinite(next.latitude) &&
+        Math.abs(next.latitude) <= 90 &&
+        Number.isFinite(next.longitude) &&
+        Math.abs(next.longitude) <= 180 &&
+        Boolean(next.address.trim()) &&
+        next.address.length <= 1000 &&
+        next.details.length <= 1000,
     });
   };
-  const valid =
-    latitude.trim() !== '' &&
-    longitude.trim() !== '' &&
-    Number.isFinite(Number(latitude)) &&
-    Number.isFinite(Number(longitude)) &&
-    Math.abs(Number(latitude)) <= 90 &&
-    Math.abs(Number(longitude)) <= 180 &&
-    Boolean(value?.address.trim()) &&
-    (value?.address.length ?? 0) <= 1000 &&
-    (value?.details.length ?? 0) <= 1000;
-
   useEffect(() => {
     if (!enabled || !host.current) return;
     let disposed = false;
@@ -262,11 +261,7 @@ export function SetupLocationPicker({
           ))}
         </ul>
       )}
-      {!enabled && (
-        <Button type="button" onClick={() => setEnabled(true)}>
-          {t('organization.locationLoadMap')}
-        </Button>
-      )}
+
       {enabled && (
         <div
           ref={host}
@@ -274,17 +269,7 @@ export function SetupLocationPicker({
           aria-label={t('organization.locationMap')}
         />
       )}
-      {enabled && (
-        <Button
-          type="button"
-          onClick={() => {
-            setEnabled(false);
-            setError('');
-          }}
-        >
-          {t('organization.locationCloseMap')}
-        </Button>
-      )}
+
       <Button
         type="button"
         onClick={() => {
@@ -323,46 +308,6 @@ export function SetupLocationPicker({
       <div className="setup-form-grid">
         <label className="tenant-field setup-field">
           <span className="setup-field-label">
-            {t('organization.locationLatitude')}
-          </span>
-          <input
-            type="number"
-            min="-90"
-            max="90"
-            step="any"
-            value={latitude}
-            onChange={(event) => {
-              setLatitude(event.target.value);
-              change({
-                latitude: event.target.value.trim()
-                  ? Number(event.target.value)
-                  : NaN,
-              });
-            }}
-          />
-        </label>
-        <label className="tenant-field setup-field">
-          <span className="setup-field-label">
-            {t('organization.locationLongitude')}
-          </span>
-          <input
-            type="number"
-            min="-180"
-            max="180"
-            step="any"
-            value={longitude}
-            onChange={(event) => {
-              setLongitude(event.target.value);
-              change({
-                longitude: event.target.value.trim()
-                  ? Number(event.target.value)
-                  : NaN,
-              });
-            }}
-          />
-        </label>
-        <label className="tenant-field setup-field">
-          <span className="setup-field-label">
             {t('organization.setupStoreAddress')}
           </span>
           <input
@@ -388,20 +333,7 @@ export function SetupLocationPicker({
           ? t('organization.locationConfirmed')
           : t('organization.locationPickHint')}
       </p>
-      <Button
-        type="button"
-        disabled={!valid}
-        onClick={() =>
-          onChange({
-            ...value!,
-            latitude: Number(latitude),
-            longitude: Number(longitude),
-            confirmed: true,
-          })
-        }
-      >
-        {t('organization.locationConfirm')}
-      </Button>
+
     </section>
   );
 }

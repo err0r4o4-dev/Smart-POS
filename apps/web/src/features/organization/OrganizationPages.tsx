@@ -1697,7 +1697,7 @@ function ReadinessReview({
       label: t('organization.metaLocation'),
       done: Boolean(form.profile.location?.confirmed),
       detail: form.profile.location
-        ? `${form.profile.location.address} · ${form.profile.location.latitude}, ${form.profile.location.longitude}`
+        ? form.profile.location.address
         : t('organization.locationPickHint'),
     },
     {

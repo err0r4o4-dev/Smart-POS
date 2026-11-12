@@ -602,7 +602,7 @@ it('does not rotate existing completed tables when advancing without table edits
     expect(screen.getByLabelText('ชื่อ/เลขโต๊ะ 1')).toHaveValue('โต๊ะ'),
   );
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  await screen.findByLabelText('ละติจูด');
+  await screen.findByLabelText('แผนที่เลือกตำแหน่งร้าน');
   expect(
     mocks.request.mock.calls.filter(
       ([path, options]) =>
@@ -614,7 +614,7 @@ it('does not rotate existing completed tables when advancing without table edits
     target: { value: 'โต๊ะใหม่' },
   });
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  await screen.findByLabelText('ละติจูด');
+  await screen.findByLabelText('แผนที่เลือกตำแหน่งร้าน');
   expect(
     mocks.request.mock.calls.filter(
       ([path, options]) =>
@@ -636,7 +636,7 @@ it('requires reconfirmation after editing the address on the grouped store scree
     target: { value: 'New entrance' },
   });
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  await screen.findByLabelText('ละติจูด');
+  await screen.findByLabelText('แผนที่เลือกตำแหน่งร้าน');
   expect(screen.getByRole('status')).not.toHaveTextContent('ยืนยันตำแหน่งแล้ว');
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
   expect(screen.getByRole('alert')).not.toBeEmptyDOMElement();
@@ -654,13 +654,11 @@ it('routes legacy review without location to location confirmation', async () =>
     location: undefined,
   });
   renderSetup();
-  await screen.findByLabelText('ละติจูด');
+  await screen.findByLabelText('แผนที่เลือกตำแหน่งร้าน');
   expect(
     screen.queryByRole('button', { name: /เปิดใช้งานร้าน/ }),
   ).not.toBeInTheDocument();
-  expect(
-    screen.getByRole('button', { name: 'ยืนยันตำแหน่งร้าน' }),
-  ).toBeDisabled();
+  expect(screen.queryByRole('button', { name: 'ยืนยันตำแหน่งร้าน' })).not.toBeInTheDocument();
 });
 
 it.each(['user', 'organization', 'branch'])(
@@ -1005,7 +1003,7 @@ it('saves current service modes when returning to the profile', async () => {
   );
   fireEvent.click(screen.getByLabelText('เดลิเวอรี'));
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  await screen.findByLabelText('ละติจูด');
+  await screen.findByLabelText('แผนที่เลือกตำแหน่งร้าน');
   fireEvent.click(screen.getByRole('button', { name: /ย้อนกลับ/ }));
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
   await waitFor(() =>
@@ -1259,16 +1257,9 @@ async function completeProfile() {
 }
 
 async function completeServicesAndTables() {
-  fireEvent.change(screen.getByLabelText('ละติจูด'), {
-    target: { value: '13.75' },
-  });
-  fireEvent.change(screen.getByLabelText('ลองจิจูด'), {
-    target: { value: '100.5' },
-  });
   fireEvent.change(screen.getByLabelText('ที่อยู่ร้าน'), {
     target: { value: 'Bangkok' },
   });
-  fireEvent.click(screen.getByRole('button', { name: 'ยืนยันตำแหน่งร้าน' }));
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
   await screen.findByText('ขั้นตอนที่ 3 จาก 4');
 }
@@ -1334,7 +1325,7 @@ it('supports forward and backward navigation while preserving values', async () 
   renderSetup();
   await completeProfile();
 
-  expect(screen.getByLabelText('ละติจูด')).toHaveValue(13.75);
+  expect(screen.getByLabelText('แผนที่เลือกตำแหน่งร้าน')).toBeVisible();
   const progress = screen.getByRole('complementary', {
     name: 'ความคืบหน้าการตั้งค่า',
   });
@@ -1344,7 +1335,7 @@ it('supports forward and backward navigation while preserving values', async () 
   fireEvent.click(screen.getByRole('button', { name: /ย้อนกลับ/ }));
   expect(screen.getByLabelText('ชื่อร้าน')).toHaveValue('ร้านตัวอย่าง');
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  await screen.findByLabelText('ละติจูด');
+  await screen.findByLabelText('แผนที่เลือกตำแหน่งร้าน');
   fireEvent.click(
     within(progress).getByRole('button', { name: /ร้านและบริการ/ }),
   );
@@ -1399,7 +1390,7 @@ it('disables editing and navigation while saving a step', async () => {
   await act(async () => {
     finishSave({ ...setupState });
   });
-  expect(await screen.findByLabelText('ละติจูด')).toBeEnabled();
+  expect(await screen.findByLabelText('แผนที่เลือกตำแหน่งร้าน')).toBeEnabled();
 });
 
 it('shows card payments as unavailable instead of allowing false completion', async () => {

@@ -38,7 +38,7 @@ it('searches only on request and rejects empty provider coordinates', async () =
   expect(
     screen.queryByRole('button', { name: 'Invalid empty coordinates' }),
   ).not.toBeInTheDocument();
-  expect(screen.getByLabelText('Latitude')).toHaveValue(13.75);
+  expect(screen.queryByLabelText('Latitude')).not.toBeInTheDocument();
   expect(screen.getByLabelText('Store address')).toHaveValue(
     'Restaurant entrance',
   );
@@ -52,9 +52,7 @@ it('searches only on request and rejects empty provider coordinates', async () =
   expect((fetcher.mock.calls[0][0] as URL).searchParams.get('q')).toBe(
     'Restaurant',
   );
-  expect(screen.getByRole('status')).not.toHaveTextContent(
-    'Location confirmed',
-  );
+  expect(screen.getByRole('status')).toHaveTextContent('Location confirmed');
 });
 
 it('ignores search results after the query changes', async () => {
@@ -85,66 +83,26 @@ it('ignores search results after the query changes', async () => {
   expect(
     screen.queryByRole('button', { name: 'Old result' }),
   ).not.toBeInTheDocument();
-  expect(screen.getByLabelText('Latitude')).toHaveValue(null);
+  expect(screen.queryByLabelText('Latitude')).not.toBeInTheDocument();
 });
 
-it('ignores a late GPS result after manual location edits', () => {
-  let reportPosition: PositionCallback | undefined;
-  vi.stubGlobal('navigator', {
-    geolocation: {
-      getCurrentPosition: (success: PositionCallback) => {
-        reportPosition = success;
-      },
-    },
-  });
+it('opens the map and hides raw coordinates', () => {
   renderInEnglish(<Picker />);
-  fireEvent.click(screen.getByRole('button', { name: 'Use current location' }));
-  fireEvent.change(screen.getByLabelText('Latitude'), {
-    target: { value: '14' },
-  });
-  act(() =>
-    reportPosition?.({
-      coords: { latitude: 15, longitude: 101 },
-    } as GeolocationPosition),
-  );
-  expect(screen.getByLabelText('Latitude')).toHaveValue(14);
+  expect(screen.getByLabelText('Store location map')).toBeVisible();
+  expect(screen.queryByLabelText('Latitude')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Longitude')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Confirm store location' })).not.toBeInTheDocument();
 });
 
-it('requires a real coordinate pair and address before confirming', () => {
+it('confirms a searched location automatically', async () => {
+  vi.stubEnv('VITE_LOCATION_SEARCH_URL', 'https://search.example.test/search');
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => [{ display_name: 'Store entrance', lat: '13.75', lon: '100.5' }],
+  }));
   renderInEnglish(<Picker />);
-  expect(
-    screen.getByRole('button', { name: 'Confirm store location' }),
-  ).toBeDisabled();
-  fireEvent.change(screen.getByLabelText('Latitude'), {
-    target: { value: '13.75' },
-  });
-  fireEvent.change(screen.getByLabelText('Longitude'), {
-    target: { value: '100.5' },
-  });
-  fireEvent.change(screen.getByLabelText('Store address'), {
-    target: { value: 'Store entrance' },
-  });
-  fireEvent.click(
-    screen.getByRole('button', { name: 'Confirm store location' }),
-  );
+  fireEvent.change(screen.getByLabelText('Search place or address'), { target: { value: 'Store' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Search location' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Store entrance' }));
   expect(screen.getByRole('status')).toHaveTextContent('Location confirmed');
-  fireEvent.change(screen.getByLabelText('Latitude'), {
-    target: { value: '14' },
-  });
-  expect(screen.getByRole('status')).not.toHaveTextContent(
-    'Location confirmed',
-  );
-});
-
-it('does not turn a missing coordinate into zero', () => {
-  renderInEnglish(<Picker />);
-  fireEvent.change(screen.getByLabelText('Latitude'), {
-    target: { value: '0' },
-  });
-  fireEvent.change(screen.getByLabelText('Store address'), {
-    target: { value: 'Store entrance' },
-  });
-  expect(
-    screen.getByRole('button', { name: 'Confirm store location' }),
-  ).toBeDisabled();
 });

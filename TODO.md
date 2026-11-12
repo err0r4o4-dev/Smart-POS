@@ -9,7 +9,7 @@ Size: Large. Risk: High (location privacy, scoped persistence and QR retries).
 - [x] Authorize external map/search queries and coordinates; no paid subscription.
 - [x] Implement four screens, legacy-step resume mapping and recoverable sequential saves.
 - [/] Add validated location persistence code, additive schema 36 and synchronized API contracts; database acceptance pending.
-- [x] Implement interactive map, explicit confirmation, manual coordinates and GPS/error recovery; search is opt-in configuration only.
+- [/] Implement interactive map with immediate open, hidden raw coordinates, automatic location confirmation and GPS/error recovery; search is opt-in configuration only.
 - [x] Run focused web tests (64/64), browser tests (12/12), typecheck, build and contract inventory (18 modules, 115 routes).
 - [x] Run scoped Go restaurant/database unit tests and gateway policy regressions (2/2); no database integration implied.
 - [?] Independent review of privacy, persistence, gateway controls and QR retry changes requires scoped delegation authorization and an available compliant reviewer.

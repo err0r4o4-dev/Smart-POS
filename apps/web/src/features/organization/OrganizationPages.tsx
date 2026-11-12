@@ -25,7 +25,6 @@ import {
   LayoutGrid,
   QrCode,
   Store,
-  Utensils,
   WalletCards,
 } from 'lucide-react';
 import { paths } from '../../app/routes';
@@ -280,12 +279,12 @@ const setupMeta = [
     icon: House,
   },
   {
-    key: 'menu',
-    label: 'organization.metaMenuPayments',
-    sidebarSubtitle: 'organization.metaMenuSidebar',
-    cardSubtitle: 'organization.metaMenuSidebar',
-    description: 'organization.metaMenuDescription',
-    icon: Utensils,
+    key: 'payments',
+    label: 'organization.metaPayments',
+    sidebarSubtitle: 'organization.metaPayments',
+    cardSubtitle: 'organization.setupPaymentLead',
+    description: 'organization.setupPaymentLead',
+    icon: CreditCard,
   },
   {
     key: 'review',
@@ -510,17 +509,6 @@ function localReadiness(
       label: t('organization.metaTables'),
       reason: t('organization.setupTablesIncomplete'),
     });
-  if (
-    !form.menu.categories.some((category) => category.name.trim()) ||
-    !form.menu.items.some(
-      (item) => item.name.trim() && decimalValid(item.price),
-    )
-  )
-    incomplete.push({
-      key: 'menu',
-      label: t('organization.metaMenu'),
-      reason: t('organization.setupMenuIncomplete'),
-    });
   if (!form.payments.cash && !form.payments.bank_transfer)
     incomplete.push({
       key: 'payments',
@@ -714,79 +702,6 @@ function SetupStepFields({
         <p className="setup-hint">
           <QrCode size={16} aria-hidden="true" />{' '}
           {t('organization.setupAddTablesHint')}
-        </p>
-      </div>
-    );
-  if (step === 3)
-    return (
-      <div className="setup-form-section">
-        <div className="setup-form-grid">
-          <SetupInput
-            label={t('organization.setupFirstCategory')}
-            value={form.menu.categories[0]?.name ?? ''}
-            required
-            onChange={(name) =>
-              update('menu', {
-                ...form.menu,
-                categories: [
-                  { ...form.menu.categories[0], name },
-                  ...form.menu.categories.slice(1),
-                ],
-                items: form.menu.items.map((item) =>
-                  item.category === form.menu.categories[0]?.name
-                    ? { ...item, category: name }
-                    : item,
-                ),
-              })
-            }
-          />
-          <SetupInput
-            label={t('organization.setupFirstItem')}
-            value={form.menu.items[0]?.name ?? ''}
-            required
-            onChange={(name) =>
-              update('menu', {
-                ...form.menu,
-                items: [
-                  {
-                    ...(form.menu.items[0] ?? {
-                      price: '',
-                      category: form.menu.categories[0]?.name ?? '',
-                    }),
-                    name,
-                  },
-                  ...form.menu.items.slice(1),
-                ],
-              })
-            }
-          />
-          <SetupInput
-            label={t('organization.setupFirstPrice')}
-            value={form.menu.items[0]?.price ?? ''}
-            required
-            type="number"
-            min="0"
-            step="0.01"
-            onChange={(price) =>
-              update('menu', {
-                ...form.menu,
-                items: [
-                  {
-                    ...(form.menu.items[0] ?? {
-                      name: '',
-                      category: form.menu.categories[0]?.name ?? '',
-                    }),
-                    price,
-                  },
-                  ...form.menu.items.slice(1),
-                ],
-              })
-            }
-          />
-        </div>
-        <p className="setup-hint">
-          <Utensils size={16} aria-hidden="true" />{' '}
-          {t('organization.setupPriceHint')}
         </p>
       </div>
     );
@@ -1031,11 +946,13 @@ function ScopedSetupPage() {
   if (setupQuery.data?.complete) return <Navigate to="/dashboard" replace />;
 
   const localIncomplete = localReadiness(form, t);
-  const readinessItems = serverState?.readiness?.incomplete ?? localIncomplete;
+  const readinessItems = (
+    serverState?.readiness?.incomplete ?? localIncomplete
+  ).filter((item) => item.key !== 'menu');
   const isReady = Boolean(
     form.profile.location?.confirmed &&
     hydratedScope === `${orgID}:${branchID}` &&
-    serverState?.readiness?.ready &&
+    (serverState?.readiness?.ready || readinessItems.length === 0) &&
     !setupQuery.isError &&
     !isDirty,
   );
@@ -1081,13 +998,6 @@ function ScopedSetupPage() {
         form.tables.tables.some((table) => !table.name.trim()))
     )
       return t('organization.setupTableRequired');
-    if (
-      step === 2 &&
-      (!form.menu.categories[0]?.name.trim() ||
-        !form.menu.items[0]?.name.trim() ||
-        !decimalValid(form.menu.items[0]?.price ?? ''))
-    )
-      return t('organization.setupMenuRequired');
     if (step === 2 && !form.payments.cash && !form.payments.bank_transfer)
       return t('organization.setupPaymentRequired');
     if (
@@ -1253,7 +1163,6 @@ function ScopedSetupPage() {
           : step === 1
             ? [{ key: 'profile' as const, payload: profilePayload }]
             : [
-                { key: 'menu' as const, payload: form.menu },
                 { key: 'payments' as const, payload: form.payments },
                 { key: 'orders' as const, payload: form.orders },
               ];
@@ -1526,7 +1435,7 @@ function ScopedSetupPage() {
                                 ? [2]
                                 : []),
                             ]
-                          : [3, 4]
+                          : [4]
                         ).map((section) => (
                           <section key={section}>
                             {section !== 0 && section !== 1 && (
@@ -1536,11 +1445,7 @@ function ScopedSetupPage() {
                                     ? 'organization.metaServices'
                                     : section === 2
                                       ? 'organization.metaTables'
-                                      : section === 3
-                                        ? 'organization.metaMenu'
-                                        : section === 4
-                                          ? 'organization.metaPayments'
-                                          : 'organization.metaOrders',
+                                      : 'organization.metaPayments',
                                 )}
                               </h3>
                             )}
@@ -1712,12 +1617,6 @@ function ReadinessReview({
       label: t('organization.metaTables'),
       done: !items.some((item) => item.key === 'tables'),
       detail: form.tables.tables[0]?.name || t('organization.setupNoTable'),
-    },
-    {
-      key: 'menu',
-      label: t('organization.setupMenuPrice'),
-      done: !items.some((item) => item.key === 'menu'),
-      detail: form.menu.items[0]?.name || t('organization.setupNoMenu'),
     },
     {
       key: 'payments',

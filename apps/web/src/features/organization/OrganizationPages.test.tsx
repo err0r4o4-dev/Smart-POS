@@ -1139,7 +1139,7 @@ it('saves the profile before a refreshed organization selection remounts the wiz
   );
 });
 
-it('preserves other menu categories and items while editing the first', async () => {
+it('does not render menu fields during setup', async () => {
   mocks.context = {
     organization: { id: 'org-1' },
     membership: { role: 'OWNER' },
@@ -1147,6 +1147,7 @@ it('preserves other menu categories and items while editing the first', async ()
   mocks.request.mockResolvedValue({
     ...setupState,
     current_step: 'menu',
+    profile: { ...setupState.profile, location: setupState.location },
     menu: {
       categories: [{ name: 'อาหาร' }, { name: 'เครื่องดื่ม' }],
       items: [
@@ -1156,27 +1157,12 @@ it('preserves other menu categories and items while editing the first', async ()
     },
   });
   renderSetup();
-  fireEvent.change(await screen.findByLabelText('หมวดหมู่เมนูแรก'), {
-    target: { value: 'จานหลัก' },
-  });
-  fireEvent.change(screen.getByLabelText('ชื่อเมนูแรก'), {
-    target: { value: 'ข้าวผัด' },
-  });
-  fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  await waitFor(() =>
-    expect(mocks.request).toHaveBeenCalledWith(
-      '/organizations/org-1/restaurant/setup/menu',
-      expect.objectContaining({
-        body: expect.objectContaining({
-          categories: [{ name: 'จานหลัก' }, { name: 'เครื่องดื่ม' }],
-          items: [
-            { name: 'ข้าวผัด', price: '45', category: 'จานหลัก' },
-            { name: 'ชา', price: '30', category: 'เครื่องดื่ม' },
-          ],
-        }),
-      }),
-    ),
-  );
+  expect(screen.queryByLabelText('หมวดหมู่เมนูแรก')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('ชื่อเมนูแรก')).not.toBeInTheDocument();
+  expect(screen.queryByText('เมนูและรับเงิน')).not.toBeInTheDocument();
+  expect(
+    mocks.request.mock.calls.some(([path]) => path.endsWith('/menu')),
+  ).toBe(false);
 });
 
 it('preserves server table and zone codes on save', async () => {
@@ -1292,7 +1278,7 @@ it('renders four accessible steps and keeps the first step blocked by validation
   const names = [
     'ร้านและบริการ',
     'ตำแหน่งร้าน',
-    'เมนูและรับเงิน',
+    'การชำระเงิน',
     'ตรวจสอบความพร้อม',
   ];
   steps.forEach((item, index) => {
@@ -1401,12 +1387,6 @@ it('shows card payments as unavailable instead of allowing false completion', as
   renderSetup();
   await completeProfile();
   await completeServicesAndTables();
-  fireEvent.change(screen.getByLabelText('ชื่อเมนูแรก'), {
-    target: { value: 'ผัดไทย' },
-  });
-  fireEvent.change(screen.getByLabelText('ราคาเมนูแรก (บาท)'), {
-    target: { value: '80' },
-  });
   const card = screen.getByLabelText(/บัตรเครดิต/);
   expect(card).toBeDisabled();
   expect(screen.getByText(/รอเชื่อมต่อผู้ให้บริการ/)).toBeInTheDocument();
@@ -1434,7 +1414,7 @@ it('recovers from initial setup loading errors with retry before editing', async
   await waitFor(() => expect(screen.getByLabelText('ชื่อร้าน')).toBeEnabled());
 });
 
-it('resumes the server step with saved configuration', async () => {
+it('resumes the payments step without rendering menu configuration', async () => {
   mocks.context = {
     organization: { id: 'org-1' },
     membership: { role: 'OWNER' },
@@ -1442,15 +1422,13 @@ it('resumes the server step with saved configuration', async () => {
   mocks.request.mockResolvedValue({
     ...setupState,
     current_step: 'menu',
-    menu: {
-      categories: [{ name: 'อาหาร' }],
-      items: [{ name: 'ข้าว', price: '45.50', category: 'อาหาร' }],
-    },
+    profile: { ...setupState.profile, location: setupState.location },
+    payments: { cash: true, bank_transfer: true, promptpay: false, card: false },
   });
   renderSetup();
-  expect(await screen.findByLabelText('ชื่อเมนูแรก')).toHaveValue('ข้าว');
-  expect(screen.getByLabelText('ราคาเมนูแรก (บาท)')).toHaveValue(45.5);
-  expect(screen.getByText('ขั้นตอนที่ 3 จาก 4')).toBeInTheDocument();
+  expect(screen.queryByLabelText('ชื่อเมนูแรก')).not.toBeInTheDocument();
+  expect(screen.getByRole('complementary', { name: 'ความคืบหน้าการตั้งค่า' }))
+    .toHaveTextContent('การชำระเงิน');
 });
 
 it('never enables activation when server readiness is false', async () => {
@@ -1493,7 +1471,7 @@ it('resumes service modes from the flat backend response', async () => {
   expect(screen.getByLabelText('เดลิเวอรี')).toBeChecked();
 });
 
-it('rejects prices with more than two decimal places', async () => {
+it('does not validate or save menu prices during setup', async () => {
   mocks.context = {
     organization: { id: 'org-1' },
     membership: { role: 'OWNER' },
@@ -1507,12 +1485,14 @@ it('rejects prices with more than two decimal places', async () => {
     },
   });
   renderSetup();
-  await screen.findByLabelText('ชื่อเมนูแรก');
+  expect(screen.queryByLabelText('ชื่อเมนูแรก')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  expect(screen.getByRole('alert')).toHaveTextContent('ราคาที่ถูกต้อง');
-  expect(
-    mocks.request.mock.calls.filter(([path]) => path.endsWith('/menu')),
-  ).toHaveLength(0);
+  await waitFor(() =>
+    expect(
+      mocks.request.mock.calls.some(([path]) => path.endsWith('/menu')),
+    ).toBe(false),
+  );
+  expect(screen.queryByText('ราคาที่ถูกต้อง')).not.toBeInTheDocument();
 });
 
 it('shows the exact server readiness reason and keeps activation disabled', async () => {
@@ -1538,21 +1518,15 @@ it('shows the exact server readiness reason and keeps activation disabled', asyn
   renderSetup();
   await completeProfile();
   await completeServicesAndTables();
-  fireEvent.change(screen.getByLabelText('ชื่อเมนูแรก'), {
-    target: { value: 'ผัดไทย' },
-  });
-  fireEvent.change(screen.getByLabelText('ราคาเมนูแรก (บาท)'), {
-    target: { value: '80' },
-  });
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
   await screen.findByText('ขั้นตอนที่ 4 จาก 4');
   await screen.findByRole('button', { name: /เปิดใช้งานร้าน/ });
 
-  expect(screen.getByText('ยังตั้งค่าไม่ครบ')).toBeInTheDocument();
+  expect(screen.getByText('ร้านพร้อมเปิดใช้งาน')).toBeInTheDocument();
   expect(
-    screen.getByText('ต้องมีเมนูที่เปิดขายอย่างน้อยหนึ่งรายการ'),
-  ).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /เปิดใช้งานร้าน/ })).toBeDisabled();
+    screen.queryByText('ต้องมีเมนูที่เปิดขายอย่างน้อยหนึ่งรายการ'),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /เปิดใช้งานร้าน/ })).toBeEnabled();
 });
 
 it('completes readiness review once and routes to the existing dashboard', async () => {
@@ -1568,12 +1542,6 @@ it('completes readiness review once and routes to the existing dashboard', async
   renderSetup();
   await completeProfile();
   await completeServicesAndTables();
-  fireEvent.change(screen.getByLabelText('ชื่อเมนูแรก'), {
-    target: { value: 'ผัดไทย' },
-  });
-  fireEvent.change(screen.getByLabelText('ราคาเมนูแรก (บาท)'), {
-    target: { value: '80' },
-  });
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
   await screen.findByText('ขั้นตอนที่ 4 จาก 4');
   await screen.findByRole('button', { name: /เปิดใช้งานร้าน/ });

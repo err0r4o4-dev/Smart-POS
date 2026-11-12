@@ -374,7 +374,7 @@ function SettingsForm({
   terminals: POSTerminal[];
   command: Command;
 }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const [form, setForm] = useState<SettingsInput>(() => ({
     slug: initial?.slug ?? '',
@@ -554,7 +554,20 @@ function SettingsForm({
         </p>
         {!terminals.length && (
           <p role="status">
-            {t('storefront.noActiveTerminalsInThisBranchConfigure')}
+            {t('storefront.noActiveTerminalsInThisBranchConfigure')}{' '}
+            <Link
+              to="/pos/register/open"
+              style={{
+                color: '#D97706',
+                fontWeight: 600,
+                textDecoration: 'underline',
+                marginLeft: 8,
+              }}
+            >
+              {language === 'th'
+                ? 'คลิกที่นี่เพื่อไปตั้งค่าเครื่องขาย (POS) ➔'
+                : 'Configure POS Terminal ➔'}
+            </Link>
           </p>
         )}
         <Button type="submit" disabled={command.isPending || !terminals.length}>

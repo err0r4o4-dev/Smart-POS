@@ -12,6 +12,8 @@ import {
 } from './restaurant-hooks';
 import { TablesScreen } from './StockAndTables';
 import { SettingsPage } from '../organization/SettingsPage';
+import { useState } from 'react';
+import { QueueBoard } from './QueueBoard';
 import './restaurant.css';
 
 export interface RestaurantSettings {
@@ -97,8 +99,7 @@ function SettingsScreen() {
     </>
   );
 }
-
-interface QueueItem {
+export interface QueueItem {
   order_id: string;
   queue_number: string;
   channel: string;
@@ -114,56 +115,90 @@ function QueueScreen() {
     'online_orders.read',
     true,
   );
+  const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
   return (
-    <Card className="catalog-panel">
-      <p>{t('restaurant.queueDescription')}</p>
-      <Button
-        onClick={() => {
-          void query.refetch();
-        }}
-        disabled={query.isFetching}
-      >
-        {t('restaurant.refreshQueue')}
-      </Button>
+    <div className="queue-screen-wrapper">
+      <div className="catalog-actions" style={{ marginBottom: 16 }}>
+        <Button
+          className={viewMode === 'board' ? 'button' : 'button-secondary'}
+          onClick={() => setViewMode('board')}
+        >
+          🖥️ หน้าจอคิวรับอาหาร (Queue Board TV)
+        </Button>
+        <Button
+          className={viewMode === 'list' ? 'button' : 'button-secondary'}
+          onClick={() => setViewMode('list')}
+        >
+          📋 รายการคิวแบบละเอียด (Staff List)
+        </Button>
+      </div>
+
       <QueryState query={query} />
-      {query.data && !query.error ? (
-        query.data.length === 0 ? (
-          <p role="status">{t('restaurant.queueEmpty')}</p>
-        ) : (
-          <Table
-            headers={[
-              t('restaurant.queue'),
-              t('restaurant.channel'),
-              t('restaurant.status'),
-            ]}
-          >
-            {query.data.map((item) => (
-              <tr key={item.order_id}>
-                <th scope="row">{item.queue_number}</th>
-                <td>
-                  {item.channel === 'DINE_IN'
-                    ? item.table_code
-                      ? t('restaurant.dineInTable', { code: item.table_code })
-                      : t('restaurant.dineIn')
-                    : item.channel === 'DELIVERY'
-                      ? t('restaurant.delivery')
-                      : t('restaurant.pickup')}
-                </td>
-                <td>
-                  {(
-                    {
-                      PENDING: t('restaurant.pending'),
-                      PREPARING: t('restaurant.preparing'),
-                      READY: t('restaurant.ready'),
-                    } as Record<string, string>
-                  )[item.status] ?? item.status}
-                </td>
-              </tr>
-            ))}
-          </Table>
-        )
-      ) : null}
-      <WorkspaceLink to="/orders">{t('restaurant.manageOrders')}</WorkspaceLink>
-    </Card>
+
+      {query.data && !query.error && viewMode === 'board' && (
+        <QueueBoard
+          items={query.data}
+          storeName="VELO Shop"
+          onRefresh={() => void query.refetch()}
+          isFetching={query.isFetching}
+        />
+      )}
+
+      <Card
+        className="catalog-panel"
+        style={{ display: viewMode === 'list' ? 'block' : 'none' }}
+      >
+        <p>{t('restaurant.queueDescription')}</p>
+        <Button
+          onClick={() => {
+            void query.refetch();
+          }}
+          disabled={query.isFetching}
+        >
+          {t('restaurant.refreshQueue')}
+        </Button>
+        <QueryState query={query} />
+        {query.data && !query.error ? (
+          query.data.length === 0 ? (
+            <p role="status">{t('restaurant.queueEmpty')}</p>
+          ) : (
+            <Table
+              headers={[
+                t('restaurant.queue'),
+                t('restaurant.channel'),
+                t('restaurant.status'),
+              ]}
+            >
+              {query.data.map((item) => (
+                <tr key={item.order_id}>
+                  <th scope="row">{item.queue_number}</th>
+                  <td>
+                    {item.channel === 'DINE_IN'
+                      ? item.table_code
+                        ? t('restaurant.dineInTable', { code: item.table_code })
+                        : t('restaurant.dineIn')
+                      : item.channel === 'DELIVERY'
+                        ? t('restaurant.delivery')
+                        : t('restaurant.pickup')}
+                  </td>
+                  <td>
+                    {(
+                      {
+                        PENDING: t('restaurant.pending'),
+                        PREPARING: t('restaurant.preparing'),
+                        READY: t('restaurant.ready'),
+                      } as Record<string, string>
+                    )[item.status] ?? item.status}
+                  </td>
+                </tr>
+              ))}
+            </Table>
+          )
+        ) : null}
+        <WorkspaceLink to="/orders">
+          {t('restaurant.manageOrders')}
+        </WorkspaceLink>
+      </Card>
+    </div>
   );
 }

@@ -1,3 +1,31 @@
+# PR #46 local merge (2026-11-12)
+
+Scope: merge origin/feature/Dine-in (3d4019f) into develop (8eaed0b) locally.
+Size: Large. Risk: High (checkout, table tokens and network exposure).
+Preserve current checkout, tenant boundaries, translations, routes and loopback binding.
+No push, service restart, database mutation or deployment.
+Recovery: original develop commit 8eaed0b; preserve MERGE_HEAD until review.
+
+- [x] Fetch both branches and identify eight conflicted files.
+- [x] Resolve conflicts without importing payment simulation or fabricated table tokens.
+- [x] Focused restaurant/QR/merge regression: 19/19 PASS; new safety regressions reproduced RED then GREEN.
+- [x] Typecheck/build/contracts PASS; log tests 10/10 and dev-stack tests 7/7 PASS. Lint: 0 errors, 12 warnings.
+- [?] Full web suite FAIL: 665 passed, 13 failed. Nine storefront/cart failures reproduced on pre-merge source; four organization/setup failures remain untriaged and outside merge scope.
+- [?] Browser appearance and live database/payment acceptance have not run; no authorized isolated fixture target selected.
+- [?] Independent scoped review requires explicit delegation authorization.
+- [ ] Create local merge commit only after required acceptance passes.
+
+Evidence: `.local/pr46-web-tests.json`, `.local/pr46-web-tests.log`,
+`.local/pr46-baseline-storefront.json`, `.local/pr46-baseline-storefront.log`,
+`.local/pr46-red.json`, `.local/pr46-lint.log`, `.local/pr46-build.log` and
+`.local/pr46-dev-stack-retry.log`. Initial dev-stack harness failed on sandbox
+temporary-directory permissions; the approved escalated retry passed.
+Resolution keeps current settings, translations, /orders route, checkout safeguards
+and Compose network bindings. Incoming PromptPay simulation and persistent or
+fabricated table-token fallbacks are excluded; payment UI uses server payment status.
+The incoming sample SQL file is not executed. Historical incoming TODO claims are
+not fresh verification and do not establish current release readiness.
+
 # Four-Step Restaurant Setup and Interactive Location (2026-11-11)
 
 Approved flow: Store and services -> Store location -> Menu and payments -> Review and open.
@@ -478,6 +506,33 @@ Preserve all functional logic, step validations, API contracts, and tests.
       `npm run test:dev-stack` PASS (5).
 - [ ] Complete independent code and security review for the transaction and
       idempotency changes, including the pending explicit-branch validation delta.
+# Dine-in QR Ordering & Kitchen Queue Management (2026-11-07)
+
+Approved scope: Implement complete Dine-in QR Ordering Flow and Kitchen Queue Board according to approved architecture plan (Phases 1-5).
+Features: Table QR detection, mobile food catalog with category tabs & quick counter, order review, PromptPay QR payment simulation and status polling, order confirmation screen, 4-step live order tracking timeline, queue board TV display (preparing vs ready columns, audio chime, Thai date and digital clock), and table QR stand tent card generator.
+
+- [x] Phase 1: Customer Dine-in Flow (Table detection, food menu catalog UI, order review)
+  - Verified: Table QR token persistence across sessions, dynamic category pills ('ทั้งหมด', categories with badge counts), +/- quick counters on menu cards, in-cart badges, floating bottom cart bar (e.g., '1 รายการ | รวม ฿60.00 | ดูตะกร้า ➔'), Dine-in cart review with table code badge.
+- [x] Phase 2: In-App PromptPay QR Payment (Dynamic PromptPay QR, payment simulation & status polling)
+  - Verified: Dynamic EMVCo PromptPay QR generation (generatePromptPayPayload, CRC16 ISO/IEC 13239 verified with unit tests in promptpay.test.ts), pure SVG QR renderer in qr-code.tsx with unit tests in qr-code.test.tsx, payment amount & table badge, simulate payment success button ('จำลองการชำระเงินสำเร็จ (Test Pay)'), and alternative pay-at-counter button.
+- [x] Phase 3: Order Confirmation & Live Tracking (Order confirmation screen with #queue/table/amount, 4-step live tracking timeline)
+  - Verified: Order confirmation card (green checkmark, order number, table code, amount, 'ติดตามสถานะ ➔'), and 4-step reactive order tracking timeline in OrderDetails.tsx (1. ชำระเงินสำเร็จ ➔ 2. กำลังเตรียมอาหาร ➔ 3. พร้อมเสิร์ฟ ➔ 4. เสิร์ฟแล้ว).
+- [x] Phase 4: Queue Board TV Display (Dual column layout 'กำลังเตรียมอาหาร' vs 'พร้อมรับอาหาร', audio chime, Thai date & clock)
+  - Verified: Dual-column responsive queue board in QueueBoard.tsx with cooking pot / shopping bag icons, badge counters, Web Audio API chime on new ready queue, live Thai date & digital clock ticker, fullscreen toggle, and route integration in /restaurant/queue.
+- [x] Sample Restaurant Menu Seeding (26 items across 6 categories, SVGs, tables A01-A03, verified on Storefront API)
+  - Added 24 high quality vector SVG images in apps/web/public/images/products/.
+  - Created reproducible SQL seed script in database/seed-sample-restaurant-menu.sql.
+  - Seeded 26 food/drink items (single dishes, noodles, soups, snacks, drinks, desserts) with units (จาน, ชาม, แก้ว, ถ้วย, ที่), active stock balances, quality stock balances, and published storefront entries.
+  - Configured dining tables (A01, A02, A03) with SHA-256 token hashes for seamless QR ordering.
+  - Verified live endpoint /api/v1/storefronts/velo-cafe/products returns 26 total items across 6 categories.
+
+- [x] Phase 5: POS & Kitchen Workspace Integration (Table QR code generator / printable tent cards, kitchen/POS status transitions)
+  - Verified: Printable Table Tent Stand card modal in StockAndTables.tsx with VELO branding, table code, SVG QR code, and print action (window.print()).
+  - QR Scanner & Network Fixes Verified:
+    * Standard ISO/IEC 18004 pure TypeScript QR code matrix generator in qr-code.tsx (Nayuki algorithm: byte mode UTF-8, proper Reed-Solomon polynomial division, functional module placement, dark module preservation at (size-8, 8), dual format info copies with correct bit-order, version info for V >= 7, and 8-mask penalty evaluation). Verified scannable by camera/Google Lens/iOS.
+    * Table QR host switcher (Localhost vs Wi-Fi LAN IP 192.168.200.31:8088 vs custom domain) with 'คัดลอกลิงก์' (Copy Link) and direct 'เปิดสั่งอาหาร (เครื่องนี้)'.
+    * Persistent deterministic fallback table token resolution so 'ดู / พิมพ์ QR' button is always shown for every table even after page reload.
+    * Full quality checks pass: 58/58 test suites (424/424 tests), typecheck clean, lint clean (0 errors), build clean.
 
 # Owner-only backoffice (2026-11-05)
 

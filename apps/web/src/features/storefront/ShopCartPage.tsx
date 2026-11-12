@@ -442,6 +442,22 @@ function CartContents({ slug }: { slug: string }) {
     }
   };
 
+  const valid =
+    cart.items.length > 0 &&
+    cart.items.every((item) => {
+      const units = exactDecimal(item.quantity, 3);
+
+      return (
+        units !== null &&
+        units > 0n &&
+        units <= MAX_LINE_QUANTITY &&
+        (!['COUNT', 'PACKAGING'].includes(item.unit_type) ||
+          units % 1000n === 0n)
+      );
+    });
+
+  const { mutate: requestQuote, isPending: isQuotePending } = quote;
+
   useEffect(() => {
     if (isCheckout) {
       try {
@@ -451,6 +467,33 @@ function CartContents({ slug }: { slug: string }) {
       }
     }
   }, [isCheckout]);
+
+  useEffect(() => {
+    if (
+      pending ||
+      !isCheckout ||
+      reviewedQuote ||
+      isQuotePending ||
+      !shop.data ||
+      !valid ||
+      tableToken === null ||
+      (diningType === 'dine-in' && !tableToken)
+    ) {
+      return;
+    }
+
+    requestQuote();
+  }, [
+    diningType,
+    isCheckout,
+    isQuotePending,
+    pending,
+    requestQuote,
+    reviewedQuote,
+    shop.data,
+    tableToken,
+    valid,
+  ]);
 
   // Existing pending-order recovery.
   if (pending) {
@@ -512,20 +555,6 @@ function CartContents({ slug }: { slug: string }) {
 
   const busy = quote.isPending || submission.isPending;
 
-  const valid =
-    cart.items.length > 0 &&
-    cart.items.every((item) => {
-      const units = exactDecimal(item.quantity, 3);
-
-      return (
-        units !== null &&
-        units > 0n &&
-        units <= MAX_LINE_QUANTITY &&
-        (!['COUNT', 'PACKAGING'].includes(item.unit_type) ||
-          units % 1000n === 0n)
-      );
-    });
-
   const estimated = cart.items.reduce(
     (total, item) =>
       total + (estimatedLine(item.unit_price, item.quantity) ?? 0n),
@@ -542,30 +571,6 @@ function CartContents({ slug }: { slug: string }) {
     busy ||
     !shop.data?.accepting_orders ||
     (diningType === 'delivery' && !deliveryAddress.trim());
-
-  useEffect(() => {
-    if (
-      !isCheckout ||
-      reviewedQuote ||
-      quote.isPending ||
-      !shop.data ||
-      !valid ||
-      tableToken === null ||
-      (diningType === 'dine-in' && !tableToken)
-    ) {
-      return;
-    }
-
-    quote.mutate();
-  }, [
-    diningType,
-    isCheckout,
-    quote.isPending,
-    reviewedQuote,
-    shop.data,
-    tableToken,
-    valid,
-  ]);
 
   const submitOrder = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

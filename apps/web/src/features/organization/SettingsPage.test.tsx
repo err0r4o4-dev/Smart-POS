@@ -168,9 +168,10 @@ it('renders the complete settings layout matching the mockup', () => {
     'การตั้งค่า',
   );
   expect(screen.getByText('รายละเอียดการตั้งค่าร้านอาหาร')).toBeInTheDocument();
-  expect(
-    screen.getByRole('link', { name: 'ดูหน้าร้าน' }),
-  ).toHaveAttribute('href', '/shop');
+  expect(screen.getByRole('link', { name: 'ดูหน้าร้าน' })).toHaveAttribute(
+    'href',
+    '/shop',
+  );
   expect(
     screen.getByRole('button', { name: 'บันทึกการเปลี่ยนแปลง' }),
   ).toBeInTheDocument();
@@ -347,4 +348,3 @@ it('shows the storefront button in English linking to the store website', async 
   expect(link).toHaveAttribute('target', '_blank');
   expect(link).toHaveAttribute('rel', 'noreferrer');
 });
-

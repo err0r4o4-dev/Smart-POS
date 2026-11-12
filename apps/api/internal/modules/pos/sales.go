@@ -206,6 +206,7 @@ func (service *Service) CompleteCheckout(ctx context.Context, user, org, id stri
 
 func saleResult(ctx context.Context, tx pgx.Tx, org, id string) (json.RawMessage, error) {
 	return raw(ctx, tx, `SELECT to_jsonb(sale)||jsonb_build_object('subtotal',sale.subtotal::text,'discount_total',sale.discount_total::text,'tax_total',sale.tax_total::text,'grand_total',sale.grand_total::text,
+ 'terminal_name',CASE WHEN sale.terminal_name LIKE '%?%' THEN COALESCE((SELECT t.name FROM pos_terminals t WHERE t.organization_id=sale.organization_id AND t.id=sale.terminal_id),sale.terminal_name) ELSE sale.terminal_name END,
  'items',COALESCE((SELECT jsonb_agg(to_jsonb(item)||jsonb_build_object('quantity',item.quantity::text,'unit_price',item.unit_price::text,'line_total',item.line_total::text) ORDER BY item.sku) FROM sale_items item WHERE item.organization_id=sale.organization_id AND item.sale_id=sale.id),'[]'::jsonb),
  'payment',(SELECT to_jsonb(payment)||jsonb_build_object('amount',payment.amount::text,'credit_amount',payment.credit_amount::text,'received',payment.received::text,'change',payment.change::text) FROM sale_payments payment WHERE payment.organization_id=sale.organization_id AND payment.sale_id=sale.id),
  'receipt',(SELECT to_jsonb(receipt) FROM receipts receipt WHERE receipt.organization_id=sale.organization_id AND receipt.sale_id=sale.id),

@@ -186,7 +186,15 @@ describe('SalesPage standardized design and behavior', () => {
     expect(screen.getByRole('tab', { name: /คืนสินค้า/ })).toBeVisible();
 
     // Cashier avatar and name
-    expect(screen.getAllByText('Thirawat Duangta')).toHaveLength(3);
+    const cashierNames = screen.getAllByText('Thirawat Duangta');
+    expect(cashierNames).toHaveLength(3);
+    expect(cashierNames[0]).toHaveClass('sales-cashier-name');
+    expect(cashierNames[0].closest('.sales-cashier-cell')).toBeInTheDocument();
+    expect(
+      cashierNames[0]
+        .closest('.sales-cashier-cell')
+        ?.querySelector('.sales-cashier-avatar'),
+    ).toHaveTextContent('T');
     expect(screen.getByText('฿28.00')).toBeVisible();
     expect(screen.getByText('฿36.00')).toBeVisible();
     expect(screen.getByText('฿57.00')).toBeVisible();
@@ -328,5 +336,83 @@ describe('SalesPage standardized design and behavior', () => {
         document.querySelector(`a[href^="${path}"]`),
       ).not.toBeInTheDocument();
     }
+  });
+
+  it('resolves corrupted terminal names containing question marks using active terminals list', async () => {
+    mocks.request.mockImplementation(async (path: string) => {
+      if (path.includes('/pos/terminals')) {
+        return {
+          items: [
+            {
+              id: 'term-1',
+              branch_id: 'branch-main',
+              code: 'TERM-01',
+              name: 'เคาน์เตอร์แคชเชียร์ 1 (หน้าร้าน)',
+              stock_location_id: 'loc-1',
+              status: 'ACTIVE',
+              revision: 1,
+            },
+          ],
+          total: 1,
+          page: 1,
+          page_size: 100,
+        };
+      }
+      return {
+        items: [
+          {
+            ...sampleSales[0],
+            terminal_name:
+              '????????????????????????? 1 (??????????????????????????)',
+          },
+        ],
+        total: 1,
+        page: 1,
+        page_size: 10,
+      };
+    });
+
+    renderSalesPage();
+
+    const matches = await screen.findAllByText(
+      'เคาน์เตอร์แคชเชียร์ 1 (หน้าร้าน)',
+    );
+    expect(matches.length).toBeGreaterThanOrEqual(2);
+    expect(matches[1]).toBeVisible();
+    expect(
+      screen.queryByText(
+        '????????????????????????? 1 (??????????????????????????)',
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  it('renders sale number with copy button and copies sale number to clipboard', async () => {
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: writeTextMock,
+      },
+    });
+
+    renderSalesPage();
+
+    const saleNumberEl = await screen.findByText(
+      'SAL-75b94e59-6859-490d-95ab-efb082b376b8',
+    );
+    expect(saleNumberEl).toHaveClass('sales-number-value');
+
+    const copyButtons = screen.getAllByRole('button', {
+      name: 'คัดลอกเลขรายการ',
+    });
+    expect(copyButtons.length).toBeGreaterThan(0);
+
+    fireEvent.click(copyButtons[0]);
+    expect(writeTextMock).toHaveBeenCalledWith(
+      'SAL-75b94e59-6859-490d-95ab-efb082b376b8',
+    );
+
+    await waitFor(() => {
+      expect(copyButtons[0]).toHaveAttribute('title', 'คัดลอกแล้ว');
+    });
   });
 });

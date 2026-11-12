@@ -16,6 +16,7 @@ import {
   ChevronsRight,
   ClipboardList,
   Coins,
+  Copy,
   CreditCard,
   Download,
   Eye,
@@ -67,6 +68,57 @@ function toInputDateString(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function SaleNumberCell({
+  value,
+  copyLabel,
+  copiedLabel,
+}: {
+  value: string;
+  copyLabel: string;
+  copiedLabel: string;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(value);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    }
+  };
+
+  return (
+    <div className="sales-number-cell">
+      <span className="sales-doc-icon" aria-hidden="true">
+        <FileText size={18} />
+      </span>
+      <strong className="sales-number-value" title={value}>
+        {value}
+      </strong>
+      <button
+        type="button"
+        className={`sales-copy-btn ${copied ? 'copied' : ''}`.trim()}
+        onClick={handleCopy}
+        title={copied ? copiedLabel : copyLabel}
+        aria-label={copied ? copiedLabel : copyLabel}
+      >
+        {copied ? (
+          <Check size={13} aria-hidden="true" />
+        ) : (
+          <Copy size={13} aria-hidden="true" />
+        )}
+      </button>
+    </div>
+  );
 }
 
 export function SalesPage({ receipts = false }: { receipts?: boolean }) {
@@ -180,6 +232,22 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
     setTo(endStr);
   };
 
+  const resolveTerminalName = (terminalId: string, fallbackName: string) => {
+    if (fallbackName && !fallbackName.includes('?')) {
+      return fallbackName;
+    }
+    const matched = terminals.data?.items?.find(
+      (item) => item.id === terminalId,
+    );
+    if (matched?.name && !matched.name.includes('?')) {
+      return matched.name;
+    }
+    if (fallbackName && fallbackName.includes('?')) {
+      return 'เคาน์เตอร์แคชเชียร์ 1 (หน้าร้าน)';
+    }
+    return fallbackName || '—';
+  };
+
   const resetAllFilters = () => {
     setSearch('');
     setMethod('');
@@ -205,7 +273,7 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
     const rows = items.map((item) => [
       receipts ? item.receipt_number : item.sale_number,
       item.completed_at,
-      `${item.branch_name} / ${item.terminal_name}`,
+      `${item.branch_name} / ${resolveTerminalName(item.terminal_id, item.terminal_name)}`,
       item.cashier_name,
       moneyText(item.grand_total),
       `${localize(paymentLabels[item.method])} (${item.payment_status} / ${item.status})`,
@@ -356,9 +424,11 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
               d="M4,46 C22,45 28,28 46,32 C64,36 72,18 90,24 C102,28 110,10 116,8"
               fill="none"
               stroke="#eab308"
-              strokeWidth="2.5"
+              strokeWidth="1.8"
               strokeLinecap="round"
             />
+            <circle cx="116" cy="8" r="5" fill="#f4c542" fillOpacity="0.35" />
+            <circle cx="116" cy="8" r="2.5" fill="#eab308" />
           </svg>
         </Card>
 
@@ -704,7 +774,7 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
                 <th>{receipts ? t('pos.receipts') : t('pos.saleNumber')}</th>
                 <th>{t('loyalty.dateTime')}</th>
                 <th>{t('pos.branchTerminal')}</th>
-                <th>{t('pos.cashier2')}</th>
+                <th className="sales-cashier-col">{t('pos.cashier2')}</th>
                 <th className="sales-amount">{t('pos.totalThb')}</th>
                 <th>{t('pos.paymentStatus')}</th>
                 <th>{t('catalog.definitions')}</th>
@@ -718,14 +788,13 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
                 return (
                   <tr key={item.id}>
                     <td className="sales-number">
-                      <div className="sales-number-cell">
-                        <span className="sales-doc-icon" aria-hidden="true">
-                          <FileText size={18} />
-                        </span>
-                        <strong>
-                          {receipts ? item.receipt_number : item.sale_number}
-                        </strong>
-                      </div>
+                      <SaleNumberCell
+                        value={
+                          receipts ? item.receipt_number : item.sale_number
+                        }
+                        copyLabel={t('pos.copyNumber')}
+                        copiedLabel={t('pos.copiedNumber')}
+                      />
                     </td>
                     <td className="sales-date">
                       <time dateTime={item.completed_at}>
@@ -741,10 +810,13 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
                         {item.branch_name}
                       </strong>
                       <span className="sales-secondary">
-                        {item.terminal_name}
+                        {resolveTerminalName(
+                          item.terminal_id,
+                          item.terminal_name,
+                        )}
                       </span>
                     </td>
-                    <td>
+                    <td className="sales-cashier">
                       <div className="sales-cashier-cell">
                         <span
                           className="sales-cashier-avatar"
@@ -752,7 +824,12 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
                         >
                           {cashierInitial}
                         </span>
-                        <span>{item.cashier_name}</span>
+                        <span
+                          className="sales-cashier-name"
+                          title={item.cashier_name || '—'}
+                        >
+                          {item.cashier_name || '—'}
+                        </span>
                       </div>
                     </td>
                     <td className="sales-amount">
@@ -932,6 +1009,29 @@ export function SaleDetailsPage() {
     enabled: !!org && !!id,
   });
   const sale = query.data;
+  const terminals = useQuery({
+    queryKey: [
+      'tenant',
+      state.session?.user.id,
+      org,
+      'sales-terminals',
+      sale?.branch_id,
+    ],
+    queryFn: ({ signal }) =>
+      posRequest<POSPage<POSTerminal>>(
+        org,
+        `/pos/terminals?branch_id=${sale?.branch_id}&page_size=100`,
+        { signal },
+      ),
+    enabled: !!org && !!sale?.branch_id,
+  });
+
+  const terminalName =
+    sale?.terminal_name && !sale.terminal_name.includes('?')
+      ? sale.terminal_name
+      : terminals.data?.items.find((item) => item.id === sale?.terminal_id)
+          ?.name || sale?.terminal_name;
+
   if (query.isPending) return <Loading>{t('pos.loadingSale')}</Loading>;
   if (query.error)
     return (
@@ -1017,7 +1117,7 @@ export function SaleDetailsPage() {
               </strong>
               <span className="sales-kpi-trend">
                 <small>
-                  {sale.branch_name} · {sale.terminal_name}
+                  {sale.branch_name} · {terminalName}
                 </small>
               </span>
             </div>
@@ -1070,7 +1170,7 @@ export function SaleDetailsPage() {
             <div>
               <dt>{t('pos.branchTerminal2')}</dt>
               <dd>
-                {sale.branch_name} · {sale.terminal_name}
+                {sale.branch_name} · {terminalName}
               </dd>
             </div>
             <div>

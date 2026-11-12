@@ -15,6 +15,7 @@ Size: Small. Risk: Low.
 # Fix Mailpit UI access on http://localhost:8025/ (2026-11-10)
 
 Scope: Enable host access to Mailpit Web UI at http://localhost:8025/ by updating docker-compose configuration.
+
 - [x] 1. Root Cause Investigation: Verify why Mailpit container does not publish port 8025 to the host
 - [x] 2. Update docker-compose.yml to expose Mailpit port 8025 to host (uncomment # internal: true on intelligence)
 - [ ] 3. Recreate Mailpit service in Docker (`docker compose up -d mailpit`)
@@ -26,20 +27,20 @@ Scope: cart item presentation and shared order-step connectors only. Small/Low.
 Preserve existing uncommitted storefront work and quantity/order behavior.
 
 - [x] Hide placeholder variants; center quantity icons; align controls beside details.
-  Below 480px, retain readable details and wrap actions into a compact lower row.
+      Below 480px, retain readable details and wrap actions into a compact lower row.
 - [x] Make removal explicit; connect order steps without crossing labels.
 - [x] New component checks 2/2 and cart-state checks 5/5 PASS. Typecheck/build PASS.
-  Chromium 156.0.8078.4 on Windows, mocked API only: browser checks 4/4 PASS
-  at 320/375/768/1440px; inspected screenshots at 320 and 1440px. No DB writes.
-  Evidence: .local/cart-controls-unit.log, cart-controls-cart-unit.log,
-  cart-controls-browser.log, cart-controls-typecheck.log and cart-controls-build.log.
+      Chromium 156.0.8078.4 on Windows, mocked API only: browser checks 4/4 PASS
+      at 320/375/768/1440px; inspected screenshots at 320 and 1440px. No DB writes.
+      Evidence: .local/cart-controls-unit.log, cart-controls-cart-unit.log,
+      cart-controls-browser.log, cart-controls-typecheck.log and cart-controls-build.log.
 - [?] Combined cart suites: 12/15 PASS; checkout-step copy assertion fails and
   QR/delivery submission tests raise "Rendered fewer hooks than expected".
   Scoped ESLint: conditional useEffect error plus missing quote dependency warning.
   Evidence: .local/cart-presentation-tests.log and .local/cart-controls-lint.log.
   Checkout logic repair is outside this presentation scope; do not claim all checks pass.
 - [x] Main reviewed presentation delta; no API/auth/payment behavior edits intended.
-  Leave task section open until the failing regression/lint checks are resolved.
+      Leave task section open until the failing regression/lint checks are resolved.
 
 # PR #40 merge conflict resolution (2026-11-09)
 
@@ -50,9 +51,9 @@ incoming changes remain intact. No auth/security policy edits are authorized.
 
 - [x] Resolve conflicts while retaining both task lists and current layout tests.
 - [x] Verify no conflict markers or unmerged entries; focused units 171/171 PASS,
-  typecheck/build PASS, lint 0 errors/9 warnings, formatting/diff checks PASS.
+      typecheck/build PASS, lint 0 errors/9 warnings, formatting/diff checks PASS.
 - [x] Review merge delta: conflict resolutions retain HEAD's layout tests;
-  incoming shop-directory changes only reformat the superseded test block.
+      incoming shop-directory changes only reformat the superseded test block.
 - [?] Full regression: web units 625/630 PASS (5 Auth failures, one missing
   ApiError mock error); mocked browser regression 224/245 PASS, plus setup 9/9.
   Browser failures include catalog list visibility and workspace route/assertion
@@ -139,12 +140,12 @@ diffs, contracts and checks; no shell, writes, network or sub-delegation.
 - [x] Account/setup, management and POS; preserve routes and interactions.
 - [x] Remove only superseded layout declarations, retaining print geometry.
 - [x] Focused safe local checks and synthetic browser regressions at
-  320/390/767/768/1023/1024/1279/1280/1440/1920px and short heights.
+      320/390/767/768/1023/1024/1279/1280/1440/1920px and short heights.
 - [x] Check alignment, header/card/section spacing, keyboard/focus, Thai/English,
-  table-local scrolling, no page overflow and loading/empty/error states.
+      table-local scrolling, no page overflow and loading/empty/error states.
 - [x] Independent scoped source review; resolved landing gap and account-menu
-  cutoff regressions. Reviewer inspected supplied source/log excerpts, not the
-  complete diff or logs, and did not execute tests. Main reviewed the scoped diff.
+      cutoff regressions. Reviewer inspected supplied source/log excerpts, not the
+      complete diff or logs, and did not execute tests. Main reviewed the scoped diff.
 - [?] Full web unit regression remains FAIL in concurrent Auth scope. Keep this
   section until the integration check passes; do not claim release readiness.
 
@@ -199,56 +200,56 @@ accounts, sessions or historical data are rewritten by development checks.
 
 - [x] Reproduce unverified login routing and missing delivery/recovery feedback.
 - [x] Complete verification routing, explicit success, resend cooldown, signup
-  recovery link and session error recovery. Preserve Google flow and UI.
+      recovery link and session error recovery. Preserve Google flow and UI.
 - [x] Expose registration SMTP acceptance without undoing a committed account;
-  update Go callers, client and public schema together.
+      update Go callers, client and public schema together.
 - [/] Reset error/generic response/local-session recovery checks pass. Existing
   transactional revocation and token expiry inspected; real DB proof is blocked.
 - [x] Fresh local checks (2026-11-09): focused auth 49/49; full `npm run test`
-  PASS (web 618/618 in 75 files, contracts 18 modules/115 routes, log tests 10/10,
-  dev-stack tests 6/6). Typecheck, web build and lint PASS (0 errors/9 warnings).
+      PASS (web 618/618 in 75 files, contracts 18 modules/115 routes, log tests 10/10,
+      dev-stack tests 6/6). Typecheck, web build and lint PASS (0 errors/9 warnings).
 - [x] `go -C apps/api test ./...`, `go -C apps/api vet ./...` and
-  `go -C apps/api build ./...` PASS with dependency downloads disabled and
-  integration DSN/browser flags unset. PostgreSQL protocol stub is not a real DB.
-  Initial full Go compile found two remaining RegistrationResult/Profile fixture
-  callers; both corrected before the passing run.
+      `go -C apps/api build ./...` PASS with dependency downloads disabled and
+      integration DSN/browser flags unset. PostgreSQL protocol stub is not a real DB.
+      Initial full Go compile found two remaining RegistrationResult/Profile fixture
+      callers; both corrected before the passing run.
 - [x] Local mocked Chromium checks 39/39: 16 password-flow cases at 390/1440px
-  plus 23 existing auth/Google/layout regressions at 320/700/701/1440px.
-  APIs intercepted; dev proxy pointed to an unused local port, no real service
-  writes. Covers keyboard/focus, token URL removal, anonymous and wrong-account
-  verification, explicit Continue, resend, expired links and recovery errors.
-  Four synthetic mobile/desktop screenshots inspected. Vite task process stopped.
+      plus 23 existing auth/Google/layout regressions at 320/700/701/1440px.
+      APIs intercepted; dev proxy pointed to an unused local port, no real service
+      writes. Covers keyboard/focus, token URL removal, anonymous and wrong-account
+      verification, explicit Continue, resend, expired links and recovery errors.
+      Four synthetic mobile/desktop screenshots inspected. Vite task process stopped.
 - [x] Scoped Prettier, gofmt and `git diff --check` PASS. Logs:
-  `.local/password-account-all-tests-final.log`, `password-account-web.log`,
-  `password-account-browser-final.log`, `password-account-go.log`,
-  `password-account-vet.log`, `password-account-go-build.log`,
-  `password-account-typecheck.log`, `password-account-lint.log`,
-  `password-account-build.log`, `password-account-format.log` (all in `.local`).
-  First dev-stack/vet attempts hit sandbox cache/temp permissions; native
-  escalated reruns passed. Original failure logs retained.
+      `.local/password-account-all-tests-final.log`, `password-account-web.log`,
+      `password-account-browser-final.log`, `password-account-go.log`,
+      `password-account-vet.log`, `password-account-go-build.log`,
+      `password-account-typecheck.log`, `password-account-lint.log`,
+      `password-account-build.log`, `password-account-format.log` (all in `.local`).
+      First dev-stack/vet attempts hit sandbox cache/temp permissions; native
+      escalated reruns passed. Original failure logs retained.
 - [?] Go race check requires CGO/toolchain support (current CGO_ENABLED=0;
   gcc/clang not found). No compiler installation or global setting change.
 - [x] Authorized independent read-only security review covered the scoped
-  password-flow source/contracts and reset boundary. It found an existing
-  login/reset race, confirmed against HEAD and current source. Login now
-  revalidates the active user's password hash under a transaction row lock
-  before inserting a session. Final source-delta review PASS; no additional
-  actionable defect identified. This is not database or release acceptance.
+      password-flow source/contracts and reset boundary. It found an existing
+      login/reset race, confirmed against HEAD and current source. Login now
+      revalidates the active user's password hash under a transaction row lock
+      before inserting a session. Final source-delta review PASS; no additional
+      actionable defect identified. This is not database or release acceptance.
 - [x] Login/reset orchestration regression: RED before the guard; GREEN after
-  it, covering unchanged and replaced credentials without exposing tokens.
-  The net.Pipe PostgreSQL protocol stub does not validate SQL lock semantics.
-  Fresh post-fix `go -C apps/api test ./... -count=1`, vet and build PASS;
-  gofmt and `git diff --check` PASS. Initial sandbox cache-access failures
-  remain in separate logs; the native approved reruns passed.
+      it, covering unchanged and replaced credentials without exposing tokens.
+      The net.Pipe PostgreSQL protocol stub does not validate SQL lock semantics.
+      Fresh post-fix `go -C apps/api test ./... -count=1`, vet and build PASS;
+      gofmt and `git diff --check` PASS. Initial sandbox cache-access failures
+      remain in separate logs; the native approved reruns passed.
 - [x] Review-time web checks rerun: 12 files/49 tests PASS; contract inventory
-  PASS (18 modules/115 routes). Frontend source stayed unchanged during the
-  backend fix. Logs: `.local/password-account-review-web-current.log`,
-  `.local/password-account-review-contracts-current.log`,
-  `.local/password-account-login-reset-red.log`,
-  `.local/password-account-login-reset-green.log`,
-  `.local/password-account-login-reset-go-all-approved.log`,
-  `.local/password-account-login-reset-vet-approved.log` and
-  `.local/password-account-login-reset-build-approved.log`.
+      PASS (18 modules/115 routes). Frontend source stayed unchanged during the
+      backend fix. Logs: `.local/password-account-review-web-current.log`,
+      `.local/password-account-review-contracts-current.log`,
+      `.local/password-account-login-reset-red.log`,
+      `.local/password-account-login-reset-green.log`,
+      `.local/password-account-login-reset-go-all-approved.log`,
+      `.local/password-account-login-reset-vet-approved.log` and
+      `.local/password-account-login-reset-build-approved.log`.
 - [?] Real PostgreSQL and inbox acceptance need an authorized isolated target
   and test mailbox/provider. Verify expiry/reuse, rollback, user isolation,
   session revocation and both concurrent login/reset lock orderings there.

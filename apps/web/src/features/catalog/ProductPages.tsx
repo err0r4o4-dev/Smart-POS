@@ -111,7 +111,7 @@ export function ProductsPage() {
       </CatalogHeader>
       <CatalogNav />
 
-      <StandardKpiGrid label={t('catalog.restaurantItems')}>
+      <StandardKpiGrid columns={3} label={t('catalog.restaurantItems')}>
         <StandardKpiCard
           icon={<Package size={20} />}
           tone="amber"

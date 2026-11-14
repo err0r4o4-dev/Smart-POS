@@ -1,4 +1,6 @@
 import {
+  Children,
+  isValidElement,
   useId,
   useState,
   type FormEvent,
@@ -64,15 +66,22 @@ export type KpiTone = 'amber' | 'success' | 'info' | 'danger';
 
 export function StandardKpiGrid({
   label,
+  columns,
+  className = '',
   children,
 }: {
   label?: string;
+  columns?: number;
+  className?: string;
   children: ReactNode;
 }) {
   const { t } = useLanguage();
+  const validChildrenCount = Children.toArray(children).filter(isValidElement).length;
+  const count = columns ?? (validChildrenCount > 0 ? validChildrenCount : 4);
   return (
     <section
-      className="sales-kpi-grid"
+      className={`sales-kpi-grid sales-kpi-grid-cols-${count} ${className}`.trim()}
+      style={{ '--kpi-grid-cols': count } as React.CSSProperties}
       aria-label={label ?? t('pos.salesSummaryRegion')}
     >
       {children}

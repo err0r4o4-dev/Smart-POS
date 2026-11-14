@@ -167,10 +167,35 @@
   font-weight: 650;
 }
 .sales-kpi-grid {
+  --kpi-grid-cols: 4;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--kpi-grid-cols, 4), minmax(0, 1fr));
   gap: var(--card-gap);
   min-width: 0;
+}
+.sales-kpi-grid-cols-1 {
+  --kpi-grid-cols: 1;
+  grid-template-columns: minmax(0, 1fr);
+}
+.sales-kpi-grid-cols-2 {
+  --kpi-grid-cols: 2;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.sales-kpi-grid-cols-3 {
+  --kpi-grid-cols: 3;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.sales-kpi-grid-cols-4 {
+  --kpi-grid-cols: 4;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.sales-kpi-grid-cols-5 {
+  --kpi-grid-cols: 5;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.sales-kpi-grid-cols-6 {
+  --kpi-grid-cols: 6;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 .sales-kpi-card,
 .sales-page .sales-kpi-card {
@@ -239,12 +264,16 @@
 .sales-kpi-trend {
   display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 4px;
   font-size: 12px;
   font-weight: 600;
   margin-top: 2px;
   color: var(--text-secondary);
+  white-space: nowrap;
+}
+.sales-kpi-trend span {
+  white-space: nowrap;
 }
 .sales-kpi-trend-up {
   color: var(--success-strong);
@@ -779,8 +808,15 @@
   align-items: end;
 }
 @media (max-width: 1150px) {
-  .sales-kpi-grid {
+  .sales-kpi-grid,
+  .sales-kpi-grid.sales-kpi-grid-cols-3,
+  .sales-kpi-grid.sales-kpi-grid-cols-4,
+  .sales-kpi-grid.sales-kpi-grid-cols-5,
+  .sales-kpi-grid.sales-kpi-grid-cols-6 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .sales-kpi-grid.sales-kpi-grid-cols-1 {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 .pos-sale-detail {
@@ -912,7 +948,12 @@
     min-width: 36px;
     padding-inline: var(--space-2);
   }
-  .sales-kpi-grid {
+  .sales-kpi-grid,
+  .sales-kpi-grid.sales-kpi-grid-cols-2,
+  .sales-kpi-grid.sales-kpi-grid-cols-3,
+  .sales-kpi-grid.sales-kpi-grid-cols-4,
+  .sales-kpi-grid.sales-kpi-grid-cols-5,
+  .sales-kpi-grid.sales-kpi-grid-cols-6 {
     grid-template-columns: minmax(0, 1fr);
   }
   .sales-heading-actions {

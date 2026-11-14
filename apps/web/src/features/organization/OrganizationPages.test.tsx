@@ -835,36 +835,6 @@ it.each(['บันทึกไม่สำเร็จ', ''])(
   },
 );
 
-it('displays arbitrary server readiness prerequisites without enabling activation', async () => {
-  mocks.context = {
-    organization: { id: 'org-1' },
-    membership: { role: 'OWNER' },
-  };
-  mocks.request.mockResolvedValue({
-    ...setupState,
-    current_step: 'review',
-    readiness: {
-      ready: false,
-      incomplete: [
-        { key: 'pos_source', label: 'POS source', reason: 'Activate terminal' },
-        {
-          key: 'future_requirement',
-          label: 'Future prerequisite',
-          reason: 'Needs attention',
-        },
-      ],
-    },
-  });
-  renderSetup();
-  expect(
-    await screen.findByText('POS source: Activate terminal'),
-  ).toBeInTheDocument();
-  expect(
-    screen.getByText('Future prerequisite: Needs attention'),
-  ).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /เปิดใช้งานร้าน/ })).toBeDisabled();
-});
-
 it('offers manual selection when copying issued secrets fails', async () => {
   mocks.context = {
     organization: { id: 'org-1' },
@@ -1673,54 +1643,6 @@ it('does not infer server readiness from an empty prerequisite list', async () =
   expect(screen.getByText('ยังตั้งค่าไม่ครบ')).toBeInTheDocument();
 });
 
-it('configures a missing POS source inside setup without opening a working page', async () => {
-  mocks.context = {
-    organization: { id: 'org-1' },
-    membership: { role: 'OWNER' },
-  };
-  const incomplete = {
-    ...setupState,
-    current_step: 'review',
-    readiness: {
-      ready: false,
-      incomplete: [
-        {
-          key: 'pos_source',
-          label: 'POS source',
-          reason: 'Choose an active source',
-        },
-      ],
-    },
-  };
-  mocks.request.mockImplementation((path: string) =>
-    Promise.resolve(
-      path.includes('/inventory/locations')
-        ? { items: [], total: 0, page: 1, page_size: 100 }
-        : incomplete,
-    ),
-  );
-  renderSetup();
-  fireEvent.click(
-    await screen.findByRole('button', { name: 'ตั้งค่าจุดขายและสต็อก' }),
-  );
-  expect(
-    await screen.findByRole('heading', { name: 'สร้าง Location' }),
-  ).toBeInTheDocument();
-  expect(
-    screen.getByRole('heading', { name: 'ตั้งค่าจุดขายและสต็อก' }),
-  ).toHaveFocus();
-  fireEvent.click(
-    screen.getByRole('button', { name: 'กลับไปตรวจสอบความพร้อม' }),
-  );
-  expect(
-    screen.queryByRole('heading', { name: 'สร้าง Location' }),
-  ).not.toBeInTheDocument();
-  expect(
-    screen.queryByRole('link', { name: 'ตั้งค่าจุดขายและสต็อก' }),
-  ).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /เปิดใช้งานร้าน/ })).toBeDisabled();
-});
-
 it('does not activate with contradictory server readiness', async () => {
   mocks.context = {
     organization: { id: 'org-1' },
@@ -1741,45 +1663,6 @@ it('does not activate with contradictory server readiness', async () => {
     await screen.findByRole('button', { name: /เปิดใช้งานร้าน/ }),
   ).toBeDisabled();
   expect(screen.getByText(/Publish a menu item/)).toBeInTheDocument();
-});
-
-it('rechecks readiness after resolving prerequisites inside setup', async () => {
-  mocks.context = {
-    organization: { id: 'org-1' },
-    membership: { role: 'OWNER' },
-  };
-  mocks.request.mockResolvedValue({
-    ...setupState,
-    current_step: 'review',
-    readiness: {
-      ready: false,
-      incomplete: [
-        {
-          key: 'storefront_menu',
-          label: 'Storefront menu',
-          reason: 'Publish the storefront menu',
-        },
-      ],
-    },
-  });
-  renderSetup(['/setup'], true);
-  expect(
-    await screen.findByRole('button', { name: 'Open store' }),
-  ).toBeDisabled();
-  expect(
-    screen.queryByRole('link', { name: 'Configure storefront' }),
-  ).not.toBeInTheDocument();
-  expect(
-    screen.getByRole('button', { name: 'Configure storefront' }),
-  ).toBeInTheDocument();
-  mocks.request.mockResolvedValue({ ...setupState, current_step: 'review' });
-  fireEvent.click(screen.getByRole('button', { name: 'Recheck readiness' }));
-  await waitFor(() =>
-    expect(screen.getByRole('button', { name: 'Open store' })).toBeEnabled(),
-  );
-  expect(
-    screen.queryByText(/Publish the storefront menu/),
-  ).not.toBeInTheDocument();
 });
 
 it('completes readiness review once and routes to the existing dashboard', async () => {

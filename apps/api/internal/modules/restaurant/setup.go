@@ -436,17 +436,6 @@ func readSetupState(ctx context.Context, tx pgx.Tx, org, branch string) (SetupSt
 		return state, dbError(err)
 	}
 	live := []bool{setupProfileReady(state.Profile), state.Services.any(), !state.Services.DineIn || (len(tables["zones"].([]map[string]any)) > 0 && len(tables["tables"].([]map[string]any)) > 0), len(menu["items"].([]map[string]any)) > 0, payments["cash"].(bool) || payments["bank_transfer"].(bool), ordersExist}
-	var posSource, shopReady, menuReady, autoConfirmReady, chargesReady bool
-	err = tx.QueryRow(ctx, `SELECT
- EXISTS(SELECT 1 FROM pos_terminals t JOIN stock_locations l ON l.organization_id=t.organization_id AND l.id=t.stock_location_id AND l.branch_id=t.branch_id WHERE t.organization_id=$1 AND t.branch_id=$2 AND t.status='ACTIVE' AND l.status='ACTIVE' AND l.type IN ('WAREHOUSE','SALES_FLOOR','SHELF')),
- EXISTS(SELECT 1 FROM storefronts s JOIN pos_terminals t ON t.organization_id=s.organization_id AND t.id=COALESCE(s.online_terminal_id,s.terminal_id) JOIN stock_locations l ON l.organization_id=t.organization_id AND l.id=t.stock_location_id AND l.branch_id=t.branch_id WHERE s.organization_id=$1 AND t.branch_id=$2 AND s.published AND s.accepting_orders AND t.status='ACTIVE' AND l.status='ACTIVE' AND l.type IN ('WAREHOUSE','SALES_FLOOR','SHELF') AND (s.online_terminal_id IS NULL OR l.type='WAREHOUSE')),
- EXISTS(SELECT 1 FROM storefronts s JOIN pos_terminals t ON t.organization_id=s.organization_id AND t.id=COALESCE(s.online_terminal_id,s.terminal_id) JOIN stock_locations l ON l.organization_id=t.organization_id AND l.id=t.stock_location_id AND l.branch_id=t.branch_id JOIN storefront_products sp ON sp.organization_id=s.organization_id AND sp.published JOIN product_variants v ON v.organization_id=sp.organization_id AND v.id=sp.variant_id JOIN products p ON p.organization_id=v.organization_id AND p.id=v.product_id JOIN units u ON u.organization_id=v.organization_id AND u.id=v.unit_id LEFT JOIN LATERAL (SELECT (entry->>'unit_price')::numeric(18,2) AS price FROM price_lists list CROSS JOIN LATERAL jsonb_array_elements(list.items) entry WHERE list.organization_id=v.organization_id AND (list.branch_id IS NULL OR list.branch_id=$2::uuid) AND list.status='ACTIVE' AND (list.starts_at IS NULL OR list.starts_at<=statement_timestamp()) AND (list.ends_at IS NULL OR list.ends_at>statement_timestamp()) AND entry->>'variant_id'=v.id::text ORDER BY (list.branch_id IS NOT NULL) DESC,list.priority DESC,list.id LIMIT 1) price_list ON true WHERE s.organization_id=$1 AND t.branch_id=$2 AND s.published AND s.accepting_orders AND t.status='ACTIVE' AND l.status='ACTIVE' AND l.type IN ('WAREHOUSE','SALES_FLOOR','SHELF') AND (s.online_terminal_id IS NULL OR l.type='WAREHOUSE') AND p.status='ACTIVE' AND v.status='ACTIVE' AND u.status='ACTIVE' AND v.currency='THB' AND COALESCE(price_list.price,v.selling_price)>0 AND NOT EXISTS(SELECT 1 FROM restaurant_recipes r WHERE r.organization_id=v.organization_id AND r.branch_id=$2 AND r.menu_variant_id=v.id AND r.status='ACTIVE') AND greatest(0.000,storefront_sellable_quantity($1,l.id,v.id)-storefront_reserved_quantity($1,l.id,v.id))>=CASE WHEN u.unit_type IN ('COUNT','PACKAGING') THEN 1.000 ELSE 0.001 END),
- COALESCE((SELECT NOT auto_confirm_orders FROM restaurant_settings WHERE organization_id=$1 AND branch_id=$2),false),
- COALESCE((SELECT vat_rate=0 AND service_charge_rate=0 FROM restaurant_charge_settings WHERE organization_id=$1 AND branch_id=$2),false)`, org, branch).Scan(&posSource, &shopReady, &menuReady, &autoConfirmReady, &chargesReady)
-	if err != nil {
-		return state, dbError(err)
-	}
-	live = append(live, posSource, shopReady, menuReady, autoConfirmReady, chargesReady)
 	applySetupReadiness(&state, steps, live)
 	state.Complete = status == "COMPLETED"
 	state.Completed = state.Complete
@@ -486,23 +475,6 @@ func applySetupReadiness(state *SetupState, steps map[int]bool, live []bool) {
 			state.Readiness.Incomplete = append(state.Readiness.Incomplete, SetupReadinessItem{Key: entry.Key, Label: setupStepLabel(step), Reason: reason})
 		}
 		state.Steps = append(state.Steps, entry)
-	}
-	prerequisites := []SetupReadinessItem{
-		{Key: "pos_source", Label: "POS source", Reason: "Activate a POS terminal and stock location for this branch"},
-		{Key: "storefront", Label: "Storefront", Reason: "Configure and publish an accepting storefront with an active branch stock source"},
-		{Key: "storefront_menu", Label: "Storefront menu", Reason: "Publish a directly stocked menu item with an active price and available stock; recipe-only saleability is not yet verified here"},
-		{Key: "auto_confirm", Label: "Automatic confirmation", Reason: "Disable automatic confirmation until order lifecycle support is available"},
-		{Key: "charges", Label: "VAT and service charge", Reason: "Set VAT and service charge to zero until order lifecycle support is available"},
-	}
-	orders, ordersKnown := state.Orders.(map[string]any)
-	qrOrdering, qrKnown := orders["qr_ordering"].(bool)
-	for index, item := range prerequisites {
-		if (index == 1 || index == 2) && ordersKnown && qrKnown && !qrOrdering {
-			continue
-		}
-		if len(live) > index+6 && !live[index+6] {
-			state.Readiness.Incomplete = append(state.Readiness.Incomplete, item)
-		}
 	}
 	if firstIncomplete != 0 {
 		state.CurrentStep = setupStepKey(firstIncomplete)

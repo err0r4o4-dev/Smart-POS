@@ -46,7 +46,6 @@ import { StandardPageHeader } from '../../components/ui/StandardPage';
 import './setup.css';
 import { SetupLocationPicker } from './SetupLocationPicker';
 import { SetupTablesEditor } from './SetupTablesEditor';
-import { SetupResources, type SetupResource } from './SetupResources';
 import { exactDecimal } from '../../lib/pos-api';
 import {
   saveSetupSections,
@@ -920,7 +919,6 @@ function ScopedSetupPage() {
   const [form, setForm] = useState<SetupFormState>(createSetupForm);
   const [savedTableCount, setSavedTableCount] = useState(0);
   const [step, setStep] = useState<SetupStepIndex>(0);
-  const [resource, setResource] = useState<SetupResource | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const [rotationUncertain, setRotationUncertain] = useState(false);
@@ -935,11 +933,9 @@ function ScopedSetupPage() {
   const saveCache = useRef<SetupSaveCache>({});
   const completionRef = useRef({ key: '', orgID: '' });
   const stepHeadingRef = useRef<HTMLHeadingElement>(null);
-  const resourceHeadingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
-    if (resource) resourceHeadingRef.current?.focus();
-    else stepHeadingRef.current?.focus();
-  }, [resource]);
+    stepHeadingRef.current?.focus();
+  }, [step]);
   const activeRef = useRef(true);
   useEffect(() => {
     activeRef.current = true;
@@ -1633,34 +1629,6 @@ function ScopedSetupPage() {
                                 {t('organization.setupManageMenu')}
                               </Button>
                             )}
-                            {(item.key === 'storefront' ||
-                              item.key === 'storefront_menu') && (
-                              <Button
-                                type="button"
-                                onClick={() => setResource('storefront')}
-                                className="button-secondary"
-                              >
-                                {t('organization.setupManageStorefront')}
-                              </Button>
-                            )}
-                            {item.key === 'pos_source' && (
-                              <Button
-                                type="button"
-                                className="button-secondary"
-                                onClick={() => setResource('source')}
-                              >
-                                {t('organization.setupConfigureSource')}
-                              </Button>
-                            )}
-                            {item.key === 'storefront_menu' && (
-                              <Button
-                                type="button"
-                                className="button-secondary"
-                                onClick={() => setResource('stock')}
-                              >
-                                {t('organization.setupConfigureStock')}
-                              </Button>
-                            )}
                           </li>
                         ))}
                       </ul>
@@ -1773,54 +1741,6 @@ function ScopedSetupPage() {
                   </div>
                 </fieldset>
               </form>
-              {step === 3 && resource && (
-                <section className="setup-inline-resources">
-                  <h2 ref={resourceHeadingRef} tabIndex={-1}>
-                    {t(
-                      resource === 'source'
-                        ? 'organization.setupConfigureSource'
-                        : resource === 'stock'
-                          ? 'organization.setupConfigureStock'
-                          : 'organization.setupManageStorefront',
-                    )}
-                  </h2>
-                  <div className="tenant-actions">
-                    <Button
-                      type="button"
-                      className="button-secondary"
-                      onClick={() => setResource('source')}
-                    >
-                      {t('organization.setupConfigureSource')}
-                    </Button>
-                    {form.orders.qr_ordering && (
-                      <>
-                        <Button
-                          type="button"
-                          className="button-secondary"
-                          onClick={() => setResource('stock')}
-                        >
-                          {t('organization.setupConfigureStock')}
-                        </Button>
-                        <Button
-                          type="button"
-                          className="button-secondary"
-                          onClick={() => setResource('storefront')}
-                        >
-                          {t('organization.setupManageStorefront')}
-                        </Button>
-                      </>
-                    )}
-                    <Button
-                      type="button"
-                      className="button-secondary"
-                      onClick={() => setResource(null)}
-                    >
-                      {t('organization.setupCloseConfiguration')}
-                    </Button>
-                  </div>
-                  <SetupResources key={resource} resource={resource} />
-                </section>
-              )}
             </Card>
           </section>
         </div>

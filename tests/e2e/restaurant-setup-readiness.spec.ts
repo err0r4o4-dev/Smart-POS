@@ -28,16 +28,6 @@ for (const width of [320, 768, 1440]) {
       ready: false,
       incomplete: [
         { key: 'menu', label: 'Menu', reason: 'Add a menu item' },
-        {
-          key: 'storefront_menu',
-          label: 'Storefront menu',
-          reason: 'Publish a stocked menu item',
-        },
-        {
-          key: 'pos_source',
-          label: 'POS source',
-          reason: 'Configure a source',
-        },
       ],
     };
     let completionRequests = 0;

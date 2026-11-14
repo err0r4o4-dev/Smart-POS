@@ -175,48 +175,14 @@ func TestSetupMenuDefaultUnitIsTenantScopedAndIdempotent(t *testing.T) {
 	}
 }
 
-func TestSetupReadinessRequiresOperationalPrerequisites(t *testing.T) {
+func TestSetupReadinessIgnoresRemovedOperationalPrerequisites(t *testing.T) {
 	steps := map[int]bool{1: true, 2: true, 3: true, 4: true, 5: true, 6: true}
 	state := SetupState{}
-	applySetupReadiness(&state, steps, []bool{true, true, true, true, true, true, false, false, false, false, false})
-	if state.Ready {
-		t.Fatal("missing operational prerequisites accepted")
-	}
-	for _, key := range []string{"pos_source", "storefront", "storefront_menu", "auto_confirm", "charges"} {
-		found := false
-		for _, item := range state.Readiness.Incomplete {
-			if item.Key == key && item.Reason != "" {
-				found = true
-			}
-		}
-		if !found {
-			t.Errorf("missing actionable readiness item %q", key)
-		}
+	applySetupReadiness(&state, steps, []bool{true, true, true, true, true, true})
+	if !state.Ready {
+		t.Fatalf("removed POS/stock prerequisites still block setup: %+v", state.Readiness.Incomplete)
 	}
 }
-
-func TestSetupReadinessRequiresStorefrontOnlyForQROrdering(t *testing.T) {
-	steps := map[int]bool{1: true, 2: true, 3: true, 4: true, 5: true, 6: true}
-	for _, tc := range []struct {
-		name                       string
-		qr, pos, shop, menu, ready bool
-	}{
-		{"staff only", false, true, false, false, true},
-		{"staff without POS", false, false, false, false, false},
-		{"QR without storefront", true, true, false, true, false},
-		{"QR without saleable menu", true, true, true, false, false},
-		{"QR with storefront and menu", true, true, true, true, true},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			state := SetupState{Orders: map[string]any{"qr_ordering": tc.qr}}
-			applySetupReadiness(&state, steps, []bool{true, true, true, true, true, true, tc.pos, tc.shop, tc.menu, true, true})
-			if state.Ready != tc.ready {
-				t.Fatalf("ready=%v, incomplete=%+v", state.Ready, state.Readiness.Incomplete)
-			}
-		})
-	}
-}
-
 func TestSetupQRGenerationRequiresTables(t *testing.T) {
 	input := SetupTablesInput{BranchID: "11111111-1111-4111-8111-111111111111", GenerateQR: true}
 	if err := input.Validate(); !errors.Is(err, ErrInput) {

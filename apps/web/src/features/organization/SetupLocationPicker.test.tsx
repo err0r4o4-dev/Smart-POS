@@ -91,18 +91,29 @@ it('opens the map and hides raw coordinates', () => {
   expect(screen.getByLabelText('Store location map')).toBeVisible();
   expect(screen.queryByLabelText('Latitude')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Longitude')).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Confirm store location' })).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'Confirm store location' }),
+  ).not.toBeInTheDocument();
 });
 
 it('confirms a searched location automatically', async () => {
   vi.stubEnv('VITE_LOCATION_SEARCH_URL', 'https://search.example.test/search');
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-    ok: true,
-    json: async () => [{ display_name: 'Store entrance', lat: '13.75', lon: '100.5' }],
-  }));
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [
+        { display_name: 'Store entrance', lat: '13.75', lon: '100.5' },
+      ],
+    }),
+  );
   renderInEnglish(<Picker />);
-  fireEvent.change(screen.getByLabelText('Search place or address'), { target: { value: 'Store' } });
+  fireEvent.change(screen.getByLabelText('Search place or address'), {
+    target: { value: 'Store' },
+  });
   fireEvent.click(screen.getByRole('button', { name: 'Search location' }));
-  fireEvent.click(await screen.findByRole('button', { name: 'Store entrance' }));
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'Store entrance' }),
+  );
   expect(screen.getByRole('status')).toHaveTextContent('Location confirmed');
 });

@@ -318,8 +318,8 @@
 .dinein-tracking-stepper {
   margin: 18px 0 24px;
   padding: 18px 20px;
-  background: #FFFFFF;
-  border: 1px solid #E5E7EB;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
   border-radius: 18px;
   box-shadow: 0 4px 14px rgba(17, 27, 56, 0.04);
 }
@@ -342,10 +342,10 @@
   top: 36px;
   width: 2px;
   height: calc(100% - 12px);
-  background: #E5E7EB;
+  background: #e5e7eb;
 }
 .dinein-step-item.done:not(:last-child)::after {
-  background: #22C55E;
+  background: #22c55e;
 }
 .dinein-step-circle {
   width: 36px;
@@ -355,47 +355,54 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  border: 2px solid #D1D5DB;
-  background: #F9FAFB;
-  color: #6B7280;
+  border: 2px solid #d1d5db;
+  background: #f9fafb;
+  color: #6b7280;
   font-weight: 700;
   font-size: 14px;
   z-index: 1;
 }
 .dinein-step-item.done .dinein-step-circle {
-  background: #DCFCE7;
-  border-color: #22C55E;
-  color: #16A34A;
+  background: #dcfce7;
+  border-color: #22c55e;
+  color: #16a34a;
 }
 .dinein-step-item.active .dinein-step-circle {
-  background: #FEF3C7;
-  border-color: #F8CA49;
-  color: #85651D;
+  background: #fef3c7;
+  border-color: #f8ca49;
+  color: #85651d;
   box-shadow: 0 0 0 4px rgba(248, 202, 73, 0.25);
 }
 .dinein-step-pulse {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: #F8CA49;
+  background: #f8ca49;
   animation: dineinPulse 1.5s infinite;
 }
 @keyframes dineinPulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.3); opacity: 0.7; }
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 0.7;
+  }
 }
 .dinein-step-info strong {
   display: block;
   font-size: 15px;
-  color: #111B38;
+  color: #111b38;
 }
 .dinein-step-item.done .dinein-step-info strong {
-  color: #15803D;
+  color: #15803d;
 }
 .dinein-step-item.active .dinein-step-info strong {
-  color: #B45309;
+  color: #b45309;
 }
 .dinein-step-info small {
   font-size: 12px;
-  color: #6B7280;
+  color: #6b7280;
 }

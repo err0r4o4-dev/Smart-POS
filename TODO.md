@@ -25,12 +25,12 @@ Recovery: revert only this task's source/test delta; no schema/data changes.
       npm run test:logs: 10/10 PASS. npm run test:dev-stack: 7/7 PASS after approved
       rerun outside sandbox; initial run failed on temporary-directory permissions.
 - [?] npm test: 695 PASS / 10 FAIL in SettingsPage, ShopCartPage and StorefrontPage.
-      Failure names match .local/setup-correctness-full-test.log; unrelated fixes
-      remain out of scope. Current evidence: .local/setup-access-root-test-final.log.
+  Failure names match .local/setup-correctness-full-test.log; unrelated fixes
+  remain out of scope. Current evidence: .local/setup-access-root-test-final.log.
 - [?] Independent access/configuration review requires explicit delegation authorization.
 - [?] Live persistence/ledger acceptance requires an authorized isolated disposable target.
-      All browser API writes were intercepted synthetic fixtures; no real database
-      writes, external map/search requests, commit, push or deployment occurred.
+  All browser API writes were intercepted synthetic fixtures; no real database
+  writes, external map/search requests, commit, push or deployment occurred.
 
 # Setup flow correctness (2026-11-12)
 
@@ -54,9 +54,9 @@ Recovery: revert only this task's frontend/test delta; no data/schema changes.
       initial sandbox run failed because Git Bash could not access its temporary path.
 - [x] Main reviewed actual scoped diff; no API/auth/QR persistence changes.
 - [?] Full npm test FAIL: 673 passed, 10 failed across SettingsPage.test.tsx,
-      ShopCartPage.test.tsx and StorefrontPage.test.tsx. These failures are outside
-      this setup patch; repairing those flows requires separately authorized scope.
-      Do not claim the full suite passes or remove this section while unresolved.
+  ShopCartPage.test.tsx and StorefrontPage.test.tsx. These failures are outside
+  this setup patch; repairing those flows requires separately authorized scope.
+  Do not claim the full suite passes or remove this section while unresolved.
 
 Evidence: `.local/setup-correctness-red.json`, `.local/setup-recheck-red.json`,
 `.local/setup-correctness-final.json`, `.local/setup-correctness-browser.json`,
@@ -576,6 +576,7 @@ Preserve all functional logic, step validations, API contracts, and tests.
       `npm run test:dev-stack` PASS (5).
 - [ ] Complete independent code and security review for the transaction and
       idempotency changes, including the pending explicit-branch validation delta.
+
 # Dine-in QR Ordering & Kitchen Queue Management (2026-11-07)
 
 Approved scope: Implement complete Dine-in QR Ordering Flow and Kitchen Queue Board according to approved architecture plan (Phases 1-5).
@@ -599,10 +600,10 @@ Features: Table QR detection, mobile food catalog with category tabs & quick cou
 - [x] Phase 5: POS & Kitchen Workspace Integration (Table QR code generator / printable tent cards, kitchen/POS status transitions)
   - Verified: Printable Table Tent Stand card modal in StockAndTables.tsx with VELO branding, table code, SVG QR code, and print action (window.print()).
   - QR Scanner & Network Fixes Verified:
-    * Standard ISO/IEC 18004 pure TypeScript QR code matrix generator in qr-code.tsx (Nayuki algorithm: byte mode UTF-8, proper Reed-Solomon polynomial division, functional module placement, dark module preservation at (size-8, 8), dual format info copies with correct bit-order, version info for V >= 7, and 8-mask penalty evaluation). Verified scannable by camera/Google Lens/iOS.
-    * Table QR host switcher (Localhost vs Wi-Fi LAN IP 192.168.200.31:8088 vs custom domain) with 'คัดลอกลิงก์' (Copy Link) and direct 'เปิดสั่งอาหาร (เครื่องนี้)'.
-    * Persistent deterministic fallback table token resolution so 'ดู / พิมพ์ QR' button is always shown for every table even after page reload.
-    * Full quality checks pass: 58/58 test suites (424/424 tests), typecheck clean, lint clean (0 errors), build clean.
+    - Standard ISO/IEC 18004 pure TypeScript QR code matrix generator in qr-code.tsx (Nayuki algorithm: byte mode UTF-8, proper Reed-Solomon polynomial division, functional module placement, dark module preservation at (size-8, 8), dual format info copies with correct bit-order, version info for V >= 7, and 8-mask penalty evaluation). Verified scannable by camera/Google Lens/iOS.
+    - Table QR host switcher (Localhost vs Wi-Fi LAN IP 192.168.200.31:8088 vs custom domain) with 'คัดลอกลิงก์' (Copy Link) and direct 'เปิดสั่งอาหาร (เครื่องนี้)'.
+    - Persistent deterministic fallback table token resolution so 'ดู / พิมพ์ QR' button is always shown for every table even after page reload.
+    - Full quality checks pass: 58/58 test suites (424/424 tests), typecheck clean, lint clean (0 errors), build clean.
 
 # Owner-only backoffice (2026-11-05)
 

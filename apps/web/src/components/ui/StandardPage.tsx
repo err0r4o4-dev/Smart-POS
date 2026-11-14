@@ -76,7 +76,8 @@ export function StandardKpiGrid({
   children: ReactNode;
 }) {
   const { t } = useLanguage();
-  const validChildrenCount = Children.toArray(children).filter(isValidElement).length;
+  const validChildrenCount =
+    Children.toArray(children).filter(isValidElement).length;
   const count = columns ?? (validChildrenCount > 0 ? validChildrenCount : 4);
   return (
     <section

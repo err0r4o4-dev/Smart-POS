@@ -1266,6 +1266,13 @@ async function completeServicesAndTables() {
   fireEvent.change(screen.getByLabelText('ที่อยู่ร้าน'), {
     target: { value: 'Bangkok' },
   });
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', {
+        name: /บันทึกและถัดไป|กำลังโหลดแผนที่/,
+      }),
+    ).toBeEnabled(),
+  );
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
   await screen.findByText('ขั้นตอนที่ 3 จาก 4');
 }

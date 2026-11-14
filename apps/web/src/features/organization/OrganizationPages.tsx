@@ -23,6 +23,7 @@ import {
   House,
   Info,
   LayoutGrid,
+  LoaderCircle,
   QrCode,
   Store,
   WalletCards,
@@ -75,6 +76,7 @@ import {
   type SetupTablesInput,
   type IssuedTableQRToken,
 } from './setup-api';
+import type { LocationMapStatus } from './SetupLocationPicker';
 
 const blankBranch: BranchInput = {
   name: '',
@@ -919,6 +921,9 @@ function ScopedSetupPage() {
   const [form, setForm] = useState<SetupFormState>(createSetupForm);
   const [savedTableCount, setSavedTableCount] = useState(0);
   const [step, setStep] = useState<SetupStepIndex>(0);
+  const [locationMapStatus, setLocationMapStatus] = useState<
+    LocationMapStatus | 'idle'
+  >('idle');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const [rotationUncertain, setRotationUncertain] = useState(false);
@@ -929,6 +934,10 @@ function ScopedSetupPage() {
     organizationID: string;
     branchID: string;
   } | null>(null);
+  const moveToStep = (nextStep: SetupStepIndex) => {
+    setLocationMapStatus('idle');
+    setStep(nextStep);
+  };
   const creationRef = useRef({ key: '', payload: '' });
   const saveCache = useRef<SetupSaveCache>({});
   const completionRef = useRef({ key: '', orgID: '' });
@@ -1139,6 +1148,9 @@ function ScopedSetupPage() {
       return t('organization.locationPickHint');
     return '';
   };
+  const locationMapLoading =
+    step === 1 &&
+    (locationMapStatus === 'idle' || locationMapStatus === 'loading');
   const downloadIssuedTokens = () => {
     const payload = JSON.stringify(issuedTokens, null, 2);
     let objectURL: string | null = null;
@@ -1363,7 +1375,7 @@ function ScopedSetupPage() {
       if (safeResult) setServerState(safeResult);
       await queryClient.invalidateQueries({ queryKey: ['restaurant-setup'] });
       if (!activeRef.current) return;
-      setStep((current) => (current + 1) as SetupStepIndex);
+      moveToStep((step + 1) as SetupStepIndex);
     } catch (failure) {
       const message =
         failure instanceof Error
@@ -1473,7 +1485,7 @@ function ScopedSetupPage() {
                   <button
                     type="button"
                     onClick={() =>
-                      index <= step && setStep(index as SetupStepIndex)
+                      index <= step && moveToStep(index as SetupStepIndex)
                     }
                     disabled={pending || index > step}
                     aria-current={isActive ? 'step' : undefined}
@@ -1559,6 +1571,7 @@ function ScopedSetupPage() {
                     step === 1 ? (
                       <SetupLocationPicker
                         value={form.profile.location}
+                        onMapStatusChange={setLocationMapStatus}
                         onChange={(location) =>
                           update('profile', {
                             ...form.profile,
@@ -1623,7 +1636,7 @@ function ScopedSetupPage() {
                             {item.key === 'menu' && (
                               <Button
                                 type="button"
-                                onClick={() => setStep(2)}
+                                onClick={() => moveToStep(2)}
                                 className="button-secondary"
                               >
                                 {t('organization.setupManageMenu')}
@@ -1699,10 +1712,7 @@ function ScopedSetupPage() {
                       onClick={() => {
                         setError('');
                         setRotationUncertain(false);
-                        setStep(
-                          (current) =>
-                            Math.max(0, current - 1) as SetupStepIndex,
-                        );
+                        moveToStep(Math.max(0, step - 1) as SetupStepIndex);
                       }}
                       disabled={step === 0 || pending}
                     >
@@ -1715,12 +1725,16 @@ function ScopedSetupPage() {
                       aria-label={
                         pending
                           ? t('organization.setupSaving')
-                          : step === 3
-                            ? t('organization.setupActivate')
-                            : t('organization.setupSaveContinue')
+                          : locationMapLoading
+                            ? t('organization.locationLoading')
+                            : step === 3
+                              ? t('organization.setupActivate')
+                              : t('organization.setupSaveContinue')
                       }
+                      aria-busy={pending || locationMapLoading}
                       disabled={
                         pending ||
+                        locationMapLoading ||
                         (Boolean(setupContext) && setupQuery.isPending) ||
                         (step === 3 && !isReady)
                       }
@@ -1728,11 +1742,19 @@ function ScopedSetupPage() {
                       <span>
                         {pending
                           ? t('organization.setupSaving')
-                          : step === 3
-                            ? t('organization.setupActivate')
-                            : t('organization.setupNext')}
+                          : locationMapLoading
+                            ? t('organization.locationLoading')
+                            : step === 3
+                              ? t('organization.setupActivate')
+                              : t('organization.setupNext')}
                       </span>
-                      {step === 3 ? (
+                      {pending || locationMapLoading ? (
+                        <LoaderCircle
+                          className="spin"
+                          size={16}
+                          aria-hidden="true"
+                        />
+                      ) : step === 3 ? (
                         <CheckCircle2 size={16} aria-hidden="true" />
                       ) : (
                         <ArrowRight size={16} aria-hidden="true" />

@@ -5,12 +5,16 @@ import { Button } from '../../components/ui/primitives';
 import type { SetupLocation } from './setup-api';
 import 'leaflet/dist/leaflet.css';
 
+export type LocationMapStatus = 'loading' | 'ready' | 'error';
+
 export function SetupLocationPicker({
   value,
   onChange,
+  onMapStatusChange,
 }: {
   value?: SetupLocation;
   onChange: (value: SetupLocation) => void;
+  onMapStatusChange?: (status: LocationMapStatus) => void;
 }) {
   const { t } = useLanguage();
   const [latitude, setLatitude] = useState(value ? String(value.latitude) : '');
@@ -28,6 +32,7 @@ export function SetupLocationPicker({
   const map = useRef<LeafletMap | null>(null);
   const marker = useRef<Marker | null>(null);
   const onChangeRef = useRef(onChange);
+  const onMapStatusChangeRef = useRef(onMapStatusChange);
   const valueRef = useRef(value);
   const request = useRef<AbortController | null>(null);
   const active = useRef(true);
@@ -35,8 +40,9 @@ export function SetupLocationPicker({
   const selectionVersion = useRef(0);
   useEffect(() => {
     onChangeRef.current = onChange;
+    onMapStatusChangeRef.current = onMapStatusChange;
     valueRef.current = value;
-  }, [onChange, value]);
+  }, [onChange, onMapStatusChange, value]);
   useEffect(() => {
     active.current = true;
     return () => {
@@ -71,6 +77,7 @@ export function SetupLocationPicker({
   useEffect(() => {
     if (!enabled || !host.current) return;
     let disposed = false;
+    onMapStatusChangeRef.current?.('loading');
     void import('leaflet')
       .then((leaflet) => {
         if (disposed || !host.current) return;
@@ -91,13 +98,14 @@ export function SetupLocationPicker({
           const { lat, lng } = event.latlng.wrap();
           setLatitude(lat.toFixed(6));
           setLongitude(lng.toFixed(6));
+          const current = valueRef.current;
           onChangeRef.current({
             address: '',
             details: '',
-            ...valueRef.current,
+            ...current,
             latitude: Number(lat.toFixed(6)),
             longitude: Number(lng.toFixed(6)),
-            confirmed: false,
+            confirmed: true,
           });
         });
         marker.current = leaflet
@@ -122,9 +130,13 @@ export function SetupLocationPicker({
             .setOpacity(1);
           view.setView([selected.latitude, selected.longitude], 16);
         }
+        onMapStatusChangeRef.current?.('ready');
       })
       .catch(() => {
-        if (!disposed) setError(t('organization.locationMapFailed'));
+        if (!disposed) {
+          setError(t('organization.locationMapFailed'));
+          onMapStatusChangeRef.current?.('error');
+        }
       });
     return () => {
       disposed = true;
@@ -286,13 +298,14 @@ export function SetupLocationPicker({
               selectionVersion.current += 1;
               setLatitude(String(position.coords.latitude));
               setLongitude(String(position.coords.longitude));
+              const current = valueRef.current;
               onChangeRef.current({
                 address: '',
                 details: '',
-                ...valueRef.current,
+                ...current,
                 latitude: position.coords.latitude,
                 longitude: position.coords.longitude,
-                confirmed: false,
+                confirmed: true,
               });
             },
             () => {

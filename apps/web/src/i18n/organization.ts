@@ -18,6 +18,7 @@ export const organization = defineMessages({
     locationMap: 'แผนที่เลือกตำแหน่งร้าน',
     locationMapFailed:
       'โหลดแผนที่ไม่สำเร็จ ข้อมูลยังอยู่ กรุณาเปิดแผนที่ใหม่หรือกรอกพิกัด',
+    locationLoading: 'กำลังโหลดแผนที่…',
     locationUseCurrent: 'ใช้ตำแหน่งปัจจุบัน',
     locationGpsFailed:
       'อ่านตำแหน่งไม่ได้ กรุณาอนุญาตตำแหน่งหรือเลือกหมุดบนแผนที่',
@@ -381,6 +382,7 @@ export const organization = defineMessages({
     locationMap: 'Store location map',
     locationMapFailed:
       'Map failed to load. Your input is retained. Reopen the map or enter coordinates.',
+    locationLoading: 'Loading map…',
     locationUseCurrent: 'Use current location',
     locationGpsFailed:
       'Location unavailable. Allow location access or pick a map pin.',

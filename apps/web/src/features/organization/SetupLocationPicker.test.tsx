@@ -5,6 +5,41 @@ import { renderInEnglish } from '../../test/render';
 import { SetupLocationPicker } from './SetupLocationPicker';
 import type { SetupLocation } from './setup-api';
 
+const leafletMock = vi.hoisted(() => {
+  let clickHandler:
+    | ((event: {
+        latlng: { wrap: () => { lat: number; lng: number } };
+      }) => void)
+    | undefined;
+  const mapInstance = {
+    setView: vi.fn(() => mapInstance),
+    on: vi.fn((event: string, handler: typeof clickHandler) => {
+      if (event === 'click') clickHandler = handler;
+      return mapInstance;
+    }),
+    panTo: vi.fn(),
+    remove: vi.fn(),
+  };
+  const markerInstance = {
+    setLatLng: vi.fn(() => markerInstance),
+    setOpacity: vi.fn(() => markerInstance),
+    addTo: vi.fn(() => markerInstance),
+  };
+  const tileLayerInstance = {
+    on: vi.fn(() => tileLayerInstance),
+    addTo: vi.fn(() => tileLayerInstance),
+  };
+  return {
+    map: vi.fn(() => mapInstance),
+    marker: vi.fn(() => markerInstance),
+    tileLayer: vi.fn(() => tileLayerInstance),
+    divIcon: vi.fn(),
+    triggerClick: (lat: number, lng: number) =>
+      clickHandler?.({ latlng: { wrap: () => ({ lat, lng }) } }),
+  };
+});
+
+vi.mock('leaflet', () => leafletMock);
 function Picker() {
   const [value, setValue] = useState<SetupLocation>();
   return <SetupLocationPicker value={value} onChange={setValue} />;
@@ -91,18 +126,67 @@ it('opens the map and hides raw coordinates', () => {
   expect(screen.getByLabelText('Store location map')).toBeVisible();
   expect(screen.queryByLabelText('Latitude')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Longitude')).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Confirm store location' })).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'Confirm store location' }),
+  ).not.toBeInTheDocument();
 });
 
 it('confirms a searched location automatically', async () => {
   vi.stubEnv('VITE_LOCATION_SEARCH_URL', 'https://search.example.test/search');
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-    ok: true,
-    json: async () => [{ display_name: 'Store entrance', lat: '13.75', lon: '100.5' }],
-  }));
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [
+        { display_name: 'Store entrance', lat: '13.75', lon: '100.5' },
+      ],
+    }),
+  );
   renderInEnglish(<Picker />);
-  fireEvent.change(screen.getByLabelText('Search place or address'), { target: { value: 'Store' } });
+  fireEvent.change(screen.getByLabelText('Search place or address'), {
+    target: { value: 'Store' },
+  });
   fireEvent.click(screen.getByRole('button', { name: 'Search location' }));
-  fireEvent.click(await screen.findByRole('button', { name: 'Store entrance' }));
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'Store entrance' }),
+  );
   expect(screen.getByRole('status')).toHaveTextContent('Location confirmed');
+});
+it('reports map loading and ready states', async () => {
+  const statuses: string[] = [];
+  renderInEnglish(
+    <SetupLocationPicker
+      onChange={() => undefined}
+      onMapStatusChange={(status) => statuses.push(status)}
+    />,
+  );
+  expect(statuses).toContain('loading');
+  await waitFor(() => expect(statuses).toContain('ready'));
+});
+
+it('confirms an existing address when a map marker is selected', async () => {
+  const onChange = vi.fn();
+  renderInEnglish(
+    <SetupLocationPicker
+      value={{
+        latitude: 13.75,
+        longitude: 100.5,
+        address: 'Existing store address',
+        details: 'Ground floor',
+        confirmed: false,
+      }}
+      onChange={onChange}
+    />,
+  );
+  await waitFor(() => expect(leafletMock.map).toHaveBeenCalled());
+
+  leafletMock.triggerClick(13.8, 100.6);
+
+  expect(onChange).toHaveBeenLastCalledWith({
+    latitude: 13.8,
+    longitude: 100.6,
+    address: 'Existing store address',
+    details: 'Ground floor',
+    confirmed: true,
+  });
 });

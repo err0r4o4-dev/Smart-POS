@@ -1,11 +1,15 @@
+import { validateSetupAddress, type SetupAddressErrors } from './setup-address';
+
 export type ProfileErrorKey =
   | 'setupNameRequired'
   | 'setupNameTooLong'
   | 'setupNameInvalid'
+  | 'setupPhoneRequired'
   | 'setupPhoneInvalid';
 export type ProfileErrors = Partial<
   Record<'name' | 'contact_phone', ProfileErrorKey>
->;
+> &
+  SetupAddressErrors;
 
 export function normalizeStorePhone(value: string) {
   return value.trim().replace(/[ -]/g, '');
@@ -14,6 +18,7 @@ export function normalizeStorePhone(value: string) {
 export function validateStoreProfile(profile: {
   name: string;
   contact_phone: string;
+  address?: string;
 }): ProfileErrors {
   const errors: ProfileErrors = {};
   const name = profile.name.trim();
@@ -27,11 +32,11 @@ export function validateStoreProfile(profile: {
   )
     errors.name = 'setupNameInvalid';
   const phone = normalizeStorePhone(profile.contact_phone);
-  if (
-    phone &&
+  if (!phone) errors.contact_phone = 'setupPhoneRequired';
+  else if (
     !/^(?:0[689]\d{8}|0[2-57]\d{7}|\+66[689]\d{8}|\+66[2-57]\d{7})$/.test(phone)
   ) {
     errors.contact_phone = 'setupPhoneInvalid';
   }
-  return errors;
+  return { ...errors, ...validateSetupAddress(profile.address ?? '') };
 }

@@ -33,6 +33,9 @@ it('creates UUID idempotency keys when randomUUID is unavailable', () => {
   );
 });
 
+const standardAddress =
+  '99/9, แขวง พระบรมมหาราชวัง, เขต พระนคร, จังหวัด กรุงเทพมหานคร, รหัสไปรษณีย์ 10200';
+
 const setupState = {
   organization_id: 'org-1',
   branch_id: 'branch',
@@ -50,15 +53,15 @@ const setupState = {
       name: 'ร้านเดิม',
       business_type: 'RESTAURANT',
       contact_email: '',
-      contact_phone: '',
-      address: 'Bangkok',
+      contact_phone: '0812345678',
+      address: standardAddress,
     },
     service_modes: { dine_in: true, takeaway: true, delivery: false },
   },
   location: {
     latitude: 13.75,
     longitude: 100.5,
-    address: 'Bangkok',
+    address: standardAddress,
     details: '',
     confirmed: true,
   },
@@ -439,6 +442,7 @@ it('requires a service mode and a table only when dine-in is selected', () => {
   fireEvent.change(screen.getByLabelText('ชื่อร้าน'), {
     target: { value: 'ร้านใหม่' },
   });
+  fillRequiredContactAndAddress(false);
   fireEvent.click(screen.getByRole('button', { name: 'ลบโต๊ะ 1' }));
   expect(screen.getByRole('status')).toHaveTextContent('ยังไม่มีโต๊ะ');
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
@@ -474,6 +478,7 @@ it('rejects an unsupported typed business type before creating a store', () => {
   fireEvent.change(screen.getByLabelText('Store name'), {
     target: { value: 'Test restaurant' },
   });
+  fillRequiredContactAndAddress(true);
   fireEvent.change(screen.getByLabelText('Store type'), {
     target: { value: 'CAFE' },
   });
@@ -559,7 +564,16 @@ it('creates and saves a profile using only visible store fields', async () => {
     target: { value: '0812345678' },
   });
   fireEvent.change(screen.getByLabelText('บ้านเลขที่ / เลขที่ตั้งร้าน'), {
-    target: { value: 'Bangkok' },
+    target: { value: '99/9' },
+  });
+  fireEvent.change(screen.getByLabelText('จังหวัด'), {
+    target: { value: 'กรุงเทพมหานคร' },
+  });
+  fireEvent.change(screen.getByLabelText('อำเภอ / เขต'), {
+    target: { value: 'พระนคร' },
+  });
+  fireEvent.change(screen.getByLabelText('ตำบล / แขวง'), {
+    target: { value: 'พระบรมมหาราชวัง' },
   });
 
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
@@ -568,7 +582,7 @@ it('creates and saves a profile using only visible store fields', async () => {
     business_type: 'RESTAURANT',
     contact_email: '',
     contact_phone: '0812345678',
-    address: 'Bangkok',
+    address: standardAddress,
   };
   await waitFor(() =>
     expect(mocks.request).toHaveBeenCalledWith(
@@ -609,7 +623,7 @@ it('omits existing metadata when saving a hydrated profile', async () => {
       business_type: 'RESTAURANT',
       contact_email: 'saved@example.test',
       contact_phone: '0812345678',
-      address: 'Bangkok',
+      address: standardAddress,
     },
     branch: {
       name: 'สาขาเดิม',
@@ -634,7 +648,7 @@ it('omits existing metadata when saving a hydrated profile', async () => {
     business_type: 'RESTAURANT',
     contact_email: 'saved@example.test',
     contact_phone: '0812345678',
-    address: 'Bangkok',
+    address: standardAddress,
   };
   await waitFor(() =>
     expect(mocks.request).toHaveBeenCalledWith(
@@ -992,8 +1006,8 @@ it('saves current service modes when returning to the profile', async () => {
       code: 'SHOP',
       business_type: 'RESTAURANT',
       contact_email: '',
-      contact_phone: '',
-      address: '',
+      contact_phone: '0812345678',
+      address: standardAddress,
     },
     branch: { name: 'สาขา', code: 'MAIN', address: '', phone: '', email: '' },
     service_modes: { dine_in: true, takeaway: true, delivery: false },
@@ -1103,6 +1117,7 @@ it('does not select or save a newly created store after the user changes', async
     target: { value: 'ร้านเดิม' },
   });
 
+  fillRequiredContactAndAddress(false);
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
   mocks.userID = 'another-user';
   view.refreshView();
@@ -1139,6 +1154,7 @@ it('saves the profile before a refreshed organization selection remounts the wiz
     target: { value: 'ร้านใหม่' },
   });
 
+  fillRequiredContactAndAddress(false);
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
   await waitFor(() =>
     expect(mocks.request).toHaveBeenCalledWith(
@@ -1246,6 +1262,30 @@ it('preserves server table and zone codes on save', async () => {
   );
 });
 
+function fillRequiredContactAndAddress(english = false) {
+  fireEvent.change(
+    screen.getByLabelText(english ? 'Store phone' : 'โทรศัพท์ร้าน'),
+    { target: { value: '0812345678' } },
+  );
+  fireEvent.change(
+    screen.getByLabelText(
+      english ? 'House number / store address' : 'บ้านเลขที่ / เลขที่ตั้งร้าน',
+    ),
+    { target: { value: '99/9' } },
+  );
+  fireEvent.change(screen.getByLabelText(english ? 'Province' : 'จังหวัด'), {
+    target: { value: 'กรุงเทพมหานคร' },
+  });
+  fireEvent.change(
+    screen.getByLabelText(english ? 'District' : 'อำเภอ / เขต'),
+    { target: { value: 'พระนคร' } },
+  );
+  fireEvent.change(
+    screen.getByLabelText(english ? 'Subdistrict' : 'ตำบล / แขวง'),
+    { target: { value: 'พระบรมมหาราชวัง' } },
+  );
+}
+
 async function completeProfile() {
   if (!mocks.context)
     mocks.request.mockResolvedValueOnce({ organization: { id: 'new-org' } });
@@ -1258,6 +1298,19 @@ async function completeProfile() {
   fireEvent.change(screen.getByLabelText('ชื่อร้าน'), {
     target: { value: 'ร้านตัวอย่าง' },
   });
+  fireEvent.change(screen.getByLabelText('โทรศัพท์ร้าน'), {
+    target: { value: '0812345678' },
+  });
+  fireEvent.change(screen.getByLabelText('จังหวัด'), {
+    target: { value: 'กรุงเทพมหานคร' },
+  });
+  fireEvent.change(screen.getByLabelText('อำเภอ / เขต'), {
+    target: { value: 'พระนคร' },
+  });
+  fireEvent.change(screen.getByLabelText('ตำบล / แขวง'), {
+    target: { value: 'พระบรมมหาราชวัง' },
+  });
+
   fireEvent.change(screen.getByLabelText('บ้านเลขที่ / เลขที่ตั้งร้าน'), {
     target: { value: '99/9 หมู่ 3' },
   });
@@ -1760,7 +1813,9 @@ it('saves a manually edited first-step address without coordinates', async () =>
       path.endsWith('/setup/profile') && options?.method === 'PUT',
   );
   expect(profileCall).toBeDefined();
-  expect(profileCall![1].body.organization.address).toBe('99/9 หมู่ 3');
+  expect(profileCall![1].body.organization.address).toBe(
+    standardAddress.replace('99/9,', '99/9 หมู่ 3,'),
+  );
   expect(profileCall![1].body).not.toHaveProperty('location');
 });
 
@@ -1795,4 +1850,109 @@ it('resumes a legacy location step at the editable first screen', async () => {
   );
   expect(screen.getByLabelText('บ้านเลขที่ / เลขที่ตั้งร้าน')).toBeVisible();
   expect(screen.getByText('ขั้นตอนที่ 1 จาก 3')).toBeVisible();
+});
+
+it('saves standard address fields in the existing profile contract and restores them on return', async () => {
+  mocks.context = {
+    organization: { id: 'org-1' },
+    membership: { role: 'OWNER' },
+  };
+  mocks.request.mockResolvedValue({
+    ...setupState,
+    current_step: 'profile',
+    location: undefined,
+  });
+  renderSetup();
+  await waitFor(() =>
+    expect(screen.getByLabelText('ชื่อร้าน')).toHaveValue('ร้านเดิม'),
+  );
+  fireEvent.change(screen.getByLabelText('บ้านเลขที่ / เลขที่ตั้งร้าน'), {
+    target: { value: '99/9' },
+  });
+  fireEvent.change(screen.getByLabelText('จังหวัด'), {
+    target: { value: 'กรุงเทพมหานคร' },
+  });
+  fireEvent.change(screen.getByLabelText('อำเภอ / เขต'), {
+    target: { value: '' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
+  expect(screen.getByLabelText('อำเภอ / เขต')).toHaveAttribute(
+    'aria-invalid',
+    'true',
+  );
+  expect(
+    mocks.request.mock.calls.filter(([, options]) => options?.method === 'PUT'),
+  ).toHaveLength(0);
+  fireEvent.change(screen.getByLabelText('อำเภอ / เขต'), {
+    target: { value: 'พระนคร' },
+  });
+  fireEvent.change(screen.getByLabelText('ตำบล / แขวง'), {
+    target: { value: 'พระบรมมหาราชวัง' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
+  await screen.findByRole('heading', { name: 'การชำระเงิน' });
+  expect(mocks.request).toHaveBeenCalledWith(
+    '/organizations/org-1/restaurant/setup/profile',
+    expect.objectContaining({
+      body: expect.objectContaining({
+        organization: expect.objectContaining({
+          address:
+            '99/9, แขวง พระบรมมหาราชวัง, เขต พระนคร, จังหวัด กรุงเทพมหานคร, รหัสไปรษณีย์ 10200',
+        }),
+      }),
+    }),
+  );
+  fireEvent.click(screen.getByRole('button', { name: /ย้อนกลับ/ }));
+  expect(screen.getByLabelText('จังหวัด')).toHaveValue('กรุงเทพมหานคร');
+  expect(screen.getByLabelText('บ้านเลขที่ / เลขที่ตั้งร้าน')).toHaveValue(
+    '99/9',
+  );
+});
+
+it('requires visible profile fields but keeps description optional', async () => {
+  renderSetup();
+  expect(screen.getByLabelText('คำอธิบายร้าน')).not.toBeRequired();
+  expect(screen.getByLabelText('โทรศัพท์ร้าน')).toBeRequired();
+  expect(screen.getByLabelText('บ้านเลขที่ / เลขที่ตั้งร้าน')).toBeRequired();
+  expect(screen.getByLabelText('จังหวัด')).toBeRequired();
+  fireEvent.change(screen.getByLabelText('ชื่อร้าน'), {
+    target: { value: 'ร้านใหม่' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
+  expect(screen.getByLabelText('โทรศัพท์ร้าน')).toHaveAccessibleDescription(
+    'กรอกโทรศัพท์ร้าน',
+  );
+  expect(
+    screen.getByLabelText('บ้านเลขที่ / เลขที่ตั้งร้าน'),
+  ).toHaveAccessibleDescription('กรอกบ้านเลขที่ / เลขที่ตั้งร้าน');
+  expect(screen.getByLabelText('จังหวัด')).toHaveAccessibleDescription(
+    'เลือกจังหวัด',
+  );
+  expect(
+    mocks.request.mock.calls.filter(
+      ([, options]) => options?.method === 'PUT' || options?.method === 'POST',
+    ),
+  ).toHaveLength(0);
+});
+it('blocks legacy review when required profile fields are missing', async () => {
+  mocks.context = {
+    organization: { id: 'org-1' },
+    membership: { role: 'OWNER' },
+  };
+  mocks.request.mockResolvedValue({
+    ...setupState,
+    current_step: 'review',
+    profile: {
+      ...setupState.profile,
+      organization: {
+        ...setupState.profile.organization,
+        contact_phone: '',
+        address: '',
+      },
+    },
+  });
+  renderSetup(['/setup'], true);
+  expect(
+    await screen.findByRole('button', { name: 'Open store' }),
+  ).toBeDisabled();
 });

@@ -17,7 +17,9 @@ for (const { width, english } of [
       code: 'SHOP',
       business_type: 'RESTAURANT',
       status: 'ACTIVE',
-      address: 'Bangkok',
+      contact_phone: '0812345678',
+      address:
+        '99/9, แขวง พระบรมมหาราชวัง, เขต พระนคร, จังหวัด กรุงเทพมหานคร, รหัสไปรษณีย์ 10200',
     };
     const branch = {
       id: 'branch',

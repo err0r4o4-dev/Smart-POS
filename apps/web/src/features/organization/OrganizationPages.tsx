@@ -45,6 +45,7 @@ import { AccountMenu } from '../../components/ui/AccountMenu';
 import { HelpDropdown } from '../../components/ui/HelpDropdown';
 import { StandardPageHeader } from '../../components/ui/StandardPage';
 import './setup.css';
+import { SetupAddressFields } from './SetupAddressFields';
 import { SetupTablesEditor } from './SetupTablesEditor';
 import {
   saveSetupSections,
@@ -495,7 +496,7 @@ function localReadiness(
   const incomplete: SetupReadinessItem[] = [];
   const profile = form.profile;
   if (
-    !profile.organization.name.trim() ||
+    Object.keys(validateStoreProfile(profile.organization)).length > 0 ||
     profile.organization.business_type !== 'RESTAURANT'
   )
     incomplete.push({
@@ -604,6 +605,8 @@ function SetupStepFields({
             value={profile.organization.contact_phone}
             placeholder={t('organization.setupPhoneExample')}
             id="setup-store-phone"
+            required
+            type="tel"
             error={
               profileErrors.contact_phone
                 ? t(`organization.${profileErrors.contact_phone}`)
@@ -618,19 +621,17 @@ function SetupStepFields({
             }
           />
         </div>
-        <div className="setup-form-row">
-          <SetupInput
-            label={t('organization.setupStoreAddress')}
-            value={profile.organization.address}
-            placeholder={t('organization.setupAddressExample')}
-            onChange={(address) =>
-              update('profile', {
-                ...profile,
-                organization: { ...profile.organization, address },
-              })
-            }
-          />
-        </div>
+        <SetupAddressFields
+          value={profile.organization.address}
+          errors={profileErrors}
+          onBlur={onValidateProfile}
+          onChange={(address) =>
+            update('profile', {
+              ...profile,
+              organization: { ...profile.organization, address },
+            })
+          }
+        />
         <div className="setup-form-row">
           <SetupInput
             label={t('organization.setupStoreDescription')}
@@ -960,7 +961,15 @@ function ScopedSetupPage() {
     return <Navigate to="/dashboard" replace />;
 
   const localIncomplete = localReadiness(form, t);
-  const readinessItems = serverState?.readiness.incomplete ?? localIncomplete;
+  const readinessItems = [
+    ...(serverState?.readiness.incomplete ?? []),
+    ...localIncomplete.filter(
+      (item) =>
+        !serverState?.readiness.incomplete.some(
+          (serverItem) => serverItem.key === item.key,
+        ),
+    ),
+  ];
   const isReady = Boolean(
     hydratedScope === `${orgID}:${branchID}` &&
     serverState?.readiness.ready &&
@@ -1001,6 +1010,7 @@ function ScopedSetupPage() {
     const errors = validateStoreProfile({
       name: form.profile.organization.name,
       contact_phone: form.profile.organization.contact_phone,
+      address: form.profile.organization.address,
     });
     setProfileErrors(errors);
     return errors;
@@ -1008,10 +1018,8 @@ function ScopedSetupPage() {
   const validationMessage = () => {
     if (step === 0) {
       const profileValidation = validateProfile();
-      if (profileValidation.name)
-        return t(`organization.${profileValidation.name}`);
-      if (profileValidation.contact_phone)
-        return t(`organization.${profileValidation.contact_phone}`);
+      const firstError = Object.values(profileValidation)[0];
+      if (firstError) return t(`organization.${firstError}`);
       const { organization } = form.profile;
       if (!organization.name.trim()) return t('organization.setupNameRequired');
       if (!organization.business_type.trim())

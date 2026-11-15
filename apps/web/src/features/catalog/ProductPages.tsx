@@ -94,7 +94,7 @@ export function ProductsPage() {
   );
 
   return (
-    <div className="catalog-page">
+    <div className="catalog-page sales-page menu-list-page">
       <CatalogHeader title={t('catalog.restaurantItems')}>
         <>
           <Link className="button button-secondary" to="/settings/storefront">
@@ -118,7 +118,6 @@ export function ProductsPage() {
           label={t('catalog.restaurantItems')}
           value={`${totalProducts} ${t('pos.itemsUnit')}`}
           subtext={t('catalog.sharedOrganizationCatalog')}
-          sparkline
         />
         <StandardKpiCard
           icon={<CheckCircle2 size={20} />}

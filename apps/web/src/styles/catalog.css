@@ -3,6 +3,11 @@
   gap: var(--group-gap);
   min-width: 0;
 }
+@media (min-width: 1151px) {
+  .menu-list-page .sales-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
 .catalog-page h1 {
   font-size: clamp(22px, 2.4vw, 28px);
   font-weight: 700;

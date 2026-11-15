@@ -11,12 +11,21 @@
 }
 
 .setup-page-wrapper {
+  --setup-success-fill: linear-gradient(
+    145deg,
+    #a0cd87 0%,
+    #70b15b 42%,
+    #429337 100%
+  );
+  --setup-success-ring: #eef8e9;
+  --setup-success-shadow: 0 2px 5px rgba(60, 120, 39, 0.18);
   min-height: 100vh;
   min-height: 100svh;
   display: flex;
   flex-direction: column;
   align-items: center;
   background:
+    url('/images/warm-gold-waves.svg') center / cover no-repeat,
     radial-gradient(
       ellipse at 50% 0%,
       rgba(255, 197, 47, 0.08),
@@ -106,7 +115,7 @@
 .setup-page {
   width: 100%;
   max-width: var(--layout-container-max);
-  margin: auto;
+  margin: 0 auto;
   padding: var(--space-8) var(--layout-gutter) 0;
   box-sizing: border-box;
   display: flex;
@@ -127,6 +136,8 @@
   position: relative;
   width: 100%;
   max-width: var(--layout-content-max);
+  padding-inline: var(--space-4);
+  box-sizing: border-box;
   margin: 0 auto;
   display: flex;
   justify-content: center;
@@ -174,7 +185,7 @@
 
 .setup-top-step-button {
   width: 100%;
-  min-height: 82px;
+  min-height: 72px;
   padding: 12px 13px;
   border-radius: 16px;
   border: 1px solid rgba(229, 224, 212, 0.95);
@@ -263,7 +274,7 @@
 }
 
 .setup-top-step-title {
-  font-size: 13.5px;
+  font-size: var(--font-caption);
   font-weight: 760;
   line-height: 1.25;
   letter-spacing: -0.015em;
@@ -271,7 +282,7 @@
 }
 
 .setup-top-step-subtitle {
-  font-size: 11px;
+  font-size: var(--font-label);
   font-weight: 450;
   line-height: 1.35;
   color: var(--text-secondary);
@@ -302,14 +313,27 @@
 }
 
 .setup-top-step-item.is-complete:not(.is-active) .setup-top-step-button {
-  border-color: var(--primary-border);
-  background: var(--primary-subtle);
+  border-color: var(--border);
+  background: var(--surface);
 }
 
 .setup-top-step-item.is-complete:not(.is-active) .setup-top-step-badge {
-  background: var(--primary-soft);
-  border-color: var(--primary-border);
-  color: var(--primary-strong);
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0;
+  box-sizing: border-box;
+  background: var(--setup-success-fill);
+  border: 3px solid var(--setup-success-ring);
+  color: #fff;
+  box-shadow:
+    var(--setup-success-shadow),
+    inset 0 1px 1px #c4e3b4;
+}
+
+.setup-top-step-item.is-complete .setup-top-step-badge svg,
+.setup-check.is-done .setup-check-status svg {
+  stroke-width: 3;
 }
 
 /* Existing Organization Banner */
@@ -886,8 +910,8 @@
 .setup-btn-next {
   min-height: 44px;
   padding: 10px 26px;
-  border-radius: 24px;
-  background: linear-gradient(135deg, #f59e0b, #eab308);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffda75, #f5b51b);
   color: #1c1917;
   font-weight: 700;
   font-size: 14px;
@@ -940,9 +964,11 @@
 
 .setup-readiness-banner {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 16px;
+  align-items: center;
+  gap: var(--space-6);
+  min-height: 100px;
+  box-sizing: border-box;
+  padding: var(--space-5) var(--space-6);
   border: 1px solid var(--primary-border);
   border-radius: 15px;
   color: var(--warning-strong);
@@ -950,9 +976,53 @@
 }
 
 .setup-readiness-banner.is-ready {
-  border-color: #bbf7d0;
-  color: var(--success-strong);
-  background: #f0fdf4;
+  border-color: #cce8c5;
+  color: #237b20;
+  background: linear-gradient(110deg, #f3fcf4, #e9f3e2);
+}
+
+.setup-readiness-symbol {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--primary-soft);
+}
+
+.is-ready .setup-readiness-symbol {
+  color: #fff;
+  background: var(--setup-success-fill);
+  border: 2px solid #d9edce;
+  box-sizing: border-box;
+  box-shadow:
+    var(--setup-success-shadow),
+    inset 0 1px 2px #c4e3b4;
+}
+
+.setup-readiness-copy {
+  min-width: 0;
+  flex: 1;
+  padding-left: var(--space-6);
+  border-left: 1px solid currentColor;
+}
+
+.setup-readiness-copy strong {
+  font-size: var(--font-section);
+  line-height: 1.4;
+}
+
+.setup-readiness-decoration {
+  flex-shrink: 0;
+  width: 160px;
+  height: 100px;
+  object-fit: contain;
+  margin-block: calc(-1 * var(--space-5));
+}
+
+.setup-recheck-button {
+  margin-top: var(--space-4);
 }
 
 .setup-readiness-banner strong,
@@ -974,28 +1044,61 @@
 
 .setup-check {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 11px;
-  padding: 12px 14px;
+  padding: 8px 18px;
+  min-height: 58px;
+  box-sizing: border-box;
   border: 1px solid var(--border);
   border-radius: 13px;
 }
 
-.setup-check > span {
+.setup-check > .setup-check-status {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: 9px;
+  border-radius: 50%;
   color: var(--primary-strong);
   background: var(--primary-soft);
 }
 
-.setup-check.is-done > span {
-  color: var(--success-strong);
-  background: #dcfce7;
+.setup-check.is-done > .setup-check-status {
+  color: #fff;
+  background: var(--setup-success-fill);
+  border: 3px solid var(--setup-success-ring);
+  box-sizing: border-box;
+  box-shadow:
+    var(--setup-success-shadow),
+    inset 0 1px 1px #c4e3b4;
+}
+
+.setup-check-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 42px;
+  border-radius: 12px;
+  color: #a76705;
+  background: var(--primary-subtle);
+}
+
+.setup-check .tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.setup-check.is-done .tag {
+  color: #18741d;
+  background: #e4f6e2;
+  border-color: transparent;
+}
+
+.setup-readiness-issues:empty {
+  display: none;
 }
 
 .setup-check > div {
@@ -1120,11 +1223,51 @@
   }
 
   .setup-check {
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: 24px 36px minmax(0, 1fr);
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .setup-readiness-banner {
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .setup-card {
+    padding: var(--space-4);
+  }
+
+  .setup-check-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .setup-check > .setup-check-status {
+    width: 24px;
+    height: 24px;
+  }
+
+  .setup-readiness-symbol {
+    width: 32px;
+    height: 32px;
+  }
+
+  .setup-readiness-copy {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .setup-readiness-copy strong {
+    font-size: var(--font-card);
+  }
+
+  .setup-readiness-decoration {
+    display: none;
   }
 
   .setup-check .tag {
-    grid-column: 2;
+    grid-column: 3;
     justify-self: start;
   }
 }

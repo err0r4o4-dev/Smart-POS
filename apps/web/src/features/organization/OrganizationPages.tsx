@@ -17,12 +17,14 @@ import {
   ChevronDown,
   ChevronRight,
   CircleAlert,
+  Coins,
   CreditCard,
   GitBranch,
   House,
   Info,
   LayoutGrid,
   LoaderCircle,
+  MapPin,
   QrCode,
   Store,
   WalletCards,
@@ -1352,7 +1354,13 @@ function ScopedSetupPage() {
                     className="setup-top-step-button"
                   >
                     <span className="setup-top-step-media">
-                      <span className="setup-top-step-badge">{index + 1} </span>
+                      <span className="setup-top-step-badge" aria-hidden="true">
+                        {complete && !isActive ? (
+                          <Check size={14} />
+                        ) : (
+                          index + 1
+                        )}
+                      </span>
                       <span className="setup-top-step-icon" aria-hidden="true">
                         <StepIcon size={20} strokeWidth={1.9} />
                       </span>
@@ -1479,7 +1487,7 @@ function ScopedSetupPage() {
                         form={form}
                         ready={isReady}
                       />
-                      <ul>
+                      <ul className="setup-readiness-issues">
                         {readinessItems.map((item, index) => (
                           <li key={`${item.key}-${index}`}>
                             {item.label}: {item.reason}
@@ -1487,7 +1495,7 @@ function ScopedSetupPage() {
                         ))}
                       </ul>
                       <Button
-                        className="button-secondary"
+                        className="button-secondary setup-recheck-button"
                         disabled={pending || setupQuery.isFetching}
                         onClick={() => void setupQuery.refetch()}
                       >
@@ -1626,6 +1634,7 @@ function ReadinessReview({
     {
       key: 'location',
       label: t('organization.metaLocation'),
+      icon: MapPin,
       done: Boolean(form.profile.location?.confirmed),
       detail: form.profile.location
         ? form.profile.location.address
@@ -1634,6 +1643,7 @@ function ReadinessReview({
     {
       key: 'profile',
       label: t('organization.metaProfile'),
+      icon: Store,
       done: !items.some((item) => item.key === 'profile'),
       detail:
         form.profile.organization.name || t('organization.setupNoStoreName'),
@@ -1641,12 +1651,14 @@ function ReadinessReview({
     {
       key: 'tables',
       label: t('organization.metaTables'),
+      icon: LayoutGrid,
       done: !items.some((item) => item.key === 'tables'),
       detail: form.tables.tables[0]?.name || t('organization.setupNoTable'),
     },
     {
       key: 'payments',
       label: t('organization.setupPaymentMethods'),
+      icon: CreditCard,
       done: !items.some((item) => item.key === 'payments'),
       detail: form.payments.cash
         ? t('organization.setupCash')
@@ -1657,6 +1669,7 @@ function ReadinessReview({
     {
       key: 'orders',
       label: t('organization.setupOrdersFees'),
+      icon: Coins,
       done: !items.some((item) => item.key === 'orders'),
       detail: t('organization.setupFeeSummary', {
         vat: form.orders.vat_percent,
@@ -1667,14 +1680,14 @@ function ReadinessReview({
   return (
     <div className="setup-review">
       <div className={`setup-readiness-banner ${ready ? 'is-ready' : ''}`}>
-        <span>
+        <span className="setup-readiness-symbol">
           {ready ? (
-            <CheckCircle2 size={22} aria-hidden="true" />
+            <Check size={28} strokeWidth={3} aria-hidden="true" />
           ) : (
             <CircleAlert size={22} aria-hidden="true" />
           )}
         </span>
-        <div>
+        <div className="setup-readiness-copy">
           <strong>
             {ready
               ? t('organization.setupReady')
@@ -1686,6 +1699,16 @@ function ReadinessReview({
               : t('organization.setupNotReadyDetails')}
           </p>
         </div>
+        {ready && (
+          <img
+            className="setup-readiness-decoration"
+            src="/images/shop-directory.svg"
+            alt=""
+            aria-hidden="true"
+            width={160}
+            height={100}
+          />
+        )}
       </div>
       <div
         className="setup-checklist"
@@ -1701,12 +1724,15 @@ function ReadinessReview({
               className={`setup-check ${check.done ? 'is-done' : ''}`}
               key={check.key}
             >
-              <span>
+              <span className="setup-check-status">
                 {check.done ? (
                   <Check size={16} aria-hidden="true" />
                 ) : (
                   <CircleAlert size={16} aria-hidden="true" />
                 )}
+              </span>
+              <span className="setup-check-icon" aria-hidden="true">
+                <check.icon size={23} strokeWidth={1.8} />
               </span>
               <div>
                 <strong>{check.label}</strong>
@@ -1717,6 +1743,7 @@ function ReadinessReview({
                 </small>
               </div>
               <Tag tone={check.done ? 'success' : 'amber'}>
+                {check.done && <Check size={14} aria-hidden="true" />}
                 {check.done
                   ? t('organization.setupReadyTag')
                   : t('organization.setupNeedsAttention')}
@@ -1725,7 +1752,7 @@ function ReadinessReview({
           ))}
       </div>
       <p className="setup-review-note">
-        <LayoutGrid size={16} aria-hidden="true" />{' '}
+        <Info size={16} aria-hidden="true" />{' '}
         {t('organization.setupReviewNote')}
       </p>
     </div>

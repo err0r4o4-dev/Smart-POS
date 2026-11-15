@@ -1,3 +1,28 @@
+# Menu page sizing (2026-11-15)
+
+Scope: Small / Low, frontend layout only. Reuse standard list-page sizing on
+/menu; preserve API calls, permissions and data. No database or external writes.
+
+- [x] Browser RED at 320/768/1440px: cards use 20px instead of standard 22px.
+- [x] Apply standard list-page class; browser checks passed at 320/768/1440px.
+- [x] Desktop grid RED: three cards leave 284px unused at 1440px.
+- [x] Fit three KPI cards to the desktop row; omit the decorative sparkline so
+      the value fits at the 1151px desktop boundary without making cards taller.
+- [x] Browser PASS 5/5 at 320/768/1150/1151/1440px with synthetic read-only APIs:
+      standard card radii, search padding/input, desktop row coverage, single-line
+      KPI value and no document overflow. Inspected 320/768/1440px screenshots.
+      Chromium on Windows, viewport emulation only; no real-device/data acceptance.
+- [x] Catalog unit tests PASS 26/26; typecheck, build, scoped ESLint/Prettier and
+      git diff --check PASS. Main reviewed the actual menu source/style/test diff.
+      Preserved OrganizationPages.tsx and setup.css changes without editing them.
+- [?] Full regression gate FAIL: npm run test reports 697/707 web tests passing.
+      SettingsPage.test.tsx (1), ShopCartPage.test.tsx (1), StorefrontPage.test.tsx
+      (8) fail outside this task's edited files. No baseline-pass claim or unrelated
+      repairs. Downstream root checks did not run after Vitest failed.
+
+Evidence: .local/menu-grid-red, .local/menu-layout-final,
+.local/menu-layout-full-test.log and .local/menu-layout-build.log.
+
 # Remove menu entry from restaurant setup (2026-11-15)
 
 Scope: remove menu entry/validation/writes from /setup and allow server readiness

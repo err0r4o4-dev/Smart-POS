@@ -439,13 +439,6 @@ func readSetupState(ctx context.Context, tx pgx.Tx, org, branch string) (SetupSt
 	applySetupReadiness(&state, steps, live)
 	state.Complete = status == "COMPLETED"
 	state.Completed = state.Complete
-	if !state.Completed && state.Location == nil {
-		state.Readiness.Incomplete = append(state.Readiness.Incomplete, SetupReadinessItem{Key: "location", Label: "Store location", Reason: "Confirm the store address and map pin"})
-		state.Ready, state.Readiness.Ready = false, false
-		if state.CurrentStep == "review" {
-			state.CurrentStep = "location"
-		}
-	}
 	return state, nil
 }
 

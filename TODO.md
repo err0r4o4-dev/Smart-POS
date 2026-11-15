@@ -1031,3 +1031,12 @@ No paid services, deployment, push, live data or database migration.
 Recovery: retain legacy JSON and hidden contact values; manual entry works when
 lookup fails. Remove this section only after required checks and review pass.
 
+
+## Setup: remove map and move manual address (2026-11-15)
+
+Supersedes the map UI in setup only; preserve optional legacy location data and the earlier privacy review blocker. Medium size / Medium risk.
+
+- [x] Remove map/GPS prerequisite; show optional manual house number in step one.
+- [x] Verify three-screen navigation, legacy resume, address save and readiness regression with component/unit tests.
+- [x] Current checks: Vitest 83/83; Go TestSetup pass; contracts/typecheck/build/diff whitespace pass; lint 0 errors and 12 warnings. Go cache access required approved escalation.
+- [?] Browser viewport and real database/API acceptance not run; no isolated target confirmed. Component/unit checks do not establish release readiness. Earlier independent privacy review remains blocked.

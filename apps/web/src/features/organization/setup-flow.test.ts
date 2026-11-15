@@ -6,7 +6,7 @@ import {
   type SetupSaveCache,
 } from './setup-flow';
 
-describe('four-step setup', () => {
+describe('setup flow', () => {
   it('does not rewrite hydrated saved tables until their payload changes', async () => {
     const cache: SetupSaveCache = {};
     const payload = { qr_enabled: true, tables: [{ name: 'One' }] };
@@ -27,12 +27,13 @@ describe('four-step setup', () => {
     );
     expect(write).toHaveBeenCalledTimes(1);
   });
-  it('maps legacy progress without skipping the unconfirmed location', () => {
-    expect(setupScreenForStep('tables', false)).toBe(0);
-    expect(setupScreenForStep('orders', false)).toBe(0);
-    expect(setupScreenForStep('menu', false)).toBe(1);
-    expect(setupScreenForStep('payments', true)).toBe(2);
-    expect(setupScreenForStep('review', true)).toBe(3);
+  it('maps legacy progress to the three visible setup screens', () => {
+    expect(setupScreenForStep('tables')).toBe(0);
+    expect(setupScreenForStep('orders')).toBe(0);
+    expect(setupScreenForStep('location')).toBe(0);
+    expect(setupScreenForStep('menu')).toBe(1);
+    expect(setupScreenForStep('payments')).toBe(1);
+    expect(setupScreenForStep('review')).toBe(2);
   });
 
   it('retries only the failed section with its original key after partial success', async () => {

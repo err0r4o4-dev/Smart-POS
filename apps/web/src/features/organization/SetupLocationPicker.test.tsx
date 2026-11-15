@@ -78,9 +78,7 @@ it('searches only on request and rejects empty provider coordinates', async () =
     screen.queryByRole('button', { name: 'Invalid empty coordinates' }),
   ).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Latitude')).not.toBeInTheDocument();
-  expect(screen.getByLabelText('Store address')).toHaveValue(
-    'Restaurant entrance',
-  );
+  expect(screen.getAllByRole('textbox')[1]).toHaveValue('');
   expect(fetcher).toHaveBeenCalledWith(
     expect.any(URL),
     expect.objectContaining({
@@ -185,7 +183,7 @@ it('requires reconfirmation after editing a confirmed address', () => {
   fireEvent.click(
     screen.getByRole('button', { name: 'Confirm store location' }),
   );
-  fireEvent.change(screen.getByLabelText('Store address'), {
+  fireEvent.change(screen.getByLabelText('House number / store address'), {
     target: { value: '2 Main Road' },
   });
   expect(screen.getByRole('status')).toHaveTextContent(

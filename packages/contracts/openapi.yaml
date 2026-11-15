@@ -18142,7 +18142,7 @@ paths:
     post:
       operationId: completeRestaurantSetup
       security: [{ sessionCookie: [] }]
-      description: Owner-only verified completion. The server validates required restaurant profile, service modes, dine-in tables, confirmed location, payment and order settings, starts the 30-day trial and records audit state in one transaction. Menu items are optional and can be added after setup; missing menu items or legacy menu-step progress do not block completion. Other missing prerequisites return conflict and never fabricate readiness.
+      description: Owner-only verified completion. The server validates required restaurant profile, service modes, dine-in tables, payment and order settings, starts the 30-day trial and records audit state in one transaction. Store coordinates are optional and are not collected during setup. Menu items are optional and can be added after setup; missing menu items or legacy menu-step progress do not block completion. Other missing prerequisites return conflict and never fabricate readiness.
       parameters:
         - $ref: '#/components/parameters/CSRF'
         - $ref: '#/components/parameters/IdempotencyKey'

@@ -24,7 +24,6 @@ import {
   Info,
   LayoutGrid,
   LoaderCircle,
-  MapPin,
   QrCode,
   Store,
   WalletCards,
@@ -46,7 +45,6 @@ import { AccountMenu } from '../../components/ui/AccountMenu';
 import { HelpDropdown } from '../../components/ui/HelpDropdown';
 import { StandardPageHeader } from '../../components/ui/StandardPage';
 import './setup.css';
-import { SetupLocationPicker } from './SetupLocationPicker';
 import { SetupTablesEditor } from './SetupTablesEditor';
 import {
   saveSetupSections,
@@ -76,7 +74,6 @@ import {
   type IssuedTableQRToken,
 } from './setup-api';
 import { validateStoreProfile, type ProfileErrors } from './setup-validation';
-import type { LocationMapStatus } from './SetupLocationPicker';
 
 const blankBranch: BranchInput = {
   name: '',
@@ -269,14 +266,6 @@ const setupMeta = [
     icon: Store,
   },
   {
-    key: 'location',
-    label: 'organization.metaLocation',
-    sidebarSubtitle: 'organization.metaLocation',
-    cardSubtitle: 'organization.locationPickHint',
-    description: 'organization.locationPickHint',
-    icon: House,
-  },
-  {
     key: 'payments',
     label: 'organization.metaPayments',
     sidebarSubtitle: 'organization.metaPayments',
@@ -294,7 +283,7 @@ const setupMeta = [
   },
 ] as const;
 
-type SetupStepIndex = 0 | 1 | 2 | 3;
+type SetupStepIndex = 0 | 1 | 2;
 
 export function setupKey() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
@@ -631,6 +620,19 @@ function SetupStepFields({
         </div>
         <div className="setup-form-row">
           <SetupInput
+            label={t('organization.setupStoreAddress')}
+            value={profile.organization.address}
+            placeholder={t('organization.setupAddressExample')}
+            onChange={(address) =>
+              update('profile', {
+                ...profile,
+                organization: { ...profile.organization, address },
+              })
+            }
+          />
+        </div>
+        <div className="setup-form-row">
+          <SetupInput
             label={t('organization.setupStoreDescription')}
             value={profile.organization.description ?? ''}
             placeholder={t('organization.setupDescriptionExample')}
@@ -817,9 +819,6 @@ function ScopedSetupPage() {
   const [form, setForm] = useState<SetupFormState>(createSetupForm);
   const [savedTableCount, setSavedTableCount] = useState(0);
   const [step, setStep] = useState<SetupStepIndex>(0);
-  const [locationMapStatus, setLocationMapStatus] = useState<
-    LocationMapStatus | 'idle'
-  >('idle');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const [profileErrors, setProfileErrors] = useState<ProfileErrors>({});
@@ -832,7 +831,6 @@ function ScopedSetupPage() {
     branchID: string;
   } | null>(null);
   const moveToStep = (nextStep: SetupStepIndex) => {
-    setLocationMapStatus('idle');
     setStep(nextStep);
   };
   const creationRef = useRef({ key: '', payload: '' });
@@ -907,12 +905,7 @@ function ScopedSetupPage() {
           ...(data.payments ? { payments: data.payments } : {}),
           ...(data.orders ? { orders: data.orders } : {}),
         }));
-      setStep(
-        setupScreenForStep(
-          data.current_step,
-          Boolean(data.profile?.location?.confirmed),
-        ),
-      );
+      setStep(setupScreenForStep(data.current_step));
     });
   }, [setupQuery.data, orgID, branchID, hydratedScope, isDirty]);
 
@@ -969,7 +962,6 @@ function ScopedSetupPage() {
   const localIncomplete = localReadiness(form, t);
   const readinessItems = serverState?.readiness.incomplete ?? localIncomplete;
   const isReady = Boolean(
-    form.profile.location?.confirmed &&
     hydratedScope === `${orgID}:${branchID}` &&
     serverState?.readiness.ready &&
     readinessItems.length === 0 &&
@@ -1036,20 +1028,15 @@ function ScopedSetupPage() {
         form.tables.tables.some((table) => !table.name.trim()))
     )
       return t('organization.setupTableRequired');
-    if (step === 2 && !form.payments.cash && !form.payments.bank_transfer)
+    if (step === 1 && !form.payments.cash && !form.payments.bank_transfer)
       return t('organization.setupPaymentRequired');
     if (
-      step === 2 &&
+      step === 1 &&
       localReadiness(form, t).some((item) => item.key === 'orders')
     )
       return t('organization.setupChargesInvalid');
-    if (step === 1 && !form.profile.location?.confirmed)
-      return t('organization.locationPickHint');
     return '';
   };
-  const locationMapLoading =
-    step === 1 &&
-    (locationMapStatus === 'idle' || locationMapStatus === 'loading');
   const downloadIssuedTokens = () => {
     const payload = JSON.stringify(issuedTokens, null, 2);
     let objectURL: string | null = null;
@@ -1083,7 +1070,7 @@ function ScopedSetupPage() {
     event.preventDefault();
     setError('');
     setRotationUncertain(false);
-    if (step === 3) {
+    if (step === 2) {
       if (!isReady) {
         setError(t('organization.setupIncomplete'));
         return;
@@ -1210,12 +1197,10 @@ function ScopedSetupPage() {
                   ]),
               { key: 'orders' as const, payload: form.orders },
             ]
-          : step === 1
-            ? [{ key: 'profile' as const, payload: profilePayload }]
-            : [
-                { key: 'payments' as const, payload: form.payments },
-                { key: 'orders' as const, payload: form.orders },
-              ];
+          : [
+              { key: 'payments' as const, payload: form.payments },
+              { key: 'orders' as const, payload: form.orders },
+            ];
       let safeResult: SetupState | null = null;
       await saveSetupSections(
         sections,
@@ -1460,62 +1445,34 @@ function ScopedSetupPage() {
                     pending || (Boolean(setupContext) && !hydratedScope)
                   }
                 >
-                  {step < 3 ? (
-                    step === 1 ? (
-                      <SetupLocationPicker
-                        value={form.profile.location}
-                        onMapStatusChange={setLocationMapStatus}
-                        onChange={(location) =>
-                          update('profile', {
-                            ...form.profile,
-                            location,
-                            organization: {
-                              ...form.profile.organization,
-                              address: [
-                                location.address,
-                                location.subdistrict &&
-                                  `ต.${location.subdistrict}`,
-                                location.district && `อ.${location.district}`,
-                                location.province,
-                                location.postal_code,
-                              ]
-                                .filter(Boolean)
-                                .join(' '),
-                            },
-                          })
-                        }
-                      />
-                    ) : (
-                      <div className="setup-grouped-fields">
-                        {(step === 0
-                          ? [
-                              0,
-                              1,
-                              ...(form.services.service_modes.dine_in
-                                ? [2]
-                                : []),
-                            ]
-                          : [3]
-                        ).map((section) => (
-                          <section key={section}>
-                            {section === 2 && (
-                              <h3>{t('organization.metaTables')}</h3>
+                  {step < 2 ? (
+                    <div className="setup-grouped-fields">
+                      {(step === 0
+                        ? [
+                            0,
+                            1,
+                            ...(form.services.service_modes.dine_in ? [2] : []),
+                          ]
+                        : [3]
+                      ).map((section) => (
+                        <section key={section}>
+                          {section === 2 && (
+                            <h3>{t('organization.metaTables')}</h3>
+                          )}
+                          <SetupStepFields
+                            step={section}
+                            savedTableCount={savedTableCount}
+                            form={form}
+                            update={update}
+                            profileErrors={profileErrors}
+                            onValidateProfile={validateProfile}
+                            promptPayAvailable={Boolean(
+                              serverState?.capabilities.promptPay,
                             )}
-                            <SetupStepFields
-                              step={section}
-                              savedTableCount={savedTableCount}
-                              form={form}
-                              update={update}
-                              profileErrors={profileErrors}
-                              onValidateProfile={validateProfile}
-                              promptPayAvailable={Boolean(
-                                serverState?.capabilities.promptPay,
-                              )}
-                            />
-                          </section>
-                        ))}
-                      </div>
-                    )
+                          />
+                        </section>
+                      ))}
+                    </div>
                   ) : (
                     <>
                       <ReadinessReview
@@ -1610,36 +1567,31 @@ function ScopedSetupPage() {
                       aria-label={
                         pending
                           ? t('organization.setupSaving')
-                          : locationMapLoading
-                            ? t('organization.locationLoading')
-                            : step === 3
-                              ? t('organization.setupActivate')
-                              : t('organization.setupSaveContinue')
+                          : step === 2
+                            ? t('organization.setupActivate')
+                            : t('organization.setupSaveContinue')
                       }
-                      aria-busy={pending || locationMapLoading}
+                      aria-busy={pending}
                       disabled={
                         pending ||
-                        locationMapLoading ||
                         (Boolean(setupContext) && setupQuery.isPending) ||
-                        (step === 3 && !isReady)
+                        (step === 2 && !isReady)
                       }
                     >
                       <span>
                         {pending
                           ? t('organization.setupSaving')
-                          : locationMapLoading
-                            ? t('organization.locationLoading')
-                            : step === 3
-                              ? t('organization.setupActivate')
-                              : t('organization.setupNext')}
+                          : step === 2
+                            ? t('organization.setupActivate')
+                            : t('organization.setupNext')}
                       </span>
-                      {pending || locationMapLoading ? (
+                      {pending ? (
                         <LoaderCircle
                           className="spin"
                           size={16}
                           aria-hidden="true"
                         />
-                      ) : step === 3 ? (
+                      ) : step === 2 ? (
                         <CheckCircle2 size={16} aria-hidden="true" />
                       ) : (
                         <ArrowRight size={16} aria-hidden="true" />
@@ -1667,15 +1619,6 @@ function ReadinessReview({
 }) {
   const { t } = useLanguage();
   const checks = [
-    {
-      key: 'location',
-      label: t('organization.metaLocation'),
-      icon: MapPin,
-      done: Boolean(form.profile.location?.confirmed),
-      detail: form.profile.location
-        ? form.profile.location.address
-        : t('organization.locationPickHint'),
-    },
     {
       key: 'profile',
       label: t('organization.metaProfile'),

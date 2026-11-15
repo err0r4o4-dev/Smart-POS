@@ -11,13 +11,10 @@ export function seedSavedSetupSection(
   cache[section] = { payload: JSON.stringify(payload), key: '', saved: true };
 }
 
-export function setupScreenForStep(
-  step: string,
-  locationConfirmed: boolean,
-): 0 | 1 | 2 | 3 {
-  if (['profile', 'services', 'tables', 'orders'].includes(step)) return 0;
-  if (!locationConfirmed || step === 'location') return 1;
-  return step === 'review' ? 3 : 2;
+export function setupScreenForStep(step: string): 0 | 1 | 2 {
+  if (['profile', 'services', 'tables', 'orders', 'location'].includes(step))
+    return 0;
+  return step === 'review' ? 2 : 1;
 }
 
 export async function saveSetupSections<

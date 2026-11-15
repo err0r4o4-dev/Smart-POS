@@ -73,3 +73,23 @@ func TestSetupLocationValidation(t *testing.T) {
 		})
 	}
 }
+
+func TestSetupManualAddressDoesNotRequireLocation(t *testing.T) {
+	for _, address := range []string{"", "99/9 Moo 3"} {
+		input := SetupProfileInput{BranchID: "11111111-1111-4111-8111-111111111111", Name: "Store", BusinessType: "RESTAURANT", Address: address}
+		if err := input.Validate(); err != nil {
+			t.Fatalf("manual optional address rejected: %v", err)
+		}
+	}
+}
+
+func TestSetupReadinessDoesNotRequireLocation(t *testing.T) {
+	for _, location := range []*SetupLocationInput{nil, {Latitude: 13.75, Longitude: 100.5, Address: "Store", Confirmed: true}} {
+		state := SetupState{Location: location}
+		steps := map[int]bool{1: true, 2: true, 3: true, 5: true, 6: true}
+		applySetupReadiness(&state, steps, []bool{true, true, true, false, true, true})
+		if !state.Ready || !state.Readiness.Ready || state.CurrentStep != "review" || len(state.Readiness.Incomplete) != 0 {
+			t.Fatalf("optional coordinates blocked setup: %+v", state)
+		}
+	}
+}

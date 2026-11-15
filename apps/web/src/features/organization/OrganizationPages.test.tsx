@@ -367,7 +367,7 @@ it('hides ordering and charge inputs without changing hydrated settings on save'
     screen.queryByLabelText('ยืนยันออเดอร์อัตโนมัติ'),
   ).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  await screen.findByText('ขั้นตอนที่ 2 จาก 4');
+  await screen.findByText('ขั้นตอนที่ 2 จาก 3');
   await completeServicesAndTables();
   expect(screen.queryByLabelText('VAT (%)')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('ค่าบริการ (%)')).not.toBeInTheDocument();
@@ -418,7 +418,7 @@ it('validates table rows and enables QR automatically', async () => {
     target: { value: 'โต๊ะ 2' },
   });
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  await screen.findByText('ขั้นตอนที่ 2 จาก 4');
+  await screen.findByText('ขั้นตอนที่ 2 จาก 3');
   expect(mocks.request).toHaveBeenCalledWith(
     '/organizations/org-1/restaurant/setup/tables',
     expect.objectContaining({
@@ -454,7 +454,9 @@ it('shows setup labels and validation in English', () => {
   renderSetup(['/setup'], true);
   expect(screen.getByLabelText('Store name')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Save and continue' }));
-  expect(screen.getByText('Enter a store name')).toBeInTheDocument();
+  expect(screen.getByLabelText('Store name')).toHaveAccessibleDescription(
+    'Enter a store name',
+  );
 });
 
 it('offers only the restaurant business type supported by setup', () => {
@@ -552,13 +554,11 @@ it('creates and saves a profile using only visible store fields', async () => {
   fireEvent.change(screen.getByLabelText('ประเภทร้าน'), {
     target: { value: 'RESTAURANT' },
   });
-  fireEvent.change(screen.getByLabelText('อีเมลร้าน'), {
-    target: { value: 'owner@example.test' },
-  });
+  expect(screen.queryByLabelText('อีเมลร้าน')).not.toBeInTheDocument();
   fireEvent.change(screen.getByLabelText('โทรศัพท์ร้าน'), {
-    target: { value: '123' },
+    target: { value: '0812345678' },
   });
-  fireEvent.change(screen.getByLabelText('ที่อยู่ร้าน'), {
+  fireEvent.change(screen.getByLabelText('บ้านเลขที่ / เลขที่ตั้งร้าน'), {
     target: { value: 'Bangkok' },
   });
 
@@ -566,8 +566,8 @@ it('creates and saves a profile using only visible store fields', async () => {
   const organization = {
     name: 'ร้านใหม่',
     business_type: 'RESTAURANT',
-    contact_email: 'owner@example.test',
-    contact_phone: '123',
+    contact_email: '',
+    contact_phone: '0812345678',
     address: 'Bangkok',
   };
   await waitFor(() =>
@@ -608,7 +608,7 @@ it('omits existing metadata when saving a hydrated profile', async () => {
       code: 'EXISTING',
       business_type: 'RESTAURANT',
       contact_email: 'saved@example.test',
-      contact_phone: '123',
+      contact_phone: '0812345678',
       address: 'Bangkok',
     },
     branch: {
@@ -633,7 +633,7 @@ it('omits existing metadata when saving a hydrated profile', async () => {
     name: 'ร้านแก้ไข',
     business_type: 'RESTAURANT',
     contact_email: 'saved@example.test',
-    contact_phone: '123',
+    contact_phone: '0812345678',
     address: 'Bangkok',
   };
   await waitFor(() =>
@@ -679,7 +679,7 @@ it('does not rotate existing completed tables when advancing without table edits
     expect(screen.getByLabelText('ชื่อ/เลขโต๊ะ 1')).toHaveValue('โต๊ะ'),
   );
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  await screen.findByLabelText('แผนที่เลือกตำแหน่งร้าน');
+  await screen.findByRole('heading', { name: 'การชำระเงิน' });
   expect(
     mocks.request.mock.calls.filter(
       ([path, options]) =>
@@ -691,53 +691,13 @@ it('does not rotate existing completed tables when advancing without table edits
     target: { value: 'โต๊ะใหม่' },
   });
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  await screen.findByLabelText('แผนที่เลือกตำแหน่งร้าน');
+  await screen.findByRole('heading', { name: 'การชำระเงิน' });
   expect(
     mocks.request.mock.calls.filter(
       ([path, options]) =>
         path.endsWith('/tables') && options?.method === 'PUT',
     ),
   ).toHaveLength(1);
-});
-
-it('requires reconfirmation after editing the address on the grouped store screen', async () => {
-  mocks.context = {
-    organization: { id: 'org-1' },
-    membership: { role: 'OWNER' },
-  };
-  renderSetup();
-  await waitFor(() =>
-    expect(screen.getByLabelText('ชื่อร้าน')).toHaveValue('ร้านเดิม'),
-  );
-  fireEvent.change(screen.getByLabelText('ที่อยู่ร้าน'), {
-    target: { value: 'New entrance' },
-  });
-  fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  await screen.findByLabelText('แผนที่เลือกตำแหน่งร้าน');
-  expect(screen.getByRole('status')).not.toHaveTextContent('ยืนยันตำแหน่งแล้ว');
-  fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  expect(screen.getByRole('alert')).not.toBeEmptyDOMElement();
-  expect(screen.getByText('ขั้นตอนที่ 2 จาก 4')).toBeInTheDocument();
-});
-
-it('routes legacy review without location to location confirmation', async () => {
-  mocks.context = {
-    organization: { id: 'org-1' },
-    membership: { role: 'OWNER' },
-  };
-  mocks.request.mockResolvedValue({
-    ...setupState,
-    current_step: 'review',
-    location: undefined,
-  });
-  renderSetup();
-  await screen.findByLabelText('แผนที่เลือกตำแหน่งร้าน');
-  expect(
-    screen.queryByRole('button', { name: /เปิดใช้งานร้าน/ }),
-  ).not.toBeInTheDocument();
-  expect(
-    screen.queryByRole('button', { name: 'ยืนยันตำแหน่งร้าน' }),
-  ).not.toBeInTheDocument();
 });
 
 it.each(['user', 'organization', 'branch'])(
@@ -1052,7 +1012,7 @@ it('saves current service modes when returning to the profile', async () => {
   );
   fireEvent.click(screen.getByLabelText('เดลิเวอรี'));
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  await screen.findByLabelText('แผนที่เลือกตำแหน่งร้าน');
+  await screen.findByRole('heading', { name: 'การชำระเงิน' });
   fireEvent.click(screen.getByRole('button', { name: /ย้อนกลับ/ }));
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
   await waitFor(() =>
@@ -1100,7 +1060,7 @@ it('prevents editing until the initial saved profile has loaded', async () => {
   fireEvent.change(screen.getByLabelText('ชื่อร้าน'), {
     target: { value: 'ชื่อใหม่' },
   });
-  expect(screen.getByLabelText('อีเมลร้าน')).toHaveValue('saved@example.test');
+  expect(screen.queryByLabelText('อีเมลร้าน')).not.toBeInTheDocument();
 });
 
 it.each(['user', 'organization', 'branch'])(
@@ -1298,24 +1258,17 @@ async function completeProfile() {
   fireEvent.change(screen.getByLabelText('ชื่อร้าน'), {
     target: { value: 'ร้านตัวอย่าง' },
   });
+  fireEvent.change(screen.getByLabelText('บ้านเลขที่ / เลขที่ตั้งร้าน'), {
+    target: { value: '99/9 หมู่ 3' },
+  });
 
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  await screen.findByText('ขั้นตอนที่ 2 จาก 4');
+  await screen.findByText('ขั้นตอนที่ 2 จาก 3');
 }
 
 async function completeServicesAndTables() {
-  fireEvent.change(screen.getByLabelText('ที่อยู่ร้าน'), {
-    target: { value: 'Bangkok' },
-  });
-  await waitFor(() =>
-    expect(
-      screen.getByRole('button', {
-        name: /บันทึกและถัดไป|กำลังโหลดแผนที่/,
-      }),
-    ).toBeEnabled(),
-  );
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  await screen.findByText('ขั้นตอนที่ 3 จาก 4');
+  await screen.findByText('ขั้นตอนที่ 3 จาก 3');
 }
 
 it('keeps setup within one named main region with a clear page heading', () => {
@@ -1335,20 +1288,15 @@ it('keeps setup within one named main region with a clear page heading', () => {
   expect(within(main).getByLabelText('ชื่อร้าน')).toBeVisible();
 });
 
-it('renders four accessible steps and keeps the first step blocked by validation', () => {
+it('renders three accessible steps and keeps the first step blocked by validation', () => {
   renderSetup();
 
   const progress = screen.getByRole('complementary', {
     name: 'ความคืบหน้าการตั้งค่า',
   });
   const steps = within(progress).getAllByRole('listitem');
-  expect(steps).toHaveLength(4);
-  const names = [
-    'ร้านและบริการ',
-    'ตำแหน่งร้าน',
-    'การชำระเงิน',
-    'ตรวจสอบความพร้อม',
-  ];
+  expect(steps).toHaveLength(3);
+  const names = ['ร้านและบริการ', 'การชำระเงิน', 'ตรวจสอบความพร้อม'];
   steps.forEach((item, index) => {
     const button = within(item).getByRole('button', {
       name: new RegExp(names[index]),
@@ -1361,14 +1309,16 @@ it('renders four accessible steps and keeps the first step blocked by validation
       expect(button).toBeDisabled();
     }
   });
-  expect(screen.getByText('ขั้นตอนที่ 1 จาก 4')).toBeInTheDocument();
+  expect(screen.getByText('ขั้นตอนที่ 1 จาก 3')).toBeInTheDocument();
   expect(screen.getAllByText('ร้านและบริการ').length).toBeGreaterThan(0);
   expect(screen.getByRole('button', { name: /บันทึกและถัดไป/ })).toBeEnabled();
 
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
 
-  expect(screen.getByRole('alert')).toHaveTextContent('กรอกชื่อร้านให้ครบ');
-  expect(screen.getByText('ขั้นตอนที่ 1 จาก 4')).toBeInTheDocument();
+  expect(screen.getByLabelText('ชื่อร้าน')).toHaveAccessibleDescription(
+    'กรอกชื่อร้านให้ครบ',
+  );
+  expect(screen.getByText('ขั้นตอนที่ 1 จาก 3')).toBeInTheDocument();
 });
 
 it('supports forward and backward navigation while preserving values', async () => {
@@ -1379,25 +1329,14 @@ it('supports forward and backward navigation while preserving values', async () 
   renderSetup();
   await completeProfile();
 
-  expect(screen.getByLabelText('แผนที่เลือกตำแหน่งร้าน')).toBeVisible();
-  const progress = screen.getByRole('complementary', {
-    name: 'ความคืบหน้าการตั้งค่า',
-  });
-  expect(
-    within(progress).getByRole('button', { name: /ตำแหน่งร้าน/ }),
-  ).toHaveAttribute('aria-current', 'step');
+  expect(screen.getByRole('heading', { name: 'การชำระเงิน' })).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: /ย้อนกลับ/ }));
   expect(screen.getByLabelText('ชื่อร้าน')).toHaveValue('ร้านตัวอย่าง');
-  fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  await screen.findByLabelText('แผนที่เลือกตำแหน่งร้าน');
-  fireEvent.click(
-    within(progress).getByRole('button', { name: /ร้านและบริการ/ }),
+  expect(screen.getByLabelText('บ้านเลขที่ / เลขที่ตั้งร้าน')).toHaveValue(
+    '99/9 หมู่ 3',
   );
-
-  expect(screen.getByLabelText('ชื่อร้าน')).toHaveValue('ร้านตัวอย่าง');
-  expect(
-    within(progress).getByRole('button', { name: /ร้านและบริการ/ }),
-  ).toHaveAttribute('aria-current', 'step');
+  fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
+  await screen.findByRole('heading', { name: 'การชำระเงิน' });
 });
 
 it('disables editing and navigation while saving a step', async () => {
@@ -1444,7 +1383,9 @@ it('disables editing and navigation while saving a step', async () => {
   await act(async () => {
     finishSave({ ...setupState });
   });
-  expect(await screen.findByLabelText('แผนที่เลือกตำแหน่งร้าน')).toBeEnabled();
+  expect(
+    await screen.findByRole('heading', { name: 'การชำระเงิน' }),
+  ).toBeVisible();
 });
 
 it('shows card payments as unavailable instead of allowing false completion', async () => {
@@ -1454,7 +1395,6 @@ it('shows card payments as unavailable instead of allowing false completion', as
   };
   renderSetup();
   await completeProfile();
-  await completeServicesAndTables();
   const card = screen.getByLabelText(/บัตรเครดิต/);
   expect(card).toBeDisabled();
   expect(screen.getByText(/รอเชื่อมต่อผู้ให้บริการ/)).toBeInTheDocument();
@@ -1684,8 +1624,7 @@ it('completes readiness review once and routes to the existing dashboard', async
   renderSetup();
   await completeProfile();
   await completeServicesAndTables();
-  fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  await screen.findByText('ขั้นตอนที่ 4 จาก 4');
+  await screen.findByText('ขั้นตอนที่ 3 จาก 3');
   await screen.findByRole('button', { name: /เปิดใช้งานร้าน/ });
 
   expect(await screen.findByText('ร้านพร้อมเปิดใช้งาน')).toBeInTheDocument();
@@ -1752,7 +1691,7 @@ it('renders standalone form layout without backoffice sidebar or hero panel', ()
   const badges = Array.from(
     stepper.querySelectorAll('.setup-top-step-badge'),
   ).map((el) => el.textContent?.trim());
-  expect(badges).toEqual(['1', '2', '3', '4']);
+  expect(badges).toEqual(['1', '2', '3']);
   const layout = document.querySelector('.setup-layout');
   expect(layout).not.toBeNull();
   expect(
@@ -1770,14 +1709,10 @@ it('renders standalone form layout without backoffice sidebar or hero panel', ()
 
   expect(screen.getByPlaceholderText('เช่น ร้านอาหารของคุณ')).toBeVisible();
   expect(
-    screen.getByPlaceholderText('เช่น contact@velocafe.com'),
-  ).toBeVisible();
+    screen.queryByPlaceholderText('เช่น contact@velocafe.com'),
+  ).not.toBeInTheDocument();
   expect(screen.getByPlaceholderText('เช่น 061-507-1665')).toBeVisible();
-  expect(
-    screen.getByPlaceholderText(
-      'เช่น 123 ถ.สุขุมวิท แขวงคลองตัน เขตวัฒนา กรุงเทพฯ 10110',
-    ),
-  ).toBeVisible();
+  expect(screen.getByPlaceholderText('เช่น 99/9 หมู่ 3 ถนน...')).toBeVisible();
   expect(
     screen.getByPlaceholderText(
       'เช่น ร้านอาหารและคาเฟ่ อาหารไทย เครื่องดื่ม และเบเกอรี่',
@@ -1795,4 +1730,69 @@ it('renders standalone form layout without backoffice sidebar or hero panel', ()
     ),
   ).toBeVisible();
   expect(screen.getByText('ถัดไป')).toBeVisible();
+});
+
+it('saves a manually edited first-step address without coordinates', async () => {
+  mocks.context = {
+    organization: { id: 'org-1' },
+    membership: { role: 'OWNER' },
+  };
+  mocks.request.mockResolvedValue({
+    ...setupState,
+    current_step: 'profile',
+    location: undefined,
+  });
+  renderSetup();
+  await waitFor(() =>
+    expect(screen.getByLabelText('ชื่อร้าน')).toHaveValue('ร้านเดิม'),
+  );
+  expect(screen.queryByText(/OpenStreetMap/)).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: /ยืนยันตำแหน่ง|ตำแหน่งปัจจุบัน/ }),
+  ).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('บ้านเลขที่ / เลขที่ตั้งร้าน'), {
+    target: { value: '99/9 หมู่ 3' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
+  await screen.findByRole('heading', { name: 'การชำระเงิน' });
+  const profileCall = mocks.request.mock.calls.find(
+    ([path, options]) =>
+      path.endsWith('/setup/profile') && options?.method === 'PUT',
+  );
+  expect(profileCall).toBeDefined();
+  expect(profileCall![1].body.organization.address).toBe('99/9 หมู่ 3');
+  expect(profileCall![1].body).not.toHaveProperty('location');
+});
+
+it('allows review without legacy location coordinates', async () => {
+  mocks.context = {
+    organization: { id: 'org-1' },
+    membership: { role: 'OWNER' },
+  };
+  mocks.request.mockResolvedValue({
+    ...setupState,
+    current_step: 'review',
+    location: undefined,
+  });
+  renderSetup(['/setup'], true);
+  expect(await screen.findByText('Store ready to open')).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Open store' })).toBeEnabled();
+});
+
+it('resumes a legacy location step at the editable first screen', async () => {
+  mocks.context = {
+    organization: { id: 'org-1' },
+    membership: { role: 'OWNER' },
+  };
+  mocks.request.mockResolvedValue({
+    ...setupState,
+    current_step: 'location',
+    location: undefined,
+  });
+  renderSetup();
+  await waitFor(() =>
+    expect(screen.getByLabelText('ชื่อร้าน')).toHaveValue('ร้านเดิม'),
+  );
+  expect(screen.getByLabelText('บ้านเลขที่ / เลขที่ตั้งร้าน')).toBeVisible();
+  expect(screen.getByText('ขั้นตอนที่ 1 จาก 3')).toBeVisible();
 });

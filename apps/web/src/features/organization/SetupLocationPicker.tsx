@@ -120,9 +120,6 @@ export function SetupLocationPicker({
                 (value): value is string =>
                   typeof value === 'string' && value.trim() !== '',
               ) ?? '';
-          const street = [getText('house_number'), getText('street')]
-            .filter(Boolean)
-            .join(' ');
           const province = getText('state', 'province');
           const district = getText('county', 'district', 'city_district');
           const subdistrict = getText('suburb', 'village', 'municipality');
@@ -144,7 +141,7 @@ export function SetupLocationPicker({
             ...current,
             latitude: lat,
             longitude: lon,
-            address: street || current?.address || '',
+            address: current?.address ?? '',
             details: current?.details ?? '',
             province_id: provinceRow?.[0],
             province: provinceRow?.[1] ?? province,
@@ -374,7 +371,8 @@ export function SetupLocationPicker({
                   change({
                     latitude: Number(result.lat),
                     longitude: Number(result.lon),
-                    address: result.display_name,
+                    address: '',
+                    details: '',
                   });
                   setResults([]);
                 }}
@@ -437,10 +435,11 @@ export function SetupLocationPicker({
       <div className="setup-form-grid">
         <label className="tenant-field setup-field">
           <span className="setup-field-label">
-            {t('organization.setupStoreAddress')}
+            {t('organization.locationAddress')}
           </span>
           <input
             value={value?.address ?? ''}
+            placeholder={t('organization.locationAddressPlaceholder')}
             maxLength={1000}
             onChange={(event) => change({ address: event.target.value })}
           />

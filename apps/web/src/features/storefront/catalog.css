@@ -1068,8 +1068,8 @@
   align-items: center;
   text-align: center;
   padding: clamp(20px, 4vw, 36px) 24px;
-  background: linear-gradient(135deg, #FFFDF5 0%, #FFF8E6 100%);
-  border: 1px solid #F0E0AA;
+  background: linear-gradient(135deg, #fffdf5 0%, #fff8e6 100%);
+  border: 1px solid #f0e0aa;
   border-radius: 20px;
   box-shadow: 0 4px 20px rgba(17, 27, 56, 0.04);
 }
@@ -1078,8 +1078,8 @@
   align-items: center;
   gap: 6px;
   padding: 4px 12px;
-  background: #FFF0C2;
-  color: #85651D;
+  background: #fff0c2;
+  color: #85651d;
   font-size: 12px;
   font-weight: 700;
   border-radius: var(--radius-pill);
@@ -1089,12 +1089,12 @@
   margin: 0 0 8px;
   font-size: clamp(20px, 2.5vw, 26px);
   font-weight: 800;
-  color: #111B38;
+  color: #111b38;
 }
 .catalog-dinein-subtitle {
   margin: 0 0 16px;
   font-size: 14px;
-  color: #55472B;
+  color: #55472b;
   max-width: 520px;
   line-height: 1.5;
 }
@@ -1103,12 +1103,12 @@
   align-items: center;
   gap: 8px;
   padding: 8px 18px;
-  background: #FFFFFF;
-  border: 1.5px solid #F8CA49;
+  background: #ffffff;
+  border: 1.5px solid #f8ca49;
   border-radius: 12px;
   font-size: 15px;
   font-weight: 800;
-  color: #111B38;
+  color: #111b38;
   box-shadow: 0 2px 8px rgba(248, 202, 73, 0.2);
   margin-bottom: 16px;
 }
@@ -1118,8 +1118,8 @@
   justify-content: center;
   gap: 8px;
   padding: 10px 24px;
-  background: #F8CA49;
-  color: #111B38;
+  background: #f8ca49;
+  color: #111b38;
   font-size: 14px;
   font-weight: 800;
   border-radius: 12px;
@@ -1128,7 +1128,7 @@
   box-shadow: 0 2px 6px rgba(17, 27, 56, 0.08);
 }
 .catalog-dinein-cta:hover {
-  background: #E5B838;
+  background: #e5b838;
   transform: translateY(-1px);
 }
 
@@ -1152,22 +1152,22 @@
   white-space: nowrap;
   padding: 8px 16px;
   border-radius: var(--radius-pill);
-  background: #F3F4F6;
+  background: #f3f4f6;
   border: 1px solid var(--border);
-  color: #4B5563;
+  color: #4b5563;
   font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 .catalog-category-pill:hover {
-  background: #E5E7EB;
+  background: #e5e7eb;
   color: #111827;
 }
 .catalog-category-pill-active {
-  background: #F8CA49 !important;
-  color: #111B38 !important;
-  border-color: #E5B838 !important;
+  background: #f8ca49 !important;
+  color: #111b38 !important;
+  border-color: #e5b838 !important;
   font-weight: 800 !important;
   box-shadow: 0 2px 6px rgba(248, 202, 73, 0.28);
 }
@@ -1189,8 +1189,8 @@
   display: inline-block;
   padding: 2px 7px;
   border-radius: var(--radius-pill);
-  background: #FEF3C7;
-  color: #92400E;
+  background: #fef3c7;
+  color: #92400e;
   font-size: 11px;
   font-weight: 700;
   margin-top: 4px;
@@ -1208,8 +1208,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 16px;
-  background: #111B38;
-  color: #FFFFFF;
+  background: #111b38;
+  color: #ffffff;
   border-radius: 16px;
   box-shadow: 0 10px 30px rgba(17, 27, 56, 0.35);
   animation: catalogSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -1238,7 +1238,7 @@
   height: 40px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.12);
-  color: #F8CA49;
+  color: #f8ca49;
 }
 .catalog-floating-cart-badge {
   position: absolute;
@@ -1247,8 +1247,8 @@
   min-width: 18px;
   height: 18px;
   padding: 0 4px;
-  background: #F8CA49;
-  color: #111B38;
+  background: #f8ca49;
+  color: #111b38;
   border-radius: var(--radius-pill);
   font-size: 11px;
   font-weight: 800;
@@ -1261,13 +1261,13 @@
 }
 .catalog-floating-cart-label {
   font-size: 11px;
-  color: #9CA3AF;
+  color: #9ca3af;
   line-height: 1.2;
 }
 .catalog-floating-cart-price {
   font-size: 17px;
   font-weight: 800;
-  color: #F8CA49;
+  color: #f8ca49;
   line-height: 1.3;
 }
 .catalog-floating-cart-btn {
@@ -1275,8 +1275,8 @@
   align-items: center;
   gap: 8px;
   padding: 10px 18px;
-  background: #F8CA49;
-  color: #111B38;
+  background: #f8ca49;
+  color: #111b38;
   font-size: 14px;
   font-weight: 800;
   border-radius: 10px;
@@ -1284,5 +1284,5 @@
   transition: all 0.15s ease;
 }
 .catalog-floating-cart-btn:hover {
-  background: #E5B838;
+  background: #e5b838;
 }

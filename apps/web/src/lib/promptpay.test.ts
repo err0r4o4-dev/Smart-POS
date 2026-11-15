@@ -3,7 +3,8 @@ import { calculateCRC16, generatePromptPayPayload } from './promptpay';
 
 describe('PromptPay Generator', () => {
   it('calculates valid CCITT-FALSE CRC16 checksum', () => {
-    const data = '00020101021229370016A000000677010111011300668123456785303764540560.005802TH6304';
+    const data =
+      '00020101021229370016A000000677010111011300668123456785303764540560.005802TH6304';
     expect(calculateCRC16(data)).toBe('B2B2');
   });
 

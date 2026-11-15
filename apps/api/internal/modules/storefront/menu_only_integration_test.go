@@ -59,6 +59,15 @@ func menuOnlyAcceptance(t *testing.T, ctx context.Context, organizations *organi
 		t.Fatalf("zero stock browse: %+v %v", products, err)
 	}
 	items := []storefront.ItemInput{{VariantID: variant, Quantity: "2.000"}}
+	t.Run("inactive branch still closes menu-only quotes", func(test *testing.T) {
+		setSourceBranchStatus(test, ctx, organizations, owner, org, shop.BranchID, "INACTIVE")
+		_, problem := service.Quote(ctx, shop.Slug, storefront.QuoteInput{Items: items})
+		setSourceBranchStatus(test, ctx, organizations, owner, org, shop.BranchID, "ACTIVE")
+		if !errors.Is(problem, storefront.ErrClosed) {
+			test.Fatalf("inactive branch accepted a quote: %v", problem)
+		}
+	})
+	setSourceTerminalStatus(t, ctx, organizations, owner, org, shop.TerminalID, "INACTIVE")
 	quote, err := service.Quote(ctx, shop.Slug, storefront.QuoteInput{Items: items})
 	if err != nil || quote.Total != "20.00" {
 		t.Fatalf("zero stock quote: %+v %v", quote, err)
@@ -78,12 +87,21 @@ func menuOnlyAcceptance(t *testing.T, ctx context.Context, organizations *organi
 		t.Fatal("foreign order read")
 	}
 	payReservationFixture(t, ctx, service, shop.Slug, input.AccessToken, order)
+	t.Run("inactive branch still closes paid menu-only preparation", func(test *testing.T) {
+		setSourceBranchStatus(test, ctx, organizations, owner, org, shop.BranchID, "INACTIVE")
+		_, problem := service.Transition(ctx, owner, org, order.ID, storefront.TransitionInput{Revision: order.Revision, Status: "PREPARING"})
+		setSourceBranchStatus(test, ctx, organizations, owner, org, shop.BranchID, "ACTIVE")
+		if !errors.Is(problem, storefront.ErrClosed) {
+			test.Fatalf("inactive branch accepted paid preparation: %v", problem)
+		}
+	})
 	for _, status := range []string{"PREPARING", "READY"} {
 		order, err = service.Transition(ctx, owner, org, order.ID, storefront.TransitionInput{Revision: order.Revision, Status: status})
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
+	setSourceTerminalStatus(t, ctx, organizations, owner, org, shop.TerminalID, "ACTIVE")
 	if _, err = point.OpenShift(ctx, owner, org, "bf333333-3333-4333-8333-333333333333", pos.ShiftInput{TerminalID: shop.TerminalID, OpeningCash: "0.00"}); err != nil {
 		t.Fatal(err)
 	}

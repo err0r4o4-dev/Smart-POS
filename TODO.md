@@ -1,3 +1,117 @@
+# Restaurant without legacy POS / stock (2026-11-15)
+
+Scope: Large / High. Full replacement approved in chat. Preserve user-owned
+setup/address work, tenant scope and immutable financial/stock history.
+Plan: docs/superpowers/plans/2026-11-15-restaurant-without-legacy-pos.md.
+New-flow scope supersedes active recipe/ingredient/stock requirements, not
+historical records or unresolved old transactions.
+User clarification (2026-11-15): one restaurant per organization, no branches in
+the new flow. Do not create/select a hidden default branch to satisfy old APIs.
+Keep organization-scoped authorization and historical branch references only
+where legacy records and unresolved legacy transactions require them.
+
+- [x] Separate menu-only quote/preparation source validation from legacy sources.
+- [x] Add internal branchless restaurant creation with atomic owner/audit/replay;
+      focused DB, concurrent replay and supplied-source independent review pass.
+- [/] Make storefront and new orders organization-scoped, without branch,
+      terminal or stock prerequisites; update the interim source validation.
+- [/] Replace setup's implicit branch selection with organization-scoped
+      restaurant configuration, dining zones/tables and durable command replay.
+      Internal API and client support now exist; legacy tables are untouched.
+      No-infrastructure setup, isolation, concurrent replay and failure rollback
+      pass isolated DB acceptance. Public creation/UI cutover remains pending.
+- [ ] Add cash evidence and direct atomic order sale/receipt settlement.
+- [ ] Replace POS UI; retire stock/shift callers after replacement acceptance.
+- [ ] Verify isolated database compatibility, races, scope and failure recovery.
+- [ ] Verify browser behavior and independent review.
+
+No primary migration, deployment, push, historical deletion or external payment
+request. No whole-flow acceptance claimed yet.
+
+Current evidence (2026-11-15): focused real PostgreSQL 17.6 acceptance PASS after
+official migrations 1-36 on a fresh task-owned tmpfs database. MENU_ONLY accepts
+inactive terminals but rejects inactive branches; unpaid preparation is denied.
+Historical TRACKED orders still reject inactive terminals and retain exact stock
+deduction/replay checks. Independent supplied-source/evidence review: no findings
+for this source-boundary slice only; the reviewer did not execute tests.
+Fresh Go storefront/restaurant/pos package regression tests PASS with DB/browser
+environment unset; these package runs do not replace the real DB check above.
+Scoped gofmt and git diff --check PASS. Browser acceptance remains pending.
+This evidence predates the no-branch clarification. The existing active-branch
+check is an interim implementation, not acceptance of the clarified new flow.
+
+Full isolated suite FAIL: four leaf cases (directory storefront constraint,
+foreign invitation, pinned invitation, reconciliation authority revocation).
+The same four failures reproduce using HEAD Go source overlays on another fresh
+database. Causes are unresolved; no unrelated repairs or release readiness claim.
+Evidence: .local/restaurant-source-db-check.log (focused PASS),
+.local/restaurant-source-db-full-current.log and
+.local/restaurant-source-db-baseline.log (matching FAILs). Task-owned containers
+and networks were removed after ownership-label verification.
+
+Branchless creation slice (2026-11-15): `organization.Service.CreateRestaurant`
+creates only the restaurant organization, OWNER membership, creation key and audit
+in one transaction. The existing public creation endpoint and setup UI are not
+switched yet: setup/settings/orders still need their organization-only replacement.
+Legacy Create still creates its original branch. No hidden branch is created by
+CreateRestaurant; no migration or primary data write is part of this slice.
+The branchless method has no public route until setup cutover is ready.
+
+Fresh slice evidence: Go organization/storefront/restaurant/pos tests PASS with
+DB/browser environment unset; organization/storefront vet PASS. Legacy creation
+golden bytes PASS against both HEAD 5778391 source overlay and current source.
+Real PostgreSQL 17.6 tmpfs, official migrations 1-36 and runtime role: branchless
+creation plus menu-only and legacy-source suites PASS (1.90s). Includes four
+concurrent same-key requests, one audit/no infrastructure, changed-payload
+conflict, foreign-user and unverified-user denial, and the pinned-store gate.
+Evidence: .local/restaurant-branchless-organization-db.log. Task-owned DB/network
+removed after label checks. Independent supplied-source/evidence review found no
+material blocker for this internal primitive; reviewer did not run the checks.
+Public setup, branchless orders/settlement and browser acceptance remain pending.
+
+Latest recheck (2026-11-16, Asia/Bangkok): all four affected Go packages and scoped
+vet PASS; formatting and diff whitespace checks PASS. Full isolated DB suite FAIL
+with the same four leaf cases recorded against HEAD baseline. Branchless creation
+PASS (0.20s), including concurrent replay and unverified-user denial. Existing
+pinned/default membership list PASS after separating the new fixture's owner;
+its original two-organization assertion is unchanged. The first full attempt
+exposed that fixture spill and was corrected, not classified as a baseline fault.
+Current full log: .local/restaurant-branchless-organization-full.log. Its task-owned
+container/network were removed. Whole-flow release readiness remains unverified.
+
+Organization setup checkpoint (2026-11-16, Asia/Bangkok): migration 37 adds typed
+restaurant profiles, dining zones/tables and a setup command ledger. Empty
+branch scope selects organization setup; explicit branch scope retains legacy
+setup. Removed implicit first-active-branch selection. OWNER authorization and
+verified identity are checked before replay. No public creation or screen/gate
+cutover yet; new table QR redemption and token retention remain unaccepted.
+
+Current verification: Go tests for organization, restaurant, storefront, pos and
+platform/database PASS; restaurant/database vet PASS. Web setup API/flow/pages
+and workspace setup gate tests PASS (4 files, 92 tests), typecheck PASS,
+contracts:check PASS (18 modules, 115 routes), scoped Prettier/gofmt and whitespace
+checks PASS. Build PASS earlier in this slice with a large-chunk warning; not
+browser evidence. No fresh browser acceptance.
+
+Real PostgreSQL 17.6 tmpfs with official migrations 1-37: branchless setup PASS
+(0.32s), explicit legacy onboarding PASS (0.19s) in the final full run. Includes
+foreign/manager/unverified OWNER denial, concurrent replay, exact charges,
+transaction rollback, tenant constraints and zero branch/stock/terminal creation.
+Empty migration down/reapply PASS; populated down refusal PASS in focused run.
+Full suite remains FAIL on the four previously baseline-reproduced leaf cases.
+The initial extra onboarding failure was an obsolete implicit-branch fixture;
+it now supplies its explicit legacy branch and passes, without weakening its
+replay, foreign-branch or metadata assertions. Logs:
+.local/restaurant-branchless-setup-db.log and
+.local/restaurant-branchless-setup-full.log. Task-owned DB/network cleanup verified.
+
+Independent review of supplied setup source/evidence found no confirmed defect;
+reviewer did not execute checks or inspect unrelated baseline failures. QR token
+redemption/storage retention was outside established evidence. This is scoped
+review only, not whole-flow approval. Remaining: organization storefront/menu/
+orders/operational QR and kitchen, direct cash/online settlement, UI cutover and
+full browser acceptance. Preserve historical records; no commit/push/deployment.
+
 # Menu page sizing (2026-11-15)
 
 Scope: Small / Low, frontend layout only. Reuse standard list-page sizing on

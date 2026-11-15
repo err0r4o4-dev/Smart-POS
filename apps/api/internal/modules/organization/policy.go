@@ -98,15 +98,7 @@ func (input *OrganizationInput) validate() error {
 }
 
 func (input *CreateInput) validateCreate() error {
-	missingCode := strings.TrimSpace(input.Code) == ""
-	if missingCode {
-		input.Code = "TEMP"
-	}
-	err := input.OrganizationInput.validate()
-	if missingCode {
-		input.Code = ""
-	}
-	if err != nil {
+	if err := input.validateOrganizationCreate(); err != nil {
 		return err
 	}
 	if strings.TrimSpace(input.Branch.Name) == "" {
@@ -117,6 +109,28 @@ func (input *CreateInput) validateCreate() error {
 	}
 	if input.Branch.validate() != nil || input.Branch.Status != "ACTIVE" {
 		return ErrInput
+	}
+	return nil
+}
+
+func (input *CreateInput) validateRestaurantCreate() error {
+	if input.BusinessType != "RESTAURANT" || input.Branch != (BranchInput{}) {
+		return ErrInput
+	}
+	return input.validateOrganizationCreate()
+}
+
+func (input *CreateInput) validateOrganizationCreate() error {
+	missingCode := strings.TrimSpace(input.Code) == ""
+	if missingCode {
+		input.Code = "TEMP"
+	}
+	err := input.OrganizationInput.validate()
+	if missingCode {
+		input.Code = ""
+	}
+	if err != nil {
+		return err
 	}
 	return nil
 }

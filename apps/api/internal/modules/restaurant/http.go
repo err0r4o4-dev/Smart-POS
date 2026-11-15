@@ -63,9 +63,6 @@ func (handler Handler) TenantRoutes(router chi.Router) {
 	service := handler.Service
 	router.Get("/restaurant/setup", endpoint(func(ctx context.Context, user, org string, request *http.Request) (any, error) {
 		branch := request.URL.Query().Get("branch_id")
-		if branch == "" {
-			return nil, ErrInput
-		}
 		return service.Setup(ctx, user, org, branch)
 	}))
 	router.Put("/restaurant/setup/profile", endpoint(func(ctx context.Context, user, org string, request *http.Request) (any, error) {

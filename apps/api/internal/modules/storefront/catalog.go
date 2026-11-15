@@ -183,7 +183,7 @@ func quote(ctx context.Context, tx pgx.Tx, org string, shop Settings, items []It
 	if !shop.Published || !shop.AcceptingOrders {
 		return result, ErrClosed
 	}
-	if err := saleSource(ctx, tx, org, shop); err != nil {
+	if err := menuSaleSource(ctx, tx, org, shop); err != nil {
 		return result, err
 	}
 	if err := normalizeItems(items); err != nil {

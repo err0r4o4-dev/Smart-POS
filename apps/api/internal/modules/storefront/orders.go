@@ -286,10 +286,8 @@ func (service *Service) Transition(ctx context.Context, user, org, id string, in
 			return current, ErrConflict
 		}
 		shop := Settings{TerminalID: current.TerminalID, BranchID: current.BranchID}
-		if err = tx.QueryRow(ctx, "SELECT stock_location_id::text FROM online_orders WHERE organization_id=$1 AND id=$2", org, id).Scan(&shop.LocationID); err != nil {
-			return current, err
-		}
-		if err = saleSource(ctx, tx, org, shop); err != nil {
+		shop, err = orderSaleSource(ctx, tx, org, id, shop)
+		if err != nil {
 			return current, err
 		}
 		for _, line := range current.Items {

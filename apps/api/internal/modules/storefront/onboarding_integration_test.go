@@ -111,13 +111,14 @@ func onboardingAcceptance(testContext *testing.T, ctx context.Context, accounts 
 		testContext.Fatal(err)
 	}
 	setup := &restaurant.Service{Organization: multi}
+	profile.BranchID = branch.ID
 	const profileKey = "fa333333-3333-4333-8333-333333333333"
 	saved, err := setup.SaveProfile(ctx, owner, created.Organization.ID, profileKey, profile)
 	if err != nil {
 		testContext.Fatal(err)
 	}
 	if saved.BranchID != branch.ID {
-		testContext.Fatalf("default main branch: got %q, want %q", saved.BranchID, branch.ID)
+		testContext.Fatalf("explicit legacy branch: got %q, want %q", saved.BranchID, branch.ID)
 	}
 	readRevision := func() int {
 		testContext.Helper()
@@ -168,6 +169,7 @@ func onboardingAcceptance(testContext *testing.T, ctx context.Context, accounts 
 		testContext.Fatal(err)
 	}
 	const legacyKey = "fa888888-8888-4888-8888-888888888888"
+	legacy.BranchID = branch.ID
 	legacySaved, err := setup.SaveProfile(ctx, owner, created.Organization.ID, legacyKey, legacy)
 	if err != nil {
 		testContext.Fatal(err)

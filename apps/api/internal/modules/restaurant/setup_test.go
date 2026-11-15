@@ -36,6 +36,29 @@ func TestSetupRoutesAreRegistered(t *testing.T) {
 	}
 }
 
+func TestRestaurantSetupDoesNotRequireBranch(t *testing.T) {
+	profile := SetupProfileInput{Name: "Restaurant", BusinessType: "RESTAURANT"}
+	if err := profile.Validate(); err != nil {
+		t.Fatalf("branchless profile rejected: %v", err)
+	}
+	if err := (SetupTablesInput{}).Validate(); err != nil {
+		t.Fatalf("branchless takeaway tables rejected: %v", err)
+	}
+	if err := (SetupPaymentsInput{Cash: true}).Validate(); err != nil {
+		t.Fatalf("branchless cash configuration rejected: %v", err)
+	}
+	if err := (SetupOrdersInput{VATRate: "7.00", ServiceChargeRate: "0"}).Validate(); err != nil {
+		t.Fatalf("branchless exact charge configuration rejected: %v", err)
+	}
+	if err := (SetupCompleteInput{}).Validate(); err != nil {
+		t.Fatalf("branchless completion rejected: %v", err)
+	}
+	profile.BranchID = "not-a-branch"
+	if err := profile.Validate(); !errors.Is(err, ErrInput) {
+		t.Fatalf("malformed legacy branch accepted: %v", err)
+	}
+}
+
 func TestSetupSixStepsAndExactAmounts(t *testing.T) {
 	for i, key := range []string{"profile", "services", "tables", "menu", "payments", "orders"} {
 		if got := setupStepKey(i + 1); got != key {

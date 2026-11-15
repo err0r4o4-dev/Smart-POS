@@ -22,6 +22,10 @@ func TestSingleStoreDeniesCreationBeforeAnyDatabaseWrite(t *testing.T) {
 	if !errors.Is(err, ErrDenied) {
 		t.Fatalf("single-store creation must be denied: %v", err)
 	}
+	_, err = service.CreateRestaurant(context.Background(), "22222222-2222-4222-8222-222222222222", "44444444-4444-4444-8444-444444444444", OrganizationInput{Name: "Cafe", BusinessType: "RESTAURANT"})
+	if !errors.Is(err, ErrDenied) {
+		t.Fatalf("single-store restaurant creation must be denied: %v", err)
+	}
 }
 
 func TestSingleStorePolicyPreservesDefaultAndUUIDCase(t *testing.T) {
@@ -38,6 +42,22 @@ func TestSingleStorePolicyPreservesDefaultAndUUIDCase(t *testing.T) {
 		service := &Service{SingleStoreOrganizationID: item.configured}
 		if service.StoreMode() != item.mode || service.AllowsOrganization(item.requested) != item.allowed {
 			t.Fatalf("incorrect store policy for %q", item.requested)
+		}
+	}
+}
+
+func TestRestaurantCreationRejectsInvalidInputBeforeDatabase(t *testing.T) {
+	service := &Service{}
+	for _, item := range []struct {
+		key   string
+		input OrganizationInput
+	}{
+		{"not-a-uuid", OrganizationInput{Name: "Cafe", BusinessType: "RESTAURANT"}},
+		{"44444444-4444-4444-8444-444444444444", OrganizationInput{Name: "Cafe", BusinessType: "RETAIL"}},
+		{"44444444-4444-4444-8444-444444444444", OrganizationInput{Name: "", BusinessType: "RESTAURANT"}},
+	} {
+		if _, err := service.CreateRestaurant(context.Background(), "22222222-2222-4222-8222-222222222222", item.key, item.input); !errors.Is(err, ErrInput) {
+			t.Fatalf("invalid restaurant input reached database: %v", err)
 		}
 	}
 }

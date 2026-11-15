@@ -52,6 +52,33 @@ func TestRolePolicy(t *testing.T) {
 		}
 	}
 }
+
+func TestRestaurantCreationHasNoImplicitBranch(t *testing.T) {
+	input := CreateInput{OrganizationInput: OrganizationInput{Name: " Cafe ", BusinessType: "RESTAURANT"}}
+	if err := input.validateRestaurantCreate(); err != nil {
+		t.Fatal(err)
+	}
+	if input.Name != "Cafe" || input.Code != "" || input.Branch != (BranchInput{}) {
+		t.Fatalf("unexpected restaurant defaults: %+v", input)
+	}
+	first, _ := json.Marshal(input)
+	if err := input.validateRestaurantCreate(); err != nil {
+		t.Fatal(err)
+	}
+	second, _ := json.Marshal(input)
+	if string(first) != string(second) {
+		t.Fatal("restaurant fingerprint changes across validation")
+	}
+	for _, invalid := range []CreateInput{
+		{OrganizationInput: OrganizationInput{Name: "Shop", BusinessType: "RETAIL"}},
+		{OrganizationInput: OrganizationInput{Name: "", BusinessType: "RESTAURANT"}},
+		{OrganizationInput: input.OrganizationInput, Branch: BranchInput{Name: "Hidden branch"}},
+	} {
+		if err := invalid.validateRestaurantCreate(); err != ErrInput {
+			t.Fatalf("invalid restaurant accepted: %+v, %v", invalid, err)
+		}
+	}
+}
 func TestValidation(t *testing.T) {
 	org := OrganizationInput{Name: "ร้านทดสอบ", Code: "thai_01", BusinessType: "RETAIL"}
 	if org.validate() != nil || org.Code != "THAI_01" {

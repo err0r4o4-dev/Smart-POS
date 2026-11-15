@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"smartpos/api/internal/modules/identity"
 	"smartpos/api/internal/modules/organization"
+	"smartpos/api/internal/modules/restaurant"
 	"smartpos/api/internal/modules/storefront"
 	"smartpos/api/internal/platform/database"
 	"smartpos/api/internal/transport"
@@ -109,6 +110,39 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Run("branchless restaurant organization", func(t *testing.T) {
+		restaurantOwner, problem := accounts.Register(ctx, "branchless-owner@example.test", "Synthetic-branchless-owner-password-2026", "Branchless restaurant owner")
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		verified, problem := accounts.VerifyEmail(ctx, mailbox.verificationTokens[restaurantOwner.Profile.Email])
+		if problem != nil || !verified.Verified {
+			t.Fatalf("branchless fixture owner verification failed: %v", problem)
+		}
+		branchless := verifyBranchlessOrganization(t, ctx, multi, restaurantOwner.ID, guest.ID)
+		unverified, problem := accounts.Register(ctx, "branchless-unverified@example.test", "Synthetic-unverified-password-2026", "Unverified restaurant owner")
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		_, problem = multi.CreateRestaurant(ctx, unverified.ID, "83711111-1111-4111-8111-111111111111", organization.OrganizationInput{Name: "Unverified restaurant", BusinessType: "RESTAURANT"})
+		if !errors.Is(problem, organization.ErrDenied) {
+			t.Fatalf("unverified user created a restaurant: %v", problem)
+		}
+		fixtureTx, _, problem := multi.Authorized(ctx, restaurantOwner.ID, branchless.Organization.ID, "organization.read")
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		defer fixtureTx.Rollback(ctx)
+		if _, problem = fixtureTx.Exec(ctx, "INSERT INTO organization_memberships(organization_id,user_id,role,status) VALUES($1,$2,'OWNER','ACTIVE')", branchless.Organization.ID, unverified.ID); problem != nil {
+			t.Fatal(problem)
+		}
+		if problem = fixtureTx.Commit(ctx); problem != nil {
+			t.Fatal(problem)
+		}
+		if _, problem = (&restaurant.Service{Organization: multi}).Setup(ctx, unverified.ID, branchless.Organization.ID, ""); !errors.Is(problem, organization.ErrDenied) {
+			t.Fatalf("unverified owner read branchless setup: %v", problem)
+		}
+	})
 	seedShop := func(state organization.Context, slug string) storefront.Settings {
 		t.Helper()
 		tx, _, problem := multi.Authorized(ctx, owner.ID, state.Organization.ID, "storefront.manage")

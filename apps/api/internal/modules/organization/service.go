@@ -254,13 +254,28 @@ func (service *Service) Context(ctx context.Context, userID, orgID string) (Cont
 	return Context{org, actor, allowed, actor.Permissions}, err
 }
 func (service *Service) Create(ctx context.Context, userID, key string, input CreateInput) (Context, error) {
+	return service.create(ctx, userID, key, input, false)
+}
+
+func (service *Service) CreateRestaurant(ctx context.Context, userID, key string, input OrganizationInput) (Context, error) {
+	return service.create(ctx, userID, key, CreateInput{OrganizationInput: input}, true)
+}
+
+func (service *Service) create(ctx context.Context, userID, key string, input CreateInput, branchless bool) (Context, error) {
 	if service.SingleStoreOrganizationID != "" {
 		return Context{}, ErrDenied
 	}
-	if !uuidPattern.MatchString(key) || input.validateCreate() != nil {
+	validate := input.validateCreate
+	if branchless {
+		validate = input.validateRestaurantCreate
+	}
+	if !uuidPattern.MatchString(key) || validate() != nil {
 		return Context{}, ErrInput
 	}
 	encoded, _ := json.Marshal(input)
+	if branchless {
+		encoded = append([]byte("restaurant:"), encoded...)
+	}
 	fingerprint := sha256.Sum256(encoded)
 	orgID, err := newUUID()
 	if err != nil {
@@ -297,19 +312,24 @@ func (service *Service) Create(ctx context.Context, userID, key string, input Cr
 	if err != nil {
 		return Context{}, dbError(err)
 	}
-	var memberID, branchID string
+	var memberID string
 	err = tx.QueryRow(ctx, "INSERT INTO organization_memberships(organization_id,user_id,role) VALUES($1,$2,'OWNER') RETURNING id", orgID, userID).Scan(&memberID)
 	if err != nil {
 		return Context{}, err
 	}
-	err = tx.QueryRow(ctx, "INSERT INTO branches(organization_id,name,code,address,phone,email,is_main) VALUES($1,$2,$3,$4,$5,$6,true) RETURNING id", orgID, input.Branch.Name, input.Branch.Code, input.Branch.Address, input.Branch.Phone, input.Branch.Email).Scan(&branchID)
-	if err != nil {
-		return Context{}, dbError(err)
+	branchIDs := []string{}
+	if !branchless {
+		var branchID string
+		err = tx.QueryRow(ctx, "INSERT INTO branches(organization_id,name,code,address,phone,email,is_main) VALUES($1,$2,$3,$4,$5,$6,true) RETURNING id", orgID, input.Branch.Name, input.Branch.Code, input.Branch.Address, input.Branch.Phone, input.Branch.Email).Scan(&branchID)
+		if err != nil {
+			return Context{}, dbError(err)
+		}
+		branchIDs = append(branchIDs, branchID)
 	}
 	if _, err = tx.Exec(ctx, "INSERT INTO organization_creation_requests(user_id,key,fingerprint,organization_id) VALUES($1,$2,$3,$4)", userID, key, fingerprint[:], orgID); err != nil {
 		return Context{}, err
 	}
-	if err = audit(ctx, tx, orgID, userID, "ORGANIZATION_CREATED", orgID, []string{branchID}); err != nil {
+	if err = audit(ctx, tx, orgID, userID, "ORGANIZATION_CREATED", orgID, branchIDs); err != nil {
 		return Context{}, err
 	}
 	if err = tx.Commit(ctx); err != nil {

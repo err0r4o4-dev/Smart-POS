@@ -72,12 +72,12 @@ func sourceAcceptance(test *testing.T, ctx context.Context, organizations *organ
 		test.Fatalf("online source must use back warehouse without changing the front terminal: %+v", configured)
 	}
 	input.Revision = configured.Revision
-	test.Run("inactive online source closes quotes instead of using front stock", func(test *testing.T) {
+	test.Run("menu-only quotes ignore inactive online terminals", func(test *testing.T) {
 		setSourceTerminalStatus(test, ctx, organizations, owner, org, backTerminal, "INACTIVE")
-		_, problem := service.Quote(ctx, shop.Slug, storefront.QuoteInput{Items: items})
+		quoted, problem := service.Quote(ctx, shop.Slug, storefront.QuoteInput{Items: items})
 		setSourceTerminalStatus(test, ctx, organizations, owner, org, backTerminal, "ACTIVE")
-		if !errors.Is(problem, storefront.ErrClosed) {
-			test.Fatalf("inactive online source did not close quotes: %v", problem)
+		if problem != nil || quoted.ID == "" {
+			test.Fatalf("menu-only quote depends on inactive terminal: %+v %v", quoted, problem)
 		}
 	})
 	test.Run("public settings do not disclose either terminal or the stock source", func(test *testing.T) {
@@ -188,6 +188,21 @@ func sourceAcceptance(test *testing.T, ctx context.Context, organizations *organ
 	})
 }
 
+func setSourceBranchStatus(test *testing.T, ctx context.Context, organizations *organization.Service, owner, org, branch, status string) {
+	test.Helper()
+	tx, _, err := organizations.Authorized(ctx, owner, org, "storefront.manage")
+	if err != nil {
+		test.Fatal(err)
+	}
+	defer tx.Rollback(ctx)
+	if _, err = tx.Exec(ctx, `UPDATE branches SET status=$3 WHERE organization_id=$1 AND id=$2`, org, branch, status); err != nil {
+		test.Fatal(err)
+	}
+	if err = tx.Commit(ctx); err != nil {
+		test.Fatal(err)
+	}
+}
+
 func setSourceTerminalStatus(test *testing.T, ctx context.Context, organizations *organization.Service, owner, org, terminal, status string) {
 	test.Helper()
 	tx, _, err := organizations.Authorized(ctx, owner, org, "storefront.manage")
@@ -279,6 +294,12 @@ func settleBackSource(test *testing.T, ctx context.Context, organizations *organ
 	if !test.Run("prepaid POS deducts only the snapshotted warehouse exactly once", func(test *testing.T) {
 		var err error
 		payReservationFixture(test, ctx, service, shop.Slug, strings.Repeat("d", 64), order)
+		setSourceTerminalStatus(test, ctx, organizations, owner, org, terminal, "INACTIVE")
+		_, problem := service.Transition(ctx, owner, org, order.ID, storefront.TransitionInput{Revision: order.Revision, Status: "PREPARING"})
+		setSourceTerminalStatus(test, ctx, organizations, owner, org, terminal, "ACTIVE")
+		if !errors.Is(problem, storefront.ErrClosed) {
+			test.Fatalf("historical tracked preparation ignored inactive source: %v", problem)
+		}
 		for _, status := range []string{"PREPARING", "READY"} {
 			order, err = service.Transition(ctx, owner, org, order.ID, storefront.TransitionInput{Revision: order.Revision, Status: status})
 			if err != nil {

@@ -17930,11 +17930,11 @@ paths:
       operationId: getRestaurantSetup
       security:
         - sessionCookie: []
-      description: Owner-only, verified-account setup progress and server-authoritative readiness for one active branch. The branch is tenant-scoped and no setup data is returned for a foreign organization.
+      description: Owner-only, verified-account setup progress and server-authoritative readiness. Omit branch_id for organization-scoped restaurant setup without branch, stock, terminal or shift infrastructure. An explicit branch_id selects the retained legacy setup; no branch is chosen automatically. No setup data is returned for a foreign organization. Organization-scoped setup does not yet enable legacy branch-bound ordering or settlement.
       parameters:
         - name: branch_id
           in: query
-          required: true
+          required: false
           schema: { type: string, format: uuid }
       responses:
         '200':
@@ -18568,7 +18568,6 @@ components:
       required:
         [
           organization_id,
-          branch_id,
           current_step,
           complete,
           ready,
@@ -18578,7 +18577,6 @@ components:
           profile,
           services,
           tables,
-          menu,
           payments,
           orders,
         ]
@@ -18679,7 +18677,7 @@ components:
     RestaurantSetupProfileInput:
       type: object
       additionalProperties: false
-      description: Accepts flat organization fields or a nested organization. When organization is supplied, its fields take precedence. Omitting organization code preserves the existing code; omitting branch preserves the existing branch.
+      description: Accepts flat organization fields or a nested organization. When organization is supplied, its fields take precedence. Omitting organization code preserves the existing code. Omit branch_id for organization-scoped setup; branch objects are rejected in that flow. Explicit branch_id retains legacy branch-scoped behavior.
       anyOf:
         - required: [name, business_type]
         - required: [organization]
@@ -18726,7 +18724,7 @@ components:
     RestaurantSetupServicesInput:
       type: object
       additionalProperties: false
-      required: [branch_id, service_modes]
+      required: [service_modes]
       properties:
         branch_id: { type: string, format: uuid }
         service_modes: { $ref: '#/components/schemas/RestaurantServiceModes' }
@@ -18749,7 +18747,7 @@ components:
     RestaurantSetupTablesInput:
       type: object
       additionalProperties: false
-      required: [branch_id, zones, tables, generate_qr]
+      required: [zones, tables, generate_qr]
       properties:
         branch_id: { type: string, format: uuid }
         zones:
@@ -18804,7 +18802,7 @@ components:
     RestaurantSetupPaymentsInput:
       type: object
       additionalProperties: false
-      required: [branch_id, cash, promptpay, bank_transfer, card]
+      required: [cash, promptpay, bank_transfer, card]
       properties:
         branch_id: { type: string, format: uuid }
         cash: { type: boolean, default: true }
@@ -18821,7 +18819,6 @@ components:
       additionalProperties: false
       required:
         [
-          branch_id,
           qr_ordering,
           kitchen_queue,
           auto_confirm,
@@ -18839,7 +18836,6 @@ components:
     RestaurantSetupCompleteInput:
       type: object
       additionalProperties: false
-      required: [branch_id]
       properties:
         branch_id: { type: string, format: uuid }
     RestaurantPeriod:

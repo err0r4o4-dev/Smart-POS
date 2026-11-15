@@ -57,7 +57,7 @@ type SetupCapabilities struct {
 
 type SetupState struct {
 	OrganizationID      string               `json:"organization_id"`
-	BranchID            string               `json:"branch_id"`
+	BranchID            string               `json:"branch_id,omitempty"`
 	CurrentStep         string               `json:"current_step"`
 	Complete            bool                 `json:"complete"`
 	Ready               bool                 `json:"ready"`
@@ -209,7 +209,7 @@ func (input *SetupProfileInput) normalize(branch string) error {
 		}
 	}
 	input.BranchID, input.Name, input.Code, input.BusinessType, input.ContactEmail = strings.TrimSpace(input.BranchID), strings.TrimSpace(input.Name), strings.ToUpper(strings.TrimSpace(input.Code)), strings.TrimSpace(input.BusinessType), strings.TrimSpace(input.ContactEmail)
-	if !uuidPattern.MatchString(input.BranchID) || (input.Code != "" && !codePattern.MatchString(input.Code)) || input.Name == "" || utf8.RuneCountInString(input.Name) > 200 || input.BusinessType != "RESTAURANT" {
+	if (input.BranchID != "" && !uuidPattern.MatchString(input.BranchID)) || (input.Code != "" && !codePattern.MatchString(input.Code)) || input.Name == "" || utf8.RuneCountInString(input.Name) > 200 || input.BusinessType != "RESTAURANT" {
 		return ErrInput
 	}
 	if input.ContactEmail != "" {
@@ -228,7 +228,7 @@ func (input *SetupTablesInput) normalize(branch string) error {
 		input.BranchID = branch
 	}
 	input.BranchID = strings.TrimSpace(input.BranchID)
-	if !uuidPattern.MatchString(input.BranchID) || len(input.Zones) > 100 || len(input.Tables) > 500 {
+	if (input.BranchID != "" && !uuidPattern.MatchString(input.BranchID)) || len(input.Zones) > 100 || len(input.Tables) > 500 {
 		return ErrInput
 	}
 	if (input.GenerateQR || input.QREnabled) && len(input.Tables) == 0 {
@@ -322,7 +322,7 @@ func (input *SetupMenuInput) normalize(branch string) error {
 }
 func (input SetupMenuInput) Validate() error { return input.normalize(input.BranchID) }
 func (input SetupPaymentsInput) Validate() error {
-	if !uuidPattern.MatchString(strings.TrimSpace(input.BranchID)) || (!input.Cash && !input.BankTransfer) || input.Card || input.PromptPay {
+	if (input.BranchID != "" && !uuidPattern.MatchString(strings.TrimSpace(input.BranchID))) || (!input.Cash && !input.BankTransfer) || input.Card || input.PromptPay {
 		return ErrInput
 	}
 	return nil
@@ -340,14 +340,14 @@ func (input *SetupOrdersInput) normalize(branch string) error {
 	input.VATRate, input.ServiceChargeRate = strings.TrimSpace(input.VATRate), strings.TrimSpace(input.ServiceChargeRate)
 	vat, vatErr := pricing.Decimal(input.VATRate, 2)
 	charge, chargeErr := pricing.Decimal(input.ServiceChargeRate, 2)
-	if !uuidPattern.MatchString(strings.TrimSpace(input.BranchID)) || vatErr != nil || chargeErr != nil || vat > 10000 || charge > 10000 {
+	if (input.BranchID != "" && !uuidPattern.MatchString(strings.TrimSpace(input.BranchID))) || vatErr != nil || chargeErr != nil || vat > 10000 || charge > 10000 {
 		return ErrInput
 	}
 	return nil
 }
 func (input SetupOrdersInput) Validate() error { return input.normalize(input.BranchID) }
 func (input SetupCompleteInput) Validate() error {
-	if !uuidPattern.MatchString(strings.TrimSpace(input.BranchID)) {
+	if input.BranchID != "" && !uuidPattern.MatchString(strings.TrimSpace(input.BranchID)) {
 		return ErrInput
 	}
 	return nil
@@ -719,12 +719,6 @@ func beginSetup(ctx context.Context, service *Service, user, org, branch string)
 		tx.Rollback(ctx)
 		return nil, organization.Member{}, "", err
 	}
-	if branch == "" {
-		if err = tx.QueryRow(ctx, "SELECT id::text FROM branches WHERE organization_id=$1 AND status='ACTIVE' ORDER BY is_main DESC,code LIMIT 1", org).Scan(&branch); err != nil {
-			tx.Rollback(ctx)
-			return nil, organization.Member{}, "", dbError(err)
-		}
-	}
 	if !uuidPattern.MatchString(branch) {
 		tx.Rollback(ctx)
 		return nil, organization.Member{}, "", ErrInput
@@ -754,6 +748,9 @@ func completeSetupProgressResult(rows int64) error {
 }
 
 func (service *Service) Setup(ctx context.Context, user, org, branch string) (SetupState, error) {
+	if branch == "" {
+		return service.organizationSetup(ctx, user, org)
+	}
 	tx, _, branch, err := beginSetup(ctx, service, user, org, branch)
 	if err != nil {
 		return SetupState{}, err
@@ -763,6 +760,15 @@ func (service *Service) Setup(ctx context.Context, user, org, branch string) (Se
 }
 
 func (service *Service) SaveProfile(ctx context.Context, user, org, key string, input SetupProfileInput) (SetupState, error) {
+	if input.BranchID == "" {
+		if input.Branch != nil {
+			return SetupState{}, ErrInput
+		}
+		if err := input.normalize(""); err != nil {
+			return SetupState{}, err
+		}
+		return service.saveOrganizationSetup(ctx, user, org, key, "profile", input)
+	}
 	if err := validateSetupIdempotencyKey(key); err != nil {
 		return SetupState{}, err
 	}
@@ -839,6 +845,12 @@ func saveServiceModes(ctx context.Context, tx pgx.Tx, org, branch, user string, 
 }
 
 func (service *Service) SaveServices(ctx context.Context, user, org, key string, input SetupServicesInput) (SetupState, error) {
+	if input.BranchID == "" {
+		if !input.ServiceModes.any() {
+			return SetupState{}, ErrInput
+		}
+		return service.saveOrganizationSetup(ctx, user, org, key, "services", input)
+	}
 	if err := validateSetupIdempotencyKey(key); err != nil {
 		return SetupState{}, err
 	}
@@ -885,6 +897,12 @@ func (service *Service) SaveServices(ctx context.Context, user, org, key string,
 }
 
 func (service *Service) SaveTables(ctx context.Context, user, org, key string, input SetupTablesInput) (SetupState, error) {
+	if input.BranchID == "" {
+		if err := input.normalize(""); err != nil {
+			return SetupState{}, err
+		}
+		return service.saveOrganizationSetup(ctx, user, org, key, "tables", input)
+	}
 	if err := validateSetupIdempotencyKey(key); err != nil {
 		return SetupState{}, err
 	}
@@ -1084,6 +1102,12 @@ func (service *Service) SaveMenu(ctx context.Context, user, org, key string, inp
 }
 
 func (service *Service) SavePayments(ctx context.Context, user, org, key string, input SetupPaymentsInput) (SetupState, error) {
+	if input.BranchID == "" {
+		if err := input.Validate(); err != nil {
+			return SetupState{}, err
+		}
+		return service.saveOrganizationSetup(ctx, user, org, key, "payments", input)
+	}
 	if err := validateSetupIdempotencyKey(key); err != nil {
 		return SetupState{}, err
 	}
@@ -1133,6 +1157,12 @@ func (service *Service) SavePayments(ctx context.Context, user, org, key string,
 }
 
 func (service *Service) SaveOrders(ctx context.Context, user, org, key string, input SetupOrdersInput) (SetupState, error) {
+	if input.BranchID == "" {
+		if err := input.normalize(""); err != nil {
+			return SetupState{}, err
+		}
+		return service.saveOrganizationSetup(ctx, user, org, key, "orders", input)
+	}
 	if err := validateSetupIdempotencyKey(key); err != nil {
 		return SetupState{}, err
 	}
@@ -1181,6 +1211,9 @@ func (service *Service) SaveOrders(ctx context.Context, user, org, key string, i
 }
 
 func (service *Service) Complete(ctx context.Context, user, org, branch, key string) (SetupState, error) {
+	if branch == "" {
+		return service.saveOrganizationSetup(ctx, user, org, key, "complete", SetupCompleteInput{})
+	}
 	if err := validateSetupIdempotencyKey(key); err != nil {
 		return SetupState{}, err
 	}

@@ -63,7 +63,7 @@ export interface SetupLocation {
 interface SetupProfileState extends SetupProfileInput {
   organization: SetupProfileInput['organization'] &
     Pick<OrganizationInput, 'code'>;
-  branch: Pick<BranchInput, 'name' | 'code' | 'address' | 'phone' | 'email'>;
+  branch?: Pick<BranchInput, 'name' | 'code' | 'address' | 'phone' | 'email'>;
 }
 
 export interface SetupServicesInput {
@@ -145,7 +145,7 @@ interface BackendSetupStep {
 interface BackendSetupState {
   location?: SetupLocation;
   organization_id: string;
-  branch_id: string;
+  branch_id?: string;
   current_step: string;
   ready: boolean;
   completed: boolean;
@@ -175,7 +175,13 @@ export function setupPath(context: SetupContext, suffix = '') {
 }
 
 function branchQuery(context: SetupContext) {
-  return `?branch_id=${encodeURIComponent(context.branchID)}`;
+  return context.branchID
+    ? `?branch_id=${encodeURIComponent(context.branchID)}`
+    : '';
+}
+
+function setupScope(branchID: string) {
+  return branchID ? { branch_id: branchID } : {};
 }
 
 function normalizeState(raw: BackendSetupState): SetupState {
@@ -269,7 +275,7 @@ function toBackendPayload(
       address,
     };
     return {
-      branch_id: branchID,
+      ...setupScope(branchID),
       organization,
       ...organization,
       service_modes: input.service_modes,
@@ -278,7 +284,7 @@ function toBackendPayload(
   }
   if (step === 'services') {
     const input = body as SetupServicesInput;
-    return { branch_id: branchID, service_modes: input.service_modes };
+    return { ...setupScope(branchID), service_modes: input.service_modes };
   }
   if (step === 'tables') {
     const input = body as SetupTablesInput;
@@ -304,7 +310,7 @@ function toBackendPayload(
     const zoneCodes = assignCodes(input.zones, 'ZONE');
     const tableCodes = assignCodes(input.tables, 'TABLE');
     return {
-      branch_id: branchID,
+      ...setupScope(branchID),
       zones: input.zones.map((zone, index) => ({
         code: zoneCodes[index],
         name: zone.name,
@@ -320,11 +326,11 @@ function toBackendPayload(
     };
   }
   if (step === 'menu')
-    return { ...(body as SetupMenuInput), branch_id: branchID };
+    return { ...(body as SetupMenuInput), ...setupScope(branchID) };
   if (step === 'payments') {
     const input = body as SetupPaymentsInput;
     return {
-      branch_id: branchID,
+      ...setupScope(branchID),
       cash: input.cash,
       bank_transfer: input.bank_transfer,
       promptpay: input.promptpay,
@@ -333,7 +339,7 @@ function toBackendPayload(
   }
   const input = body as SetupOrdersInput;
   return {
-    branch_id: branchID,
+    ...setupScope(branchID),
     qr_ordering: input.qr_ordering,
     kitchen_queue: input.kitchen_queue,
     auto_confirm: input.auto_confirm,
@@ -379,7 +385,7 @@ export function completeSetup(
     setupPath(context, '/complete'),
     {
       method: 'POST',
-      body: { branch_id: context.branchID },
+      body: setupScope(context.branchID),
       csrf,
       key,
     },

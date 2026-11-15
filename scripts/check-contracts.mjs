@@ -1067,6 +1067,34 @@ assert.ok(
   !compose.services.ai.ports,
   'Internal AI must not publish a host port',
 );
+const restaurantMenu = api.components.schemas.RestaurantSetupMenuInput;
+const storefrontSettings = api.components.schemas.StorefrontSettingsInput;
+assert.ok(!storefrontSettings.required.includes('terminal_id'));
+assert.match(storefrontSettings.description, /unpublished/);
+assert.equal(
+  storefrontSettings.allOf[0].then.properties.published.const,
+  false,
+);
+assert.equal(
+  storefrontSettings.allOf[0].then.properties.accepting_orders.const,
+  false,
+);
+assert.equal(
+  storefrontSettings.allOf[0].then.properties.online_terminal_id.const,
+  '',
+);
+const restaurantMenuItem = api.components.schemas.RestaurantSetupMenuItemInput;
+assert.ok(!restaurantMenu.required.includes('branch_id'));
+assert.deepEqual(restaurantMenuItem.dependentRequired, {
+  product_id: ['variant_id'],
+});
+assert.match(
+  restaurantMenuItem.properties.category_id.description,
+  /selected category/,
+);
+for (const name of ['product_id', 'variant_id', 'category_id']) {
+  assert.equal(restaurantMenuItem.properties[name].format, 'uuid');
+}
 console.log(
   'PASS: 18 modules, 115 unique documented routes, owner-only access, Stripe sandbox/storefront/POS contracts and service health wiring',
 );

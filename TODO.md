@@ -1,5 +1,55 @@
 # Restaurant without legacy POS / stock (2026-11-15)
 
+Private organization catalog slice (2026-11-16): Main implements registry-only
+managed reads for verified owners, with exact menu prices and no infrastructure
+dependency. Keep publication, ordering, legacy catalog and UI unchanged. Separate
+supplied-source independent review authorized; no reviewer tools or delegation.
+
+- [x] Add real isolated DB RED/GREEN for registered-only reads, exact prices,
+      search/pagination, owner/verification/tenant boundaries and closed drafts.
+- [x] Implement scoped catalog read and update its existing API description.
+- [x] Run focused isolated DB acceptance, Go tests/vet and contract checks.
+- [x] Complete independent supplied-source review: no confirmed defects.
+      Reviewer inspected scoped source/contracts/output, used no tools and did
+      not run tests. The completed reviewer is closed.
+- [?] Whole-flow regression acceptance remains unmet: full isolated DB has four
+  failing leaf cases; root web tests have ten failures. No fresh baseline
+  comparison establishes whether these failures predate this slice.
+
+Slice evidence (2026-11-16, Asia/Bangkok): `go test ./... -count=1` in `apps/api`
+passes 17 tested packages with `GOPROXY=off` and DB/browser variables empty.
+Scoped `go vet` for storefront, restaurant and platform/database passes. These
+Go package runs skip DB/browser acceptance. `npm run contracts:check` passes
+18 modules/115 routes. Scoped gofmt, OpenAPI Prettier and diff whitespace pass.
+Evidence: `.local/restaurant-private-catalog-final-go.log` and
+`.local/restaurant-private-catalog-final-vet.log`.
+
+With `RESTAURANT_SOURCE_FOCUSED=1` and baseline empty,
+`node .local/restaurant-catalog-db-check.mjs` passes real PostgreSQL17.6 acceptance
+after official migrations1-39 using the runtime role on task-owned tmpfs (1.94s;
+branchless organization0.71s). Registered-only reads, exact price, JSON flags,
+25-item pagination, saleability and access denials pass. Legacy focused groups,
+empty down/reapply37-39, populated down refusals and owned cleanup pass.
+Evidence: `.local/restaurant-private-catalog-final-focused.log` and
+`.local/restaurant-private-catalog-db.log`.
+
+The same runner without the focused flag fails full DB acceptance (4.85s):
+directory storefront constraint `storefronts_check` (23514), foreign invitation,
+pinned invitation and reconciliation authority-revoked-during-GET expectation.
+Branchless organization passes (0.67s); task-owned cleanup passes. Evidence:
+`.local/restaurant-private-catalog-final-full.log` and
+`.local/restaurant-private-catalog-full.log`.
+
+`npm run test` fails at the web step: 732 pass/10 fail across three failed files
+(SettingsPage1, ShopCartPage1, StorefrontPage8). Its remaining chained checks did
+not run; contracts passed separately. Evidence:
+`.local/restaurant-private-catalog-root-test.log`. Full Markdown Prettier checks
+still warn on untouched TODO/plan sections; no broad reformat was applied.
+Whole-flow browser acceptance and release readiness remain unmet. This slice
+does not enable ordering, publication or direct settlement.
+
+Recovery: source-only rollback of this slice; no migration or retained-data writes.
+
 Scope: Large / High. Full replacement approved in chat. Preserve user-owned
 setup/address work, tenant scope and immutable financial/stock history.
 Plan: docs/superpowers/plans/2026-11-15-restaurant-without-legacy-pos.md.
@@ -20,7 +70,18 @@ where legacy records and unresolved legacy transactions require them.
       Internal API and client support now exist; legacy tables are untouched.
       No-infrastructure setup, isolation, concurrent replay and failure rollback
       pass isolated DB acceptance. Public creation/UI cutover remains pending.
+- [/] Add organization-scoped setup menus with an explicit catalog registry.
+      TDD: optional branch validation, concurrent replay, exact price, no legacy
+      infrastructure, foreign/legacy rejection and rollback. Keep explicit legacy
+      setup unchanged; add guarded command-schema migration before integration.
+      Review source/contract/DB evidence independently before closing this slice.
+      Implementation and focused acceptance pass; whole-flow and cross-workflow
+      catalog/stock interaction acceptance remain pending. See checkpoint below.
 - [ ] Add cash evidence and direct atomic order sale/receipt settlement.
+- [/] Add organization-only storefront drafts without terminal/stock identities.
+      Preserve legacy settings and forbid source-mode conversion. Keep new drafts
+      unpublished and closed until direct order/payment acceptance. Verify owner,
+      tenant scope, revisions, races, SQL guards and guarded migration recovery.
 - [ ] Replace POS UI; retire stock/shift callers after replacement acceptance.
 - [ ] Verify isolated database compatibility, races, scope and failure recovery.
 - [ ] Verify browser behavior and independent review.
@@ -111,6 +172,104 @@ redemption/storage retention was outside established evidence. This is scoped
 review only, not whole-flow approval. Remaining: organization storefront/menu/
 orders/operational QR and kitchen, direct cash/online settlement, UI cutover and
 full browser acceptance. Preserve historical records; no commit/push/deployment.
+
+Organization menu checkpoint (2026-11-16, Asia/Bangkok; baseline a86d5d1):
+the existing setup-menu API now accepts omitted branch scope. Migration 38 adds
+organization/category and organization/product/variant registries plus menu_saved
+and the menu command type. New menu writes create or reuse registered identities
+only; legacy SKU/category/variant collisions are rejected, not silently adopted.
+Legacy explicit-branch persistence is unchanged. Reads expose registered menu
+items only; optional menu readiness and completion without menus are retained.
+No per-variant stock policy exists or was invented; future MENU_ONLY orders must
+consume the registry explicitly. Public creation, storefront and UI cutover stay
+pending. Catalog/stock APIs can still affect catalog identities; their complete
+interaction with this registry is not accepted by this checkpoint.
+
+Current PASS checks:
+- `go test ./... -count=1` in apps/api, DB/browser variables empty; scoped
+  restaurant/storefront/database `go vet`. Package runs skip real DB acceptance.
+- Focused PostgreSQL 17.6 tmpfs, runtime role, official migrations 1-38: PASS
+  (1.76s; branchless creation/setup/menu 0.45s). Includes four concurrent menu
+  requests, exact 45.25/55.35 prices, one replay audit, foreign/manager denials,
+  registered update, legacy identity rejection, duplicate/SQL-constraint rollback,
+  registry RLS/composite FK and zero branch/stock/terminal/inventory commands.
+  Empty down/reapply and populated down refusal PASS for migrations 37 and 38;
+  ownership-checked task DB/network cleanup PASS. No primary migration.
+- Focused web setup client/flow/pages/gate: 4 files, 93 tests PASS. Client preserves
+  exact menu price without branch/source fields. Typecheck and build PASS; build
+  reports the large-chunk warning. No fresh browser evidence.
+- `npm run contracts:check` PASS (18 modules, 115 routes); scoped ESLint,
+  Prettier, gofmt and `git diff --check` PASS; `npm run test:logs` 10/10 PASS.
+
+Current FAIL checks, not release approval:
+- Full isolated DB FAIL with four leaf cases: directory public projection
+  `storefronts_check`, foreign invitation, pinned invitation and reconciliation
+  authority revoked during GET. These names/errors match the earlier recorded
+  baseline failures; no new baseline overlay was run in this menu slice. Branchless
+  case PASS 0.50s and explicit legacy onboarding PASS 0.16s in the current full run.
+- Root `npm run test` stops on web failures: 732 passed, 10 failed (90 files).
+  Unchanged SettingsPage: storefront active-slug link. Unchanged ShopCartPage:
+  checkout navigation/return. Unchanged StorefrontPage: exact quantity/cart badge,
+  table QR persistence, four invalid-QR cases (invalid/empty/uppercase/duplicate),
+  quote invalidation after quantity changes and uncertain-order replay. Their
+  baseline status was not independently established; do not label them pre-existing.
+- Separate `npm run test:dev-stack`: 6/7 PASS; development CSP/gateway-header
+  comparison FAIL. Initial supervisor sandbox permission failure was retried via
+  approved escalation and then PASS. No infrastructure/control changes made.
+
+TDD: unit and real DB RED rejected omitted branch scope before implementation;
+focused GREEN follows. An added SQL-constraint rollback test initially expected
+ErrInput; corrected to established ErrConflict mapping for SQLSTATE 23514, without
+altering production error semantics. Independent supplied-source review found
+an OpenAPI dependency omission; `product_id` now requires `variant_id`, and category
+matching is documented. Contract assertion RED/GREEN and delta re-review PASS.
+No other confirmed scoped finding; reviewer did not run checks. Whole-flow,
+browser and catalog/stock interaction approval remain unmet.
+
+Evidence: .local/restaurant-menu-red-console.log,
+.local/restaurant-branchless-menu-db.log, .local/restaurant-branchless-menu-full.log,
+.local/restaurant-menu-web-tests.log, .local/restaurant-menu-web-build.log and
+.local/restaurant-menu-dev-stack.log. No commit, push, deployment or history deletion.
+
+Organization storefront draft checkpoint (2026-11-16, Asia/Bangkok): migration
+39 adds immutable LEGACY_POS/RESTAURANT source kinds. Restaurant drafts have no
+terminal or stock identity and a generated FK to their own restaurant profile.
+Existing rows remain LEGACY_POS; no mode conversion or historical rewrite.
+Verified OWNER settings writes use the existing organization lock, exact shipping
+fees, revision checks and an atomic audit. Drafts cannot publish, accept orders or
+call legacy product publication/catalog paths. UI and public creation remain
+unchanged. This is an intermediate draft boundary, not the completed flow.
+
+Current PASS: `go test ./... -count=1` in apps/api with DB/browser variables empty,
+scoped storefront/restaurant/database vet, contracts:check (18 modules/115 routes),
+scoped Prettier/gofmt and git diff --check. These Go package checks skip real DB
+acceptance. No frontend production changes or fresh browser acceptance this slice.
+
+Real PostgreSQL 17.6 tmpfs, runtime role, official migrations 1-39: final focused
+PASS 1.82s, branchless creation/setup/menu/draft 0.52s. Covers four concurrent
+initial saves (one success/three stale conflicts), exact 12.35/13.37 fees,
+owner/manager/unverified/tenant/pinned boundaries, zero infrastructure, SQL/RLS/FK
+guards, slug collision rollback with no draft/audit residue, no public visibility,
+legacy no-conversion and affected historical stock-source regressions.
+Empty down/reapply 37-39 and populated down refusal 37-39 PASS. Task-owned
+container/network cleanup PASS. Evidence: .local/restaurant-branchless-settings-db.log.
+
+Full isolated DB run FAIL 4.57s on the four previously recorded leaf cases:
+directory storefronts_check, foreign invitation, pinned invitation and authority
+revoked during reconciliation GET. Branchless PASS 0.47s, legacy no-conversion
+PASS and explicit legacy onboarding PASS 0.15s. No new baseline overlay was run;
+the final collision test was added after this full run and passed the focused
+rerun. Evidence: .local/restaurant-branchless-settings-full.log. Cleanup PASS.
+Earlier web/dev-stack failures above remain unresolved and were not rerun here.
+
+TDD: draft input initially failed for required legacy infrastructure; contract
+assertion initially failed for required terminal_id. Both pass after the change.
+The first DB attempt failed because the new test expected organization.ErrNotFound
+instead of the established storefront.ErrNotFound wrapper; corrected the test,
+not production mapping. Attempt log retained. Independent supplied-source review
+reports no confirmed P1/P2 finding in migration39/settings/catalog/contract scope;
+reviewer used no tools and ran no checks. Whole-flow review remains pending.
+No primary migration, commit, push, deployment or historical deletion.
 
 # Menu page sizing (2026-11-15)
 

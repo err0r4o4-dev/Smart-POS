@@ -49,6 +49,18 @@ describe('organization-scoped setup client', () => {
     );
   });
 
+  it('saves exact menu prices without inserting a branch or stock source', async () => {
+    const menu = {
+      categories: [{ name: 'Meals' }],
+      items: [{ category: 'Meals', name: 'Soup', price: '55.35' }],
+    };
+    await saveSetupStep('menu', menu, context, 'csrf', 'menu-key');
+    expect(organizationRequest).toHaveBeenCalledWith(
+      '/organizations/restaurant-id/restaurant/setup/menu',
+      { method: 'PUT', body: menu, csrf: 'csrf', key: 'menu-key' },
+    );
+  });
+
   it('completes without a branch while preserving the completion gate', async () => {
     expect(await completeSetup(context, 'csrf', 'complete-key')).toEqual({
       ready: false,

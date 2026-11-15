@@ -241,10 +241,13 @@ func (input *SettingsInput) validate() error {
 	input.ContactPhone = strings.TrimSpace(input.ContactPhone)
 	input.TerminalID = strings.ToLower(input.TerminalID)
 	input.OnlineTerminalID = strings.ToLower(input.OnlineTerminalID)
+	if input.TerminalID == "" && (input.OnlineTerminalID != "" || input.Published || input.AcceptingOrders) {
+		return ErrInput
+	}
 	if input.OnlineTerminalID != "" && (!uuidPattern.MatchString(input.OnlineTerminalID) || input.OnlineTerminalID == input.TerminalID) {
 		return ErrInput
 	}
-	if (input.Slug != "" && (!slugPattern.MatchString(input.Slug) || strings.HasSuffix(input.Slug, "-") || strings.Contains(input.Slug, "--"))) || !text(input.Name, 200, true) || !text(input.Description, 1000, false) || !text(input.PickupInstructions, 1000, false) || !text(input.ContactPhone, 30, false) || !uuidPattern.MatchString(input.TerminalID) || input.Revision < 0 || (input.AcceptingOrders && !input.Published) {
+	if (input.Slug != "" && (!slugPattern.MatchString(input.Slug) || strings.HasSuffix(input.Slug, "-") || strings.Contains(input.Slug, "--"))) || !text(input.Name, 200, true) || !text(input.Description, 1000, false) || !text(input.PickupInstructions, 1000, false) || !text(input.ContactPhone, 30, false) || (input.TerminalID != "" && !uuidPattern.MatchString(input.TerminalID)) || input.Revision < 0 || (input.AcceptingOrders && !input.Published) {
 		return ErrInput
 	}
 	return nil

@@ -142,6 +142,15 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 		if _, problem = (&restaurant.Service{Organization: multi}).Setup(ctx, unverified.ID, branchless.Organization.ID, ""); !errors.Is(problem, organization.ErrDenied) {
 			t.Fatalf("unverified owner read branchless setup: %v", problem)
 		}
+		if _, problem = (&storefront.Service{Organization: multi}).Settings(ctx, unverified.ID, branchless.Organization.ID); !errors.Is(problem, organization.ErrDenied) {
+			t.Fatalf("unverified owner read restaurant draft: %v", problem)
+		}
+		if _, problem = (&storefront.Service{Organization: multi}).Products(ctx, unverified.ID, branchless.Organization.ID, "", "", 1); !errors.Is(problem, organization.ErrDenied) {
+			t.Fatalf("unverified owner read restaurant catalog: %v", problem)
+		}
+		if _, problem = (&storefront.Service{Organization: multi}).SaveSettings(ctx, unverified.ID, branchless.Organization.ID, storefront.SettingsInput{Name: "Unverified draft"}); !errors.Is(problem, organization.ErrDenied) {
+			t.Fatalf("unverified owner changed restaurant draft: %v", problem)
+		}
 	})
 	seedShop := func(state organization.Context, slug string) storefront.Settings {
 		t.Helper()
@@ -170,6 +179,16 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 	}
 	firstShop := seedShop(first, "first-fixture")
 	seedShop(second, "second-fixture")
+	t.Run("legacy storefront cannot become restaurant draft", func(testContext *testing.T) {
+		_, problem := (&storefront.Service{Organization: multi}).SaveSettings(ctx, owner.ID, first.Organization.ID, storefront.SettingsInput{Name: firstShop.Name, Revision: firstShop.Revision})
+		if !errors.Is(problem, storefront.ErrConflict) {
+			testContext.Fatalf("legacy storefront converted to draft: %v", problem)
+		}
+		current, problem := (&storefront.Service{Organization: multi}).Settings(ctx, owner.ID, first.Organization.ID)
+		if problem != nil || current == nil || *current != firstShop {
+			testContext.Fatalf("legacy storefront changed after rejected draft: %v", problem)
+		}
+	})
 	single := &organization.Service{Pool: pool, Mailer: mailbox, SingleStoreOrganizationID: first.Organization.ID}
 	shop := &storefront.Service{Organization: single}
 	t.Run("directory shop types preserve public projection visibility and rollback", func(t *testing.T) {

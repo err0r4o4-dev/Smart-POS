@@ -415,6 +415,17 @@ func TestSetupProfilePreservesExplicitBranchFingerprint(testContext *testing.T) 
 	}
 }
 
+func TestSetupMenuAllowsOrganizationScope(testContext *testing.T) {
+	input := SetupMenuInput{Categories: []SetupCategoryInput{{Name: "Meals"}}, Items: []SetupMenuItemInput{{Category: "Meals", Name: "Soup", Price: "45.25"}}}
+	if err := input.Validate(); err != nil {
+		testContext.Fatalf("organization menu rejected: %v", err)
+	}
+	input.BranchID = "not-a-branch"
+	if err := input.Validate(); !errors.Is(err, ErrInput) {
+		testContext.Fatalf("malformed legacy branch accepted: %v", err)
+	}
+}
+
 func TestSetupCompletionRequiresOneProgressRow(t *testing.T) {
 	if err := completeSetupProgressResult(0); !errors.Is(err, ErrConflict) {
 		t.Fatalf("zero rows: got %v", err)

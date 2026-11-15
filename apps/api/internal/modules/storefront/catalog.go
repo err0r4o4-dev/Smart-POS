@@ -124,6 +124,22 @@ func (service *Service) Products(ctx context.Context, user, org, slug, search st
 	if public && !shop.Published {
 		return Page[Product]{}, ErrNotFound
 	}
+	if shop.TerminalID == "" {
+		if public {
+			return Page[Product]{}, ErrNotFound
+		}
+		var source string
+		if err = tx.QueryRow(ctx, "SELECT source_kind FROM storefronts WHERE organization_id=$1", org).Scan(&source); err != nil {
+			return Page[Product]{}, dbError(err)
+		}
+		if source != "RESTAURANT" {
+			return Page[Product]{}, ErrConflict
+		}
+		if err = organization.RequireVerified(ctx, tx, user); err != nil {
+			return Page[Product]{}, err
+		}
+		return organizationProducts(ctx, tx, org, strings.TrimSpace(search), page)
+	}
 	if !public && !branchAllowed(actor, shop.BranchID) {
 		return Page[Product]{}, organization.ErrDenied
 	}
@@ -144,6 +160,9 @@ func (service *Service) Publish(ctx context.Context, user, org, id string, input
 	}
 	if !branchAllowed(actor, shop.BranchID) {
 		return Product{}, organization.ErrDenied
+	}
+	if shop.TerminalID == "" {
+		return Product{}, ErrConflict
 	}
 	if shop.Revision != input.Revision {
 		return Product{}, ErrConflict

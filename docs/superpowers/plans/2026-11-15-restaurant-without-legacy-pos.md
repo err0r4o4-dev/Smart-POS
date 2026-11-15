@@ -1,5 +1,46 @@
 # Restaurant Without Legacy POS Implementation Plan
 
+## Private organization catalog slice (2026-11-16)
+
+The existing managed product read now discriminates organization restaurant
+drafts explicitly. Only verified owners can read registered menu variants through
+the organization/category/product/variant/unit relationships. Use the exact menu
+catalog price, not legacy branch or organization price lists. Preserve active
+status, THB currency, exact-price and unbatched recall saleability guards. Return
+MENU_ONLY with null availability and false publication/sold-out flags; this does
+not authorize checkout or publication. Legacy reads and writes remain unchanged.
+
+Main owns the scoped read and its tests. Independent supplied-source review is
+authorized with no reviewer tools, writes, network or further delegation. Tests
+use only a confirmed task-owned PostgreSQL tmpfs target. No migration or frontend
+cutover is part of this slice. Recovery is a source-only rollback of this delta,
+preserving prior work and all retained data. Current results and unmet regression
+gates are tracked in TODO.md; whole-flow acceptance remains open.
+
+## Organization storefront draft slice (2026-11-16)
+
+Scope: save and read organization-scoped storefront drafts without POS terminals,
+branches or stock locations. Keep drafts unpublished and closed until direct
+restaurant ordering and financial settlement are accepted. Do not switch public
+creation or the UI, adopt legacy storefronts, or remove historical source guards.
+
+Main implements validation, persistence, migration 39 and contract changes.
+Independent supplied-source review covers the draft transaction, access boundary,
+schema guards and contract. Existing organization locking serializes revisions;
+settings and audit writes remain atomic. A generated organization reference binds
+restaurant-mode rows to restaurant_profiles. Source kinds are immutable.
+
+Acceptance: verified OWNER and scope checks; exact delivery fees; concurrent
+revision conflicts; no draft visibility in public or pinned directories; legacy
+catalog calls blocked for drafts; SQL guards; legacy source preservation; and
+rollback without retained partial writes. Empty migration rollback/reapply must
+pass. Populated restaurant drafts must block down migration and use forward
+recovery. No primary migration, commit, push or deployment.
+
+Next: replace operational catalog/order/table/queue identities and direct payment
+settlement before enabling publication or cutting over clients. Existing full
+suite failures and browser acceptance remain open in TODO.md.
+
 ## Branchless creation prerequisite (2026-11-15)
 
 `organization.Service.CreateRestaurant` now provides organization-only creation,
@@ -39,6 +80,42 @@ Build success is not browser acceptance. No primary migration or deployment.
 Next boundary: organization-scoped operational menu/storefront/order identities,
 direct cash/payment settlement and QR/kitchen consumers. Do not expose branchless
 creation or remove legacy dependencies before their replacements are accepted.
+
+## Organization Menu Slice Plan (2026-11-16)
+
+Scope: extend optional setup menus to organization scope, without switching public
+creation, storefront checkout or UI routes. Reuse the existing catalog and money
+types, but register only new or already registered restaurant menu identities and
+reject implicit legacy catalog adoption or foreign identities. Preserve explicit
+branch setup behavior and fingerprints.
+
+Sequence: prove missing branchless behavior with unit/isolated tests; extract the
+new menu catalog persistence boundary without altering legacy setup; add a
+forward command-schema migration and branchless setup read/write; align OpenAPI
+and existing client; verify concurrent replay, exact prices, authorization and
+failure rollback; independent source/evidence review. Main owns implementation;
+reviewer receives scoped source only and performs no writes or external actions.
+
+Risks: shared product/category edits can affect historical retail consumers;
+reject conflicting identities rather than reclassify legacy catalog rows. Migration
+down must refuse retained menu commands; forward recovery after real menu data.
+No primary migration, commit, push or deployment. Whole-flow completion stays open.
+
+Ruling from schema inspection: stock_policy is stored on orders/carts/sales, not
+product_variants. Add scoped category/item registries rather than inventing a
+per-variant policy or converting historical catalog records. Future MENU_ONLY
+orders must explicitly consume this registry; this slice does not enable checkout.
+
+Checkpoint: organization menu implementation and focused real DB acceptance PASS
+with official migrations 1-38, concurrent replay, exact prices, legacy/cross-tenant
+identity rejection, rollback and registry RLS/FKs. Empty rollback/reapply and
+populated rollback refusal PASS. Full DB still fails the four recorded leaf cases;
+web suite fails 10 tests and separate dev-stack check fails its CSP comparison.
+Focused web 93 tests, Go suite/vet, typecheck/build and contract checks PASS. Review
+identified the missing product_id/variant_id contract dependency; assertion
+RED/GREEN and scoped re-review confirm its fix. No other confirmed scoped finding.
+Catalog/stock interactions and actual storefront/checkout/UI remain unaccepted.
+Detailed commands, failures and evidence paths are in TODO.md. Keep task open.
 
 ## Approved Direction
 

@@ -287,7 +287,7 @@ func (input *SetupMenuInput) normalize(branch string) error {
 		input.BranchID = branch
 	}
 	input.BranchID = strings.TrimSpace(input.BranchID)
-	if !uuidPattern.MatchString(input.BranchID) || len(input.Categories) == 0 || len(input.Categories) > 100 || len(input.Items) == 0 || len(input.Items) > 500 {
+	if (input.BranchID != "" && !uuidPattern.MatchString(input.BranchID)) || len(input.Categories) == 0 || len(input.Categories) > 100 || len(input.Items) == 0 || len(input.Items) > 500 {
 		return ErrInput
 	}
 	categories := map[string]struct{}{}
@@ -976,6 +976,12 @@ func (service *Service) SaveTables(ctx context.Context, user, org, key string, i
 }
 
 func (service *Service) SaveMenu(ctx context.Context, user, org, key string, input SetupMenuInput) (SetupState, error) {
+	if input.BranchID == "" {
+		if err := input.normalize(""); err != nil {
+			return SetupState{}, err
+		}
+		return service.saveOrganizationSetup(ctx, user, org, key, "menu", input)
+	}
 	if err := validateSetupIdempotencyKey(key); err != nil {
 		return SetupState{}, err
 	}

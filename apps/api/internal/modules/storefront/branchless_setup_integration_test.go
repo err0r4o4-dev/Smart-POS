@@ -84,6 +84,7 @@ func verifyBranchlessSetup(t *testing.T, ctx context.Context, organizations *org
 	if _, err = service.SaveTables(ctx, owner, org, "90711111-1111-4111-8111-111111111111", invalidTables); err == nil {
 		t.Fatal("invalid replacement tables did not roll back")
 	}
+	verifyBranchlessMenu(t, ctx, organizations, owner, guest, org)
 	state, err = service.Complete(ctx, owner, org, "", "91711111-1111-4111-8111-111111111111")
 	if err != nil || !state.Completed || !state.Ready {
 		t.Fatalf("branchless completion failed: %v", err)
@@ -116,7 +117,7 @@ func verifyBranchlessSetup(t *testing.T, ctx context.Context, organizations *org
 	if err != nil {
 		t.Fatal(err)
 	}
-	if branches != 0 || stock != 0 || terminals != 0 || inventoryCommands != 0 || commands != 6 || profileAudits != 1 || auditBranches != 0 || activeTables != 1 || vat != "7.00" || charge != "10.00" || !trialStarted {
+	if branches != 0 || stock != 0 || terminals != 0 || inventoryCommands != 0 || commands != 8 || profileAudits != 1 || auditBranches != 0 || activeTables != 1 || vat != "7.00" || charge != "10.00" || !trialStarted {
 		t.Fatal("branchless setup infrastructure, exact charges, rollback, replay or trial invariant failed")
 	}
 	if err = tx.QueryRow(ctx, "SELECT qr_token_hash FROM restaurant_dining_tables WHERE organization_id=$1 AND id=$2", org, issued.TableID).Scan(&tokenHash); err != nil {
@@ -142,7 +143,11 @@ func verifyBranchlessSetup(t *testing.T, ctx context.Context, organizations *org
 	if _, err = service.SavePayments(ctx, guest, org, "95711111-1111-4111-8111-111111111111", restaurant.SetupPaymentsInput{Cash: true}); !errors.Is(err, organization.ErrDenied) {
 		t.Fatalf("non-owner gained branchless configuration write: %v", err)
 	}
+	if _, err = service.SaveMenu(ctx, guest, org, "96711111-1111-4111-8111-111111111111", restaurant.SetupMenuInput{Categories: []restaurant.SetupCategoryInput{{Name: "Meals"}}, Items: []restaurant.SetupMenuItemInput{{Category: "Meals", Name: "Soup", Price: "45.25"}}}); !errors.Is(err, organization.ErrDenied) {
+		t.Fatalf("non-owner gained branchless menu write: %v", err)
+	}
 	verifyBranchlessSetupIsolation(t, ctx, organizations, owner, org, zoneID)
+	verifyBranchlessSettings(t, ctx, organizations, owner, guest, org)
 }
 
 func verifyBranchlessSetupIsolation(t *testing.T, ctx context.Context, organizations *organization.Service, owner, original, foreignZone string) {
@@ -155,6 +160,19 @@ func verifyBranchlessSetupIsolation(t *testing.T, ctx context.Context, organizat
 	if _, err = service.SaveProfile(ctx, owner, other.Organization.ID, "94711111-1111-4111-8111-111111111111", restaurant.SetupProfileInput{Name: "Other restaurant", BusinessType: "RESTAURANT"}); err != nil {
 		t.Fatal(err)
 	}
+	originalState, err := service.Setup(ctx, owner, original, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	originalItem := originalState.Menu.(map[string]any)["items"].([]map[string]any)[0]
+	foreignMenu := restaurant.SetupMenuInput{Categories: []restaurant.SetupCategoryInput{{Name: "Meals"}}, Items: []restaurant.SetupMenuItemInput{{VariantID: originalItem["variant_id"].(string), Category: "Meals", Name: "Foreign menu", Price: "1.00"}}}
+	if _, err = service.SaveMenu(ctx, owner, other.Organization.ID, "99711111-1111-4111-8111-111111111111", foreignMenu); !errors.Is(err, restaurant.ErrInput) {
+		t.Fatalf("cross-organization menu variant accepted: %v", err)
+	}
+	foreignMenu.Categories[0].ID = originalItem["category_id"].(string)
+	if _, err = service.SaveMenu(ctx, owner, other.Organization.ID, "99711111-1111-4111-8111-111111111111", foreignMenu); !errors.Is(err, restaurant.ErrInput) {
+		t.Fatalf("cross-organization menu category accepted: %v", err)
+	}
 	tx, _, err := organizations.Authorized(ctx, owner, other.Organization.ID, "organization.read")
 	if err != nil {
 		t.Fatal(err)
@@ -163,6 +181,23 @@ func verifyBranchlessSetupIsolation(t *testing.T, ctx context.Context, organizat
 	var visible int
 	if err = tx.QueryRow(ctx, "SELECT count(*) FROM restaurant_profiles WHERE organization_id=$1", original).Scan(&visible); err != nil || visible != 0 {
 		t.Fatalf("foreign restaurant profile visible through RLS: %v", err)
+	}
+	if err = tx.QueryRow(ctx, "SELECT (SELECT count(*) FROM restaurant_menu_categories WHERE organization_id=$1)+(SELECT count(*) FROM restaurant_menu_items WHERE organization_id=$1)", original).Scan(&visible); err != nil || visible != 0 {
+		t.Fatalf("foreign restaurant menu registry visible through RLS: %v", err)
+	}
+	if _, err = tx.Exec(ctx, "SAVEPOINT foreign_menu"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec(ctx, "INSERT INTO restaurant_menu_items(organization_id,product_id,variant_id) VALUES($1,$2,$3)", other.Organization.ID, originalItem["product_id"], originalItem["variant_id"]); err == nil {
+		t.Fatal("cross-organization menu registry accepted")
+	} else {
+		var problem *pgconn.PgError
+		if !errors.As(err, &problem) || problem.Code != "23503" {
+			t.Fatalf("expected organization-menu FK violation: %v", err)
+		}
+	}
+	if _, err = tx.Exec(ctx, "ROLLBACK TO SAVEPOINT foreign_menu"); err != nil {
+		t.Fatal(err)
 	}
 	if _, err = tx.Exec(ctx, `INSERT INTO restaurant_dining_tables(organization_id,zone_id,code,name,seats,qr_token_hash,created_by,updated_by)
 	 VALUES($1,$3,'T1','Foreign zone',2,repeat('a',64),$2,$2)`, other.Organization.ID, owner, foreignZone); err == nil {

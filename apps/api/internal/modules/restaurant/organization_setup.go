@@ -118,12 +118,16 @@ func readOrganizationSetup(ctx context.Context, tx pgx.Tx, org string) (SetupSta
 	state.Tables = map[string]any{"zones": zones, "tables": tables, "qr_enabled": tableQR}
 	state.Payments = map[string]any{"cash": cash, "bank_transfer": bank, "promptpay": false, "card": false}
 	state.Orders = map[string]any{"qr_ordering": orderQR, "kitchen_queue": kitchen, "auto_confirm": autoConfirm, "vat_percent": vat, "service_charge_percent": serviceCharge}
-	steps := map[int]bool{1: profileSaved, 2: servicesSaved, 3: tablesSaved, 5: paymentsSaved, 6: ordersSaved}
+	menuSaved, menuItems, err := readOrganizationMenu(ctx, tx, org, &state)
+	if err != nil {
+		return state, err
+	}
+	steps := map[int]bool{1: profileSaved, 2: servicesSaved, 3: tablesSaved, 4: menuSaved, 5: paymentsSaved, 6: ordersSaved}
 	live := []bool{
 		profileSaved && strings.TrimSpace(name) != "" && strings.TrimSpace(code) != "" && businessType == "RESTAURANT",
 		servicesSaved && state.Services.any(),
 		tablesSaved && (!state.Services.DineIn || (len(zones) > 0 && len(tables) > 0)),
-		false,
+		menuSaved && menuItems > 0,
 		paymentsSaved && (cash || bank),
 		ordersSaved,
 	}
@@ -215,6 +219,8 @@ func (service *Service) saveOrganizationSetup(ctx context.Context, user, org, ke
 			_, err = tx.Exec(ctx, "UPDATE restaurant_profiles SET services_saved=true,dine_in=$2,takeaway=$3,delivery=$4 WHERE organization_id=$1", org, modes.DineIn, modes.Takeaway, modes.Delivery)
 		case "tables":
 			tokens, err = saveOrganizationTables(ctx, tx, org, user, input.(SetupTablesInput))
+		case "menu":
+			err = saveOrganizationMenu(ctx, tx, org, user, input.(SetupMenuInput))
 		case "payments":
 			payments := input.(SetupPaymentsInput)
 			_, err = tx.Exec(ctx, "UPDATE restaurant_profiles SET payments_saved=true,cash_enabled=$2,bank_transfer_enabled=$3 WHERE organization_id=$1", org, payments.Cash, payments.BankTransfer)

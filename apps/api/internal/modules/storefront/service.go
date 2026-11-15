@@ -119,7 +119,7 @@ func (service *Service) resolvedOrganizationAllowed(org *string) bool {
 }
 func settings(ctx context.Context, tx pgx.Tx, org string) (Settings, error) {
 	var result Settings
-	err := tx.QueryRow(ctx, `SELECT shop.slug,shop.name,shop.description,shop.contact_phone,shop.pickup_instructions,shop.terminal_id::text,shop.published,shop.accepting_orders,shop.revision,terminal.branch_id::text,terminal.stock_location_id::text,COALESCE(shop.online_terminal_id::text,''),shop.delivery_enabled,shop.shipping_fee::text FROM storefronts shop JOIN pos_terminals terminal ON terminal.organization_id=shop.organization_id AND terminal.id=COALESCE(shop.online_terminal_id,shop.terminal_id) WHERE shop.organization_id=$1`, org).Scan(&result.Slug, &result.Name, &result.Description, &result.ContactPhone, &result.PickupInstructions, &result.TerminalID, &result.Published, &result.AcceptingOrders, &result.Revision, &result.BranchID, &result.LocationID, &result.OnlineTerminalID, &result.DeliveryEnabled, &result.ShippingFee)
+	err := tx.QueryRow(ctx, `SELECT shop.slug,shop.name,shop.description,shop.contact_phone,shop.pickup_instructions,COALESCE(shop.terminal_id::text,''),shop.published,shop.accepting_orders,shop.revision,COALESCE(terminal.branch_id::text,''),COALESCE(terminal.stock_location_id::text,''),COALESCE(shop.online_terminal_id::text,''),shop.delivery_enabled,shop.shipping_fee::text FROM storefronts shop LEFT JOIN pos_terminals terminal ON terminal.organization_id=shop.organization_id AND terminal.id=COALESCE(shop.online_terminal_id,shop.terminal_id) WHERE shop.organization_id=$1 AND (shop.source_kind='RESTAURANT' OR terminal.id IS NOT NULL)`, org).Scan(&result.Slug, &result.Name, &result.Description, &result.ContactPhone, &result.PickupInstructions, &result.TerminalID, &result.Published, &result.AcceptingOrders, &result.Revision, &result.BranchID, &result.LocationID, &result.OnlineTerminalID, &result.DeliveryEnabled, &result.ShippingFee)
 	return result, dbError(err)
 }
 func (service *Service) PublicSettings(ctx context.Context, slug string) (Settings, error) {
@@ -154,6 +154,11 @@ func (service *Service) Settings(ctx context.Context, user, org string) (*Settin
 	if !branchAllowed(actor, result.BranchID) {
 		return nil, organization.ErrDenied
 	}
+	if result.TerminalID == "" {
+		if err = organization.RequireVerified(ctx, tx, user); err != nil {
+			return nil, err
+		}
+	}
 	return &result, nil
 }
 func uniqueAutoSlug(ctx context.Context, tx pgx.Tx, base string) (string, error) {
@@ -185,6 +190,9 @@ func (service *Service) SaveSettings(ctx context.Context, user, org string, inpu
 	defer tx.Rollback(ctx)
 	if err = input.validate(); err != nil {
 		return Settings{}, err
+	}
+	if input.TerminalID == "" {
+		return saveOrganizationSettings(ctx, tx, user, org, input)
 	}
 	var branch, location string
 	err = tx.QueryRow(ctx, `SELECT terminal.branch_id::text,terminal.stock_location_id::text FROM pos_terminals terminal JOIN branches branch ON branch.organization_id=terminal.organization_id AND branch.id=terminal.branch_id WHERE terminal.organization_id=$1 AND terminal.id=$2 AND terminal.status='ACTIVE' AND branch.status='ACTIVE' FOR UPDATE OF terminal`, org, input.TerminalID).Scan(&branch, &location)

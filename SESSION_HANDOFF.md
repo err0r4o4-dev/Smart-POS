@@ -1,5 +1,107 @@
 # SESSION HANDOFF BRIEF
 
+Handoff ID: HND-20261116-020613
+Timestamp: 2026-11-16T02:06:13+07:00 (Asia/Bangkok)
+Branch/Workspace: feature/fix-flowsss | D:\!Project\smartPOS(Web_Application)
+HEAD: a86d5d1
+
+## 1. Objective And Authorization
+
+Active Task ID: `TODO.md:1`, Restaurant without legacy POS / stock (2026-11-15).
+Plan: `docs/superpowers/plans/2026-11-15-restaurant-without-legacy-pos.md`.
+
+Replace the new flow with one restaurant per organization, without business
+branches, hidden default branches, stock, POS carts or shifts as prerequisites.
+Preserve historical retail, financial and stock records and unresolved transactions.
+Local implementation, isolated task-owned DB checks and scoped independent review
+are authorized. The user commits manually. Do not commit, push, deploy, create Git
+branches or migrate primary/retained databases. The existing Git branch is not a
+business branch. This save does not resume implementation.
+
+## 2. Completed And Verified Work
+
+HEAD contains internal branchless creation/setup and migration37. Uncommitted
+menu work adds an explicit organization catalog registry and guarded migration38.
+Menu remains optional; legacy and foreign identity reuse is rejected.
+
+Latest slice adds organization-only storefront drafts and migration39. Verified
+owners can save exact fees with revision checks and atomic audits. Source kind
+is immutable. Restaurant drafts require their own profile and cannot publish,
+accept orders or enter legacy catalog/publication paths. No infrastructure is
+created. UI and public creation are unchanged. RequiredVersion is 39.
+
+Changed files: `restaurant/{organization_setup.go,setup.go,setup_test.go}`;
+new `restaurant/organization_menu.go`; storefront service/domain/catalog,
+branchless setup/menu/settings tests, single-store tests and new
+`storefront/organization_settings.go`; platform database version; migrations38/39;
+setup-api test; OpenAPI; contract checker; TODO and the existing plan.
+All module paths are under `apps/api/internal/modules`; web test is under
+`apps/web/src/features/organization`. Preserve the entire dirty worktree.
+
+Implementation-session evidence, not rerun for this handoff:
+
+- PASS: in `apps/api`, `GOPROXY=off`, DB/browser variables empty,
+  `go test ./... -count=1` (17 tested packages); scoped `go vet` for storefront,
+  restaurant and platform/database. These package runs skip DB/browser acceptance.
+- PASS: `npm run contracts:check` (18 modules/115 routes), scoped Prettier/gofmt
+  and `git diff --check`.
+- PASS: `RESTAURANT_SOURCE_FOCUSED=1` with baseline empty,
+  `node .local/restaurant-source-db-check.mjs`: PostgreSQL17.6 tmpfs, migrations1-39,
+  runtime role, 1.82s; branchless slice0.52s. Covers races, scope, exact fees,
+  slug rollback, SQL/RLS/FK guards, no public visibility and legacy regressions.
+  Empty down/reapply37-39, populated down refusals and owned cleanup PASS.
+  Evidence: `.local/restaurant-branchless-settings-db.log`.
+- Scoped independent supplied-source review: no confirmed P1/P2 in
+  migration39/settings/catalog/contract. Reviewer ran no tools/tests; closed.
+  No production delta after review. Later collision test passes focused rerun.
+
+## 3. Pending Work
+
+Use `TODO.md:1` and its organization storefront draft checkpoint at `TODO.md:184`.
+Full operational organization catalog/order/payment settlement, dining/queue,
+public creation/UI cutover, legacy caller retirement and whole-flow acceptance
+remain open. Do not close the task or enable draft publication prematurely.
+
+## 4. Verified Decisions
+
+Preserve exact money, atomic replay/audit, tenant isolation and immutable history.
+Paid-before-kitchen requires PAID payment, unreleased hold and refund/reconciliation
+exclusions. Existing prepaid settlement still depends on POS/shift; replacement
+is pending. No per-variant stock_policy exists. Legacy catalog/stock interactions
+with registered menu identities still require acceptance.
+Populated down39 refuses with: `Restaurant storefront data exists; use forward recovery`.
+
+## 5. Known Failures And Limits
+
+Full isolated DB run FAIL4.57s: directory storefronts_check; foreign invitation;
+pinned invitation; reconciliation authority-revoked GET mismatch. No fresh baseline
+overlay this slice. Full run precedes the final collision-only test addition.
+Evidence: `.local/restaurant-branchless-settings-full.log`; cleanup PASS.
+First focused attempt had an incorrect test error expectation; test corrected,
+production mapping unchanged. Attempt log retained.
+
+Earlier web732PASS/10FAIL and dev-stack6/7PASS (CSP failure) remain unresolved;
+no baseline-pass claim. No fresh frontend/browser checks for this draft slice.
+Whole-flow independent review and release readiness remain unmet.
+Git status works despite a global-ignore permission warning. Go cache/WSL DB
+checks require native escalation; do not bypass sandbox controls. No agents or
+tool sessions remain running. No tests ran merely to save this handoff.
+
+## 6. Resume Boundary
+
+Next Authorized Action: on explicit continuation, reconcile this brief with
+Git/TODO, then scope the registry-backed operational storefront/order boundary
+and direct settlement dependencies before editing. Retain unpublished drafts.
+Required Approval: none for settled authorized local work; native gates remain.
+External actions, primary DB changes and commits require specific authorization.
+
+---
+
+# HISTORICAL BRIEF - NOT CURRENT
+
+The following brief is preserved verbatim as historical evidence. Its stock
+roadmap, branch, test results and next actions do not describe current acceptance.
+
 Handoff ID: HND-20261105-004600
 Timestamp: 2026-11-05 00:46:00 +07:00 (Asia/Bangkok)
 Branch/Workspace: feature/fix-flow-system | D:\!Project\smartPOS(Web_Application)

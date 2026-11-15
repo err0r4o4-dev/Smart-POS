@@ -615,7 +615,7 @@ paths:
       operationId: listManagedStorefrontProducts
       security:
         - sessionCookie: []
-      description: storefront.manage and branch access; 24 per page.
+      description: storefront.manage; 24 per page. Legacy POS sources retain branch access. Organization restaurant drafts require a verified owner and return only registered menu items at their exact catalog prices, with MENU_ONLY stock policy and null availability. Draft products remain unpublished; this read does not enable publication, quotes or ordering.
       parameters:
         - name: page
           in: query
@@ -18768,19 +18768,30 @@ components:
       additionalProperties: false
       required: [name]
       properties:
+        id: { type: string, format: uuid }
         name: { type: string, minLength: 1, maxLength: 100 }
     RestaurantSetupMenuItemInput:
       type: object
       additionalProperties: false
       required: [category, name, price]
+      dependentRequired:
+        product_id: [variant_id]
       properties:
+        product_id: { type: string, format: uuid }
+        variant_id: { type: string, format: uuid }
+        category_id:
+          type: string
+          format: uuid
+          description: Must identify the selected category supplied in categories and named by category. Organization-scoped setup accepts only registered restaurant menu categories.
+        sku: { type: string, pattern: '^[A-Z0-9][A-Z0-9_.-]{0,79}$' }
         category: { type: string }
         name: { type: string, minLength: 1, maxLength: 200 }
         price: { type: string, pattern: '^[0-9]{1,16}(\.[0-9]{1,2})?$' }
     RestaurantSetupMenuInput:
       type: object
       additionalProperties: false
-      required: [branch_id, categories, items]
+      description: Omit branch_id for organization-scoped restaurant menus. This path accepts only new or already registered restaurant menu identities, never implicit legacy catalog adoption. An explicit branch_id retains legacy setup behavior.
+      required: [categories, items]
       properties:
         branch_id: { type: string, format: uuid }
         categories:
@@ -19129,6 +19140,7 @@ components:
     StorefrontSettingsInput:
       type: object
       additionalProperties: false
+      description: Omit terminal_id or send an empty string for an organization-scoped restaurant draft. Drafts require a verified owner and an existing restaurant profile, remain unpublished and closed, and cannot use legacy product publication. Direct order/payment cutover is not enabled yet. Existing terminal-scoped settings retain legacy behavior. Source kinds cannot be converted; stale revisions conflict.
       required:
         - name
         - description
@@ -19137,7 +19149,23 @@ components:
         - published
         - accepting_orders
         - revision
-        - terminal_id
+      allOf:
+        - if:
+            anyOf:
+              - not:
+                  required: [terminal_id]
+              - required: [terminal_id]
+                properties:
+                  terminal_id:
+                    const: ''
+          then:
+            properties:
+              published:
+                const: false
+              accepting_orders:
+                const: false
+              online_terminal_id:
+                const: ''
       properties:
         slug:
           type: string
@@ -19168,7 +19196,8 @@ components:
           minimum: 0
         terminal_id:
           type: string
-          format: uuid
+          pattern: ^$|^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$
+          description: Omitted or empty for an organization-scoped unpublished restaurant draft; a UUID for legacy POS settings.
         online_terminal_id:
           type: string
           pattern: ^$|^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$

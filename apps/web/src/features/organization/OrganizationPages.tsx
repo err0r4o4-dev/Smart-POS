@@ -17,7 +17,6 @@ import {
   ChevronDown,
   ChevronRight,
   CircleAlert,
-  CircleHelp,
   CreditCard,
   GitBranch,
   House,
@@ -28,7 +27,6 @@ import {
   Store,
   WalletCards,
 } from 'lucide-react';
-import { paths } from '../../app/routes';
 import { WorkspaceLink as Link } from '../../app/WorkspaceNavigation';
 import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavigate';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -43,11 +41,11 @@ import {
 } from '../../components/ui/primitives';
 import { LanguageSwitcher } from '../../components/ui/LanguageSwitcher';
 import { AccountMenu } from '../../components/ui/AccountMenu';
+import { HelpDropdown } from '../../components/ui/HelpDropdown';
 import { StandardPageHeader } from '../../components/ui/StandardPage';
 import './setup.css';
 import { SetupLocationPicker } from './SetupLocationPicker';
 import { SetupTablesEditor } from './SetupTablesEditor';
-import { exactDecimal } from '../../lib/pos-api';
 import {
   saveSetupSections,
   seedSavedSetupSection,
@@ -66,7 +64,6 @@ import {
   createOrganization,
   getSetup,
   saveSetupStep,
-  type SetupMenuInput,
   type SetupOrdersInput,
   type SetupPaymentsInput,
   type SetupProfileInput,
@@ -224,7 +221,6 @@ function useWrite() {
 type SetupFormState = {
   profile: SetupProfileInput & { organization: { description?: string } };
   tables: SetupTablesInput;
-  menu: SetupMenuInput;
   services: SetupServicesInput;
   payments: SetupPaymentsInput;
   orders: SetupOrdersInput;
@@ -249,10 +245,6 @@ const createSetupForm = (): SetupFormState => ({
     zones: [{ name: 'พื้นที่หลัก' }],
     tables: [{ name: 'โต๊ะ 1', zone: 'พื้นที่หลัก', seats: 2 }],
     qr_enabled: true,
-  },
-  menu: {
-    categories: [{ name: 'เมนูหลัก' }],
-    items: [{ name: '', price: '', category: 'เมนูหลัก' }],
   },
   payments: { cash: true, bank_transfer: true, promptpay: false, card: false },
   orders: {
@@ -283,7 +275,7 @@ const setupMeta = [
   },
   {
     key: 'payments',
-    label: 'organization.metaMenuPayments',
+    label: 'organization.metaPayments',
     sidebarSubtitle: 'organization.metaPayments',
     cardSubtitle: 'organization.setupPaymentLead',
     description: 'organization.setupPaymentLead',
@@ -518,23 +510,6 @@ function localReadiness(
       label: t('organization.metaPayments'),
       reason: t('organization.setupPaymentRequired'),
     });
-  if (
-    !form.menu.items.length ||
-    form.menu.items.some(
-      (item) =>
-        !item.name.trim() ||
-        !item.category.trim() ||
-        !form.menu.categories.some(
-          (category) => category.name === item.category,
-        ) ||
-        (exactDecimal(item.price, 2) ?? 0n) <= 0n,
-    )
-  )
-    incomplete.push({
-      key: 'menu',
-      label: t('organization.metaMenu'),
-      reason: t('organization.setupMenuRequired'),
-    });
   const vat = Number(form.orders.vat_percent);
   const service = Number(form.orders.service_charge_percent);
   if (
@@ -721,7 +696,7 @@ function SetupStepFields({
         </p>
       </div>
     );
-  if (step === 4)
+  if (step === 3)
     return (
       <div className="setup-form-section">
         <SetupToggle
@@ -804,97 +779,6 @@ function SetupStepFields({
             <Tag>{t('organization.setupUnavailable')}</Tag>
           </label>
         </div>
-      </div>
-    );
-  if (step === 3)
-    return (
-      <div className="setup-form-section">
-        {form.menu.items.map((item, index) => {
-          const change = (patch: Partial<SetupMenuInput['items'][number]>) => {
-            const items = form.menu.items.map((entry, position) =>
-              position === index
-                ? {
-                    ...entry,
-                    ...patch,
-                    ...(patch.category !== undefined
-                      ? { category_id: undefined }
-                      : {}),
-                  }
-                : entry,
-            );
-            update('menu', {
-              categories: [
-                ...new Set(items.map((entry) => entry.category)),
-              ].map(
-                (name) =>
-                  form.menu.categories.find(
-                    (category) => category.name === name,
-                  ) ?? { name },
-              ),
-              items,
-            });
-          };
-          return (
-            <fieldset key={index}>
-              <legend>
-                {t('organization.metaMenu')} {index + 1}
-              </legend>
-              <SetupInput
-                label={
-                  index === 0
-                    ? t('organization.setupFirstCategory')
-                    : `${t('organization.setupFirstCategory')} ${index + 1}`
-                }
-                value={item.category}
-                required
-                onChange={(category) => change({ category })}
-              />
-              <SetupInput
-                label={
-                  index === 0
-                    ? t('organization.setupFirstItem')
-                    : `${t('organization.setupFirstItem')} ${index + 1}`
-                }
-                value={item.name}
-                required
-                onChange={(name) => change({ name })}
-              />
-              <SetupInput
-                label={
-                  index === 0
-                    ? t('organization.setupFirstPrice')
-                    : `${t('organization.setupFirstPrice')} ${index + 1}`
-                }
-                value={item.price}
-                type="number"
-                min="0.01"
-                step="0.01"
-                required
-                onChange={(price) => change({ price })}
-              />
-            </fieldset>
-          );
-        })}
-        <Button
-          type="button"
-          className="button-secondary"
-          disabled={form.menu.items.length >= 500}
-          onClick={() =>
-            update('menu', {
-              ...form.menu,
-              items: [
-                ...form.menu.items,
-                {
-                  name: '',
-                  price: '',
-                  category: form.menu.categories[0]?.name ?? '',
-                },
-              ],
-            })
-          }
-        >
-          {t('organization.setupAddMenu')}
-        </Button>
       </div>
     );
   return null;
@@ -1007,13 +891,6 @@ function ScopedSetupPage() {
           ...(data.profile ? { profile: data.profile } : {}),
           ...(data.services ? { services: data.services } : {}),
           ...(data.tables ? { tables: data.tables } : {}),
-          ...(data.menu
-            ? {
-                menu: data.menu.items.length
-                  ? data.menu
-                  : createSetupForm().menu,
-              }
-            : {}),
           ...(data.payments ? { payments: data.payments } : {}),
           ...(data.orders ? { orders: data.orders } : {}),
         }));
@@ -1134,11 +1011,6 @@ function ScopedSetupPage() {
       return t('organization.setupTableRequired');
     if (step === 2 && !form.payments.cash && !form.payments.bank_transfer)
       return t('organization.setupPaymentRequired');
-    if (
-      step === 2 &&
-      localReadiness(form, t).some((item) => item.key === 'menu')
-    )
-      return t('organization.setupMenuRequired');
     if (
       step === 2 &&
       localReadiness(form, t).some((item) => item.key === 'orders')
@@ -1314,7 +1186,6 @@ function ScopedSetupPage() {
           : step === 1
             ? [{ key: 'profile' as const, payload: profilePayload }]
             : [
-                { key: 'menu' as const, payload: form.menu },
                 { key: 'payments' as const, payload: form.payments },
                 { key: 'orders' as const, payload: form.orders },
               ];
@@ -1352,11 +1223,6 @@ function ScopedSetupPage() {
           if (!activeRef.current) return;
           const { issued_table_qr_tokens, ...saved } = result;
           safeResult = saved;
-          if (section.key === 'menu' && result.menu) {
-            const menu = result.menu;
-            setForm((current) => ({ ...current, menu }));
-            seedSavedSetupSection(saveCache.current, 'menu', menu);
-          }
           if (section.key === 'tables') {
             setIssuedTokens(issued_table_qr_tokens ?? []);
             if (form.services.service_modes.dine_in)
@@ -1418,13 +1284,7 @@ function ScopedSetupPage() {
         </div>
         <div className="topbar-right setup-topbar-actions">
           <LanguageSwitcher />
-          <Link
-            to={paths.help}
-            className="icon-button topbar-help"
-            aria-label={t('landing.help')}
-          >
-            <CircleHelp size={20} aria-hidden="true" />
-          </Link>
+          <HelpDropdown />
           <AccountMenu />
         </div>
       </header>
@@ -1593,21 +1453,11 @@ function ScopedSetupPage() {
                                 ? [2]
                                 : []),
                             ]
-                          : [3, 4]
+                          : [3]
                         ).map((section) => (
                           <section key={section}>
-                            {section !== 0 && section !== 1 && (
-                              <h3>
-                                {t(
-                                  section === 1
-                                    ? 'organization.metaServices'
-                                    : section === 2
-                                      ? 'organization.metaTables'
-                                      : section === 3
-                                        ? 'organization.metaMenu'
-                                        : 'organization.metaPayments',
-                                )}
-                              </h3>
+                            {section === 2 && (
+                              <h3>{t('organization.metaTables')}</h3>
                             )}
                             <SetupStepFields
                               step={section}
@@ -1633,15 +1483,6 @@ function ScopedSetupPage() {
                         {readinessItems.map((item, index) => (
                           <li key={`${item.key}-${index}`}>
                             {item.label}: {item.reason}
-                            {item.key === 'menu' && (
-                              <Button
-                                type="button"
-                                onClick={() => moveToStep(2)}
-                                className="button-secondary"
-                              >
-                                {t('organization.setupManageMenu')}
-                              </Button>
-                            )}
                           </li>
                         ))}
                       </ul>

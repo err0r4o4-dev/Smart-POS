@@ -70,8 +70,8 @@ func TestSetupReadinessUsesLiveDataSeparatelyFromProgress(t *testing.T) {
 	steps := map[int]bool{1: true, 2: true, 3: true, 4: true, 5: true, 6: true}
 	state := SetupState{}
 	applySetupReadiness(&state, steps, []bool{true, true, true, false, true, true})
-	if state.Ready || state.CurrentStep != "menu" || state.Steps[3].Ready || !state.Steps[0].Ready {
-		t.Fatalf("inactive menu accepted: %+v", state)
+	if !state.Ready || state.CurrentStep != "review" || state.Steps[3].Ready || !state.Steps[0].Ready {
+		t.Fatalf("optional menu blocked setup or lost live state: %+v", state)
 	}
 	applySetupReadiness(&state, steps, []bool{true, false, true, true, true, true})
 	if state.Ready || state.CurrentStep != "services" {
@@ -86,6 +86,37 @@ func TestSetupReadinessUsesLiveDataSeparatelyFromProgress(t *testing.T) {
 	applySetupReadiness(&state, steps, []bool{true, true, true, true, true, true})
 	if !state.Ready || state.CurrentStep != "review" {
 		t.Fatalf("ready state rejected: %+v", state)
+	}
+}
+
+func TestSetupReadinessAllowsMenuAfterCompletion(t *testing.T) {
+	for _, menuSaved := range []bool{false, true} {
+		for _, menuAvailable := range []bool{false, true} {
+			steps := map[int]bool{1: true, 2: true, 3: true, 4: menuSaved, 5: true, 6: true}
+			state := SetupState{}
+			applySetupReadiness(&state, steps, []bool{true, true, true, menuAvailable, true, true})
+			if !state.Ready || !state.Readiness.Ready || state.CurrentStep != "review" || len(state.Readiness.Incomplete) != 0 {
+				t.Fatalf("optional menu blocked setup (saved=%v, available=%v): %+v", menuSaved, menuAvailable, state)
+			}
+			if len(state.Steps) != 6 || state.Steps[3].Complete != menuSaved || state.Steps[3].Ready != menuAvailable {
+				t.Fatalf("legacy menu progress or live state changed: %+v", state.Steps)
+			}
+		}
+	}
+}
+
+func TestSetupReadinessStillRequiresNonMenuSettings(t *testing.T) {
+	for _, step := range []int{1, 2, 3, 5, 6} {
+		t.Run(setupStepKey(step), func(t *testing.T) {
+			steps := map[int]bool{1: true, 2: true, 3: true, 5: true, 6: true}
+			live := []bool{true, true, true, false, true, true}
+			live[step-1] = false
+			state := SetupState{}
+			applySetupReadiness(&state, steps, live)
+			if state.Ready || state.Readiness.Ready || state.CurrentStep != setupStepKey(step) || len(state.Readiness.Incomplete) != 1 || state.Readiness.Incomplete[0].Key != setupStepKey(step) {
+				t.Fatalf("required %s ignored or optional menu still blocks: %+v", setupStepKey(step), state)
+			}
+		})
 	}
 }
 

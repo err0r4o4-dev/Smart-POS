@@ -1,3 +1,32 @@
+# Remove menu entry from restaurant setup (2026-11-15)
+
+Scope: remove menu entry/validation/writes from /setup and allow server readiness
+without menu items. Preserve existing catalog data, legacy menu endpoint, required
+profile/services/tables/location/payments/orders, access checks and transactions.
+Medium size / Medium risk; no migration, live database writes, push or deployment.
+Recovery: revert only this task's source/test delta; no schema/data changes.
+
+- [x] Add regression tests for empty menus, legacy resume and required settings.
+      RED: Go readiness tests reject missing menu; web tests expose menu inputs.
+- [x] Update setup UI, readiness and completion contract coherently.
+- [x] Focused web regression: OrganizationPages, setup-flow and WorkspaceSetupGate
+      passed 83/83. Go: `go test ./internal/modules/restaurant -count=1` passed.
+- [x] Mocked browser acceptance: restaurant-setup-menu-optional.spec.ts passed 4/4
+      on Chromium 156.0.8078.4 / Windows, Thai at 320/768/1440px and English at
+      1440px. Inspected rendered screenshots; keyboard, focus, validation, retry,
+      pending completion and no menu writes passed. Viewport emulation, not devices.
+- [x] Typecheck, contracts:check (18 modules/115 routes), lint (0 errors/12 warnings),
+      build, scoped Prettier, git diff --check and log tests (10/10) passed.
+      Dev-stack tests passed 7/7 after approved rerun outside the sandbox;
+      the sandbox attempt failed with a temporary harness mkdir permission error.
+- [x] Main reviewed scoped diff: no catalog deletion, menu writes, access-control,
+      schema or transaction changes. Preserved user-owned HelpDropdown changes.
+- [?] Full regression gate: `npm run test` failed with 697/707 web tests passing.
+      Failures: SettingsPage.test.tsx (1), ShopCartPage.test.tsx (1), and
+      StorefrontPage.test.tsx (8). These failures are outside this patch's edited
+      behavior; no unrelated repairs or baseline-pass claims. Keep task open.
+      Live database acceptance not run: no isolated disposable target established.
+
 # Complete setup before workspace access (2026-11-13)
 
 Scope: finish required configuration inside /setup and deny management pages

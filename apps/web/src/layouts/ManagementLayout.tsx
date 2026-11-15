@@ -1,5 +1,6 @@
 import { LanguageSwitcher } from '../components/ui/LanguageSwitcher';
 import { AccountMenu } from '../components/ui/AccountMenu';
+import { HelpDropdown } from '../components/ui/HelpDropdown';
 import { useLanguage } from '../app/language';
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
@@ -8,7 +9,6 @@ import {
   Bell,
   ChevronDown,
   ChevronRight,
-  CircleHelp,
   House,
   Menu,
   Search,
@@ -233,13 +233,7 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
                 </NavLink>
               </>
             )}
-            <NavLink
-              to={paths.help}
-              className="icon-button topbar-help"
-              aria-label={t('landing.help')}
-            >
-              <CircleHelp size={20} aria-hidden="true" />
-            </NavLink>
+            <HelpDropdown />
             <AccountMenu />
           </div>
           <button

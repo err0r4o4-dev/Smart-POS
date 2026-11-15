@@ -458,17 +458,18 @@ func applySetupReadiness(state *SetupState, steps map[int]bool, live []bool) {
 	for step := 1; step <= 6; step++ {
 		complete := steps[step]
 		ready := live[step-1]
-		if !complete && firstIncomplete == 0 {
+		required := step != 4
+		if required && !complete && firstIncomplete == 0 {
 			firstIncomplete = step
 		}
-		if !ready && firstUnready == 0 {
+		if required && !ready && firstUnready == 0 {
 			firstUnready = step
 		}
 		entry := SetupStep{Key: setupStepKey(step), Status: "PENDING", Complete: complete, Ready: ready, Reasons: []string{}}
 		if complete {
 			entry.Status = "COMPLETE"
 		}
-		if !ready {
+		if required && !ready {
 			reason := "Complete the " + setupStepLabel(step) + " step"
 			entry.Reasons = []string{reason}
 			entry.Reason = reason

@@ -49,6 +49,15 @@ also requires a separately reviewed gateway `connect-src` allowance; the default
 gateway permits same-origin connections only. The local browser throttle is not
 a shared provider rate limiter.
 
+The location picker also loads the pinned MIT Thai address dataset at
+`apps/web/public/data/thai-addresses.json` for province/district/subdistrict
+selection and postal-code autofill. Reverse lookup defaults to the free Photon
+endpoint `https://photon.komoot.io/reverse`, or uses `VITE_LOCATION_REVERSE_URL`
+when configured. It sends only `lat` and `lon`, with omitted credentials and no
+referrer; provider failure leaves manual structured entry available. The frontend
+accepts Photon `features[0].properties` responses and never sends store name,
+phone, email or account data.
+
 Migration 36 adds nullable `branches.setup_location` JSONB. The API requires
 schema 36 and validates confirmed coordinates/address before writing through the
 existing setup profile transaction. Changing a profile address without a matching

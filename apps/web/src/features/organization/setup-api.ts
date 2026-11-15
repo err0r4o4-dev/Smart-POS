@@ -51,6 +51,13 @@ export interface SetupLocation {
   address: string;
   details: string;
   confirmed: boolean;
+  province_id?: number;
+  district_id?: number;
+  subdistrict_id?: number;
+  province?: string;
+  district?: string;
+  subdistrict?: string;
+  postal_code?: string;
 }
 
 interface SetupProfileState extends SetupProfileInput {

@@ -1012,3 +1012,22 @@ Recovery: remove only task-owned source delta and the added dependency.
 
 - Maintain bilingual (Thai/English) compatibility if test assertions or UI text are sensitive to language.
 - Ensure viewport responsiveness across 320px, 768px, and 1440px.
+# Setup field validation and structured Thai address (2026-11-15)
+
+Scope: hide setup email/address without erasing values; inline name/Thai phone
+validation; dependent Thai address fields, coordinate lookup and confirmation.
+Large / High: coordinate privacy and persisted address validation.
+User authorized free provider/data selection and coordinate-only lookup.
+No paid services, deployment, push, live data or database migration.
+
+- [x] Pin licensed address data and configure free Photon coordinate-only reverse lookup.
+- [x] Add inline profile validation and dependent structured Thai address fields.
+- [x] Add manual fallback, explicit confirmation and stale-result protection.
+- [x] Preserve compatible JSON persistence and synchronize public contracts.
+- [x] Focused web/Go, contracts, typecheck, lint, build and dataset checks passed.
+  Browser viewport acceptance was not run in this pass.
+- [?] Independent privacy/correctness review requires delegation authorization.
+
+Recovery: retain legacy JSON and hidden contact values; manual entry works when
+lookup fails. Remove this section only after required checks and review pass.
+

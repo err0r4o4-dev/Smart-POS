@@ -61,11 +61,15 @@ it('searches only on request and rejects empty provider coordinates', async () =
   });
   vi.stubGlobal('fetch', fetcher);
   renderInEnglish(<Picker />);
-  expect(fetcher).not.toHaveBeenCalled();
+  expect(fetcher).toHaveBeenCalledWith(
+    '/data/thai-addresses.json',
+    expect.anything(),
+  );
   fireEvent.change(screen.getByLabelText('Search place or address'), {
     target: { value: 'Restaurant' },
   });
-  expect(fetcher).not.toHaveBeenCalled();
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  expect(fetcher.mock.calls[0][0]).toBe('/data/thai-addresses.json');
   fireEvent.click(screen.getByRole('button', { name: 'Search location' }));
   fireEvent.click(
     await screen.findByRole('button', { name: 'Restaurant entrance' }),
@@ -84,10 +88,14 @@ it('searches only on request and rejects empty provider coordinates', async () =
       referrerPolicy: 'no-referrer',
     }),
   );
-  expect((fetcher.mock.calls[0][0] as URL).searchParams.get('q')).toBe(
-    'Restaurant',
+  const searchCall = fetcher.mock.calls.find(([input]) =>
+    String(input).includes('search.example.test'),
   );
-  expect(screen.getByRole('status')).toHaveTextContent('Location confirmed');
+  expect(searchCall).toBeDefined();
+  expect((searchCall?.[0] as URL).searchParams.get('q')).toBe('Restaurant');
+  expect(screen.getByRole('status')).toHaveTextContent(
+    'Choose a pin, complete the structured address, then confirm the location',
+  );
 });
 
 it('ignores search results after the query changes', async () => {
@@ -105,7 +113,7 @@ it('ignores search results after the query changes', async () => {
     target: { value: 'Old query' },
   });
   fireEvent.click(screen.getByRole('button', { name: 'Search location' }));
-  await waitFor(() => expect(fetcher).toHaveBeenCalledOnce());
+  await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
   fireEvent.change(screen.getByLabelText('Search place or address'), {
     target: { value: 'New query' },
   });
@@ -127,8 +135,8 @@ it('opens the map and hides raw coordinates', () => {
   expect(screen.queryByLabelText('Latitude')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Longitude')).not.toBeInTheDocument();
   expect(
-    screen.queryByRole('button', { name: 'Confirm store location' }),
-  ).not.toBeInTheDocument();
+    screen.getByRole('button', { name: 'Confirm store location' }),
+  ).toBeDisabled();
 });
 
 it('confirms a searched location automatically', async () => {
@@ -150,8 +158,41 @@ it('confirms a searched location automatically', async () => {
   fireEvent.click(
     await screen.findByRole('button', { name: 'Store entrance' }),
   );
-  expect(screen.getByRole('status')).toHaveTextContent('Location confirmed');
+  expect(screen.getByRole('status')).toHaveTextContent(
+    'Choose a pin, complete the structured address, then confirm the location',
+  );
 });
+it('requires reconfirmation after editing a confirmed address', () => {
+  function ConfirmedPicker() {
+    const [value, setValue] = useState<SetupLocation>({
+      latitude: 13.75,
+      longitude: 100.5,
+      address: '1 Main Road',
+      details: '',
+      province_id: 1,
+      district_id: 10,
+      subdistrict_id: 100,
+      province: 'กรุงเทพมหานคร',
+      district: 'เขตพระนคร',
+      subdistrict: 'พระบรมมหาราชวัง',
+      postal_code: '10200',
+      confirmed: false,
+    });
+    return <SetupLocationPicker value={value} onChange={setValue} />;
+  }
+
+  renderInEnglish(<ConfirmedPicker />);
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Confirm store location' }),
+  );
+  fireEvent.change(screen.getByLabelText('Store address'), {
+    target: { value: '2 Main Road' },
+  });
+  expect(screen.getByRole('status')).toHaveTextContent(
+    'Choose a pin, complete the structured address, then confirm the location',
+  );
+});
+
 it('reports map loading and ready states', async () => {
   const statuses: string[] = [];
   renderInEnglish(
@@ -187,6 +228,6 @@ it('confirms an existing address when a map marker is selected', async () => {
     longitude: 100.6,
     address: 'Existing store address',
     details: 'Ground floor',
-    confirmed: true,
+    confirmed: false,
   });
 });

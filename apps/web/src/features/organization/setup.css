@@ -506,6 +506,25 @@
   min-height: 80px;
 }
 
+.setup-field-error {
+  display: block;
+  margin-top: 2px;
+  color: var(--error-strong);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.setup-field input[aria-invalid='true'],
+.setup-field textarea[aria-invalid='true'],
+.setup-field select[aria-invalid='true'] {
+  border-color: var(--error-strong);
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.1);
+}
+
+.setup-location .setup-select-element {
+  appearance: auto;
+}
+
 .setup-field input::placeholder,
 .setup-field textarea::placeholder {
   color: var(--text-strong);

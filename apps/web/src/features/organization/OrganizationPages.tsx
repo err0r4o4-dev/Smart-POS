@@ -75,6 +75,7 @@ import {
   type SetupTablesInput,
   type IssuedTableQRToken,
 } from './setup-api';
+import { validateStoreProfile, type ProfileErrors } from './setup-validation';
 import type { LocationMapStatus } from './SetupLocationPicker';
 
 const blankBranch: BranchInput = {
@@ -326,6 +327,9 @@ function SetupInput({
   placeholder,
   min,
   step,
+  error,
+  id,
+  onBlur,
 }: {
   label: string;
   value: string;
@@ -335,7 +339,11 @@ function SetupInput({
   placeholder?: string;
   min?: string;
   step?: string;
+  error?: string;
+  id?: string;
+  onBlur?: () => void;
 }) {
+  const errorID = error && id ? `${id}-error` : undefined;
   return (
     <label className="tenant-field setup-field">
       <span className="setup-field-label">
@@ -348,7 +356,10 @@ function SetupInput({
         )}
       </span>
       <input
+        id={id}
         aria-label={label}
+        aria-invalid={Boolean(error)}
+        aria-describedby={errorID}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         required={required}
@@ -356,7 +367,13 @@ function SetupInput({
         placeholder={placeholder}
         min={min}
         step={step}
+        onBlur={onBlur}
       />
+      {error && (
+        <span id={errorID} className="setup-field-error" role="alert">
+          {error}
+        </span>
+      )}
     </label>
   );
 }
@@ -538,6 +555,8 @@ function SetupStepFields({
   update,
   promptPayAvailable,
   savedTableCount,
+  profileErrors,
+  onValidateProfile,
 }: {
   step: number;
   form: SetupFormState;
@@ -547,6 +566,8 @@ function SetupStepFields({
   ) => void;
   promptPayAvailable: boolean;
   savedTableCount: number;
+  profileErrors: ProfileErrors;
+  onValidateProfile: () => void;
 }) {
   const profile = form.profile;
   const { t } = useLanguage();
@@ -559,6 +580,13 @@ function SetupStepFields({
             value={profile.organization.name}
             placeholder={t('organization.setupStoreNameExample')}
             required
+            id="setup-store-name"
+            error={
+              profileErrors.name
+                ? t(`organization.${profileErrors.name}`)
+                : undefined
+            }
+            onBlur={onValidateProfile}
             onChange={(name) =>
               update('profile', {
                 ...profile,
@@ -583,38 +611,20 @@ function SetupStepFields({
             }
           />
           <SetupInput
-            label={t('organization.setupStoreEmail')}
-            value={profile.organization.contact_email}
-            placeholder={t('organization.setupEmailExample')}
-            type="email"
-            onChange={(contact_email) =>
-              update('profile', {
-                ...profile,
-                organization: { ...profile.organization, contact_email },
-              })
-            }
-          />
-        </div>
-        <div className="setup-form-grid">
-          <SetupInput
             label={t('organization.setupStorePhone')}
             value={profile.organization.contact_phone}
             placeholder={t('organization.setupPhoneExample')}
+            id="setup-store-phone"
+            error={
+              profileErrors.contact_phone
+                ? t(`organization.${profileErrors.contact_phone}`)
+                : undefined
+            }
+            onBlur={onValidateProfile}
             onChange={(contact_phone) =>
               update('profile', {
                 ...profile,
                 organization: { ...profile.organization, contact_phone },
-              })
-            }
-          />
-          <SetupInput
-            label={t('organization.setupStoreAddress')}
-            value={profile.organization.address}
-            placeholder={t('organization.setupAddressExample')}
-            onChange={(address) =>
-              update('profile', {
-                ...profile,
-                organization: { ...profile.organization, address },
               })
             }
           />
@@ -812,6 +822,7 @@ function ScopedSetupPage() {
   >('idle');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
+  const [profileErrors, setProfileErrors] = useState<ProfileErrors>({});
   const [rotationUncertain, setRotationUncertain] = useState(false);
   const [serverState, setServerState] = useState<SetupState | null>(null);
   const [issuedTokens, setIssuedTokens] = useState<IssuedTableQRToken[]>([]);
@@ -991,10 +1002,24 @@ function ScopedSetupPage() {
       return next;
     });
     setError('');
+    if (key === 'profile') setProfileErrors({});
     setRotationUncertain(false);
+  };
+  const validateProfile = () => {
+    const errors = validateStoreProfile({
+      name: form.profile.organization.name,
+      contact_phone: form.profile.organization.contact_phone,
+    });
+    setProfileErrors(errors);
+    return errors;
   };
   const validationMessage = () => {
     if (step === 0) {
+      const profileValidation = validateProfile();
+      if (profileValidation.name)
+        return t(`organization.${profileValidation.name}`);
+      if (profileValidation.contact_phone)
+        return t(`organization.${profileValidation.contact_phone}`);
       const { organization } = form.profile;
       if (!organization.name.trim()) return t('organization.setupNameRequired');
       if (!organization.business_type.trim())
@@ -1446,7 +1471,16 @@ function ScopedSetupPage() {
                             location,
                             organization: {
                               ...form.profile.organization,
-                              address: location.address,
+                              address: [
+                                location.address,
+                                location.subdistrict &&
+                                  `ต.${location.subdistrict}`,
+                                location.district && `อ.${location.district}`,
+                                location.province,
+                                location.postal_code,
+                              ]
+                                .filter(Boolean)
+                                .join(' '),
                             },
                           })
                         }
@@ -1472,6 +1506,8 @@ function ScopedSetupPage() {
                               savedTableCount={savedTableCount}
                               form={form}
                               update={update}
+                              profileErrors={profileErrors}
+                              onValidateProfile={validateProfile}
                               promptPayAvailable={Boolean(
                                 serverState?.capabilities.promptPay,
                               )}

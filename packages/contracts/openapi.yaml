@@ -18669,6 +18669,13 @@ components:
         address: { type: string, minLength: 1, maxLength: 1000 }
         details: { type: string, maxLength: 1000, default: '' }
         confirmed: { type: boolean, const: true }
+        province_id: { type: integer, minimum: 1 }
+        district_id: { type: integer, minimum: 1 }
+        subdistrict_id: { type: integer, minimum: 1 }
+        province: { type: string, maxLength: 200 }
+        district: { type: string, maxLength: 200 }
+        subdistrict: { type: string, maxLength: 200 }
+        postal_code: { type: string, pattern: '^\\d{5}$' }
     RestaurantSetupProfileInput:
       type: object
       additionalProperties: false

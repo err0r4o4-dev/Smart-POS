@@ -934,6 +934,48 @@ Features: Table QR detection, mobile food catalog with category tabs & quick cou
 
 # Owner-only backoffice (2026-11-05)
 
+- [/] Web regression repair (2026-11-16), authorized after baseline inspection:
+  fix the ten reproduced web failures without changing order/payment logic,
+  authorization, schema or primary data. Main owns the bounded frontend/test
+  patch; no delegation, commit, push, migration or deployment is authorized.
+  Restore the catalog add-result announcement; align tests with current routes
+  and labels, await asynchronous storefront data and retain QR, quote freshness
+  and idempotent-retry assertions. Verify RED/GREEN, full web tests, typecheck,
+  contracts, lint, build and the actual diff. Browser checks require an isolated
+  safe environment. Recovery reverts only this repair's local delta.
+  Verification evidence (2026-11-16; current six-file local delta):
+  - PASS RED/GREEN: the three affected web files changed from 40 passed / 10
+    failed to 52 passed / 0 failed, including two added regression cases.
+    Evidence: `.local/web-repair-red.json`, `.local/web-repair-focused.json`.
+  - PASS final web rerun: 90 files, 756 tests. Evidence:
+    `.local/web-repair-final-web.log`.
+  - PASS final Chromium checks: Thai/English at 320px and 1440px, four tests.
+    Covered successful/repeated keyboard additions, rejected additions against
+    concurrently updated stored stock limits, unchanged rejected quantities and
+    horizontal overflow. Static local build, synthetic intercepted APIs only;
+    no database, live payment or screen-reader/audio acceptance is claimed.
+    Evidence: `.local/web-repair-final-browser.log` and browser-results images.
+  - PASS typecheck, contracts (18 modules / 115 routes), lint (0 errors / 12
+    warnings), build (chunk-size warning), formatting and diff whitespace.
+    Evidence: `.local/web-repair-typecheck.log`, `.local/web-repair-lint.log`,
+    `.local/web-repair-build.log`, `.local/web-repair-full-recheck.log`.
+  - FAIL root `npm run test`: web/contracts/log checks passed, but dev-stack
+    returned 5 passed / 2 failed. The CSP assertion at
+    `scripts/dev-stack.test.mjs:150` disagrees with dev websocket connect-src
+    entries and remains unresolved outside this repair's authorized scope.
+    The dev-watch failure was sandbox permission denial; its focused approved
+    escalated rerun passed (1 test), not a passing full-root rerun.
+    Evidence: `.local/web-repair-dev-watch-recheck.log`.
+  - An earlier concurrent full run timed out in AccountFlow (755 passed / 1
+    failed); its isolated rerun passed all three tests and subsequent full web
+    runs passed. Timing contention is an inference, not a proven root cause.
+    Original failed attempts are retained in `.local/web-repair-full-test.log`.
+  - Main reviewed the actual frontend/test diff; QR denial, quote freshness and
+    retry body/key assertions remain. No new independent review was dispatched;
+    the previous role-removal review does not cover this accessibility repair.
+    The bounded web regression is verified; overall acceptance stays open for
+    the unresolved root CSP check. No commit, push or database changes made.
+
 - [/] Role-definition removal follow-up (2026-11-16): support OWNER only in
   application catalogs, types and authorization branches. Preserve historical
   migrations, membership records and negative tests for retired/unknown roles.
@@ -942,7 +984,10 @@ Features: Table QR detection, mobile food catalog with category tabs & quick cou
   this follow-up patch. The user authorized a separate read-only reviewer for
   this follow-up's diff, relevant contracts and check evidence only; no shell,
   network, writes, unrelated files or further delegation.
-  Implemented locally: OWNER-only Go catalog and frontend Role/labels; removed
+  Current baseline: `132edb10fb56c991ff9e38bddfd1a0d1cda34727`, explicitly
+  accepted by the user on 2026-11-16. The role-removal implementation is in this
+  commit; Main made no commit or application changes during this inspection.
+  Implemented: OWNER-only Go catalog and frontend Role/labels; removed
   dead staff permission builders and named-role exceptions across inventory,
   purchasing, POS, pricing and returns. Other runtime role strings fail the
   protected frontend access guard. Negative fixtures retain all retired roles
@@ -962,17 +1007,39 @@ Features: Table QR detection, mobile food catalog with category tabs & quick cou
     OWNER narrowing in ManagementLayout fixed those errors before the rerun.
   - FAIL full web suite: 744 passed, 10 failed in SettingsPage, ShopCartPage and
     StorefrontPage (3 of 90 files). Log: `.local/role-removal-web-tests.log`.
-    These failures have not been established as baseline failures or repaired.
+    The baseline comparison below reproduces these failures; none were repaired.
   - PASS fresh recheck (2026-11-16, 10:25): 94 focused web tests, Go tests
     (17 packages, database/browser opt-ins disabled), typecheck, contracts,
     Go vet/build and diff whitespace checks. All 31 application/test file
     hashes match the independent review evidence package.
-  - IN PROGRESS independent review: the first attempt could not read the local
-    evidence package because its permitted tool was unavailable. The same
-    reviewer received scoped code, contracts and evidence inline without tools;
-    the verdict is pending. No application code changed during review.
+  - PASS independent static review: the separate read-only reviewer inspected
+    the complete 31-file application/test diff and requested supporting source
+    inline, with no tools, and found no confirmed defects. The reviewer did not
+    execute tests, verify hashes or inspect raw check output. This is not runtime
+    acceptance or release-readiness approval. The reviewer is now closed.
+  - PASS evidence reconciliation after baseline acceptance: all 31 file hashes
+    still match `.local/role-removal-review.json`; database diff from `1d675621`
+    to `132edb10` is empty. The worktree was clean before this tracker update.
+  - FAIL fresh full web run on `132edb10`: 744 passed, 10 failed, 90 files.
+    JSON: `.local/role-removal-current-results.json`. All 94 assertions in the
+    six focused role/access suites passed in this run.
+  - PASS failure attribution check, not suite acceptance: an isolated local
+    snapshot of `1d675621` ran the same three failing files using the existing
+    installed dependencies, without installation, checkout or database access.
+    Result: 40 passed, 10 failed; all 50 assertion statuses and all 10 failing
+    case names match the current run. Source, tests, test setup, Vite config and
+    dependency manifests for this comparison are unchanged between the commits.
+    Baseline JSON: `.local/role-removal-baseline-1d675621/apps/web/.local/role-removal-baseline-results.json`.
+    These failures reproduce before the role-removal commit in this environment;
+    no historical-environment or full-baseline-suite pass is claimed.
+  - Remaining failure diagnosis: seven storefront cases query an older review
+    button label, one cart case expects a different step label, one catalog case
+    cannot find its named status announcement, and one settings case reads the
+    fallback shop URL rather than the loaded slug. No assertions were weakened
+    and no storefront/settings repair was included in this role-only inspection.
   - BLOCKED real database/tenant runtime acceptance: no confirmed disposable
-    target. No migration, database write, commit, push or deployment performed.
+    target. Browser acceptance also remains unverified. Main performed no
+    migration, database write, commit, push or deployment during this inspection.
 
 Approved scope: restrict backoffice access to active OWNER memberships; reject
 MANAGER, CASHIER, INVENTORY_STAFF and PURCHASING_STAFF. Remove the `/work`

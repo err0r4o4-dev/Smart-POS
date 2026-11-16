@@ -103,6 +103,11 @@ export function ShopCatalog({ slug }: { slug: string }) {
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const [addResult, setAddResult] = useState<{
+    productName: string;
+    succeeded: boolean;
+    sequence: number;
+  } | null>(null);
 
   const [searchParams] = useSearchParams();
   const tableToken = readTableToken(searchParams.toString());
@@ -194,6 +199,22 @@ export function ShopCatalog({ slug }: { slug: string }) {
   );
   return (
     <div className="shop-catalog">
+      <div
+        role="status"
+        aria-label={t('storefront.addProductResult')}
+        aria-atomic="true"
+        className="catalog-visually-hidden"
+      >
+        {addResult && (
+          <span key={addResult.sequence}>
+            {addResult.succeeded
+              ? t('storefront.addedValue0ToCart', {
+                  value0: translateProduct(addResult.productName, language),
+                })
+              : t('storefront.unableToAddProductCheckQuantityAnd')}
+          </span>
+        )}
+      </div>
       <header className="shop-page-heading shop-store-heading">
         <div className="shop-store-identity">
           <span className="shop-store-symbol">
@@ -580,7 +601,12 @@ export function ShopCatalog({ slug }: { slug: string }) {
                     ))
                 }
                 add={(quantity) => {
-                  cart.add(product, quantity);
+                  const succeeded = cart.add(product, quantity);
+                  setAddResult((previous) => ({
+                    productName: product.product_name,
+                    succeeded,
+                    sequence: (previous?.sequence ?? 0) + 1,
+                  }));
                 }}
               />
             ))}

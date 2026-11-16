@@ -139,7 +139,7 @@ it('navigates to checkout and allows returning to cart', async () => {
     name: 'ขั้นตอนการสั่งซื้อ',
   });
   expect(visibleSteps.querySelector('[aria-current="step"]')).toHaveTextContent(
-    'ตรวจสอบและยืนยันคำสั่งซื้อ',
+    'ยืนยันคำสั่งซื้อ',
   );
   fireEvent.click(screen.getAllByRole('button', { name: 'กลับไปตะกร้า' })[0]);
   expect(

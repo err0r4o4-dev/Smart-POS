@@ -85,6 +85,73 @@ test.beforeEach(async ({ page, baseURL }) => {
   });
 });
 
+for (const language of ['th', 'en'] as const) {
+  for (const width of [320, 1440]) {
+    test(`catalog announces cart additions and rejections in ${language} at ${width}px`, async ({
+      page,
+    }, testInfo) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.addInitScript((value) => {
+        localStorage.setItem('smartpos.language', value);
+      }, language);
+      await page.goto('/shop/ui-test');
+      await expect(
+        page.getByRole('heading', { name: product.product_name }),
+      ).toBeVisible();
+      const status = page.getByRole('status', {
+        name: language === 'th' ? 'ผลการเพิ่มสินค้า' : 'Add product result',
+      });
+      await expect(status).toBeEmpty();
+      const add = page.getByRole('button', {
+        name: language === 'th' ? 'เพิ่มลงตะกร้า' : 'Add to cart',
+        exact: true,
+      });
+      await add.click();
+      await expect(status).toHaveText(
+        language === 'th'
+          ? `เพิ่ม ${product.product_name} ลงตะกร้าแล้ว`
+          : `Added ${product.product_name} to cart`,
+      );
+      await add.focus();
+      await add.press('Enter');
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () =>
+              JSON.parse(localStorage.getItem('shop-cart:ui-test')!)[0]
+                .quantity,
+          ),
+        )
+        .toBe('2.000');
+      await page.evaluate(
+        (item) => {
+          localStorage.setItem('shop-cart:ui-test', JSON.stringify([item]));
+        },
+        { ...product, quantity: '20.000' },
+      );
+      await add.click();
+      await expect(status).toHaveText(
+        language === 'th'
+          ? 'เพิ่มสินค้าไม่ได้ กรุณาตรวจจำนวนและสต็อกล่าสุด'
+          : 'Unable to add product. Check quantity and latest stock.',
+      );
+      expect(
+        await page.evaluate(
+          () =>
+            JSON.parse(localStorage.getItem('shop-cart:ui-test')!)[0].quantity,
+        ),
+      ).toBe('20.000');
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth),
+      ).toBeLessThanOrEqual(width);
+      await page.screenshot({
+        path: testInfo.outputPath(`catalog-feedback-${language}-${width}.png`),
+        fullPage: true,
+      });
+    });
+  }
+}
+
 for (const width of [320, 375, 768, 1440]) {
   test(`cart controls stay compact and centered at ${width}px`, async ({
     page,

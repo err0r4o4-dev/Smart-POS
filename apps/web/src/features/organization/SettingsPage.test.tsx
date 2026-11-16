@@ -335,7 +335,7 @@ it('links the storefront button to the store website using active slug', async (
   renderPage();
 
   const link = await screen.findByRole('link', { name: 'ดูหน้าร้าน' });
-  expect(link).toHaveAttribute('href', '/shop/velocafe');
+  await waitFor(() => expect(link).toHaveAttribute('href', '/shop/velocafe'));
   expect(link).toHaveAttribute('target', '_blank');
   expect(link).toHaveAttribute('rel', 'noreferrer');
 });

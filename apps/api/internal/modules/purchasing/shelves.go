@@ -337,7 +337,7 @@ func (service *Service) ActTask(ctx context.Context, user, org, id, action, key 
 	if err != nil {
 		return nil, err
 	}
-	if assigned != nil && *assigned != user && actor.Role != "OWNER" && actor.Role != "MANAGER" {
+	if assigned != nil && *assigned != user && actor.Role != "OWNER" {
 		return nil, organization.ErrDenied
 	}
 	if action == "assign" {

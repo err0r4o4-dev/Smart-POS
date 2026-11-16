@@ -934,6 +934,46 @@ Features: Table QR detection, mobile food catalog with category tabs & quick cou
 
 # Owner-only backoffice (2026-11-05)
 
+- [/] Role-definition removal follow-up (2026-11-16): support OWNER only in
+  application catalogs, types and authorization branches. Preserve historical
+  migrations, membership records and negative tests for retired/unknown roles.
+  Use focused RED/GREEN Go/frontend tests, typecheck and contract checks; do not
+  commit, push, migrate or access the primary database. Recovery reverses only
+  this follow-up patch. The user authorized a separate read-only reviewer for
+  this follow-up's diff, relevant contracts and check evidence only; no shell,
+  network, writes, unrelated files or further delegation.
+  Implemented locally: OWNER-only Go catalog and frontend Role/labels; removed
+  dead staff permission builders and named-role exceptions across inventory,
+  purchasing, POS, pricing and returns. Other runtime role strings fail the
+  protected frontend access guard. Negative fixtures retain all retired roles
+  and add UNKNOWN; narrowing the supported catalog does not remove policy tests.
+  Current checks (2026-11-16):
+  - PASS RED: Go catalog test failed on all five supported roles; frontend access
+    tests failed seven cases (retired labels and unsupported runtime grants).
+  - PASS GREEN: `go test ./... -count=1` from `apps/api`, 17 test packages.
+    SMARTPOS_SINGLE_STORE_TEST_DSN was cleared and restaurant browser tests
+    disabled for this command; this is not database integration evidence.
+  - PASS `go vet ./...`, `go build ./...`; changed Go files are gofmt-clean.
+  - PASS focused web tests: access, owner-access, WorkspacePages,
+    OrganizationProvider, NavigationMenu, WorkspaceSetupGate (6 files, 94 tests).
+  - PASS `npm run typecheck`, `npm run contracts:check` (18 modules, 115 routes),
+    `npm run lint` (0 errors, 12 warnings) and `npm run build` (chunk-size warning).
+    Typecheck initially failed on runtime-string role label indexing; explicit
+    OWNER narrowing in ManagementLayout fixed those errors before the rerun.
+  - FAIL full web suite: 744 passed, 10 failed in SettingsPage, ShopCartPage and
+    StorefrontPage (3 of 90 files). Log: `.local/role-removal-web-tests.log`.
+    These failures have not been established as baseline failures or repaired.
+  - PASS fresh recheck (2026-11-16, 10:25): 94 focused web tests, Go tests
+    (17 packages, database/browser opt-ins disabled), typecheck, contracts,
+    Go vet/build and diff whitespace checks. All 31 application/test file
+    hashes match the independent review evidence package.
+  - IN PROGRESS independent review: the first attempt could not read the local
+    evidence package because its permitted tool was unavailable. The same
+    reviewer received scoped code, contracts and evidence inline without tools;
+    the verdict is pending. No application code changed during review.
+  - BLOCKED real database/tenant runtime acceptance: no confirmed disposable
+    target. No migration, database write, commit, push or deployment performed.
+
 Approved scope: restrict backoffice access to active OWNER memberships; reject
 MANAGER, CASHIER, INVENTORY_STAFF and PURCHASING_STAFF. Remove the `/work`
 workspace and invitation, member and role administration UI and API. Retain

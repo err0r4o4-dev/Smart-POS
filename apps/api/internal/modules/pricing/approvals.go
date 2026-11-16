@@ -165,7 +165,7 @@ func (service *Service) Approvals(ctx context.Context, user, org string) ([]json
 		return nil, err
 	}
 	defer tx.Rollback(ctx)
-	rows, err := tx.Query(ctx, `SELECT to_jsonb(item)||jsonb_build_object('amount',amount::text) FROM discount_approvals item WHERE organization_id=$1 AND ($2='OWNER' OR branch_id=ANY($3::uuid[])) AND ($2<>'CASHIER' OR requested_by=$4) ORDER BY created_at DESC,id LIMIT 200`, org, actor.Role, actor.BranchIDs, user)
+	rows, err := tx.Query(ctx, `SELECT to_jsonb(item)||jsonb_build_object('amount',amount::text) FROM discount_approvals item WHERE organization_id=$1 AND ($2='OWNER' OR branch_id=ANY($3::uuid[])) AND ($2='OWNER' OR requested_by=$4) ORDER BY created_at DESC,id LIMIT 200`, org, actor.Role, actor.BranchIDs, user)
 	if err != nil {
 		return nil, err
 	}

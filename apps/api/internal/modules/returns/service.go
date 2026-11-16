@@ -68,7 +68,7 @@ func saleScope(ctx context.Context, tx pgx.Tx, actor organization.Member, user, 
 	if err != nil {
 		return "", dbError(err)
 	}
-	if actor.Role == "CASHIER" && cashier != user {
+	if actor.Role != "OWNER" && cashier != user {
 		return "", organization.ErrDenied
 	}
 	return branch, dbError(inventory.BranchScope(ctx, tx, actor, org, branch, false))

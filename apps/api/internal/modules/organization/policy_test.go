@@ -6,7 +6,7 @@ import (
 )
 
 func TestInventoryPolicy(t *testing.T) {
-	for _, role := range Roles {
+	for _, role := range policyTestRoles {
 		for _, permission := range InventoryPermissions {
 			if got, want := hasPermission(role, permission), role == "OWNER"; got != want {
 				t.Errorf("%s %s: got %t, want %t", role, permission, got, want)
@@ -46,7 +46,7 @@ func TestCreateDefaultsAndStrictUpdates(testContext *testing.T) {
 }
 
 func TestRolePolicy(t *testing.T) {
-	for _, role := range append(append([]string{}, Roles...), "ADMIN") {
+	for _, role := range append(append([]string{}, policyTestRoles...), "ADMIN") {
 		if got, want := hasPermission(role, "organization.read"), role == "OWNER"; got != want {
 			t.Errorf("%s organization.read: got %t, want %t", role, got, want)
 		}

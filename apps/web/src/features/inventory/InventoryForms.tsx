@@ -526,7 +526,7 @@ export function DocumentDetails({
     branchAllowed(doc.branch_id) &&
     (!doc.assigned_to ||
       doc.assigned_to === tenant.context?.membership.user_id ||
-      ['OWNER', 'MANAGER'].includes(tenant.context?.membership.role ?? ''));
+      tenant.context?.membership.role === 'OWNER');
   function branchAllowed(branchID: string | null) {
     return (
       tenant.context?.branches.some(
@@ -535,9 +535,7 @@ export function DocumentDetails({
     );
   }
   function actionAllowed(action: string) {
-    const elevated = ['OWNER', 'MANAGER'].includes(
-      tenant.context?.membership.role ?? '',
-    );
+    const elevated = tenant.context?.membership.role === 'OWNER';
     if (
       action === 'cancel' &&
       doc.created_by !== tenant.context?.membership.user_id &&

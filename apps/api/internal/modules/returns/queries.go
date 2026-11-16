@@ -70,7 +70,7 @@ func (service *Service) List(ctx context.Context, user, org, kind string, input 
 	if kind == "refunds" {
 		query = `WITH matched AS (SELECT to_jsonb(refund)||jsonb_build_object('amount',refund.amount::text,'return_number',doc.number) AS value,refund.created_at,refund.id FROM customer_refunds refund JOIN customer_returns doc ON doc.organization_id=refund.organization_id AND doc.id=refund.return_id WHERE refund.organization_id=$1 AND ($2::uuid IS NULL OR refund.branch_id=$2) AND ($3::uuid[] IS NULL OR refund.branch_id=ANY($3)) AND ($4::uuid IS NULL OR doc.original_sale_id=$4) AND ($5='' OR refund.status=$5) AND ($6='' OR strpos(lower(doc.number),lower($6))>0) AND ($7::boolean=false OR doc.created_by=$8)) SELECT jsonb_build_object('items',COALESCE((SELECT jsonb_agg(value ORDER BY created_at DESC,id) FROM (SELECT * FROM matched ORDER BY created_at DESC,id LIMIT $9 OFFSET $10) page),'[]'::jsonb),'total',(SELECT count(*) FROM matched),'page',$11::integer,'page_size',$9::integer)`
 	}
-	return raw(ctx, tx, query, org, nullable(input.Branch), branches, nullable(input.Sale), input.Status, input.Search, actor.Role == "CASHIER", user, input.PageSize, (input.Page-1)*input.PageSize, input.Page)
+	return raw(ctx, tx, query, org, nullable(input.Branch), branches, nullable(input.Sale), input.Status, input.Search, actor.Role != "OWNER", user, input.PageSize, (input.Page-1)*input.PageSize, input.Page)
 }
 func (service *Service) Get(ctx context.Context, user, org, kind, id string) (json.RawMessage, error) {
 	permission := "returns.read"
@@ -98,7 +98,7 @@ func (service *Service) Get(ctx context.Context, user, org, kind, id string) (js
 	if err != nil {
 		return nil, err
 	}
-	if actor.Role == "CASHIER" && doc.Creator != user {
+	if actor.Role != "OWNER" && doc.Creator != user {
 		return nil, ErrNotFound
 	}
 	return result(ctx, tx, org, id)

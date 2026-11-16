@@ -27,7 +27,7 @@ func checkout(ctx context.Context, tx pgx.Tx, actor organization.Member, user, o
 	if item.CustomerID != nil && !allowed(actor.Permissions, "customers.select") {
 		return item, organization.ErrDenied
 	}
-	if actor.Role == "CASHIER" && item.CashierID != user {
+	if actor.Role != "OWNER" && item.CashierID != user {
 		return item, organization.ErrDenied
 	}
 	if err = scope(ctx, tx, actor, org, item.BranchID, false); err != nil {

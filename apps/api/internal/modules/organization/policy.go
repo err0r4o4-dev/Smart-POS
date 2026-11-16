@@ -14,11 +14,10 @@ var ErrNotFound = errors.New("resource not found")
 var ErrConflict = errors.New("operation conflicts with current state")
 var uuidPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 var codePattern = regexp.MustCompile(`^[A-Z0-9][A-Z0-9_-]{0,49}$`)
-var Roles = []string{"OWNER", "MANAGER", "CASHIER", "INVENTORY_STAFF", "PURCHASING_STAFF"}
+var Roles = []string{"OWNER"}
 var CatalogPermissions = []string{"catalog.read", "catalog.create", "catalog.update", "catalog.archive", "catalog.import", "catalog.barcode.manage", "catalog.labels.print", "catalog.category.manage", "catalog.brand.manage", "catalog.unit.manage"}
 var InventoryPermissions = []string{"inventory.read", "inventory.location.manage", "inventory.opening_balance.create", "inventory.adjustment.create", "inventory.adjustment.approve", "inventory.adjustment.post", "inventory.count.create", "inventory.count.update", "inventory.count.approve", "inventory.count.post", "inventory.transfer.create", "inventory.transfer.approve", "inventory.transfer.dispatch", "inventory.transfer.receive", "inventory.reorder_point.manage", "inventory.audit.read"}
 var POSPermissions = []string{"pos.access", "pos.cart.manage", "pos.checkout", "pos.payment.cash", "pos.payment.manual_confirm", "pos.terminal.manage", "pos.register.open", "pos.register.close", "pos.register.close.other", "pos.register.history.read", "pos.payment.reconcile", "sales.read", "receipts.read", "receipts.print"}
-var CashierPOSPermissions = []string{"pos.access", "pos.cart.manage", "pos.checkout", "pos.payment.cash", "pos.payment.manual_confirm", "pos.register.open", "pos.register.close", "pos.register.history.read", "sales.read", "receipts.read", "receipts.print"}
 var PermissionNames = append(append(append(append(append(append([]string{"organization.read", "organization.update", "branch.read", "branch.create", "branch.update", "branch.deactivate", "audit.read"}, CatalogPermissions...), InventoryPermissions...), POSPermissions...), PurchasingPermissions...), ReturnsPermissions...), AdjustmentPermissions...)
 
 func Permissions(role string) []string {
@@ -27,26 +26,9 @@ func Permissions(role string) []string {
 	}
 	return []string{}
 }
-func managerPermissions() []string {
-	return append(append(append(append(append(append(append([]string{"organization.read", "branch.read", "branch.update", "employee.read", "employee.invite", "employee.update", "employee.remove", "role.read", "role.assign", "audit.read"}, CatalogPermissions...), InventoryPermissions...), POSPermissions...), PurchasingPermissions...), ReturnsPermissions...), AdjustmentPermissions...), PricingPermissions...)
-}
-func cashierPermissions() []string {
-	return append(append(append([]string{"organization.read", "branch.read", "catalog.read", "inventory.read", "pricing.read", "promotions.read", "discount.read", "discount.request"}, CashierPOSPermissions...), CashierReturnsPermissions...), CashierAdjustmentPermissions...)
-}
 func hasPermission(role, permission string) bool {
 	for _, allowed := range Permissions(role) {
 		if allowed == permission {
-			return true
-		}
-	}
-	return false
-}
-func subordinate(role string) bool {
-	return role == "CASHIER" || role == "INVENTORY_STAFF" || role == "PURCHASING_STAFF"
-}
-func validRole(role string) bool {
-	for _, known := range Roles {
-		if known == role {
 			return true
 		}
 	}
@@ -59,23 +41,6 @@ func contains(values []string, value string) bool {
 		}
 	}
 	return false
-}
-func subset(values, allowed []string) bool {
-	for _, item := range values {
-		if !contains(allowed, item) {
-			return false
-		}
-	}
-	return true
-}
-func canManage(actor, target Member, nextRole string, branches []string) bool {
-	if actor.Status != "ACTIVE" {
-		return false
-	}
-	if actor.Role == "OWNER" {
-		return validRole(nextRole)
-	}
-	return actor.Role == "MANAGER" && actor.ID != target.ID && subordinate(target.Role) && subordinate(nextRole) && len(target.BranchIDs) > 0 && len(branches) > 0 && subset(target.BranchIDs, actor.BranchIDs) && subset(branches, actor.BranchIDs)
 }
 func textValid(value string, maximum int, required bool) bool {
 	length := utf8.RuneCountInString(strings.TrimSpace(value))

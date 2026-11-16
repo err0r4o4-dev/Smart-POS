@@ -52,7 +52,7 @@ vi.mock('../../app/OrganizationProvider', () => ({
   }),
 }));
 
-function selectRole(role: Role, permissions: string[]) {
+function selectRole(role: string, permissions: string[]) {
   mocks.context = {
     organization: {
       id: 'shop',
@@ -70,7 +70,7 @@ function selectRole(role: Role, permissions: string[]) {
       user_id: 'user',
       email: 'user@example.test',
       display_name: 'Test user',
-      role,
+      role: role as Role,
       status: 'ACTIVE',
       branch_ids: ['branch'],
       permissions,
@@ -211,29 +211,33 @@ it.each<Role>(['OWNER'])(
   },
 );
 
-it.each<Role>(['MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'PURCHASING_STAFF'])(
-  'denies %s management despite broad permissions',
-  (role) => {
-    selectRole(role, allPermissions);
-    renderWorkspace();
-    expect(screen.getByRole('heading', { name: 'Forbidden' })).toBeVisible();
-    expect(
-      document.querySelector('[data-workspace="management"]'),
-    ).not.toBeInTheDocument();
-  },
-);
+it.each([
+  'MANAGER',
+  'CASHIER',
+  'INVENTORY_STAFF',
+  'PURCHASING_STAFF',
+  'UNKNOWN',
+])('denies %s management despite broad permissions', (role) => {
+  selectRole(role, allPermissions);
+  renderWorkspace();
+  expect(screen.getByRole('heading', { name: 'Forbidden' })).toBeVisible();
+  expect(
+    document.querySelector('[data-workspace="management"]'),
+  ).not.toBeInTheDocument();
+});
 
-it.each<Role>(['MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'PURCHASING_STAFF'])(
-  'denies management settings on a direct link for %s',
-  (role) => {
-    selectRole(role, allPermissions);
-    renderWorkspace('/settings');
-    expect(screen.getByRole('heading', { name: 'Forbidden' })).toBeVisible();
-    expect(
-      screen.queryByText('Private store settings'),
-    ).not.toBeInTheDocument();
-  },
-);
+it.each([
+  'MANAGER',
+  'CASHIER',
+  'INVENTORY_STAFF',
+  'PURCHASING_STAFF',
+  'UNKNOWN',
+])('denies management settings on a direct link for %s', (role) => {
+  selectRole(role, allPermissions);
+  renderWorkspace('/settings');
+  expect(screen.getByRole('heading', { name: 'Forbidden' })).toBeVisible();
+  expect(screen.queryByText('Private store settings')).not.toBeInTheDocument();
+});
 
 it('redirects a signed-in user without a store to setup in multi-store mode', () => {
   renderWorkspace();
@@ -306,14 +310,17 @@ it('renders an owner menu path with query and hash intact', async () => {
   );
 });
 
-it.each<Role>(['MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'PURCHASING_STAFF'])(
-  'denies %s menu paths even with permission',
-  (role) => {
-    selectRole(role, allPermissions);
-    renderWorkspace('/menu/item-1');
-    expect(screen.getByRole('heading', { name: 'Forbidden' })).toBeVisible();
-  },
-);
+it.each([
+  'MANAGER',
+  'CASHIER',
+  'INVENTORY_STAFF',
+  'PURCHASING_STAFF',
+  'UNKNOWN',
+])('denies %s menu paths even with permission', (role) => {
+  selectRole(role, allPermissions);
+  renderWorkspace('/menu/item-1');
+  expect(screen.getByRole('heading', { name: 'Forbidden' })).toBeVisible();
+});
 
 it('denies menu paths to a cashier even with catalog permission', () => {
   selectRole('CASHIER', allPermissions);
@@ -372,11 +379,14 @@ it('allows an owner with POS permission to access POS', async () => {
   expect(await screen.findByRole('heading', { name: 'POS' })).toBeVisible();
 });
 
-it.each<Role>(['MANAGER', 'CASHIER', 'INVENTORY_STAFF', 'PURCHASING_STAFF'])(
-  'denies %s direct POS access',
-  (role) => {
-    selectRole(role, ['pos.access']);
-    renderWorkspace('/pos');
-    expect(screen.getByRole('heading', { name: 'Forbidden' })).toBeVisible();
-  },
-);
+it.each([
+  'MANAGER',
+  'CASHIER',
+  'INVENTORY_STAFF',
+  'PURCHASING_STAFF',
+  'UNKNOWN',
+])('denies %s direct POS access', (role) => {
+  selectRole(role, ['pos.access']);
+  renderWorkspace('/pos');
+  expect(screen.getByRole('heading', { name: 'Forbidden' })).toBeVisible();
+});

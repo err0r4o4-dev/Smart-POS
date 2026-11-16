@@ -24,7 +24,7 @@ func (service *Service) TransitionAdjustment(ctx context.Context, user, org, kin
 	if err = inventory.BranchScope(ctx, tx, actor, org, doc.Branch, true); err != nil {
 		return nil, dbError(err)
 	}
-	if action == "complete" && actor.Role == "CASHIER" && strings.HasPrefix(doc.Difference, "-") {
+	if action == "complete" && actor.Role != "OWNER" && strings.HasPrefix(doc.Difference, "-") {
 		return nil, organization.ErrDenied
 	}
 	if action != "confirm-settlement" && (input.Method != "" || input.Reference != "" || input.Note != "" || input.ShiftID != nil || input.Acknowledged) {
@@ -143,7 +143,7 @@ func acknowledgeAdjustment(ctx context.Context, tx pgx.Tx, actor organization.Me
 		return ErrInput
 	}
 	negative := strings.HasPrefix(doc.Difference, "-")
-	if negative && actor.Role == "CASHIER" {
+	if negative && actor.Role != "OWNER" {
 		return organization.ErrDenied
 	}
 	methods := []string{"CASH", "QR_MANUAL", "BANK_TRANSFER_MANUAL"}

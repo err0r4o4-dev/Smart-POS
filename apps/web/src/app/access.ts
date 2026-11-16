@@ -1,25 +1,20 @@
-export type Role =
-  'OWNER' | 'MANAGER' | 'CASHIER' | 'INVENTORY_STAFF' | 'PURCHASING_STAFF';
+export type Role = 'OWNER';
 export type Session =
   | { authenticated: false }
-  | { authenticated: true; role: Role; permissions: string[] };
+  | { authenticated: true; role: string; permissions: string[] };
 export const anonymousSession: Session = { authenticated: false };
 
 export type WorkspaceArea = 'management' | 'account';
 export const managementRoles: Role[] = ['OWNER'];
 export const roleLabels: Record<Role, string> = {
   OWNER: 'เจ้าของร้าน',
-  MANAGER: 'ผู้จัดการ',
-  CASHIER: 'แคชเชียร์',
-  INVENTORY_STAFF: 'พนักงานคลัง',
-  PURCHASING_STAFF: 'พนักงานจัดซื้อ',
 };
 
-export function isManagementRole(role: Role) {
-  return managementRoles.includes(role);
+export function isManagementRole(role: string): role is Role {
+  return role === 'OWNER';
 }
 
-export function workspaceHome(role: Role) {
+export function workspaceHome(role: string) {
   return isManagementRole(role) ? '/dashboard' : '/403';
 }
 
@@ -29,7 +24,7 @@ export function canAccess(
   roles?: Role[],
 ): boolean {
   if (!permission && !roles) return true;
-  if (!session.authenticated) return false;
+  if (!session.authenticated || !isManagementRole(session.role)) return false;
   return (
     (!roles || roles.includes(session.role)) &&
     (!permission || session.permissions.includes(permission))

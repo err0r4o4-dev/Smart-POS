@@ -12,6 +12,14 @@ import (
 	"smartpos/api/internal/modules/identity"
 )
 
+var policyTestRoles = []string{"OWNER", "MANAGER", "CASHIER", "INVENTORY_STAFF", "PURCHASING_STAFF", "UNKNOWN"}
+
+func TestSupportedRolesAreOwnerOnly(test *testing.T) {
+	if len(Roles) != 1 || Roles[0] != "OWNER" {
+		test.Fatalf("supported roles = %v, want [OWNER]", Roles)
+	}
+}
+
 func TestOwnerOnlyPermissions(test *testing.T) {
 	for _, role := range []string{"MANAGER", "CASHIER", "INVENTORY_STAFF", "PURCHASING_STAFF", "UNKNOWN"} {
 		if got := Permissions(role); len(got) != 0 {
@@ -23,7 +31,7 @@ func TestOwnerOnlyPermissions(test *testing.T) {
 			test.Errorf("owner missing %s", permission)
 		}
 	}
-	for _, role := range append(append([]string{}, Roles...), "UNKNOWN") {
+	for _, role := range append(append([]string{}, policyTestRoles...), "UNKNOWN") {
 		if hasPermission(role, "") || hasPermission(role, "unknown.permission") {
 			test.Errorf("%s received an empty or unknown permission", role)
 		}

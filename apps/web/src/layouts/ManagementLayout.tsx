@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import {
   anonymousSession,
+  isManagementRole,
   roleLabels,
   type WorkspaceArea,
 } from '../app/access';
@@ -51,7 +52,10 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
           permissions: tenant.context.permissions,
         }
       : anonymousSession;
-  const role = access.authenticated ? access.role : undefined;
+  const role =
+    access.authenticated && isManagementRole(access.role)
+      ? access.role
+      : undefined;
   const areaTitle = {
     management: t('shell.storeManagement'),
     account: t('shell.accountAndAccess'),

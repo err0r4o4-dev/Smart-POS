@@ -85,7 +85,7 @@ func (service *Service) CreateDocument(ctx context.Context, user, org, kind, key
 		if kind != "COUNT" || !uuidPattern.MatchString(*input.AssignedTo) {
 			return nil, ErrInput
 		}
-		if *input.AssignedTo != user && actor.Role != "OWNER" && actor.Role != "MANAGER" {
+		if *input.AssignedTo != user && actor.Role != "OWNER" {
 			return nil, organization.ErrDenied
 		}
 		var role string
@@ -153,7 +153,7 @@ func (service *Service) SaveCount(ctx context.Context, user, org, id, key string
 	if err = documentScope(ctx, tx, actor, org, doc, "update"); err != nil {
 		return nil, err
 	}
-	if doc.AssignedTo != nil && *doc.AssignedTo != user && actor.Role != "OWNER" && actor.Role != "MANAGER" {
+	if doc.AssignedTo != nil && *doc.AssignedTo != user && actor.Role != "OWNER" {
 		return nil, organization.ErrDenied
 	}
 	op, cached, err := operation(ctx, tx, user, org, "count:items:"+id, key, input)
@@ -245,10 +245,10 @@ func (service *Service) Act(ctx context.Context, user, org, kind, id, action, ke
 	if err = documentScope(ctx, tx, actor, org, doc, action); err != nil {
 		return nil, err
 	}
-	if action == "cancel" && doc.CreatedBy != user && actor.Role != "OWNER" && actor.Role != "MANAGER" {
+	if action == "cancel" && doc.CreatedBy != user && actor.Role != "OWNER" {
 		return nil, organization.ErrDenied
 	}
-	if kind == "COUNT" && action == "submit" && doc.AssignedTo != nil && *doc.AssignedTo != user && actor.Role != "OWNER" && actor.Role != "MANAGER" {
+	if kind == "COUNT" && action == "submit" && doc.AssignedTo != nil && *doc.AssignedTo != user && actor.Role != "OWNER" {
 		return nil, organization.ErrDenied
 	}
 	op, cached, err := operation(ctx, tx, user, org, kind+":"+id+":"+action, key, input)

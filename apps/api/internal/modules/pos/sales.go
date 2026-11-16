@@ -239,7 +239,7 @@ func (service *Service) Sale(ctx context.Context, user, org, id string, receipt 
 	if err = scope(ctx, tx, actor, org, branch, false); err != nil {
 		return nil, err
 	}
-	if actor.Role == "CASHIER" && cashier != user {
+	if actor.Role != "OWNER" && cashier != user {
 		return nil, organization.ErrDenied
 	}
 	return saleResult(ctx, tx, org, id)

@@ -18,7 +18,7 @@ func adjustmentHeader(ctx context.Context, tx pgx.Tx, actor organization.Member,
 	if err != nil {
 		return doc, dbError(err)
 	}
-	if actor.Role == "CASHIER" && doc.Creator != user {
+	if actor.Role != "OWNER" && doc.Creator != user {
 		return doc, organization.ErrDenied
 	}
 	if err = inventory.BranchScope(ctx, tx, actor, org, doc.Branch, false); err != nil {
@@ -70,5 +70,5 @@ func (service *Service) ListAdjustments(ctx context.Context, user, org, kind str
 	if actor.Role == "OWNER" {
 		branches = nil
 	}
-	return raw(ctx, tx, `WITH matched AS (SELECT to_jsonb(doc)||jsonb_build_object('return_credit',doc.return_credit::text,'replacement_total',doc.replacement_total::text,'net_difference',doc.net_difference::text) AS value,doc.created_at,doc.id FROM sale_adjustments doc WHERE doc.organization_id=$1 AND kind=$2 AND ($3::uuid IS NULL OR branch_id=$3) AND ($4::uuid[] IS NULL OR branch_id=ANY($4)) AND ($5::uuid IS NULL OR original_sale_id=$5) AND ($6='' OR status=$6) AND ($7='' OR strpos(lower(number),lower($7))>0) AND (NOT $8 OR created_by=$9)) SELECT jsonb_build_object('items',COALESCE((SELECT jsonb_agg(value ORDER BY created_at DESC,id) FROM (SELECT * FROM matched ORDER BY created_at DESC,id LIMIT $10 OFFSET $11) page),'[]'::jsonb),'total',(SELECT count(*) FROM matched),'page',$12::integer,'page_size',$10::integer)`, org, kind, nullable(input.Branch), branches, nullable(input.Sale), input.Status, input.Search, actor.Role == "CASHIER", user, input.PageSize, (input.Page-1)*input.PageSize, input.Page)
+	return raw(ctx, tx, `WITH matched AS (SELECT to_jsonb(doc)||jsonb_build_object('return_credit',doc.return_credit::text,'replacement_total',doc.replacement_total::text,'net_difference',doc.net_difference::text) AS value,doc.created_at,doc.id FROM sale_adjustments doc WHERE doc.organization_id=$1 AND kind=$2 AND ($3::uuid IS NULL OR branch_id=$3) AND ($4::uuid[] IS NULL OR branch_id=ANY($4)) AND ($5::uuid IS NULL OR original_sale_id=$5) AND ($6='' OR status=$6) AND ($7='' OR strpos(lower(number),lower($7))>0) AND (NOT $8 OR created_by=$9)) SELECT jsonb_build_object('items',COALESCE((SELECT jsonb_agg(value ORDER BY created_at DESC,id) FROM (SELECT * FROM matched ORDER BY created_at DESC,id LIMIT $10 OFFSET $11) page),'[]'::jsonb),'total',(SELECT count(*) FROM matched),'page',$12::integer,'page_size',$10::integer)`, org, kind, nullable(input.Branch), branches, nullable(input.Sale), input.Status, input.Search, actor.Role != "OWNER", user, input.PageSize, (input.Page-1)*input.PageSize, input.Page)
 }

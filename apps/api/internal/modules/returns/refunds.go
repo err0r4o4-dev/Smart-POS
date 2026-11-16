@@ -27,7 +27,7 @@ func refundHeader(ctx context.Context, tx pgx.Tx, actor organization.Member, use
 	if err != nil {
 		return value, err
 	}
-	if actor.Role == "CASHIER" && doc.Creator != user {
+	if actor.Role != "OWNER" && doc.Creator != user {
 		return value, organization.ErrDenied
 	}
 	return value, nil

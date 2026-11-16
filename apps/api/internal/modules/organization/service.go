@@ -245,7 +245,7 @@ func (service *Service) Context(ctx context.Context, userID, orgID string) (Cont
 	if err != nil {
 		return Context{}, err
 	}
-	if subordinate(actor.Role) {
+	if actor.Role != "OWNER" {
 		org.ContactEmail = ""
 		org.ContactPhone = ""
 		org.Address = ""

@@ -140,15 +140,15 @@ func (service *Service) List(ctx context.Context, user, org, resource string, fi
 	case "shifts":
 		from := ` FROM (SELECT shift.*,shift.opened_at AS created_at FROM register_shifts shift) item JOIN pos_terminals terminal ON terminal.organization_id=item.organization_id AND terminal.id=item.terminal_id JOIN users cashier ON cashier.id=item.cashier_id`
 		selectSQL := `to_jsonb(item)-ARRAY['open_key','close_key']||jsonb_build_object('opening_cash',item.opening_cash::text,'cash_sales',item.cash_sales::text,'cash_refunds',item.cash_refunds::text,'expected_cash',item.expected_cash::text,'counted_cash',item.counted_cash::text,'difference',item.difference::text,'terminal_name',terminal.name,'cashier_name',cashier.display_name)`
-		return jsonPage(ctx, tx, selectSQL, from, base+" AND ($5 OR item.cashier_id=$6) AND ($7='' OR item.status=$7) AND ($8='' OR item.terminal_id=nullif($8,'')::uuid)", append(args, actor.Role != "CASHIER", user, filters.Status, filters.TerminalID), filters)
+		return jsonPage(ctx, tx, selectSQL, from, base+" AND ($5 OR item.cashier_id=$6) AND ($7='' OR item.status=$7) AND ($8='' OR item.terminal_id=nullif($8,'')::uuid)", append(args, actor.Role == "OWNER", user, filters.Status, filters.TerminalID), filters)
 	case "checkouts":
 		selectSQL := `to_jsonb(item)-ARRAY['items','fingerprint','idempotency_key','confirmation_key']||jsonb_build_object('total',item.total::text,'received',item.received::text,'change',item.change::text,'sale_id',COALESCE((SELECT id::text FROM sales WHERE organization_id=item.organization_id AND checkout_id=item.id),''))`
-		return jsonPage(ctx, tx, selectSQL, " FROM pos_checkouts item", base+" AND ($5 OR item.cashier_id=$6) AND ($7='' OR item.status=$7) AND ($8='' OR item.terminal_id=nullif($8,'')::uuid)", append(args, actor.Role != "CASHIER", user, filters.Status, filters.TerminalID), filters)
+		return jsonPage(ctx, tx, selectSQL, " FROM pos_checkouts item", base+" AND ($5 OR item.cashier_id=$6) AND ($7='' OR item.status=$7) AND ($8='' OR item.terminal_id=nullif($8,'')::uuid)", append(args, actor.Role == "OWNER", user, filters.Status, filters.TerminalID), filters)
 	case "sales", "receipts":
 		from := ` FROM (SELECT sale.*,sale.completed_at AS created_at FROM sales sale) item JOIN sale_payments payment ON payment.organization_id=item.organization_id AND payment.sale_id=item.id JOIN receipts receipt ON receipt.organization_id=item.organization_id AND receipt.sale_id=item.id`
 		selectSQL := `to_jsonb(item)||jsonb_build_object('grand_total',item.grand_total::text,'subtotal',item.subtotal::text,'discount_total',item.discount_total::text,'tax_total',item.tax_total::text,'method',payment.method,'receipt_id',receipt.id,'receipt_number',receipt.receipt_number,'terminal_name',CASE WHEN item.terminal_name LIKE '%?%' THEN COALESCE((SELECT t.name FROM pos_terminals t WHERE t.organization_id=item.organization_id AND t.id=item.terminal_id),item.terminal_name) ELSE item.terminal_name END)`
 		where := base + ` AND ($5 OR item.cashier_id=$6) AND ($7='' OR item.status=$7) AND ($8='' OR item.terminal_id=nullif($8,'')::uuid) AND ($9='' OR item.cashier_id=nullif($9,'')::uuid) AND ($10='' OR payment.method=$10) AND ($11='' OR item.sale_number ILIKE '%'||$11||'%' OR receipt.receipt_number ILIKE '%'||$11||'%') AND ($12='' OR item.completed_at>=nullif($12,'')::timestamptz) AND ($13='' OR item.completed_at<=nullif($13,'')::timestamptz)`
-		return jsonPage(ctx, tx, selectSQL, from, where, append(args, actor.Role != "CASHIER", user, filters.Status, filters.TerminalID, filters.CashierID, filters.Method, filters.Search, filters.From, filters.To), filters)
+		return jsonPage(ctx, tx, selectSQL, from, where, append(args, actor.Role == "OWNER", user, filters.Status, filters.TerminalID, filters.CashierID, filters.Method, filters.Search, filters.From, filters.To), filters)
 	}
 	return result, ErrInput
 }
@@ -169,7 +169,7 @@ func (service *Service) Shift(ctx context.Context, user, org, id string) (json.R
 	if err = scope(ctx, tx, actor, org, branch, false); err != nil {
 		return nil, err
 	}
-	if actor.Role == "CASHIER" && cashier != user {
+	if actor.Role != "OWNER" && cashier != user {
 		return nil, organization.ErrDenied
 	}
 	return shiftResult(ctx, tx, org, id)

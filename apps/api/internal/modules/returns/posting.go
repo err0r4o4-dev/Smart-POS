@@ -26,7 +26,7 @@ func (service *Service) Transition(ctx context.Context, user, org, id, action, k
 	if err != nil {
 		return nil, err
 	}
-	if actor.Role == "CASHIER" && doc.Creator != user {
+	if actor.Role != "OWNER" && doc.Creator != user {
 		return nil, organization.ErrDenied
 	}
 	if err = inventory.BranchScope(ctx, tx, actor, org, doc.Branch, true); err != nil {

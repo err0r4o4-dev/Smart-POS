@@ -41,7 +41,9 @@ const context = (id: string): OrganizationContext => ({
     user_id: 'user',
     email: '',
     display_name: '',
-    role: id === 'a' ? 'OWNER' : 'CASHIER',
+    role: (id === 'a'
+      ? 'OWNER'
+      : 'CASHIER') as OrganizationContext['membership']['role'],
     status: 'ACTIVE',
     branch_ids: [`${id}-main`],
     permissions: [],

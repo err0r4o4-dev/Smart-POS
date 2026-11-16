@@ -110,11 +110,10 @@ func (service *Service) Audit(ctx context.Context, userID, orgID, objectID strin
 		if !uuidPattern.MatchString(objectID) {
 			return nil, ErrNotFound
 		}
-		target, err := memberBy(ctx, tx, orgID, "m.id", objectID)
-		if err != nil {
+		if _, err := memberBy(ctx, tx, orgID, "m.id", objectID); err != nil {
 			return nil, err
 		}
-		if actor.Role != "OWNER" && target.ID != actor.ID && (!subordinate(target.Role) || len(target.BranchIDs) == 0 || !subset(target.BranchIDs, actor.BranchIDs)) {
+		if actor.Role != "OWNER" {
 			return nil, ErrNotFound
 		}
 	}

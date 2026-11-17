@@ -3,6 +3,7 @@ package storefront_test
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"io"
@@ -221,20 +222,26 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 			t.Fatalf("shop type metadata or ordering: %v", problem)
 		}
 		for _, mutation := range []string{
-			"UPDATE storefronts SET published=false WHERE organization_id=$1",
-			"UPDATE storefronts SET published=true WHERE organization_id=$1;",
+			"UPDATE storefronts SET published=false,accepting_orders=false WHERE organization_id=$1",
+			"UPDATE storefronts SET published=true,accepting_orders=true WHERE organization_id=$1;",
 			"UPDATE organizations SET status='INACTIVE' WHERE id=$1",
 		} {
 			if _, problem = tx.Exec(ctx, mutation, first.Organization.ID); problem != nil {
 				t.Fatal(problem)
 			}
-			if strings.Contains(mutation, "published=true") {
-				continue
-			}
 			if problem = tx.QueryRow(ctx, "SELECT storefront_directory()").Scan(&result); problem != nil {
 				t.Fatal(problem)
 			}
-			if problem = json.Unmarshal(result, &entries); problem != nil || len(entries) != 1 || entries[0]["slug"] != "second-fixture" {
+			if problem = json.Unmarshal(result, &entries); problem != nil {
+				t.Fatal(problem)
+			}
+			if strings.Contains(mutation, "published=true") {
+				if len(entries) != 2 || entries[0]["slug"] != firstShop.Slug || entries[0]["accepting_orders"] != true || entries[1]["slug"] != "second-fixture" {
+					t.Fatal("republished store missing from directory")
+				}
+				continue
+			}
+			if len(entries) != 1 || entries[0]["slug"] != "second-fixture" {
 				t.Fatalf("unpublished or inactive store exposed: %v", problem)
 			}
 		}
@@ -373,35 +380,75 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 			t.Fatalf("public internal IDs: %v", problem)
 		}
 	})
-	t.Run("foreign invitation remains pending and grants no membership", func(t *testing.T) {
-		_, problem := multi.Invite(ctx, owner.ID, second.Organization.ID, organization.InviteInput{Email: guest.Email, Role: "CASHIER", BranchIDs: []string{second.Branches[0].ID}})
-		if problem != nil {
-			t.Fatal(problem)
-		}
-		if _, problem = single.Accept(ctx, guest.Profile, mailbox.tokens[guest.Email]); !errors.Is(problem, organization.ErrNotFound) {
-			t.Fatalf("foreign invitation accepted: %v", problem)
-		}
-		invitations, problem := multi.Invitations(ctx, owner.ID, second.Organization.ID)
-		if problem != nil || len(invitations) != 1 || invitations[0].Status != "PENDING" {
-			t.Fatalf("foreign invitation mutated: %v", problem)
-		}
-		if _, problem = multi.Context(ctx, guest.ID, second.Organization.ID); !errors.Is(problem, organization.ErrNotFound) {
-			t.Fatalf("foreign membership created: %v", problem)
-		}
-	})
-	t.Run("pinned invitation preserves role and branch permissions", func(t *testing.T) {
-		_, problem := single.Invite(ctx, owner.ID, first.Organization.ID, organization.InviteInput{Email: guest.Email, Role: "CASHIER", BranchIDs: []string{first.Branches[0].ID}})
-		if problem != nil {
-			t.Fatal(problem)
-		}
-		joined, problem := single.Accept(ctx, guest.Profile, mailbox.tokens[guest.Email])
-		if problem != nil || joined.Membership.Role != "CASHIER" || len(joined.Branches) != 1 || joined.Branches[0].ID != first.Branches[0].ID {
-			t.Fatalf("pinned invitation: %v", problem)
-		}
-		if _, problem = shop.Settings(ctx, guest.ID, first.Organization.ID); !errors.Is(problem, organization.ErrDenied) {
-			t.Fatalf("staff received management authority: %v", problem)
-		}
-	})
+	for _, fixture := range []struct{ name, org, branch string }{
+		{"foreign", second.Organization.ID, second.Branches[0].ID},
+		{"pinned", first.Organization.ID, first.Branches[0].ID},
+	} {
+		t.Run("retired invitation preserves history and denies membership/"+fixture.name, func(t *testing.T) {
+			token := "retained-invitation-" + fixture.org
+			hash := sha256.Sum256([]byte(token))
+			tx, _, problem := multi.Authorized(ctx, owner.ID, fixture.org, "storefront.manage")
+			if problem != nil {
+				t.Fatal(problem)
+			}
+			defer tx.Rollback(ctx)
+			var invitation, before string
+			problem = tx.QueryRow(ctx, `INSERT INTO organization_invitations(organization_id,email,role,branch_ids,token_hash,invited_by)
+				VALUES($1,$2,'CASHIER',ARRAY[$3::uuid],$4,$5) RETURNING id::text`, fixture.org, guest.Email, fixture.branch, hash[:], owner.ID).Scan(&invitation)
+			if problem != nil {
+				t.Fatal(problem)
+			}
+			if problem = tx.QueryRow(ctx, "SELECT row_to_json(invitation)::text FROM organization_invitations invitation WHERE organization_id=$1 AND id=$2", fixture.org, invitation).Scan(&before); problem != nil {
+				t.Fatal(problem)
+			}
+			var auditsBefore int
+			if problem = tx.QueryRow(ctx, "SELECT count(*) FROM organization_audit_events WHERE organization_id=$1", fixture.org).Scan(&auditsBefore); problem != nil {
+				t.Fatal(problem)
+			}
+			if problem = tx.Commit(ctx); problem != nil {
+				t.Fatal(problem)
+			}
+			sentBefore := len(mailbox.tokens)
+			for _, service := range []*organization.Service{multi, single} {
+				if _, problem = service.Invite(ctx, owner.ID, fixture.org, organization.InviteInput{Email: guest.Email, Role: "CASHIER", BranchIDs: []string{fixture.branch}}); !errors.Is(problem, organization.ErrNotFound) {
+					t.Fatalf("retired invitation creation: %v", problem)
+				}
+				if _, problem = service.Invitations(ctx, owner.ID, fixture.org); !errors.Is(problem, organization.ErrNotFound) {
+					t.Fatalf("retired invitation listing: %v", problem)
+				}
+				if problem = service.RevokeInvitation(ctx, owner.ID, fixture.org, invitation); !errors.Is(problem, organization.ErrNotFound) {
+					t.Fatalf("retired invitation revocation: %v", problem)
+				}
+				if _, problem = service.Accept(ctx, guest.Profile, token); !errors.Is(problem, organization.ErrNotFound) {
+					t.Fatalf("retired invitation acceptance: %v", problem)
+				}
+			}
+			if len(mailbox.tokens) != sentBefore {
+				t.Fatal("retired invitation sent mail")
+			}
+			if _, problem = multi.Context(ctx, guest.ID, fixture.org); !errors.Is(problem, organization.ErrNotFound) {
+				t.Fatalf("retired invitation granted context: %v", problem)
+			}
+			if _, problem = shop.Settings(ctx, guest.ID, fixture.org); !errors.Is(problem, storefront.ErrNotFound) {
+				t.Fatalf("retired invitation granted management: %v", problem)
+			}
+			probe, _, problem := multi.Authorized(ctx, owner.ID, fixture.org, "storefront.manage")
+			if problem != nil {
+				t.Fatal(problem)
+			}
+			defer probe.Rollback(ctx)
+			var after string
+			var invitations, memberships, auditsAfter int
+			problem = probe.QueryRow(ctx, `SELECT row_to_json(invitation)::text,
+				(SELECT count(*) FROM organization_invitations WHERE organization_id=$1),
+				(SELECT count(*) FROM organization_memberships WHERE organization_id=$1 AND user_id=$3),
+				(SELECT count(*) FROM organization_audit_events WHERE organization_id=$1)
+				FROM organization_invitations invitation WHERE organization_id=$1 AND id=$2`, fixture.org, invitation, guest.ID).Scan(&after, &invitations, &memberships, &auditsAfter)
+			if problem != nil || before != after || invitations != 1 || memberships != 0 || auditsAfter != auditsBefore {
+				t.Fatalf("retired invitation changed retained data: invitations=%d memberships=%d audits=%d error=%v", invitations, memberships, auditsAfter-auditsBefore, problem)
+			}
+		})
+	}
 	t.Run("durable customer payment persistence", func(t *testing.T) {
 		state, problem := multi.Create(ctx, owner.ID, "f1111111-1111-4111-8111-111111111111", createInput("PAYMENT"))
 		if problem != nil {

@@ -202,6 +202,9 @@ func quote(ctx context.Context, tx pgx.Tx, org string, shop Settings, items []It
 	if !shop.Published || !shop.AcceptingOrders {
 		return result, ErrClosed
 	}
+	if shop.TerminalID == "" {
+		return organizationQuote(ctx, tx, org, shop, items, mode)
+	}
 	if err := menuSaleSource(ctx, tx, org, shop); err != nil {
 		return result, err
 	}

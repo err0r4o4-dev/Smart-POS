@@ -50,6 +50,7 @@ func verifyBranchlessSettings(testContext *testing.T, ctx context.Context, organ
 	if _, err = service.PublicSettings(ctx, saved.Slug); !errors.Is(err, storefront.ErrNotFound) {
 		testContext.Fatalf("unpublished draft exposed publicly: %v", err)
 	}
+	verifyOrganizationQuote(testContext, ctx, organizations, owner, guest, org, saved.Slug)
 	verifyBranchlessCatalog(testContext, ctx, organizations, owner, guest, org, saved.Slug)
 	if _, err = service.Publish(ctx, owner, org, "11111111-1111-4111-8111-111111111111", storefront.PublishInput{Revision: saved.Revision, Published: true}); !errors.Is(err, storefront.ErrConflict) {
 		testContext.Fatalf("draft used legacy product publishing: %v", err)

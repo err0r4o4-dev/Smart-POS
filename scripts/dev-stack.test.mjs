@@ -152,8 +152,8 @@ test('development CSP is isolated and keeps gateway routing and headers', () => 
   const expected = gateway
     .replace("script-src 'self';", "script-src 'self' 'unsafe-inline';")
     .replace(
-      "connect-src 'self';",
-      "connect-src 'self' ws://localhost:{$GATEWAY_PORT:8088} ws://127.0.0.1:{$GATEWAY_PORT:8088};",
+      "connect-src 'self' https://photon.komoot.io;",
+      "connect-src 'self' https://photon.komoot.io ws://localhost:{$GATEWAY_PORT:8088} ws://127.0.0.1:{$GATEWAY_PORT:8088};",
     );
   assert.equal(read('infra/caddy/Caddyfile.dev'), expected);
   assert.deepEqual(base.services.caddy.volumes, [

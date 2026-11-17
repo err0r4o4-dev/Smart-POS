@@ -272,6 +272,10 @@ func paymentReconciliationAcceptance(test *testing.T, ctx context.Context, organ
 		}
 		defer tx.Rollback(ctx)
 		var membership string
+		var cartsBefore, salesBefore int
+		if problem = tx.QueryRow(ctx, "SELECT (SELECT count(*) FROM pos_carts WHERE organization_id=$1),(SELECT count(*) FROM sales WHERE organization_id=$1)", org).Scan(&cartsBefore, &salesBefore); problem != nil {
+			test.Fatal(problem)
+		}
 		problem = tx.QueryRow(ctx, "INSERT INTO organization_memberships(organization_id,user_id,role) VALUES($1,$2,'MANAGER') RETURNING id::text", org, unauthorizedUser).Scan(&membership)
 		if problem != nil {
 			test.Fatal(problem)
@@ -280,6 +284,22 @@ func paymentReconciliationAcceptance(test *testing.T, ctx context.Context, organ
 			test.Fatal(problem)
 		}
 		if problem = tx.Commit(ctx); problem != nil {
+			test.Fatal(problem)
+		}
+		input := storefront.PaymentReconciliationInput{OrderID: next.ID, SessionID: "cs_test_staffRevoked"}
+		before := retrieves
+		if _, problem = service.ReconcileCustomerPayment(ctx, unauthorizedUser, org, "6aeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", input); !errors.Is(problem, organization.ErrDenied) || retrieves != before {
+			test.Fatalf("retired manager reached provider: %v calls=%d", problem, retrieves-before)
+		}
+		promote, _, problem := organizations.Authorized(ctx, owner, org, "storefront.manage")
+		if problem != nil {
+			test.Fatal(problem)
+		}
+		defer promote.Rollback(ctx)
+		if _, problem = promote.Exec(ctx, "UPDATE organization_memberships SET role='OWNER' WHERE organization_id=$1 AND id=$2", org, membership); problem != nil {
+			test.Fatal(problem)
+		}
+		if problem = promote.Commit(ctx); problem != nil {
 			test.Fatal(problem)
 		}
 		original := gateway.retrieve
@@ -299,9 +319,8 @@ func paymentReconciliationAcceptance(test *testing.T, ctx context.Context, organ
 			}
 			return session, write.Commit(network)
 		}
-		input := storefront.PaymentReconciliationInput{OrderID: next.ID, SessionID: "cs_test_staffRevoked"}
-		if _, problem = service.ReconcileCustomerPayment(ctx, unauthorizedUser, org, "6aeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", input); !errors.Is(problem, storefront.ErrNotFound) {
-			test.Fatalf("revoked authority committed GET: %v", problem)
+		if _, problem = service.ReconcileCustomerPayment(ctx, unauthorizedUser, org, "6aeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", input); !errors.Is(problem, storefront.ErrNotFound) || retrieves != before+1 {
+			test.Fatalf("revoked authority committed GET or skipped provider: %v calls=%d", problem, retrieves-before)
 		}
 		current, problem := service.CustomerPaymentReview(ctx, owner, org, next.ID)
 		if problem != nil || current.Attempt.State != "REQUESTED" || current.Attempt.SessionID != nil || current.StockHoldReleased || current.Status != "SESSION_REQUIRED" {
@@ -315,6 +334,14 @@ func paymentReconciliationAcceptance(test *testing.T, ctx context.Context, organ
 		var count int
 		if problem = probe.QueryRow(ctx, "SELECT (SELECT count(*) FROM online_payment_observations WHERE organization_id=$1 AND order_id=$2)+(SELECT count(*) FROM online_payment_reconciliations WHERE organization_id=$1 AND order_id=$2)", org, next.ID).Scan(&count); problem != nil || count != 0 {
 			test.Fatalf("revoked GET leaked journal: %d %v", count, problem)
+		}
+		var cartsAfter, salesAfter int
+		var unsettled bool
+		problem = probe.QueryRow(ctx, `SELECT (SELECT count(*) FROM pos_carts WHERE organization_id=$1),
+			(SELECT count(*) FROM sales WHERE organization_id=$1),cart_id IS NULL AND sale_id IS NULL
+			FROM online_orders WHERE organization_id=$1 AND id=$2`, org, next.ID).Scan(&cartsAfter, &salesAfter, &unsettled)
+		if problem != nil || cartsAfter != cartsBefore || salesAfter != salesBefore || !unsettled {
+			test.Fatalf("revoked GET created checkout or sale: carts=%d sales=%d unsettled=%t error=%v", cartsAfter-cartsBefore, salesAfter-salesBefore, unsettled, problem)
 		}
 	})
 }

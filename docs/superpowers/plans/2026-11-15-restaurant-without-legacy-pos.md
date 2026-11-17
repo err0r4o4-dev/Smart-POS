@@ -1,5 +1,127 @@
 # Restaurant Without Legacy POS Implementation Plan
 
+## Regression acceptance repair (2026-11-17)
+
+This test-only repair supersedes the DB/CSP failures recorded in the earlier
+quote checkpoint. Production authorization, gateway policies, schema and payment
+behavior are unchanged. Directory fixtures now unpublish and stop accepting
+orders together, then verify visibility immediately after republishing. Retired
+invitation tests preserve seeded historical rows and deny create/list/revoke/
+accept in both pinned and unrestricted services without membership or audit
+writes. Reconciliation first proves MANAGER denial without provider access,
+then uses a temporary OWNER to exercise suspension during the provider GET.
+The final checks require one provider retrieval, unchanged unknown payment/hold
+state, no observation/reconciliation journal and no new checkout or sale.
+
+The development CSP test now matches the existing Photon connect-src directive
+before inserting the existing local websocket exceptions. Neither Caddy policy
+is modified. This restores the exact base/development comparison, not a broader
+production allowlist.
+
+Fresh checks against HEAD `57e7106` plus the current local delta:
+
+- Before repair, full isolated DB FAIL 5.52s at the same four leaf cases;
+  focused CSP FAIL 1 equality assertion. Evidence:
+  `.local/restaurant-regression-red-db.log` and
+  `.local/restaurant-regression-red-csp.log`. These are reproduced obsolete
+  fixture/expectation failures, not a new production-behavior TDD claim.
+- The first DB repair attempt failed because a new assertion used the
+  organization not-found error instead of the storefront error mapping. The
+  mapper was inspected and only the assertion corrected. Evidence:
+  `.local/restaurant-regression-green-db.log`.
+- Final post-review full DB PASS 5.63s via
+  `node .local/restaurant-quote-db-check.mjs`, with focused/baseline flags empty,
+  `GOPROXY=off` and the project-local Go cache. Official migrations 1-39,
+  runtime-role PostgreSQL 17.6, task-owned tmpfs and internal network only.
+  Empty rollback/reapply 37-39, populated rollback refusals and ownership-checked
+  container/network cleanup PASS. Evidence:
+  `.local/restaurant-regression-reviewed-db.log`.
+- `npm run test` PASS: web 90 files/756 tests, contracts 18 modules/115 routes,
+  log-format 10 tests and dev-stack 7 tests. The approved native run includes
+  the temporary dev-watch harness; no dependency installation or external
+  provider call. Evidence: `.local/restaurant-regression-green-root.log`.
+- From `apps/api`, `go test ./... -count=1`, `go vet ./...` and `go build ./...`
+  PASS, with DB/browser opt-ins empty and `GOPROXY=off`. Tests cover 17 packages;
+  this run alone is not DB acceptance. Evidence:
+  `.local/restaurant-regression-reviewed-go.log`,
+  `.local/restaurant-regression-reviewed-vet.log` and
+  `.local/restaurant-regression-reviewed-build.log`.
+- Scoped gofmt, JavaScript Prettier and diff whitespace checks PASS. Native race
+  remains BLOCKED: current CGO is 0 and no gcc is on PATH. The existing local Go
+  validation image also has no gcc/cc, checked in a read-only, network-disabled
+  temporary container. No compiler or image was installed or downloaded.
+
+The authorized independent reviewer used supplied source/contracts and reported
+check evidence only, without tools or test execution. Two coverage findings
+prompted the no-checkout/sale and immediate-republish assertions; scoped
+re-review reports both resolved with no remaining confirmed findings there.
+Main ran the matching post-review checks. No production, retained-data, commit,
+push or deployment action occurred. Recovery removes only this test repair.
+Race, organization order snapshots, settlement and whole-flow browser acceptance
+remain open; this does not establish restaurant cutover or release readiness.
+
+## Organization quote checkpoint (2026-11-17)
+
+`storefront.Service.QuoteOrganization` provides an internal quote for verified
+owners of organization restaurant drafts. It prices only explicitly registered
+menu variants, with organization-scoped joins, active dependencies, THB currency
+and the existing unbatched-recall guard. It reuses exact decimal quantity and
+half-up line rounding, fulfillment defaults and delivery-fee limits. Table tokens
+are rejected until organization-level QR redemption is accepted. No public route,
+schema migration, UI, infrastructure creation or order/payment write is added.
+
+The service holds the existing organization authorization lock while reading
+settings and prices. This serializes supported organization mutations; it does
+not serialize arbitrary SQL writers. Returned quotes are not persisted orders
+or price reservations. Future order creation must recalculate inside its own
+authorized transaction and persist menu, quantity, unit and money snapshots.
+Public publication/accepting-order checks precede the calculator delegation;
+the restaurant-draft schema constraint still prohibits publication and ordering.
+
+Earlier quote-only checks, superseded where noted by the repair above:
+
+- Initial RED was an undefined `QuoteOrganization` compilation failure. This
+  establishes the missing API seam, not behavioral database RED evidence.
+- `go test ./... -count=1`, `go vet ./...` and `go build ./...` from `apps/api`
+  PASS, with `GOPROXY=off` and DB/browser variables empty. The test run covers
+  17 tested packages and does not replace database or browser acceptance.
+- `RESTAURANT_SOURCE_FOCUSED=1`, baseline empty,
+  `node .local/restaurant-quote-db-check.mjs`: PASS 2.50s, including branchless
+  quotes and legacy menu/source regressions. Existing local images, PostgreSQL
+  17.6, runtime role, official migrations 1-39, internal network and task-owned
+  tmpfs only. Empty rollback/reapply and populated down-refusal checks 37-39,
+  plus ownership-checked cleanup, PASS. Exact quote 110.70 + 12.35 = 123.05;
+  access denials, input/status/currency/recall guards, no business writes and
+  lock cancellation/price refresh are covered. Evidence:
+  `.local/restaurant-quote-final-focused.log`.
+- Full DB command with focused/baseline empty: FAIL 5.82s. Four leaf failures
+  concern directory storefront constraints, foreign/pinned invitations and
+  authority-revoked reconciliation. A fresh HEAD-only build overlay reproduces
+  the same failure paths and errors (5.51s), without changing the worktree.
+  Both targets cleaned up. Evidence: `.local/restaurant-quote-final-full.log`
+  and `.local/restaurant-quote-final-baseline.log`.
+- `npm run test`: web PASS 90 files/756 tests, contracts PASS 18 modules/115
+  routes, log-format PASS 10 tests; dev-stack FAIL 1 of 7 on the CSP expectation.
+  The CSP test and its configuration inputs match HEAD. Native approval allowed
+  the dev-watch temporary-directory harness to pass on rerun. Evidence:
+  `.local/restaurant-quote-final-root-test-escalated.log`; the first sandbox
+  attempt is retained in `.local/restaurant-quote-final-root-test.log`.
+- `go test -race ./...`: BLOCKED, native toolchain reports that race requires
+  CGO; no compiler was installed. Evidence: `.local/restaurant-quote-race.log`.
+  Real DB lock/cancellation checks passed separately. Scoped gofmt and diff
+  whitespace checks PASS. Browser verification is outside this internal-only
+  delta; whole-flow browser acceptance remains required.
+- Full-plan Prettier still warns on unchanged HEAD content. Only the added
+  checkpoint is formatted; the existing suffix is unchanged. Evidence:
+  `.local/restaurant-quote-doc-scope-format.log`.
+
+Independent supplied-source review covered the production delta, authorization,
+schema/money contracts, public quote gates and matching test evidence. No
+confirmed findings. The reviewer used no tools and did not execute tests or
+inspect raw logs. Main performed the local checks. At that checkpoint, full
+regression and release readiness were unmet. No commit, push,
+deployment or primary/retained database change occurred. Before public cutover,
+recovery is a source-only rollback of this delta, preserving other work.
 ## Private organization catalog slice (2026-11-16)
 
 The existing managed product read now discriminates organization restaurant

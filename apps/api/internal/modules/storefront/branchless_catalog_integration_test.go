@@ -65,6 +65,9 @@ func verifyBranchlessCatalog(testContext *testing.T, ctx context.Context, organi
 	if err != nil || otherPage.Total != 25 || len(otherPage.Items) != 1 || otherPage.Items[0].ProductName != "Other menu 24" {
 		testContext.Fatalf("catalog page boundary/order failed: %v", err)
 	}
+	if _, problem := service.QuoteOrganization(ctx, owner, org, storefront.QuoteInput{Items: []storefront.ItemInput{{VariantID: otherPage.Items[0].VariantID, Quantity: "1.000"}}}); !errors.Is(problem, storefront.ErrNotFound) {
+		testContext.Fatalf("quote accepted a foreign registered menu: %v", problem)
+	}
 	if result, problem := service.Products(ctx, owner, org, "", "FOREIGN", 1); problem != nil || result.Total != 0 || len(result.Items) != 0 {
 		testContext.Fatalf("foreign registry leaked into catalog: %v", problem)
 	}
@@ -138,7 +141,14 @@ func verifyBranchlessCatalog(testContext *testing.T, ctx context.Context, organi
 	if err != nil || len(page.Items) != 1 || page.Items[0].UnitPrice != "55.35" || !page.Items[0].Saleable {
 		testContext.Fatalf("legacy pricing changed registered menu price: %v", err)
 	}
+	quoteInput := storefront.QuoteInput{Items: []storefront.ItemInput{{VariantID: item.VariantID, Quantity: "1.000"}}}
+	if value, problem := service.QuoteOrganization(ctx, owner, org, quoteInput); problem != nil || value.Total != "55.35" || value.Items[0].UnitPrice != "55.35" {
+		testContext.Fatalf("legacy price list changed organization quote: %+v error=%v", value, problem)
+	}
 	verifyBranchlessCatalogSaleability(testContext, ctx, organizations, owner, org, item.VariantID)
+	if _, problem := service.QuoteOrganization(ctx, owner, org, quoteInput); !errors.Is(problem, storefront.ErrStock) {
+		testContext.Fatalf("quote accepted recalled menu: %v", problem)
+	}
 }
 
 func verifyBranchlessCatalogSaleability(testContext *testing.T, ctx context.Context, organizations *organization.Service, owner, org, variant string) {

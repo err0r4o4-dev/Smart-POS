@@ -26,9 +26,7 @@ for (const width of [320, 768, 1440]) {
     };
     let readiness = {
       ready: false,
-      incomplete: [
-        { key: 'menu', label: 'Menu', reason: 'Add a menu item' },
-      ],
+      incomplete: [{ key: 'menu', label: 'Menu', reason: 'Add a menu item' }],
     };
     let completionRequests = 0;
     await page.setViewportSize({ width, height: 900 });

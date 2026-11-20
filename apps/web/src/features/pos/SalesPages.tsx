@@ -376,7 +376,7 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
         className="sales-kpi-grid"
         aria-label={t('pos.salesSummaryRegion')}
       >
-        <Card className="sales-kpi-card sales-kpi-card-featured">
+        <Card className="sales-kpi-card">
           <div className="sales-kpi-content">
             <span
               className="sales-kpi-icon sales-kpi-icon-amber"
@@ -398,38 +398,6 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
               </span>
             </div>
           </div>
-          <svg
-            className="sales-kpi-sparkline"
-            viewBox="0 0 120 56"
-            aria-hidden="true"
-            focusable="false"
-          >
-            <defs>
-              <linearGradient
-                id="sales-sparkline-fill"
-                x1="0"
-                y1="0"
-                x2="0"
-                y2="1"
-              >
-                <stop offset="0%" stopColor="#f4c542" stopOpacity="0.38" />
-                <stop offset="100%" stopColor="#f4c542" stopOpacity="0.02" />
-              </linearGradient>
-            </defs>
-            <path
-              d="M4,46 C22,45 28,28 46,32 C64,36 72,18 90,24 C102,28 110,10 116,8 L116,54 L4,54 Z"
-              fill="url(#sales-sparkline-fill)"
-            />
-            <path
-              d="M4,46 C22,45 28,28 46,32 C64,36 72,18 90,24 C102,28 110,10 116,8"
-              fill="none"
-              stroke="#eab308"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-            />
-            <circle cx="116" cy="8" r="5" fill="#f4c542" fillOpacity="0.35" />
-            <circle cx="116" cy="8" r="2.5" fill="#eab308" />
-          </svg>
         </Card>
 
         <Card className="sales-kpi-card">

@@ -1,4 +1,4 @@
-import { render } from '../../test/render';
+import { render, renderInEnglish } from '../../test/render';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -58,8 +58,8 @@ const response = (data: unknown) => ({
   status: 200,
   json: async () => ({ data }),
 });
-function view(path: string) {
-  return render(
+function view(path: string, english = false) {
+  return (english ? renderInEnglish : render)(
     <QueryClientProvider
       client={
         new QueryClient({
@@ -76,6 +76,7 @@ function view(path: string) {
             <Route index element={<StorefrontPage />} />
             <Route path=":slug" element={<StorefrontPage />} />
             <Route path=":slug/cart" element={<ShopCartPage />} />
+            <Route path=":slug/checkout" element={<ShopCartPage />} />
             <Route
               path=":slug/orders/:orderId"
               element={<ShopTrackingPage />}
@@ -262,6 +263,36 @@ it('adds the selected exact quantity and updates the shared header cart badge', 
   ).toHaveTextContent('เพิ่ม กาแฟ');
 });
 
+it('announces a successful cart addition in English', async () => {
+  view('/shop/test-shop', true);
+  await screen.findByRole('heading', { name: 'กาแฟ' });
+  const status = screen.getByRole('status', { name: 'Add product result' });
+  expect(status).toBeEmptyDOMElement();
+  fireEvent.click(screen.getByRole('button', { name: 'Add to cart' }));
+  expect(status).toHaveTextContent('Added กาแฟ to cart');
+  expect(
+    JSON.parse(localStorage.getItem('shop-cart:test-shop')!)[0].quantity,
+  ).toBe('1.000');
+});
+
+it('announces a rejected addition when the stored cart has exhausted stock', async () => {
+  view('/shop/test-shop');
+  await screen.findByRole('heading', { name: 'กาแฟ' });
+  const add = screen.getByRole('button', { name: 'เพิ่มลงตะกร้า' });
+  expect(add).toBeEnabled();
+  localStorage.setItem(
+    'shop-cart:test-shop',
+    JSON.stringify([{ ...product, quantity: '5.000' }]),
+  );
+  fireEvent.click(add);
+  expect(
+    screen.getByRole('status', { name: 'ผลการเพิ่มสินค้า' }),
+  ).toHaveTextContent('เพิ่มสินค้าไม่ได้ กรุณาตรวจจำนวนและสต็อกล่าสุด');
+  expect(
+    JSON.parse(localStorage.getItem('shop-cart:test-shop')!)[0].quantity,
+  ).toBe('5.000');
+});
+
 it('validates quantity against available stock including the existing cart', async () => {
   localStorage.setItem(
     'shop-cart:test-shop',
@@ -326,7 +357,7 @@ it.each([undefined, 'FUTURE'])(
   },
 );
 
-it('requests category, price and sort without an availability filter and resets pagination', async () => {
+it('requests category and sort without an availability filter and resets pagination', async () => {
   const category = '22222222-2222-4222-8222-222222222222';
   fetchMock.mockImplementation(async (url: string) => {
     if (url.includes('/products?')) {
@@ -355,21 +386,12 @@ it('requests category, price and sort without an availability filter and resets 
     expect(url.searchParams.get('category_id')).toBe(category);
     expect(url.searchParams.get('page')).toBe('1');
   });
-  fireEvent.change(screen.getByLabelText('ราคาต่ำสุด'), {
-    target: { value: '10' },
-  });
-  fireEvent.change(screen.getByLabelText('ราคาสูงสุด'), {
-    target: { value: '50' },
-  });
-  fireEvent.click(screen.getByRole('button', { name: 'ใช้ช่วงราคา' }));
   expect(screen.queryByLabelText('สถานะสินค้า')).toBeNull();
   fireEvent.change(screen.getByLabelText('เรียงสินค้า'), {
     target: { value: 'price_asc' },
   });
   await waitFor(() => {
     const url = new URL(fetchMock.mock.calls.at(-1)![0], 'http://fixture.test');
-    expect(url.searchParams.get('min_price')).toBe('10');
-    expect(url.searchParams.get('max_price')).toBe('50');
     expect(url.searchParams.has('availability')).toBe(false);
     expect(url.searchParams.get('sort')).toBe('price_asc');
   });
@@ -377,7 +399,6 @@ it('requests category, price and sort without an availability filter and resets 
   await waitFor(() => {
     const url = new URL(fetchMock.mock.calls.at(-1)![0], 'http://fixture.test');
     expect(url.searchParams.has('category_id')).toBe(false);
-    expect(url.searchParams.has('min_price')).toBe(false);
     expect(url.searchParams.has('availability')).toBe(false);
   });
 });
@@ -399,33 +420,6 @@ it('switches grid/list display without discarding the cart', async () => {
   );
 });
 
-it('rejects an invalid price range without requesting incorrect results', async () => {
-  fetchMock.mockImplementation(async (url: string) =>
-    url.includes('/products?')
-      ? response({
-          items: [product],
-          total: 1,
-          page: 1,
-          page_size: 24,
-          categories: [],
-        })
-      : response(settings),
-  );
-  view('/shop/test-shop');
-  await screen.findByRole('heading', { name: 'กาแฟ' });
-  const calls = fetchMock.mock.calls.length;
-  fireEvent.change(screen.getByLabelText('ราคาต่ำสุด'), {
-    target: { value: '20' },
-  });
-  fireEvent.change(screen.getByLabelText('ราคาสูงสุด'), {
-    target: { value: '10' },
-  });
-  fireEvent.click(screen.getByRole('button', { name: 'ใช้ช่วงราคา' }));
-  expect(screen.getByRole('alert')).toHaveTextContent(
-    'ราคาต่ำสุดต้องไม่เกินราคาสูงสุด',
-  );
-  expect(fetchMock).toHaveBeenCalledTimes(calls);
-});
 it('disables ordering while the published store is closed', async () => {
   fetchMock.mockImplementation(async (url: string) =>
     response(
@@ -477,12 +471,12 @@ it('keeps table QR context through cart review and submission', async () => {
   );
   fireEvent.click(cartLink);
   const review = await screen.findByRole('button', {
-    name: 'ตรวจรายการและยอดล่าสุด',
+    name: 'ตรวจสอบรายการและยอดล่าสุด',
   });
   await waitFor(() => expect(review).toBeEnabled());
   fireEvent.click(review);
   expect(await screen.findByText('โต๊ะ T01')).toBeVisible();
-  fireEvent.change(screen.getByLabelText('ชื่อผู้รับสินค้า'), {
+  fireEvent.change(screen.getByLabelText('ชื่อผู้สั่งซื้อหรือผู้รับสินค้า'), {
     target: { value: 'Synthetic guest' },
   });
   fireEvent.change(screen.getByLabelText('เบอร์ติดต่อ'), {
@@ -490,7 +484,7 @@ it('keeps table QR context through cart review and submission', async () => {
   });
   fireEvent.click(screen.getByRole('checkbox'));
   fireEvent.click(
-    screen.getByRole('button', { name: 'ส่งออเดอร์ · ยังไม่ชำระเงิน' }),
+    screen.getByRole('button', { name: 'ยืนยันและส่งคำสั่งซื้อ' }),
   );
   expect(
     await screen.findByRole('heading', { name: 'ติดตามออเดอร์' }),
@@ -526,7 +520,7 @@ it.each([
       'ลิงก์โต๊ะไม่ถูกต้อง',
     );
     expect(
-      screen.getByRole('button', { name: 'ตรวจรายการและยอดล่าสุด' }),
+      screen.getByRole('button', { name: 'ตรวจสอบรายการและยอดล่าสุด' }),
     ).toBeDisabled();
     expect(
       fetchMock.mock.calls.some(([url]) => String(url).endsWith('/quote')),
@@ -541,19 +535,39 @@ it('invalidates a reviewed quote after quantity changes', async () => {
   );
   view('/shop/test-shop/cart');
   const review = await screen.findByRole('button', {
-    name: 'ตรวจรายการและยอดล่าสุด',
+    name: 'ตรวจสอบรายการและยอดล่าสุด',
   });
   await waitFor(() => expect(review).toBeEnabled());
   fireEvent.click(review);
   expect(
-    await screen.findByRole('button', { name: 'ส่งออเดอร์ · ยังไม่ชำระเงิน' }),
+    await screen.findByRole('button', { name: 'ยืนยันและส่งคำสั่งซื้อ' }),
   ).toBeVisible();
+  const quotesBeforeChange = fetchMock.mock.calls.filter(([url]) =>
+    String(url).endsWith('/quote'),
+  ).length;
+  fireEvent.click(screen.getAllByRole('button', { name: 'กลับไปตะกร้า' })[0]);
   fireEvent.change(screen.getByLabelText('จำนวน กาแฟ'), {
     target: { value: '2' },
   });
   expect(
-    screen.queryByRole('button', { name: 'ส่งออเดอร์ · ยังไม่ชำระเงิน' }),
+    screen.queryByRole('button', { name: 'ยืนยันและส่งคำสั่งซื้อ' }),
   ).not.toBeInTheDocument();
+  expect(
+    JSON.parse(localStorage.getItem('shop-cart:test-shop')!)[0].quantity,
+  ).toBe('2.000');
+  fireEvent.click(
+    screen.getByRole('button', { name: 'ตรวจสอบรายการและยอดล่าสุด' }),
+  );
+  await screen.findByRole('button', { name: 'ยืนยันและส่งคำสั่งซื้อ' });
+  const quotes = fetchMock.mock.calls
+    .filter(([url]) => String(url).endsWith('/quote'))
+    .slice(quotesBeforeChange);
+  expect(quotes.length).toBeGreaterThan(0);
+  for (const call of quotes) {
+    expect(JSON.parse(call[1].body).items).toEqual([
+      { variant_id: product.variant_id, quantity: '2.000' },
+    ]);
+  }
 });
 it('retries an uncertain order with the same body, token and idempotency key', async () => {
   let attempts = 0;
@@ -583,13 +597,16 @@ it('retries an uncertain order with the same body, token and idempotency key', a
   );
   view('/shop/test-shop/cart');
   const review = await screen.findByRole('button', {
-    name: 'ตรวจรายการและยอดล่าสุด',
+    name: 'ตรวจสอบรายการและยอดล่าสุด',
   });
   await waitFor(() => expect(review).toBeEnabled());
   fireEvent.click(review);
-  fireEvent.change(await screen.findByLabelText('ชื่อผู้รับสินค้า'), {
-    target: { value: 'ลูกค้าทดสอบ' },
-  });
+  fireEvent.change(
+    await screen.findByLabelText('ชื่อผู้สั่งซื้อหรือผู้รับสินค้า'),
+    {
+      target: { value: 'ลูกค้าทดสอบ' },
+    },
+  );
   expect(
     screen.getByRole('checkbox', {
       name: /ฉันเข้าใจว่ารายการที่ติดตามสต็อกจะถูกกันหลังส่งออเดอร์สำเร็จ/,
@@ -600,7 +617,7 @@ it('retries an uncertain order with the same body, token and idempotency key', a
   });
   fireEvent.click(screen.getByRole('checkbox'));
   fireEvent.click(
-    screen.getByRole('button', { name: 'ส่งออเดอร์ · ยังไม่ชำระเงิน' }),
+    screen.getByRole('button', { name: 'ยืนยันและส่งคำสั่งซื้อ' }),
   );
   expect(await screen.findByRole('alert')).toHaveTextContent(
     'เครือข่ายขัดข้อง',
@@ -649,4 +666,19 @@ it('requires the private access fragment to track an order', () => {
   view('/shop/test-shop/orders/order');
   expect(screen.getByRole('alert')).toHaveTextContent('ลิงก์ติดตามไม่ครบ');
   expect(fetchMock).not.toHaveBeenCalled();
+});
+
+it('toggles favorite on a product in grid and list view', async () => {
+  view('/shop/test-shop');
+  await screen.findByRole('heading', { name: 'กาแฟ' });
+  const favBtn = screen.getByRole('button', { name: 'บันทึกในรายการโปรด' });
+  expect(favBtn).toHaveAttribute('aria-pressed', 'false');
+  fireEvent.click(favBtn);
+  expect(screen.getByRole('button', { name: 'นำออกจากรายการโปรด' })).toHaveAttribute('aria-pressed', 'true');
+
+  fireEvent.click(screen.getByRole('button', { name: 'แสดงแบบรายการ' }));
+  const favBtnList = screen.getByRole('button', { name: 'นำออกจากรายการโปรด' });
+  expect(favBtnList).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.click(favBtnList);
+  expect(screen.getByRole('button', { name: 'บันทึกในรายการโปรด' })).toHaveAttribute('aria-pressed', 'false');
 });

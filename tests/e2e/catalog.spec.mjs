@@ -230,9 +230,6 @@ test('global catalog filters reset pagination and sorting before rendering (API 
   await expect(page.getByText('หน้า 2 · 27 รายการ')).toBeVisible();
   await page.getByRole('button', { name: 'เครื่องดื่ม 26' }).click();
   await expect(page.getByText('หน้า 1 · 26 รายการ')).toBeVisible();
-  await page.getByLabel('ราคาต่ำสุด').fill('10');
-  await page.getByLabel('ราคาสูงสุด').fill('20');
-  await page.getByRole('button', { name: 'ใช้ช่วงราคา' }).click();
   await expect(page.getByLabel('สถานะสินค้า')).toHaveCount(0);
   await page.getByLabel('เรียงสินค้า').selectOption('price_desc');
   await expect
@@ -240,8 +237,6 @@ test('global catalog filters reset pagination and sorting before rendering (API 
     .toMatchObject({
       page: '1',
       category_id: drink,
-      min_price: '10',
-      max_price: '20',
       sort: 'price_desc',
     });
   await page.getByRole('button', { name: 'ล้างตัวกรอง' }).click();

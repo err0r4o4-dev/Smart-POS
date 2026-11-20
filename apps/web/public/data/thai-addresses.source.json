@@ -4,23 +4,8 @@
   "license": "MIT",
   "sha256": "aaa090b7a8c0e12cb687580647b5fc190577b19be5dc15b5992dcc23efd68ddb",
   "fields": {
-    "provinces": [
-      "id",
-      "name_th",
-      "name_en"
-    ],
-    "districts": [
-      "id",
-      "province_id",
-      "name_th",
-      "name_en"
-    ],
-    "subdistricts": [
-      "id",
-      "district_id",
-      "name_th",
-      "name_en",
-      "postal_code"
-    ]
+    "provinces": ["id", "name_th", "name_en"],
+    "districts": ["id", "province_id", "name_th", "name_en"],
+    "subdistricts": ["id", "district_id", "name_th", "name_en", "postal_code"]
   }
 }

@@ -286,20 +286,6 @@
   font-weight: 400;
   font-size: 11px;
 }
-.sales-kpi-card-featured .sales-kpi-content {
-  flex: 1;
-  min-width: 0;
-}
-.sales-kpi-sparkline {
-  position: static;
-  width: 82px;
-  height: 42px;
-  flex-shrink: 0;
-  align-self: center;
-  margin-left: auto;
-  pointer-events: none;
-  filter: drop-shadow(0 2px 6px rgba(234, 179, 8, 0.16));
-}
 .sales-filter-card,
 .sales-table-card,
 .sales-page .sales-filter-card,
@@ -964,10 +950,6 @@
   }
   .sales-filter-actions > .button {
     flex: 1;
-  }
-  .sales-kpi-sparkline {
-    width: 68px;
-    height: 36px;
   }
   .sales-history-table .sales-number {
     min-width: 215px;

@@ -122,6 +122,7 @@ inspect raw logs. Main performed the local checks. At that checkpoint, full
 regression and release readiness were unmet. No commit, push,
 deployment or primary/retained database change occurred. Before public cutover,
 recovery is a source-only rollback of this delta, preserving other work.
+
 ## Private organization catalog slice (2026-11-16)
 
 The existing managed product read now discriminates organization restaurant
@@ -255,6 +256,7 @@ Specialist default model routing is unverified; no model substitution is allowed
 No primary migration, external service calls, push, deployment or history deletion.
 
 ## Acceptance And Recovery
+
 - Fresh restaurant setup and sale need no branch, warehouse, terminal, cart or shift.
 - No branch creation, selection, branch_id requirement or active-branch gate in
   new setup, menu, table/QR, order, payment, kitchen or fulfillment operations.
@@ -271,39 +273,46 @@ No primary migration, external service calls, push, deployment or history deleti
   writes, recover forward; never delete history to restore incompatible constraints.
 
 ## Execution
+
 ### 1. Menu-Only Source Boundary
+
 This checkpoint predates the user's no-branch clarification. Its active-branch
 gate remains an interim dependency to replace in step 2, not new-flow acceptance.
+
 - [x] Add focused source-policy tests; initial undefined-helper RED was recorded
-  earlier in this task, followed by GREEN. No full-flow RED/GREEN claim.
+      earlier in this task, followed by GREEN. No full-flow RED/GREEN claim.
 - [x] Keep active organization/branch and historical TRACKED source validation.
 - [x] Focused Go tests, real PostgreSQL source-boundary checks and independent
-  supplied-source/evidence review. No findings in this slice; reviewer ran no tests.
+      supplied-source/evidence review. No findings in this slice; reviewer ran no tests.
 
 ### 2. Organization-Scoped Restaurant And Order Source
+
 - [ ] Add organization-scoped direct-source discrimination and compatibility
-  constraints, retaining branch references only for legacy recovery/history.
+      constraints, retaining branch references only for legacy recovery/history.
 - [ ] Update settings, catalog, quotes, orders and public contracts coherently.
 - [ ] Remove branch/terminal selection from the new UI; preserve safe
-  pending/error/retry states without creating a hidden default branch.
+      pending/error/retry states without creating a hidden default branch.
 - [ ] Scope menus, tables/QR, kitchen queues, setup and cache keys to the restaurant
-  organization; preserve server-side staff authorization and deny foreign access.
+      organization; preserve server-side staff authorization and deny foreign access.
 - [ ] Test a restaurant with no branch/terminal/stock rows, inactive historical
-  branches, organization switching, old orders and migrations.
+      branches, organization switching, old orders and migrations.
 
 ### 3. Direct Restaurant Financial Transactions
+
 - [ ] Define cash confirmation/refund evidence and authenticated permissions.
 - [ ] Implement atomic direct sale/receipt from frozen order/payment snapshots.
 - [ ] Keep database guards, refund exclusions and organization lock discipline.
 - [ ] Test exact totals, revisions, replay, races, scope and rollback.
 
 ### 4. Replace Active Legacy Operations
+
 - [ ] Replace /pos with restaurant order entry and payment confirmation.
 - [ ] Preserve dine-in, pickup, delivery and fulfillment semantics.
 - [ ] Retire unused stock/recipe/shift routes only after replacements pass.
 - [ ] Update consumers, OpenAPI, route inventory and relevant documentation.
 
 ### 5. Acceptance
+
 - [ ] Unit/contract checks, typecheck, lint and build.
 - [ ] Isolated real database migration/legacy/transaction/permission checks.
 - [ ] Desktop/mobile browser and recovery checks.
@@ -311,14 +320,17 @@ gate remains an interim dependency to replace in step 2, not new-flow acceptance
 - [ ] Remove this task's TODO section only after every acceptance gate passes.
 
 ## Evidence Limits
+
 Static checks are not database acceptance. Builds are not browser acceptance.
 The flow is not complete until required checks and independent review pass.
 
 ## Current Checkpoint (2026-11-15)
+
 These results cover the earlier source-boundary slice. They do not prove the
 subsequently clarified no-branch behavior; that acceptance remains pending.
+
 - Fresh package regression: `go test ./internal/modules/storefront
-  ./internal/modules/restaurant ./internal/modules/pos -count=1` PASS. DB/browser
+./internal/modules/restaurant ./internal/modules/pos -count=1` PASS. DB/browser
   environment unset for this command; its integration skips are not acceptance.
 - Real isolated PostgreSQL: existing local 17.6 image, official migrations 1-36,
   runtime role, confirmed marker and empty initial users. Selected
@@ -341,6 +353,7 @@ subsequently clarified no-branch behavior; that acceptance remains pending.
   browser evidence in this slice. No commit, push or deployment.
 
 ## Next Dependency Boundary
+
 `storefront.settings` still joins terminals. `SaveSettings` and `CreateOrder`
 still require terminal/location identities. `pos.SettlePrepaidOnlineOrder` still
 requires a cart and shift. Do not remove old routes before these are replaced.

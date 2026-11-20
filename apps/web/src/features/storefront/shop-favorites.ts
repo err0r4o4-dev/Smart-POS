@@ -1,4 +1,4 @@
-import { useMemo, useSyncExternalStore } from 'react';
+import { useMemo, useState, useSyncExternalStore } from 'react';
 
 const memory = new Map<string, string>();
 const favoritesEvent = 'smartpos-shop-favorites';
@@ -24,6 +24,8 @@ function readFavorites(value: string): string[] {
 }
 
 export function useShopFavorites(slug?: string) {
+  const [, setTick] = useState(0);
+
   const value = useSyncExternalStore(
     (notify) => {
       const changed = (event: Event) => {
@@ -34,8 +36,9 @@ export function useShopFavorites(slug?: string) {
         )
           return;
         if (event instanceof CustomEvent && event.detail !== slug) return;
-        if (event instanceof StorageEvent && slug) memory.delete(slug);
+        if (slug) memory.delete(slug);
         notify();
+        setTick((t) => t + 1);
       };
       window.addEventListener('storage', changed);
       window.addEventListener(favoritesEvent, changed);
@@ -64,6 +67,7 @@ export function useShopFavorites(slug?: string) {
     } catch {
       memory.set(slug, serialized);
     }
+    setTick((t) => t + 1);
     window.dispatchEvent(new CustomEvent(favoritesEvent, { detail: slug }));
     return !exists;
   };

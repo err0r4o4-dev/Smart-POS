@@ -77,8 +77,6 @@ function translateProduct(name: string | undefined, lang: string): string {
 }
 const initialFilters = {
   category: '',
-  minimum: '',
-  maximum: '',
   sort: 'name',
 };
 function quantityText(value: bigint) {
@@ -90,7 +88,7 @@ function quantityText(value: bigint) {
 }
 
 export function ShopCatalog({ slug }: { slug: string }) {
-  const { t, localize, language } = useLanguage();
+  const { t, language } = useLanguage();
 
   const cart = useShopCart(slug);
   const favorites = useShopFavorites(slug);
@@ -98,8 +96,6 @@ export function ShopCatalog({ slug }: { slug: string }) {
   const [submitted, setSubmitted] = useState('');
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState(initialFilters);
-  const [priceDraft, setPriceDraft] = useState({ minimum: '', maximum: '' });
-  const [priceError, setPriceError] = useState('');
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
@@ -146,8 +142,6 @@ export function ShopCatalog({ slug }: { slug: string }) {
     page: String(page),
   });
   if (filters.category) parameters.set('category_id', filters.category);
-  if (filters.minimum) parameters.set('min_price', filters.minimum);
-  if (filters.maximum) parameters.set('max_price', filters.maximum);
   if (filters.sort !== 'name' && filters.sort !== 'favorites')
     parameters.set('sort', filters.sort);
   const query = parameters.toString();
@@ -166,8 +160,6 @@ export function ShopCatalog({ slug }: { slug: string }) {
   };
   const clear = () => {
     setFilters(initialFilters);
-    setPriceDraft({ minimum: '', maximum: '' });
-    setPriceError('');
     setSearch('');
     setSubmitted('');
     setPage(1);
@@ -193,8 +185,6 @@ export function ShopCatalog({ slug }: { slug: string }) {
   const filtered = !!(
     submitted ||
     filters.category ||
-    filters.minimum ||
-    filters.maximum ||
     filters.sort !== 'name'
   );
   return (
@@ -331,45 +321,8 @@ export function ShopCatalog({ slug }: { slug: string }) {
             </section>
           )}
 
-          <div
-            id="menu-catalog"
-            className="catalog-category-pills"
-            role="tablist"
-            aria-label={t('catalog.categories')}
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={!filters.category}
-              className={
-                'catalog-category-pill ' +
-                (!filters.category ? 'catalog-category-pill-active' : '')
-              }
-              onClick={() => changeFilters({ category: '' })}
-            >
-              {t('common.all')}
-              <span className="catalog-pill-count">{allCount}</span>
-            </button>
-            {categories.map((category) => (
-              <button
-                key={category.id}
-                type="button"
-                role="tab"
-                aria-selected={filters.category === category.id}
-                className={
-                  'catalog-category-pill ' +
-                  (filters.category === category.id
-                    ? 'catalog-category-pill-active'
-                    : '')
-                }
-                onClick={() => changeFilters({ category: category.id })}
-              >
-                {translateCategory(category.name, language)}
-                <span className="catalog-pill-count">{category.count}</span>
-              </button>
-            ))}
-          </div>
           <form
+            id="menu-catalog"
             className="catalog-search"
             onSubmit={(event) => {
               event.preventDefault();
@@ -455,75 +408,6 @@ export function ShopCatalog({ slug }: { slug: string }) {
                     : t('storefront.priceHighToLow')}
                 </option>
               </select>
-            </div>
-            <div className="catalog-price-filter">
-              <form
-                className="catalog-price-panel"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  const minimum = priceDraft.minimum
-                    ? exactDecimal(priceDraft.minimum)
-                    : null;
-                  const maximum = priceDraft.maximum
-                    ? exactDecimal(priceDraft.maximum)
-                    : null;
-                  const moneyPattern = /^[0-9]{1,16}(\.[0-9]{1,2})?$/;
-                  if (
-                    (priceDraft.minimum &&
-                      (!moneyPattern.test(priceDraft.minimum) ||
-                        minimum === null)) ||
-                    (priceDraft.maximum &&
-                      (!moneyPattern.test(priceDraft.maximum) ||
-                        maximum === null)) ||
-                    (minimum !== null && maximum !== null && minimum > maximum)
-                  ) {
-                    setPriceError(
-                      t('storefront.enterAValidPriceRangeTheMinimum'),
-                    );
-                    return;
-                  }
-                  setPriceError('');
-                  changeFilters(priceDraft);
-                }}
-              >
-                <span className="catalog-price-filter-title">
-                  {t('storefront.priceRange')}
-                </span>
-                <label>
-                  {t('storefront.minimumPrice')}
-                  <input
-                    inputMode="decimal"
-                    value={priceDraft.minimum}
-                    maxLength={19}
-                    onChange={(event) =>
-                      setPriceDraft({
-                        ...priceDraft,
-                        minimum: event.target.value,
-                      })
-                    }
-                    placeholder="0.00"
-                  />
-                </label>
-                <label>
-                  {t('storefront.maximumPrice')}
-                  <input
-                    inputMode="decimal"
-                    value={priceDraft.maximum}
-                    maxLength={19}
-                    onChange={(event) =>
-                      setPriceDraft({
-                        ...priceDraft,
-                        maximum: event.target.value,
-                      })
-                    }
-                    placeholder={t('storefront.noLimit')}
-                  />
-                </label>
-                {priceError && <p role="alert">{localize(priceError)}</p>}
-                <Button type="submit" disabled={!supportsFilters}>
-                  {t('storefront.applyPriceRange')}
-                </Button>
-              </form>
             </div>
             {filtered && (
               <Button className="catalog-clear" onClick={clear}>
@@ -755,7 +639,8 @@ function CatalogProductCard({
         >
           <Heart
             size={16}
-            strokeWidth={isFavorite ? 0 : 1.8}
+            strokeWidth={1.8}
+            stroke={isFavorite ? '#ef4444' : 'currentColor'}
             fill={isFavorite ? '#ef4444' : 'none'}
             className={isFavorite ? 'heart-filled' : ''}
             aria-hidden="true"

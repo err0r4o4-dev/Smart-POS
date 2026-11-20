@@ -186,7 +186,6 @@
 .shop-store-shell .catalog-search-field,
 .shop-store-shell .catalog-search-submit,
 .shop-store-shell .catalog-sort-wrapper,
-.shop-store-shell .catalog-price-filter summary,
 .shop-store-shell .catalog-view-toggle {
   border-radius: var(--radius-control);
 }

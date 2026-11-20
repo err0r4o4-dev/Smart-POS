@@ -357,7 +357,7 @@ it.each([undefined, 'FUTURE'])(
   },
 );
 
-it('requests category, price and sort without an availability filter and resets pagination', async () => {
+it('requests category and sort without an availability filter and resets pagination', async () => {
   const category = '22222222-2222-4222-8222-222222222222';
   fetchMock.mockImplementation(async (url: string) => {
     if (url.includes('/products?')) {
@@ -386,21 +386,12 @@ it('requests category, price and sort without an availability filter and resets 
     expect(url.searchParams.get('category_id')).toBe(category);
     expect(url.searchParams.get('page')).toBe('1');
   });
-  fireEvent.change(screen.getByLabelText('ราคาต่ำสุด'), {
-    target: { value: '10' },
-  });
-  fireEvent.change(screen.getByLabelText('ราคาสูงสุด'), {
-    target: { value: '50' },
-  });
-  fireEvent.click(screen.getByRole('button', { name: 'ใช้ช่วงราคา' }));
   expect(screen.queryByLabelText('สถานะสินค้า')).toBeNull();
   fireEvent.change(screen.getByLabelText('เรียงสินค้า'), {
     target: { value: 'price_asc' },
   });
   await waitFor(() => {
     const url = new URL(fetchMock.mock.calls.at(-1)![0], 'http://fixture.test');
-    expect(url.searchParams.get('min_price')).toBe('10');
-    expect(url.searchParams.get('max_price')).toBe('50');
     expect(url.searchParams.has('availability')).toBe(false);
     expect(url.searchParams.get('sort')).toBe('price_asc');
   });
@@ -408,7 +399,6 @@ it('requests category, price and sort without an availability filter and resets 
   await waitFor(() => {
     const url = new URL(fetchMock.mock.calls.at(-1)![0], 'http://fixture.test');
     expect(url.searchParams.has('category_id')).toBe(false);
-    expect(url.searchParams.has('min_price')).toBe(false);
     expect(url.searchParams.has('availability')).toBe(false);
   });
 });
@@ -430,33 +420,6 @@ it('switches grid/list display without discarding the cart', async () => {
   );
 });
 
-it('rejects an invalid price range without requesting incorrect results', async () => {
-  fetchMock.mockImplementation(async (url: string) =>
-    url.includes('/products?')
-      ? response({
-          items: [product],
-          total: 1,
-          page: 1,
-          page_size: 24,
-          categories: [],
-        })
-      : response(settings),
-  );
-  view('/shop/test-shop');
-  await screen.findByRole('heading', { name: 'กาแฟ' });
-  const calls = fetchMock.mock.calls.length;
-  fireEvent.change(screen.getByLabelText('ราคาต่ำสุด'), {
-    target: { value: '20' },
-  });
-  fireEvent.change(screen.getByLabelText('ราคาสูงสุด'), {
-    target: { value: '10' },
-  });
-  fireEvent.click(screen.getByRole('button', { name: 'ใช้ช่วงราคา' }));
-  expect(screen.getByRole('alert')).toHaveTextContent(
-    'ราคาต่ำสุดต้องไม่เกินราคาสูงสุด',
-  );
-  expect(fetchMock).toHaveBeenCalledTimes(calls);
-});
 it('disables ordering while the published store is closed', async () => {
   fetchMock.mockImplementation(async (url: string) =>
     response(
@@ -703,4 +666,19 @@ it('requires the private access fragment to track an order', () => {
   view('/shop/test-shop/orders/order');
   expect(screen.getByRole('alert')).toHaveTextContent('ลิงก์ติดตามไม่ครบ');
   expect(fetchMock).not.toHaveBeenCalled();
+});
+
+it('toggles favorite on a product in grid and list view', async () => {
+  view('/shop/test-shop');
+  await screen.findByRole('heading', { name: 'กาแฟ' });
+  const favBtn = screen.getByRole('button', { name: 'บันทึกในรายการโปรด' });
+  expect(favBtn).toHaveAttribute('aria-pressed', 'false');
+  fireEvent.click(favBtn);
+  expect(screen.getByRole('button', { name: 'นำออกจากรายการโปรด' })).toHaveAttribute('aria-pressed', 'true');
+
+  fireEvent.click(screen.getByRole('button', { name: 'แสดงแบบรายการ' }));
+  const favBtnList = screen.getByRole('button', { name: 'นำออกจากรายการโปรด' });
+  expect(favBtnList).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.click(favBtnList);
+  expect(screen.getByRole('button', { name: 'บันทึกในรายการโปรด' })).toHaveAttribute('aria-pressed', 'false');
 });

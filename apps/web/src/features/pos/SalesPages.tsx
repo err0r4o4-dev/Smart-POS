@@ -70,6 +70,21 @@ function toInputDateString(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+function formatPaymentMethodDisplay(rawLabel: string) {
+  const sep = ' — ';
+  if (rawLabel.includes(sep)) {
+    const parts = rawLabel.split(sep);
+    return {
+      primary: parts[0],
+      note:
+        String.fromCharCode(40) +
+        parts.slice(1).join(sep) +
+        String.fromCharCode(41),
+    };
+  }
+  return { primary: rawLabel, note: null };
+}
+
 function SaleNumberCell({
   value,
   copyLabel,
@@ -808,36 +823,46 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
                       <strong>฿{moneyText(item.grand_total)}</strong>
                     </td>
                     <td className="sales-payment">
-                      <span className="sales-payment-label">
-                        {localize(paymentLabels[item.method])}
-                      </span>
-                      <div className="sales-statuses">
-                        <Tag
-                          tone={
-                            item.payment_status === 'CONFIRMED'
-                              ? 'success'
-                              : 'neutral'
-                          }
-                        >
-                          {item.payment_status === 'CONFIRMED' && (
-                            <Check size={12} aria-hidden="true" />
-                          )}
-                          <span>
-                            {item.payment_status === 'CONFIRMED'
-                              ? t('pos.paymentConfirmed')
-                              : item.payment_status}
-                          </span>
-                        </Tag>
-                        <Tag
-                          tone={
-                            item.status === 'COMPLETED' ? 'success' : 'neutral'
-                          }
-                        >
-                          {item.status === 'COMPLETED'
-                            ? t('pos.saleCompleted')
-                            : item.status}
-                        </Tag>
-                      </div>
+                      {(() => {
+                        const methodDisplay = formatPaymentMethodDisplay(
+                          localize(paymentLabels[item.method]),
+                        );
+                        return (
+                          <>
+                            <div className="sales-payment-method-row">
+                              <strong className="sales-payment-primary">
+                                {methodDisplay.primary}
+                              </strong>
+                              {methodDisplay.note && (
+                                <span className="sales-payment-note">
+                                  {methodDisplay.note}
+                                </span>
+                              )}
+                            </div>
+                            <div className="sales-statuses">
+                              <Tag
+                                tone={
+                                  item.status === 'COMPLETED'
+                                    ? 'success'
+                                    : item.status === 'CANCELLED' ||
+                                        item.status === 'REFUNDED'
+                                      ? 'error'
+                                      : 'neutral'
+                                }
+                              >
+                                {item.status === 'COMPLETED' && (
+                                  <Check size={12} aria-hidden="true" />
+                                )}
+                                <span>
+                                  {item.status === 'COMPLETED'
+                                    ? t('pos.saleCompleted')
+                                    : item.status}
+                                </span>
+                              </Tag>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </td>
                     <td>
                       <div className="sales-row-actions">

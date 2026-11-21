@@ -182,11 +182,7 @@ export function ShopCatalog({ slug }: { slug: string }) {
   const allCount = supportsFilters
     ? categories.reduce((total, category) => total + category.count, 0)
     : (products.data?.total ?? 0);
-  const filtered = !!(
-    submitted ||
-    filters.category ||
-    filters.sort !== 'name'
-  );
+  const filtered = !!(submitted || filters.category || filters.sort !== 'name');
   return (
     <div className="shop-catalog">
       <div

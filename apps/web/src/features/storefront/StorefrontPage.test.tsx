@@ -674,11 +674,15 @@ it('toggles favorite on a product in grid and list view', async () => {
   const favBtn = screen.getByRole('button', { name: 'บันทึกในรายการโปรด' });
   expect(favBtn).toHaveAttribute('aria-pressed', 'false');
   fireEvent.click(favBtn);
-  expect(screen.getByRole('button', { name: 'นำออกจากรายการโปรด' })).toHaveAttribute('aria-pressed', 'true');
+  expect(
+    screen.getByRole('button', { name: 'นำออกจากรายการโปรด' }),
+  ).toHaveAttribute('aria-pressed', 'true');
 
   fireEvent.click(screen.getByRole('button', { name: 'แสดงแบบรายการ' }));
   const favBtnList = screen.getByRole('button', { name: 'นำออกจากรายการโปรด' });
   expect(favBtnList).toHaveAttribute('aria-pressed', 'true');
   fireEvent.click(favBtnList);
-  expect(screen.getByRole('button', { name: 'บันทึกในรายการโปรด' })).toHaveAttribute('aria-pressed', 'false');
+  expect(
+    screen.getByRole('button', { name: 'บันทึกในรายการโปรด' }),
+  ).toHaveAttribute('aria-pressed', 'false');
 });

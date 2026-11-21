@@ -739,13 +739,17 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
           <table className="record-table">
             <thead>
               <tr>
-                <th className="sales-number">{receipts ? t('pos.receipts') : t('pos.saleNumber')}</th>
+                <th className="sales-number">
+                  {receipts ? t('pos.receipts') : t('pos.saleNumber')}
+                </th>
                 <th className="sales-date">{t('loyalty.dateTime')}</th>
                 <th className="sales-branch-col">{t('pos.branchTerminal')}</th>
                 <th className="sales-cashier-col">{t('pos.cashier2')}</th>
                 <th className="sales-amount">{t('pos.totalThb')}</th>
                 <th className="sales-payment-col">{t('pos.paymentStatus')}</th>
-                <th className="sales-actions-col">{t('catalog.definitions')}</th>
+                <th className="sales-actions-col">
+                  {t('catalog.definitions')}
+                </th>
               </tr>
             </thead>
             <tbody>

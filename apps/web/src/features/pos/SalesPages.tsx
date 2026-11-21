@@ -71,10 +71,16 @@ function toInputDateString(date: Date): string {
 }
 
 function formatPaymentMethodDisplay(rawLabel: string) {
-  const sep = " — ";
+  const sep = ' — ';
   if (rawLabel.includes(sep)) {
     const parts = rawLabel.split(sep);
-    return { primary: parts[0], note: String.fromCharCode(40) + parts.slice(1).join(sep) + String.fromCharCode(41) };
+    return {
+      primary: parts[0],
+      note:
+        String.fromCharCode(40) +
+        parts.slice(1).join(sep) +
+        String.fromCharCode(41),
+    };
   }
   return { primary: rawLabel, note: null };
 }
@@ -819,7 +825,7 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
                     <td className="sales-payment">
                       {(() => {
                         const methodDisplay = formatPaymentMethodDisplay(
-                          localize(paymentLabels[item.method])
+                          localize(paymentLabels[item.method]),
                         );
                         return (
                           <>
@@ -836,20 +842,20 @@ export function SalesPage({ receipts = false }: { receipts?: boolean }) {
                             <div className="sales-statuses">
                               <Tag
                                 tone={
-                                  item.status === "COMPLETED"
-                                    ? "success"
-                                    : item.status === "CANCELLED" ||
-                                        item.status === "REFUNDED"
-                                      ? "error"
-                                      : "neutral"
+                                  item.status === 'COMPLETED'
+                                    ? 'success'
+                                    : item.status === 'CANCELLED' ||
+                                        item.status === 'REFUNDED'
+                                      ? 'error'
+                                      : 'neutral'
                                 }
                               >
-                                {item.status === "COMPLETED" && (
+                                {item.status === 'COMPLETED' && (
                                   <Check size={12} aria-hidden="true" />
                                 )}
                                 <span>
-                                  {item.status === "COMPLETED"
-                                    ? t("pos.saleCompleted")
+                                  {item.status === 'COMPLETED'
+                                    ? t('pos.saleCompleted')
                                     : item.status}
                                 </span>
                               </Tag>

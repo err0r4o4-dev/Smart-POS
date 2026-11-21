@@ -529,15 +529,32 @@
 }
 .sales-page .table-scroll.sales-history-table table,
 .sales-history-table table {
-  min-width: 960px;
+  min-width: 1040px;
+  border-spacing: 0 16px;
+}
+.sales-history-table td {
+  padding-block: 16px;
+}
+.sales-history-table .sales-number {
+  min-width: 230px;
+  white-space: nowrap;
+}
+.sales-history-table .sales-date {
+  min-width: 120px;
+  white-space: nowrap;
 }
 .sales-history-table .sales-branch-col,
 .sales-history-table .sales-branch {
-  min-width: 130px;
+  min-width: 170px;
+  max-width: 220px;
 }
 .sales-branch-name {
+  display: block;
   font-weight: 600;
   color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .sales-history-table .sales-cashier-col,
 .sales-history-table .sales-cashier {
@@ -585,25 +602,47 @@
 .sales-history-table .sales-amount {
   text-align: right;
   font-size: 15px;
+  font-weight: 600;
+  padding-inline-end: 16px;
+}
+.sales-history-table .sales-payment-col,
+.sales-history-table .sales-payment {
+  min-width: 220px;
 }
 .sales-payment-label {
+  display: block;
   font-weight: 600;
   font-size: 13px;
   color: var(--text-primary);
+  white-space: nowrap;
 }
 .sales-secondary {
   display: block;
   margin-top: 2px;
   color: var(--text-secondary);
   font-size: 12px;
-  word-break: break-word;
-  overflow-wrap: anywhere;
+  line-height: 1.35;
+  white-space: normal;
+}
+.sales-branch .sales-secondary {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .sales-statuses {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
+  flex-wrap: nowrap;
   gap: 6px;
   margin-top: 6px;
+}
+.sales-statuses .tag {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.sales-history-table .sales-actions-col {
+  width: 1%;
+  white-space: nowrap;
 }
 .sales-row-actions {
   display: inline-flex;

@@ -8,6 +8,7 @@ import (
 	"errors"
 
 	"github.com/jackc/pgx/v5"
+	"smartpos/api/internal/modules/organization"
 )
 
 func claimCommand(ctx context.Context, tx pgx.Tx, org, user, operation, key string, input any) (string, []byte, error) {
@@ -52,4 +53,49 @@ func saveCommand(ctx context.Context, tx pgx.Tx, org, id string, result any) err
 		return ErrConflict
 	}
 	return nil
+}
+
+func claimAuthorizedCommand(ctx context.Context, authorization *organization.Authorization, org, user, operation, key string, input any) (string, []byte, error) {
+	tx := authorization.Tx
+	if !uuidPattern.MatchString(key) {
+		return "", nil, ErrInput
+	}
+	encoded, err := json.Marshal(input)
+	if err != nil {
+		return "", nil, ErrInput
+	}
+	hash := sha256.Sum256(encoded)
+	fingerprint := hex.EncodeToString(hash[:])
+	var id, previousFingerprint string
+	var previous []byte
+	err = tx.QueryRow(ctx, "SELECT id::text,fingerprint,result FROM inventory_operations WHERE organization_id=$1 AND actor_id=$2 AND operation=$3 AND idempotency_key=$4", org, user, operation, key).Scan(&id, &previousFingerprint, &previous)
+	if err == nil || errors.Is(err, pgx.ErrNoRows) {
+		if failure := authorization.Recheck(ctx); failure != nil {
+			return "", nil, failure
+		}
+	}
+	if err == nil {
+		if previousFingerprint != fingerprint || previous == nil {
+			return "", nil, ErrConflict
+		}
+		return id, previous, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return "", nil, dbError(err)
+	}
+	err = tx.QueryRow(ctx, "INSERT INTO inventory_operations(organization_id,actor_id,operation,idempotency_key,fingerprint) VALUES($1,$2,$3,$4,$5) RETURNING id::text", org, user, operation, key, fingerprint).Scan(&id)
+	if err != nil {
+		return "", nil, dbError(err)
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return "", nil, err
+	}
+	return id, nil, nil
+}
+
+func saveAuthorizedCommand(ctx context.Context, authorization *organization.Authorization, org, id string, result any) error {
+	if err := authorization.Recheck(ctx); err != nil {
+		return err
+	}
+	return saveCommand(ctx, authorization.Tx, org, id, result)
 }

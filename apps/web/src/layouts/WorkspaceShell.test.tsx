@@ -201,8 +201,14 @@ it('supports ArrowDown/ArrowUp keyboard navigation in the profile dropdown and r
   fireEvent.keyDown(avatarButton, { key: 'ArrowDown' });
 
   const menu = screen.getByRole('menu', { name: 'Your account' });
+  const securityItem = within(menu).getByRole('menuitem', {
+    name: 'Account security',
+  });
   const settingsItem = within(menu).getByRole('menuitem', { name: 'Settings' });
   const signOutItem = within(menu).getByRole('menuitem', { name: 'Sign out' });
+
+  fireEvent.keyDown(menu, { key: 'ArrowDown' });
+  expect(securityItem).toHaveFocus();
 
   fireEvent.keyDown(menu, { key: 'ArrowDown' });
   expect(settingsItem).toHaveFocus();

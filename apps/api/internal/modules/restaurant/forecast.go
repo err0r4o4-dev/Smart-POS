@@ -12,12 +12,16 @@ func (service *Service) ForecastStatus(ctx context.Context, user, org, branch st
 	if !uuidPattern.MatchString(branch) {
 		return ForecastStatus{}, ErrInput
 	}
-	tx, actor, err := service.begin(ctx, user, org, "sales.read")
+	authorization, err := service.begin(ctx, user, org, "sales.read")
 	if err != nil {
 		return ForecastStatus{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
-	if err = activeBranch(ctx, tx, actor, org, branch); err != nil {
+	if err = activeBranch(ctx, tx, authorization.Actor, org, branch); err != nil {
+		return ForecastStatus{}, err
+	}
+	if err = authorization.Recheck(ctx); err != nil {
 		return ForecastStatus{}, err
 	}
 	return ForecastStatus{Status: "unavailable", Reason: "FORECAST_NOT_CONFIGURED", Items: []ForecastItem{}}, nil

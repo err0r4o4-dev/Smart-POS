@@ -14,6 +14,7 @@ import { businessArea, workspacePath } from '../../app/workspace-paths';
 import { ErrorState, Loading } from '../../components/ui/primitives';
 import { useQuery } from '@tanstack/react-query';
 import { getSetup } from '../organization/setup-api';
+import { MFARequiredState } from '../organization/MFARequiredState';
 
 function SetupCompletionGate() {
   const { t, localize } = useLanguage();
@@ -65,6 +66,7 @@ export function WorkspaceAreaGate() {
   ) {
     if (tenant.loading)
       return <Loading>{t('workspace.checkingManagementWorkspace')}</Loading>;
+    if (tenant.errorCode === 'MFA_REQUIRED') return <MFARequiredState />;
     if (tenant.error)
       return (
         <ErrorState
@@ -102,6 +104,7 @@ export function LegacyWorkspaceRedirect({ path }: { path: string }) {
   const { search, hash } = useLocation();
   if (tenant.loading)
     return <Loading>{t('workspace.selectingWorkspace')}</Loading>;
+  if (tenant.errorCode === 'MFA_REQUIRED') return <MFARequiredState />;
   if (tenant.error)
     return (
       <ErrorState

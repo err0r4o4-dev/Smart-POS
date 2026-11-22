@@ -1,6 +1,9 @@
 import { defineMessages } from './defineMessages';
 export const auth = defineMessages({
   th: {
+    securityStoryTitle: 'ปกป้องบัญชีของคุณ',
+    securityStorySummary:
+      'เพิ่มการยืนยันตัวตน และเก็บรหัสกู้คืนไว้ในที่ปลอดภัย',
     verificationTitle: 'ยืนยันอีเมล',
     verificationRequired:
       'กรุณายืนยันอีเมลก่อนตั้งค่าหรือจัดการร้าน ลิงก์มีอายุ 24 ชั่วโมง',
@@ -108,6 +111,9 @@ export const auth = defineMessages({
     account: 'บัญชี',
   },
   en: {
+    securityStoryTitle: 'Protect your account',
+    securityStorySummary:
+      'Add a second sign-in step and keep recovery codes somewhere safe.',
     verificationTitle: 'Verify your email',
     verificationRequired:
       'Verify your email before setting up or managing your store. The link expires in 24 hours.',

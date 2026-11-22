@@ -30,6 +30,7 @@ import {
   RegisterPage,
   EmailVerificationPage,
   ResetPasswordPage,
+  MFASettingsPage,
 } from './route-pages';
 import { OrganizationGate } from '../features/organization/OrganizationGate';
 import { PageError, RouteLoading } from '../components/feedback/PageError';
@@ -247,6 +248,10 @@ const routes: RouteObject[] = [
     ],
   },
   { path: paths.login, element: <LoginPage /> },
+  {
+    element: <RequireSession />,
+    children: [{ path: paths.security, element: <MFASettingsPage /> }],
+  },
   { path: paths.register, element: <RegisterPage /> },
   { path: paths.verifyEmail, element: <EmailVerificationPage /> },
   { path: paths.forgotPassword, element: <ForgotPasswordPage /> },

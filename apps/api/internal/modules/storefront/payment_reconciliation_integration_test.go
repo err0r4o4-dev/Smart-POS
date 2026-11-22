@@ -71,6 +71,7 @@ func paymentReconciliationAcceptance(test *testing.T, ctx context.Context, organ
 		if problem != nil || replay.ReconciliationID != result.ReconciliationID || retrieves != 1 {
 			test.Fatalf("durable staff replay: %+v error %v calls %d", replay, problem, retrieves)
 		}
+		assertKitchenQueueOrder(test, ctx, organizations, owner, org, shop.BranchID, order.ID, true)
 		tx, _, problem := organizations.Authorized(ctx, owner, org, "storefront.manage")
 		if problem != nil {
 			test.Fatal(problem)
@@ -108,6 +109,7 @@ func paymentReconciliationAcceptance(test *testing.T, ctx context.Context, organ
 		if problem != nil || result.Status != "REFUND_REVIEW_REQUIRED" || result.Attempt.State != "PAID" || result.StockHoldReleased || result.ReconciliationID == "" {
 			test.Fatalf("paid fulfillment review: %+v error %v", result, problem)
 		}
+		assertKitchenQueueOrder(test, ctx, organizations, owner, org, shop.BranchID, order.ID, false)
 		replay, problem := service.FlagCustomerPaymentFulfillment(ctx, owner, org, order.ID, key, "QUALITY_BLOCKED")
 		if problem != nil || replay.ReconciliationID != result.ReconciliationID {
 			test.Fatalf("fulfillment review replay: %+v error %v", replay, problem)

@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { OrganizationProvider, useOrganization } from './OrganizationProvider';
 import type { OrganizationContext } from '../lib/organization-api';
+import { ApiError } from '../lib/api';
 const mocks = vi.hoisted(() => ({
   request: vi.fn(),
   auth: { status: 'authenticated', session: { user: { id: 'user' } } } as {
@@ -81,6 +82,7 @@ function Probe() {
       <output>{tenant.context?.organization.id ?? 'none'}</output>
       <span>{tenant.storeMode ?? 'mode-pending'}</span>
       {tenant.error && <p role="alert">{tenant.error}</p>}
+      {tenant.errorCode === 'MFA_REQUIRED' && <span>MFA needed</span>}
       <span>{tenant.branchID}</span>
       <span>
         {tenant.can('employee.read') ? 'employees-visible' : 'employees-denied'}
@@ -121,6 +123,29 @@ beforeEach(() => {
     ),
   );
 });
+it.each(['/organizations', '/context'])(
+  'preserves MFA_REQUIRED and clears cached context when %s denies assurance',
+  async (deniedPath) => {
+    const view = mount();
+    expect(await screen.findByText('employees-visible')).toBeVisible();
+    mocks.request.mockImplementation((path: string) =>
+      (deniedPath === '/organizations' && path === '/organizations') ||
+      (deniedPath === '/context' && path !== '/organizations')
+        ? Promise.reject(
+            new ApiError(403, 'Verify MFA', undefined, 'MFA_REQUIRED'),
+          )
+        : Promise.resolve(
+            path === '/organizations' ? organizations : context('a'),
+          ),
+    );
+    await act(async () => {
+      await view.client.invalidateQueries({ queryKey: ['tenant'] });
+    });
+    expect(await screen.findByText('MFA needed')).toBeVisible();
+    expect(screen.getByText('none')).toBeVisible();
+    expect(screen.getByText('employees-denied')).toBeVisible();
+  },
+);
 it('switches organizations and permissions without rendering old tenant data', async () => {
   mount();
   expect(await screen.findByText('employees-visible')).toBeVisible();

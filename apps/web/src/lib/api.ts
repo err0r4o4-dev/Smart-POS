@@ -46,6 +46,7 @@ export class ApiError extends Error {
     public status: number,
     message: string,
     public retryAfterSeconds?: number,
+    public code?: string,
   ) {
     super(message);
   }
@@ -115,7 +116,10 @@ export async function requestData<Result>(
   }
   const envelope =
     typeof result === 'object' && result !== null
-      ? (result as { data?: Result; error?: { message?: unknown } })
+      ? (result as {
+          data?: Result;
+          error?: { message?: unknown; code?: unknown };
+        })
       : undefined;
   if (!response.ok) {
     throw new ApiError(
@@ -124,6 +128,10 @@ export async function requestData<Result>(
         ? envelope.error.message
         : responseMessage(response.status),
       retryAfter(response.headers),
+      typeof envelope?.error?.code === 'string' &&
+        /^[A-Z][A-Z0-9_]{0,79}$/.test(envelope.error.code)
+        ? envelope.error.code
+        : undefined,
     );
   }
   if (!envelope || envelope.data === undefined) {

@@ -336,7 +336,7 @@ paths:
       operationId: transitionOnlineOrder
       security:
         - sessionCookie: []
-      description: online_orders.manage; PENDING -> PREPARING -> READY; rejection/cancellation requires public reason; no manual completion; linked cart must be reconciled in POS.
+      description: online_orders.manage with independent active OWNER and live session MFA authorization. PENDING -> PREPARING -> READY; both kitchen transitions require a PAID payment attempt with an unreleased stock hold, no blocking refund intent and no FULFILLMENT_REVIEW reconciliation. Preserves branch, revision, source and exact stock checks. Rejection/cancellation requires public reason; no manual completion; linked cart must be reconciled in POS. Rechecks after waits, between status/event/audit effects and before commit; denied transactions return no order data and retain no partial effects. Missing assurance returns 403 MFA_REQUIRED; invalid or expired authentication returns 401 UNAUTHENTICATED. All responses use Cache-Control no-store. Commit errors can require state reconciliation before retry.
       parameters:
         - $ref: '#/components/parameters/CSRF'
       responses:
@@ -406,7 +406,7 @@ paths:
       operationId: getOnlineOrder
       security:
         - sessionCookie: []
-      description: online_orders.read and branch access; owner-only contact.
+      description: online_orders.read with independent active OWNER and live session MFA authorization and branch access. Rechecks after private detail queries before returning customer contact; missing assurance returns 403 MFA_REQUIRED and invalid or expired authentication returns 401 UNAUTHENTICATED. Failures return no partial private data.
       parameters: []
       responses:
         '200':
@@ -463,7 +463,7 @@ paths:
       operationId: listOnlineOrders
       security:
         - sessionCookie: []
-      description: online_orders.read; authorized branches only; 20 per page.
+      description: online_orders.read with independent active OWNER and live session MFA authorization; authorized branches only; 20 per page. Rechecks after count, ID and detail queries, including empty pages, before returning private data. Missing assurance returns 403 MFA_REQUIRED and invalid or expired authentication returns 401 UNAUTHENTICATED. Failures return no partial page or customer data.
       parameters:
         - name: page
           in: query
@@ -551,7 +551,7 @@ paths:
       operationId: publishStorefrontProduct
       security:
         - sessionCookie: []
-      description: storefront.manage; optimistic storefront revision increments.
+      description: storefront.manage with independent active OWNER and live session MFA authorization. Preserves branch and saleability checks and optimistic storefront revision increments. Rechecks after business waits and between listing, revision and audit effects, then before commit; denied transactions retain no partial effects or response data. Missing assurance returns 403 MFA_REQUIRED and invalid or expired authentication returns 401 UNAUTHENTICATED. All responses use Cache-Control no-store. Commit errors can require state reconciliation before retry.
       parameters:
         - $ref: '#/components/parameters/CSRF'
       responses:
@@ -615,7 +615,7 @@ paths:
       operationId: listManagedStorefrontProducts
       security:
         - sessionCookie: []
-      description: storefront.manage; 24 per page. Legacy POS sources retain branch access. Organization restaurant drafts require a verified owner and return only registered menu items at their exact catalog prices, with MENU_ONLY stock policy and null availability. Draft products remain unpublished; this read does not enable publication, quotes or ordering.
+      description: storefront.manage with independent active OWNER and live session MFA authorization; 24 per page. Rechecks after settings/source waits and before private results, including empty pages; any private failure returns no accumulated data. Missing assurance returns 403 MFA_REQUIRED and invalid or expired authentication returns 401 UNAUTHENTICATED. All responses use Cache-Control no-store. Legacy POS sources retain branch access. Organization restaurant drafts return only registered menu items at their exact catalog prices, with MENU_ONLY stock policy and null availability. Draft products remain unpublished; this read does not enable publication, quotes or ordering. Public slug products use a separate publication boundary without employee MFA.
       parameters:
         - name: page
           in: query
@@ -684,7 +684,7 @@ paths:
       operationId: getManagedStorefront
       security:
         - sessionCookie: []
-      description: storefront.manage and branch access; 404 until configured.
+      description: storefront.manage with independent active OWNER and live session MFA authorization and branch access. Returns null until configured, after the same final assurance check as populated settings. Rechecks after query waits before returning private data; missing assurance returns 403 MFA_REQUIRED and invalid or expired authentication returns 401 UNAUTHENTICATED, without data. All responses use Cache-Control no-store. Public slug settings are a separate boundary.
       parameters: []
       responses:
         '200':
@@ -697,7 +697,9 @@ paths:
                   - data
                 properties:
                   data:
-                    $ref: '#/components/schemas/StorefrontSettings'
+                    oneOf:
+                      - $ref: '#/components/schemas/StorefrontSettings'
+                      - type: 'null'
         '400':
           description: Invalid input
           content:
@@ -738,7 +740,7 @@ paths:
       operationId: saveManagedStorefront
       security:
         - sessionCookie: []
-      description: storefront.manage; initial revision 0; slug cannot change after any order; cannot move terminal/unpublish while live orders remain.
+      description: storefront.manage with independent active OWNER and live session MFA authorization for both legacy and organization-native settings. Initial revision 0; slug cannot change after any order; cannot move terminal/unpublish while live orders remain. Rechecks after validation waits and between settings, fee and audit effects, then before commit; denied transactions retain no partial effects or response data. Missing assurance returns 403 MFA_REQUIRED and invalid or expired authentication returns 401 UNAUTHENTICATED. All responses use Cache-Control no-store. Commit errors can require state reconciliation before retry.
       parameters:
         - $ref: '#/components/parameters/CSRF'
       responses:
@@ -3400,7 +3402,7 @@ paths:
     get:
       operationId: organizationAudit
       security: [{ sessionCookie: [] }]
-      description: Newest 100 records, OWNER only within the requested organization. Historical actor identifiers are retained. No secrets or raw tokens.
+      description: Newest 100 records, active OWNER only within the requested organization. Requires live session MFA and rechecks after query waits before returning records. Missing assurance returns 403 MFA_REQUIRED; invalid or expired authentication returns 401 UNAUTHENTICATED, without data. Historical actor identifiers are retained. No secrets or raw tokens.
       parameters:
         [{ in: query, name: member_id, schema: { type: string, format: uuid } }]
       responses:
@@ -3430,10 +3432,17 @@ paths:
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '404': { $ref: '#/components/responses/AuthError' }
+        '503': { $ref: '#/components/responses/AuthError' }
   /api/v1/organizations:
     get:
       operationId: listOrganizations
       security: [{ sessionCookie: [] }]
+      description: >-
+        Requires live MFA assurance for this authenticated session, including an
+        empty list. Missing assurance returns 403 MFA_REQUIRED; invalid or expired
+        authentication returns 401 UNAUTHENTICATED. No organization data is
+        returned on denial. Complete verification in account security and retry
+        explicitly. Active OWNER and single-store filters remain authoritative.
       responses:
         '200':
           description: Active OWNER memberships only. Legacy non-owner memberships are not listed. In single-store mode, only active ownership of the configured store is returned; no ownership returns an empty array.
@@ -3456,10 +3465,28 @@ paths:
                 }
         '401': { $ref: '#/components/responses/AuthError' }
         '503': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
     post:
       operationId: createOrganization
       security: [{ sessionCookie: [] }]
-      description: Atomically creates organization, OWNER membership, active main branch, default THB/Asia-Bangkok configuration and audit. If organization code is omitted, the server generates it; if branch is omitted, the main branch is named สาขาหลัก with code MAIN. Explicit organization code and branch remain supported. Replaying the same per-user key/payload returns the same context; different payload returns 409. Disabled with 403 in single-store mode, including retries; use an existing explicitly configured organization, not first-user ownership.
+      description: >-
+        Requires a verified account and live MFA assurance for this authenticated
+        session, including replay. Atomically creates organization, OWNER
+        membership, active main branch, default THB/Asia-Bangkok configuration
+        and audit. If organization code is omitted, the server generates it; if
+        branch is omitted, the main branch is named สาขาหลัก with code MAIN.
+        Explicit organization code and branch remain supported. Replaying the
+        same per-user key/payload returns the same context; different payload
+        returns 409. Creation commits before Context is independently authorized.
+        An error or lost response may follow a successful commit. Preserve the
+        original Idempotency-Key and payload through login/MFA recovery and retry
+        that operation; do not generate a new key for an unknown outcome. Invalid
+        or expired authentication returns 401 UNAUTHENTICATED; missing session
+        assurance returns 403 MFA_REQUIRED with no result payload. Open account
+        security to enroll or challenge, then retry explicitly. Disabled with
+        403 in single-store mode, including retries; use an existing explicitly
+        configured organization, not first-user ownership. This gate is not a
+        five-minute sensitive-action authorization grant.
       parameters:
         - { $ref: '#/components/parameters/CSRF' }
         - {
@@ -3485,15 +3512,17 @@ paths:
     get:
       operationId: getOrganization
       security: [{ sessionCookie: [] }]
+      description: Returns the same independently authorized Context as the context endpoint; requires live session MFA assurance (403 MFA_REQUIRED), current active OWNER membership and organization scope. Invalid or expired authentication returns 401 UNAUTHENTICATED. Failed authentication or assurance returns no result payload.
       responses:
         '200': { $ref: '#/components/responses/OrganizationContext' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '404': { $ref: '#/components/responses/AuthError' }
+        '503': { $ref: '#/components/responses/AuthError' }
     patch:
       operationId: updateOrganization
       security: [{ sessionCookie: [] }]
-      description: OWNER only. Full editable fields; no ownership change or tenant deactivation.
+      description: Active OWNER with live session MFA only. Rechecks after organization lock waits, before effects and before commit. Missing assurance returns 403 MFA_REQUIRED; invalid or expired authentication returns 401 UNAUTHENTICATED, without data. Full editable fields; no ownership change or tenant deactivation. Does not grant five-minute sensitive-action authority.
       parameters: [{ $ref: '#/components/parameters/CSRF' }]
       requestBody:
         {
@@ -3528,22 +3557,25 @@ paths:
         '403': { $ref: '#/components/responses/AuthError' }
         '404': { $ref: '#/components/responses/AuthError' }
         '409': { $ref: '#/components/responses/AuthError' }
+        '503': { $ref: '#/components/responses/AuthError' }
   /api/v1/organizations/{id}/context:
     parameters: [{ $ref: '#/components/parameters/OrganizationID' }]
     get:
       operationId: organizationContext
       security: [{ sessionCookie: [] }]
-      description: Membership revalidated on every call. Only ACTIVE authorized branches. Owner receives all; operational roles receive organization identity with redacted contact data.
+      description: Live session MFA assurance and active OWNER membership revalidated on every call, including after organization lock waits and before returning private data. Only ACTIVE authorized branches. Missing assurance returns 403 MFA_REQUIRED; invalid or expired authentication returns 401 UNAUTHENTICATED. Failed authentication or assurance returns no result payload. Account security remains accessible independently. This is not a five-minute sensitive-action authorization grant; List and other business endpoints are separate enforcement boundaries.
       responses:
         '200': { $ref: '#/components/responses/OrganizationContext' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '404': { $ref: '#/components/responses/AuthError' }
+        '503': { $ref: '#/components/responses/AuthError' }
   /api/v1/organizations/{id}/permissions:
     parameters: [{ $ref: '#/components/parameters/OrganizationID' }]
     get:
       operationId: effectivePermissions
       security: [{ sessionCookie: [] }]
+      description: Uses the same independent Context authorization and live session MFA checks. Missing assurance returns 403 MFA_REQUIRED; invalid or expired authentication returns 401 UNAUTHENTICATED, with no result payload.
       responses:
         '200':
           {
@@ -3564,11 +3596,13 @@ paths:
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '404': { $ref: '#/components/responses/AuthError' }
+        '503': { $ref: '#/components/responses/AuthError' }
   /api/v1/organizations/{id}/branches:
     parameters: [{ $ref: '#/components/parameters/OrganizationID' }]
     get:
       operationId: listBranches
       security: [{ sessionCookie: [] }]
+      description: Active OWNER with live session MFA only. Rechecks after lock and query waits before returning branches. Missing assurance returns 403 MFA_REQUIRED; invalid or expired authentication returns 401 UNAUTHENTICATED, without data.
       responses:
         '200':
           {
@@ -3594,10 +3628,12 @@ paths:
           }
         '401': { $ref: '#/components/responses/AuthError' }
         '404': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '503': { $ref: '#/components/responses/AuthError' }
     post:
       operationId: createBranch
       security: [{ sessionCookie: [] }]
-      description: OWNER only, unique code within organization.
+      description: Active OWNER with live session MFA only, unique code within organization. Rechecks after lock waits and before effects and commit. Missing assurance returns 403 MFA_REQUIRED; invalid or expired authentication returns 401 UNAUTHENTICATED, without data.
       parameters: [{ $ref: '#/components/parameters/CSRF' }]
       requestBody:
         {
@@ -3615,6 +3651,7 @@ paths:
         '403': { $ref: '#/components/responses/AuthError' }
         '404': { $ref: '#/components/responses/AuthError' }
         '409': { $ref: '#/components/responses/AuthError' }
+        '503': { $ref: '#/components/responses/AuthError' }
   /api/v1/organizations/{id}/branches/{branchId}:
     parameters:
       [
@@ -3629,14 +3666,17 @@ paths:
     get:
       operationId: getBranch
       security: [{ sessionCookie: [] }]
+      description: Uses the same active OWNER and live session MFA checks as listBranches, including its final recheck. Missing assurance returns 403 MFA_REQUIRED; invalid or expired authentication returns 401 UNAUTHENTICATED, without data.
       responses:
         '200': { $ref: '#/components/responses/Branch' }
         '401': { $ref: '#/components/responses/AuthError' }
         '404': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '503': { $ref: '#/components/responses/AuthError' }
     patch:
       operationId: updateBranch
       security: [{ sessionCookie: [] }]
-      description: OWNER only; may activate/deactivate except the final ACTIVE branch. No hard-delete operation.
+      description: Active OWNER with live session MFA only; may activate/deactivate except the final ACTIVE branch. Rechecks after lock waits and before effects and commit. Missing assurance returns 403 MFA_REQUIRED; invalid or expired authentication returns 401 UNAUTHENTICATED, without data. No hard-delete operation.
       parameters: [{ $ref: '#/components/parameters/CSRF' }]
       requestBody:
         {
@@ -3654,6 +3694,7 @@ paths:
         '403': { $ref: '#/components/responses/AuthError' }
         '404': { $ref: '#/components/responses/AuthError' }
         '409': { $ref: '#/components/responses/AuthError' }
+        '503': { $ref: '#/components/responses/AuthError' }
   /api/v1/auth/register:
     post:
       operationId: register
@@ -3831,6 +3872,101 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/MessageResponse' }
         '400': { $ref: '#/components/responses/InvalidInput' }
+        '429': { $ref: '#/components/responses/AuthError' }
+        '503': { $ref: '#/components/responses/AuthError' }
+  /api/v1/auth/mfa:
+    get:
+      operationId: mfaStatus
+      security: [{ sessionCookie: [] }]
+      description: Live verified account only. Reports current active-factor assurance for this session, not a sensitive-action grant. All responses use Cache-Control no-store. Missing server encryption configuration returns 503.
+      responses:
+        '200':
+          description: Current factor and session status from one consistent database read.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MFAStatusResponse' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '503': { $ref: '#/components/responses/AuthError' }
+  /api/v1/auth/mfa/enrollment:
+    post:
+      operationId: beginMFAEnrollment
+      security: [{ sessionCookie: [] }]
+      description: Requires allowed Origin, session CSRF and verified primary login within five minutes. Replaces only pending enrollment and binds it to this session. Active factors cannot be replaced. Secret is returned only after encrypted persistence and audit commit; do not log or persist it in browser storage. All responses use no-store. Five durable enrollment attempts per account per ten minutes, shared across sessions.
+      parameters:
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: false }
+      responses:
+        '200':
+          description: Five-minute pending factor with a 20-byte Base32 TOTP secret (SHA1, six digits, 30-second period).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MFAEnrollmentResponse' }
+        '400': { $ref: '#/components/responses/AuthError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '409': { $ref: '#/components/responses/AuthError' }
+        '415': { $ref: '#/components/responses/AuthError' }
+        '429': { $ref: '#/components/responses/AuthError' }
+        '503': { $ref: '#/components/responses/AuthError' }
+  /api/v1/auth/mfa/enrollment/confirm:
+    post:
+      operationId: confirmMFAEnrollment
+      security: [{ sessionCookie: [] }]
+      description: Requires allowed Origin, session CSRF and fresh primary login within five minutes on the initiating session. Atomically activates the current pending factor, consumes the OTP step, creates ten recovery-code verifiers, records assurance and audit. Codes are returned once after commit; retries never redisclose them. If a successful response is lost, check status; recovery-code regeneration remains unavailable in this slice. All responses use no-store. Shares the five-per-ten-minute account proof limit with challenge.
+      parameters:
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MFAProofInput' }
+      responses:
+        '200':
+          description: Enabled factor with ten single-use recovery codes; never log or persist them in browser storage.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MFARecoveryResponse' }
+        '400': { $ref: '#/components/responses/AuthError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '415': { $ref: '#/components/responses/AuthError' }
+        '429': { $ref: '#/components/responses/AuthError' }
+        '503': { $ref: '#/components/responses/AuthError' }
+  /api/v1/auth/mfa/challenge:
+    post:
+      operationId: verifyMFA
+      security: [{ sessionCookie: [] }]
+      description: Requires allowed Origin, session CSRF and live verified account. Consumes one current active-factor TOTP step atomically with session assurance and audit. This does not refresh primary-authentication time or grant a sensitive action. All responses use no-store. Shares the five-per-ten-minute account proof limit with confirmation.
+      parameters:
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MFAProofInput' }
+      responses:
+        '200':
+          description: Current session now has active-factor assurance.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MFAVerifiedResponse' }
+        '400': { $ref: '#/components/responses/AuthError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '415': { $ref: '#/components/responses/AuthError' }
         '429': { $ref: '#/components/responses/AuthError' }
         '503': { $ref: '#/components/responses/AuthError' }
   /api/v1/auth/me:
@@ -17930,7 +18066,7 @@ paths:
       operationId: getRestaurantSetup
       security:
         - sessionCookie: []
-      description: Owner-only, verified-account setup progress and server-authoritative readiness. Omit branch_id for organization-scoped restaurant setup without branch, stock, terminal or shift infrastructure. An explicit branch_id selects the retained legacy setup; no branch is chosen automatically. No setup data is returned for a foreign organization. Organization-scoped setup does not yet enable legacy branch-bound ordering or settlement.
+      description: Owner-only, verified-account setup progress and server-authoritative readiness. Omit branch_id for organization-scoped restaurant setup without branch, stock, terminal or shift infrastructure. Organization-scoped and explicit retained-branch reads require live session MFA, rechecked after query waits before returning private state; missing assurance returns 403 MFA_REQUIRED and invalid or expired authentication returns 401 UNAUTHENTICATED, without data. An explicit branch_id selects retained legacy setup with the same independent MFA authorization; no branch is chosen automatically. No setup data is returned for a foreign organization. Organization-scoped setup does not yet enable legacy branch-bound ordering or settlement. Organization-scoped setup writes and matching replays also require independent live MFA authorization.
       parameters:
         - name: branch_id
           in: query
@@ -17957,9 +18093,9 @@ paths:
       - $ref: '#/components/parameters/OrganizationID'
     put:
       operationId: saveRestaurantSetupProfile
+      description: Organization-scoped and explicit retained-branch writes and matching replays require live session MFA and active OWNER permission, rechecked after waits, before later effects or private results and before commit. Missing assurance returns 403 MFA_REQUIRED; invalid or expired authentication returns 401 UNAUTHENTICATED, without setup data or QR tokens. Denial rolls back command, profile, menu, table, QR and audit effects together. An explicit branch_id selects retained legacy setup with the same independent MFA authorization and branch isolation. This does not grant five-minute sensitive-action authorization.
       security:
         - sessionCookie: []
-      description: Owner-only verified setup step. Saves the restaurant profile and enabled service modes atomically when migration 000030 is installed.
       parameters:
         - $ref: '#/components/parameters/CSRF'
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -17989,6 +18125,7 @@ paths:
       - $ref: '#/components/parameters/OrganizationID'
     put:
       operationId: saveRestaurantSetupServices
+      description: Organization-scoped and explicit retained-branch writes and matching replays require live session MFA and active OWNER permission, rechecked after waits, before later effects or private results and before commit. Missing assurance returns 403 MFA_REQUIRED; invalid or expired authentication returns 401 UNAUTHENTICATED, without setup data or QR tokens. Denial rolls back command, profile, menu, table, QR and audit effects together. An explicit branch_id selects retained legacy setup with the same independent MFA authorization and branch isolation. This does not grant five-minute sensitive-action authorization.
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/CSRF'
@@ -18020,6 +18157,7 @@ paths:
       - $ref: '#/components/parameters/OrganizationID'
     put:
       operationId: saveRestaurantSetupTables
+      description: Organization-scoped and explicit retained-branch writes and matching replays require live session MFA and active OWNER permission, rechecked after waits, before later effects or private results and before commit. Missing assurance returns 403 MFA_REQUIRED; invalid or expired authentication returns 401 UNAUTHENTICATED, without setup data or QR tokens. Denial rolls back command, profile, menu, table, QR and audit effects together. An explicit branch_id selects retained legacy setup with the same independent MFA authorization and branch isolation. This does not grant five-minute sensitive-action authorization.
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/CSRF'
@@ -18050,6 +18188,7 @@ paths:
       - $ref: '#/components/parameters/OrganizationID'
     put:
       operationId: saveRestaurantSetupMenu
+      description: Organization-scoped and explicit retained-branch writes and matching replays require live session MFA and active OWNER permission, rechecked after waits, before later effects or private results and before commit. Missing assurance returns 403 MFA_REQUIRED; invalid or expired authentication returns 401 UNAUTHENTICATED, without setup data or QR tokens. Denial rolls back command, profile, menu, table, QR and audit effects together. An explicit branch_id selects retained legacy setup with the same independent MFA authorization and branch isolation. This does not grant five-minute sensitive-action authorization.
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/CSRF'
@@ -18080,6 +18219,7 @@ paths:
       - $ref: '#/components/parameters/OrganizationID'
     put:
       operationId: saveRestaurantSetupPayments
+      description: Organization-scoped and explicit retained-branch writes and matching replays require live session MFA and active OWNER permission, rechecked after waits, before later effects or private results and before commit. Missing assurance returns 403 MFA_REQUIRED; invalid or expired authentication returns 401 UNAUTHENTICATED, without setup data or QR tokens. Denial rolls back command, profile, menu, table, QR and audit effects together. An explicit branch_id selects retained legacy setup with the same independent MFA authorization and branch isolation. This does not grant five-minute sensitive-action authorization.
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/CSRF'
@@ -18111,6 +18251,7 @@ paths:
       - $ref: '#/components/parameters/OrganizationID'
     put:
       operationId: saveRestaurantSetupOrders
+      description: Organization-scoped and explicit retained-branch writes and matching replays require live session MFA and active OWNER permission, rechecked after waits, before later effects or private results and before commit. Missing assurance returns 403 MFA_REQUIRED; invalid or expired authentication returns 401 UNAUTHENTICATED, without setup data or QR tokens. Denial rolls back command, profile, menu, table, QR and audit effects together. An explicit branch_id selects retained legacy setup with the same independent MFA authorization and branch isolation. This does not grant five-minute sensitive-action authorization.
       security: [{ sessionCookie: [] }]
       parameters:
         - $ref: '#/components/parameters/CSRF'
@@ -18141,8 +18282,8 @@ paths:
       - $ref: '#/components/parameters/OrganizationID'
     post:
       operationId: completeRestaurantSetup
+      description: Organization-scoped and explicit retained-branch writes and matching replays require live session MFA and active OWNER permission, rechecked after waits, before later effects or private results and before commit. Missing assurance returns 403 MFA_REQUIRED; invalid or expired authentication returns 401 UNAUTHENTICATED, without setup data or QR tokens. Denial rolls back command, profile, menu, table, QR and audit effects together. An explicit branch_id selects retained legacy setup with the same independent MFA authorization and branch isolation. This does not grant five-minute sensitive-action authorization. The server validates required restaurant profile, service modes, dine-in tables, payment and order settings, starts the 30-day trial and records audit state in one transaction. Store coordinates are optional and are not collected during setup. Menu items are optional and can be added after setup; missing menu items or legacy menu-step progress do not block completion. Other missing prerequisites return conflict and never fabricate readiness.
       security: [{ sessionCookie: [] }]
-      description: Owner-only verified completion. The server validates required restaurant profile, service modes, dine-in tables, payment and order settings, starts the 30-day trial and records audit state in one transaction. Store coordinates are optional and are not collected during setup. Menu items are optional and can be added after setup; missing menu items or legacy menu-step progress do not block completion. Other missing prerequisites return conflict and never fabricate readiness.
       parameters:
         - $ref: '#/components/parameters/CSRF'
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -18175,7 +18316,7 @@ paths:
       operationId: getRestaurantSettings
       security:
         - sessionCookie: []
-      description: storefront.manage. Returns closing-time settings and the current half-open reporting window. Defaults are revision zero until first save; midnight does not reset stock.
+      description: storefront.manage with independent active OWNER and live session MFA authorization. Rechecks after waits before returning private data; missing assurance returns 403 MFA_REQUIRED and invalid or expired authentication returns 401 UNAUTHENTICATED, without data. Returns closing-time settings and the current half-open reporting window. Defaults are revision zero until first save; midnight does not reset stock.
       responses:
         '200':
           description: Authorized restaurant data.
@@ -18212,7 +18353,7 @@ paths:
       operationId: saveRestaurantSettings
       security:
         - sessionCookie: []
-      description: 'storefront.manage. Optimistic revision is required. Saves configuration only: does not reset stock, close POS shifts, cancel orders or rewrite historical records.'
+      description: 'storefront.manage with independent active OWNER and live session MFA authorization. Rechecks after waits, before later effects and before commit; missing assurance returns 403 MFA_REQUIRED and invalid or expired authentication returns 401 UNAUTHENTICATED, without data or committed changes. Optimistic revision is required. Saves configuration only: does not reset stock, close POS shifts, cancel orders or rewrite historical records. This does not grant five-minute sensitive-action authority.'
       responses:
         '200':
           description: Authorized restaurant data.
@@ -18247,7 +18388,7 @@ paths:
       operationId: listRestaurantTables
       security:
         - sessionCookie: []
-      description: online_orders.manage. Branch-scoped table metadata. Listing never returns raw QR tokens. Dine-in orders use a creation token with a storefront bound to the same branch.
+      description: online_orders.manage with independent active OWNER and live session MFA authorization. Rechecks after waits before returning private data; missing assurance returns 403 MFA_REQUIRED and invalid or expired authentication returns 401 UNAUTHENTICATED, without data. Branch-scoped table metadata. Listing never returns raw QR tokens. Dine-in orders use a creation token with a storefront bound to the same branch.
       responses:
         '200':
           description: Authorized restaurant data.
@@ -18275,7 +18416,7 @@ paths:
       operationId: createRestaurantTable
       security:
         - sessionCookie: []
-      description: online_orders.manage. Durable actor-scoped key/payload replay. Revision zero. Returns the generated qr_token only on creation and replay of that creation; store it before leaving the page. Listing and updates omit it.
+      description: online_orders.manage with independent active OWNER and live session MFA authorization, including durable actor-scoped key/payload replay. Rechecks after waits, before private replay results, later effects and commit; missing assurance returns 403 MFA_REQUIRED and invalid or expired authentication returns 401 UNAUTHENTICATED, without data, QR tokens or committed changes. Revision zero. Returns the generated qr_token only on creation and replay of that creation; store it before leaving the page. Listing and updates omit it. This does not grant five-minute sensitive-action authority.
       responses:
         '200':
           description: Authorized restaurant data.
@@ -18319,7 +18460,7 @@ paths:
       operationId: updateRestaurantTable
       security:
         - sessionCookie: []
-      description: online_orders.manage. Requires current positive revision; stale revisions conflict. Does not enable dine-in checkout.
+      description: online_orders.manage with independent active OWNER and live session MFA authorization. Rechecks after waits, before later effects and commit; missing assurance returns 403 MFA_REQUIRED and invalid or expired authentication returns 401 UNAUTHENTICATED, without data or committed changes. Requires current positive revision; stale revisions conflict. Does not enable dine-in checkout. This does not grant five-minute sensitive-action authority.
       responses:
         '200':
           description: Authorized restaurant data.
@@ -18354,7 +18495,7 @@ paths:
       operationId: listRestaurantQueue
       security:
         - sessionCookie: []
-      description: online_orders.read. Authenticated live paid active online orders only. Returns durable queue numbers scoped to the organization, branch and persisted business period; orders without a ticket retain their legacy WEB-... order number. No customer PII or anonymous public display token.
+      description: online_orders.read with independent active OWNER and live session MFA authorization. Rechecks after waits before returning private data; missing assurance returns 403 MFA_REQUIRED and invalid or expired authentication returns 401 UNAUTHENTICATED, without data. Live active online orders require a PAID attempt with unreleased stock hold and exclude REQUESTED, PENDING, REQUIRES_ACTION or SUCCEEDED refund intents and FULFILLMENT_REVIEW reconciliations. Returns durable queue numbers scoped to the organization, branch and persisted business period; orders without a ticket retain their legacy WEB-... order number. No customer PII or anonymous public display token.
       responses:
         '200':
           description: Authorized restaurant data.
@@ -18510,6 +18651,60 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
   schemas:
+    MFAProofInput:
+      type: object
+      additionalProperties: false
+      required: [code]
+      properties:
+        code: { type: string, pattern: '^[0-9]{6}$' }
+    MFAStatusResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [enabled, session_verified]
+          properties:
+            enabled: { type: boolean }
+            session_verified: { type: boolean }
+    MFAEnrollmentResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [factor_id, secret, expires_at]
+          properties:
+            factor_id: { type: string, format: uuid }
+            secret: { type: string, pattern: '^[A-Z2-7]{32}$' }
+            expires_at: { type: string, format: date-time }
+    MFARecoveryResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [recovery_codes]
+          properties:
+            recovery_codes:
+              type: array
+              minItems: 10
+              maxItems: 10
+              uniqueItems: true
+              items: { type: string, pattern: '^[A-Z2-7]{25}[AEIMQUY4]$' }
+    MFAVerifiedResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [session_verified]
+          properties:
+            session_verified: { type: boolean, const: true }
     EmailVerificationInput:
       type: object
       additionalProperties: false
@@ -18652,10 +18847,12 @@ components:
       type: object
       additionalProperties: false
       required: [dine_in, takeaway, delivery]
+      description: Setup configuration only. Pickup is independent of Takeaway and is supported only without an explicit branch_id. Omission preserves the stored Pickup value; old replay snapshots may omit it. New organization profiles default Pickup to false. A supplied value must be Boolean. At least one effective service mode is required when services are saved. In a profile update, all three legacy flags false with Pickup omitted leaves services unchanged. These flags do not publish a restaurant or pause runtime ordering.
       properties:
         dine_in: { type: boolean, default: true }
         takeaway: { type: boolean, default: true }
         delivery: { type: boolean, default: false }
+        pickup: { type: boolean }
     RestaurantSetupLocation:
       type: object
       additionalProperties: false

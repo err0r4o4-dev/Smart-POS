@@ -42,7 +42,15 @@ func run(logger *slog.Logger) error {
 		return err
 	}
 	google := identity.NewGoogleAuth(authentication, settings.GoogleClientID, settings.GoogleClientSecret, settings.GoogleRedirectURI)
-	server := &http.Server{Addr: settings.Address, Handler: transport.RouterWithOptions(database.Checker{Pool: pool}, logger, transport.Options{PaymentSandbox: settings.PaymentSandbox, CustomerPayments: settings.CustomerPayments, SingleStoreOrganizationID: settings.SingleStoreOrganizationID}, identity.Handler{Service: authentication, Google: google, Origins: settings.AllowedOrigins, Production: settings.Environment == "production", TrustedProxyIP: settings.TrustedProxyIP}), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 1 << 20}
+	var mfa *identity.MFAService
+	if settings.MFAEncryptionKeyID != "" {
+		mfa, err = identity.NewMFAService(pool, settings.MFAEncryptionKeyID, settings.MFAEncryptionKey)
+		if err != nil {
+			return errors.New("MFA initialization failed")
+		}
+		clear(settings.MFAEncryptionKey)
+	}
+	server := &http.Server{Addr: settings.Address, Handler: transport.RouterWithOptions(database.Checker{Pool: pool}, logger, transport.Options{PaymentSandbox: settings.PaymentSandbox, CustomerPayments: settings.CustomerPayments, SingleStoreOrganizationID: settings.SingleStoreOrganizationID}, identity.Handler{Service: authentication, Google: google, MFA: mfa, Origins: settings.AllowedOrigins, Production: settings.Environment == "production", TrustedProxyIP: settings.TrustedProxyIP}), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 1 << 20}
 	failures := make(chan error, 1)
 	go func() { failures <- server.ListenAndServe() }()
 	logger.Info("server starting", "event", "server_starting", "address", settings.Address)

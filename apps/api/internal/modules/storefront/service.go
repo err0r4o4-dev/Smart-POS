@@ -139,25 +139,24 @@ func (service *Service) PublicSettings(ctx context.Context, slug string) (Settin
 	return result, nil
 }
 func (service *Service) Settings(ctx context.Context, user, org string) (*Settings, error) {
-	tx, actor, err := service.authorized(ctx, user, org, "storefront.manage")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "storefront.manage")
 	if err != nil {
-		return nil, err
+		return nil, dbError(err)
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
 	result, err := settings(ctx, tx, org)
 	if errors.Is(err, ErrNotFound) {
-		return nil, nil
+		return nil, authorization.Recheck(ctx)
 	}
 	if err != nil {
 		return nil, err
 	}
-	if !branchAllowed(actor, result.BranchID) {
+	if !branchAllowed(authorization.Actor, result.BranchID) {
 		return nil, organization.ErrDenied
 	}
-	if result.TerminalID == "" {
-		if err = organization.RequireVerified(ctx, tx, user); err != nil {
-			return nil, err
-		}
+	if err = authorization.Recheck(ctx); err != nil {
+		return nil, err
 	}
 	return &result, nil
 }
@@ -183,16 +182,27 @@ func uniqueAutoSlug(ctx context.Context, tx pgx.Tx, base string) (string, error)
 	return "", ErrConflict
 }
 func (service *Service) SaveSettings(ctx context.Context, user, org string, input SettingsInput) (Settings, error) {
-	tx, actor, err := service.authorized(ctx, user, org, "storefront.manage")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "storefront.manage")
 	if err != nil {
-		return Settings{}, err
+		return Settings{}, dbError(err)
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
 	if err = input.validate(); err != nil {
 		return Settings{}, err
 	}
 	if input.TerminalID == "" {
-		return saveOrganizationSettings(ctx, tx, user, org, input)
+		result, err := saveOrganizationSettings(ctx, authorization, user, org, input)
+		if err != nil {
+			return Settings{}, err
+		}
+		if err = authorization.Recheck(ctx); err != nil {
+			return Settings{}, err
+		}
+		if err = tx.Commit(ctx); err != nil {
+			return Settings{}, dbError(err)
+		}
+		return result, nil
 	}
 	var branch, location string
 	err = tx.QueryRow(ctx, `SELECT terminal.branch_id::text,terminal.stock_location_id::text FROM pos_terminals terminal JOIN branches branch ON branch.organization_id=terminal.organization_id AND branch.id=terminal.branch_id WHERE terminal.organization_id=$1 AND terminal.id=$2 AND terminal.status='ACTIVE' AND branch.status='ACTIVE' FOR UPDATE OF terminal`, org, input.TerminalID).Scan(&branch, &location)
@@ -259,21 +269,36 @@ func (service *Service) SaveSettings(ctx context.Context, user, org string, inpu
 			return Settings{}, ErrConflict
 		}
 	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Settings{}, err
+	}
 	_, err = tx.Exec(ctx, `INSERT INTO storefronts(organization_id,slug,name,description,contact_phone,pickup_instructions,terminal_id,published,accepting_orders,online_terminal_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,nullif($10,'')::uuid) ON CONFLICT(organization_id) DO UPDATE SET slug=excluded.slug,name=excluded.name,description=excluded.description,contact_phone=excluded.contact_phone,pickup_instructions=excluded.pickup_instructions,terminal_id=excluded.terminal_id,published=excluded.published,accepting_orders=excluded.accepting_orders,online_terminal_id=excluded.online_terminal_id,revision=storefronts.revision+1,updated_at=now()`, org, input.Slug, input.Name, input.Description, input.ContactPhone, input.PickupInstructions, input.TerminalID, input.Published, input.AcceptingOrders, input.OnlineTerminalID)
 	if err != nil {
 		return Settings{}, dbError(err)
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Settings{}, err
 	}
 	if _, err = tx.Exec(ctx, "UPDATE storefronts SET delivery_enabled=$2,shipping_fee=$3 WHERE organization_id=$1", org, input.DeliveryEnabled, input.ShippingFee); err != nil {
 		return Settings{}, dbError(err)
 	}
 	result, err := settings(ctx, tx, org)
 	if err != nil {
-		return result, err
+		return Settings{}, err
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Settings{}, err
 	}
 	if err = organization.RecordAudit(ctx, tx, org, user, "storefront.updated", org); err != nil {
-		return result, err
+		return Settings{}, err
 	}
-	return result, dbError(tx.Commit(ctx))
+	if err = authorization.Recheck(ctx); err != nil {
+		return Settings{}, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return Settings{}, dbError(err)
+	}
+	return result, nil
 }
 func saleSource(ctx context.Context, tx pgx.Tx, org string, shop Settings) error {
 	var active bool

@@ -1,9 +1,44 @@
 package config
 
 import (
+	"encoding/base64"
 	"strings"
 	"testing"
 )
+
+func TestMFAConfiguration(t *testing.T) {
+	key := base64.StdEncoding.EncodeToString([]byte(strings.Repeat("B", 32)))
+	for _, item := range []struct {
+		name, id, key string
+		valid         bool
+	}{
+		{"pre-cutover disabled", "", "", true},
+		{"configured", "key-v1", key, true},
+		{"missing key", "key-v1", "", false},
+		{"missing id", "", key, false},
+		{"invalid id", " key-v1", key, false},
+		{"long id", strings.Repeat("x", 101), key, false},
+		{"invalid encoding", "key-v1", "not-a-key", false},
+		{"short key", "key-v1", base64.StdEncoding.EncodeToString([]byte(strings.Repeat("B", 31))), false},
+		{"long key", "key-v1", base64.StdEncoding.EncodeToString([]byte(strings.Repeat("B", 33))), false},
+		{"embedded newline", "key-v1", key[:8] + "\n" + key[8:], false},
+		{"unpadded key", "key-v1", strings.TrimRight(key, "="), false},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			values := map[string]string{"DATABASE_URL": "postgres://localhost/smartpos", "APP_ENV": "development", "PUBLIC_ORIGIN": "https://example.test", "SMTP_ADDR": "localhost:1025", "MAIL_FROM": "noreply@example.test", "MFA_ENCRYPTION_KEY_ID": item.id, "MFA_ENCRYPTION_KEY": item.key}
+			settings, err := Parse(func(name string) string { return values[name] })
+			if (err == nil) != item.valid {
+				t.Fatalf("valid=%v error=%v", item.valid, err)
+			}
+			if err != nil && (!strings.Contains(err.Error(), "MFA_ENCRYPTION_KEY") || (item.key != "" && strings.Contains(err.Error(), item.key))) {
+				t.Fatal("MFA configuration error is unsafe or not actionable")
+			}
+			if err == nil && (settings.MFAEncryptionKeyID != item.id || (item.id == "" && len(settings.MFAEncryptionKey) != 0) || (item.id != "" && string(settings.MFAEncryptionKey) != strings.Repeat("B", 32))) {
+				t.Fatal("MFA configuration did not retain the explicitly decoded key")
+			}
+		})
+	}
+}
 
 func TestGoogleConfiguration(test *testing.T) {
 	for _, tc := range []struct {

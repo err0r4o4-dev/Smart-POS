@@ -7,12 +7,20 @@ import (
 )
 
 func (service *Service) Branches(ctx context.Context, userID, orgID string) ([]Branch, error) {
-	tx, actor, err := service.authorized(ctx, userID, orgID, "branch.read")
+	authorization, err := service.AuthorizeMFA(ctx, userID, orgID, "branch.read")
 	if err != nil {
 		return nil, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
-	return branches(ctx, tx, orgID, actor, actor.Role != "OWNER")
+	result, err := branches(ctx, tx, orgID, actor, actor.Role != "OWNER")
+	if err != nil {
+		return nil, err
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 func (service *Service) SaveBranch(ctx context.Context, userID, orgID, branchID string, input BranchInput) (Branch, error) {
 	if input.validate() != nil {
@@ -25,13 +33,17 @@ func (service *Service) SaveBranch(ctx context.Context, userID, orgID, branchID 
 			return Branch{}, ErrNotFound
 		}
 	}
-	tx, actor, err := service.authorized(ctx, userID, orgID, permission)
+	authorization, err := service.AuthorizeMFA(ctx, userID, orgID, permission)
 	if err != nil {
 		return Branch{}, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
 	isMain := false
 	if branchID == "" {
+		if err = authorization.Recheck(ctx); err != nil {
+			return Branch{}, err
+		}
 		err = tx.QueryRow(ctx, "INSERT INTO branches(organization_id,name,code,address,phone,email,status) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id", orgID, input.Name, input.Code, input.Address, input.Phone, input.Email, input.Status).Scan(&branchID)
 	} else {
 		if actor.Role != "OWNER" && (!contains(actor.BranchIDs, branchID) || input.Status != "ACTIVE") {
@@ -54,15 +66,27 @@ func (service *Service) SaveBranch(ctx context.Context, userID, orgID, branchID 
 				return Branch{}, ErrConflict
 			}
 		}
+		if err = authorization.Recheck(ctx); err != nil {
+			return Branch{}, err
+		}
 		_, err = tx.Exec(ctx, "UPDATE branches SET name=$3,code=$4,address=$5,phone=$6,email=$7,status=$8,updated_at=now() WHERE organization_id=$1 AND id=$2", orgID, branchID, input.Name, input.Code, input.Address, input.Phone, input.Email, input.Status)
 	}
 	if err != nil {
 		return Branch{}, dbError(err)
 	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Branch{}, err
+	}
 	if err = audit(ctx, tx, orgID, userID, "BRANCH_SAVED", branchID, []string{branchID}); err != nil {
 		return Branch{}, err
 	}
-	return Branch{branchID, orgID, input, isMain}, dbError(tx.Commit(ctx))
+	if err = authorization.Recheck(ctx); err != nil {
+		return Branch{}, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return Branch{}, dbError(err)
+	}
+	return Branch{branchID, orgID, input, isMain}, nil
 }
 func (service *Service) Members(ctx context.Context, userID, orgID, memberID string) ([]Member, error) {
 	return nil, ErrNotFound
@@ -101,10 +125,11 @@ type AuditEvent struct {
 }
 
 func (service *Service) Audit(ctx context.Context, userID, orgID, objectID string) ([]AuditEvent, error) {
-	tx, actor, err := service.authorized(ctx, userID, orgID, "audit.read")
+	authorization, err := service.AuthorizeMFA(ctx, userID, orgID, "audit.read")
 	if err != nil {
 		return nil, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
 	if objectID != "" {
 		if !uuidPattern.MatchString(objectID) {
@@ -130,5 +155,12 @@ func (service *Service) Audit(ctx context.Context, userID, orgID, objectID strin
 		}
 		result = append(result, event)
 	}
-	return result, rows.Err()
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return nil, err
+	}
+	return result, nil
 }

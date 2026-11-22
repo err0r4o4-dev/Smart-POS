@@ -22,6 +22,7 @@ type Profile struct {
 }
 
 type Session struct {
+	ID        string `json:"-"`
 	User      Profile
 	CSRFHash  [32]byte
 	CSRFToken string
@@ -175,7 +176,7 @@ func (service *Service) Current(ctx context.Context, token string) (Session, err
 	var session Session
 	session.User.Onboarding = "PENDING_ORGANIZATION"
 	var csrfHash []byte
-	err = service.Pool.QueryRow(ctx, `SELECT u.id,u.email,u.display_name,u.status,u.email_verified_at IS NOT NULL,s.csrf_hash FROM auth_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>now() AND u.status='ACTIVE'`, tokenHash[:]).Scan(&session.User.ID, &session.User.Email, &session.User.DisplayName, &session.User.Status, &session.User.EmailVerified, &csrfHash)
+	err = service.Pool.QueryRow(ctx, `SELECT u.id,u.email,u.display_name,u.status,u.email_verified_at IS NOT NULL,s.csrf_hash,s.id FROM auth_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>now() AND u.status='ACTIVE'`, tokenHash[:]).Scan(&session.User.ID, &session.User.Email, &session.User.DisplayName, &session.User.Status, &session.User.EmailVerified, &csrfHash, &session.ID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Session{}, ErrInvalidToken
 	}

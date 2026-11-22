@@ -4,28 +4,41 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5"
-	"smartpos/api/internal/modules/organization"
 	"smartpos/api/internal/modules/pos"
 	"smartpos/api/internal/modules/pricing"
 )
 
 func (service *Service) QuoteOrganization(ctx context.Context, user, org string, input QuoteInput) (Quote, error) {
-	tx, _, err := service.authorized(ctx, user, org, "storefront.manage")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "storefront.manage")
 	if err != nil {
-		return Quote{}, err
+		return Quote{}, dbError(err)
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
-	if err = organization.RequireVerified(ctx, tx, user); err != nil {
-		return Quote{}, err
-	}
 	if input.TableToken != "" {
 		return Quote{}, ErrInput
 	}
-	shop, err := settings(ctx, tx, org)
-	if err != nil {
+	shop, readError := settings(ctx, tx, org)
+	if err = ctx.Err(); err != nil {
 		return Quote{}, err
 	}
-	return organizationQuote(ctx, tx, org, shop, input.Items, input.Fulfillment)
+	if err = authorization.Recheck(ctx); err != nil {
+		return Quote{}, err
+	}
+	if readError != nil {
+		return Quote{}, readError
+	}
+	result, quoteError := organizationQuote(ctx, tx, org, shop, input.Items, input.Fulfillment)
+	if err = ctx.Err(); err != nil {
+		return Quote{}, err
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Quote{}, err
+	}
+	if quoteError != nil {
+		return Quote{}, quoteError
+	}
+	return result, nil
 }
 
 func organizationQuote(ctx context.Context, tx pgx.Tx, org string, shop Settings, items []ItemInput, mode string) (Quote, error) {

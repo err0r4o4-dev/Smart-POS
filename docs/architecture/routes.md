@@ -36,6 +36,7 @@ Storefront adds seven logical routes; backoffice routes use the management works
 | Authentication | `/verify-email` | Email confirmation and resend; no automatic login | 1 | public; session refresh for signed-in users |
 | Authentication | `/forgot-password` | Implemented Phase 1A | 1 | public Origin-validated entry |
 | Authentication | `/reset-password` | Implemented Phase 1A | 1 | public token + Origin-validated entry |
+| Authentication | `/security` | MFA enrollment/challenge and one-time recovery-code display; mandatory authority gates pending | 1 | verified session; independent of organization context |
 | Authentication | `/setup` | Implemented Phase 1B | 1 | session; no existing tenant required for creation |
 | Authentication | `/account` | Implemented Phase 1A | 1 | session |
 | Dashboard | `/dashboard` | Foundation shell (business dashboard planned) | 3 | session + tenant + branch permission |

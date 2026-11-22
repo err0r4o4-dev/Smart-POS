@@ -6,7 +6,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { ChevronRight, LogOut, Settings } from 'lucide-react';
+import { ChevronRight, LogOut, Settings, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../app/AuthProvider';
 import { useLanguage } from '../../app/language';
 import { paths } from '../../app/routes';
@@ -66,6 +66,7 @@ export function AccountMenu() {
   const initial =
     state.session.user.display_name.trim().slice(0, 1).toUpperCase() || 'U';
   const isSettingsRoute =
+    location.pathname === paths.security ||
     location.pathname === paths.settings ||
     location.pathname.startsWith(paths.settings + '/');
 
@@ -179,6 +180,17 @@ export function AccountMenu() {
           <div className="account-menu-divider" role="separator" />
 
           <div className="account-menu-list">
+            <NavLink
+              to={paths.security}
+              role="menuitem"
+              className="account-menu-item"
+              onClick={() => setOpen(false)}
+            >
+              <span className="account-menu-item-icon" aria-hidden="true">
+                <ShieldCheck size={16} />
+              </span>
+              <span className="account-menu-item-label">{t('mfa.title')}</span>
+            </NavLink>
             <NavLink
               to={paths.settings}
               role="menuitem"

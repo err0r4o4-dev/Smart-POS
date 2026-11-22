@@ -3,6 +3,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useOrganization } from '../../app/OrganizationProvider';
 import { ErrorState, Loading } from '../../components/ui/primitives';
 import type { Role } from '../../app/access';
+import { MFARequiredState } from './MFARequiredState';
 
 function useSafeOrganization() {
   try {
@@ -25,6 +26,7 @@ export function OrganizationGate({
     return (
       <Loading>{t('organization.checkingOrganizationPermissions')}</Loading>
     );
+  if (tenant.errorCode === 'MFA_REQUIRED') return <MFARequiredState />;
   if (tenant.error)
     return (
       <ErrorState

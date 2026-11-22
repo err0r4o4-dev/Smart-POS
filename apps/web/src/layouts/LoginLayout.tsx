@@ -18,7 +18,7 @@ export function LoginLayout({
 }: {
   children: ReactNode;
   titleId?: string;
-  story?: 'login' | 'register' | 'verify' | 'recover' | 'reset';
+  story?: 'login' | 'register' | 'verify' | 'recover' | 'reset' | 'security';
 }) {
   const { t } = useLanguage();
   const storyTitle =

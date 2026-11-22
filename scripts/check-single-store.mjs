@@ -5,6 +5,7 @@ import { createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { setTimeout } from 'node:timers/promises';
 import { assertIntegrationTestsRan } from './single-store-test-output.mjs';
+import { verifyPickupRecovery } from './pickup-recovery-check.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const apiRoot = fileURLToPath(new URL('../apps/api/', import.meta.url));
@@ -650,6 +651,10 @@ COMMIT;`,
   assertIntegrationTestsRan(testOutput);
   console.log(
     'PASS: selected integration acceptance cases completed without skips.',
+  );
+  verifyPickupRecovery((statement) => sql(database, statement));
+  console.log(
+    'PASS: Pickup downgrade preserves incomplete data under administrator and FORCE RLS owner roles.',
   );
 } catch (error) {
   console.error(redact(error.message));

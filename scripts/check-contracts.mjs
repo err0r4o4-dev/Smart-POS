@@ -12,15 +12,15 @@ assert.ok(
   ),
   'Employee and role management must not be part of the active route inventory',
 );
-const expected = [7, 4, 9, 6, 9, 11, 7, 8, 5, 5, 4, 6, 7, 2, 10, 4, 8, 3];
+const expected = [8, 4, 9, 6, 9, 11, 7, 8, 5, 5, 4, 6, 7, 2, 10, 4, 8, 3];
 assert.equal(modules.length, 18);
 assert.deepEqual(
   modules.map((item) => item.routes.length),
   expected,
 );
 const routes = modules.flatMap((item) => item.routes);
-assert.equal(routes.length, 115);
-assert.equal(new Set(routes).size, 115);
+assert.equal(routes.length, 116);
+assert.equal(new Set(routes).size, 116);
 for (const route of [
   '/restaurant/recipes',
   '/restaurant/quick-stock',
@@ -41,6 +41,30 @@ for (const item of modules) {
     assert.ok(routeDocs.includes('`' + route + '`'), `Missing route ${route}`);
 }
 const api = YAML.parse(readFileSync('packages/contracts/openapi.yaml', 'utf8'));
+for (const [path, method, response] of [
+  ['', 'get', 'MFAStatusResponse'],
+  ['/enrollment', 'post', 'MFAEnrollmentResponse'],
+  ['/enrollment/confirm', 'post', 'MFARecoveryResponse'],
+  ['/challenge', 'post', 'MFAVerifiedResponse'],
+]) {
+  const operation = api.paths['/api/v1/auth/mfa' + path]?.[method];
+  assert.deepEqual(operation?.security, [{ sessionCookie: [] }]);
+  assert.equal(
+    operation.responses['200'].content['application/json'].schema.$ref,
+    '#/components/schemas/' + response,
+  );
+  if (method === 'post')
+    assert.ok(
+      operation.parameters.some(
+        (parameter) => parameter.name === 'X-CSRF-Token' && parameter.required,
+      ),
+    );
+}
+assert.equal(api.components.schemas.MFAProofInput.additionalProperties, false);
+assert.equal(
+  api.components.schemas.MFAProofInput.properties.code.pattern,
+  '^[0-9]{6}$',
+);
 assert.equal(
   api.paths['/api/v1/auth/register'].post.responses['201'].content[
     'application/json'
@@ -377,6 +401,10 @@ assert.deepEqual(
     '/api/v1/auth/login',
     '/api/v1/auth/logout',
     '/api/v1/auth/me',
+    '/api/v1/auth/mfa',
+    '/api/v1/auth/mfa/enrollment',
+    '/api/v1/auth/mfa/enrollment/confirm',
+    '/api/v1/auth/mfa/challenge',
     '/api/v1/auth/register',
     '/api/v1/auth/reset-password',
     '/api/v1/auth/email/verify',
@@ -1096,5 +1124,5 @@ for (const name of ['product_id', 'variant_id', 'category_id']) {
   assert.equal(restaurantMenuItem.properties[name].format, 'uuid');
 }
 console.log(
-  'PASS: 18 modules, 115 unique documented routes, owner-only access, Stripe sandbox/storefront/POS contracts and service health wiring',
+  'PASS: 18 modules, 116 unique documented routes, owner-only access, Stripe sandbox/storefront/POS contracts and service health wiring',
 );

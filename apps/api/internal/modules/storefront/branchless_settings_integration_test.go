@@ -12,7 +12,7 @@ import (
 	"smartpos/api/internal/modules/storefront"
 )
 
-func verifyBranchlessSettings(testContext *testing.T, ctx context.Context, organizations *organization.Service, owner, guest, org string) {
+func verifyBranchlessSettings(testContext *testing.T, ctx, guestCtx context.Context, organizations *organization.Service, owner, guest, org string) {
 	testContext.Helper()
 	service := &storefront.Service{Organization: organizations}
 	input := storefront.SettingsInput{Name: "Restaurant draft", ShippingFee: "12.35", DeliveryEnabled: true}
@@ -50,8 +50,8 @@ func verifyBranchlessSettings(testContext *testing.T, ctx context.Context, organ
 	if _, err = service.PublicSettings(ctx, saved.Slug); !errors.Is(err, storefront.ErrNotFound) {
 		testContext.Fatalf("unpublished draft exposed publicly: %v", err)
 	}
-	verifyOrganizationQuote(testContext, ctx, organizations, owner, guest, org, saved.Slug)
-	verifyBranchlessCatalog(testContext, ctx, organizations, owner, guest, org, saved.Slug)
+	verifyOrganizationQuote(testContext, ctx, guestCtx, organizations, owner, guest, org, saved.Slug)
+	verifyBranchlessCatalog(testContext, ctx, guestCtx, organizations, owner, guest, org, saved.Slug)
 	if _, err = service.Publish(ctx, owner, org, "11111111-1111-4111-8111-111111111111", storefront.PublishInput{Revision: saved.Revision, Published: true}); !errors.Is(err, storefront.ErrConflict) {
 		testContext.Fatalf("draft used legacy product publishing: %v", err)
 	}
@@ -72,10 +72,10 @@ func verifyBranchlessSettings(testContext *testing.T, ctx context.Context, organ
 	if err != nil || updated.Revision != 2 || updated.Slug != saved.Slug || updated.ShippingFee != "13.37" {
 		testContext.Fatalf("draft revision update failed: %v", err)
 	}
-	if _, err = service.Settings(ctx, guest, org); !errors.Is(err, organization.ErrDenied) && !errors.Is(err, organization.ErrNotFound) {
+	if _, err = service.Settings(guestCtx, guest, org); !errors.Is(err, organization.ErrDenied) && !errors.Is(err, organization.ErrNotFound) {
 		testContext.Fatalf("non-owner read draft: %v", err)
 	}
-	if _, err = service.SaveSettings(ctx, guest, org, input); !errors.Is(err, organization.ErrDenied) && !errors.Is(err, organization.ErrNotFound) {
+	if _, err = service.SaveSettings(guestCtx, guest, org, input); !errors.Is(err, organization.ErrDenied) && !errors.Is(err, organization.ErrNotFound) {
 		testContext.Fatalf("non-owner changed draft: %v", err)
 	}
 	other, err := organizations.CreateRestaurant(ctx, owner, "a9711111-1111-4111-8111-111111111111", organization.OrganizationInput{Name: "No profile draft", BusinessType: "RESTAURANT"})

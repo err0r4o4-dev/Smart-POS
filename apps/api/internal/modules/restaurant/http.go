@@ -46,6 +46,10 @@ func endpoint(run func(context.Context, string, string, *http.Request) (any, err
 		}
 		status, code, message := 503, "DEPENDENCY_UNAVAILABLE", "ระบบร้านอาหารยังไม่พร้อม"
 		switch {
+		case errors.Is(err, identity.ErrInvalidToken):
+			status, code, message = 401, "UNAUTHENTICATED", "Authentication required"
+		case errors.Is(err, identity.ErrMFARequired):
+			status, code, message = 403, "MFA_REQUIRED", "Verify MFA in account security before continuing"
 		case errors.Is(err, ErrInput), errors.Is(err, inventory.ErrInput):
 			status, code, message = 400, "INVALID_INPUT", "ตรวจสอบข้อมูลร้านอาหารอีกครั้ง"
 		case errors.Is(err, ErrNotFound), errors.Is(err, organization.ErrNotFound), errors.Is(err, inventory.ErrNotFound):

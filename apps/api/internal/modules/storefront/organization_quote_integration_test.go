@@ -8,11 +8,12 @@ import (
 	"testing"
 	"time"
 
+	"smartpos/api/internal/modules/identity"
 	"smartpos/api/internal/modules/organization"
 	"smartpos/api/internal/modules/storefront"
 )
 
-func verifyOrganizationQuote(testContext *testing.T, ctx context.Context, organizations *organization.Service, owner, guest, org, slug string) {
+func verifyOrganizationQuote(testContext *testing.T, ctx, guestCtx context.Context, organizations *organization.Service, owner, guest, org, slug string) {
 	testContext.Helper()
 	service := &storefront.Service{Organization: organizations}
 	snapshot := func() [7]int {
@@ -42,6 +43,12 @@ func verifyOrganizationQuote(testContext *testing.T, ctx context.Context, organi
 		testContext.Fatalf("organization quote menu fixture: %v", err)
 	}
 	input := storefront.QuoteInput{Items: []storefront.ItemInput{{VariantID: page.Items[0].VariantID, Quantity: "2.000"}}, Fulfillment: "DELIVERY"}
+	testContext.Run("organization quote requires a live session", func(testContext *testing.T) {
+		value, problem := service.QuoteOrganization(context.Background(), owner, org, input)
+		if !errors.Is(problem, identity.ErrInvalidToken) || !reflect.ValueOf(value).IsZero() {
+			testContext.Fatalf("unassured organization quote returned data: %v", problem)
+		}
+	})
 	value, err := service.QuoteOrganization(ctx, owner, org, input)
 	if err != nil || len(value.Items) != 1 || value.ID == "" || value.Currency != "THB" || value.Fulfillment != "DELIVERY" || value.Subtotal != "110.70" || value.ShippingFee != "12.35" || value.Total != "123.05" {
 		testContext.Fatalf("exact branchless organization quote: quote=%+v error=%v", value, err)
@@ -60,13 +67,14 @@ func verifyOrganizationQuote(testContext *testing.T, ctx context.Context, organi
 	}
 	for _, candidate := range []struct {
 		name, user string
+		request    context.Context
 		want       error
 	}{
-		{"manager", guest, organization.ErrDenied},
-		{"foreign user", "11111111-1111-4111-8111-111111111111", storefront.ErrNotFound},
+		{"manager", guest, guestCtx, organization.ErrDenied},
+		{"mismatched actor", "11111111-1111-4111-8111-111111111111", ctx, identity.ErrInvalidToken},
 	} {
 		testContext.Run("organization quote denies "+candidate.name, func(testContext *testing.T) {
-			if _, problem := service.QuoteOrganization(ctx, candidate.user, org, input); !errors.Is(problem, candidate.want) {
+			if _, problem := service.QuoteOrganization(candidate.request, candidate.user, org, input); !errors.Is(problem, candidate.want) {
 				testContext.Fatalf("expected %v, got %v", candidate.want, problem)
 			}
 		})
@@ -142,7 +150,7 @@ func verifyOrganizationQuote(testContext *testing.T, ctx context.Context, organi
 				testContext.Fatal(restoreError)
 			}
 		}()
-		if _, problem = service.QuoteOrganization(ctx, owner, org, input); !errors.Is(problem, organization.ErrDenied) {
+		if _, problem = service.QuoteOrganization(ctx, owner, org, input); !errors.Is(problem, identity.ErrInvalidToken) {
 			testContext.Fatalf("unverified owner quoted draft: %v", problem)
 		}
 	})

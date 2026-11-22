@@ -10,6 +10,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { SetupPage, setupKey } from './OrganizationPages';
+import { webcrypto } from 'node:crypto';
+import { ApiError } from '../../lib/api';
+import { reserveCompletionKey } from './completion-operation';
 import {
   saveSetupStep,
   type SetupProfileInput,
@@ -183,6 +186,7 @@ it.each([
 });
 
 const mocks = vi.hoisted(() => ({
+  mfaStatus: vi.fn(),
   request: vi.fn(),
   refresh: vi.fn(),
   select: vi.fn(),
@@ -239,9 +243,13 @@ vi.mock('../../app/OrganizationProvider', () => ({
 vi.mock('../../lib/organization-api', () => ({
   organizationRequest: mocks.request,
 }));
+vi.mock('../auth/mfa-api', () => ({ getMFAStatus: mocks.mfaStatus }));
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.stubGlobal('crypto', webcrypto);
+  sessionStorage.clear();
+  mocks.mfaStatus.mockResolvedValue({ enabled: true, session_verified: true });
   mocks.storeMode = 'multi';
   mocks.role = 'OWNER';
   mocks.context = null;
@@ -252,6 +260,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllGlobals();
   Object.defineProperty(URL, 'createObjectURL', {
     configurable: true,
     value: nativeCreateObjectURL,
@@ -261,6 +270,142 @@ afterEach(() => {
     value: nativeRevokeObjectURL,
   });
 });
+
+it('requires MFA before reserving or sending a store creation', async () => {
+  mocks.role = null;
+  mocks.mfaStatus.mockResolvedValue({
+    enabled: false,
+    session_verified: false,
+  });
+  renderSetup(['/setup'], true);
+  fireEvent.change(screen.getByLabelText('Store name'), {
+    target: { value: 'New store' },
+  });
+  fillRequiredContactAndAddress(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Save and continue' }));
+  expect(
+    await screen.findByRole('link', {
+      name: 'Open account security (new tab)',
+    }),
+  ).toHaveAttribute('href', '/security');
+  expect(mocks.request).not.toHaveBeenCalled();
+  expect(sessionStorage.getItem('smartpos-creation:user')).toBeNull();
+  expect(screen.getByLabelText('Store name')).toHaveValue('New store');
+});
+
+it('keeps the same creation key across MFA errors and remounts, and blocks changed details', async () => {
+  mocks.role = null;
+  mocks.request.mockRejectedValue(
+    new ApiError(403, 'MFA required', undefined, 'MFA_REQUIRED'),
+  );
+  const fill = (name = 'New store') => {
+    fireEvent.change(screen.getByLabelText('Store name'), {
+      target: { value: name },
+    });
+    fillRequiredContactAndAddress(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Save and continue' }));
+  };
+  const first = renderSetup(['/setup'], true);
+  fill();
+  await screen.findByRole('link', { name: 'Open account security (new tab)' });
+  const firstKey = mocks.request.mock.calls[0][1].key;
+  expect(
+    JSON.parse(sessionStorage.getItem('smartpos-creation:user')!).key,
+  ).toBe(firstKey);
+  first.unmount();
+  renderSetup(['/setup'], true);
+  fill('Different store');
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'Restore the original store details',
+  );
+  expect(mocks.request).toHaveBeenCalledTimes(1);
+  fill();
+  await waitFor(() => expect(mocks.request).toHaveBeenCalledTimes(2));
+  expect(mocks.request.mock.calls[1][1].key).toBe(firstKey);
+});
+
+it('retains the creation key when a success response has no store identity', async () => {
+  mocks.role = null;
+  mocks.request.mockResolvedValue({ organization: {} });
+  renderSetup(['/setup'], true);
+  fireEvent.change(screen.getByLabelText('Store name'), {
+    target: { value: 'New store' },
+  });
+  fillRequiredContactAndAddress(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Save and continue' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'creation outcome is unknown',
+  );
+  expect(sessionStorage.getItem('smartpos-creation:user')).not.toBeNull();
+  expect(mocks.request).toHaveBeenCalledTimes(1);
+});
+
+it('allows correcting details after the server definitively rejects creation input', async () => {
+  mocks.role = null;
+  mocks.request.mockRejectedValue(
+    new ApiError(
+      400,
+      'Check the submitted details',
+      undefined,
+      'INVALID_INPUT',
+    ),
+  );
+  renderSetup(['/setup'], true);
+  fireEvent.change(screen.getByLabelText('Store name'), {
+    target: { value: 'New store' },
+  });
+  fillRequiredContactAndAddress(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Save and continue' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'Check the submitted details',
+  );
+  expect(sessionStorage.getItem('smartpos-creation:user')).toBeNull();
+  const firstKey = mocks.request.mock.calls[0][1].key;
+  fireEvent.change(screen.getByLabelText('Store name'), {
+    target: { value: 'Corrected store' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Save and continue' }));
+  await waitFor(() => expect(mocks.request).toHaveBeenCalledTimes(2));
+  expect(mocks.request.mock.calls[1][1].key).not.toBe(firstKey);
+});
+
+it.each([401, 400, 503])(
+  'keeps an older unknown creation key after a later %s response',
+  async (status) => {
+    mocks.role = null;
+    mocks.request.mockRejectedValue(
+      new ApiError(0, 'Synthetic connection failure'),
+    );
+    renderSetup(['/setup'], true);
+    fireEvent.change(screen.getByLabelText('Store name'), {
+      target: { value: 'New store' },
+    });
+    fillRequiredContactAndAddress(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Save and continue' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'creation outcome is unknown',
+    );
+    const firstKey = mocks.request.mock.calls[0][1].key;
+    mocks.request.mockRejectedValue(
+      new ApiError(
+        status,
+        'Synthetic error',
+        undefined,
+        status === 400 ? 'INVALID_INPUT' : undefined,
+      ),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Save and continue' }));
+    await waitFor(() => expect(mocks.request).toHaveBeenCalledTimes(2));
+    expect(mocks.request.mock.calls[1][1].key).toBe(firstKey);
+    expect(
+      JSON.parse(sessionStorage.getItem('smartpos-creation:user')!).key,
+    ).toBe(firstKey);
+    if (status === 401)
+      expect(
+        await screen.findByRole('link', { name: 'Sign in again' }),
+      ).toHaveAttribute('href', '/login?returnTo=%2Fsetup');
+  },
+);
 
 function renderSetup(initialEntries = ['/setup'], english = false) {
   const client = new QueryClient({
@@ -1119,6 +1264,7 @@ it('does not select or save a newly created store after the user changes', async
 
   fillRequiredContactAndAddress(false);
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
+  await waitFor(() => expect(mocks.request).toHaveBeenCalledTimes(1));
   mocks.userID = 'another-user';
   view.refreshView();
   finishCreation({
@@ -1662,6 +1808,135 @@ it('does not activate with contradictory server readiness', async () => {
     await screen.findByRole('button', { name: /เปิดใช้งานร้าน/ }),
   ).toBeDisabled();
   expect(screen.getByText(/Publish a menu item/)).toBeInTheDocument();
+});
+
+it.each([
+  [403, 'MFA_REQUIRED', 'Open account security (new tab)'],
+  [401, 'UNAUTHENTICATED', 'Sign in again'],
+])(
+  'recovers completion denial %s without changing its operation key',
+  async (status, code, link) => {
+    mocks.branchID = '';
+    mocks.context = {
+      organization: { id: 'org-1' },
+      membership: { role: 'OWNER' },
+    };
+    const keys: string[] = [];
+    mocks.request.mockImplementation(
+      (path: string, options?: { key?: string }) => {
+        if (path.endsWith('/setup/complete')) {
+          keys.push(options!.key!);
+          return keys.length === 1
+            ? Promise.reject(
+                new ApiError(status, 'Verify account', undefined, code),
+              )
+            : Promise.resolve({ ...setupState, ready: true, completed: true });
+        }
+        return Promise.resolve({ ...setupState, current_step: 'review' });
+      },
+    );
+    const view = renderSetup(['/setup'], true);
+    fireEvent.click(await screen.findByRole('button', { name: 'Open store' }));
+    expect(await screen.findByRole('link', { name: link })).toHaveAttribute(
+      'href',
+      status === 403 ? '/security' : '/login?returnTo=%2Fsetup',
+    );
+    expect(keys).toHaveLength(1);
+    expect(screen.getByText('Store ready to open')).toBeVisible();
+    if (status === 401) {
+      fireEvent.click(screen.getByRole('link', { name: link }));
+      view.unmount();
+      renderSetup(['/setup'], true);
+      await screen.findByRole('button', { name: 'Open store' });
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Open store' }));
+    await waitFor(() => expect(keys).toHaveLength(2));
+    expect(keys[1]).toBe(keys[0]);
+    await screen.findByText('แดชบอร์ด');
+    expect(
+      Object.keys(sessionStorage).some((name) =>
+        name.startsWith('smartpos-completion:'),
+      ),
+    ).toBe(false);
+  },
+);
+
+it.each(['unavailable', 'discarded', 'corrupt'])(
+  'does not send completion when recovery storage is %s',
+  async (failure) => {
+    mocks.branchID = '';
+    mocks.context = {
+      organization: { id: 'org-1' },
+      membership: { role: 'OWNER' },
+    };
+    mocks.request.mockResolvedValue({ ...setupState, current_step: 'review' });
+    renderSetup(['/setup'], true);
+    const complete = await screen.findByRole('button', { name: 'Open store' });
+    let restore = () => {};
+    if (failure === 'corrupt') {
+      reserveCompletionKey(
+        'user',
+        { organizationID: 'org-1', branchID: '' },
+        setupKey,
+      );
+      sessionStorage.setItem(sessionStorage.key(0)!, 'corrupt');
+    } else {
+      const spy = vi
+        .spyOn(Storage.prototype, 'setItem')
+        .mockImplementationOnce(() => {
+          if (failure === 'unavailable') throw new Error('denied');
+        });
+      restore = () => spy.mockRestore();
+    }
+    fireEvent.click(complete);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'no open-store request was sent',
+    );
+    expect(
+      mocks.request.mock.calls.some(([path]) => path.endsWith('/complete')),
+    ).toBe(false);
+    restore();
+  },
+);
+
+it('retains an uncertain completion key through remount and only clears confirmed success', async () => {
+  mocks.branchID = '';
+  mocks.context = {
+    organization: { id: 'org-1' },
+    membership: { role: 'OWNER' },
+  };
+  const keys: string[] = [];
+  mocks.request.mockImplementation(
+    (path: string, options?: { key?: string }) => {
+      if (path.endsWith('/complete')) {
+        keys.push(options!.key!);
+        if (keys.length === 1)
+          return Promise.reject(new TypeError('Network unavailable'));
+        return Promise.resolve({ ...setupState, completed: keys.length === 3 });
+      }
+      return Promise.resolve({ ...setupState, current_step: 'review' });
+    },
+  );
+  const view = renderSetup(['/setup'], true);
+  fireEvent.click(await screen.findByRole('button', { name: 'Open store' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'Network unavailable',
+  );
+  view.unmount();
+  renderSetup(['/setup'], true);
+  fireEvent.click(await screen.findByRole('button', { name: 'Open store' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'The server has not confirmed the store is ready',
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Open store' }));
+  await screen.findByText('แดชบอร์ด');
+  expect(keys).toHaveLength(3);
+  expect(new Set(keys).size).toBe(1);
+  expect(
+    Object.keys(sessionStorage).some((name) =>
+      name.startsWith('smartpos-completion:'),
+    ),
+  ).toBe(false);
 });
 
 it('completes readiness review once and routes to the existing dashboard', async () => {

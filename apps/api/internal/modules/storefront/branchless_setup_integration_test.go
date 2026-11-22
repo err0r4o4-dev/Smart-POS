@@ -13,17 +13,17 @@ import (
 	"smartpos/api/internal/modules/restaurant"
 )
 
-func verifyBranchlessSetup(t *testing.T, ctx context.Context, organizations *organization.Service, owner, guest, org string) {
+func verifyBranchlessSetup(t *testing.T, ctx, guestCtx context.Context, organizations *organization.Service, owner, guest, org string) {
 	t.Helper()
 	service := &restaurant.Service{Organization: organizations}
 	state, err := service.Setup(ctx, owner, org, "")
 	if err != nil || state.BranchID != "" || state.Ready || state.Completed {
 		t.Fatalf("initial branchless setup: ready=%v completed=%v error=%v", state.Ready, state.Completed, err)
 	}
-	if _, err = service.Setup(ctx, guest, org, ""); !errors.Is(err, organization.ErrNotFound) && !errors.Is(err, organization.ErrDenied) {
+	if _, err = service.Setup(guestCtx, guest, org, ""); !errors.Is(err, organization.ErrNotFound) && !errors.Is(err, organization.ErrDenied) {
 		t.Fatalf("foreign setup read allowed: %v", err)
 	}
-	if _, err = service.SavePayments(ctx, guest, org, "95711111-1111-4111-8111-111111111111", restaurant.SetupPaymentsInput{Cash: true}); !errors.Is(err, organization.ErrNotFound) && !errors.Is(err, organization.ErrDenied) {
+	if _, err = service.SavePayments(guestCtx, guest, org, "95711111-1111-4111-8111-111111111111", restaurant.SetupPaymentsInput{Cash: true}); !errors.Is(err, organization.ErrNotFound) && !errors.Is(err, organization.ErrDenied) {
 		t.Fatalf("foreign setup write allowed: %v", err)
 	}
 	if _, err = service.Complete(ctx, owner, org, "", "84711111-1111-4111-8111-111111111111"); !errors.Is(err, restaurant.ErrConflict) {
@@ -84,7 +84,7 @@ func verifyBranchlessSetup(t *testing.T, ctx context.Context, organizations *org
 	if _, err = service.SaveTables(ctx, owner, org, "90711111-1111-4111-8111-111111111111", invalidTables); err == nil {
 		t.Fatal("invalid replacement tables did not roll back")
 	}
-	verifyBranchlessMenu(t, ctx, organizations, owner, guest, org)
+	verifyBranchlessMenu(t, ctx, guestCtx, organizations, owner, guest, org)
 	state, err = service.Complete(ctx, owner, org, "", "91711111-1111-4111-8111-111111111111")
 	if err != nil || !state.Completed || !state.Ready {
 		t.Fatalf("branchless completion failed: %v", err)
@@ -137,17 +137,18 @@ func verifyBranchlessSetup(t *testing.T, ctx context.Context, organizations *org
 	if err = tx.Commit(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = service.Setup(ctx, guest, org, ""); !errors.Is(err, organization.ErrDenied) {
+	if _, err = service.Setup(guestCtx, guest, org, ""); !errors.Is(err, organization.ErrDenied) {
 		t.Fatalf("non-owner gained branchless configuration access: %v", err)
 	}
-	if _, err = service.SavePayments(ctx, guest, org, "95711111-1111-4111-8111-111111111111", restaurant.SetupPaymentsInput{Cash: true}); !errors.Is(err, organization.ErrDenied) {
+	if _, err = service.SavePayments(guestCtx, guest, org, "95711111-1111-4111-8111-111111111111", restaurant.SetupPaymentsInput{Cash: true}); !errors.Is(err, organization.ErrDenied) {
 		t.Fatalf("non-owner gained branchless configuration write: %v", err)
 	}
-	if _, err = service.SaveMenu(ctx, guest, org, "96711111-1111-4111-8111-111111111111", restaurant.SetupMenuInput{Categories: []restaurant.SetupCategoryInput{{Name: "Meals"}}, Items: []restaurant.SetupMenuItemInput{{Category: "Meals", Name: "Soup", Price: "45.25"}}}); !errors.Is(err, organization.ErrDenied) {
+	if _, err = service.SaveMenu(guestCtx, guest, org, "96711111-1111-4111-8111-111111111111", restaurant.SetupMenuInput{Categories: []restaurant.SetupCategoryInput{{Name: "Meals"}}, Items: []restaurant.SetupMenuItemInput{{Category: "Meals", Name: "Soup", Price: "45.25"}}}); !errors.Is(err, organization.ErrDenied) {
 		t.Fatalf("non-owner gained branchless menu write: %v", err)
 	}
 	verifyBranchlessSetupIsolation(t, ctx, organizations, owner, org, zoneID)
-	verifyBranchlessSettings(t, ctx, organizations, owner, guest, org)
+	verifyBranchlessSettings(t, ctx, guestCtx, organizations, owner, guest, org)
+	verifyBranchlessPickup(t, ctx, guestCtx, organizations, owner, guest)
 }
 
 func verifyBranchlessSetupIsolation(t *testing.T, ctx context.Context, organizations *organization.Service, owner, original, foreignZone string) {

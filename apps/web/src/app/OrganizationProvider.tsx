@@ -26,6 +26,7 @@ interface OrganizationState {
   branchID: string;
   loading: boolean;
   error: string;
+  errorCode?: string;
   select: (orgID: string, branchID?: string) => void;
   refresh: () => Promise<void>;
   can: (permission: string) => boolean;
@@ -177,6 +178,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
           !!userID &&
           (organizationsQuery.isPending || (!!orgID && contextQuery.isPending)),
         error: failure instanceof Error ? failure.message : '',
+        errorCode: failure instanceof ApiError ? failure.code : undefined,
         can: (permission) => context?.permissions.includes(permission) ?? false,
       }}
     >

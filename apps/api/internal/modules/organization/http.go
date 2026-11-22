@@ -24,6 +24,10 @@ func respond(writer http.ResponseWriter, request *http.Request, status int, resu
 	}
 	code, message, status := "DEPENDENCY_UNAVAILABLE", "Organization service unavailable", 503
 	switch {
+	case errors.Is(err, identity.ErrInvalidToken):
+		code, message, status = "UNAUTHENTICATED", "Authentication required", 401
+	case errors.Is(err, identity.ErrMFARequired):
+		code, message, status = "MFA_REQUIRED", "Verify MFA in account security before continuing", 403
 	case errors.Is(err, ErrInput):
 		code, message, status = "INVALID_INPUT", "Check the submitted details", 400
 	case errors.Is(err, ErrDenied):

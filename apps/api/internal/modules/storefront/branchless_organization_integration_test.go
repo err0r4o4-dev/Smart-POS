@@ -8,7 +8,7 @@ import (
 	"smartpos/api/internal/modules/organization"
 )
 
-func verifyBranchlessOrganization(t *testing.T, ctx context.Context, service *organization.Service, ownerID, guestID string) organization.Context {
+func verifyBranchlessOrganization(t *testing.T, ctx, guestCtx context.Context, service *organization.Service, ownerID, guestID string) organization.Context {
 	t.Helper()
 	input := organization.OrganizationInput{Name: "Branchless restaurant", BusinessType: "RESTAURANT"}
 	key := "81711111-1111-4111-8111-111111111111"
@@ -64,7 +64,7 @@ func verifyBranchlessOrganization(t *testing.T, ctx context.Context, service *or
 	if _, err = service.CreateRestaurant(ctx, ownerID, key, input); !errors.Is(err, organization.ErrConflict) {
 		t.Fatalf("changed replay must conflict: %v", err)
 	}
-	if _, err = service.Context(ctx, guestID, created.Organization.ID); !errors.Is(err, organization.ErrNotFound) && !errors.Is(err, organization.ErrDenied) {
+	if _, err = service.Context(guestCtx, guestID, created.Organization.ID); !errors.Is(err, organization.ErrNotFound) && !errors.Is(err, organization.ErrDenied) {
 		t.Fatalf("foreign user read restaurant: %v", err)
 	}
 	legacyInput := input
@@ -76,6 +76,6 @@ func verifyBranchlessOrganization(t *testing.T, ctx context.Context, service *or
 	if _, err = pinned.CreateRestaurant(ctx, ownerID, "82711111-1111-4111-8111-111111111111", input); !errors.Is(err, organization.ErrDenied) {
 		t.Fatalf("single-store creation allowed: %v", err)
 	}
-	verifyBranchlessSetup(t, ctx, service, ownerID, guestID, created.Organization.ID)
+	verifyBranchlessSetup(t, ctx, guestCtx, service, ownerID, guestID, created.Organization.ID)
 	return created
 }

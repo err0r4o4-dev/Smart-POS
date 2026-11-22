@@ -9,6 +9,7 @@
       "/verify-email",
       "/forgot-password",
       "/reset-password",
+      "/security",
       "/setup",
       "/account"
     ]

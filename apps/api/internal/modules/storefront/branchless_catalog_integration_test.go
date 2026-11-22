@@ -8,12 +8,13 @@ import (
 	"strings"
 	"testing"
 
+	"smartpos/api/internal/modules/identity"
 	"smartpos/api/internal/modules/organization"
 	"smartpos/api/internal/modules/restaurant"
 	"smartpos/api/internal/modules/storefront"
 )
 
-func verifyBranchlessCatalog(testContext *testing.T, ctx context.Context, organizations *organization.Service, owner, guest, org, slug string) {
+func verifyBranchlessCatalog(testContext *testing.T, ctx, guestCtx context.Context, organizations *organization.Service, owner, guest, org, slug string) {
 	testContext.Helper()
 	service := &storefront.Service{Organization: organizations}
 	page, err := service.Products(ctx, owner, org, "", "", 1)
@@ -94,10 +95,10 @@ func verifyBranchlessCatalog(testContext *testing.T, ctx context.Context, organi
 			testContext.Fatalf("invalid catalog query accepted: %v", problem)
 		}
 	}
-	if _, problem := service.Products(ctx, guest, org, "", "", 1); !errors.Is(problem, organization.ErrDenied) {
+	if _, problem := service.Products(guestCtx, guest, org, "", "", 1); !errors.Is(problem, organization.ErrDenied) {
 		testContext.Fatalf("manager read owner catalog: %v", problem)
 	}
-	if _, problem := service.Products(ctx, "11111111-1111-4111-8111-111111111111", org, "", "", 1); !errors.Is(problem, storefront.ErrNotFound) {
+	if _, problem := service.Products(ctx, "11111111-1111-4111-8111-111111111111", org, "", "", 1); !errors.Is(problem, identity.ErrInvalidToken) {
 		testContext.Fatalf("foreign user read catalog: %v", problem)
 	}
 	pinned := &storefront.Service{Organization: &organization.Service{Pool: organizations.Pool, SingleStoreOrganizationID: "11111111-1111-4111-8111-111111111111"}}

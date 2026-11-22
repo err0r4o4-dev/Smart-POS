@@ -13,7 +13,7 @@ import (
 	"smartpos/api/internal/modules/restaurant"
 )
 
-func onboardingAcceptance(testContext *testing.T, ctx context.Context, accounts *identity.Service, multi, single *organization.Service, owner, guest string, foreign organization.Context) {
+func onboardingAcceptance(testContext *testing.T, ctx, guestContext context.Context, accounts *identity.Service, multi, single *organization.Service, owner, guest string, foreign organization.Context) {
 	testContext.Helper()
 	unverified, err := accounts.Register(ctx, "onboarding-unverified@example.test", "Synthetic-unverified-password-2026", "Unverified")
 	if err != nil {
@@ -186,7 +186,7 @@ func onboardingAcceptance(testContext *testing.T, ctx context.Context, accounts 
 	if err != nil || len(current.Branches) != 1 || current.Branches[0] != branch || current.Organization.Code != created.Organization.Code {
 		testContext.Fatalf("legacy branch clearing: %+v, %v", current, err)
 	}
-	if _, err = setup.SaveProfile(ctx, guest, created.Organization.ID, "fa444444-4444-4444-8444-444444444444", profile); !errors.Is(err, organization.ErrNotFound) && !errors.Is(err, organization.ErrDenied) {
+	if _, err = setup.SaveProfile(guestContext, guest, created.Organization.ID, "fa444444-4444-4444-8444-444444444444", profile); !errors.Is(err, organization.ErrNotFound) && !errors.Is(err, organization.ErrDenied) {
 		testContext.Fatalf("foreign user profile: %v", err)
 	}
 	profile.BranchID = foreign.Branches[0].ID

@@ -76,6 +76,7 @@ func paymentHoldAcceptance(test *testing.T, ctx context.Context, organizations *
 		}
 	}
 	test.Run("requested attempt blocks direct cancellation", func(test *testing.T) {
+		assertKitchenQueueOrder(test, ctx, organizations, owner, org, shop.BranchID, orders[0].ID, false)
 		rejectSourceWrite(test, ctx, organizations, owner, org, "UPDATE online_orders SET status='CANCELLED',revision=revision+1 WHERE organization_id=$1 AND id=$2", org, orders[0].ID)
 	})
 	test.Run("unknown provider outcome holds past the original deadline", func(test *testing.T) {
@@ -97,6 +98,7 @@ func paymentHoldAcceptance(test *testing.T, ctx context.Context, organizations *
 				test.Fatal(problem)
 			}
 			assertLive(test, 1, true)
+			assertKitchenQueueOrder(test, ctx, organizations, owner, org, shop.BranchID, orders[1].ID, false)
 		}
 	})
 	test.Run("payment-backed stock cannot be spent by a competing ledger writer", func(test *testing.T) {
@@ -142,15 +144,18 @@ func paymentHoldAcceptance(test *testing.T, ctx context.Context, organizations *
 	accept(0, "cs_test_holdPaidFirst", "evt_holdExpiredStale", "expired", "unpaid")
 	test.Run("paid then stale expiry cannot release the hold", func(test *testing.T) {
 		assertLive(test, 0, true)
+		assertKitchenQueueOrder(test, ctx, organizations, owner, org, shop.BranchID, orders[0].ID, true)
 	})
 	accept(1, "cs_test_holdExpiredFirst", "evt_holdExpiredFirst", "expired", "unpaid")
 	test.Run("confirmed expiry releases only the payment extension", func(test *testing.T) {
 		assertLive(test, 1, false)
+		assertKitchenQueueOrder(test, ctx, organizations, owner, org, shop.BranchID, orders[1].ID, false)
 		assertSourceStock(test, ctx, organizations, owner, org, shop.BranchID, shop.LocationID, variant, "3.000", "3.000", "0.000")
 	})
 	accept(1, "cs_test_holdExpiredFirst", "evt_holdLatePaid", "complete", "paid")
 	test.Run("late paid records money without resurrecting the released extension", func(test *testing.T) {
 		assertLive(test, 1, false)
+		assertKitchenQueueOrder(test, ctx, organizations, owner, org, shop.BranchID, orders[1].ID, false)
 		rejectSourceWrite(test, ctx, organizations, owner, org, "UPDATE online_payment_attempts SET stock_hold_released=false,revision=revision+1 WHERE organization_id=$1 AND order_id=$2", org, orders[1].ID)
 	})
 	accept(2, "cs_test_holdCancelled", "evt_holdCancelExpiry", "expired", "unpaid")

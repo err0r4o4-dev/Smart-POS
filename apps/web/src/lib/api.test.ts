@@ -6,9 +6,26 @@ import {
   linkGoogle,
   login,
   logout,
+  requestData,
 } from './api';
 
 afterEach(() => vi.unstubAllGlobals());
+it('preserves the stable MFA recovery code from an unsuccessful response', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue({
+      ok: false,
+      status: 403,
+      json: async () => ({
+        error: { code: 'MFA_REQUIRED', message: 'Verify MFA' },
+      }),
+    }),
+  );
+  await expect(requestData('/api/v1/organizations', {})).rejects.toMatchObject({
+    status: 403,
+    code: 'MFA_REQUIRED',
+  });
+});
 it('checks Google capability and links with same-origin browser cookies', async () => {
   const fetcher = vi.fn().mockResolvedValue({
     ok: true,

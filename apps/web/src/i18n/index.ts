@@ -1,4 +1,5 @@
 import { auth } from './auth';
+import { mfa } from './mfa';
 import { catalog } from './catalog';
 import { common } from './common';
 import { customers } from './customers';
@@ -27,6 +28,7 @@ import { assistant } from './assistant';
 export type Language = 'th' | 'en';
 export const messages = {
   th: {
+    mfa: mfa.th,
     assistant: assistant.th,
     restaurant: restaurant.th,
     statuses: statuses.th,
@@ -54,6 +56,7 @@ export const messages = {
     shared: shared.th,
   },
   en: {
+    mfa: mfa.en,
     assistant: assistant.en,
     restaurant: restaurant.en,
     statuses: statuses.en,

@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   branch: 'branch-1',
   user: 'owner-1',
   role: 'OWNER',
+  mfaRequired: false,
 }));
 vi.mock('../../app/AuthProvider', () => ({
   useAuth: () => ({
@@ -34,7 +35,8 @@ vi.mock('../../app/OrganizationProvider', () => ({
     },
     branchID: mocks.branch,
     loading: false,
-    error: '',
+    error: mocks.mfaRequired ? 'Verify MFA' : '',
+    errorCode: mocks.mfaRequired ? 'MFA_REQUIRED' : undefined,
     storeMode: 'multi',
   }),
 }));
@@ -47,10 +49,22 @@ beforeEach(() => {
   mocks.branch = 'branch-1';
   mocks.user = 'owner-1';
   mocks.role = 'OWNER';
+  mocks.mfaRequired = false;
   mocks.getSetup.mockResolvedValue({
     complete: false,
     readiness: { ready: true },
   });
+});
+it('offers account security when the parent workspace gate receives MFA_REQUIRED', async () => {
+  mocks.mfaRequired = true;
+  mount();
+  expect(
+    await screen.findByRole('link', { name: 'ความปลอดภัยของบัญชี' }),
+  ).toHaveAttribute('href', '/security');
+  expect(mocks.getSetup).not.toHaveBeenCalled();
+  expect(
+    screen.queryByRole('heading', { name: 'Working page' }),
+  ).not.toBeInTheDocument();
 });
 afterEach(() =>
   notifyManager.setScheduler((callback) => setTimeout(callback, 0)),

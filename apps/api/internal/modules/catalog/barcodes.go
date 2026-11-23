@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"github.com/jackc/pgx/v5"
+	"smartpos/api/internal/modules/organization"
 	"strings"
 )
 
@@ -63,7 +64,8 @@ func barcodes(ctx context.Context, tx pgx.Tx, org, variant string) ([]Barcode, e
 	}
 	return items, rows.Err()
 }
-func registerBarcode(ctx context.Context, tx pgx.Tx, org, variant string, input BarcodeInput) (Barcode, error) {
+func registerBarcode(ctx context.Context, authorization *organization.Authorization, org, variant string, input BarcodeInput) (Barcode, error) {
+	tx := authorization.Tx
 	var count int
 	if err := tx.QueryRow(ctx, "SELECT count(*) FROM product_barcodes WHERE organization_id=$1 AND variant_id=$2", org, variant).Scan(&count); err != nil {
 		return Barcode{}, err
@@ -74,20 +76,27 @@ func registerBarcode(ctx context.Context, tx pgx.Tx, org, variant string, input 
 	if count == 0 {
 		input.IsPrimary = true
 	}
+	if err := authorization.Recheck(ctx); err != nil {
+		return Barcode{}, err
+	}
 	if input.IsPrimary {
 		if _, err := tx.Exec(ctx, "UPDATE product_barcodes SET is_primary=false WHERE organization_id=$1 AND variant_id=$2", org, variant); err != nil {
 			return Barcode{}, err
 		}
+	}
+	if err := authorization.Recheck(ctx); err != nil {
+		return Barcode{}, err
 	}
 	item := Barcode{VariantID: variant, BarcodeInput: input}
 	err := tx.QueryRow(ctx, "INSERT INTO product_barcodes(organization_id,variant_id,code,symbology,source,is_primary) VALUES($1,$2,$3,$4,$5,$6) RETURNING id::text", org, variant, input.Code, input.Symbology, input.Source, input.IsPrimary).Scan(&item.ID)
 	return item, databaseError(err)
 }
 func (service *Service) RegisterBarcode(ctx context.Context, user, org, product, variant string, input BarcodeInput, generate bool) (Barcode, error) {
-	tx, err := service.begin(ctx, user, org, "catalog.barcode.manage")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "catalog.barcode.manage")
 	if err != nil {
 		return Barcode{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
 	if !uuidPattern.MatchString(product) || !uuidPattern.MatchString(variant) {
 		return Barcode{}, ErrNotFound
@@ -95,7 +104,10 @@ func (service *Service) RegisterBarcode(ctx context.Context, user, org, product,
 	var found string
 	err = tx.QueryRow(ctx, "SELECT v.id FROM product_variants v JOIN products p ON p.organization_id=v.organization_id AND p.id=v.product_id WHERE v.organization_id=$1 AND v.product_id=$2 AND v.id=$3 AND p.status<>'ARCHIVED' AND v.status<>'ARCHIVED'", org, product, variant).Scan(&found)
 	if err != nil {
-		return Barcode{}, databaseError(err)
+		return privateReadResult(ctx, authorization, Barcode{}, err)
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Barcode{}, err
 	}
 	if generate {
 		random := make([]byte, 16)
@@ -108,41 +120,50 @@ func (service *Service) RegisterBarcode(ctx context.Context, user, org, product,
 	} else if err = input.validate(); err != nil {
 		return Barcode{}, err
 	}
-	item, err := registerBarcode(ctx, tx, org, variant, input)
+	item, err := registerBarcode(ctx, authorization, org, variant, input)
 	if err != nil {
-		return item, err
+		return privateReadResult(ctx, authorization, Barcode{}, err)
 	}
-	err = finish(ctx, tx, org, user, "catalog.barcode.registered", item.ID)
-	return item, err
+	if err = finish(ctx, authorization, org, user, "catalog.barcode.registered", item.ID); err != nil {
+		return Barcode{}, err
+	}
+	return item, nil
 }
 func (service *Service) DeleteBarcode(ctx context.Context, user, org, product, variant, id string) (map[string]bool, error) {
-	tx, err := service.begin(ctx, user, org, "catalog.barcode.manage")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "catalog.barcode.manage")
 	if err != nil {
 		return nil, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
 	if !uuidPattern.MatchString(product) || !uuidPattern.MatchString(variant) || !uuidPattern.MatchString(id) {
 		return nil, ErrNotFound
 	}
 	command, err := tx.Exec(ctx, "DELETE FROM product_barcodes b USING product_variants v WHERE b.organization_id=$1 AND b.variant_id=$2 AND b.id=$3 AND v.organization_id=b.organization_id AND v.id=b.variant_id AND v.product_id=$4", org, variant, id, product)
 	if err != nil {
-		return nil, databaseError(err)
+		return privateReadResult(ctx, authorization, map[string]bool(nil), err)
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return nil, err
 	}
 	if command.RowsAffected() != 1 {
 		return nil, ErrNotFound
 	}
 	_, err = tx.Exec(ctx, "UPDATE product_barcodes SET is_primary=true WHERE organization_id=$1 AND id=(SELECT id FROM product_barcodes WHERE organization_id=$1 AND variant_id=$2 ORDER BY is_primary DESC,created_at,id LIMIT 1)", org, variant)
 	if err != nil {
+		return privateReadResult(ctx, authorization, map[string]bool(nil), err)
+	}
+	if err = finish(ctx, authorization, org, user, "catalog.barcode.removed", id); err != nil {
 		return nil, err
 	}
-	err = finish(ctx, tx, org, user, "catalog.barcode.removed", id)
-	return map[string]bool{"removed": true}, err
+	return map[string]bool{"removed": true}, nil
 }
 func (service *Service) Lookup(ctx context.Context, user, org, code string) (Lookup, error) {
-	tx, err := service.begin(ctx, user, org, "catalog.read")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "catalog.read")
 	if err != nil {
 		return Lookup{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
 	code = strings.TrimRight(code, "\r\n")
 	if !validBarcode(code, "CODE128") {
@@ -151,11 +172,11 @@ func (service *Service) Lookup(ctx context.Context, user, org, code string) (Loo
 	var product, variant string
 	err = tx.QueryRow(ctx, "SELECT v.product_id::text,v.id::text FROM product_barcodes b JOIN product_variants v ON v.organization_id=b.organization_id AND v.id=b.variant_id WHERE b.organization_id=$1 AND b.code=$2", org, code).Scan(&product, &variant)
 	if err != nil {
-		return Lookup{}, databaseError(err)
+		return privateReadResult(ctx, authorization, Lookup{}, err)
 	}
 	item, err := productBy(ctx, tx, org, product)
 	if err != nil {
-		return Lookup{}, err
+		return privateReadResult(ctx, authorization, Lookup{}, err)
 	}
 	saleable := false
 	for _, value := range item.Variants {
@@ -163,5 +184,5 @@ func (service *Service) Lookup(ctx context.Context, user, org, code string) (Loo
 			saleable = item.Status == "ACTIVE" && value.Status == "ACTIVE"
 		}
 	}
-	return Lookup{Product: item, VariantID: variant, Saleable: saleable}, nil
+	return privateReadResult(ctx, authorization, Lookup{Product: item, VariantID: variant, Saleable: saleable}, nil)
 }

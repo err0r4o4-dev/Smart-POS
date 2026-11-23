@@ -161,12 +161,28 @@ func (service *Service) recordCustomerObservation(ctx context.Context, slug stri
 }
 
 func storeCustomerObservation(ctx context.Context, tx pgx.Tx, attempt PaymentAttempt, session stripe.CustomerSession, source string) (PaymentAttempt, string, error) {
+	fingerprint, outcome, err := insertCustomerObservation(ctx, tx, attempt, session, source)
+	if err != nil {
+		return PaymentAttempt{}, "", err
+	}
+	observation, err := readCustomerObservation(ctx, tx, attempt, source, fingerprint)
+	if err != nil {
+		return PaymentAttempt{}, "", err
+	}
+	attempt, err = observePayment(ctx, tx, attempt, session, outcome)
+	if err != nil {
+		return PaymentAttempt{}, "", err
+	}
+	return attempt, observation, nil
+}
+
+func insertCustomerObservation(ctx context.Context, tx pgx.Tx, attempt PaymentAttempt, session stripe.CustomerSession, source string) (string, string, error) {
 	expected := ""
 	if attempt.SessionID != nil {
 		expected = *attempt.SessionID
 	}
 	if err := session.Validate(attempt.Charge(), expected); err != nil {
-		return PaymentAttempt{}, "", paymentError(err)
+		return "", "", paymentError(err)
 	}
 	outcome := "PROCESSING"
 	if session.Status == "open" {
@@ -190,15 +206,13 @@ func storeCustomerObservation(ctx context.Context, tx pgx.Tx, attempt PaymentAtt
 	_, err := tx.Exec(ctx, `INSERT INTO online_payment_observations(organization_id,order_id,source,session_id,provider_status,provider_payment_status,outcome,payment_intent,amount_minor,currency,expires_at,fingerprint)
  VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) ON CONFLICT(organization_id,order_id,source,fingerprint) DO NOTHING`, attempt.OrganizationID, attempt.OrderID, source, session.ID, session.Status, session.PaymentStatus, outcome, intent, session.AmountMinor, session.Currency, attempt.ExpiresAt, fingerprint)
 	if err != nil {
-		return PaymentAttempt{}, "", paymentError(err)
+		return "", "", paymentError(err)
 	}
+	return fingerprint, outcome, nil
+}
+
+func readCustomerObservation(ctx context.Context, tx pgx.Tx, attempt PaymentAttempt, source, fingerprint string) (string, error) {
 	var observation string
-	if err = tx.QueryRow(ctx, "SELECT id::text FROM online_payment_observations WHERE organization_id=$1 AND order_id=$2 AND source=$3 AND fingerprint=$4", attempt.OrganizationID, attempt.OrderID, source, fingerprint).Scan(&observation); err != nil {
-		return PaymentAttempt{}, "", paymentError(err)
-	}
-	attempt, err = observePayment(ctx, tx, attempt, session, outcome)
-	if err != nil {
-		return PaymentAttempt{}, "", err
-	}
-	return attempt, observation, nil
+	err := tx.QueryRow(ctx, "SELECT id::text FROM online_payment_observations WHERE organization_id=$1 AND order_id=$2 AND source=$3 AND fingerprint=$4", attempt.OrganizationID, attempt.OrderID, source, fingerprint).Scan(&observation)
+	return observation, paymentError(err)
 }

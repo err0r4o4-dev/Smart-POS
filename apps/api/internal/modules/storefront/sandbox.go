@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5"
 	"smartpos/api/internal/modules/identity"
 	"smartpos/api/internal/modules/organization"
 	"smartpos/api/internal/platform/httpx"
@@ -18,7 +17,7 @@ import (
 )
 
 type sandboxAccess interface {
-	Authorized(context.Context, string, string, string) (pgx.Tx, organization.Member, error)
+	AuthorizeMFA(context.Context, string, string, string) (*organization.Authorization, error)
 }
 type sandboxGateway interface {
 	Configured() bool
@@ -39,6 +38,10 @@ func sandboxRespond(writer http.ResponseWriter, request *http.Request, result an
 	}
 	code, message, status := "GATEWAY_UNAVAILABLE", "Stripe sandbox ยังไม่พร้อม ตรวจการตั้งค่า test key และลองใหม่ด้วยรายการเดิม", 503
 	switch {
+	case errors.Is(err, identity.ErrInvalidToken):
+		code, message, status = "UNAUTHENTICATED", "Authentication required", 401
+	case errors.Is(err, identity.ErrMFARequired):
+		code, message, status = "MFA_REQUIRED", "Verify MFA in account security before continuing", 403
 	case errors.Is(err, stripe.ErrInput):
 		code, message, status = "INVALID_INPUT", "ข้อมูลทดสอบหรือ Idempotency-Key ไม่ถูกต้อง", 400
 	case errors.Is(err, organization.ErrDenied):
@@ -50,27 +53,57 @@ func sandboxRespond(writer http.ResponseWriter, request *http.Request, result an
 	}
 	httpx.Error(writer, request, status, code, message)
 }
+
+func (handler SandboxHandler) authorize(ctx context.Context, scope stripe.Scope) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if scope.UserID == "" {
+		return identity.ErrInvalidToken
+	}
+	if handler.Organization == nil {
+		return stripe.ErrUnavailable
+	}
+	authorization, err := handler.Organization.AuthorizeMFA(ctx, scope.UserID, scope.OrganizationID, "storefront.manage")
+	if err != nil {
+		return err
+	}
+	if authorization == nil || authorization.Tx == nil {
+		return identity.ErrInvalidToken
+	}
+	err = ctx.Err()
+	if err == nil {
+		err = authorization.Recheck(ctx)
+	}
+	rollbackErr := authorization.Tx.Rollback(ctx)
+	if err != nil {
+		return err
+	}
+	if rollbackErr != nil {
+		return rollbackErr
+	}
+	return ctx.Err()
+}
+
 func (handler SandboxHandler) endpoint(action string) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Cache-Control", "no-store")
 		ctx, cancel := context.WithTimeout(request.Context(), 25*time.Second)
 		defer cancel()
 		scope := stripe.Scope{OrganizationID: chi.URLParam(request, "id"), UserID: identity.SessionFromContext(ctx).User.ID}
-		tx, _, err := handler.Organization.Authorized(ctx, scope.UserID, scope.OrganizationID, "storefront.manage")
-		if err != nil {
-			sandboxRespond(writer, request, nil, err, 200)
-			return
-		}
-		if err = tx.Rollback(ctx); err != nil {
+		if err := handler.authorize(ctx, scope); err != nil {
 			sandboxRespond(writer, request, nil, err, 200)
 			return
 		}
 		configured := handler.Gateway != nil && handler.Gateway.Configured()
-		if action == "status" {
-			sandboxRespond(writer, request, map[string]any{"provider": "stripe", "mode": "test", "configured": configured, "amount_minor": 2000, "currency": "thb", "customer_checkout_enabled": false}, nil, 200)
-			return
-		}
-		if !configured {
-			sandboxRespond(writer, request, nil, stripe.ErrUnavailable, 200)
+		if action == "status" || !configured {
+			if err := handler.authorize(ctx, scope); err != nil {
+				sandboxRespond(writer, request, nil, err, 200)
+			} else if action == "status" {
+				sandboxRespond(writer, request, map[string]any{"provider": "stripe", "mode": "test", "configured": configured, "amount_minor": 2000, "currency": "thb", "customer_checkout_enabled": false}, nil, 200)
+			} else {
+				sandboxRespond(writer, request, nil, stripe.ErrUnavailable, 200)
+			}
 			return
 		}
 		if request.Method == http.MethodPost {
@@ -87,7 +120,16 @@ func (handler SandboxHandler) endpoint(action string) http.HandlerFunc {
 				return
 			}
 		}
+		if err := handler.authorize(ctx, scope); err != nil {
+			sandboxRespond(writer, request, nil, err, 200)
+			return
+		}
+		if err := ctx.Err(); err != nil {
+			sandboxRespond(writer, request, nil, err, 200)
+			return
+		}
 		var result any
+		var err error
 		status := 200
 		switch action {
 		case "create":
@@ -97,6 +139,11 @@ func (handler SandboxHandler) endpoint(action string) http.HandlerFunc {
 			result, err = handler.Gateway.RetrieveCheckout(ctx, scope, chi.URLParam(request, "sessionId"))
 		case "refund":
 			result, err = handler.Gateway.RefundCheckout(ctx, scope, chi.URLParam(request, "sessionId"))
+		}
+		// A provider effect may already exist even when postflight access is denied.
+		if failure := handler.authorize(ctx, scope); failure != nil {
+			sandboxRespond(writer, request, nil, failure, status)
+			return
 		}
 		sandboxRespond(writer, request, result, err, status)
 	}

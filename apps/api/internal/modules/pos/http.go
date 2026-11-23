@@ -24,6 +24,10 @@ func respond(writer http.ResponseWriter, request *http.Request, result any, err 
 	}
 	code, message, status := "DEPENDENCY_UNAVAILABLE", "POS service unavailable", 503
 	switch {
+	case errors.Is(err, identity.ErrInvalidToken):
+		code, message, status = "UNAUTHENTICATED", "Sign in to continue", 401
+	case errors.Is(err, identity.ErrMFARequired):
+		code, message, status = "MFA_REQUIRED", "Verify MFA to continue", 403
 	case errors.Is(err, ErrInput):
 		code, message, status = "INVALID_INPUT", "Check submitted POS details", 400
 	case errors.Is(err, ErrNotFound):

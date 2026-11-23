@@ -1,4 +1,5 @@
 -- Active: 1795089294509@@127.0.0.1@15432
+
 # VELOPOS migration task plan
 
 Status: LOCAL EXECUTION AUTHORIZED 2026-11-22; specification reconciled; application implementation and acceptance pending.
@@ -909,12 +910,12 @@ Matching offline Go/vet, contracts18/116 and scoped formatting/diff checks passe
 Message-only independent review found no concrete findings, with document
 formatting checked separately. Other financial writers and full T1.3 remain open.
 
-Storefront reconciliation preflight cutover (Large/High, active):
+Storefront reconciliation preflight cutover (Large/High, bounded acceptance):
 
-- [/] Trace prepareStaffVerification and provider-dispatch/replay contracts.
-- [ ] Prove unassured preflight denial RED, acquire typed MFA authorization and
+- [x] Trace prepareStaffVerification and provider-dispatch/replay contracts.
+- [x] Prove unassured preflight denial RED, acquire typed MFA authorization and
       recheck after replay/dispatch reads; discard partial private results.
-- [ ] Verify real session/tenant/permission denials, interrupted waits, no denied
+- [x] Verify real session/tenant/permission denials, interrupted waits, no denied
       provider calls, unchanged state and unlocked successful dispatch; obtain
       matching local checks and independent review.
 
@@ -923,6 +924,516 @@ Post-provider ReconcileCustomerPayment effects and refund writers remain pending
 No schema, public route, provider configuration or financial mutation change.
 Replay keeps its current projection and immutable identity. Recovery uses a
 compatible forward build; actual provider calls remain unauthorized.
+
+Acceptance, 2026-11-23: user confirmed commit6c1f839 as the current baseline.
+`storefront-reconciliation-preflight-resume-baseline.log` reproduced the two
+legacy fixtures passing an Owner session with another actor ID. Fixtures now use
+that actor's real MFA session and separately retain mismatched-actor denial.
+`storefront-reconciliation-preflight-resume-isolated.log` records PASS63.10s,
+preflight PASS4.44s, 231 PASS entries and zero FAIL/SKIP. The prior concurrent
+Go/vet run hit the shared90-second suite deadline; it is preserved, with unchanged
+assertions/deadlines passing in the standalone rerun. Tests cover26-table snapshots,
+unchanged MFA factor state, used recovery-code and MFA audit counts,
+replay/dispatch/order interruption, no denied provider calls,
+exact dispatch tuple and released organization/session locks before retrieval.
+Absent dispatch rows retain the existing configured-fingerprint fallback; matching
+and changed provider identities are exercised with local synthetic callbacks only.
+Offline Go/vet, contracts18/116 and scoped formatting/diff checks passed.
+Message-only independent review found no concrete findings. Post-provider effects,
+refund writers and full T1.3 remain pending.
+
+Storefront reconciliation result cutover (Large/High, bounded acceptance):
+
+- [x] Trace post-provider authorization, observation/payment effects, replay and
+      commit boundaries; preserve exact payment state, identity and deduplication.
+- [x] Reproduce expired authorization during Retrieve RED; reacquire typed live
+      MFA and recheck after waits, between effects and before commit/private replay.
+- [x] Verify revocation/cancellation, transactional rollback and deduplicated
+      observations, same/different-key concurrency and stale provider evidence;
+      obtain matching full regressions/static checks and independent review.
+
+Scope: ReconcileCustomerPayment post-provider orchestration, explicitly checked
+observation stages and focused tests. Provider dispatch remains outside database
+transactions. Retain shared public checkout behavior and refund helpers; no schema,
+route, provider configuration or actual external call change. Controlled failures
+must return zero and roll back all effects. Unknown commit outcomes retain the
+original key for reconciliation; recovery uses a compatible forward build.
+
+Acceptance, 2026-11-23: `storefront-reconciliation-result-red.log` reproduced
+expired provider-time authorization committing and returning a reconciliation.
+The typed post-provider transaction and checked observation stages pass the
+minimal GREEN and `storefront-reconciliation-result-expanded.log`: full
+PASS77.61s, result group PASS14.37s, 232 PASS entries, zero FAIL/SKIP. Tests cover
+provider-time expiry/revocation/MFA removal/cancellation, eleven interrupted SQL
+stages with26-table rollback snapshots, unchanged MFA factor state, used
+recovery-code and MFA audit counts, same/different-key
+concurrency, deduplicated observation preservation and stale OPEN evidence after
+PAID. Shared public checkout and legacy payment/refund regression groups passed.
+The43-migration runtime-role target was a uniquely labelled tmpfs PostgreSQL17.6;
+owned container/network cleanup passed. Offline `go test ./... -count=1` and
+`go vet ./...`, contracts18/116, scoped gofmt and diff checks passed. Message-only
+independent review of supplied source/tests/evidence found no concrete findings;
+the reviewer executed no checks. Commit errors remain potentially uncertain.
+No live provider/browser or full T1.3 acceptance is implied. Refund writers remain
+pending.
+
+Storefront refund preparation cutover (Large/High, bounded acceptance):
+
+- [x] Trace durable refund preparation, replay, authorization and provider boundary.
+- [x] Reproduce missing MFA preparation denial RED; carry typed authorization
+      through request insertion, audit and final locked intent read.
+- [x] Verify no denied provider dispatch, rollback, exact durable identity,
+      cancellation/expiry/replay/concurrency and matching independent review.
+
+Scope: prepareCustomerCancellation, cancellation check before bounded dispatch,
+and focused synthetic-provider tests through CancelPaidCustomerOrder. Preserve
+current full-charge pre-shipment semantics,
+durable refund identity and retry rules. No schema, public route or live provider
+call change. Discovered-refund preflight and post-provider finalization remain
+separate pending cuts. Controlled denial must return zero; ambiguous Commit
+outcomes retain the original operation identity and require reconciliation.
+
+Acceptance, 2026-11-23: missing-session RED reached a synthetic provider and
+created an intent. A separate cancellation RED reproduced dispatch after local
+fingerprinting canceled the request. Typed preparation and the dispatch guard
+pass focused GREEN and `storefront-refund-preparation-expanded.log`: full
+PASS83.42s, 233 PASS entries, zero FAIL/SKIP. Six SQL-stage expiry/cancellation
+checks, existing-intent replay interruption, session/tenant/permission denials,
+concurrent same-key preparation, conflicting-key rejection and terminal replay
+retain the exact1000-minor-unit charge/key/fingerprint. Provider callbacks verify
+committed intent plus one request audit and released locks before dispatch.
+Controlled failures preserve26-table snapshots, MFA factor state, used recovery
+codes and MFA audit counts. The cancellation guard retains the durable intent
+for explicit retry. One legacy delivery fixture now uses the actual foreign
+actor's MFA session while separately retaining mismatched-actor denial.
+Standalone schema43/PostgreSQL17.6 runtime-role checks and owned-resource cleanup
+passed. Matching offline full Go/vet, contracts18/116, scoped gofmt/Prettier and
+diff checks passed. Message-only independent review found no concrete findings
+or unmet bounded checks; reviewer executed no checks. Intermediate fixture and
+snapshot failures remain recorded. Discovered-ID preflight, result finalization,
+five-minute sensitive authority and full T1.3 remain pending.
+
+Storefront discovered-refund preflight cutover (Large/High, bounded acceptance):
+
+- [x] Trace discovered-ID preflight, terminal replay, immutable charge and locks;
+      add missing/primary-session denial RED before typed authorization changes.
+- [x] Recheck after the locked intent read, discard private partial results and
+      release locks before bounded retrieval; preserve key/provider-ID conflicts.
+- [x] Verify real denial/isolation, interrupted read/replay, exact dispatch tuple,
+      unknown-result identity and matching regression/static checks with review.
+
+Scope: the discovered-ID branch of processCustomerRefund and focused synthetic
+provider tests. Result finalization is a separate pending slice. No schema,
+public route, provider configuration or live provider call. Existing full-charge
+pre-shipment semantics and23-hour creation limit remain; discovered retrieval
+must not create or replace the durable refund. Recovery retains the original
+identity and all records through a compatible forward build.
+
+Acceptance, 2026-11-23: `storefront-refund-preflight-red.log` reproduced an
+unassured Retrieve call. Minimal and expanded focused GREEN passed. Matching
+`storefront-refund-preflight-expanded.log` records full PASS88.30s, new group
+PASS3.56s, 234 PASS entries and zero FAIL/SKIP. Tests cover real session/actor/
+Owner/tenant/pinned-scope denials, order-lock and intent-read interruption,
+terminal replay, changed key and known provider-ID conflict, cancellation after
+fingerprinting and exact1000-minor-unit retrieval with released organization/
+session locks. Unknown outcomes preserve the original durable intent. Controlled
+failures retain26-table snapshots, MFA factor state, used recovery codes and MFA
+audit counts. The schema43 runtime-role disposable target and owned-resource
+cleanup passed. Fresh offline full Go/vet, contracts18/116, scoped gofmt/Prettier
+and diff checks passed. Message-only independent review found no concrete
+findings or mandatory bounded gap and executed no checks. A local runner syntax
+failure was corrected before database execution and remains recorded separately.
+Result finalization, five-minute sensitive authority and full T1.3 remain pending.
+
+Storefront refund result cutover (Large/High, bounded acceptance):
+
+- [x] Trace result-time authorization, current intent validation and every
+      financial effect; reproduce provider-time session expiry before changes.
+- [x] Reacquire typed authorization after provider response; recheck after waits,
+      between effects and before commit; discard partial intent on errors.
+- [x] Verify expiry/revocation/cancellation rollback, exact identity and
+      concurrent/deduplicated/stale observations; run matching full regression,
+      static checks and independent review before bounded acceptance.
+
+Scope: processCustomerRefund post-provider transaction and focused tests. Preserve
+full frozen-charge/provider evidence, terminal conflict rules, derived hold
+release and atomic cancellation/event/audit. Provider calls remain outside DB
+transactions. No schema, public route or live provider work; original durable
+identity supports recovery after uncertain commit. The aggregate isolated suite
+budget grows from90 to120 seconds for added explicit expiry cases after measured
+88.30-second preflight regression; individual operation/provider/barrier bounds
+and assertions stay unchanged. This is not a performance acceptance claim.
+
+Acceptance, 2026-11-23: provider-time expiry RED committed a successful refund
+and returned private data. Typed result authorization passes minimal GREEN and
+matching `storefront-refund-result-final.log`: full PASS97.66s, new group
+PASS11.94s, 235 PASS entries and zero FAIL/SKIP. Create and discovered Retrieve
+cover provider-time expiry, revocation, lost assurance and cancellation. Ten
+SQL-stage expiry/cancellation cases and interrupted deduplication preserve
+26-table snapshots, factor fields, used recovery-code counts and MFA audit
+counts; session proof timestamps are not part of those snapshots. An actual
+concurrent service binds the provider ID before the outer result, which then
+rejects conflicting evidence. Four unlocked provider callbacks cover identical
+successes, stale pending and contradictory failed responses: one hold release,
+one cancellation event/audit, preserved terminal state and rolled-back conflicting
+observation. Terminal replay has no dispatch or new effects. Schema43 runtime-role
+tmpfs PostgreSQL17.6 and ID/label-verified cleanup passed. Fresh offline full Go
+tests/vet, contracts18/116, changed-Go gofmt, scoped Prettier and diff checks passed.
+Independent message-only review found no concrete findings or unmet bounded
+checks and executed no tests. Corrected test-local naming and provider-binding
+fixture failures remain recorded separately. Authorization is point-in-time;
+Commit errors remain potentially uncertain and retain the original recovery
+identity. Sandbox, five-minute sensitive authority and full T1.3 remain pending.
+
+Storefront sandbox MFA cutover (Large/High, bounded acceptance):
+
+- [x] Trace all four sandbox actions and reproduce primary-only private access;
+      retain test-only provider scope, exact values and operation identities.
+- [x] Use short typed MFA authorization transactions before local work, again
+      before dispatch or local status, and after provider success/error. Keep locks
+      outside body/configuration/provider calls and discard denied private results.
+- [x] Verify real session/Owner/tenant denials and provider-time changes,
+      cancellation, lock release, original-key recovery and unchanged local data;
+      run matching regression/contracts and independent review.
+
+Scope: SandboxHandler, matching OpenAPI descriptions and focused HTTP/database
+tests. Initial authorization still precedes disabled/status and syntax responses.
+Final status/configuration checks follow local work; sanitized syntax errors do
+not disclose private state. Provider effects can precede postflight denial and
+cannot roll back: recovery retains the same key and existing retrieve/refund
+identity. No live Stripe calls, new provider, schema change or five-minute
+sensitive-action grant. Recovery uses a compatible forward build and preserves
+all prior provider identities and local records. Security specialist supplied
+message-only sequencing advice; independent review remains required.
+
+Acceptance, 2026-11-23: primary-only access RED returned HTTP200 configuration.
+Typed MFA GREEN and matching `storefront-sandbox-mfa-final.log` pass full101.84s,
+new group4.19s,236 PASS entries and zero FAIL/SKIP. Four actions cover enabled/
+disabled, missing/primary/foreign/pinned-context and non-Owner/suspended denials.
+Provider success and error cases cover expired/revoked/unassured sessions,
+cancellation and Owner demotion/suspension; authority denial wins without data.
+Actual transactions verify released organization/session locks during provider,
+configuration and decoder work. Configuration interruption, decoder cancellation
+and three authorization-stage expiry/cancellation pairs prevent premature
+dispatch or private return. Runtime snapshots preserve26 business tables, factor
+fields, used recovery-code counts and MFA audit counts, excluding expected
+middleware session-use updates. Strict empty JSON/body bounds, Origin/CSRF,
+exactTHB2000 and unchanged scope/key/session forwarding remain covered. Provider
+effects are synthetic and not asserted to roll back. OpenAPI documents MFA and
+uncertain external outcomes. Client16/16 tests preserve401/403 codes, prohibit
+automatic retries and forward the original key on explicit recovery. No UI or
+browser claim. Fresh offline Go/vet, contracts18/116, web typecheck, focused ESLint,
+changed-Go gofmt, scoped Prettier and diff checks pass. Initial runner omitted its
+Pickup fixture; its gate test passed but downgrade assertion failed. Corrected
+fixture selection passes focused/full runs and ID/label-verified cleanup. A
+wrong-root formatting command, Go cache sandbox denial and initial TypeScript
+formatting warning are retained separately; supported escalation/scoped formatting
+resolved them without ACL/config changes. Independent message-only review found
+no concrete findings or unmet bounded checks and executed no checks. Synchronous
+body/configuration callbacks still depend on their own return; cancellation is
+checked before subsequent dispatch/response. Live provider, five-minute sensitive
+authority, other consumers and full T1.3 remain open.
+
+Restaurant in-memory command recovery core (High risk, accepted 2026-11-23):
+
+- [x] Reproduce loss of the original attempt on network/auth errors and after
+      later definitive rejection of a previously uncertain request.
+- [x] Bind immutable serialized payload/key to user, organization, branch, path
+      and method; retain uncertainty on the attempt until matching success.
+      Permit refreshed CSRF, explicit same-command retry and synchronous duplicate
+      protection; prevent stale callbacks/private results crossing contexts.
+- [x] Verify hook and actual consumer regressions, client/type/lint/static checks
+      and independent review. No new storage, public contract, DOM or styling.
+
+Scope: useRestaurantCommand and focused tests. Known first-request rejection may
+permit correction; an uncertain earlier request cannot be disproved by a later
+400/409. Backend authorization remains authoritative. Existing caller remounts
+already fence context changes; the core must additionally refuse a retained
+attempt in a different operation/context. Security specialist supplied bounded
+message-only advice. Navigation/remount/reload durability and a full recovery UX
+remain pending; payloads/proofs are not written to browser storage. Recovery and
+rollback preserve the existing provider/server command identities; no automatic
+retry, new provider calls or database changes.
+
+Bounded frontend acceptance, 2026-11-23 (full recovery and T1.3 remain open):
+
+- Baseline RED: network0 incorrectly cleared uncertainty; the expanded baseline
+  suite failed16/19 cases for auth/malformed-success responses, sticky later
+  rejection, nested mutation, context results and throwing callbacks. GREEN:
+  27 hook cases and12 actual RestaurantPage cases passed, including the real
+  TableForm's explicit0/403/400/success retry sequence with one immutable key/body.
+- The core snapshots JSON before dispatch and parses a fresh body per attempt,
+  preserves exact decimal strings, permits refreshed CSRF and refuses retries
+  across user/organization/branch/path/method. It checks context again immediately
+  before transport, suppresses late private results/callbacks and invalidates only
+  the original tenant. Matching success clears uncertainty; a throwing consumer
+  callback does not relock an acknowledged write or strand the duplicate guard.
+- Current root regression:97 web files/842 tests, contracts18/116 and logs10 PASS.
+  Root exit1 retained in `restaurant-command-root-test.log`: dev-stack's disposable
+  Git-shell fixture could not create its temp directory. Read-only sandbox/path
+  inspection followed by supported native escalation of the unchanged dev-stack
+  test passed7/7,0 skipped (`restaurant-command-dev-stack-final.log`). No ACL or
+  global configuration changed. Artifacts are in `.local/velopos-identity-20261122/`.
+- Current `tsc -b --pretty false`, scoped ESLint, scoped Prettier and diff checks
+  PASS. Vite build PASS (`restaurant-command-build.log`) with a chunk-size advisory;
+  jsdom logged unsupported document navigation during the passing web suite.
+  Independent reviewer inspected the supplied core, tests, contracts and matching
+  evidence with no concrete findings or unmet bounded checks; reviewer ran no tools.
+  Browser/device, reload durability, live provider and new database acceptance are
+  not claimed. No production DOM/CSS, public contract, storage or schema changed.
+
+Catalog private read authority (Large/High, bounded acceptance):
+
+- [x] TDD independent missing/primary-only denial for taxonomy, product/list,
+      barcode lookup, import-job and labels reads, including the inline labels path.
+- [x] Acquire typed MFA before business locks and recheck before populated or
+      empty private return, closing rows and discarding accumulated data on error.
+      Preserve existing permissions, own-import visibility, exact prices and scope.
+- [x] Verify actual isolated runtime-role denial, expiry/lock waits, cancellation,
+      tenant/Owner/pinned-context cases, middleware contracts and unchanged state;
+      run affected Go/client/static checks and independent review.
+
+Scope: catalog read services/labels handler and matching tests/OpenAPI. All catalog
+writers and other raw Authorized consumers remain separate pending work. No schema,
+retained database, provider or UI change. Dependencies: accepted typed MFA core and
+organization authorization; security specialist advice requested within existing
+message-only authorization. Recovery keeps existing data and uses a compatible
+forward build; this is not full mandatory-MFA or five-minute sensitive authority.
+
+Bounded acceptance, 2026-11-23; full T1.3 remains open:
+
+- Valid RED reproduced seven direct missing/primary-only disclosures and nine
+  HTTP primary-only successes before the cutover. The final eight service
+  entrypoints and nine GET routes now acquire typed MFA with their existing
+  catalog.read, catalog.import or catalog.labels.print permission. Variants still
+  delegate Product; labels prepare existing product data without printing.
+- Actual runtime-role tests cover missing/primary/mismatched/foreign principals,
+  active non-Owner and suspended membership, pinned deployment, nested tenant
+  IDs and same-code foreign barcodes, creator-only imports, exact prices,
+  pagination, empty/not-found responses and no-store. Real table-lock waits,
+  count/projection/nested/final expiry and cancellation return zero data and
+  metadata. Malformed import JSON and injected nested SQL failures disclose no
+  partial results. Protected business/audit digests remain unchanged.
+- `node .local/velopos-pickup-20261122/check-db.mjs full`: PASS300 entries,
+  FAIL0/SKIP0,127.82s. The Catalog group passed in26.04s. Task-owned tmpfs
+  PostgreSQL17.6/schema43, non-BYPASSRLS runtime role, empty downgrade/reapply,
+  refused populated unsafe downgrade and verified container/network cleanup all
+  passed. Evidence: `.local/velopos-identity-20261122/catalog-read-full.log`;
+  valid RED and expanded focused evidence remain alongside it.
+- Offline `go test -count=1 ./...` and `go vet ./...` passed with database flags
+  cleared. Vitest organization-api/api/pos-api/CatalogPages: four files/59tests
+  passed, including stable401/403 codes and no automatic retry on all nine read
+  paths. TypeScript, scoped ESLint/gofmt/Prettier, contracts18/116 and diff checks
+  passed. Offline unit results are separate from real database acceptance.
+- Independent review accepted the supplied code/tests/evidence. Its P2 found
+  OpenAPI overstated rechecks after aborted SQL; corrected all nine descriptions
+  to distinguish usable-transaction rechecks from sanitized zero-payload aborted
+  failures. Fresh contracts/format checks and focused re-review passed; reviewer
+  executed no tools. No schema, public response shape, browser/device or live
+  provider acceptance is claimed. Catalog writers and full authority/recovery
+  remain pending.
+
+Catalog mutation authority (Large/High, bounded acceptance):
+
+- [x] Reproduce independent unassured mutation/replay access before changing
+      taxonomy, product/variant, barcode and import writers.
+- [x] Carry typed MFA through their transaction and nested write helpers; check
+      after waits, between effects, before audit/private replay/commit and discard
+      outward partial results on failures. Preserve permissions and exact values.
+- [x] Verify disposable runtime-role denial/isolation, expiry/cancellation and
+      atomic business/audit rollback, import replay/concurrency, current contracts
+      and clients, then independent review before bounded acceptance.
+
+Scope: all catalog mutation entrypoints and their package-private write helpers,
+matching integration tests and existing HTTP/OpenAPI contracts. Main owns edits;
+the existing security adviser and independent reviewer remain message-only.
+Dependencies: accepted typed MFA/read gate. No schema, retained data, provider,
+printing or UI change. Recovery preserves data with a compatible forward build;
+commit uncertainty requires reconciliation using the original operation, not an
+assumed rollback. Full five-minute authority/recovery and T1.3 remain pending.
+
+Bounded acceptance, 2026-11-23; full migration remains open:
+
+- Valid initial RED reproduced thirteen unassured mutation paths committing
+  effects. All eight public writers now acquire typed MFA and pass the same
+  authorization transaction through nested product, variant and barcode effects.
+  Existing archive permissions, tenant predicates, creator-only imports, exact
+  decimal values, revisions and import modes remain. Errors return zero outward
+  data; usable transactions recheck domain errors, while aborted SQL keeps its
+  existing error classification without a futile recheck. Completed same-mode
+  import replay rechecks assurance and returns stored results without new effects.
+- Runtime-role acceptance covers fifteen HTTP mutation routes with real
+  cookie/Origin/CSRF and primary-only denial, plus SKIP/UPDATE confirmation modes.
+  Direct tests cover missing/mismatched principals, non-Owner and suspended
+  membership, pinned deployment and foreign nested references. Actual table-lock
+  waits and post-effect expiry/cancellation roll back products, variants, primary
+  demotion/promotion, import completion and audit together. A second-row barcode
+  SQL failure rolls back earlier imported effects. Concurrent confirm produces one
+  completion audit; replay/conflicting mode, creator isolation, prices, revisions,
+  SKU immutability/uniqueness, last-active variant, taxonomy/base-unit and barcode-limit checks
+  retain their existing behavior.
+- `node .local/velopos-pickup-20261122/check-db.mjs full`: PASS378 entries,
+  FAIL0/SKIP0,157.96s; mutation group30.17s. Task-owned tmpfs PostgreSQL17.6,
+  schema43 and non-BYPASSRLS runtime role; empty downgrade/reapply, populated
+  unsafe downgrade refusal/forward recovery and full-ID/label-verified cleanup
+  passed. Evidence: `.local/velopos-identity-20261122/catalog-write-full-final.log`.
+  Valid RED, focused and earlier full logs remain alongside it. One expanded
+  run failed because category/brand HTTP fixtures supplied a unit-only field;
+  corrected fixtures passed without relaxing production validation.
+- Offline `go test -count=1 ./...` and `go vet ./...` passed. An initial sandbox
+  run could not read a Go cache entry; supported escalation passed without ACL or
+  configuration changes. Client/API/POS/CatalogPages Vitest passed four files and
+  74 tests, including assurance errors and one-attempt ambiguous failures across
+  fifteen mutation paths. TypeScript, scoped ESLint/gofmt/Prettier,
+  contracts18/116 and whitespace checks passed. These are separate from real
+  database acceptance. OpenAPI preserves response schemas and documents MFA,
+  zero error payloads, creator/mode replay and commit uncertainty.
+- The existing independent reviewer inspected the supplied scoped source,
+  contracts, tests and matching evidence and accepted this bounded cutover with
+  no concrete findings; it executed no tools. No schema, retained database,
+  printing, browser/device or provider acceptance is claimed. Other retained
+  consumers, sensitive five-minute authority, recovery UX and full T1.3 remain
+  open. The user commits; no staging, commit, push or deployment was performed.
+
+Customer writer authority (Large/High, bounded acceptance, 2026-11-23):
+
+- [x] Add independent live MFA gates to Save, SaveGroup, Archive and Membership,
+      covering seven routes plus creation replay and membership no-op results.
+      Preserve normalized fingerprints, creator scope, revisions, archived-group
+      removal, masking and atomic audit. Reuse typed authorization through waits,
+      related writes, result reads and commit. Readers share the same gate.
+- [x] Verify direct and cookie HTTP denial, Origin/CSRF, tenant and nested-object
+      isolation, replay/conflict/concurrency, post-effect expiry/cancellation,
+      late SQL failure and exact business/audit rollback on isolated runtime DB.
+      Run matching Go, client/contract/static checks and independent review.
+
+Scope excludes POS selection, schema, providers and UI. Recovery uses a compatible
+forward build preserving records. Uncertain commit errors return zero payload;
+they do not prove rollback. T1.3 and the full migration remain incomplete.
+
+Matching evidence, 2026-11-23:
+
+- RED demonstrated direct creation/update and replay without a live MFA session.
+  A separate valid membership no-op RED returned success without a session before
+  any other RED mutation changed fixture revisions. The four entrypoints now
+  independently acquire typed MFA. The old raw customer begin helper is removed;
+  prior readers mechanically use the renamed shared beginMFA helper. The same
+  authorization transaction rechecks before effects, between membership writes,
+  before private replay/no-op results and before/after audit before commit. All
+  failures return zero Customer/Group or nil Archive payload.
+- Isolated acceptance covers all ten service variants and seven real cookie
+  HTTP routes, missing/primary-only/mismatched/revoked sessions, removed/Manager/
+  suspended memberships, pinned deployments, cross-tenant and mixed customer/group
+  references, Origin/CSRF and no-store. Actual customer/group table locks and
+  query-end expiry/cancellation cover creation lookup, each write, both membership
+  directions, final reads, replay/no-op results and audit. Exact business/history/
+  audit digests match after every rollback. Five real aborted SQL projections or
+  audit failures discard partial results and effects. Middleware session-use
+  metadata is deliberately outside the business snapshot.
+- Creation replay returns the current resource/revision without new effects;
+  changed normalized input conflicts. Matching concurrent creates return one ID
+  and one audit event; the same key under another synthetic Owner creates an
+  independent resource. Stale Save/SaveGroup/Archive and membership revisions
+  conflict. Concurrent membership change yields one success and one conflict.
+  Adding to an archived group fails even if already present; removing from it
+  increments only the active customer. Archiving preserves membership/history;
+  archived-customer no-op requests still fail validation. Both membership
+  permissions remain required; current Owner-only roles do not expose a role
+  with only one of those permissions, so no artificial permission seam was added.
+- `node .local/velopos-pickup-20261122/check-db.mjs full`: PASS536 entries,
+  FAIL0/SKIP0,205.70s; customer writers30.61s and prior customer reads17.13s.
+  PostgreSQL17.6/schema43, actual non-super/non-BYPASSRLS runtime role, unique
+  task-owned tmpfs container/internal network, no host ports or retained volume.
+  Empty downgrade/reapply, populated unsafe downgrade refusal/forward recovery,
+  and exact-ID/label cleanup passed. Evidence:
+  `.local/velopos-identity-20261122/customer-write-full.log`.
+- Fresh offline `go test -count=1 ./...` and `go vet ./...` passed. Vitest passed
+  three files/58 tests, including all thirteen customer read/write method/path
+  cases retaining assurance errors, same-origin cookies, AbortSignal and mutation
+  body/CSRF. TypeScript, scoped ESLint/gofmt/Prettier, contracts18/116 and diff
+  whitespace checks passed. Existing OpenAPI request/success schemas are retained;
+  seven writer descriptions/403 contracts now describe MFA. Evidence includes
+  `customer-write-go-final.log` and `customer-write-vet.log` in the same directory.
+- Intermediate failures remain recorded: stale-update test used invalid revision0
+  instead of prior revision1; corrected test passed with no production change.
+  A wrong working-directory path caused a missing-helper compile failure before
+  the two history callsites were renamed correctly. One contract-edit command
+  failed parsing without editing files; the corrected bounded edit passed. An
+  offline Go run hit a sandbox cache access denial; supported escalation passed
+  without ACL/configuration changes. No assertions or runtime grants weakened.
+- The existing independent reviewer inspected supplied scoped source, tests,
+  contracts and matching evidence, finding no concrete defects or unmet bounded
+  checks. Reviewer executed no tools, shell, network, filesystem writes or
+  delegation. No browser/device, race-detector, provider, real Admin, primary or
+  retained-data acceptance is claimed. User commits; no staging/commit/push/deploy.
+
+Customer read authority (Large/High, bounded acceptance, 2026-11-23):
+
+- [x] Reproduce independent denial failures for Get, List, Groups, History and
+      Audit, including the POST search route sharing List.
+- [x] Add typed read-only MFA authorization; preserve writer paths, tenant and
+      branch predicates, masking and exact historical amounts. Close rows before
+      rechecking and return zero private data/metadata on failures.
+- [x] Verify real runtime-role positive/negative/isolation, lock expiry and
+      cancellation, partial-result suppression, HTTP/CSRF/client contracts and
+      unchanged business state; obtain independent scoped review.
+
+Main owns customer service/HTTP, matching tests/contracts and this tracker.
+Existing security adviser and reviewer are message-only; no tools or delegation.
+Dependencies: accepted typed organization authorization. No schema, provider or
+UI change. Recovery is a compatible forward build preserving existing data;
+reverting only this slice's local delta does not require a database downgrade.
+Customer writers were outside this read checkpoint and are accepted above.
+POS selection helpers and full T1.3 remain separate pending work. The historical
+read evidence below is superseded for integrated source by the writer run above.
+
+Bounded evidence, 2026-11-23; full migration remains open:
+
+- Valid RED: all five service readers returned data for missing, primary-only
+  and mismatched session contexts (fifteen failures). Get, List, Groups, History
+  and Audit now independently acquire the existing typed MFA transaction. The
+  original writer helpers and POS selection paths are unchanged. All outward
+  read failures return zero data and pagination/summary metadata. Rows close
+  before rechecks; aborted SQL preserves sanitized error classification without
+  attempting assurance queries in a failed transaction. HTTP maps assurance
+  failures to401 UNAUTHENTICATED or403 MFA_REQUIRED with no data and no-store.
+- Acceptance covers all six routes with actual cookie/Origin/CSRF, direct
+  principal and membership denial, pinned deployment, foreign customer/group/
+  branch identifiers, stale revoked context, real table-lock expiry/cancellation,
+  interruptions after counts, customer lookup, history summary and accumulated
+  rows, final-check cancellation and four aborted SQL projections. Organization-
+  scoped business/history/audit digests remain unchanged after reads and faults.
+  Real Catalog/POS fixture settlement verifies exact10.00 history, inclusive
+  date boundaries and branch filtering. Existing group counts, search escaping,
+  pagination and Owner contact fields remain. Audit retains customer-object and
+  event-prefix scope and its existing lack of branch/date filtering. No stronger
+  multi-query snapshot or malformed-JSON/scan-fixture coverage is claimed.
+- `node .local/velopos-pickup-20261122/check-db.mjs full`: PASS437 entries,
+  FAIL0/SKIP0,175.98s; customer group17.20s. PostgreSQL17.6/schema43, actual
+  non-super/non-BYPASSRLS runtime role, unique task-owned tmpfs container/internal
+  network, no host ports or retained volumes. Empty downgrade/reapply, populated
+  unsafe downgrade refusal/forward recovery and full-ID/label cleanup passed.
+  Evidence: `.local/velopos-identity-20261122/customer-read-full.log`; valid RED
+  and focused logs remain in `.local/velopos-pickup-20261122/customer-read-*.log`.
+- Offline `go test -count=1 ./...` and `go vet ./...` passed; ordinary Go tests
+  do not replace the separate database run. Vitest passed three files/51 tests
+  (customers-api, organization-api, api), including six actual client method/path
+  cases retaining status/code, one request, cancellation signal and body-only
+  search/CSRF. TypeScript, scoped ESLint/gofmt/Prettier, contracts18/116 and diff
+  whitespace checks passed. Shared suite deadline increased to four minutes
+  (browser mode five) for added deliberate expiry waits; runner timeout unchanged.
+- Intermediate fixture failures are retained: incorrect Context branch field and
+  customer-ID pointer, a reused source fixture requiring an absent storefront,
+  and42501 when attempting exclusive locks on read-only sales/audit tables.
+  Fixtures now use actual Catalog/POS APIs and customer-lookup locks; history and
+  audit query boundaries also have explicit interruption/fault checks. Runtime
+  grants, production validation and assertions were not weakened.
+- The existing independent reviewer inspected supplied source, contracts, tests
+  and matching evidence and found no concrete issue or unmet check for this
+  bounded slice; it used no tools. No schema, primary/retained database, UI,
+  browser/device, race-detector or live-provider acceptance is claimed. Full
+  customer writer/POS selection, sensitive five-minute authority, recovery and
+  T1.3 acceptance remain open. User commits; no staging/commit/push/deploy occurred.
 
 Persistence checks on task-owned tmpfs PostgreSQL 17.6, 2026-11-22:
 

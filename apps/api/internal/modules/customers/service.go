@@ -40,30 +40,15 @@ func has(values []string, value string) bool {
 	}
 	return false
 }
-func (service *Service) begin(ctx context.Context, user, org, permission string, filters Filter) (pgx.Tx, organization.Member, error) {
-	tx, actor, err := service.Organization.Authorized(ctx, user, org, permission)
-	if err != nil {
-		return nil, actor, err
+func finish(ctx context.Context, authorization *organization.Authorization, org, user, event, id string) error {
+	if err := authorization.Recheck(ctx); err != nil {
+		return err
 	}
-	if actor.Role != "OWNER" && len(actor.BranchIDs) == 0 || filters.BranchID != "" && actor.Role != "OWNER" && !has(actor.BranchIDs, filters.BranchID) {
-		tx.Rollback(ctx)
-		return nil, actor, organization.ErrDenied
-	}
-	if filters.BranchID != "" {
-		var exists bool
-		err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM branches WHERE organization_id=$1 AND id=$2)", org, filters.BranchID).Scan(&exists)
-		if err != nil || !exists {
-			tx.Rollback(ctx)
-			if err != nil {
-				return nil, actor, err
-			}
-			return nil, actor, ErrNotFound
-		}
-	}
-	return tx, actor, nil
-}
-func finish(ctx context.Context, tx pgx.Tx, org, user, event, id string) error {
+	tx := authorization.Tx
 	if err := organization.RecordAudit(ctx, tx, org, user, event, id); err != nil {
+		return err
+	}
+	if err := authorization.Recheck(ctx); err != nil {
 		return err
 	}
 	return dbError(tx.Commit(ctx))
@@ -99,24 +84,27 @@ func read(ctx context.Context, tx pgx.Tx, actor organization.Member, org, id str
 	return scanCustomer(tx.QueryRow(ctx, "SELECT "+customerColumns+" FROM customers item WHERE item.organization_id=$1 AND item.id=$2", org, id), actor)
 }
 func (service *Service) Get(ctx context.Context, user, org, id string) (Customer, error) {
-	tx, actor, err := service.begin(ctx, user, org, "customers.read", Filter{})
+	authorization, err := service.beginMFA(ctx, user, org, "customers.read", Filter{})
 	if err != nil {
 		return Customer{}, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
-	return read(ctx, tx, actor, org, id)
+	item, err := read(ctx, tx, actor, org, id)
+	return privateReadResult(ctx, authorization, item, err)
 }
 func (service *Service) List(ctx context.Context, user, org string, filters Filter) (Page, error) {
 	result := Page{Items: []Customer{}, Page: filters.Page, PageSize: filters.PageSize}
 	if err := filters.validate(); err != nil {
-		return result, err
+		return Page{}, err
 	}
 	result.Page = filters.Page
 	result.PageSize = filters.PageSize
-	tx, actor, err := service.begin(ctx, user, org, "customers.read", filters)
+	authorization, err := service.beginMFA(ctx, user, org, "customers.read", filters)
 	if err != nil {
-		return result, err
+		return Page{}, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
 	where := ` FROM customers item WHERE item.organization_id=$1 AND ($2='' OR item.status=$2) AND ($3::uuid IS NULL OR EXISTS(SELECT 1 FROM customer_group_memberships WHERE organization_id=item.organization_id AND customer_id=item.id AND group_id=$3)) AND ($4='' OR lower(item.code) LIKE $4 ESCAPE '\' OR lower(item.name) LIKE $4 ESCAPE '\' OR item.phone LIKE $4 ESCAPE '\' OR item.email LIKE $4 ESCAPE '\')`
 	search := ""
@@ -125,24 +113,30 @@ func (service *Service) List(ctx context.Context, user, org string, filters Filt
 	}
 	args := []any{org, filters.Status, nullable(filters.GroupID), search}
 	if err = tx.QueryRow(ctx, "SELECT count(*)"+where, args...).Scan(&result.Total); err != nil {
-		return result, err
+		return privateReadResult(ctx, authorization, result, err)
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Page{}, err
 	}
 	args = append(args, filters.PageSize, (filters.Page-1)*filters.PageSize)
 	rows, err := tx.Query(ctx, "SELECT "+customerColumns+where+" ORDER BY item.created_at DESC,item.id LIMIT $5 OFFSET $6", args...)
 	if err != nil {
-		return result, err
+		return privateReadResult(ctx, authorization, result, err)
 	}
 	defer rows.Close()
 	items := []Customer{}
 	for rows.Next() {
 		item, problem := scanCustomer(rows, actor)
 		if problem != nil {
-			return result, problem
+			rows.Close()
+			return privateReadResult(ctx, authorization, result, problem)
 		}
 		items = append(items, item)
 	}
 	result.Items = items
-	return result, rows.Err()
+	err = rows.Err()
+	rows.Close()
+	return privateReadResult(ctx, authorization, result, err)
 }
 func nullable(value string) any {
 	if value == "" {
@@ -154,10 +148,11 @@ func (service *Service) Save(ctx context.Context, user, org, id, key string, inp
 	if input.normalize() != nil || input.Status != "ACTIVE" || id == "" && (!UUID.MatchString(key) || input.Revision != 0) || id != "" && (!UUID.MatchString(id) || input.Revision < 1) {
 		return Customer{}, ErrInput
 	}
-	tx, actor, err := service.begin(ctx, user, org, "customers.manage", Filter{})
+	authorization, err := service.beginMFA(ctx, user, org, "customers.manage", Filter{})
 	if err != nil {
 		return Customer{}, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
 	event := "customers.updated"
 	if id == "" {
@@ -166,30 +161,43 @@ func (service *Service) Save(ctx context.Context, user, org, id, key string, inp
 		err = tx.QueryRow(ctx, "SELECT id::text,create_fingerprint FROM customers WHERE organization_id=$1 AND created_by=$2 AND create_key=$3", org, user, key).Scan(&id, &previous)
 		if err == nil {
 			if previous != hash {
-				return Customer{}, ErrConflict
+				return privateReadResult(ctx, authorization, Customer{}, ErrConflict)
 			}
-			return read(ctx, tx, actor, org, id)
+			item, problem := read(ctx, tx, actor, org, id)
+			return privateReadResult(ctx, authorization, item, problem)
 		}
 		if !errors.Is(err, pgx.ErrNoRows) {
+			return privateReadResult(ctx, authorization, Customer{}, err)
+		}
+		if err = authorization.Recheck(ctx); err != nil {
 			return Customer{}, err
 		}
 		err = tx.QueryRow(ctx, `INSERT INTO customers(organization_id,code,name,phone,email,notes,marketing_consent,created_by,create_key,create_fingerprint) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id::text`, org, input.Code, input.Name, input.Phone, input.Email, input.Notes, input.MarketingConsent, user, key, hash).Scan(&id)
 		event = "customers.created"
 	} else {
+		if err = authorization.Recheck(ctx); err != nil {
+			return Customer{}, err
+		}
 		command, problem := tx.Exec(ctx, `UPDATE customers SET code=$3,name=$4,phone=$5,email=$6,notes=$7,marketing_consent=$8,revision=revision+1,updated_at=now() WHERE organization_id=$1 AND id=$2 AND revision=$9 AND status='ACTIVE'`, org, id, input.Code, input.Name, input.Phone, input.Email, input.Notes, input.MarketingConsent, input.Revision)
 		err = problem
 		if err == nil && command.RowsAffected() != 1 {
-			return Customer{}, ErrConflict
+			return privateReadResult(ctx, authorization, Customer{}, ErrConflict)
 		}
 	}
 	if err != nil {
-		return Customer{}, dbError(err)
+		return privateReadResult(ctx, authorization, Customer{}, err)
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Customer{}, err
 	}
 	item, err := read(ctx, tx, actor, org, id)
 	if err != nil {
-		return item, err
+		return privateReadResult(ctx, authorization, Customer{}, err)
 	}
-	return item, finish(ctx, tx, org, user, event, id)
+	if err = finish(ctx, authorization, org, user, event, id); err != nil {
+		return Customer{}, err
+	}
+	return item, nil
 }
 func (service *Service) Archive(ctx context.Context, user, org, id string, revision int64, group bool) (any, error) {
 	permission, table, event := "customers.manage", "customers", "customers.archived"
@@ -199,17 +207,24 @@ func (service *Service) Archive(ctx context.Context, user, org, id string, revis
 	if !UUID.MatchString(id) || revision < 1 {
 		return nil, ErrInput
 	}
-	tx, actor, err := service.begin(ctx, user, org, permission, Filter{})
+	authorization, err := service.beginMFA(ctx, user, org, permission, Filter{})
 	if err != nil {
 		return nil, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
+	if err = authorization.Recheck(ctx); err != nil {
+		return nil, err
+	}
 	command, err := tx.Exec(ctx, "UPDATE "+table+" SET status='ARCHIVED',revision=revision+1,updated_at=now() WHERE organization_id=$1 AND id=$2 AND revision=$3 AND status='ACTIVE'", org, id, revision)
 	if err != nil {
-		return nil, dbError(err)
+		return privateReadResult[any](ctx, authorization, nil, err)
 	}
 	if command.RowsAffected() != 1 {
-		return nil, ErrConflict
+		return privateReadResult[any](ctx, authorization, nil, ErrConflict)
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return nil, err
 	}
 	var result any
 	if group {
@@ -218,9 +233,12 @@ func (service *Service) Archive(ctx context.Context, user, org, id string, revis
 		result, err = read(ctx, tx, actor, org, id)
 	}
 	if err != nil {
+		return privateReadResult[any](ctx, authorization, nil, err)
+	}
+	if err = finish(ctx, authorization, org, user, event, id); err != nil {
 		return nil, err
 	}
-	return result, finish(ctx, tx, org, user, event, id)
+	return result, nil
 }
 func ReadSelection(ctx context.Context, tx pgx.Tx, org, id string) (*Selection, error) {
 	if id == "" {

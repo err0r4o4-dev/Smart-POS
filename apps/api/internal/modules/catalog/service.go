@@ -27,12 +27,32 @@ func databaseError(err error) error {
 	}
 	return err
 }
-func (service *Service) begin(ctx context.Context, user, org, permission string) (pgx.Tx, error) {
-	tx, _, err := service.Organization.Authorized(ctx, user, org, permission)
-	return tx, err
+func privateReadResult[Result any](ctx context.Context, authorization *organization.Authorization, result Result, err error) (Result, error) {
+	var zero Result
+	if failure := ctx.Err(); failure != nil {
+		return zero, failure
+	}
+	// An aborted SQL transaction cannot revalidate assurance; expose no payload.
+	if err != nil && authorization.Tx.Conn().PgConn().TxStatus() == 'E' {
+		return zero, databaseError(err)
+	}
+	if failure := authorization.Recheck(ctx); failure != nil {
+		return zero, failure
+	}
+	if err != nil {
+		return zero, databaseError(err)
+	}
+	return result, nil
 }
-func finish(ctx context.Context, tx pgx.Tx, org, user, event, object string) error {
+func finish(ctx context.Context, authorization *organization.Authorization, org, user, event, object string) error {
+	if err := authorization.Recheck(ctx); err != nil {
+		return err
+	}
+	tx := authorization.Tx
 	if err := organization.RecordAudit(ctx, tx, org, user, event, object); err != nil {
+		return err
+	}
+	if err := authorization.Recheck(ctx); err != nil {
 		return err
 	}
 	return databaseError(tx.Commit(ctx))
@@ -89,29 +109,33 @@ func (service *Service) Taxonomies(ctx context.Context, user, org, kind string, 
 	if err := filter.validate(); err != nil {
 		return result, err
 	}
-	tx, err := service.begin(ctx, user, org, "catalog.read")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "catalog.read")
 	if err != nil {
-		return result, err
+		return Page[Taxonomy]{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
 	where := " FROM " + kind + " WHERE organization_id=$1 AND name ILIKE $2 AND (($3='' AND status<>'ARCHIVED') OR status=$3)"
 	if err = tx.QueryRow(ctx, "SELECT count(*)"+where, org, "%"+filter.Search+"%", filter.Status).Scan(&result.Total); err != nil {
-		return result, err
+		return privateReadResult(ctx, authorization, result, err)
 	}
 	rows, err := tx.Query(ctx, "SELECT "+taxonomyColumns(kind)+where+" ORDER BY name,id LIMIT $4 OFFSET $5", org, "%"+filter.Search+"%", filter.Status, filter.PageSize, (filter.Page-1)*filter.PageSize)
 	if err != nil {
-		return result, err
+		return privateReadResult(ctx, authorization, result, err)
 	}
 	defer rows.Close()
 	for rows.Next() {
 		item, err := readTaxonomy(rows, kind)
 		if err != nil {
-			return result, err
+			rows.Close()
+			return privateReadResult(ctx, authorization, result, err)
 		}
 		result.Items = append(result.Items, item)
 	}
 	result.Page, result.PageSize = filter.Page, filter.PageSize
-	return result, rows.Err()
+	err = rows.Err()
+	rows.Close()
+	return privateReadResult(ctx, authorization, result, err)
 }
 func taxonomyRelations(ctx context.Context, tx pgx.Tx, org, kind, id string, input TaxonomyInput) error {
 	if kind == "categories" && input.ParentID != nil {
@@ -154,10 +178,11 @@ func (service *Service) SaveTaxonomy(ctx context.Context, user, org, kind, id st
 	if err != nil {
 		return Taxonomy{}, err
 	}
-	tx, err := service.begin(ctx, user, org, permission)
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, permission)
 	if err != nil {
 		return Taxonomy{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
 	if err = input.validate(kind); err != nil {
 		return Taxonomy{}, err
@@ -166,11 +191,17 @@ func (service *Service) SaveTaxonomy(ctx context.Context, user, org, kind, id st
 		return Taxonomy{}, ErrInput
 	}
 	if err = taxonomyRelations(ctx, tx, org, kind, id, input); err != nil {
+		return privateReadResult(ctx, authorization, Taxonomy{}, err)
+	}
+	if err = authorization.Recheck(ctx); err != nil {
 		return Taxonomy{}, err
 	}
 	if id != "" {
 		current, err := readTaxonomy(tx.QueryRow(ctx, "SELECT "+taxonomyColumns(kind)+" FROM "+kind+" WHERE organization_id=$1 AND id=$2", org, id), kind)
 		if err != nil {
+			return privateReadResult(ctx, authorization, Taxonomy{}, err)
+		}
+		if err = authorization.Recheck(ctx); err != nil {
 			return Taxonomy{}, err
 		}
 		if current.Revision != input.Revision {
@@ -180,6 +211,9 @@ func (service *Service) SaveTaxonomy(ctx context.Context, user, org, kind, id st
 			var used bool
 			err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM product_variants WHERE organization_id=$1 AND unit_id=$2) OR EXISTS(SELECT 1 FROM units WHERE organization_id=$1 AND base_unit_id=$2)", org, id).Scan(&used)
 			if err != nil {
+				return privateReadResult(ctx, authorization, Taxonomy{}, err)
+			}
+			if err = authorization.Recheck(ctx); err != nil {
 				return Taxonomy{}, err
 			}
 			if used {
@@ -196,6 +230,9 @@ func (service *Service) SaveTaxonomy(ctx context.Context, user, org, kind, id st
 			}
 			var used bool
 			if err = tx.QueryRow(ctx, query, org, id).Scan(&used); err != nil {
+				return privateReadResult(ctx, authorization, Taxonomy{}, err)
+			}
+			if err = authorization.Recheck(ctx); err != nil {
 				return Taxonomy{}, err
 			}
 			if used {
@@ -222,12 +259,17 @@ func (service *Service) SaveTaxonomy(ctx context.Context, user, org, kind, id st
 		args = append(args, id)
 		query = fmt.Sprintf("UPDATE %s SET name=$2,description=$3,status=$4%s,revision=revision+1,updated_at=now() WHERE organization_id=$1 AND id=$%d RETURNING %s", kind, extraSet, len(args), taxonomyColumns(kind))
 	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Taxonomy{}, err
+	}
 	item, err := readTaxonomy(tx.QueryRow(ctx, query, args...), kind)
 	if err != nil {
-		return item, err
+		return privateReadResult(ctx, authorization, Taxonomy{}, err)
 	}
-	err = finish(ctx, tx, org, user, "catalog."+kind+".saved", item.ID)
-	return item, err
+	if err = finish(ctx, authorization, org, user, "catalog."+kind+".saved", item.ID); err != nil {
+		return Taxonomy{}, err
+	}
+	return item, nil
 }
 func sameID(left, right *string) bool {
 	return left == nil && right == nil || left != nil && right != nil && *left == *right

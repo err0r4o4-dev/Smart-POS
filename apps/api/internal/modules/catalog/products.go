@@ -26,55 +26,64 @@ func productBy(ctx context.Context, tx pgx.Tx, org, id string) (Product, error) 
 	return item, err
 }
 func (service *Service) Product(ctx context.Context, user, org, id string) (Product, error) {
-	tx, err := service.begin(ctx, user, org, "catalog.read")
+	return service.privateProduct(ctx, user, org, id, "catalog.read")
+}
+func (service *Service) Labels(ctx context.Context, user, org, id string) (Product, error) {
+	return service.privateProduct(ctx, user, org, id, "catalog.labels.print")
+}
+func (service *Service) privateProduct(ctx context.Context, user, org, id, permission string) (Product, error) {
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, permission)
 	if err != nil {
 		return Product{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
-	return productBy(ctx, tx, org, id)
+	result, err := productBy(ctx, tx, org, id)
+	return privateReadResult(ctx, authorization, result, err)
 }
 func (service *Service) Products(ctx context.Context, user, org string, filter Filter) (Page[Product], error) {
 	result := Page[Product]{Items: []Product{}}
 	if err := filter.validate(); err != nil {
 		return result, err
 	}
-	tx, err := service.begin(ctx, user, org, "catalog.read")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "catalog.read")
 	if err != nil {
-		return result, err
+		return Page[Product]{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
 	where := ` WHERE p.organization_id=$1 AND (($3='' AND p.status<>'ARCHIVED') OR p.status=$3) AND ($4::uuid IS NULL OR p.category_id=$4) AND ($5::uuid IS NULL OR p.brand_id=$5) AND (p.name ILIKE $2 OR EXISTS(SELECT 1 FROM product_variants v WHERE v.organization_id=p.organization_id AND v.product_id=p.id AND (v.sku ILIKE $2 OR EXISTS(SELECT 1 FROM product_barcodes z WHERE z.organization_id=v.organization_id AND z.variant_id=v.id AND z.code ILIKE $2))))`
 	args := []any{org, "%" + filter.Search + "%", filter.Status, nullableID(filter.CategoryID), nullableID(filter.BrandID)}
 	if err = tx.QueryRow(ctx, "SELECT count(*)"+productFrom+where, args...).Scan(&result.Total); err != nil {
-		return result, err
+		return privateReadResult(ctx, authorization, result, err)
 	}
 	order := map[string]string{"name": "p.name,p.id", "-name": "p.name DESC,p.id", "updated": "p.updated_at,p.id", "-updated": "p.updated_at DESC,p.id"}[filter.Sort]
 	args = append(args, filter.PageSize, (filter.Page-1)*filter.PageSize)
 	rows, err := tx.Query(ctx, "SELECT "+productColumns+productFrom+where+" ORDER BY "+order+" LIMIT $6 OFFSET $7", args...)
 	if err != nil {
-		return result, err
+		return privateReadResult(ctx, authorization, result, err)
 	}
 	for rows.Next() {
 		item, err := readProduct(rows)
 		if err != nil {
 			rows.Close()
-			return result, err
+			return privateReadResult(ctx, authorization, result, err)
 		}
 		result.Items = append(result.Items, item)
 	}
 	err = rows.Err()
 	rows.Close()
 	if err != nil {
-		return result, err
+		return privateReadResult(ctx, authorization, result, err)
 	}
 	for index := range result.Items {
 		result.Items[index].Variants, err = variants(ctx, tx, org, result.Items[index].ID)
 		if err != nil {
-			return result, err
+			return privateReadResult(ctx, authorization, result, err)
 		}
 	}
 	result.Page, result.PageSize = filter.Page, filter.PageSize
-	return result, nil
+	return privateReadResult(ctx, authorization, result, nil)
 }
 func productReferences(ctx context.Context, tx pgx.Tx, org string, input ProductInput) error {
 	if err := reference(ctx, tx, org, "categories", input.CategoryID); err != nil {
@@ -82,7 +91,8 @@ func productReferences(ctx context.Context, tx pgx.Tx, org string, input Product
 	}
 	return reference(ctx, tx, org, "brands", input.BrandID)
 }
-func createProduct(ctx context.Context, tx pgx.Tx, user, org string, input CreateInput) (Product, error) {
+func createProduct(ctx context.Context, authorization *organization.Authorization, user, org string, input CreateInput) (Product, error) {
+	tx := authorization.Tx
 	if err := input.ProductInput.validate(); err != nil {
 		return Product{}, err
 	}
@@ -102,39 +112,52 @@ func createProduct(ctx context.Context, tx pgx.Tx, user, org string, input Creat
 	if err := productReferences(ctx, tx, org, input.ProductInput); err != nil {
 		return Product{}, err
 	}
+	if err := authorization.Recheck(ctx); err != nil {
+		return Product{}, err
+	}
 	var id string
 	err := tx.QueryRow(ctx, "INSERT INTO products(organization_id,name,description,category_id,brand_id,status,created_by,updated_by) VALUES($1,$2,$3,$4,$5,$6,$7,$7) RETURNING id::text", org, input.Name, input.Description, input.CategoryID, input.BrandID, input.Status, user).Scan(&id)
 	if err != nil {
 		return Product{}, databaseError(err)
 	}
 	for _, variant := range input.Variants {
-		if _, err = saveVariant(ctx, tx, org, id, "", variant); err != nil {
+		if err = authorization.Recheck(ctx); err != nil {
+			return Product{}, err
+		}
+		if _, err = saveVariant(ctx, authorization, org, id, "", variant); err != nil {
 			return Product{}, err
 		}
 	}
 	return productBy(ctx, tx, org, id)
 }
 func (service *Service) CreateProduct(ctx context.Context, user, org string, input CreateInput) (Product, error) {
-	tx, err := service.begin(ctx, user, org, "catalog.create")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "catalog.create")
 	if err != nil {
 		return Product{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
-	item, err := createProduct(ctx, tx, user, org, input)
+	item, err := createProduct(ctx, authorization, user, org, input)
 	if err != nil {
-		return item, err
+		return privateReadResult(ctx, authorization, Product{}, err)
 	}
-	err = finish(ctx, tx, org, user, "catalog.product.created", item.ID)
-	return item, err
+	if err = finish(ctx, authorization, org, user, "catalog.product.created", item.ID); err != nil {
+		return Product{}, err
+	}
+	return item, nil
 }
 func (service *Service) UpdateProduct(ctx context.Context, user, org, id string, input ProductInput) (Product, error) {
-	tx, actor, err := service.Organization.Authorized(ctx, user, org, "catalog.update")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "catalog.update")
 	if err != nil {
 		return Product{}, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
 	current, err := productBy(ctx, tx, org, id)
 	if err != nil {
+		return privateReadResult(ctx, authorization, Product{}, err)
+	}
+	if err = authorization.Recheck(ctx); err != nil {
 		return Product{}, err
 	}
 	if current.Status == "ARCHIVED" || input.Status == "ARCHIVED" {
@@ -164,16 +187,24 @@ func (service *Service) UpdateProduct(ctx context.Context, user, org, id string,
 		}
 	}
 	if err = productReferences(ctx, tx, org, input); err != nil {
+		return privateReadResult(ctx, authorization, Product{}, err)
+	}
+	if err = authorization.Recheck(ctx); err != nil {
 		return Product{}, err
 	}
 	_, err = tx.Exec(ctx, "UPDATE products SET name=$3,description=$4,category_id=$5,brand_id=$6,status=$7,revision=revision+1,updated_by=$8,updated_at=now() WHERE organization_id=$1 AND id=$2", org, id, input.Name, input.Description, input.CategoryID, input.BrandID, input.Status, user)
 	if err != nil {
-		return Product{}, databaseError(err)
+		return privateReadResult(ctx, authorization, Product{}, err)
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Product{}, err
 	}
 	item, err := productBy(ctx, tx, org, id)
 	if err != nil {
-		return item, err
+		return privateReadResult(ctx, authorization, Product{}, err)
 	}
-	err = finish(ctx, tx, org, user, "catalog.product.updated", id)
-	return item, err
+	if err = finish(ctx, authorization, org, user, "catalog.product.updated", id); err != nil {
+		return Product{}, err
+	}
+	return item, nil
 }

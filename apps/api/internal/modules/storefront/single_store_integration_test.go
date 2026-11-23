@@ -49,9 +49,9 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 	if err != nil || configuration.ConnConfig.Host != "127.0.0.1" || configuration.ConnConfig.Port != 15514 || configuration.ConnConfig.Database != "smartpos_single_store_acceptance" {
 		t.Fatal("refusing an unconfirmed isolated database target")
 	}
-	deadline := 90 * time.Second
+	deadline := 4 * time.Minute
 	if os.Getenv("SMARTPOS_RESTAURANT_BROWSER") == "1" {
-		deadline = 4 * time.Minute
+		deadline = 5 * time.Minute
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), deadline)
 	defer cancel()
@@ -475,6 +475,34 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 			}
 		})
 	}
+	t.Run("customer mutations require independent MFA", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "df300000-0000-4000-8000-000000000001", createInput("CUSTWRITEMFA"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		customerMutationMFAAcceptance(t, ctx, pool, auth, multi, ownerSession, guestSession, state.Organization.ID)
+	})
+	t.Run("customer reads require independent MFA", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "df200000-0000-4000-8000-000000000001", createInput("CUSTREADMFA"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		customerReadMFAAcceptance(t, ctx, pool, auth, multi, ownerSession, guestSession, state.Organization.ID)
+	})
+	t.Run("catalog reads require independent MFA", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "df000000-0000-4000-8000-000000000001", createInput("CATREADMFA"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		catalogReadMFAAcceptance(t, ctx, pool, auth, multi, ownerSession, guestSession, state.Organization.ID)
+	})
+	t.Run("catalog mutations require independent MFA", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "df100000-0000-4000-8000-000000000001", createInput("CATWRITEMFA"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		catalogMutationMFAAcceptance(t, ctx, pool, auth, multi, ownerSession, guestSession, state.Organization.ID)
+	})
 	t.Run("storefront private reads require independent MFA", func(t *testing.T) {
 		state, problem := multi.Create(ctx, owner.ID, "d2000000-0000-4000-8000-000000000002", createInput("PRIVATE"))
 		if problem != nil {
@@ -531,6 +559,41 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 		}
 		privateReconciliationPreflightMFAAcceptance(t, ctx, pool, auth, multi, ownerSession, guestSession, state.Organization.ID, seedShop(state, "private-reconciliation-preflight-mfa"))
 	})
+	t.Run("storefront reconciliation results require live MFA", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "da000000-0000-4000-8000-000000000001", createInput("RECONCILIATIONRESULTMFA"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		privateReconciliationMFAAcceptance(t, ctx, pool, multi, ownerSession, state.Organization.ID, seedShop(state, "private-reconciliation-result-mfa"))
+	})
+	t.Run("storefront refund preparation requires independent MFA", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "db000000-0000-4000-8000-000000000001", createInput("REFUNDPREPARATIONMFA"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		privateRefundPreparationMFAAcceptance(t, ctx, pool, auth, multi, ownerSession, guestSession, state.Organization.ID, seedShop(state, "private-refund-preparation-mfa"))
+	})
+	t.Run("storefront discovered refund preflight requires independent MFA", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "dc000000-0000-4000-8000-000000000001", createInput("REFUNDPREFLIGHTMFA"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		privateRefundPreflightMFAAcceptance(t, ctx, pool, auth, multi, ownerSession, guestSession, state.Organization.ID, seedShop(state, "private-refund-preflight-mfa"))
+	})
+	t.Run("storefront refund results require independent MFA", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "dd000000-0000-4000-8000-000000000001", createInput("REFUNDRESULTMFA"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		privateRefundResultMFAAcceptance(t, ctx, pool, multi, ownerSession, state.Organization.ID, seedShop(state, "private-refund-result-mfa"))
+	})
+	t.Run("storefront sandbox requires independent MFA", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "de000000-0000-4000-8000-000000000001", createInput("SANDBOXMFA"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		sandboxMFAAcceptance(t, ctx, pool, auth, multi, ownerSession, guestSession, state.Organization.ID)
+	})
 	t.Run("durable customer payment persistence", func(t *testing.T) {
 		state, problem := multi.Create(ctx, owner.ID, "f1111111-1111-4111-8111-111111111111", createInput("PAYMENT"))
 		if problem != nil {
@@ -571,14 +634,14 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 		if problem != nil {
 			t.Fatal(problem)
 		}
-		paymentReconciliationAcceptance(t, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "reconciliation-fixture"), first.Organization.ID, guest.ID)
+		paymentReconciliationAcceptance(t, ctx, guestSession.Context, multi, owner.ID, state.Organization.ID, seedShop(state, "reconciliation-fixture"), first.Organization.ID, guest.ID)
 	})
 	t.Run("complete delivery flow", func(t *testing.T) {
 		state, problem := multi.Create(ctx, owner.ID, "5a111111-1111-4111-8111-111111111111", createInput("DELIVERY"))
 		if problem != nil {
 			t.Fatal(problem)
 		}
-		deliveryAcceptance(t, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "delivery-fixture"), first.Organization.ID, guest.ID)
+		deliveryAcceptance(t, ctx, guestSession.Context, multi, owner.ID, state.Organization.ID, seedShop(state, "delivery-fixture"), first.Organization.ID, guest.ID)
 	})
 	t.Run("atomic online reservation foundation", func(t *testing.T) {
 		reservationAcceptance(t, ctx, multi, owner.ID, first.Organization.ID, firstShop)

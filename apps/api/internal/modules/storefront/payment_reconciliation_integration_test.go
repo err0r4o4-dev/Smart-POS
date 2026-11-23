@@ -8,13 +8,14 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
+	"smartpos/api/internal/modules/identity"
 	"smartpos/api/internal/modules/organization"
 	"smartpos/api/internal/modules/pos"
 	"smartpos/api/internal/modules/storefront"
 	"smartpos/api/internal/platform/stripe"
 )
 
-func paymentReconciliationAcceptance(test *testing.T, ctx context.Context, organizations *organization.Service, owner, org string, shop storefront.Settings, foreignOrg, unauthorizedUser string) {
+func paymentReconciliationAcceptance(test *testing.T, ctx, unauthorizedContext context.Context, organizations *organization.Service, owner, org string, shop storefront.Settings, foreignOrg, unauthorizedUser string) {
 	test.Helper()
 	base, err := stripe.NewSandbox("sk_test_syntheticReconciliation", "http://localhost:8088")
 	if err != nil {
@@ -86,7 +87,10 @@ func paymentReconciliationAcceptance(test *testing.T, ctx context.Context, organ
 	test.Run("staff authority and replay identity are rechecked without provider calls", func(test *testing.T) {
 		input := storefront.PaymentReconciliationInput{OrderID: order.ID, SessionID: "cs_test_staffRecovered"}
 		key := "6a333333-3333-4333-8333-333333333333"
-		if _, problem := service.ReconcileCustomerPayment(ctx, unauthorizedUser, org, key, input); !errors.Is(problem, storefront.ErrNotFound) {
+		if _, problem := service.ReconcileCustomerPayment(ctx, unauthorizedUser, org, key, input); !errors.Is(problem, identity.ErrInvalidToken) {
+			test.Fatalf("mismatched session actor replay: %v", problem)
+		}
+		if _, problem := service.ReconcileCustomerPayment(unauthorizedContext, unauthorizedUser, org, key, input); !errors.Is(problem, storefront.ErrNotFound) {
 			test.Fatalf("unauthorized replay: %v", problem)
 		}
 		if _, problem := service.ReconcileCustomerPayment(ctx, owner, foreignOrg, key, input); !errors.Is(problem, storefront.ErrNotFound) {
@@ -290,7 +294,7 @@ func paymentReconciliationAcceptance(test *testing.T, ctx context.Context, organ
 		}
 		input := storefront.PaymentReconciliationInput{OrderID: next.ID, SessionID: "cs_test_staffRevoked"}
 		before := retrieves
-		if _, problem = service.ReconcileCustomerPayment(ctx, unauthorizedUser, org, "6aeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", input); !errors.Is(problem, organization.ErrDenied) || retrieves != before {
+		if _, problem = service.ReconcileCustomerPayment(unauthorizedContext, unauthorizedUser, org, "6aeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", input); !errors.Is(problem, organization.ErrDenied) || retrieves != before {
 			test.Fatalf("retired manager reached provider: %v calls=%d", problem, retrieves-before)
 		}
 		promote, _, problem := organizations.Authorized(ctx, owner, org, "storefront.manage")
@@ -321,7 +325,7 @@ func paymentReconciliationAcceptance(test *testing.T, ctx context.Context, organ
 			}
 			return session, write.Commit(network)
 		}
-		if _, problem = service.ReconcileCustomerPayment(ctx, unauthorizedUser, org, "6aeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", input); !errors.Is(problem, storefront.ErrNotFound) || retrieves != before+1 {
+		if _, problem = service.ReconcileCustomerPayment(unauthorizedContext, unauthorizedUser, org, "6aeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", input); !errors.Is(problem, storefront.ErrNotFound) || retrieves != before+1 {
 			test.Fatalf("revoked authority committed GET or skipped provider: %v calls=%d", problem, retrieves-before)
 		}
 		current, problem := service.CustomerPaymentReview(ctx, owner, org, next.ID)

@@ -506,8 +506,57 @@ raw public and settlement helpers remain unchanged. Matching runtime-role expiry
 rollback, revision, concurrent replay and complete paid-kitchen eligibility
 regressions and independent backend review are recorded in tasks.md. The six
 existing HTTP operations describe401/403 without data; internal recipe/forecast
-methods gain no routes and forecast remains local unavailable status. Frontend
-uncertain-operation recovery remains a pending consumer slice.
+methods gain no routes and forecast remains local unavailable status. The
+restaurant command hook now preserves an immutable in-memory payload/key and
+sticky uncertainty until matching success, binding explicit retry to its original
+user, organization, branch, path and method while permitting refreshed CSRF.
+Context changes fence dispatch and private completion callbacks/results; success
+invalidates the original tenant cache. Matching hook, TableForm, static and
+independent-review evidence is recorded in tasks.md on 2026-11-23. Navigation,
+remount and reload durability and full recovery UX remain pending; no payloads or
+proofs are persisted by this hook.
+Catalog taxonomy, Product/Products, barcode lookup, ImportJob and labels reads now
+independently acquire typed MFA before business locks with their existing
+permissions. Nested tenant predicates, creator-only imports, exact prices and
+pagination remain. Usable transactions recheck before private data or domain
+errors; aborted SQL failures return sanitized errors without private payload and
+cannot recheck. All interrupted/helper failures discard accumulated data and page
+metadata. Rows close before nested queries and final rechecks. The nine existing
+GET contracts preserve no-store and map assurance failures to401/403 without data.
+Matching runtime-role denial, lock/expiry/cancellation, tenant isolation,
+partial-result, client and independent-review evidence is in tasks.md on
+2026-11-23. All eight Catalog writers now acquire typed MFA and carry the same
+authorization transaction through nested product, variant and barcode effects.
+They recheck after waits, between effects and before audit/commit, returning zero
+outward data on failure. Existing permission, tenant, creator, revision, exact
+price and import-mode rules remain. Completed creator/job/mode replay rechecks
+assurance and returns its stored result without new effects; commit uncertainty
+still needs reconciliation before retry. Matching runtime-role rollback,
+concurrency, HTTP/client, contract and independent-review evidence is in tasks.md
+on 2026-11-23. Other retained consumers, five-minute sensitive authority, recovery
+and full T1.3 remain pending; these slices add no schema, printing or provider
+effects.
+Customer Get, List, Groups, History and Audit now independently acquire typed
+MFA for their five service entrypoints and six HTTP routes, including body-only
+POST search. Existing permissions, tenant/branch predicates, group counts,
+masking and exact historical values remain. Reads close rows before rechecks;
+all failures discard private data and pagination/summary metadata. Usable
+transactions recheck domain errors; aborted SQL keeps sanitized classification
+without returning data. Audit retains its existing customer-object/event-prefix
+scope and does not apply branch/date filters. Matching runtime-role lock,
+expiry/cancellation, revoked-session, SQL-fault, history and client evidence plus
+independent review is recorded in tasks.md on2026-11-23. This read slice changes
+no schema or isolation level. Customer Save, SaveGroup, Archive and Membership
+now also independently acquire typed live MFA for all seven write routes. They
+retain normalized creator-bound creation keys, current-resource replay, optimistic
+revisions, tenant/permission checks, contact masking and archived-group removal.
+The same transaction rechecks after waits, between membership effects and before
+audit/commit or private replay/no-op results. Failed operations return zero data;
+controlled precommit denial rolls back business/audit together. An uncertain
+commit error does not prove rollback. Matching runtime-role rollback, SQL-fault,
+concurrency, cookie/client/contract and independent-review evidence is recorded
+in tasks.md on2026-11-23. POS selection, five-minute sensitive authority, recovery
+and full T1.3 acceptance remain pending. No schema or provider change is included.
 Storefront private Settings, Order and Orders now independently acquire the typed
 MFA gate and recheck before populated, null or empty results. Interrupted private
 reads discard accumulated data; existing tenant/branch scope, inactive history,
@@ -554,7 +603,54 @@ projection before fresh-state eligibility checks. Runtime-role interruption,
 same-key concurrency, refund replay and settled-order rejection evidence plus
 independent review are recorded in tasks.md. Reconciliation and audit remain
 atomic; uncertain commit outcomes require state reconciliation.
-Other raw Authorized consumers remain pending; these bounded setup results do
+prepareStaffVerification now independently acquires typed MFA authorization,
+checks after replay/dispatch lookups and discards partial results on failures.
+Its transaction rolls back before the bounded provider retrieval. The caller
+checks cancellation before dispatch. This proves authorization at preflight time;
+post-provider financial authority is reacquired separately. Existing
+session binding, configured provider fingerprint and absent-dispatch recovery
+remain intact. Matching runtime-role, real-session, lock-release and independent
+review evidence is recorded in tasks.md.
+ReconcileCustomerPayment now reacquires typed MFA after provider retrieval and
+uses the current locked attempt. Checked observation insertion, deduplication
+lookup and payment update share its transaction with reconciliation and audit.
+Checks between stages and before private replay/commit discard partial results;
+Commit errors also return zero without claiming a known rollback. The shared
+public checkout wrapper preserves its original SQL ordering and state rules.
+Matching runtime-role interruption,26-table rollback, concurrent idempotency,
+deduplication, stale-evidence and independent-review evidence is in tasks.md.
+prepareCustomerCancellation now independently acquires typed MFA authorization,
+checks after the locked intent/status reads and between intent/audit effects,
+and checks after the final intent read before commit or private replay. Controlled
+failures return zero intent and roll back uncommitted preparation effects. The
+committed immutable charge and request
+audit precede bounded provider dispatch, with a caller-cancellation check after
+local fingerprinting. Matching runtime-role denial/rollback/idempotency and
+independent review evidence is in tasks.md. Commit errors remain potentially
+uncertain; recovery retains the original operation identity. Discovered-refund
+preflight now obtains typed staff-payment authorization before the locked intent
+read and rechecks afterward before releasing locks. Changed key/known provider-ID
+conflicts and terminal replay remain bound to the original intent; denied reads
+return zero and cannot dispatch. Runtime-role interruption, exact unlocked
+retrieval and independent review evidence is in tasks.md. Result finalization now
+reacquires typed MFA after the provider response and validates against the
+current locked intent. Checks between observation, intent, payment/hold, order,
+event and audit effects and before commit discard partial results on failure.
+Identical successes converge; stale pending preserves the terminal result and
+contradictory terminal evidence rolls back. The release guard preserves one
+payment-attempt revision increase. Matching runtime-role rollback, provider-time
+authority, concurrency and independent-review evidence is in tasks.md. Commit
+errors retain outcome uncertainty and the original recovery identity.
+The four retained Stripe sandbox actions now use short typed MFA transactions
+before local work, again before dispatch or local configuration return, and after
+provider success/error. No authorization locks span body/configuration/provider
+work. Postflight denial returns no private result and takes precedence over
+gateway errors; an external test effect may already exist, so recovery retains
+the same key/Checkout/refund identity. OpenAPI, HTTP checks on the runtime role,
+unchanged local-data checks, client error/key regression and independent-review evidence
+are recorded in tasks.md. This does not authorize live provider calls or assert
+that denied external effects roll back.
+Other raw Authorized consumers remain pending; these bounded results do
 not establish full Owner/Admin MFA coverage or five-minute sensitive authority.
 Owner/Admin require MFA and fresh authentication
 for receiving-account changes, transfer and advertising-credit refunds.

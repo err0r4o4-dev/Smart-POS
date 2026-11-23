@@ -114,17 +114,32 @@ func (service *Service) ReconcileCustomerPayment(ctx context.Context, user, org,
 	if err = session.Validate(attempt.Charge(), input.SessionID); err != nil {
 		return PaymentReview{}, paymentError(err)
 	}
-	tx, attempt, err := service.staffPaymentTx(ctx, user, org, input.OrderID)
+	authorization, attempt, err := service.authorizeStaffPayment(ctx, user, org, input.OrderID)
 	if err != nil {
 		return PaymentReview{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
-	if previous, err = replayReconciliation(ctx, tx, user, key, hash, attempt); err != nil {
+	recheck := func() error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		return authorization.Recheck(ctx)
+	}
+	previous, err = replayReconciliation(ctx, tx, user, key, hash, attempt)
+	if failure := recheck(); failure != nil {
+		return PaymentReview{}, failure
+	}
+	if err != nil {
 		return PaymentReview{}, err
-	} else if previous != nil {
+	}
+	if previous != nil {
 		return *previous, nil
 	}
 	currentIdentity, err := service.staffDispatchIdentity(ctx, tx, attempt)
+	if failure := recheck(); failure != nil {
+		return PaymentReview{}, failure
+	}
 	if err != nil {
 		return PaymentReview{}, err
 	}
@@ -140,21 +155,40 @@ func (service *Service) ReconcileCustomerPayment(ctx context.Context, user, org,
 		if err != nil {
 			return PaymentReview{}, err
 		}
+		if err = recheck(); err != nil {
+			return PaymentReview{}, err
+		}
 	}
 	var observation string
-	attempt, observation, err = storeCustomerObservation(ctx, tx, attempt, session, "RETRIEVE")
+	attempt, observation, err = storeStaffObservation(ctx, authorization, attempt, session)
 	if err != nil {
 		return PaymentReview{}, err
 	}
-	reconciliation, err := appendReconciliation(ctx, tx, user, key, hash, "VERIFY_SESSION", "PROVIDER_LOOKUP", &observation, attempt)
+	var reconciliation string
+	err = tx.QueryRow(ctx, `INSERT INTO online_payment_reconciliations(organization_id,order_id,actor_id,idempotency_key,request_fingerprint,action,reason_code,session_id,observation_id,payment_state) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id::text`, org, attempt.OrderID, user, key, hash, "VERIFY_SESSION", "PROVIDER_LOOKUP", attempt.SessionID, &observation, attempt.State).Scan(&reconciliation)
 	if err != nil {
+		return PaymentReview{}, paymentError(err)
+	}
+	if err = recheck(); err != nil {
+		return PaymentReview{}, err
+	}
+	if err = organization.RecordAudit(ctx, tx, org, user, "online_payment.reconciled", reconciliation); err != nil {
+		return PaymentReview{}, paymentError(err)
+	}
+	if err = recheck(); err != nil {
 		return PaymentReview{}, err
 	}
 	result, err := readPaymentReview(ctx, tx, attempt, reconciliation)
+	if failure := recheck(); failure != nil {
+		return PaymentReview{}, failure
+	}
 	if err != nil {
 		return PaymentReview{}, err
 	}
-	return result, paymentError(tx.Commit(ctx))
+	if err = tx.Commit(ctx); err != nil {
+		return PaymentReview{}, paymentError(err)
+	}
+	return result, nil
 }
 
 func (service *Service) CustomerPaymentReview(ctx context.Context, user, org, order string) (PaymentReview, error) {

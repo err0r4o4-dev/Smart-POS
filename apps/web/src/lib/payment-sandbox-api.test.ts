@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createSandboxCheckout,
+  refundSandboxCheckout,
   sandboxCheckout,
   sandboxStatus,
 } from './payment-sandbox-api';
@@ -25,6 +26,46 @@ beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock);
 });
 describe('sandbox API boundary', () => {
+  it.each([
+    { status: 401, code: 'UNAUTHENTICATED' },
+    { status: 403, code: 'MFA_REQUIRED' },
+  ])(
+    'preserves $code and the original recovery key',
+    async ({ status, code }) => {
+      fetchMock.mockResolvedValue({
+        ok: false,
+        status,
+        json: async () => ({
+          error: { code, message: 'Verify account access' },
+        }),
+      });
+      const key = 'de000000-0000-4000-8000-000000000002';
+      const operations = [
+        () => createSandboxCheckout('org', 'synthetic-csrf', key),
+        () => sandboxStatus('org'),
+        () => sandboxCheckout('org', checkout.id),
+        () => refundSandboxCheckout('org', 'synthetic-csrf', checkout.id),
+      ];
+      for (const [index, operation] of operations.entries()) {
+        await expect(operation()).rejects.toMatchObject({ status, code });
+        expect(fetchMock).toHaveBeenCalledTimes(index + 1);
+      }
+      fetchMock.mockResolvedValue(ok(checkout));
+      await expect(
+        createSandboxCheckout('org', 'synthetic-csrf', key),
+      ).resolves.toEqual(checkout);
+      expect(fetchMock).toHaveBeenCalledTimes(5);
+      for (const index of [0, 4]) {
+        expect(fetchMock.mock.calls[index]).toEqual([
+          '/api/v1/organizations/org/storefront/payment-sandbox/checkouts',
+          expect.objectContaining({
+            headers: expect.objectContaining({ 'Idempotency-Key': key }),
+          }),
+        ]);
+      }
+    },
+  );
+
   it.each([
     { ...checkout, amount_minor: '2000' },
     { ...checkout, amount_minor: 1 },

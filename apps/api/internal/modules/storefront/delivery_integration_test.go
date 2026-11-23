@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"smartpos/api/internal/modules/identity"
 	"smartpos/api/internal/modules/organization"
 	"smartpos/api/internal/modules/storefront"
 	"smartpos/api/internal/platform/stripe"
@@ -26,7 +27,7 @@ func (gateway *refundGatewayFixture) RetrieveCustomerRefund(ctx context.Context,
 	return gateway.getRefund(ctx, charge, id)
 }
 
-func deliveryAcceptance(test *testing.T, ctx context.Context, organizations *organization.Service, owner, org string, shop storefront.Settings, foreignOrg, unauthorizedUser string) {
+func deliveryAcceptance(test *testing.T, ctx, unauthorizedContext context.Context, organizations *organization.Service, owner, org string, shop storefront.Settings, foreignOrg, unauthorizedUser string) {
 	test.Helper()
 	service := &storefront.Service{Organization: organizations}
 	variant := seedSourceProduct(test, ctx, organizations, owner, org, shop.BranchID, shop.LocationID, shop.LocationID)
@@ -115,7 +116,10 @@ func deliveryAcceptance(test *testing.T, ctx context.Context, organizations *org
 			retrieves++
 			return stripe.CustomerRefund{ID: id, Object: "refund", Status: refundStatus, AmountMinor: charge.AmountMinor, Currency: "thb", PaymentIntent: charge.PaymentIntent, Metadata: map[string]string{"smartpos_purpose": stripe.CustomerRefundPurpose, "organization_id": org, "order_id": orderID, "refund_id": charge.RefundID}}, nil
 		}
-		if _, problem = service.CancelPaidCustomerOrder(ctx, unauthorizedUser, org, orderID, key); !errors.Is(problem, storefront.ErrNotFound) {
+		if _, problem = service.CancelPaidCustomerOrder(ctx, unauthorizedUser, org, orderID, key); !errors.Is(problem, identity.ErrInvalidToken) {
+			test.Fatalf("mismatched refund actor: %v", problem)
+		}
+		if _, problem = service.CancelPaidCustomerOrder(unauthorizedContext, unauthorizedUser, org, orderID, key); !errors.Is(problem, storefront.ErrNotFound) {
 			test.Fatalf("nonmember refund: %v", problem)
 		}
 		if _, problem = service.CancelPaidCustomerOrder(ctx, owner, foreignOrg, orderID, key); !errors.Is(problem, storefront.ErrNotFound) {

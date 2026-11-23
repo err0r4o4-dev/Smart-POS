@@ -28,6 +28,10 @@ func endpoint(run func(context.Context, string, string, *http.Request) (any, err
 		}
 		status, code, message := 503, "DEPENDENCY_UNAVAILABLE", "Customer service unavailable"
 		switch {
+		case errors.Is(err, identity.ErrInvalidToken):
+			status, code, message = 401, "UNAUTHENTICATED", "Sign in to continue"
+		case errors.Is(err, identity.ErrMFARequired):
+			status, code, message = 403, "MFA_REQUIRED", "Verify MFA to continue"
 		case errors.Is(err, ErrInput):
 			status, code, message = 400, "INVALID_INPUT", "Check customer details and filters"
 		case errors.Is(err, ErrConflict):

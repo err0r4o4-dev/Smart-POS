@@ -53,3 +53,38 @@ func (service *Service) authorizeStaffPayment(ctx context.Context, user, org, or
 	}
 	return authorization, attempt, nil
 }
+
+func storeStaffObservation(ctx context.Context, authorization *organization.Authorization, attempt PaymentAttempt, session stripe.CustomerSession) (PaymentAttempt, string, error) {
+	recheck := func() error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		return authorization.Recheck(ctx)
+	}
+	if err := recheck(); err != nil {
+		return PaymentAttempt{}, "", err
+	}
+	tx := authorization.Tx
+	fingerprint, outcome, err := insertCustomerObservation(ctx, tx, attempt, session, "RETRIEVE")
+	if err != nil {
+		return PaymentAttempt{}, "", err
+	}
+	if err = recheck(); err != nil {
+		return PaymentAttempt{}, "", err
+	}
+	observation, err := readCustomerObservation(ctx, tx, attempt, "RETRIEVE", fingerprint)
+	if err != nil {
+		return PaymentAttempt{}, "", err
+	}
+	if err = recheck(); err != nil {
+		return PaymentAttempt{}, "", err
+	}
+	attempt, err = observePayment(ctx, tx, attempt, session, outcome)
+	if err != nil {
+		return PaymentAttempt{}, "", err
+	}
+	if err = recheck(); err != nil {
+		return PaymentAttempt{}, "", err
+	}
+	return attempt, observation, nil
+}

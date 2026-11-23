@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/jackc/pgx/v5"
-	"smartpos/api/internal/modules/organization"
 	"strings"
 	"time"
 )
@@ -225,10 +224,11 @@ func validateImportRows(ctx context.Context, tx pgx.Tx, org string, rows []Impor
 	return results, nil
 }
 func (service *Service) PreviewImport(ctx context.Context, user, org, filename string, data []byte, mapping map[string]string) (ImportJob, error) {
-	tx, err := service.begin(ctx, user, org, "catalog.import")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "catalog.import")
 	if err != nil {
 		return ImportJob{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
 	table, err := parseFile(filename, data)
 	if err != nil {
@@ -240,23 +240,28 @@ func (service *Service) PreviewImport(ctx context.Context, user, org, filename s
 	}
 	var count int
 	if err = tx.QueryRow(ctx, "SELECT count(*) FROM product_import_jobs WHERE organization_id=$1 AND created_by=$2 AND created_at>now()-interval '1 hour'", org, user).Scan(&count); err != nil {
-		return ImportJob{}, err
+		return privateReadResult(ctx, authorization, ImportJob{}, err)
 	}
 	if count >= 30 {
-		return ImportJob{}, ErrConflict
+		return privateReadResult(ctx, authorization, ImportJob{}, ErrConflict)
 	}
 	if _, err = validateImportRows(ctx, tx, org, rows); err != nil {
+		return privateReadResult(ctx, authorization, ImportJob{}, err)
+	}
+	if err = authorization.Recheck(ctx); err != nil {
 		return ImportJob{}, err
 	}
 	encoded, _ := json.Marshal(rows)
 	var id string
 	err = tx.QueryRow(ctx, "INSERT INTO product_import_jobs(organization_id,created_by,rows) VALUES($1,$2,$3) RETURNING id::text", org, user, encoded).Scan(&id)
 	if err != nil {
-		return ImportJob{}, databaseError(err)
+		return privateReadResult(ctx, authorization, ImportJob{}, err)
 	}
 	job := summarizeImport(id, table.Headers, rows)
-	err = finish(ctx, tx, org, user, "catalog.import.previewed", id)
-	return job, err
+	if err = finish(ctx, authorization, org, user, "catalog.import.previewed", id); err != nil {
+		return ImportJob{}, err
+	}
+	return job, nil
 }
 func importJob(ctx context.Context, tx pgx.Tx, user, org, id string) (ImportJob, string, time.Time, error) {
 	if !uuidPattern.MatchString(id) {
@@ -288,51 +293,62 @@ func importJob(ctx context.Context, tx pgx.Tx, user, org, id string) (ImportJob,
 	return summary, currentMode, expiry, nil
 }
 func (service *Service) ImportJob(ctx context.Context, user, org, id string) (ImportJob, error) {
-	tx, err := service.begin(ctx, user, org, "catalog.import")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "catalog.import")
 	if err != nil {
 		return ImportJob{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
 	job, _, _, err := importJob(ctx, tx, user, org, id)
-	return job, err
+	return privateReadResult(ctx, authorization, job, err)
 }
 func (service *Service) ConfirmImport(ctx context.Context, user, org, id, mode string) (ImportJob, error) {
-	tx, err := service.begin(ctx, user, org, "catalog.import")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "catalog.import")
 	if err != nil {
 		return ImportJob{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
 	if mode != "CREATE" && mode != "SKIP" && mode != "UPDATE" {
 		return ImportJob{}, ErrInput
 	}
 	job, previous, expiry, err := importJob(ctx, tx, user, org, id)
 	if err != nil {
-		return job, err
+		return privateReadResult(ctx, authorization, ImportJob{}, err)
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return ImportJob{}, err
 	}
 	if job.Status == "COMPLETED" {
 		if previous != mode {
-			return job, ErrConflict
+			return privateReadResult(ctx, authorization, ImportJob{}, ErrConflict)
 		}
-		return job, nil
+		return privateReadResult(ctx, authorization, job, nil)
 	}
 	if !time.Now().Before(expiry) {
-		return job, ErrConflict
+		return privateReadResult(ctx, authorization, ImportJob{}, ErrConflict)
 	}
 	old := append([]ImportRow{}, job.Rows...)
 	resolved, err := validateImportRows(ctx, tx, org, job.Rows)
 	if err != nil {
-		return job, err
+		return privateReadResult(ctx, authorization, ImportJob{}, err)
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return ImportJob{}, err
 	}
 	for index, row := range job.Rows {
 		if len(row.Errors) > 0 || row.ExistingID != old[index].ExistingID || row.VariantRevision != old[index].VariantRevision || row.ProductRevision != old[index].ProductRevision {
-			return job, ErrConflict
+			return privateReadResult(ctx, authorization, ImportJob{}, ErrConflict)
 		}
 		if mode == "CREATE" && row.ExistingID != "" {
-			return job, ErrConflict
+			return privateReadResult(ctx, authorization, ImportJob{}, ErrConflict)
 		}
 	}
 	result := ImportResult{Total: len(job.Rows)}
 	for index, row := range job.Rows {
+		if err = authorization.Recheck(ctx); err != nil {
+			return ImportJob{}, err
+		}
 		value := resolved[index]
 		var variant Variant
 		if value.Existing != nil && mode == "SKIP" {
@@ -340,9 +356,9 @@ func (service *Service) ConfirmImport(ctx context.Context, user, org, id, mode s
 			continue
 		}
 		if value.Existing == nil {
-			product, err := createProduct(ctx, tx, user, org, CreateInput{ProductInput: value.Product, Variants: []VariantInput{value.Variant}})
+			product, err := createProduct(ctx, authorization, user, org, CreateInput{ProductInput: value.Product, Variants: []VariantInput{value.Variant}})
 			if err != nil {
-				return job, err
+				return privateReadResult(ctx, authorization, ImportJob{}, err)
 			}
 			variant = product.Variants[0]
 			result.Imported++
@@ -352,38 +368,47 @@ func (service *Service) ConfirmImport(ctx context.Context, user, org, id, mode s
 			value.Variant.Attributes = variant.Attributes
 			value.Variant.Name = variant.Name
 			value.Variant.Status = variant.Status
-			variant, err = saveVariant(ctx, tx, org, variant.ProductID, variant.ID, value.Variant)
+			variant, err = saveVariant(ctx, authorization, org, variant.ProductID, variant.ID, value.Variant)
 			if err != nil {
-				return job, err
+				return privateReadResult(ctx, authorization, ImportJob{}, err)
+			}
+			if err = authorization.Recheck(ctx); err != nil {
+				return ImportJob{}, err
 			}
 			_, err = tx.Exec(ctx, "UPDATE products SET name=$3,category_id=COALESCE($4,category_id),brand_id=COALESCE($5,brand_id),revision=revision+1,updated_by=$6,updated_at=now() WHERE organization_id=$1 AND id=$2", org, variant.ProductID, row.Name, value.Product.CategoryID, value.Product.BrandID, user)
 			if err != nil {
-				return job, databaseError(err)
+				return privateReadResult(ctx, authorization, ImportJob{}, err)
 			}
 			result.Updated++
+		}
+		if err = authorization.Recheck(ctx); err != nil {
+			return ImportJob{}, err
 		}
 		if row.Barcode != "" {
 			var exists bool
 			if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM product_barcodes WHERE organization_id=$1 AND code=$2)", org, row.Barcode).Scan(&exists); err != nil {
-				return job, err
+				return privateReadResult(ctx, authorization, ImportJob{}, err)
+			}
+			if err = authorization.Recheck(ctx); err != nil {
+				return ImportJob{}, err
 			}
 			if !exists {
-				if _, err = registerBarcode(ctx, tx, org, variant.ID, BarcodeInput{Code: row.Barcode, Symbology: row.Symbology, Source: "MANUFACTURER"}); err != nil {
-					return job, err
+				if _, err = registerBarcode(ctx, authorization, org, variant.ID, BarcodeInput{Code: row.Barcode, Symbology: row.Symbology, Source: "MANUFACTURER"}); err != nil {
+					return privateReadResult(ctx, authorization, ImportJob{}, err)
 				}
 			}
 		}
 	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return ImportJob{}, err
+	}
 	encoded, _ := json.Marshal(result)
 	_, err = tx.Exec(ctx, "UPDATE product_import_jobs SET status='COMPLETED',mode=$3,result=$4,confirmed_at=now() WHERE organization_id=$1 AND id=$2", org, id, mode, encoded)
 	if err != nil {
-		return job, err
+		return privateReadResult(ctx, authorization, ImportJob{}, err)
 	}
-	if err = organization.RecordAudit(ctx, tx, org, user, "catalog.import.completed", id); err != nil {
-		return job, err
-	}
-	if err = tx.Commit(ctx); err != nil {
-		return job, databaseError(err)
+	if err = finish(ctx, authorization, org, user, "catalog.import.completed", id); err != nil {
+		return ImportJob{}, err
 	}
 	job.Status = "COMPLETED"
 	job.Result = &result

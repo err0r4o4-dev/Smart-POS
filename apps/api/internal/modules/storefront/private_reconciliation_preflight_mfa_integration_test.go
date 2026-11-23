@@ -82,7 +82,7 @@ func privateReconciliationPreflightMFAAcceptance(t *testing.T, ctx context.Conte
 	if value, problem := pinned.ReconcileCustomerPayment(owner.Context, user, org, key, input); !errors.Is(problem, storefront.ErrNotFound) || !reflect.ValueOf(value).IsZero() || calls != 0 {
 		t.Fatalf("reconciliation preflight crossed pinned organization: %v", problem)
 	}
-	before := privateCatalogSnapshot(t, ctx, organizations, user, org)
+	before := privatePreflightSnapshot(t, ctx, organizations, user, org)
 	proof := privateQuoteProof(t, ctx, pool, user)
 	for _, expired := range []bool{true, false} {
 		verifyPrivateReadWait(t, ctx, pool, owner, "online_orders", expired, func(request context.Context) (any, error) {
@@ -97,7 +97,7 @@ func privateReconciliationPreflightMFAAcceptance(t *testing.T, ctx context.Conte
 	if value, problem := service.ReconcileCustomerPayment(owner.Context, user, org, key, changed); !errors.Is(problem, storefront.ErrConflict) || !reflect.ValueOf(value).IsZero() || calls != 0 {
 		t.Fatalf("mismatched checkout session reached provider: %v calls=%d", problem, calls)
 	}
-	if privateCatalogSnapshot(t, ctx, organizations, user, org) != before || privateQuoteProof(t, ctx, pool, user) != proof || calls != 0 {
+	if privatePreflightSnapshot(t, ctx, organizations, user, org) != before || privateQuoteProof(t, ctx, pool, user) != proof || calls != 0 {
 		t.Fatal("denied preflight changed business/MFA state or called provider")
 	}
 	gateway.retrieve = func(network context.Context, charge stripe.CustomerCharge, session string) (stripe.CustomerSession, error) {
@@ -122,7 +122,7 @@ func privateReconciliationPreflightMFAAcceptance(t *testing.T, ctx context.Conte
 		return stripe.CustomerSession{}, stripe.ErrUnavailable
 	}
 	value, err = service.ReconcileCustomerPayment(owner.Context, user, org, key, input)
-	if !errors.Is(err, stripe.ErrUnavailable) || !reflect.ValueOf(value).IsZero() || calls != 1 || privateCatalogSnapshot(t, ctx, organizations, user, org) != before {
+	if !errors.Is(err, stripe.ErrUnavailable) || !reflect.ValueOf(value).IsZero() || calls != 1 || privatePreflightSnapshot(t, ctx, organizations, user, org) != before {
 		t.Fatalf("assured absent-dispatch preflight failed or retained locks/effects: %v calls=%d", err, calls)
 	}
 	gateway.retrieve = func(_ context.Context, charge stripe.CustomerCharge, session string) (stripe.CustomerSession, error) {
@@ -134,7 +134,7 @@ func privateReconciliationPreflightMFAAcceptance(t *testing.T, ctx context.Conte
 		t.Fatalf("assured preflight reconciliation fixture: %v calls=%d", err, calls)
 	}
 	reconciliation := value.ReconciliationID
-	before = privateCatalogSnapshot(t, ctx, organizations, user, org)
+	before = privatePreflightSnapshot(t, ctx, organizations, user, org)
 	for _, expired := range []bool{true, false} {
 		verifyPrivateReconciliationPreflightStage(t, ctx, pool, owner, org, key, input, gateway, "SELECT doc.status,attempt.stock_hold_released", expired)
 	}
@@ -142,7 +142,7 @@ func privateReconciliationPreflightMFAAcceptance(t *testing.T, ctx context.Conte
 		t.Fatalf("primary-only preflight replay: %v calls=%d", problem, calls)
 	}
 	value, err = service.ReconcileCustomerPayment(owner.Context, user, org, key, input)
-	if err != nil || value.ReconciliationID != reconciliation || calls != 2 || privateCatalogSnapshot(t, ctx, organizations, user, org) != before || privateQuoteProof(t, ctx, pool, user) != proof {
+	if err != nil || value.ReconciliationID != reconciliation || calls != 2 || privatePreflightSnapshot(t, ctx, organizations, user, org) != before || privateQuoteProof(t, ctx, pool, user) != proof {
 		t.Fatalf("assured preflight replay changed identity/state or dispatched: %v calls=%d", err, calls)
 	}
 	privatePreflightDispatchAcceptance(t, ctx, organizations, owner, org, shop, items, gateway.CustomerClient)

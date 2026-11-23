@@ -178,6 +178,50 @@ async function createTable() {
   fireEvent.click(screen.getByRole('button', { name: 'บันทึกโต๊ะ' }));
 }
 
+it('keeps table input locked and retries the original command until success', async () => {
+  const write = vi
+    .fn()
+    .mockRejectedValueOnce(new ApiError(0, 'Connection lost'))
+    .mockRejectedValueOnce(new ApiError(403, 'MFA required'))
+    .mockRejectedValueOnce(new ApiError(400, 'Later rejection'))
+    .mockResolvedValue({
+      id: 't1',
+      branch_id: 'branch',
+      code: 'T01',
+      name: 'ริมหน้าต่าง',
+      seats: 2,
+      status: 'ACTIVE',
+      revision: 1,
+    });
+  mocks.request.mockImplementation(
+    (org: string, path: string, options?: { method?: string }) =>
+      options?.method === 'POST'
+        ? write(org, path, options)
+        : Promise.resolve([]),
+  );
+  view('tables');
+  await createTable();
+  expect(await screen.findByRole('alert')).toHaveTextContent('Connection lost');
+  const code = screen.getByLabelText('รหัสโต๊ะ');
+  expect(code).toBeDisabled();
+  expect(code).toHaveValue('T01');
+  expect(write).toHaveBeenCalledTimes(1);
+  const first = write.mock.calls[0];
+  for (const message of ['MFA required', 'Later rejection']) {
+    fireEvent.click(screen.getByRole('button', { name: 'บันทึกโต๊ะ' }));
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent(message),
+    );
+    expect(code).toBeDisabled();
+    expect(code).toHaveValue('T01');
+  }
+  fireEvent.click(screen.getByRole('button', { name: 'บันทึกโต๊ะ' }));
+  await waitFor(() => expect(code).toBeEnabled());
+  expect(code).toHaveValue('');
+  expect(write).toHaveBeenCalledTimes(4);
+  for (const call of write.mock.calls) expect(call).toEqual(first);
+});
+
 it('shows a real table-order link from the creation response and matching storefront branch', async () => {
   tableCreationResponses();
   view('tables');

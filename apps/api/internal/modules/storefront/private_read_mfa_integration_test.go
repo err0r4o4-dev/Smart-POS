@@ -104,7 +104,7 @@ func verifyPrivateReadWait(t *testing.T, ctx context.Context, pool *pgxpool.Pool
 	}
 	defer blocker.Rollback(ctx)
 	switch table {
-	case "storefronts", "online_orders", "online_order_events", "pos_terminals", "stock_locations":
+	case "storefronts", "online_orders", "online_order_events", "pos_terminals", "stock_locations", "categories", "brands", "units", "products", "product_barcodes", "product_import_jobs", "customers", "customer_groups":
 	default:
 		t.Fatal("unrecognized private-read lock target")
 	}

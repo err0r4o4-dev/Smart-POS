@@ -4,6 +4,102 @@ import { ApiError, getSession } from './api';
 
 afterEach(() => vi.unstubAllGlobals());
 
+it.each([
+  '/categories',
+  '/brands',
+  '/units',
+  '/products',
+  '/products/product-a',
+  '/products/product-a/variants',
+  '/products/product-a/labels',
+  '/barcodes/lookup?code=CATALOG-READ',
+  '/products/import/job-a',
+])('retains catalog assurance errors without retrying %s', async (path) => {
+  const controller = new AbortController();
+  for (const denial of [
+    { status: 401, code: 'UNAUTHENTICATED' },
+    { status: 403, code: 'MFA_REQUIRED' },
+    { status: 403, code: 'FORBIDDEN' },
+  ]) {
+    const fetcher = vi.fn().mockResolvedValue({
+      ok: false,
+      status: denial.status,
+      json: async () => ({
+        error: { code: denial.code, message: 'Verify access' },
+      }),
+    });
+    vi.stubGlobal('fetch', fetcher);
+    await expect(
+      organizationRequest(`/organizations/org-a${path}`, {
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({ ...denial, message: 'Verify access' });
+    expect(fetcher).toHaveBeenCalledExactlyOnceWith(
+      `/api/v1/organizations/org-a${path}`,
+      expect.objectContaining({
+        method: 'GET',
+        credentials: 'same-origin',
+        signal: controller.signal,
+      }),
+    );
+  }
+});
+
+it.each([
+  ['POST', '/categories'],
+  ['PATCH', '/categories/category-a'],
+  ['POST', '/brands'],
+  ['PATCH', '/brands/brand-a'],
+  ['POST', '/units'],
+  ['PATCH', '/units/unit-a'],
+  ['POST', '/products'],
+  ['PATCH', '/products/product-a'],
+  ['POST', '/products/product-a/variants'],
+  ['PATCH', '/products/product-a/variants/variant-a'],
+  ['POST', '/products/product-a/variants/variant-a/barcodes'],
+  ['POST', '/products/product-a/variants/variant-a/barcodes/generate'],
+  ['DELETE', '/products/product-a/variants/variant-a/barcodes/barcode-a'],
+  ['POST', '/products/import/preview'],
+  ['POST', '/products/import/job-a/confirm'],
+])(
+  'retains catalog mutation errors without retrying %s %s',
+  async (method, path) => {
+    for (const denial of [
+      { status: 401, code: 'UNAUTHENTICATED' },
+      { status: 403, code: 'MFA_REQUIRED' },
+      { status: 403, code: 'FORBIDDEN' },
+      { status: 403, code: 'INVALID_CSRF' },
+    ]) {
+      const fetcher = vi.fn().mockResolvedValue({
+        ok: false,
+        status: denial.status,
+        json: async () => ({
+          error: { code: denial.code, message: 'Verify access' },
+        }),
+      });
+      vi.stubGlobal('fetch', fetcher);
+      await expect(
+        organizationRequest(`/organizations/org-a${path}`, {
+          method,
+          body: {},
+          csrf: 'synthetic-csrf',
+        }),
+      ).rejects.toMatchObject(denial);
+      expect(fetcher).toHaveBeenCalledTimes(1);
+    }
+    const fetcher = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+    vi.stubGlobal('fetch', fetcher);
+    await expect(
+      organizationRequest(`/organizations/org-a${path}`, {
+        method,
+        body: {},
+        csrf: 'synthetic-csrf',
+      }),
+    ).rejects.toThrow('ตรวจสอบสถานะรายการก่อนทำซ้ำ');
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  },
+);
+
 it('preserves scoped requests, decimal strings, credentials and retry keys', async () => {
   const controller = new AbortController();
   const fetcher = vi.fn().mockResolvedValue({

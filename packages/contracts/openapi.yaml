@@ -13,7 +13,7 @@ paths:
       operationId: getPaymentSandboxStatus
       security:
         - sessionCookie: []
-      description: storefront.manage. Development-only Stripe diagnostics; configured means a test key is present, not that provider connectivity was verified. No customer payment, local order, sale or stock effects.
+      description: Current Owner session MFA and storefront.manage, rechecked after local configuration work. Development-only Stripe diagnostics; configured means a test key is present, not that provider connectivity was verified. No customer payment, local order, sale or stock effects.
       responses:
         '200':
           description: Local test-only configuration status; no secrets returned.
@@ -44,7 +44,7 @@ paths:
       operationId: createPaymentSandboxCheckout
       security:
         - sessionCookie: []
-      description: storefront.manage, allowed Origin and CSRF. Creates only a fixed THB 20.00 Stripe test Checkout, card/PromptPay subject to account support. Client cannot choose amount, redirect, currency, metadata or live mode. Same user/organization/key retries use the same Stripe idempotency key; retry promptly within provider retention. Not a customer order or fulfillment command.
+      description: Current Owner session MFA and storefront.manage, allowed Origin and CSRF. Authorization is reacquired before dispatch and after provider success or error. Creates only a fixed THB 20.00 Stripe test Checkout, card/PromptPay subject to account support. Client cannot choose amount, redirect, currency, metadata or live mode. Same user/organization/key retries use the same Stripe idempotency key; retry promptly within provider retention. Post-provider denial or cancellation can withhold a checkout that already exists; retain the original key and reconcile without a replacement identity. Not a customer order or fulfillment command.
       parameters:
         - $ref: '#/components/parameters/CSRF'
         - name: Idempotency-Key
@@ -98,7 +98,7 @@ paths:
       operationId: getPaymentSandboxCheckout
       security:
         - sessionCookie: []
-      description: storefront.manage. Reads authoritative test payment/refund status from Stripe; verifies test mode, purpose, organization, creator, amount and currency. Does not accept a success URL as payment evidence. Foreign creator/tenant/purpose returns 404.
+      description: Current Owner session MFA and storefront.manage, reacquired before dispatch and after provider success or error. Reads authoritative test payment/refund status from Stripe; verifies test mode, purpose, organization, creator, amount and currency. Does not accept a success URL as payment evidence. Foreign creator/tenant/purpose returns 404. A denied postflight returns no private provider data.
       responses:
         '200':
           description: Verified provider state; no local sale or order completion.
@@ -135,7 +135,7 @@ paths:
       operationId: refundPaymentSandboxCheckout
       security:
         - sessionCookie: []
-      description: storefront.manage, Origin and CSRF. Full test refund only after retrieving a paid, owned, test Checkout. PaymentIntent and amount are server-derived. Deterministic per-session refund idempotency; existing refund is returned instead of creating another. Pending/requires_action/failed are not success. No POS refund, cash drawer or inventory effects.
+      description: Current Owner session MFA and storefront.manage, Origin and CSRF. Authorization is reacquired before dispatch and after provider success or error. Full test refund only after retrieving a paid, owned, test Checkout. PaymentIntent and amount are server-derived. Deterministic per-session refund idempotency; existing refund is returned instead of creating another. Post-provider denial or cancellation does not prove the refund did not occur; reconcile the original test Checkout. Pending/requires_action/failed are not success. No POS refund, cash drawer or inventory effects.
       parameters:
         - $ref: '#/components/parameters/CSRF'
       requestBody:
@@ -1519,7 +1519,7 @@ paths:
       operationId: listCatalogcategories
       security:
         - sessionCookie: []
-      description: Requires catalog.read. Exclude ARCHIVED by default; bounded pagination.
+      description: Requires catalog.read and a live MFA-assured Owner session. Assurance is rechecked before private results or domain errors while the transaction remains usable. Aborted SQL failures return sanitized errors without private payload and cannot be rechecked. Failures discard partial data. Responses use no-store. Exclude ARCHIVED by default; bounded pagination.
       parameters:
         - name: search
           in: query
@@ -1578,13 +1578,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Authentication required
+          description: UNAUTHENTICATED; missing, invalid, revoked or expired session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Permission, Origin or CSRF denied
+          description: MFA_REQUIRED for primary-only sessions; FORBIDDEN for denied permission
           content:
             application/json:
               schema:
@@ -1611,7 +1611,9 @@ paths:
       operationId: createCatalogCategory
       security:
         - sessionCookie: []
-      description: 'Requires catalog.category.manage. '
+      description: >-
+        Requires catalog.category.manage.
+        Requires independently verified MFA in addition to the existing permission. Rechecks assurance after waits, between write effects, and before audit and commit. Usable-transaction domain errors are rechecked; aborted SQL errors expose no partial payload. Failure before commit rolls back business and audit changes. A commit/transport failure can have an uncertain outcome: reconcile the original operation before retrying; there is no automatic write retry.
       parameters:
         - $ref: '#/components/parameters/CSRF'
       requestBody:
@@ -1640,13 +1642,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Authentication required
+          description: UNAUTHENTICATED - missing, invalid or expired session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Permission, Origin or CSRF denied
+          description: MFA_REQUIRED, FORBIDDEN or Origin/CSRF denied
           content:
             application/json:
               schema:
@@ -1688,9 +1690,9 @@ paths:
       operationId: updateCatalogCategory
       security:
         - sessionCookie: []
-      description:
-        Requires catalog.category.manage. Complete fields/current revision; referenced taxonomy
-        cannot archive; category cycles rejected; unit structure immutable after use.
+      description: >-
+        Requires catalog.category.manage. Complete fields/current revision; referenced taxonomy cannot archive; category cycles rejected; unit structure immutable after use.
+        Requires independently verified MFA in addition to the existing permission. Rechecks assurance after waits, between write effects, and before audit and commit. Usable-transaction domain errors are rechecked; aborted SQL errors expose no partial payload. Failure before commit rolls back business and audit changes. A commit/transport failure can have an uncertain outcome: reconcile the original operation before retrying; there is no automatic write retry.
       parameters:
         - $ref: '#/components/parameters/CSRF'
       requestBody:
@@ -1719,13 +1721,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Authentication required
+          description: UNAUTHENTICATED - missing, invalid or expired session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Permission, Origin or CSRF denied
+          description: MFA_REQUIRED, FORBIDDEN or Origin/CSRF denied
           content:
             application/json:
               schema:
@@ -1761,7 +1763,7 @@ paths:
       operationId: listCatalogbrands
       security:
         - sessionCookie: []
-      description: Requires catalog.read. Exclude ARCHIVED by default; bounded pagination.
+      description: Requires catalog.read and a live MFA-assured Owner session. Assurance is rechecked before private results or domain errors while the transaction remains usable. Aborted SQL failures return sanitized errors without private payload and cannot be rechecked. Failures discard partial data. Responses use no-store. Exclude ARCHIVED by default; bounded pagination.
       parameters:
         - name: search
           in: query
@@ -1820,13 +1822,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Authentication required
+          description: UNAUTHENTICATED; missing, invalid, revoked or expired session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Permission, Origin or CSRF denied
+          description: MFA_REQUIRED for primary-only sessions; FORBIDDEN for denied permission
           content:
             application/json:
               schema:
@@ -1853,7 +1855,9 @@ paths:
       operationId: createCatalogBrand
       security:
         - sessionCookie: []
-      description: 'Requires catalog.brand.manage. '
+      description: >-
+        Requires catalog.brand.manage.
+        Requires independently verified MFA in addition to the existing permission. Rechecks assurance after waits, between write effects, and before audit and commit. Usable-transaction domain errors are rechecked; aborted SQL errors expose no partial payload. Failure before commit rolls back business and audit changes. A commit/transport failure can have an uncertain outcome: reconcile the original operation before retrying; there is no automatic write retry.
       parameters:
         - $ref: '#/components/parameters/CSRF'
       requestBody:
@@ -1882,13 +1886,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Authentication required
+          description: UNAUTHENTICATED - missing, invalid or expired session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Permission, Origin or CSRF denied
+          description: MFA_REQUIRED, FORBIDDEN or Origin/CSRF denied
           content:
             application/json:
               schema:
@@ -1930,9 +1934,9 @@ paths:
       operationId: updateCatalogBrand
       security:
         - sessionCookie: []
-      description:
-        Requires catalog.brand.manage. Complete fields/current revision; referenced taxonomy
-        cannot archive; category cycles rejected; unit structure immutable after use.
+      description: >-
+        Requires catalog.brand.manage. Complete fields/current revision; referenced taxonomy cannot archive; category cycles rejected; unit structure immutable after use.
+        Requires independently verified MFA in addition to the existing permission. Rechecks assurance after waits, between write effects, and before audit and commit. Usable-transaction domain errors are rechecked; aborted SQL errors expose no partial payload. Failure before commit rolls back business and audit changes. A commit/transport failure can have an uncertain outcome: reconcile the original operation before retrying; there is no automatic write retry.
       parameters:
         - $ref: '#/components/parameters/CSRF'
       requestBody:
@@ -1961,13 +1965,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Authentication required
+          description: UNAUTHENTICATED - missing, invalid or expired session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Permission, Origin or CSRF denied
+          description: MFA_REQUIRED, FORBIDDEN or Origin/CSRF denied
           content:
             application/json:
               schema:
@@ -2003,7 +2007,7 @@ paths:
       operationId: listCatalogunits
       security:
         - sessionCookie: []
-      description: Requires catalog.read. Exclude ARCHIVED by default; bounded pagination.
+      description: Requires catalog.read and a live MFA-assured Owner session. Assurance is rechecked before private results or domain errors while the transaction remains usable. Aborted SQL failures return sanitized errors without private payload and cannot be rechecked. Failures discard partial data. Responses use no-store. Exclude ARCHIVED by default; bounded pagination.
       parameters:
         - name: search
           in: query
@@ -2062,13 +2066,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Authentication required
+          description: UNAUTHENTICATED; missing, invalid, revoked or expired session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Permission, Origin or CSRF denied
+          description: MFA_REQUIRED for primary-only sessions; FORBIDDEN for denied permission
           content:
             application/json:
               schema:
@@ -2095,7 +2099,9 @@ paths:
       operationId: createCatalogUnit
       security:
         - sessionCookie: []
-      description: 'Requires catalog.unit.manage. '
+      description: >-
+        Requires catalog.unit.manage.
+        Requires independently verified MFA in addition to the existing permission. Rechecks assurance after waits, between write effects, and before audit and commit. Usable-transaction domain errors are rechecked; aborted SQL errors expose no partial payload. Failure before commit rolls back business and audit changes. A commit/transport failure can have an uncertain outcome: reconcile the original operation before retrying; there is no automatic write retry.
       parameters:
         - $ref: '#/components/parameters/CSRF'
       requestBody:
@@ -2124,13 +2130,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Authentication required
+          description: UNAUTHENTICATED - missing, invalid or expired session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Permission, Origin or CSRF denied
+          description: MFA_REQUIRED, FORBIDDEN or Origin/CSRF denied
           content:
             application/json:
               schema:
@@ -2172,9 +2178,9 @@ paths:
       operationId: updateCatalogUnit
       security:
         - sessionCookie: []
-      description:
-        Requires catalog.unit.manage. Complete fields/current revision; referenced taxonomy
-        cannot archive; category cycles rejected; unit structure immutable after use.
+      description: >-
+        Requires catalog.unit.manage. Complete fields/current revision; referenced taxonomy cannot archive; category cycles rejected; unit structure immutable after use.
+        Requires independently verified MFA in addition to the existing permission. Rechecks assurance after waits, between write effects, and before audit and commit. Usable-transaction domain errors are rechecked; aborted SQL errors expose no partial payload. Failure before commit rolls back business and audit changes. A commit/transport failure can have an uncertain outcome: reconcile the original operation before retrying; there is no automatic write retry.
       parameters:
         - $ref: '#/components/parameters/CSRF'
       requestBody:
@@ -2203,13 +2209,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Authentication required
+          description: UNAUTHENTICATED - missing, invalid or expired session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Permission, Origin or CSRF denied
+          description: MFA_REQUIRED, FORBIDDEN or Origin/CSRF denied
           content:
             application/json:
               schema:
@@ -2246,7 +2252,7 @@ paths:
       security:
         - sessionCookie: []
       description:
-        Requires catalog.read. Search name/SKU/barcode; ARCHIVED excluded unless requested;
+        Requires catalog.read and a live MFA-assured Owner session. Assurance is rechecked before private results or domain errors while the transaction remains usable. Aborted SQL failures return sanitized errors without private payload and cannot be rechecked. Failures discard partial data. Responses use no-store. Search name/SKU/barcode; ARCHIVED excluded unless requested;
         stable UUID secondary sort.
       parameters:
         - name: search
@@ -2316,13 +2322,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Authentication required
+          description: UNAUTHENTICATED; missing, invalid, revoked or expired session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Permission, Origin or CSRF denied
+          description: MFA_REQUIRED for primary-only sessions; FORBIDDEN for denied permission
           content:
             application/json:
               schema:
@@ -2349,9 +2355,9 @@ paths:
       operationId: createCatalogProduct
       security:
         - sessionCookie: []
-      description:
-        Requires catalog.create. Atomic product plus 1-100 variants; ACTIVE parent requires
-        active variant; no stock; duplicate names allowed.
+      description: >-
+        Requires catalog.create. Atomic product plus 1-100 variants; ACTIVE parent requires active variant; no stock; duplicate names allowed.
+        Requires independently verified MFA in addition to the existing permission. Rechecks assurance after waits, between write effects, and before audit and commit. Usable-transaction domain errors are rechecked; aborted SQL errors expose no partial payload. Failure before commit rolls back business and audit changes. A commit/transport failure can have an uncertain outcome: reconcile the original operation before retrying; there is no automatic write retry.
       parameters:
         - $ref: '#/components/parameters/CSRF'
       requestBody:
@@ -2380,13 +2386,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Authentication required
+          description: UNAUTHENTICATED - missing, invalid or expired session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Permission, Origin or CSRF denied
+          description: MFA_REQUIRED, FORBIDDEN or Origin/CSRF denied
           content:
             application/json:
               schema:
@@ -2428,7 +2434,7 @@ paths:
       operationId: getCatalogProduct
       security:
         - sessionCookie: []
-      description: 'Requires catalog.read. '
+      description: 'Requires catalog.read and a live MFA-assured Owner session. Assurance is rechecked before private results or domain errors while the transaction remains usable. Aborted SQL failures return sanitized errors without private payload and cannot be rechecked. Failures discard partial data. Responses use no-store. '
       parameters: []
       responses:
         '200':
@@ -2450,13 +2456,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Authentication required
+          description: UNAUTHENTICATED; missing, invalid, revoked or expired session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Permission, Origin or CSRF denied
+          description: MFA_REQUIRED for primary-only sessions; FORBIDDEN for denied permission
           content:
             application/json:
               schema:
@@ -2483,9 +2489,9 @@ paths:
       operationId: updateCatalogProduct
       security:
         - sessionCookie: []
-      description:
-        Requires catalog.update. Complete fields/current revision; archive/restore also
-        requires catalog.archive; history retained.
+      description: >-
+        Requires catalog.update. Complete fields/current revision; archive/restore also requires catalog.archive; history retained.
+        Requires independently verified MFA in addition to the existing permission. Rechecks assurance after waits, between write effects, and before audit and commit. Usable-transaction domain errors are rechecked; aborted SQL errors expose no partial payload. Failure before commit rolls back business and audit changes. A commit/transport failure can have an uncertain outcome: reconcile the original operation before retrying; there is no automatic write retry.
       parameters:
         - $ref: '#/components/parameters/CSRF'
       requestBody:
@@ -2514,13 +2520,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Authentication required
+          description: UNAUTHENTICATED - missing, invalid or expired session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Permission, Origin or CSRF denied
+          description: MFA_REQUIRED, FORBIDDEN or Origin/CSRF denied
           content:
             application/json:
               schema:
@@ -2562,7 +2568,7 @@ paths:
       operationId: listCatalogVariants
       security:
         - sessionCookie: []
-      description: Requires catalog.read. At most 100 variants per product.
+      description: Requires catalog.read and a live MFA-assured Owner session. Assurance is rechecked before private results or domain errors while the transaction remains usable. Aborted SQL failures return sanitized errors without private payload and cannot be rechecked. Failures discard partial data. Responses use no-store. At most 100 variants per product.
       parameters: []
       responses:
         '200':
@@ -2586,13 +2592,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Authentication required
+          description: UNAUTHENTICATED; missing, invalid, revoked or expired session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Permission, Origin or CSRF denied
+          description: MFA_REQUIRED for primary-only sessions; FORBIDDEN for denied permission
           content:
             application/json:
               schema:
@@ -2619,7 +2625,9 @@ paths:
       operationId: createCatalogVariant
       security:
         - sessionCookie: []
-      description: 'Requires catalog.create. '
+      description: >-
+        Requires catalog.create.
+        Requires independently verified MFA in addition to the existing permission. Rechecks assurance after waits, between write effects, and before audit and commit. Usable-transaction domain errors are rechecked; aborted SQL errors expose no partial payload. Failure before commit rolls back business and audit changes. A commit/transport failure can have an uncertain outcome: reconcile the original operation before retrying; there is no automatic write retry.
       parameters:
         - $ref: '#/components/parameters/CSRF'
       requestBody:
@@ -2648,13 +2656,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Authentication required
+          description: UNAUTHENTICATED - missing, invalid or expired session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Permission, Origin or CSRF denied
+          description: MFA_REQUIRED, FORBIDDEN or Origin/CSRF denied
           content:
             application/json:
               schema:
@@ -2702,9 +2710,9 @@ paths:
       operationId: updateCatalogVariant
       security:
         - sessionCookie: []
-      description:
-        Requires catalog.update. Current revision/unchanged SKU; SKU forever reserved;
-        archive/restore requires catalog.archive; cannot disable last active variant of active parent.
+      description: >-
+        Requires catalog.update. Current revision/unchanged SKU; SKU forever reserved; archive/restore requires catalog.archive; cannot disable last active variant of active parent.
+        Requires independently verified MFA in addition to the existing permission. Rechecks assurance after waits, between write effects, and before audit and commit. Usable-transaction domain errors are rechecked; aborted SQL errors expose no partial payload. Failure before commit rolls back business and audit changes. A commit/transport failure can have an uncertain outcome: reconcile the original operation before retrying; there is no automatic write retry.
       parameters:
         - $ref: '#/components/parameters/CSRF'
       requestBody:
@@ -2733,13 +2741,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Authentication required
+          description: UNAUTHENTICATED - missing, invalid or expired session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Permission, Origin or CSRF denied
+          description: MFA_REQUIRED, FORBIDDEN or Origin/CSRF denied
           content:
             application/json:
               schema:
@@ -2787,9 +2795,9 @@ paths:
       operationId: registerCatalogBarcode
       security:
         - sessionCookie: []
-      description:
-        Requires catalog.barcode.manage. Tenant-unique variant barcode; checksum EAN/UPC or
-        printable ASCII Code128; max 20 aliases; first primary; primary switch atomic.
+      description: >-
+        Requires catalog.barcode.manage. Tenant-unique variant barcode; checksum EAN/UPC or printable ASCII Code128; max 20 aliases; first primary; primary switch atomic.
+        Requires independently verified MFA in addition to the existing permission. Rechecks assurance after waits, between write effects, and before audit and commit. Usable-transaction domain errors are rechecked; aborted SQL errors expose no partial payload. Failure before commit rolls back business and audit changes. A commit/transport failure can have an uncertain outcome: reconcile the original operation before retrying; there is no automatic write retry.
       parameters:
         - $ref: '#/components/parameters/CSRF'
       requestBody:
@@ -2818,13 +2826,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Authentication required
+          description: UNAUTHENTICATED - missing, invalid or expired session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Permission, Origin or CSRF denied
+          description: MFA_REQUIRED, FORBIDDEN or Origin/CSRF denied
           content:
             application/json:
               schema:
@@ -2872,7 +2880,9 @@ paths:
       operationId: generateCatalogBarcode
       security:
         - sessionCookie: []
-      description: Requires catalog.barcode.manage. Random 128-bit SP- identifier, Code128; not GS1 GTIN.
+      description: >-
+        Requires catalog.barcode.manage. Random 128-bit SP- identifier, Code128; not GS1 GTIN.
+        Requires independently verified MFA in addition to the existing permission. Rechecks assurance after waits, between write effects, and before audit and commit. Usable-transaction domain errors are rechecked; aborted SQL errors expose no partial payload. Failure before commit rolls back business and audit changes. A commit/transport failure can have an uncertain outcome: reconcile the original operation before retrying; there is no automatic write retry.
       parameters:
         - $ref: '#/components/parameters/CSRF'
       requestBody:
@@ -2907,13 +2917,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Authentication required
+          description: UNAUTHENTICATED - missing, invalid or expired session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Permission, Origin or CSRF denied
+          description: MFA_REQUIRED, FORBIDDEN or Origin/CSRF denied
           content:
             application/json:
               schema:
@@ -2967,7 +2977,9 @@ paths:
       operationId: removeCatalogBarcode
       security:
         - sessionCookie: []
-      description: Requires catalog.barcode.manage. Deletes mapping only; promotes remaining alias.
+      description: >-
+        Requires catalog.barcode.manage. Deletes mapping only; promotes remaining alias.
+        Requires independently verified MFA in addition to the existing permission. Rechecks assurance after waits, between write effects, and before audit and commit. Usable-transaction domain errors are rechecked; aborted SQL errors expose no partial payload. Failure before commit rolls back business and audit changes. A commit/transport failure can have an uncertain outcome: reconcile the original operation before retrying; there is no automatic write retry.
       parameters:
         - $ref: '#/components/parameters/CSRF'
       responses:
@@ -2996,13 +3008,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Authentication required
+          description: UNAUTHENTICATED - missing, invalid or expired session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Permission, Origin or CSRF denied
+          description: MFA_REQUIRED, FORBIDDEN or Origin/CSRF denied
           content:
             application/json:
               schema:
@@ -3039,7 +3051,7 @@ paths:
       security:
         - sessionCookie: []
       description:
-        Requires catalog.read. Trim scanner CR/LF suffix; unknown 404; no fabricated product
+        Requires catalog.read and a live MFA-assured Owner session. Assurance is rechecked before private results or domain errors while the transaction remains usable. Aborted SQL failures return sanitized errors without private payload and cannot be rechecked. Failures discard partial data. Responses use no-store. Trim scanner CR/LF suffix; unknown 404; no fabricated product
         data; inactive/archived saleable=false, not stock availability.
       parameters:
         - name: code
@@ -3069,13 +3081,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Authentication required
+          description: UNAUTHENTICATED; missing, invalid, revoked or expired session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Permission, Origin or CSRF denied
+          description: MFA_REQUIRED for primary-only sessions; FORBIDDEN for denied permission
           content:
             application/json:
               schema:
@@ -3111,7 +3123,7 @@ paths:
       operationId: getCatalogLabels
       security:
         - sessionCookie: []
-      description: Requires catalog.labels.print. Browser SVG/print label source; no direct thermal commands.
+      description: Requires catalog.labels.print and a live MFA-assured Owner session. Assurance is rechecked before private results or domain errors while the transaction remains usable. Aborted SQL failures return sanitized errors without private payload and cannot be rechecked. Failures discard partial data. Responses use no-store. Browser SVG/print label source; no direct thermal commands.
       parameters: []
       responses:
         '200':
@@ -3133,13 +3145,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Authentication required
+          description: UNAUTHENTICATED; missing, invalid, revoked or expired session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Permission, Origin or CSRF denied
+          description: MFA_REQUIRED for primary-only sessions; FORBIDDEN for denied permission
           content:
             application/json:
               schema:
@@ -3169,10 +3181,9 @@ paths:
       operationId: previewCatalogImport
       security:
         - sessionCookie: []
-      description:
-        Requires catalog.import. 5 MiB/2000 rows; UTF8 CSV or one-sheet XLSX; ZIP max20 MiB/100
-        entries; no formulas/extraction; ACTIVE taxonomy required; creator-only job; 1-hour expiry;
-        max30 previews/user/tenant/hour.
+      description: >-
+        Requires catalog.import. 5 MiB/2000 rows; UTF8 CSV or one-sheet XLSX; ZIP max20 MiB/100 entries; no formulas/extraction; ACTIVE taxonomy required; creator-only job; 1-hour expiry; max30 previews/user/tenant/hour.
+        Requires independently verified MFA in addition to the existing permission. Rechecks assurance after waits, between write effects, and before audit and commit. Usable-transaction domain errors are rechecked; aborted SQL errors expose no partial payload. Failure before commit rolls back business and audit changes. A commit/transport failure can have an uncertain outcome: reconcile the original operation before retrying; there is no automatic write retry.
       parameters:
         - $ref: '#/components/parameters/CSRF'
       responses:
@@ -3195,13 +3206,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Authentication required
+          description: UNAUTHENTICATED - missing, invalid or expired session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Permission, Origin or CSRF denied
+          description: MFA_REQUIRED, FORBIDDEN or Origin/CSRF denied
           content:
             application/json:
               schema:
@@ -3255,11 +3266,9 @@ paths:
       operationId: confirmCatalogImport
       security:
         - sessionCookie: []
-      description:
-        Requires catalog.import. Atomic revalidation by tenant SKU; barcode conflict rejects;
-        CREATE refuses existing; SKIP skips existing; UPDATE changes name/unit/prices/nonempty
-        taxonomy, preserves description/status/attributes. Same job/mode retry returns result;
-        different mode/expiry/stale/invalid ->409/no writes.
+      description: >-
+        Requires catalog.import. Atomic revalidation by tenant SKU; barcode conflict rejects; CREATE refuses existing; SKIP skips existing; UPDATE changes name/unit/prices/nonempty taxonomy, preserves description/status/attributes. Same creator/job/mode retry rechecks assurance and returns the stored result without new effects; different mode/expiry/stale/invalid ->409/no writes.
+        Requires independently verified MFA in addition to the existing permission. Rechecks assurance after waits, between write effects, and before audit and commit. Usable-transaction domain errors are rechecked; aborted SQL errors expose no partial payload. Failure before commit rolls back business and audit changes. A commit/transport failure can have an uncertain outcome: reconcile the original operation before retrying; there is no automatic write retry.
       parameters:
         - $ref: '#/components/parameters/CSRF'
       requestBody:
@@ -3298,13 +3307,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Authentication required
+          description: UNAUTHENTICATED - missing, invalid or expired session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Permission, Origin or CSRF denied
+          description: MFA_REQUIRED, FORBIDDEN or Origin/CSRF denied
           content:
             application/json:
               schema:
@@ -3346,7 +3355,7 @@ paths:
       operationId: getCatalogImportJob
       security:
         - sessionCookie: []
-      description: Requires catalog.import. Creator-only preview/result.
+      description: Requires catalog.import and a live MFA-assured Owner session. Assurance is rechecked before private results or domain errors while the transaction remains usable. Aborted SQL failures return sanitized errors without private payload and cannot be rechecked. Failures discard partial data. Responses use no-store. Creator-only preview/result.
       parameters: []
       responses:
         '200':
@@ -3368,13 +3377,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Authentication required
+          description: UNAUTHENTICATED; missing, invalid, revoked or expired session
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Permission, Origin or CSRF denied
+          description: MFA_REQUIRED for primary-only sessions; FORBIDDEN for denied permission
           content:
             application/json:
               schema:
@@ -16176,9 +16185,9 @@ paths:
       operationId: listCustomers
       security:
         - sessionCookie: []
-      description:
-        'Requires customers.read; active organization membership and branch authorization are checked
-        before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control: no-store. Archival preserves immutable
+      description: 'Requires customers.read and an independently authorized active Owner with live session MFA. Organization and existing branch scope remain server-enforced. Customer data is organization-wide, not an identity account. Rechecks after waits and before private data or domain errors when the transaction remains usable. Aborted SQL errors retain sanitized classification without private payload. Failures return no partial data, totals or pagination metadata. Cache-Control: no-store.'
+      before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control:
+        no-store. Archival preserves immutable
         transaction references.'
       responses:
         '200':
@@ -16195,9 +16204,17 @@ paths:
         '400':
           $ref: '#/components/responses/InventoryInvalid'
         '401':
-          $ref: '#/components/responses/InventoryUnauthenticated'
+          description: 'UNAUTHENTICATED; missing, invalid, revoked or expired session'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '403':
-          $ref: '#/components/responses/InventoryForbidden'
+          description: 'MFA_REQUIRED for primary-only sessions; FORBIDDEN for denied permission; POST search also retains Origin and CSRF checks'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           $ref: '#/components/responses/InventoryNotFound'
         '409':
@@ -16236,10 +16253,7 @@ paths:
       operationId: createCustomer
       security:
         - sessionCookie: []
-      description:
-        'Requires customers.manage; active organization membership and branch authorization are checked
-        before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control: no-store. Archival preserves immutable
-        transaction references.'
+      description: 'Requires customers.manage and active OWNER membership. This service independently verifies live MFA and tenant scope before writes, creation replay and membership no-op results. Assurance is rechecked after waits and before audit/commit or private return; failures expose no customer payload. Normalized creator-bound replay returns the current resource; stale revisions conflict. Archive preserves historical references. Cache-Control: no-store.'
       responses:
         '200':
           description: Authoritative result in data envelope
@@ -16257,7 +16271,11 @@ paths:
         '401':
           $ref: '#/components/responses/InventoryUnauthenticated'
         '403':
-          $ref: '#/components/responses/InventoryForbidden'
+          description: MFA_REQUIRED or FORBIDDEN; no private data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           $ref: '#/components/responses/InventoryNotFound'
         '409':
@@ -16288,9 +16306,9 @@ paths:
       operationId: searchCustomers
       security:
         - sessionCookie: []
-      description:
-        'Requires customers.read; active organization membership and branch authorization are checked
-        before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control: no-store. Archival preserves immutable
+      description: 'Requires customers.read and an independently authorized active Owner with live session MFA. Organization and existing branch scope remain server-enforced. Customer data is organization-wide, not an identity account. Rechecks after waits and before private data or domain errors when the transaction remains usable. Aborted SQL errors retain sanitized classification without private payload. Failures return no partial data, totals or pagination metadata. Cache-Control: no-store. Search remains in the JSON body and requires allowed Origin and CSRF.'
+      before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control:
+        no-store. Archival preserves immutable
         transaction references.'
       responses:
         '200':
@@ -16307,9 +16325,17 @@ paths:
         '400':
           $ref: '#/components/responses/InventoryInvalid'
         '401':
-          $ref: '#/components/responses/InventoryUnauthenticated'
+          description: 'UNAUTHENTICATED; missing, invalid, revoked or expired session'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '403':
-          $ref: '#/components/responses/InventoryForbidden'
+          description: 'MFA_REQUIRED for primary-only sessions; FORBIDDEN for denied permission; POST search also retains Origin and CSRF checks'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           $ref: '#/components/responses/InventoryNotFound'
         '409':
@@ -16337,9 +16363,9 @@ paths:
       operationId: getCustomer
       security:
         - sessionCookie: []
-      description:
-        'Requires customers.read; active organization membership and branch authorization are checked
-        before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control: no-store. Archival preserves immutable
+      description: 'Requires customers.read and an independently authorized active Owner with live session MFA. Organization and existing branch scope remain server-enforced. Customer data is organization-wide, not an identity account. Rechecks after waits and before private data or domain errors when the transaction remains usable. Aborted SQL errors retain sanitized classification without private payload. Failures return no partial data, totals or pagination metadata. Cache-Control: no-store.'
+      before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control:
+        no-store. Archival preserves immutable
         transaction references.'
       responses:
         '200':
@@ -16356,9 +16382,17 @@ paths:
         '400':
           $ref: '#/components/responses/InventoryInvalid'
         '401':
-          $ref: '#/components/responses/InventoryUnauthenticated'
+          description: 'UNAUTHENTICATED; missing, invalid, revoked or expired session'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '403':
-          $ref: '#/components/responses/InventoryForbidden'
+          description: 'MFA_REQUIRED for primary-only sessions; FORBIDDEN for denied permission; POST search also retains Origin and CSRF checks'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           $ref: '#/components/responses/InventoryNotFound'
         '409':
@@ -16370,10 +16404,7 @@ paths:
       operationId: updateCustomer
       security:
         - sessionCookie: []
-      description:
-        'Requires customers.manage; active organization membership and branch authorization are checked
-        before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control: no-store. Archival preserves immutable
-        transaction references.'
+      description: 'Requires customers.manage and active OWNER membership. This service independently verifies live MFA and tenant scope before writes, creation replay and membership no-op results. Assurance is rechecked after waits and before audit/commit or private return; failures expose no customer payload. Normalized creator-bound replay returns the current resource; stale revisions conflict. Archive preserves historical references. Cache-Control: no-store.'
       responses:
         '200':
           description: Authoritative result in data envelope
@@ -16391,7 +16422,11 @@ paths:
         '401':
           $ref: '#/components/responses/InventoryUnauthenticated'
         '403':
-          $ref: '#/components/responses/InventoryForbidden'
+          description: MFA_REQUIRED or FORBIDDEN; no private data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           $ref: '#/components/responses/InventoryNotFound'
         '409':
@@ -16419,10 +16454,7 @@ paths:
       operationId: archiveCustomer
       security:
         - sessionCookie: []
-      description:
-        'Requires customers.manage; active organization membership and branch authorization are checked
-        before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control: no-store. Archival preserves immutable
-        transaction references.'
+      description: 'Requires customers.manage and active OWNER membership. This service independently verifies live MFA and tenant scope before writes, creation replay and membership no-op results. Assurance is rechecked after waits and before audit/commit or private return; failures expose no customer payload. Normalized creator-bound replay returns the current resource; stale revisions conflict. Archive preserves historical references. Cache-Control: no-store.'
       responses:
         '200':
           description: Authoritative result in data envelope
@@ -16440,7 +16472,11 @@ paths:
         '401':
           $ref: '#/components/responses/InventoryUnauthenticated'
         '403':
-          $ref: '#/components/responses/InventoryForbidden'
+          description: MFA_REQUIRED or FORBIDDEN; no private data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           $ref: '#/components/responses/InventoryNotFound'
         '409':
@@ -16468,9 +16504,9 @@ paths:
       operationId: customerHistory
       security:
         - sessionCookie: []
-      description:
-        'Requires customers.history.read; active organization membership and branch authorization are
-        checked before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control: no-store. Archival preserves
+      description: 'Requires customers.history.read and an independently authorized active Owner with live session MFA. Organization and existing branch scope remain server-enforced. Customer data is organization-wide, not an identity account. Rechecks after waits and before private data or domain errors when the transaction remains usable. Aborted SQL errors retain sanitized classification without private payload. Failures return no partial data, totals or pagination metadata. Cache-Control: no-store. Existing branch/date predicates and exact decimal history remain unchanged; no stronger snapshot isolation is claimed.'
+      checked before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control:
+        no-store. Archival preserves
         immutable transaction references.'
       responses:
         '200':
@@ -16487,9 +16523,17 @@ paths:
         '400':
           $ref: '#/components/responses/InventoryInvalid'
         '401':
-          $ref: '#/components/responses/InventoryUnauthenticated'
+          description: 'UNAUTHENTICATED; missing, invalid, revoked or expired session'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '403':
-          $ref: '#/components/responses/InventoryForbidden'
+          description: 'MFA_REQUIRED for primary-only sessions; FORBIDDEN for denied permission; POST search also retains Origin and CSRF checks'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           $ref: '#/components/responses/InventoryNotFound'
         '409':
@@ -16541,9 +16585,9 @@ paths:
       operationId: customerAudit
       security:
         - sessionCookie: []
-      description:
-        'Requires customers.history.read; active organization membership and branch authorization are
-        checked before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control: no-store. Archival preserves
+      description: 'Requires customers.history.read and an independently authorized active Owner with live session MFA. Organization and existing branch scope remain server-enforced. Customer data is organization-wide, not an identity account. Rechecks after waits and before private data or domain errors when the transaction remains usable. Aborted SQL errors retain sanitized classification without private payload. Failures return no partial data, totals or pagination metadata. Cache-Control: no-store. Audit remains scoped by organization, customer object and customers event prefix; existing branch/date filters do not filter audit events.'
+      checked before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control:
+        no-store. Archival preserves
         immutable transaction references.'
       responses:
         '200':
@@ -16560,9 +16604,17 @@ paths:
         '400':
           $ref: '#/components/responses/InventoryInvalid'
         '401':
-          $ref: '#/components/responses/InventoryUnauthenticated'
+          description: 'UNAUTHENTICATED; missing, invalid, revoked or expired session'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '403':
-          $ref: '#/components/responses/InventoryForbidden'
+          description: 'MFA_REQUIRED for primary-only sessions; FORBIDDEN for denied permission; POST search also retains Origin and CSRF checks'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           $ref: '#/components/responses/InventoryNotFound'
         '409':
@@ -16591,9 +16643,9 @@ paths:
       operationId: listCustomerGroups
       security:
         - sessionCookie: []
-      description:
-        'Requires customers.groups.read; active organization membership and branch authorization are
-        checked before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control: no-store. Archival preserves
+      description: 'Requires customers.groups.read and an independently authorized active Owner with live session MFA. Organization and existing branch scope remain server-enforced. Customer data is organization-wide, not an identity account. Rechecks after waits and before private data or domain errors when the transaction remains usable. Aborted SQL errors retain sanitized classification without private payload. Failures return no partial data, totals or pagination metadata. Cache-Control: no-store.'
+      checked before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control:
+        no-store. Archival preserves
         immutable transaction references.'
       responses:
         '200':
@@ -16610,9 +16662,17 @@ paths:
         '400':
           $ref: '#/components/responses/InventoryInvalid'
         '401':
-          $ref: '#/components/responses/InventoryUnauthenticated'
+          description: 'UNAUTHENTICATED; missing, invalid, revoked or expired session'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '403':
-          $ref: '#/components/responses/InventoryForbidden'
+          description: 'MFA_REQUIRED for primary-only sessions; FORBIDDEN for denied permission; POST search also retains Origin and CSRF checks'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           $ref: '#/components/responses/InventoryNotFound'
         '409':
@@ -16646,10 +16706,7 @@ paths:
       operationId: createCustomerGroup
       security:
         - sessionCookie: []
-      description:
-        'Requires customers.groups.manage; active organization membership and branch authorization are
-        checked before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control: no-store. Archival preserves
-        immutable transaction references.'
+      description: 'Requires customers.groups.manage and active OWNER membership. This service independently verifies live MFA and tenant scope before writes, creation replay and membership no-op results. Assurance is rechecked after waits and before audit/commit or private return; failures expose no customer payload. Normalized creator-bound replay returns the current resource; stale revisions conflict. Archive preserves historical references. Cache-Control: no-store.'
       responses:
         '200':
           description: Authoritative result in data envelope
@@ -16667,7 +16724,11 @@ paths:
         '401':
           $ref: '#/components/responses/InventoryUnauthenticated'
         '403':
-          $ref: '#/components/responses/InventoryForbidden'
+          description: MFA_REQUIRED or FORBIDDEN; no private data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           $ref: '#/components/responses/InventoryNotFound'
         '409':
@@ -16704,10 +16765,7 @@ paths:
       operationId: updateCustomerGroup
       security:
         - sessionCookie: []
-      description:
-        'Requires customers.groups.manage; active organization membership and branch authorization are
-        checked before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control: no-store. Archival preserves
-        immutable transaction references.'
+      description: 'Requires customers.groups.manage and active OWNER membership. This service independently verifies live MFA and tenant scope before writes, creation replay and membership no-op results. Assurance is rechecked after waits and before audit/commit or private return; failures expose no customer payload. Normalized creator-bound replay returns the current resource; stale revisions conflict. Archive preserves historical references. Cache-Control: no-store.'
       responses:
         '200':
           description: Authoritative result in data envelope
@@ -16725,7 +16783,11 @@ paths:
         '401':
           $ref: '#/components/responses/InventoryUnauthenticated'
         '403':
-          $ref: '#/components/responses/InventoryForbidden'
+          description: MFA_REQUIRED or FORBIDDEN; no private data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           $ref: '#/components/responses/InventoryNotFound'
         '409':
@@ -16753,10 +16815,7 @@ paths:
       operationId: archiveCustomerGroup
       security:
         - sessionCookie: []
-      description:
-        'Requires customers.groups.manage; active organization membership and branch authorization are
-        checked before any idempotent replay. Customer data is organization-wide, not a user account. Backoffice reads require OWNER access. Cache-Control: no-store. Archival preserves
-        immutable transaction references.'
+      description: 'Requires customers.groups.manage and active OWNER membership. This service independently verifies live MFA and tenant scope before writes, creation replay and membership no-op results. Assurance is rechecked after waits and before audit/commit or private return; failures expose no customer payload. Normalized creator-bound replay returns the current resource; stale revisions conflict. Archive preserves historical references. Cache-Control: no-store.'
       responses:
         '200':
           description: Authoritative result in data envelope
@@ -16774,7 +16833,11 @@ paths:
         '401':
           $ref: '#/components/responses/InventoryUnauthenticated'
         '403':
-          $ref: '#/components/responses/InventoryForbidden'
+          description: MFA_REQUIRED or FORBIDDEN; no private data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           $ref: '#/components/responses/InventoryNotFound'
         '409':
@@ -16808,11 +16871,7 @@ paths:
       operationId: setCustomerMembership
       security:
         - sessionCookie: []
-      description:
-        'Requires customers.manage and customers.groups.manage; active organization membership and branch
-        authorization are checked before any idempotent replay. Customer data is organization-wide, not a user
-        account. Backoffice reads require OWNER access. Cache-Control: no-store.
-        Archival preserves immutable transaction references.'
+      description: 'Requires customers.manage and customers.groups.manage and active OWNER membership. This service independently verifies live MFA and tenant scope before writes, creation replay and membership no-op results. Assurance is rechecked after waits and before audit/commit or private return; failures expose no customer payload. Normalized creator-bound replay returns the current resource; stale revisions conflict. Archive preserves historical references. Cache-Control: no-store.'
       responses:
         '200':
           description: Authoritative result in data envelope
@@ -16830,7 +16889,11 @@ paths:
         '401':
           $ref: '#/components/responses/InventoryUnauthenticated'
         '403':
-          $ref: '#/components/responses/InventoryForbidden'
+          description: MFA_REQUIRED or FORBIDDEN; no private data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           $ref: '#/components/responses/InventoryNotFound'
         '409':
@@ -18550,7 +18613,7 @@ components:
       description: Development cookie name; production uses __Host-smartpos_session.
   responses:
     PaymentSandboxFailure:
-      description: Invalid input (400), missing session (401), permission/Origin/CSRF denied (403), inaccessible test resource (404), payment/refund conflict (409), non-JSON body (415), or unconfigured/unavailable/invalid provider response (503). Provider payloads and credentials are never echoed.
+      description: Invalid input (400), missing/invalid/expired/revoked session (401), missing current session MFA or permission/Origin/CSRF denied (403), inaccessible test resource (404), payment/refund conflict (409), non-JSON body (415), or unconfigured/unavailable/invalid provider response or request cancellation (503). Postflight authorization denial takes precedence over provider results/errors and returns no data; an external test effect may already exist. Provider payloads and credentials are never echoed.
       content:
         application/json:
           schema:

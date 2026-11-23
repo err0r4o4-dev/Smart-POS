@@ -23,29 +23,33 @@ func (service *Service) SelectCustomer(ctx context.Context, user, org, id string
 	}
 	cart, err := cartHeader(ctx, tx, actor, user, org, id)
 	if err != nil {
-		return cart, err
+		return Cart{}, err
 	}
 	if cart.Status != "ACTIVE" && cart.Status != "HELD" || input.Revision != cart.Revision {
-		return cart, ErrConflict
+		return Cart{}, ErrConflict
 	}
 	if err = cartUnlocked(ctx, tx, org, id); err != nil {
-		return cart, err
+		return Cart{}, err
 	}
 	if input.CustomerID != nil {
 		if _, err = customers.ValidateSelection(ctx, tx, actor, org, *input.CustomerID); err != nil {
-			return cart, dbError(err)
+			return Cart{}, dbError(err)
 		}
 	}
 	_, err = tx.Exec(ctx, "UPDATE pos_carts SET customer_id=$3,revision=revision+1,updated_at=now() WHERE organization_id=$1 AND id=$2", org, id, input.CustomerID)
 	if err != nil {
-		return cart, dbError(err)
+		return Cart{}, dbError(err)
 	}
 	cart, err = readCart(ctx, tx, actor, user, org, id)
 	if err != nil {
-		return cart, err
+		return Cart{}, err
 	}
-	return cart, finish(ctx, tx, org, user, "pos.cart.customer_selected", id)
+	if err = finish(ctx, tx, org, user, "pos.cart.customer_selected", id); err != nil {
+		return Cart{}, err
+	}
+	return cart, nil
 }
+
 func validateCheckoutCustomer(ctx context.Context, tx pgx.Tx, org string, item Checkout) error {
 	if item.CustomerID == nil {
 		return nil
@@ -61,7 +65,7 @@ func validateCheckoutCustomer(ctx context.Context, tx pgx.Tx, org string, item C
 	if err != nil {
 		return dbError(err)
 	}
-	if selected.Status != "ACTIVE" {
+	if selected == nil || selected.Status != "ACTIVE" {
 		return ErrCustomer
 	}
 	return nil

@@ -33,6 +33,22 @@ export const mfa = defineMessages({
     code: 'รหัส 6 หลัก',
     enable: 'เปิดใช้ MFA',
     verify: 'ยืนยันรหัส',
+    startRecovery: 'ใช้รหัสกู้คืน',
+    recoveryCode: 'รหัสกู้คืน',
+    recoveryHelp:
+      'ใช้รหัสกู้คืนที่ยังไม่เคยใช้ หลังเข้าสู่ระบบด้วยรหัสผ่านหรือ Google ภายใน 5 นาที',
+    stageReplacement: 'ตั้งค่าแอปใหม่',
+    cancelRecovery: 'ยกเลิกการกู้คืน',
+    replacementHelp:
+      'ป้อนรหัสจากแอปที่ตั้งค่าด้วยคีย์ใหม่ แอปเดิมยังใช้ได้จนกว่าจะยืนยันสำเร็จ',
+    replace: 'ยืนยันการเปลี่ยนแอป',
+    replaced:
+      'เปลี่ยนแอปยืนยันตัวตนแล้ว เซสชันเดิมทั้งหมดสิ้นสุด เข้าสู่ระบบอีกครั้ง เปิดความปลอดภัยของบัญชี แล้วใช้รหัสจากแอปใหม่',
+    replacementUnknown:
+      'ยังยืนยันไม่ได้ว่าเปลี่ยนแอปแล้วหรือไม่ เข้าสู่ระบบอีกครั้งแล้วลองรหัสจากแอปใหม่ก่อน หากยังไม่เปลี่ยน แอปเดิมจะยังใช้ได้ ระบบจะไม่แสดงรหัสกู้คืนจากคำขอนี้ซ้ำ',
+    replacementLeaveHelp:
+      'ระบบอาจเปลี่ยนแอปแม้ออกจากหน้านี้ หากออกตอนนี้ คุณอาจไม่ได้รับรหัสกู้คืนชุดใหม่',
+    signinAgain: 'เข้าสู่ระบบอีกครั้ง',
     pending: 'กำลังดำเนินการ…',
     retry: 'ตรวจสอบสถานะอีกครั้ง',
     unavailable: 'ตรวจสอบ MFA ไม่สำเร็จ กรุณาลองตรวจสอบสถานะอีกครั้ง',
@@ -45,7 +61,7 @@ export const mfa = defineMessages({
       'หากเปิดใช้แล้วแต่ไม่ได้รับรหัสกู้คืน แอปยืนยันตัวตนอาจยังใช้งานได้ ขณะนี้ยังสร้างรหัสกู้คืนใหม่หรือกู้คืนผ่านผู้ดูแลไม่ได้',
     codesTitle: 'เก็บรหัสกู้คืนของคุณ',
     codesHelp:
-      'ขณะนี้ยังใช้รหัสกู้คืนไม่ได้ รหัสแสดงเฉพาะครั้งนี้ เก็บไว้ในที่ปลอดภัยนอกอุปกรณ์ยืนยันตัวตน หน้านี้ไม่บันทึกรหัสให้คุณ',
+      'รหัสแสดงเฉพาะครั้งนี้ เก็บไว้ในที่ปลอดภัยนอกอุปกรณ์ยืนยันตัวตน หน้านี้ไม่บันทึกรหัสให้คุณ',
     acknowledged: 'ฉันเก็บรหัสเหล่านี้ไว้ในที่ปลอดภัยแล้ว',
     done: 'เสร็จแล้ว',
     leaveTitle: 'เก็บรหัสกู้คืนก่อนออกจากหน้านี้',
@@ -94,6 +110,22 @@ export const mfa = defineMessages({
     code: 'Six-digit code',
     enable: 'Enable MFA',
     verify: 'Verify code',
+    startRecovery: 'Use a recovery code',
+    recoveryCode: 'Recovery code',
+    recoveryHelp:
+      'Use an unused recovery code within five minutes of signing in with your password or Google.',
+    stageReplacement: 'Set up replacement',
+    cancelRecovery: 'Cancel recovery',
+    replacementHelp:
+      'Enter a code from the authenticator you set up with the new key. Your old authenticator works until confirmation succeeds.',
+    replace: 'Replace authenticator',
+    replaced:
+      'Your authenticator was replaced and all previous sessions ended. Sign in again, open Account security, and use a code from the new authenticator.',
+    replacementUnknown:
+      'We could not confirm whether your authenticator changed. Sign in again and try the new authenticator first. If nothing changed, the old authenticator still works. Recovery codes from this request cannot be shown again.',
+    replacementLeaveHelp:
+      'Your authenticator may change even if you leave. Leaving now could mean losing the new recovery codes.',
+    signinAgain: 'Sign in again',
     pending: 'Working…',
     retry: 'Check status again',
     unavailable: 'Could not check MFA. Check status again to retry.',
@@ -107,7 +139,7 @@ export const mfa = defineMessages({
       'If MFA is enabled but recovery codes were not received, your authenticator may still work. Code regeneration and administrator recovery are not available yet.',
     codesTitle: 'Keep your recovery codes',
     codesHelp:
-      'Using recovery codes is not available yet. Codes are shown only now. Store them safely away from your authenticator device. This page does not save them for you.',
+      'Codes are shown only now. Store them safely away from your authenticator device. This page does not save them for you.',
     acknowledged: 'I have stored these codes somewhere safe',
     done: 'Done',
     leaveTitle: 'Keep your recovery codes before leaving',

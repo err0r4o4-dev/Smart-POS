@@ -15,8 +15,9 @@ server, or runs migrations. Do not put connection strings in command arguments,
 source, shell history, reports or shared files. Do not forward this variable to
 the application runtime or browser.
 
-The target must have exactly one clean migration version matching the command
-build (currently43). The operator needs SELECT/INSERT/UPDATE on
+The target must have exactly one migration record, marked clean, at the version
+specified by the command build's `database.RequiredVersion`. The operator needs
+SELECT/INSERT/UPDATE on
 `platform_admins`, SELECT/INSERT on `platform_admin_audit_events`, SELECT and
 row-lock privileges on `users`, SELECT on `auth_mfa_factors` and
 `schema_migrations`, and SELECT/UPDATE on `auth_sessions`. Provisioning credentials
@@ -62,11 +63,14 @@ enable that access later, and fails closed if the boundary is broken.
 
 ## Recovery and acceptance
 
-Migration43 adds empty authority/audit tables without inferring Admin rights from
+Migration 43 introduced empty authority/audit tables without inferring Admin rights from
 existing tenant OWNER memberships. Its downgrade refuses once authority or audit
 history exists; retain history and recover with a compatible forward build.
 The command does not create database roles, change an account's MFA, transfer
 restaurant ownership, implement manual recovery, or silently retry mutations.
 
 Current test/review results and unresolved acceptance are recorded in
-[the migration tracker](../../specs/velopos-migration/tasks.md).
+[the migration tracker](../../specs/velopos-migration/tasks.md). See
+[T2.3](../../specs/velopos-migration/tasks.md#t2-3) for the disposable database
+rehearsal of interrupted upgrades and refused populated downgrades. The rehearsal
+does not authorize changing migration metadata on an operational database.

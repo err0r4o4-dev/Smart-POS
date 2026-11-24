@@ -33,6 +33,7 @@ import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavig
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
+import { paths } from '../../app/routes';
 import {
   Brand,
   Button,
@@ -557,6 +558,7 @@ function SetupStepFields({
   form,
   update,
   promptPayAvailable,
+  pickupAvailable,
   savedTableCount,
   profileErrors,
   onValidateProfile,
@@ -568,6 +570,7 @@ function SetupStepFields({
     value: SetupFormState[Key],
   ) => void;
   promptPayAvailable: boolean;
+  pickupAvailable: boolean;
   savedTableCount: number;
   profileErrors: ProfileErrors;
   onValidateProfile: () => void;
@@ -697,6 +700,18 @@ function SetupStepFields({
               })
             }
           />
+          {pickupAvailable && (
+            <SetupToggle
+              label={t('organization.setupPickup')}
+              description={t('organization.setupPickupHint')}
+              checked={form.services.service_modes.pickup ?? false}
+              onChange={(pickup) =>
+                update('services', {
+                  service_modes: { ...form.services.service_modes, pickup },
+                })
+              }
+            />
+          )}
           <SetupToggle
             label={t('organization.setupDelivery')}
             description={t('organization.setupDeliveryHint')}
@@ -977,7 +992,9 @@ function ScopedSetupPage() {
   )
     return <Navigate to="/account" replace />;
   if (setupQuery.data?.complete === true)
-    return <Navigate to="/dashboard" replace />;
+    return (
+      <Navigate to={branchID ? paths.dashboard : paths.settings} replace />
+    );
 
   const localIncomplete = localReadiness(form, t);
   const readinessItems = [
@@ -1137,7 +1154,10 @@ function ScopedSetupPage() {
           ],
         });
         if (!activeRef.current) return;
-        navigate(result.dashboard || '/dashboard', { replace: true });
+        navigate(
+          branchID ? result.dashboard || paths.dashboard : paths.settings,
+          { replace: true },
+        );
       } catch (failure) {
         if (!activeRef.current) return;
         if (failure instanceof CompletionRecoveryError) {
@@ -1562,6 +1582,7 @@ function ScopedSetupPage() {
                             update={update}
                             profileErrors={profileErrors}
                             onValidateProfile={validateProfile}
+                            pickupAvailable={Boolean(orgID) && !branchID}
                             promptPayAvailable={Boolean(
                               serverState?.capabilities.promptPay,
                             )}

@@ -57,3 +57,15 @@ func TestMFAUnavailableAndValidation(t *testing.T) {
 		})
 	}
 }
+
+func TestMFARecoveryRequiresAuthentication(t *testing.T) {
+	router := chi.NewRouter()
+	(Handler{}).Routes(router)
+	for _, path := range []string{"/auth/mfa/recovery", "/auth/mfa/recovery/confirm"} {
+		response := httptest.NewRecorder()
+		router.ServeHTTP(response, httptest.NewRequest(http.MethodPost, path, strings.NewReader("{}")))
+		if response.Code != http.StatusUnauthorized || response.Header().Get("Cache-Control") != "no-store" {
+			t.Errorf("%s: got %d, expected uncached 401", path, response.Code)
+		}
+	}
+}

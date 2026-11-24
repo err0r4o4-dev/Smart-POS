@@ -327,7 +327,9 @@ function toBackendPayload(
         zone_code:
           zoneCodes[input.zones.findIndex((zone) => zone.name === table.zone)],
       })),
-      generate_qr: input.qr_enabled,
+      ...(branchID
+        ? { generate_qr: input.qr_enabled }
+        : { qr_enabled: input.qr_enabled }),
     };
   }
   if (step === 'menu')

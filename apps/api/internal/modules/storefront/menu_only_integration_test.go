@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"smartpos/api/internal/modules/identity"
 	"smartpos/api/internal/modules/inventory"
 	"smartpos/api/internal/modules/organization"
 	"smartpos/api/internal/modules/pos"
@@ -18,9 +19,10 @@ import (
 	"smartpos/api/internal/modules/returns"
 	"smartpos/api/internal/modules/storefront"
 	"smartpos/api/internal/platform/stripe"
+	"smartpos/api/internal/testsupport"
 )
 
-func menuOnlyAcceptance(t *testing.T, ctx context.Context, organizations *organization.Service, owner, org string, shop storefront.Settings, foreignOrg, unauthorized string) {
+func menuOnlyAcceptance(t *testing.T, ctx context.Context, organizations *organization.Service, owner, org string, shop storefront.Settings, foreignOrg, unauthorized string, auth identity.Handler, session testsupport.MFASession) {
 	t.Helper()
 	tx, _, err := organizations.Authorized(ctx, owner, org, "storefront.manage")
 	if err != nil {
@@ -158,7 +160,7 @@ func menuOnlyAcceptance(t *testing.T, ctx context.Context, organizations *organi
 		t.Fatalf("cash checkout: %+v %v", checkout, err)
 	}
 	t.Run("financial-only returns and exchanges", func(test *testing.T) {
-		menuOnlyReturnsAcceptance(test, ctx, organizations, owner, org, shop, checkout.SaleID, variant)
+		menuOnlyReturnsAcceptance(test, ctx, organizations, owner, org, shop, checkout.SaleID, variant, auth, session)
 	})
 	linkedOrder, err := service.CreateOrder(ctx, shop.Slug, "bfdddddd-dddd-4ddd-8ddd-dddddddddddd", input)
 	if err != nil {

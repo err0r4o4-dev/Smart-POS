@@ -44,23 +44,27 @@ func adjustmentResult(ctx context.Context, tx pgx.Tx, org, id string) (json.RawM
 	object["return_document"] = linked
 	return json.Marshal(object)
 }
-func (service *Service) GetAdjustment(ctx context.Context, user, org, kind, id string) (json.RawMessage, error) {
-	tx, actor, err := service.Organization.Authorized(ctx, user, org, permissionFor(kind, "read"))
+func (service *Service) GetAdjustment(ctx context.Context, user, org, kind, id string) (value json.RawMessage, err error) {
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, permissionFor(kind, "read"))
 	if err != nil {
 		return nil, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
+	defer finishRead(ctx, authorization, &value, &err)
 	if _, err = adjustmentHeader(ctx, tx, actor, user, org, kind, id); err != nil {
 		return nil, err
 	}
 	return adjustmentResult(ctx, tx, org, id)
 }
-func (service *Service) ListAdjustments(ctx context.Context, user, org, kind string, input Filter) (json.RawMessage, error) {
-	tx, actor, err := service.Organization.Authorized(ctx, user, org, permissionFor(kind, "read"))
+func (service *Service) ListAdjustments(ctx context.Context, user, org, kind string, input Filter) (value json.RawMessage, err error) {
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, permissionFor(kind, "read"))
 	if err != nil {
 		return nil, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
+	defer finishRead(ctx, authorization, &value, &err)
 	if input.Branch != "" {
 		if err = inventory.BranchScope(ctx, tx, actor, org, input.Branch, false); err != nil {
 			return nil, dbError(err)

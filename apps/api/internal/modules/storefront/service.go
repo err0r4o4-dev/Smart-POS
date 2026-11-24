@@ -61,10 +61,6 @@ func branchAllowed(actor organization.Member, branch string) bool {
 	}
 	return false
 }
-func (service *Service) authorized(ctx context.Context, user, org, permission string) (pgx.Tx, organization.Member, error) {
-	tx, actor, err := service.Organization.Authorized(ctx, user, org, permission)
-	return tx, actor, dbError(err)
-}
 func (service *Service) public(ctx context.Context, slug string, lock bool) (pgx.Tx, string, error) {
 	if !slugPattern.MatchString(slug) {
 		return nil, "", ErrNotFound

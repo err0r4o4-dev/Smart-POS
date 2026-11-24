@@ -50,10 +50,7 @@ func fingerprint(input any) string {
 	sum := sha256.Sum256(encoded)
 	return hex.EncodeToString(sum[:])
 }
-func (service *Service) begin(ctx context.Context, user, org, permission string) (pgx.Tx, organization.Member, error) {
-	tx, actor, err := service.Organization.Authorized(ctx, user, org, permission)
-	return tx, actor, dbError(err)
-}
+
 func scope(ctx context.Context, tx pgx.Tx, actor organization.Member, org, branch string, active bool) error {
 	if !uuidPattern.MatchString(branch) {
 		return ErrInput
@@ -75,12 +72,7 @@ func raw(ctx context.Context, tx pgx.Tx, query string, args ...any) (json.RawMes
 	err := tx.QueryRow(ctx, query, args...).Scan(&result)
 	return json.RawMessage(result), dbError(err)
 }
-func finish(ctx context.Context, tx pgx.Tx, org, user, event, id string) error {
-	if err := organization.RecordAudit(ctx, tx, org, user, event, id); err != nil {
-		return err
-	}
-	return dbError(tx.Commit(ctx))
-}
+
 func terminal(ctx context.Context, tx pgx.Tx, actor organization.Member, org, id string, active bool) (Terminal, error) {
 	var item Terminal
 	if !uuidPattern.MatchString(id) {
@@ -155,27 +147,33 @@ func variant(ctx context.Context, tx pgx.Tx, org, location, id, quantity, oldPri
 	return item, nil
 }
 
-func (service *Service) SaveTerminal(ctx context.Context, user, org, id string, input TerminalInput) (Terminal, error) {
-	tx, actor, err := service.begin(ctx, user, org, "pos.terminal.manage")
+func (service *Service) SaveTerminal(ctx context.Context, user, org, id string, input TerminalInput) (result Terminal, err error) {
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "pos.terminal.manage")
 	if err != nil {
-		return Terminal{}, err
+		return Terminal{}, dbError(err)
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
+	defer func() {
+		if err != nil {
+			result = Terminal{}
+		}
+	}()
 	if input.Status == "" {
 		input.Status = "ACTIVE"
 	}
 	if !codePattern.MatchString(input.Code) || !text(input.Name, 200, true) || !allowed([]string{"ACTIVE", "INACTIVE"}, input.Status) {
 		return Terminal{}, ErrInput
 	}
-	if err = scope(ctx, tx, actor, org, input.BranchID, true); err != nil {
+	if err = writeCheck(ctx, authorization, scope(ctx, tx, actor, org, input.BranchID, true)); err != nil {
 		return Terminal{}, err
 	}
-	if err = inventory.SaleLocation(ctx, tx, actor, org, input.BranchID, input.StockLocationID); err != nil {
+	if err = writeCheck(ctx, authorization, inventory.SaleLocation(ctx, tx, actor, org, input.BranchID, input.StockLocationID)); err != nil {
 		return Terminal{}, dbError(err)
 	}
 	if id != "" {
 		current, err := terminal(ctx, tx, actor, org, id, false)
-		if err != nil {
+		if err = writeCheck(ctx, authorization, err); err != nil {
 			return Terminal{}, err
 		}
 		if current.Revision != input.Revision || current.BranchID != input.BranchID {
@@ -183,24 +181,27 @@ func (service *Service) SaveTerminal(ctx context.Context, user, org, id string, 
 		}
 		var busy bool
 		if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM register_shifts WHERE organization_id=$1 AND terminal_id=$2 AND status='OPEN') OR EXISTS(SELECT 1 FROM pos_carts WHERE organization_id=$1 AND terminal_id=$2 AND status IN ('ACTIVE','HELD')) OR EXISTS(SELECT 1 FROM online_orders WHERE organization_id=$1 AND terminal_id=$2 AND storefront_order_live(organization_id,id))", org, id).Scan(&busy); err != nil {
+			return Terminal{}, writeCheck(ctx, authorization, err)
+		}
+		if err = writeCheck(ctx, authorization, nil); err != nil {
 			return Terminal{}, err
 		}
 		if busy {
 			return Terminal{}, ErrConflict
 		}
 		_, err = tx.Exec(ctx, "UPDATE pos_terminals SET code=$3,name=$4,stock_location_id=$5,status=$6,revision=revision+1,updated_at=now() WHERE organization_id=$1 AND id=$2", org, id, input.Code, input.Name, input.StockLocationID, input.Status)
-		if err != nil {
+		if err = writeCheck(ctx, authorization, err); err != nil {
 			return Terminal{}, dbError(err)
 		}
 	} else {
 		err = tx.QueryRow(ctx, "INSERT INTO pos_terminals(organization_id,branch_id,code,name,stock_location_id,status) VALUES($1,$2,$3,$4,$5,$6) RETURNING id::text", org, input.BranchID, input.Code, input.Name, input.StockLocationID, input.Status).Scan(&id)
-		if err != nil {
+		if err = writeCheck(ctx, authorization, err); err != nil {
 			return Terminal{}, dbError(err)
 		}
 	}
-	result, err := terminal(ctx, tx, actor, org, id, false)
-	if err != nil {
+	result, err = terminal(ctx, tx, actor, org, id, false)
+	if err = writeCheck(ctx, authorization, err); err != nil {
 		return result, err
 	}
-	return result, finish(ctx, tx, org, user, "pos.terminal.saved", id)
+	return result, finishAuthorized(ctx, authorization, org, user, "pos.terminal.saved", id)
 }

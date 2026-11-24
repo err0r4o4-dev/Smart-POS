@@ -92,19 +92,22 @@ func quoteAdjustment(ctx context.Context, tx pgx.Tx, actor organization.Member, 
 	quote.Difference, err = difference(quote.ReplacementTotal, quote.ReturnCredit)
 	return quote, err
 }
-func (service *Service) QuoteAdjustment(ctx context.Context, user, org, kind string, input AdjustmentInput) (AdjustmentQuote, error) {
-	tx, actor, err := service.Organization.Authorized(ctx, user, org, permissionFor(kind, "create"))
+func (service *Service) QuoteAdjustment(ctx context.Context, user, org, kind string, input AdjustmentInput) (value AdjustmentQuote, err error) {
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, permissionFor(kind, "create"))
 	if err != nil {
 		return AdjustmentQuote{}, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
+	defer finishRead(ctx, authorization, &value, &err)
 	return quoteAdjustment(ctx, tx, actor, user, org, kind, input)
 }
 func (service *Service) SaveAdjustment(ctx context.Context, user, org, kind, id, key string, input AdjustmentInput) (json.RawMessage, error) {
-	tx, actor, err := service.Organization.Authorized(ctx, user, org, permissionFor(kind, "create"))
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, permissionFor(kind, "create"))
 	if err != nil {
 		return nil, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
 	if _, err = saleScope(ctx, tx, actor, user, org, input.SaleID); err != nil {
 		return nil, err
@@ -120,18 +123,21 @@ func (service *Service) SaveAdjustment(ctx context.Context, user, org, kind, id,
 		ID    string
 		Input AdjustmentInput
 	}{id, input})
-	if err != nil || cached != nil {
-		return cached, dbError(err)
+	if err = checkAuthorization(ctx, authorization, dbError(err)); err != nil {
+		return nil, err
+	}
+	if cached != nil {
+		return cached, nil
 	}
 	if id != "" && (current.Status != "DRAFT" || current.Revision != input.Revision || current.Sale != input.SaleID) {
 		return nil, ErrConflict
 	}
 	quote, err := quoteAdjustment(ctx, tx, actor, user, org, kind, input)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
 		return nil, err
 	}
 	returnID, err := createDocument(ctx, tx, actor, user, org, quote.Branch, input.CreateInput)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
 		return nil, err
 	}
 	items, _ := json.Marshal(quote.Items)
@@ -147,8 +153,8 @@ func (service *Service) SaveAdjustment(ctx context.Context, user, org, kind, id,
 		return nil, dbError(err)
 	}
 	value, err := adjustmentResult(ctx, tx, org, id)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
 		return nil, err
 	}
-	return finish(ctx, tx, user, org, op, "adjustments.saved", id, value)
+	return finishWrite(ctx, authorization, user, org, op, "adjustments.saved", id, value)
 }

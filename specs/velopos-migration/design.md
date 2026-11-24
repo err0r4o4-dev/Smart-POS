@@ -310,6 +310,60 @@ payment reservations or cancel paid orders. Table QR binds restaurant/table;
 private customer session data never lives in the persistent public QR. Separate
 orders/payments on the same table remain independent FIFO entries.
 
+### Native order availability contract (T1.2 proposal)
+
+This contract advances VLP-007 and VLP-032. It does not grant permission to sell.
+The existing `/organizations/{id}/restaurant/setup` routes save setup flags;
+`/organizations/{id}/storefront` owns the legacy `accepting_orders` switch.
+The public storefront quote and order routes use `fulfillment` and an optional
+table token. The legacy `PICKUP` value covers more than native Pickup, so its
+meaning must stay unchanged. The setup wizard, storefront settings, public
+catalog and cart use those existing shapes. Keep them intact until a native
+consumer and producer pass compatibility checks.
+
+- **Owner settings.** A native availability read returns the restaurant's time
+  zone, weekly ordering windows, global pause, four per-mode pause flags and a
+  revision. A write replaces those settings as one unit, with the expected
+  revision, using the existing verified Owner write boundary. Stale revision
+  conflicts, invalid schedules and foreign writes have no effect. Save the new
+  revision and audit in the same transaction. Keep these operational settings
+  editable after setup without reopening or mutating completed setup records.
+- **Ordering windows.** Proposed representation: ISO weekdays 1-7 and local
+  `HH:mm` boundaries in the restaurant's explicit IANA time zone. Start is
+  inclusive and end exclusive. A day without windows is closed; use `24:00`
+  only as an end boundary and split overnight windows at midnight. Reject
+  unknown zones, invalid weekdays, empty or reversed intervals and overlaps;
+  touching intervals are valid. Evaluate a trusted server instant in the stored
+  zone, independent of client clocks and the server host's local zone. Do not
+  infer opening hours from the old branch closing time. Keep unpublished native
+  configuration separate from the live legacy storefront during transition.
+- **Public result.** Use an explicit native mode (`DINE_IN`, `TAKEAWAY`,
+  `PICKUP`, `DELIVERY`). For a discoverable restaurant, expose only evaluated
+  per-mode availability and a safe denial reason; omit owner settings, evidence
+  and private table data. A mode can admit a new order only when the restaurant
+  can sell, the mode is enabled, its current window is open, and neither pause
+  applies. A quote is advisory. At new order admission re-evaluate under the
+  restaurant transaction's serialization boundary with settings updates, using
+  a server instant captured after acquiring that boundary. All four modes must
+  use the same predicate. A denial must create no order or payment side effects.
+- **Existing obligations.** A matching authenticated replay (or replay with the
+  required guest proof) returns an already committed result without admitting
+  another order; a changed request still conflicts. Closing or pausing cannot
+  cancel a paid order, remove a paid queue entry, stop verified reconciliation or
+  release a hold for an unknown payment. Starting a new payment attempt for an
+  already created unpaid order, with no pending attempt, must be specified with
+  T3.2/T3.3 and B03 before changing any payment entry point.
+
+Acceptance: test inside/outside windows, exact boundaries, overnight split,
+empty schedules and differing host/restaurant zones; all four modes, individual
+and global pause/resume, and no selling before approval; cross-restaurant denial,
+stale revision and audit rollback; both serialized outcomes of a pause racing
+with admission, a stale quote, a proved replay after pause, and existing paid or
+unknown-payment work continuing. Verify legacy settings, quote, order and
+tracking compatibility. Exact routes, DTO names and status/code mapping must
+land with their real Go producer, OpenAPI, route inventory and React consumer.
+No runtime path or migration is introduced by this proposal.
+
 ### Selected setup-only Pickup contract - 2026-11-22
 
 The first local implementation slice adds durable organization-native Pickup
@@ -354,6 +408,143 @@ retained upgrade, populated downgrade refusal and preservation of private drafts
 No public checkout, payment, queue, quote, table-token or authorization control
 is changed. Browser/UI rollout and per-mode runtime availability are later slices.
 
+### Native table QR and private session boundary (T1.2 proposal)
+
+VLP-018 gives the persistent QR authority to identify a restaurant and
+table. Scanning opens the public menu and lets the customer choose Dine-in
+or Takeaway. The QR must not read or resume a previous cart, session, order
+or payment. A new Dine-in session uses separate private proof, bound on the
+server to that organization and native dining table. The same QR can start
+independent sessions at the same table. Orders and payment attempts keep
+their own identity and queue positions; a table identifier is not an
+idempotency key. Choosing Takeaway from the QR does not carry a Dine-in table
+assignment.
+
+The setup producer in `organization_setup.go` writes
+`restaurant_dining_tables` and returns issued QR values to the Owner setup
+UI in `OrganizationPages.tsx`. The legacy `dineInTable` reader in
+`storefront/orders.go` resolves `table_token` against branch-scoped
+`restaurant_tables`. `ShopCatalog.tsx` and `ShopCartPage.tsx` consume
+that legacy token and the cart pairs it with legacy `PICKUP`. Keep the
+legacy reader, UI and order foreign keys in service. The native flow uses the
+organization-scoped dining table; a matching code or name cannot link the two
+table families.
+
+The public projection must omit private session, cart, order and payment
+state. A native Dine-in mutation must validate both the table context and
+the matching private session proof at the server. Keep Dine-in sessions out
+of saved-cart sync/recovery and reorder.
+
+| Operation | Authority and result |
+| --- | --- |
+| Resolve QR | The public QR resolves only against an active native table in the addressed restaurant, and returns public table/menu context. Repeated scans do not resume or close another session. |
+| Start Dine-in | An explicit start from that QR creates an independent server-side session and issues its private proof. An explicit Takeaway choice skips this operation. |
+| Read or change session state | Require matching private proof, organization, table and session state in the transaction. The server derives the table assignment from the validated session; caller-provided IDs do not grant access. Missing, foreign, expired and ended proofs get the same denial and no private payload. |
+| End or expire | End the session without releasing reservations, altering committed orders, or changing queue entries. Once ended or expired, it cannot open another order. Customers use the separate order proof for committed obligations; the QR cannot recover that proof. |
+
+For the first wire contract, propose a server-generated opaque proof with
+256 bits of randomness, returned only at session creation and submitted in
+the body of private POST requests. This follows the existing storefront
+tracking pattern without reusing order tracking proof or introducing a
+browser-wide ambient cookie. Responses that issue proof or return private
+state are non-cacheable. Keep proof out of URLs, logs, analytics and shared
+cart caches. Store only its digest server-side. Scope the persisted session
+to a composite organization/table reference, and bind any private cart or
+command replay to the session as well as the organization. A lookup by
+restaurant/table alone never selects a customer's session. Recheck lifecycle
+and scoped proof before returning a replay or creating new work.
+
+#### Proposed v1 paths and payloads
+
+The base path is `/api/v1/storefronts/{slug}`. Resolve the slug through the
+published storefront and the deployment's organization scope before querying
+native dining tables. Use the canonical slug to load the existing public menu
+separately. The legacy `table_token` parameter on `/quote` and `/orders` keeps
+its existing meaning and is not accepted as native session proof.
+
+| POST path | JSON request | Success response |
+| --- | --- | --- |
+| `/table-qr/resolve` | `{"qr_token":"..."}` | `200`, `{"data":{"table":{"code":"...","name":"..."}}}`. Does not create, select or end a session. |
+| `/table-sessions` | `{"qr_token":"..."}` | `201`, `{"data":{"table":{"code":"...","name":"..."},"session_proof":"...","expires_at":"..."}}`. Call only on explicit Dine-in selection; recheck QR and Dine-in admission in the write transaction. |
+| `/table-sessions/end` | `{"session_proof":"..."}` | `204`, empty body. End only the session selected by this proof within the addressed restaurant. |
+
+`qr_token` uses the existing 64 lowercase hexadecimal character format.
+`session_proof` is an independently generated 32-byte value encoded as
+unpadded base64url (43 characters); `expires_at` is the server's deadline
+in UTC RFC 3339 format. No internal table/session identifiers are returned.
+Reject malformed JSON, unknown fields and wrong field types with the existing
+`400 INVALID_INPUT` envelope. On a valid JSON object, an absent or unusable
+credential, unknown shop, or wrong scope returns the uniform `404 NOT_FOUND`
+envelope. Ended and expired proofs get the same denial. A matching QR whose
+table is public but cannot admit a new Dine-in session returns `409 STORE_CLOSED`
+on start. Apply `Cache-Control: no-store` before validation or rate limiting
+on all three paths, including errors. Bound request size and reuse storefront
+public write middleware before lookups or writes: disallowed origins return
+`403 INVALID_ORIGIN`; throttling returns `429 RATE_LIMITED` with `Retry-After`.
+Never log credential values.
+
+The existing limiter persists its scope in `auth_rate_limits`, whose check
+constraint enumerates supported scopes. Add and verify separate scope values
+for resolve, start and end before mounting the paths; reusing the legacy
+quote/order buckets would couple unrelated customer actions. Verify that
+rate limiting happens before session access and that the new buckets leave
+the retained quote, order, tracking and payment buckets unchanged.
+
+Each successful explicit start creates one session. The client submits once
+per choice and does not automatically retry an ambiguous start. A customer
+may explicitly start again if the response was lost: this never recovers the
+lost proof or ends any other session. An abandoned session expires and cannot
+hold inventory, quota, benefits or payment by itself. A newer session is never
+inferred from the QR, even when it is the only active session at that table.
+
+A future native quote or checkout takes `session_proof` in its JSON body for
+`DINE_IN` and derives the table from the session; it does not take a QR or an
+editable table ID as authority. A `TAKEAWAY` request does not take a session
+proof or assign a table. Ending a session and admitting an order serialize on
+the scoped session: if end wins, no order is admitted; if admission commits
+first, its order, payment and queue state stay intact. Use separate order
+proof for payment recovery, without checking the dining session.
+
+#### Proposed persistence and transaction checks
+
+- Reference the native table with `(organization_id, table_id)`, using the
+  existing unique `(organization_id, id)` on `restaurant_dining_tables`.
+  Enforce organization scope on both reads and writes through the runtime
+  role. Use an indexed `(organization_id, proof_digest)` lookup; store a
+  digest of the decoded proof, never a recoverable copy. Do not make the table
+  unique in the session store: it can have more than one active session.
+- Follow the existing storefront write order: acquire the organization lock
+  before any session lock. Recheck start eligibility after obtaining that lock;
+  a QR resolved before a concurrent setup change is not evidence for a later
+  write. End and checkout admission must lock the same scoped session row
+  and read its current state after the wait. No writer should hold a session
+  lock and then request the organization lock.
+- Compare the expiry deadline with the database wall clock after lock waits
+  and before admitting work, not with the transaction start timestamp. An
+  admission waiting past expiry must return no result and create no order,
+  payment attempt or reservations. An already committed attempt remains
+  recoverable only through its order proof. Do not copy the session proof
+  into order snapshots, payment records or replay results.
+
+The remaining decisions are whether a reload restores the session in the
+same tab or requires a new start; the session lifetime; and whether closing
+a table, disabling QR or rotating it also ends existing sessions. Resolve is
+subject to the current table and QR configuration in every case. Same-tab
+recovery, if selected, must prove possession of the current session and must
+be separate from the QR landing flow. A fresh scan, browser tab opened from
+a QR link, or explicit Takeaway selection cannot recover a previous session.
+Keep saved-cart expiry and concurrency under B14. Review the authority and
+contract under T1.3 before adding the Go producer, web consumer, OpenAPI or
+migration.
+
+Acceptance must cover repeated and concurrent starts, independent sessions
+and orders for the same table, Takeaway without a table assignment, missing
+or mismatched proof, expiry/end racing new admission, proof-free public
+projections, and retained legacy QR behavior. With isolated fixtures, show
+that denial leaves the other session and its records unchanged and that
+ending the session preserves committed order/payment/queue state.
+This proposal does not register a route or add a migration.
+
 <a id="d03"></a>
 
 ## D03. Menu, revisions and import
@@ -377,6 +568,230 @@ schema, size limits and all-or-nothing versus partial-apply behavior remain TBD
 before T3.9 implementation. Existing catalog import is a reuse seam, not proof
 of modifier-aware restaurant import. Scope 93 menu media management is excluded;
 existing image fields do not approve it.
+
+### Modifier ownership and revision boundary
+
+The existing organization menu registry keys a sellable item by restaurant
+and variant. Keep that identity for modifier ownership; do not attach groups
+to a display name, SKU, category or arbitrary legacy product. A group belongs
+to one registered item and an option belongs to one group. Persist stable IDs
+and require the full restaurant/item/group relationship for edits and for
+validating a customer selection. Resolve IDs in the current restaurant before
+reporting field or revision errors so a foreign reference gives no details
+about the other restaurant.
+
+Use a separate Owner menu command for modifiers. The existing setup save
+accepts category/item rows without any modifier data; treating those missing
+fields as an empty replacement list would erase configuration on a retained
+client save or replay. Preserve groups and options when setup edits a name,
+price or category. Owner reads include inactive options for management, while
+the customer view exposes only sellable choices. Changing sale status does not
+delete the option or make an older snapshot unreadable.
+
+Use one base menu revision across writes that change customer choices,
+prices or availability. In particular, the existing item writer and future
+bulk-import writer must participate in the same revision boundary before any
+client can depend on it. A write under the current restaurant and live Owner
+authority validates the final choice bounds, appends before/after history and
+audit, then commits together. An old base revision conflicts without writing;
+an exact retry may return its original result only after current authorization
+is checked. A restore appends a new revision. It does not reactivate historical
+orders or rewrite purchase snapshots.
+
+For checkout, validate distinct selected options against their own item and
+group, required/optional bounds, current sale status and exact extra prices
+on the server. A stale price or unavailable choice requires the customer to
+reconfirm; never silently substitute another choice. Binding the resulting
+snapshot to an order and reserving main/option quantities at payment remains
+the separate T3.2/T3.7 transaction. This boundary selects no quota hold duration
+or allocation policy and makes no changes to legacy recipes or stock.
+
+Acceptance includes a retained setup save preserving configured choices,
+foreign and wrong-parent references returning no details, stale edits and
+audit failure writing nothing, disabled choices requiring reconfirmation in a
+pending cart, and paid snapshots staying unchanged after edit or restore.
+This defines the design boundary; no HTTP path, wire payload or schema is
+published by this checkpoint.
+
+### Native menu modifier wire proposal (T1.2)
+
+This proposal covers VLP-008, the choice and price portions of VLP-079, and
+the revision and snapshot boundary of VLP-091. It does not change the
+retained setup, catalog, or quote payloads. A native producer and consumer
+must implement the contract together before any route is published.
+The retained `storefront.ItemInput` carries `variant_id` and `quantity`,
+and `normalizeItems` rejects a second line with the same variant. Keep that
+behavior for existing consumers; the native path must distinguish lines by
+item and selection rather than using the variant alone.
+
+| Operation | Proposed wire behavior |
+| --- | --- |
+| Read for Owner | Under the current restaurant and verified Owner authority, return the menu revision and the addressed item's groups and options, including inactive options. Each group has a stable ID, label, and integer minimum and maximum choices; each option has a stable ID, label, exact THB extra price as a decimal string, and sale status. |
+| Edit for Owner | Submit the item scope, expected menu revision, an idempotency key, and explicit group/option changes. Omitted groups or options are unchanged. Validate the resulting state and return the committed projection and revision. The established setup command remains compatible and preserves choices. |
+| Read for customer | Once public admission is approved, return the current revision, item and group IDs, labels, choice bounds and sellable option IDs, labels and extra prices. Exclude inactive options and Owner history. A required group without enough sellable choices makes the item unavailable; it cannot be bypassed by omitting selections. |
+| Revalidate customer selections | Each cart line submits its item ID, quantity, and distinct option IDs grouped by group ID. Resolve them under the addressed restaurant and line item. Compute prices on the server. An invalid or no longer sellable selection, or a changed displayed price, requires the customer to review and confirm current choices and totals before payment. Do not substitute choices, mutate paid orders, or allocate quota during a read or cart save. |
+
+Read and write projections must use a coherent revision: a response cannot
+pair one revision with groups or prices from another. An authorized command
+with a stale revision or a reused key with a changed payload conflicts without
+writing. An exact replay returns its original result after current authority
+and scope checks, even after later menu edits. Validate the item and scoped
+references before reporting conflicts or field errors so no response reveals
+another restaurant's IDs, menu revision or private configuration.
+
+#### Shared revision cutover prerequisites
+
+The setup-profile revision is not a menu revision. The organization setup
+command increments it, but existing catalog and quality commands can change
+what the organization catalog and quote return without updating that profile.
+Public activation must wait until the following paths observe one menu
+revision boundary for registered items and categories.
+
+| Existing writer | What must participate in the native revision |
+| --- | --- |
+| `restaurant/organization_menu.go` and `restaurant/setup.go` | The organization menu command can register and update items. Retained `SaveMenu` can still update shared catalog rows. Include a retained write when it touches a row used by the native projection; retain its request shape, existing authorization and distinct replay contract. |
+| `catalog/products.go`, `catalog/variants.go`, `catalog/service.go` | Product names, category assignment and status, variant name, price, unit and status, and referenced category/unit changes can alter current menu projections. Limit revision participation to changes relevant to the restaurant menu. |
+| `catalog/imports.go` | `ConfirmImport` updates existing variants through `saveVariant` and can write the product directly. The committed batch must include all affected changes in the same revision and roll back that revision on failure. Preview and replay must not increment it. |
+| `inventory/quality.go` | A variant-wide recall suppresses sale in both organization readers. Its publication must invalidate an earlier purchase confirmation. Keep the recall's existing authorization and immutable evidence; a menu restore must not reopen a recalled item. |
+
+Migration 48 provides an append-only revision table. The proposed writer
+reads the last committed revision after taking the existing organization row
+lock and appends the next revision with before/after state and actor. The
+organization row serializes allocation even when no revision exists yet.
+The business writes and revision append must commit together. Identify
+existing security, recall and import locks before
+choosing the final order. In particular, migration 13's
+`quality_recall_guard` takes `organizations ... FOR UPDATE` inside the
+insert, and `ConfirmImport` locks its import job. Trace those paths together
+with payment admission before assigning the lock order. The starting order
+for review is existing authority proof, organization row, then import job
+or menu rows. `AuthorizeMFA` already locks the organization
+after session proof; retained `trackingPaymentTx` resolves the order proof
+before locking the organization. Do not change either proof boundary or
+acquire the revision lock inside an inner SQL helper after an affected
+business lock is already held. A consistent snapshot must include revision,
+item, options and eligibility; reading the
+revision in one read-committed statement and the menu in another is insufficient.
+Payment entry must revalidate under the write-side coordination, since a
+coherent read alone cannot prevent a later change racing admission.
+
+Acceptance: (1) race an exact native edit against a retained setup edit and
+against catalog import; the observable revision and projections must agree
+with the commit sequence, with no lost edit or duplicate revision on replay;
+(2) change a referenced category or unit and create a variant-wide recall
+between quote and payment; the outdated confirmation must not admit payment
+or reserve anything; (3) fail an update after touching shared data and prove
+the revision, history and effects all rolled back; (4) interleave unrelated
+restaurant writes and prove their revisions, history and access remain
+isolated. Keep native activation off until the writer inventory and these
+checks are independently verified. Existing orders and retained APIs stay
+available throughout the additive cutover.
+
+Bind the customer's confirmation to the server quote for those exact
+selections, quantities, extras and totals. A newer revision triggers a
+server revalidation; if the confirmed choices, prices or availability no
+longer match, the previous confirmation cannot admit payment. The customer
+may request a fresh quote and confirm again. This quote does not by itself
+prove quota is held or the restaurant admits a new payment attempt.
+
+Before publishing, cover retained saves preserving choices, coherent reads
+during concurrent edits, exact replay versus changed-payload conflict,
+foreign and wrong-parent IDs, unavailable required groups, exact extras,
+and reconfirmation after a price or choice changes. Include the case where
+two lines use the same item with different valid selections; their choices
+and totals must remain distinct in the order snapshot. Verify that later
+edits and restores leave that snapshot unchanged. Quota allocation and hold
+timing stay with B14; CSV/XLSX activation stays with B16. Route naming and
+OpenAPI registration follow review of the native producer and consumers.
+
+### B16 proposal: version 1 template and apply policy
+
+Use one rectangular table for UTF-8 CSV (optional BOM) or a single-sheet
+XLSX workbook. One table fits the existing parser and gives both formats the
+same validation rules. Proposed ceiling: 5 MiB input, 2,000 data rows, and
+20 MiB aggregate expanded XLSX size, matching the catalog parser. Reject
+formulas rather than importing their cached results. These are proposed
+restaurant limits, not an approval to change the retained catalog importer.
+
+Use an explicit template version and row kind. The CSV header below also
+defines the XLSX header row. Column names are fixed; column order may differ.
+Every data row must use template version `1`. Reject unknown or duplicate
+headers, mixed versions and inconsistent row widths before preview.
+
+```csv
+template_version,row_kind,ref,parent_ref,name,price,sale_status,min_choices,max_choices
+1,CATEGORY,rice,,Rice bowls,,,,
+1,ITEM,basil-rice,rice,Basil rice,85.00,ACTIVE,,
+1,GROUP,protein,basil-rice,Protein,,,1,1
+1,OPTION,chicken,protein,Chicken,0.00,ACTIVE,,
+1,OPTION,beef,protein,Beef,20.00,ACTIVE,,
+```
+
+Proposed fields by row kind:
+
+| Row kind | Stable reference | Editable fields |
+| --- | --- | --- |
+| `CATEGORY` | `ref` | `name` |
+| `ITEM` | `ref`, `parent_ref` (category) | `name`, `price`, `sale_status` |
+| `GROUP` | `ref`, `parent_ref` (item) | `name`, `min_choices`, `max_choices` |
+| `OPTION` | `ref`, `parent_ref` (group) | `name`, `price` (extra charge), `sale_status` |
+
+References address entities within the current restaurant and row kind, not
+display names or database IDs from another tenant. Reject duplicate entity
+references, missing parents and fields that do not apply to the row kind.
+Resolve references against the proposed final menu so file order does not
+matter. Validate prices as exact decimals and preserve explicit zero; a blank
+optional field is not a request to clear a price. Omission does not delete an
+item. Deactivation is explicit (`INACTIVE` on an item or option). The status
+values in this template are proposed wire values, independent of storage
+enums. For an existing entity, a blank applicable field preserves the current
+value; for a new entity, require the name and all applicable parent, price,
+status and choice bounds. For a group, zero minimum means optional; a
+positive minimum means required. Validate the final group's bounds against
+the final sellable options before applying. Quota fields wait for the T3.7
+contract.
+
+Recommend all-or-nothing apply. Preview reports add/change/unchanged/error
+with line and field; it does not modify the menu. Apply rechecks the Owner
+and restaurant, the exact preview contents and base menu revision. Any invalid
+row or intervening edit rejects the batch and requires a fresh preview.
+One successful batch records the menu revision and audit in the same
+transaction; an identical retry returns the recorded result. A retry with
+changed content conflicts. Price, category and sale-status bulk edits use the
+same revision boundary. The transaction never rewrites a paid snapshot;
+pending carts revalidate against the committed menu on their next operation.
+
+#### Retained parser and native preview boundary
+
+`catalog/import_parser.go` already checks UTF-8, strips a CSV BOM, enforces
+rectangular CSV rows, and handles sparse XLSX cells within the header width.
+It checks ZIP entry count, expanded size and worksheet coordinates, and
+rejects formula cells. Reuse these format checks; apply the fixed header,
+row-kind and reference validation after parsing, independently of format.
+Neither format may round prices or coerce an empty value to zero. Reject
+scientific notation and values that exceed the supported decimal precision
+before apply, even if a workbook stores them as numeric cells.
+
+The retained `ConfirmImport` resolves catalog rows by tenant SKU and uses
+product/variant revisions. Its creator-only preview, authorization recheck,
+and stored replay result are useful patterns; its mapping and UPDATE logic
+cannot identify native categories, groups or options. Migration 38 keys the
+native menu by restaurant/category or restaurant/variant, and migration 47
+keys modifier options by their owning group. The proposed `ref` has no
+durable mapping in those tables. B16 must select how repeated templates bind
+an existing entity after rename, for example by a durable restaurant-scoped
+reference or a tenant-scoped reference issued by an existing-menu template.
+Do not infer the mapping from a display name or treat an unmatched update as
+an insert. Verify that unknown or foreign references cannot update another
+restaurant and that moving an existing item retains its identity and history.
+
+Acceptance should cover format parity, Thai text and decimal fidelity,
+duplicate/missing/foreign references, malformed or oversized files, stale
+preview, apply/retry concurrency, audit failure rolling back the whole batch,
+unchanged paid snapshots, and stale pending-cart rejection. Approval is
+still needed for the template, limits and atomic apply policy. Preview
+retention and the shared modifier/availability fields need their owning
+contracts before implementation.
 
 <a id="d04"></a>
 
@@ -423,6 +838,32 @@ using an explicitly verified user ID and an audit event, as selected by the user
 on 2026-11-22. No self-service Owner elevation or actual Admin grant is authorized
 by this selection. The local schema43 command now has scoped acceptance in tasks.md;
 mandatory authority enforcement and manual recovery evidence remain open.
+
+### Authority matrix for the native restaurant flow (T1.3)
+
+These are required boundaries for native operations. Retained branch
+operations continue to use their own organization, branch and permission
+checks until their replacements are accepted.
+
+| Actor | Required authority | Denial and acceptance evidence |
+| --- | --- | --- |
+| Public visitor | Only the approved public restaurant and menu projection. A persistent QR can identify a table but grants no private access. | Public responses contain no customer/session/order credentials, payment evidence or internal audit. |
+| Guest | No account for checkout. Private order operations require server-validated proof for that exact order and restaurant; a Dine-in session has separate proof under D02. | Deny order number, contact info, QR, wrong order proof and proof from another restaurant. An order claim also requires a signed-in member and must atomically prevent a second claim. |
+| Member | Active signed-in identity plus an explicit owner predicate on the requested customer record or order. Claims are per order and do not change payment, reviews or points. | Deny foreign member, guest order without valid claim and a session revoked before access. Use the same predicate for reads, mutations and timeline subscriptions. |
+| Restaurant Owner | Active Owner of the addressed organization, active session and current MFA for protected operations. Only one account can hold native Owner authority per restaurant. An Owner of multiple restaurants selects one context per request. | Verify ownership under the transaction boundary. Deny missing MFA, wrong restaurant, stale or revoked session, and old Owner after transfer. Never infer which retained Owner to keep or widen a branch grant. |
+| Platform Admin | Separate server-provisioned active authority, current MFA and permission for the particular approved operation and target. Owner membership cannot confer platform authority. | Verify removal and session revocation, deny Owner self-elevation, and audit attributable actions. Approval of transfer or receiving-account activation requires its own evidence workflow. |
+| Elevated sensitive operation | The actor must pass the applicable Owner or Admin gate plus fresh verified primary proof and current TOTP for the same account and session within five minutes. Apply to receiving-account changes, transfer and ads credit refunds when their native writers exist. | Deny a fresh login alone, a fresh TOTP paired with absent or old primary proof, a recovery code alone, and proof expiring before the final authorization checkpoint. Denial may not mutate the target or return a previous private result. |
+
+Scope each command replay, stream, attachment and export to the actual
+resource and current authority before returning any private payload. On
+account, organization or branch change, discard the old client context and
+do not accept responses into the new context. Backend access checks remain
+required even when the UI has already removed the old workspace. For the
+transfer transaction, verify both the replacement and removal of old
+authority, including continued denial from the former Owner's session.
+Retention, manual recovery and merchant evidence remain under B07, B12
+and B10 respectively. This matrix does not grant access or assert
+implementation or exhaustive acceptance.
 
 Internal implementation checkpoint, 2026-11-22: migration 41 adds encrypted
 per-user factors, recovery verifiers and nullable session assurance. The internal
@@ -698,6 +1139,46 @@ or guest-session scope. Identical retry returns the same order/attempt; changed
 payload under the same key fails. Transactions and unique constraints prevent
 duplicate orders, payments, queue entries, quotas, coupons and points. A safe new
 payment attempt belongs to the same order and revalidates applicable inputs.
+
+### Saved-cart versioning and expiry (B14 proposal)
+
+The retained `shop-cart.ts` stores line arrays in browser storage under a
+storefront slug, with an in-memory fallback. It observes cross-tab changes
+but has no persisted revision or expiry; it is not a member-sync source.
+Keep retained carts readable until their replacement is accepted. Never
+infer member ownership from a legacy browser cart or import one on sign-in.
+
+Proposed native behavior:
+
+- Scope the guest draft to the device's browser storage and a stable restaurant
+  identity. Scope the member draft to the authenticated member and stable
+  restaurant identity; resolve both server-side for reads and writes. Keep
+  guest and member drafts separate when an account changes. Neither draft
+  stores private table/session proof, order proof or payment credentials.
+- Use compare-and-update against the revision the editor read. Creation
+  expects no current draft; two concurrent creates cannot overwrite each
+  other. A stale edit does not overwrite or silently merge the current draft.
+  Show the current authorized draft and keep the rejected edits available for
+  explicit review. Refreshes, conflicts and replays are not edits and do not
+  extend expiry. Do not claim local cross-tab safety from storage notifications
+  alone; the compare and write must be serialized or the write fails safely.
+- Treat an expired draft as unavailable and require explicit creation of a
+  new draft. An edit from before expiry cannot resurrect it or overwrite a
+  replacement draft; compare the draft identity as well as the revision.
+  Expiry and conflict resolution must not reserve quota, create an order,
+  start payment, or unwind any existing payment or quota hold.
+- Store selections and quantities as draft inputs. Checkout must validate the
+  current restaurant, menu, modifier choices and prices before the customer
+  confirms. Do not apply a stored price or replace a sold-out choice silently.
+
+Acceptance: two clients edit the same revision and only one write succeeds;
+a stale client cannot overwrite a recreated draft; reading does not extend
+expiry; a second guest device or foreign member cannot see the draft; changing
+accounts does not import the prior draft; restoring the draft creates no hold,
+order or payment. Verify guest same-browser concurrency separately from
+member cross-device concurrency. Guest and member inactivity durations await
+the product decision. Payment hold duration and quota allocation remain
+separate B14 decisions; unknown payment continues to retain the hold.
 
 <a id="d07"></a>
 

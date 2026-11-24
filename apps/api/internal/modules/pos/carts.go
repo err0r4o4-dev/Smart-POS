@@ -135,64 +135,86 @@ func cartUnlocked(ctx context.Context, tx pgx.Tx, org, id string) error {
 	return nil
 }
 func (service *Service) Cart(ctx context.Context, user, org, id string) (Cart, error) {
-	tx, actor, err := service.begin(ctx, user, org, "pos.cart.manage")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "pos.cart.manage")
 	if err != nil {
-		return Cart{}, err
+		return Cart{}, dbError(err)
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
-	return readCart(ctx, tx, actor, user, org, id)
+	item, err := readCart(ctx, tx, actor, user, org, id)
+	return privateReadResult(ctx, authorization, item, err)
 }
-func (service *Service) CreateCart(ctx context.Context, user, org, key string, input CartInput) (Cart, error) {
-	tx, actor, err := service.begin(ctx, user, org, "pos.cart.manage")
+func (service *Service) CreateCart(ctx context.Context, user, org, key string, input CartInput) (result Cart, err error) {
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "pos.cart.manage")
 	if err != nil {
-		return Cart{}, err
+		return Cart{}, dbError(err)
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
+	defer func() {
+		if err != nil {
+			result = Cart{}
+		}
+	}()
 	if !uuidPattern.MatchString(key) || len(input.Items) != 0 {
 		return Cart{}, ErrInput
 	}
 	var id, previousTerminal string
 	err = tx.QueryRow(ctx, "SELECT id::text,terminal_id::text FROM pos_carts WHERE organization_id=$1 AND cashier_id=$2 AND create_key=$3", org, user, key).Scan(&id, &previousTerminal)
 	if err == nil {
+		if err = writeCheck(ctx, authorization, nil); err != nil {
+			return Cart{}, err
+		}
 		if previousTerminal != input.TerminalID {
 			return Cart{}, ErrConflict
 		}
-		return readCart(ctx, tx, actor, user, org, id)
+		result, err = readCart(ctx, tx, actor, user, org, id)
+		return privateReadResult(ctx, authorization, result, err)
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
+		return Cart{}, writeCheck(ctx, authorization, err)
+	}
+	if err = writeCheck(ctx, authorization, nil); err != nil {
 		return Cart{}, err
 	}
 	value, err := terminal(ctx, tx, actor, org, input.TerminalID, true)
-	if err != nil {
+	if err = writeCheck(ctx, authorization, err); err != nil {
 		return Cart{}, err
 	}
-	if _, err = ownShift(ctx, tx, org, value.ID, user); err != nil {
+	_, err = ownShift(ctx, tx, org, value.ID, user)
+	if err = writeCheck(ctx, authorization, err); err != nil {
 		return Cart{}, err
 	}
 	err = tx.QueryRow(ctx, "INSERT INTO pos_carts(organization_id,branch_id,terminal_id,cashier_id,create_key,stock_policy) VALUES($1,$2,$3,$4,$5,'MENU_ONLY') RETURNING id::text", org, value.BranchID, value.ID, user, key).Scan(&id)
+	if err = writeCheck(ctx, authorization, err); err != nil {
+		return Cart{}, err
+	}
+	result, err = readCart(ctx, tx, actor, user, org, id)
+	if err = writeCheck(ctx, authorization, err); err != nil {
+		return result, err
+	}
+	return result, finishAuthorized(ctx, authorization, org, user, "pos.cart.created", id)
+}
+func (service *Service) UpdateCart(ctx context.Context, user, org, id, action string, input CartInput) (result Cart, err error) {
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "pos.cart.manage")
 	if err != nil {
 		return Cart{}, dbError(err)
 	}
-	result, err := readCart(ctx, tx, actor, user, org, id)
-	if err != nil {
-		return result, err
-	}
-	return result, finish(ctx, tx, org, user, "pos.cart.created", id)
-}
-func (service *Service) UpdateCart(ctx context.Context, user, org, id, action string, input CartInput) (Cart, error) {
-	tx, actor, err := service.begin(ctx, user, org, "pos.cart.manage")
-	if err != nil {
-		return Cart{}, err
-	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
+	defer func() {
+		if err != nil {
+			result = Cart{}
+		}
+	}()
 	current, err := cartHeader(ctx, tx, actor, user, org, id)
-	if err != nil {
+	if err = writeCheck(ctx, authorization, err); err != nil {
 		return current, err
 	}
 	if current.Revision != input.Revision || allowed([]string{"COMPLETED", "CANCELLED"}, current.Status) {
 		return current, ErrConflict
 	}
-	if err = cartUnlocked(ctx, tx, org, id); err != nil {
+	if err = writeCheck(ctx, authorization, cartUnlocked(ctx, tx, org, id)); err != nil {
 		return current, err
 	}
 	next := current.Status
@@ -202,17 +224,19 @@ func (service *Service) UpdateCart(ctx context.Context, user, org, id, action st
 		if current.Status != "ACTIVE" || validateItems(input.Items) != nil {
 			return current, ErrInput
 		}
-		if err = validateOnlineCart(ctx, tx, org, id, input.Items); err != nil {
+		if err = writeCheck(ctx, authorization, validateOnlineCart(ctx, tx, org, id, input.Items)); err != nil {
 			return current, err
 		}
 		value, err := terminal(ctx, tx, actor, org, current.TerminalID, true)
-		if err != nil {
+		if err = writeCheck(ctx, authorization, err); err != nil {
 			return current, err
 		}
-		if _, err = ownShift(ctx, tx, org, value.ID, user); err != nil {
+		_, err = ownShift(ctx, tx, org, value.ID, user)
+		if err = writeCheck(ctx, authorization, err); err != nil {
 			return current, err
 		}
-		if _, err = tx.Exec(ctx, "DELETE FROM pos_cart_items WHERE organization_id=$1 AND cart_id=$2", org, id); err != nil {
+		_, err = tx.Exec(ctx, "DELETE FROM pos_cart_items WHERE organization_id=$1 AND cart_id=$2", org, id)
+		if err = writeCheck(ctx, authorization, err); err != nil {
 			return current, err
 		}
 		for _, inputItem := range input.Items {
@@ -223,15 +247,15 @@ func (service *Service) UpdateCart(ctx context.Context, user, org, id, action st
 				return current, ErrInput
 			}
 			value, err := variant(ctx, tx, org, value.StockLocationID, inputItem.VariantID, inputItem.Quantity, "")
-			if err != nil {
+			if err = writeCheck(ctx, authorization, err); err != nil {
 				return current, err
 			}
 			if !value.Saleable {
 				return current, ErrConflict
 			}
 			_, err = tx.Exec(ctx, "INSERT INTO pos_cart_items(organization_id,cart_id,variant_id,quantity,unit_price,batch_id) VALUES($1,$2,$3,$4,$5,$6)", org, id, inputItem.VariantID, inputItem.Quantity, value.UnitPrice, inputItem.BatchID)
-			if err != nil {
-				return current, dbError(err)
+			if err = writeCheck(ctx, authorization, err); err != nil {
+				return current, err
 			}
 		}
 	case "hold":
@@ -246,17 +270,19 @@ func (service *Service) UpdateCart(ctx context.Context, user, org, id, action st
 		if input.TerminalID != "" && input.TerminalID != current.TerminalID {
 			return current, ErrConflict
 		}
-		if _, err = terminal(ctx, tx, actor, org, current.TerminalID, true); err != nil {
+		_, err = terminal(ctx, tx, actor, org, current.TerminalID, true)
+		if err = writeCheck(ctx, authorization, err); err != nil {
 			return current, err
 		}
-		if _, err = ownShift(ctx, tx, org, current.TerminalID, user); err != nil {
+		_, err = ownShift(ctx, tx, org, current.TerminalID, user)
+		if err = writeCheck(ctx, authorization, err); err != nil {
 			return current, err
 		}
 		next = "ACTIVE"
 		if current.CustomerID != nil {
 			selected, problem := customers.ReadSelection(ctx, tx, org, *current.CustomerID)
-			if problem != nil {
-				return current, dbError(problem)
+			if err = writeCheck(ctx, authorization, problem); err != nil {
+				return current, err
 			}
 			if selected.Status != "ACTIVE" {
 				current.CustomerID = nil
@@ -269,16 +295,17 @@ func (service *Service) UpdateCart(ctx context.Context, user, org, id, action st
 		return current, ErrInput
 	}
 	_, err = tx.Exec(ctx, "UPDATE pos_carts SET status=$3,revision=revision+1,updated_at=now(),customer_id=$4 WHERE organization_id=$1 AND id=$2", org, id, next, current.CustomerID)
-	if err != nil {
-		return current, dbError(err)
+	if err = writeCheck(ctx, authorization, err); err != nil {
+		return current, err
 	}
-	result, err := readCart(ctx, tx, actor, user, org, id)
-	if err != nil {
+	result, err = readCart(ctx, tx, actor, user, org, id)
+	if err = writeCheck(ctx, authorization, err); err != nil {
 		return result, err
 	}
 	if action == "update" {
-		if _, err = tx.Exec(ctx, "UPDATE pos_carts SET pricing_revision=$3 WHERE organization_id=$1 AND id=$2", org, id, result.Pricing.Revision); err != nil {
-			return result, dbError(err)
+		_, err = tx.Exec(ctx, "UPDATE pos_carts SET pricing_revision=$3 WHERE organization_id=$1 AND id=$2", org, id, result.Pricing.Revision)
+		if err = writeCheck(ctx, authorization, err); err != nil {
+			return result, err
 		}
 		result.StoredPricingRevision = result.Pricing.Revision
 		result.ReviewRequired = false
@@ -290,14 +317,14 @@ func (service *Service) UpdateCart(ctx context.Context, user, org, id, action st
 	}
 	result.CustomerCleared = cleared
 	if action == "cancel" {
-		if err = releaseOnlineCart(ctx, tx, user, org, id); err != nil {
+		if err = writeCheck(ctx, authorization, releaseOnlineCart(ctx, tx, user, org, id)); err != nil {
 			return result, err
 		}
 	}
 	if cleared {
-		if err = organization.RecordAudit(ctx, tx, org, user, "pos.cart.customer_cleared", id); err != nil {
+		if err = writeCheck(ctx, authorization, organization.RecordAudit(ctx, tx, org, user, "pos.cart.customer_cleared", id)); err != nil {
 			return result, err
 		}
 	}
-	return result, finish(ctx, tx, org, user, "pos.cart."+action, id)
+	return result, finishAuthorized(ctx, authorization, org, user, "pos.cart."+action, id)
 }

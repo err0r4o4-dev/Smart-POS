@@ -40,17 +40,18 @@ func (service *Service) Settle(ctx context.Context, user, org, id, action, key s
 	if action == "report" {
 		permission = "refunds.settlement.report"
 	}
-	tx, actor, err := service.Organization.Authorized(ctx, user, org, permission)
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, permission)
 	if err != nil {
 		return nil, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
 	value, err := refundHeader(ctx, tx, actor, user, org, id)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
 		return nil, err
 	}
-	if err = inventory.BranchScope(ctx, tx, actor, org, value.Branch, true); err != nil {
-		return nil, dbError(err)
+	if err = checkAuthorization(ctx, authorization, dbError(inventory.BranchScope(ctx, tx, actor, org, value.Branch, true))); err != nil {
+		return nil, err
 	}
 	if !input.Acknowledged || !validText(input.Note, 2000, true) || !validText(input.Reference, 200, false) {
 		return nil, ErrInput
@@ -59,17 +60,20 @@ func (service *Service) Settle(ctx context.Context, user, org, id, action, key s
 		ID    string
 		Input SettlementInput
 	}{id, input})
-	if err != nil || cached != nil {
-		return cached, dbError(err)
+	if err = checkAuthorization(ctx, authorization, dbError(err)); err != nil {
+		return nil, err
+	}
+	if cached != nil {
+		return cached, nil
 	}
 	if input.Revision != value.Revision {
 		return nil, ErrConflict
 	}
 	saved, err := applyRefundSettlement(ctx, tx, user, org, id, action, input, value)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
 		return nil, err
 	}
-	return finish(ctx, tx, user, org, op, "refunds."+action, id, saved)
+	return finishWrite(ctx, authorization, user, org, op, "refunds."+action, id, saved)
 }
 
 func applyRefundSettlement(ctx context.Context, tx pgx.Tx, user, org, id, action string, input SettlementInput, value refund) (json.RawMessage, error) {

@@ -30,6 +30,10 @@ func endpoint(run func(context.Context, string, string, *http.Request) (any, err
 		}
 		status, code, message := 503, "DEPENDENCY_UNAVAILABLE", "Loyalty service unavailable"
 		switch {
+		case errors.Is(err, identity.ErrInvalidToken):
+			status, code, message = 401, "UNAUTHENTICATED", "Sign in again"
+		case errors.Is(err, identity.ErrMFARequired):
+			status, code, message = 403, "MFA_REQUIRED", "Multi-factor authentication required"
 		case errors.Is(err, ErrInput), errors.Is(err, inventory.ErrInput):
 			status, code, message = 400, "INVALID_INPUT", "Check loyalty details"
 		case errors.Is(err, ErrConflict), errors.Is(err, inventory.ErrConflict):

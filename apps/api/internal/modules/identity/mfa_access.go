@@ -8,18 +8,28 @@ import (
 )
 
 var ErrMFARequired = errors.New("MFA authentication required")
+var ErrRecentAuthenticationRequired = errors.New("recent primary authentication and TOTP required")
+
+func RequireRecentMFA(ctx context.Context, tx pgx.Tx, userID string) (*MFAAccess, error) {
+	return requireMFA(ctx, tx, userID, true)
+}
 
 type MFAAccess struct {
 	tx        pgx.Tx
 	userID    string
 	sessionID string
 	factorID  string
+	recent    bool
 }
 
 // RequireMFA acquires security locks before any business locks. The caller owns
 // the transaction and must recheck after later waits and before committing work.
 // MFA authenticates the actor; organization permissions remain a separate check.
 func RequireMFA(ctx context.Context, tx pgx.Tx, userID string) (*MFAAccess, error) {
+	return requireMFA(ctx, tx, userID, false)
+}
+
+func requireMFA(ctx context.Context, tx pgx.Tx, userID string, recent bool) (*MFAAccess, error) {
 	session := SessionFromContext(ctx)
 	if tx == nil || session.ID == "" || userID == "" || session.User.ID != userID {
 		return nil, ErrInvalidToken
@@ -28,11 +38,23 @@ func RequireMFA(ctx context.Context, tx pgx.Tx, userID string) (*MFAAccess, erro
 	if err := tx.QueryRow(ctx, `SELECT id FROM users WHERE id=$1 FOR NO KEY UPDATE`, userID).Scan(&locked); err != nil {
 		return nil, mfaAccessError(err)
 	}
-	access := &MFAAccess{tx: tx, userID: userID, sessionID: session.ID}
+	access := &MFAAccess{tx: tx, userID: userID, sessionID: session.ID, recent: recent}
 	if err := tx.QueryRow(ctx, `SELECT coalesce(mfa_factor_id::text,'') FROM auth_sessions WHERE id=$1 AND user_id=$2 FOR SHARE`, session.ID, userID).Scan(&access.factorID); err != nil {
 		return nil, mfaAccessError(err)
 	}
 	if access.factorID == "" {
+		// A primary-only session can expire while the security locks are acquired.
+		var live bool
+		if err := tx.QueryRow(ctx, `WITH decision AS MATERIALIZED (SELECT clock_timestamp() AS now)
+		 SELECT u.status='ACTIVE'
+		 AND s.revoked_at IS NULL AND s.created_at<=d.now AND s.expires_at>d.now
+		 FROM auth_sessions s JOIN users u ON u.id=s.user_id CROSS JOIN decision d
+		 WHERE s.id=$1 AND s.user_id=$2`, session.ID, userID).Scan(&live); err != nil {
+			return nil, mfaAccessError(err)
+		}
+		if !live {
+			return nil, ErrInvalidToken
+		}
 		return nil, ErrMFARequired
 	}
 	if err := tx.QueryRow(ctx, `SELECT id FROM auth_mfa_factors WHERE id=$1 AND user_id=$2 FOR SHARE`, access.factorID, userID).Scan(&locked); err != nil {
@@ -54,16 +76,18 @@ func (access *MFAAccess) Recheck(ctx context.Context) error {
 	if session.ID != access.sessionID || session.User.ID != access.userID {
 		return ErrInvalidToken
 	}
-	var account, live, assured bool
+	var account, live, assured, recent bool
 	err := access.tx.QueryRow(ctx, `WITH decision AS MATERIALIZED (SELECT clock_timestamp() AS now)
 	 SELECT u.status='ACTIVE' AND u.email_verified_at IS NOT NULL AND u.email_verified_at<=d.now,
 	 s.revoked_at IS NULL AND s.created_at<=d.now AND s.expires_at>d.now,
 	 f.activated_at IS NOT NULL AND f.activated_at<=d.now AND f.revoked_at IS NULL
 	 AND s.mfa_factor_id=f.id AND s.mfa_verified_at IS NOT NULL
-	 AND s.mfa_verified_at>=s.created_at AND s.mfa_verified_at>=f.activated_at AND s.mfa_verified_at<=d.now
+	 AND s.mfa_verified_at>=s.created_at AND s.mfa_verified_at>=f.activated_at AND s.mfa_verified_at<=d.now,
+	 COALESCE(s.primary_verified_at>d.now-interval '5 minutes' AND s.primary_verified_at<=s.created_at
+	   AND s.mfa_verified_at>d.now-interval '5 minutes',false)
 	 FROM auth_sessions s JOIN users u ON u.id=s.user_id
 	 JOIN auth_mfa_factors f ON f.user_id=u.id AND f.id=$3 CROSS JOIN decision d
-	 WHERE s.id=$1 AND s.user_id=$2`, access.sessionID, access.userID, access.factorID).Scan(&account, &live, &assured)
+	 WHERE s.id=$1 AND s.user_id=$2`, access.sessionID, access.userID, access.factorID).Scan(&account, &live, &assured, &recent)
 	if err != nil {
 		return mfaAccessError(err)
 	}
@@ -72,6 +96,9 @@ func (access *MFAAccess) Recheck(ctx context.Context) error {
 	}
 	if !assured {
 		return ErrMFARequired
+	}
+	if access.recent && !recent {
+		return ErrRecentAuthenticationRequired
 	}
 	return nil
 }

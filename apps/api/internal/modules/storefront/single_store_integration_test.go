@@ -49,9 +49,10 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 	if err != nil || configuration.ConnConfig.Host != "127.0.0.1" || configuration.ConnConfig.Port != 15514 || configuration.ConnConfig.Database != "smartpos_single_store_acceptance" {
 		t.Fatal("refusing an unconfirmed isolated database target")
 	}
-	deadline := 4 * time.Minute
+	// The aggregate suite runs serial database-clock expiry checks across modules.
+	deadline := 12 * time.Minute
 	if os.Getenv("SMARTPOS_RESTAURANT_BROWSER") == "1" {
-		deadline = 5 * time.Minute
+		deadline += time.Minute
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), deadline)
 	defer cancel()
@@ -108,6 +109,9 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 	ownerSession := testsupport.EnrollMFA(t, ctx, auth, owner.Email, "Synthetic-owner-password-2026")
 	guestSession := testsupport.EnrollMFA(t, ctx, auth, guest.Email, "Synthetic-staff-password-2026")
 	ctx = ownerSession.Context
+	t.Run("sensitive authority requires recent primary and TOTP", func(t *testing.T) {
+		recentMFAAcceptance(t, ctx, pool, ownerSession, guestSession)
+	})
 	multi := &organization.Service{Pool: pool, Mailer: mailbox}
 	createInput := func(code string) organization.CreateInput {
 		return organization.CreateInput{OrganizationInput: organization.OrganizationInput{Name: "Synthetic " + code, Code: code, BusinessType: "RETAIL"}, Branch: organization.BranchInput{Name: "Main", Code: "MAIN", Status: "ACTIVE"}}
@@ -129,8 +133,18 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 		if problem != nil || !verified.Verified {
 			t.Fatalf("branchless fixture owner verification failed: %v", problem)
 		}
-		ctx := testsupport.EnrollMFA(t, ctx, auth, restaurantOwner.Email, "Synthetic-branchless-owner-password-2026").Context
+		restaurantSession := testsupport.EnrollMFA(t, ctx, auth, restaurantOwner.Email, "Synthetic-branchless-owner-password-2026")
+		ctx := restaurantSession.Context
 		branchless := verifyBranchlessOrganization(t, ctx, guestSession.Context, multi, restaurantOwner.ID, guest.ID)
+		_, token, csrf, problem := accounts.Login(ctx, restaurantOwner.Email, "Synthetic-branchless-owner-password-2026")
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		verifyAvailabilityHTTP(t, auth, multi, restaurantSession, guestSession, ownerSession, testsupport.MFASession{Token: token, CSRF: csrf}, branchless.Organization.ID)
+		t.Run("modifier owner read", func(t *testing.T) {
+			primary := testsupport.Authenticate(t, ctx, auth, token)
+			verifyModifierOwnerRead(t, ctx, primary, guestSession.Context, multi, restaurantOwner.ID, guest.ID, branchless.Organization.ID)
+		})
 		unverified, problem := accounts.Register(ctx, "branchless-unverified@example.test", "Synthetic-unverified-password-2026", "Unverified restaurant owner")
 		if problem != nil {
 			t.Fatal(problem)
@@ -194,7 +208,22 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 		return settings
 	}
 	firstShop := seedShop(first, "first-fixture")
-	seedShop(second, "second-fixture")
+	secondShop := seedShop(second, "second-fixture")
+	t.Run("returns reads require independent MFA", func(t *testing.T) {
+		const password = "Synthetic-returns-staff-password-2026"
+		staff, err := accounts.Register(ctx, "single-store-returns-staff@example.test", password, "Synthetic Returns staff")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result, err := accounts.VerifyEmail(ctx, mailbox.verificationTokens[staff.Email]); err != nil || !result.Verified || result.User.ID != staff.ID {
+			t.Fatalf("verify synthetic Returns staff: %v", err)
+		}
+		staffSession := testsupport.EnrollMFA(t, ctx, auth, staff.Email, password)
+		returnsReadMFAAcceptance(t, ctx, pool, auth, multi, ownerSession, guestSession, staffSession, first.Organization.ID, firstShop.BranchID)
+	})
+	t.Run("inventory readers require independent MFA", func(t *testing.T) {
+		inventoryReadMFAAcceptance(t, ctx, pool, auth, multi, ownerSession, guestSession, first.Organization.ID, firstShop, secondShop)
+	})
 	t.Run("legacy storefront cannot become restaurant draft", func(testContext *testing.T) {
 		_, problem := (&storefront.Service{Organization: multi}).SaveSettings(ctx, owner.ID, first.Organization.ID, storefront.SettingsInput{Name: firstShop.Name, Revision: firstShop.Revision})
 		if !errors.Is(problem, storefront.ErrConflict) {
@@ -475,6 +504,62 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 			}
 		})
 	}
+	t.Run("POS online mutations require independent MFA", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "dfb00000-0000-4000-8000-000000000001", createInput("POSONLINEMFA"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		posOnlineMutationMFAAcceptance(t, ctx, pool, auth, multi, ownerSession, guestSession, state.Organization.ID, seedShop(state, "pos-online-mfa"))
+	})
+	t.Run("POS checkout mutations require independent MFA", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "dfa00000-0000-4000-8000-000000000001", createInput("POSCHECKMFA"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		posCheckoutMutationMFAAcceptance(t, ctx, pool, auth, multi, ownerSession, guestSession, state.Organization.ID)
+	})
+	t.Run("POS cart mutations require independent MFA", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "df900000-0000-4000-8000-000000000001", createInput("POSCARTMFA"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		posCartMutationMFAAcceptance(t, ctx, pool, auth, multi, ownerSession, guestSession, state.Organization.ID)
+	})
+	t.Run("POS register mutations require independent MFA", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "df800000-0000-4000-8000-000000000001", createInput("POSREGISTERMFA"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		posRegisterMFAAcceptance(t, ctx, pool, auth, multi, ownerSession, guestSession, state.Organization.ID)
+	})
+	t.Run("remaining POS reads require independent MFA", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "df700000-0000-4000-8000-000000000001", createInput("POSOTHERREADMFA"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		posOtherReadMFAAcceptance(t, ctx, pool, auth, multi, ownerSession, guestSession, state.Organization.ID)
+	})
+	t.Run("POS list reads require independent MFA", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "df600000-0000-4000-8000-000000000001", createInput("POSLISTMFA"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		posListMFAAcceptance(t, ctx, pool, auth, multi, ownerSession, guestSession, state.Organization.ID)
+	})
+	t.Run("POS detail reads require independent MFA", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "df500000-0000-4000-8000-000000000001", createInput("POSREADMFA"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		posReadMFAAcceptance(t, ctx, pool, auth, multi, ownerSession, guestSession, state.Organization.ID)
+	})
+	t.Run("POS customer selection requires independent MFA", func(t *testing.T) {
+		state, problem := multi.Create(ctx, owner.ID, "df400000-0000-4000-8000-000000000001", createInput("POSCUSTOMERMFA"))
+		if problem != nil {
+			t.Fatal(problem)
+		}
+		posCustomerMFAAcceptance(t, ctx, pool, auth, multi, ownerSession, guestSession, state.Organization.ID)
+	})
 	t.Run("customer mutations require independent MFA", func(t *testing.T) {
 		state, problem := multi.Create(ctx, owner.ID, "df300000-0000-4000-8000-000000000001", createInput("CUSTWRITEMFA"))
 		if problem != nil {
@@ -512,7 +597,7 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 		if problem != nil {
 			t.Fatal(problem)
 		}
-		privateReadMFAAcceptance(t, ctx, pool, auth, multi, ownerSession, guestSession, state.Organization.ID, seedShop(state, "private-mfa-fixture"), empty)
+		privateReadMFAAcceptance(t, ctx, pool, auth, multi, ownerSession, guestSession, state.Organization.ID, seedShop(state, "private-mfa-fixture"), secondShop.Slug, empty)
 	})
 	t.Run("storefront private catalog requires independent MFA", func(t *testing.T) {
 		state, problem := multi.Create(ctx, owner.ID, "d3000000-0000-4000-8000-000000000001", createInput("CATALOGMFA"))
@@ -620,14 +705,14 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 		if problem != nil {
 			t.Fatal(problem)
 		}
-		paymentPrepaidAcceptance(t, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "prepaid-fixture"), first.Organization.ID, guest.ID)
+		paymentPrepaidAcceptance(t, ctx, guestSession.Context, multi, owner.ID, state.Organization.ID, seedShop(state, "prepaid-fixture"), first.Organization.ID, guest.ID)
 	})
 	t.Run("menu-only zero-stock sales", func(t *testing.T) {
 		state, problem := multi.Create(ctx, owner.ID, "bf111111-1111-4111-8111-111111111111", createInput("MENU_ONLY"))
 		if problem != nil {
 			t.Fatal(problem)
 		}
-		menuOnlyAcceptance(t, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "menu-only-fixture"), first.Organization.ID, guest.ID)
+		menuOnlyAcceptance(t, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "menu-only-fixture"), first.Organization.ID, guest.ID, auth, ownerSession)
 	})
 	t.Run("staff customer payment reconciliation", func(t *testing.T) {
 		state, problem := multi.Create(ctx, owner.ID, "6a111111-1111-4111-8111-111111111111", createInput("RECONCILE"))
@@ -651,7 +736,7 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 		if problem != nil {
 			t.Fatal(problem)
 		}
-		ingredientReservationAcceptance(t, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "ingredient-fixture"), first.Organization.ID, guest.ID)
+		ingredientReservationAcceptance(t, ctx, guestSession.Context, multi, owner.ID, state.Organization.ID, seedShop(state, "ingredient-fixture"), first.Organization.ID, guest.ID)
 	})
 	t.Run("unpublished pinned store does not fall back to another store", func(t *testing.T) {
 		_, problem := (&storefront.Service{Organization: multi}).SaveSettings(ctx, owner.ID, first.Organization.ID, storefront.SettingsInput{Slug: firstShop.Slug, Name: firstShop.Name, TerminalID: firstShop.TerminalID, Revision: firstShop.Revision})
@@ -706,5 +791,13 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 			testContext.Fatal(problem)
 		}
 		restaurantQueueSchemaAcceptance(testContext, ctx, multi, owner.ID, state.Organization.ID, seedShop(state, "queue-schema-fixture"), first.Organization.ID)
+	})
+	// This fixture adds a published store and a membership to the shared database.
+	t.Run("inventory settings require independent MFA", func(t *testing.T) {
+		state, err := multi.Create(ctx, owner.ID, "dfb10000-0000-4000-8000-000000000001", createInput("INVSETTINGMFA"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		inventorySettingsMFAAcceptance(t, ctx, pool, auth, multi, ownerSession, guestSession, state.Organization.ID, seedShop(state, "inventory-settings-mfa"), secondShop)
 	})
 }

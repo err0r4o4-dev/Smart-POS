@@ -21,36 +21,40 @@ func approvalResult(ctx context.Context, tx pgx.Tx, org, id string) (json.RawMes
 	err := tx.QueryRow(ctx, `SELECT to_jsonb(item)||jsonb_build_object('amount',amount::text) FROM discount_approvals item WHERE organization_id=$1 AND id=$2`, org, id).Scan(&data)
 	return data, dbError(err)
 }
-func cartBasis(ctx context.Context, tx pgx.Tx, org, cart string) (string, string, int64, Quote, error) {
+func cartBasis(ctx context.Context, authorization *organization.Authorization, org, cart string) (string, string, int64, Quote, error) {
+	tx := authorization.Tx
 	var branch, user, status string
 	var revision int64
 	err := tx.QueryRow(ctx, "SELECT branch_id::text,cashier_id::text,revision,status FROM pos_carts WHERE organization_id=$1 AND id=$2 FOR UPDATE", org, cart).Scan(&branch, &user, &revision, &status)
-	if err != nil {
-		return "", "", 0, Quote{}, dbError(err)
+	if err = checkAuthorization(ctx, authorization, dbError(err)); err != nil {
+		return "", "", 0, Quote{}, err
 	}
 	if status != "ACTIVE" {
 		return "", "", 0, Quote{}, ErrConflict
 	}
 	rows, err := tx.Query(ctx, "SELECT variant_id::text,quantity::text FROM pos_cart_items WHERE organization_id=$1 AND cart_id=$2 ORDER BY variant_id", org, cart)
 	if err != nil {
-		return "", "", 0, Quote{}, err
+		return "", "", 0, Quote{}, checkAuthorization(ctx, authorization, err)
 	}
 	lines := []Line{}
 	for rows.Next() {
 		var line Line
 		if err = rows.Scan(&line.VariantID, &line.Quantity); err != nil {
 			rows.Close()
-			return "", "", 0, Quote{}, err
+			return "", "", 0, Quote{}, checkAuthorization(ctx, authorization, err)
 		}
 		lines = append(lines, line)
 	}
 	err = rows.Err()
 	rows.Close()
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
 		return "", "", 0, Quote{}, err
 	}
 	quote, err := QuoteCart(ctx, tx, org, branch, lines)
-	return branch, user, revision, quote, err
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
+		return "", "", 0, Quote{}, err
+	}
+	return branch, user, revision, quote, nil
 }
 func CurrentApprover(ctx context.Context, tx pgx.Tx, org, id string) error {
 	if id == "" {
@@ -106,23 +110,24 @@ func Redeem(ctx context.Context, tx pgx.Tx, org, sale string, quote Quote) error
 	return nil
 }
 func (service *Service) RequestApproval(ctx context.Context, user, org, key string, input ApprovalInput) (json.RawMessage, error) {
-	tx, actor, err := service.Organization.Authorized(ctx, user, org, "discount.request")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "discount.request")
 	if err != nil {
 		return nil, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
 	cents, err := Decimal(input.Amount, 2)
 	if err != nil || cents == 0 || !UUID.MatchString(key) || !UUID.MatchString(input.CartID) || len(strings.TrimSpace(input.Reason)) == 0 || len(input.Reason) > 2000 || strings.ContainsAny(input.Reason, "\x00\r\n") {
 		return nil, ErrInput
 	}
-	branch, cashier, revision, quote, err := cartBasis(ctx, tx, org, input.CartID)
+	branch, cashier, revision, quote, err := cartBasis(ctx, authorization, org, input.CartID)
 	if err != nil {
 		return nil, err
 	}
 	if cashier != user {
 		return nil, organization.ErrDenied
 	}
-	if err = Scope(ctx, tx, actor, org, branch, true); err != nil {
+	if err = checkAuthorization(ctx, authorization, Scope(ctx, tx, actor, org, branch, true)); err != nil {
 		return nil, err
 	}
 	total, _ := Decimal(quote.Total, 2)
@@ -131,46 +136,55 @@ func (service *Service) RequestApproval(ctx context.Context, user, org, key stri
 	}
 	var id, previous, status string
 	var alive bool
-	err = tx.QueryRow(ctx, "SELECT id::text,fingerprint,status,expires_at>statement_timestamp() FROM discount_approvals WHERE organization_id=$1 AND requested_by=$2 AND idempotency_key=$3", org, user, key).Scan(&id, &previous, &status, &alive)
-	if err == nil {
+	lookup := tx.QueryRow(ctx, "SELECT id::text,fingerprint,status,expires_at>statement_timestamp() FROM discount_approvals WHERE organization_id=$1 AND requested_by=$2 AND idempotency_key=$3", org, user, key).Scan(&id, &previous, &status, &alive)
+	if err = checkAuthorization(ctx, authorization, lookup); err != nil && err != pgx.ErrNoRows {
+		return nil, err
+	}
+	if lookup == nil {
 		if previous != Hash(input) || !alive {
 			return nil, ErrConflict
 		}
 		if status == "APPROVED" {
-			if err = CurrentApprover(ctx, tx, org, id); err != nil {
+			if err = checkAuthorization(ctx, authorization, CurrentApprover(ctx, tx, org, id)); err != nil {
 				return nil, err
 			}
 		}
-		return approvalResult(ctx, tx, org, id)
-	}
-	if err != pgx.ErrNoRows {
-		return nil, err
+		result, err := approvalResult(ctx, tx, org, id)
+		if err = checkAuthorization(ctx, authorization, err); err != nil {
+			return nil, err
+		}
+		return result, nil
 	}
 	err = tx.QueryRow(ctx, "INSERT INTO discount_approvals(organization_id,branch_id,cart_id,cart_revision,pricing_revision,amount,reason,requested_by,idempotency_key,fingerprint) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id::text", org, branch, input.CartID, revision, quote.Revision, input.Amount, input.Reason, user, key, Hash(input)).Scan(&id)
-	if err != nil {
-		return nil, dbError(err)
+	if err = checkAuthorization(ctx, authorization, dbError(err)); err != nil {
+		return nil, err
 	}
 	result, err := approvalResult(ctx, tx, org, id)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
 		return nil, err
 	}
-	if err = organization.RecordAudit(ctx, tx, org, user, "pricing.discount.requested", id); err != nil {
+	if err = checkAuthorization(ctx, authorization, organization.RecordAudit(ctx, tx, org, user, "pricing.discount.requested", id)); err != nil {
 		return nil, err
 	}
-	return result, dbError(tx.Commit(ctx))
+	if err = tx.Commit(ctx); err != nil {
+		return nil, dbError(err)
+	}
+	return result, nil
 }
-func (service *Service) Approvals(ctx context.Context, user, org string) ([]json.RawMessage, error) {
-	tx, actor, err := service.Organization.Authorized(ctx, user, org, "discount.read")
+func (service *Service) Approvals(ctx context.Context, user, org string) (result []json.RawMessage, err error) {
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "discount.read")
 	if err != nil {
 		return nil, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
+	defer finishRead(ctx, authorization, &result, &err)
 	rows, err := tx.Query(ctx, `SELECT to_jsonb(item)||jsonb_build_object('amount',amount::text) FROM discount_approvals item WHERE organization_id=$1 AND ($2='OWNER' OR branch_id=ANY($3::uuid[])) AND ($2='OWNER' OR requested_by=$4) ORDER BY created_at DESC,id LIMIT 200`, org, actor.Role, actor.BranchIDs, user)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	result := []json.RawMessage{}
+	result = []json.RawMessage{}
 	for rows.Next() {
 		var data []byte
 		if err = rows.Scan(&data); err != nil {
@@ -181,10 +195,11 @@ func (service *Service) Approvals(ctx context.Context, user, org string) ([]json
 	return result, rows.Err()
 }
 func (service *Service) Decide(ctx context.Context, user, org, id, action string, revision int64) (json.RawMessage, error) {
-	tx, actor, err := service.Organization.Authorized(ctx, user, org, "discount.approve")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "discount.approve")
 	if err != nil {
 		return nil, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
 	if !UUID.MatchString(id) {
 		return nil, ErrInput
@@ -193,17 +208,17 @@ func (service *Service) Decide(ctx context.Context, user, org, id, action string
 	var cartRevision, current int64
 	var alive bool
 	err = tx.QueryRow(ctx, "SELECT branch_id::text,cart_id::text,cart_revision,pricing_revision,status,revision,expires_at>statement_timestamp() FROM discount_approvals WHERE organization_id=$1 AND id=$2 FOR UPDATE", org, id).Scan(&branch, &cart, &cartRevision, &pricingRevision, &status, &current, &alive)
-	if err != nil {
-		return nil, dbError(err)
+	if err = checkAuthorization(ctx, authorization, dbError(err)); err != nil {
+		return nil, err
 	}
-	if err = Scope(ctx, tx, actor, org, branch, true); err != nil {
+	if err = checkAuthorization(ctx, authorization, Scope(ctx, tx, actor, org, branch, true)); err != nil {
 		return nil, err
 	}
 	if status != "PENDING" || current != revision || !alive {
 		return nil, ErrConflict
 	}
 	if action == "approve" {
-		_, _, actual, quote, err := cartBasis(ctx, tx, org, cart)
+		_, _, actual, quote, err := cartBasis(ctx, authorization, org, cart)
 		if err != nil {
 			return nil, err
 		}
@@ -217,15 +232,18 @@ func (service *Service) Decide(ctx context.Context, user, org, id, action string
 		return nil, ErrInput
 	}
 	_, err = tx.Exec(ctx, "UPDATE discount_approvals SET status=$3,revision=revision+1,approved_by=$4,approved_at=now() WHERE organization_id=$1 AND id=$2", org, id, status, user)
-	if err != nil {
-		return nil, dbError(err)
+	if err = checkAuthorization(ctx, authorization, dbError(err)); err != nil {
+		return nil, err
 	}
 	result, err := approvalResult(ctx, tx, org, id)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
 		return nil, err
 	}
-	if err = organization.RecordAudit(ctx, tx, org, user, "pricing.discount."+action, id); err != nil {
+	if err = checkAuthorization(ctx, authorization, organization.RecordAudit(ctx, tx, org, user, "pricing.discount."+action, id)); err != nil {
 		return nil, err
 	}
-	return result, dbError(tx.Commit(ctx))
+	if err = tx.Commit(ctx); err != nil {
+		return nil, dbError(err)
+	}
+	return result, nil
 }

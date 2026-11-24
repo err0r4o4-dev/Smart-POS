@@ -16,6 +16,154 @@ const recoveryCodes = Array.from(
   (_, i) => String.fromCharCode(65 + i) + 'A'.repeat(25),
 );
 
+for (const width of [360, 390, 768, 1280]) {
+  test.describe(`Authenticator replacement at ${width}px`, () => {
+    test.use({ viewport: { width, height: 900 }, hasTouch: width < 768 });
+    test('uses one recovery confirmation and requires a new sign-in', async ({
+      page,
+    }) => {
+      const lost = width === 390;
+      let starts = 0;
+      let confirms = 0;
+      let signedInAgain = false;
+      const newCsrf = 'synthetic-renewed-csrf';
+      const factorId = '43000000-0000-4000-8000-000000000002';
+      await page.route('**/api/**', async (route) => {
+        const request = route.request();
+        const path = new URL(request.url()).pathname;
+        if (path === '/api/v1/auth/me')
+          return route.fulfill({ json: { data: session } });
+        if (path === '/api/v1/auth/login') {
+          signedInAgain = true;
+          return route.fulfill({
+            json: { data: { ...session, csrf_token: newCsrf } },
+          });
+        }
+        if (path === '/api/v1/auth/mfa')
+          return route.fulfill({
+            json: { data: { enabled: true, session_verified: false } },
+          });
+        if (path === '/api/v1/auth/google/config')
+          return route.fulfill({ json: { data: { enabled: false } } });
+        if (path === '/api/v1/auth/mfa/recovery') {
+          starts++;
+          expect(request.headers()['x-csrf-token']).toBe(session.csrf_token);
+          expect(request.postDataJSON()).toEqual({
+            recovery_code: recoveryCodes[0],
+          });
+          return route.fulfill({
+            json: {
+              data: {
+                factor_id: factorId,
+                secret: 'A'.repeat(32),
+                expires_at: new Date(Date.now() + 300000).toISOString(),
+              },
+            },
+          });
+        }
+        if (path === '/api/v1/auth/mfa/recovery/confirm') {
+          confirms++;
+          expect(request.headers()['x-csrf-token']).toBe(session.csrf_token);
+          expect(request.postDataJSON()).toEqual({
+            factor_id: factorId,
+            code: '001234',
+          });
+          if (lost) return route.abort('failed');
+          return route.fulfill({
+            json: { data: { recovery_codes: recoveryCodes } },
+          });
+        }
+        if (path === '/api/v1/auth/mfa/challenge') {
+          expect(signedInAgain).toBe(true);
+          expect(request.headers()['x-csrf-token']).toBe(newCsrf);
+          expect(request.postDataJSON()).toEqual({ code: '567890' });
+          return route.fulfill({ json: { data: { session_verified: true } } });
+        }
+        return route.fulfill({
+          status: 503,
+          json: { error: { message: 'Unconfigured synthetic boundary' } },
+        });
+      });
+      await page.goto('/security');
+      await page.getByRole('button', { name: 'English', exact: true }).click();
+      await page
+        .getByRole('button', { name: 'Use a recovery code' })
+        .press('Enter');
+      const recoveryInput = page.getByRole('textbox', {
+        name: 'Recovery code',
+        exact: true,
+      });
+      await expect(recoveryInput).toHaveAccessibleDescription(
+        /unused recovery code within five minutes/,
+      );
+      await recoveryInput.fill('INVALID!');
+      await recoveryInput.press('Enter');
+      await expect(recoveryInput).toBeFocused();
+      await expect(recoveryInput).toHaveValue('INVALID!');
+      expect(starts).toBe(0);
+      await recoveryInput.fill(recoveryCodes[0]);
+      await page.getByRole('button', { name: 'Set up replacement' }).click();
+      const setupKey = page.getByRole('textbox', {
+        name: 'Authenticator setup key',
+      });
+      await expect(setupKey).toBeVisible();
+      await expect(setupKey).toHaveAccessibleDescription(
+        /Keep this key private/,
+      );
+      expect(starts).toBe(1);
+      if (width <= 390) {
+        await page.getByRole('button', { name: 'ไทย', exact: true }).click();
+        await expect(page.getByText(/แอปเดิมยังใช้ได้/)).toBeVisible();
+        await page.evaluate(() => {
+          document.documentElement.style.fontSize = '125%';
+        });
+        expect(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth <= innerWidth,
+          ),
+        ).toBe(true);
+        await page
+          .getByRole('button', { name: 'English', exact: true })
+          .click();
+      }
+      await page.getByLabel('Six-digit code').fill('001234');
+      await page.getByRole('button', { name: 'Replace authenticator' }).click();
+      if (lost) {
+        await expect(page.getByRole('alert')).toContainText(
+          'could not confirm whether your authenticator changed',
+        );
+        await expect(page.getByLabel('Authenticator setup key')).toHaveCount(0);
+      } else {
+        await expect(
+          page.getByRole('heading', { name: 'Keep your recovery codes' }),
+        ).toBeFocused();
+        await expect(page.getByRole('button', { name: 'Done' })).toBeDisabled();
+        await page
+          .getByRole('checkbox', {
+            name: 'I have stored these codes somewhere safe',
+          })
+          .check();
+        await page.getByRole('button', { name: 'Done' }).click();
+      }
+      await expect(page.locator('.mfa-recovery-codes')).toHaveCount(0);
+      await page.getByRole('link', { name: 'Sign in again' }).click();
+      await expect(page).toHaveURL(/\/login\?returnTo=%2Fsecurity$/);
+      await page.getByLabel('Email address').fill(session.user.email);
+      await page
+        .getByLabel('Password', { exact: true })
+        .fill('synthetic-fixture-password');
+      await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+      await expect(page).toHaveURL(/\/security$/);
+      await page.getByLabel('Six-digit code').fill('567890');
+      await page.getByRole('button', { name: 'Verify code' }).click();
+      await expect(
+        page.getByText('MFA verified for this session'),
+      ).toBeVisible();
+      expect(confirms).toBe(1);
+    });
+  });
+}
+
 async function fixture(
   page: Page,
   failStatus = false,
@@ -118,9 +266,7 @@ for (const width of [360, 1280]) {
       await page
         .getByRole('button', { name: 'Stay here', exact: true })
         .click();
-      await expect(
-        page.getByText(/Using recovery codes is not available yet/),
-      ).toBeVisible();
+      await expect(page.getByText(/Codes are shown only now/)).toBeVisible();
       await expect(page.locator('.mfa-recovery-codes li')).toHaveCount(10);
       await expect(page).toHaveURL(/\/security$/);
     });

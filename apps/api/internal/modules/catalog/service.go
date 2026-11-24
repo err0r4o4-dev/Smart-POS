@@ -255,7 +255,12 @@ func (service *Service) SaveTaxonomy(ctx context.Context, user, org, kind, id st
 		args = append(args, input.Code, input.UnitType, input.BaseUnitID, input.ConversionFactor)
 	}
 	query := "INSERT INTO " + kind + "(organization_id,name,description,status" + extraColumns + ") VALUES($1,$2,$3,$4" + extraValues + ") RETURNING " + taxonomyColumns(kind)
+	var before []byte
 	if id != "" {
+		before, err = catalogMenuState(ctx, tx, org, kind, id)
+		if err != nil {
+			return privateReadResult(ctx, authorization, Taxonomy{}, err)
+		}
 		args = append(args, id)
 		query = fmt.Sprintf("UPDATE %s SET name=$2,description=$3,status=$4%s,revision=revision+1,updated_at=now() WHERE organization_id=$1 AND id=$%d RETURNING %s", kind, extraSet, len(args), taxonomyColumns(kind))
 	}
@@ -265,6 +270,11 @@ func (service *Service) SaveTaxonomy(ctx context.Context, user, org, kind, id st
 	item, err := readTaxonomy(tx.QueryRow(ctx, query, args...), kind)
 	if err != nil {
 		return privateReadResult(ctx, authorization, Taxonomy{}, err)
+	}
+	if before != nil {
+		if err = recordCatalogMenuChange(ctx, authorization, org, user, kind, id, before); err != nil {
+			return privateReadResult(ctx, authorization, Taxonomy{}, err)
+		}
 	}
 	if err = finish(ctx, authorization, org, user, "catalog."+kind+".saved", item.ID); err != nil {
 		return Taxonomy{}, err

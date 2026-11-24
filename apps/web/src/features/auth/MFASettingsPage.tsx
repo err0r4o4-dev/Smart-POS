@@ -15,7 +15,9 @@ import { LoginLayout } from '../../layouts/LoginLayout';
 import { ApiError } from '../../lib/api';
 import {
   beginMFAEnrollment,
+  beginMFARecovery,
   confirmMFAEnrollment,
+  confirmMFARecovery,
   getMFAStatus,
   verifyMFA,
   type MFAEnrollment,
@@ -26,8 +28,10 @@ import './mfa.css';
 type Flow =
   | { kind: 'loading' | 'unavailable' | 'uncertain' | 'expired' }
   | { kind: 'status'; value: MFAStatus }
-  | { kind: 'enrollment'; value: MFAEnrollment }
-  | { kind: 'codes'; value: string[] };
+  | { kind: 'recovery-input' }
+  | { kind: 'enrollment' | 'replacement'; value: MFAEnrollment }
+  | { kind: 'codes'; value: string[]; replaced?: boolean }
+  | { kind: 'relogin'; uncertain: boolean };
 
 export function MFASettingsPage() {
   const { state, clear } = useAuth();
@@ -52,6 +56,7 @@ function MFAFlow({
   const [flow, setFlow] = useState<Flow>({ kind: 'loading' });
   const [busy, setBusy] = useState(false);
   const [code, setCode] = useState('');
+  const [recoveryCode, setRecoveryCode] = useState('');
   const [error, setError] = useState<'invalid' | 'limited' | 'unknown' | null>(
     null,
   );
@@ -62,7 +67,8 @@ function MFAFlow({
   const busyRef = useRef(false);
   const codeHeading = useRef<HTMLHeadingElement>(null);
   const protectCodes = flow.kind === 'codes';
-  const confirmationPending = busy && flow.kind === 'enrollment';
+  const confirmationPending =
+    busy && (flow.kind === 'enrollment' || flow.kind === 'replacement');
   const protectNavigation = protectCodes || confirmationPending;
   const blocker = useBlocker(protectNavigation);
   useBeforeUnload(
@@ -122,10 +128,23 @@ function MFAFlow({
     } catch (failure) {
       if (controller.signal.aborted) return;
       if (
+        mutation &&
+        flow.kind === 'replacement' &&
+        !(
+          failure instanceof ApiError &&
+          [400, 403, 429].includes(failure.status)
+        )
+      ) {
+        setCode('');
+        setFlow({ kind: 'relogin', uncertain: true });
+        return;
+      }
+      if (
         failure instanceof ApiError &&
         (failure.status === 401 || failure.status === 403)
       ) {
         setCode('');
+        setRecoveryCode('');
         setFlow({ kind: 'expired' });
         invalidate();
       } else if (
@@ -138,6 +157,7 @@ function MFAFlow({
           setMissingRecoveryCodes(true);
         setError(mutation ? 'unknown' : null);
         setCode('');
+        setRecoveryCode('');
         setFlow({ kind: mutation ? 'uncertain' : 'unavailable' });
       }
     } finally {
@@ -153,21 +173,40 @@ function MFAFlow({
       (signal) => getMFAStatus(signal),
       (value) => setFlow({ kind: 'status', value }),
     );
+  const startRecovery = (event: FormEvent) => {
+    event.preventDefault();
+    if (!/^[A-Z2-7]{25}[AEIMQUY4]$/.test(recoveryCode)) return;
+    void perform(
+      (signal) => beginMFARecovery(recoveryCode, csrf, signal),
+      (value) => {
+        setRecoveryCode('');
+        setFlow({ kind: 'replacement', value });
+      },
+      true,
+    );
+  };
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (
       !/^[0-9]{6}$/.test(code) ||
-      (flow.kind !== 'enrollment' && flow.kind !== 'status')
+      (flow.kind !== 'enrollment' &&
+        flow.kind !== 'replacement' &&
+        flow.kind !== 'status')
     )
       return;
-    if (flow.kind === 'enrollment') {
+    if (flow.kind === 'enrollment' || flow.kind === 'replacement') {
+      const replaced = flow.kind === 'replacement';
+      const factorId = flow.value.factor_id;
       void perform(
-        (signal) => confirmMFAEnrollment(code, csrf, signal),
+        (signal) =>
+          replaced
+            ? confirmMFARecovery(factorId, code, csrf, signal)
+            : confirmMFAEnrollment(code, csrf, signal),
         (result) => {
           setCode('');
           setAcknowledged(false);
           setMissingRecoveryCodes(false);
-          setFlow({ kind: 'codes', value: result.recovery_codes });
+          setFlow({ kind: 'codes', value: result.recovery_codes, replaced });
         },
         true,
       );
@@ -187,6 +226,7 @@ function MFAFlow({
   };
   const needsCode =
     flow.kind === 'enrollment' ||
+    flow.kind === 'replacement' ||
     (flow.kind === 'status' &&
       flow.value.enabled &&
       !flow.value.session_verified);
@@ -225,7 +265,64 @@ function MFAFlow({
             {t(busy ? 'mfa.pending' : 'mfa.begin')}
           </Button>
         )}
-        {flow.kind === 'enrollment' && (
+        {flow.kind === 'status' && flow.value.enabled && (
+          <Button
+            disabled={busy}
+            onClick={() => {
+              setCode('');
+              setError(null);
+              setFlow({ kind: 'recovery-input' });
+            }}
+          >
+            {t('mfa.startRecovery')}
+          </Button>
+        )}
+        {flow.kind === 'recovery-input' && (
+          <form className="auth-form-body" onSubmit={startRecovery}>
+            <fieldset disabled={busy}>
+              <p id="mfa-recovery-help">{t('mfa.recoveryHelp')}</p>
+              <div className="auth-field-group">
+                <label htmlFor="mfa-recovery-code">
+                  {t('mfa.recoveryCode')}
+                </label>
+                <input
+                  id="mfa-recovery-code"
+                  type="text"
+                  value={recoveryCode}
+                  onChange={(event) =>
+                    setRecoveryCode(event.target.value.toUpperCase().trim())
+                  }
+                  autoComplete="off"
+                  spellCheck={false}
+                  autoCapitalize="characters"
+                  pattern="[A-Z2-7]{25}[AEIMQUY4]"
+                  maxLength={26}
+                  required
+                  aria-describedby={
+                    error ? 'mfa-recovery-help mfa-error' : 'mfa-recovery-help'
+                  }
+                />
+              </div>
+              <Button type="submit">
+                {t(busy ? 'mfa.pending' : 'mfa.stageReplacement')}
+              </Button>
+            </fieldset>
+          </form>
+        )}
+        {(flow.kind === 'recovery-input' || flow.kind === 'replacement') && (
+          <Button
+            disabled={busy}
+            onClick={() => {
+              setCode('');
+              setRecoveryCode('');
+              setFlow({ kind: 'loading' });
+              checkStatus();
+            }}
+          >
+            {t('mfa.cancelRecovery')}
+          </Button>
+        )}
+        {(flow.kind === 'enrollment' || flow.kind === 'replacement') && (
           <div className="mfa-enrollment">
             <label htmlFor="mfa-key">{t('mfa.key')}</label>
             <p id="mfa-key-help">{t('mfa.keyHelp')}</p>
@@ -250,6 +347,7 @@ function MFAFlow({
           <form className="auth-form-body" onSubmit={submit}>
             <fieldset disabled={busy}>
               {flow.kind === 'status' && <p>{t('mfa.challenge')}</p>}
+              {flow.kind === 'replacement' && <p>{t('mfa.replacementHelp')}</p>}
               <div className="auth-field-group">
                 <label htmlFor="mfa-code">{t('mfa.code')}</label>
                 <input
@@ -272,7 +370,9 @@ function MFAFlow({
                     ? 'mfa.pending'
                     : flow.kind === 'enrollment'
                       ? 'mfa.enable'
-                      : 'mfa.verify',
+                      : flow.kind === 'replacement'
+                        ? 'mfa.replace'
+                        : 'mfa.verify',
                 )}
               </Button>
             </fieldset>
@@ -295,6 +395,7 @@ function MFAFlow({
               {t('mfa.codesTitle')}
             </h3>
             <p>{t('mfa.codesHelp')}</p>
+            {flow.replaced && <p>{t('mfa.replaced')}</p>}
             <ul className="mfa-recovery-codes">
               {flow.value.map((value) => (
                 <li key={value}>
@@ -314,6 +415,10 @@ function MFAFlow({
               disabled={!acknowledged}
               onClick={() => {
                 if (blocker.state === 'blocked') blocker.reset();
+                if (flow.replaced) {
+                  setFlow({ kind: 'relogin', uncertain: false });
+                  return;
+                }
                 setFlow({
                   kind: 'status',
                   value: { enabled: true, session_verified: true },
@@ -335,7 +440,11 @@ function MFAFlow({
             </h3>
             <p>
               {t(
-                confirmationPending ? 'mfa.pendingLeaveHelp' : 'mfa.leaveHelp',
+                confirmationPending
+                  ? flow.kind === 'replacement'
+                    ? 'mfa.replacementLeaveHelp'
+                    : 'mfa.pendingLeaveHelp'
+                  : 'mfa.leaveHelp',
               )}
             </p>
             <Button onClick={() => blocker.reset()}>{t('mfa.stay')}</Button>
@@ -344,13 +453,28 @@ function MFAFlow({
             </Button>
           </section>
         )}
-        {flow.kind !== 'codes' && (
+        {flow.kind === 'relogin' && (
+          <div>
+            <p role={flow.uncertain ? 'alert' : 'status'}>
+              {t(flow.uncertain ? 'mfa.replacementUnknown' : 'mfa.replaced')}
+            </p>
+            <Link
+              to={`${paths.login}?returnTo=${encodeURIComponent(paths.security)}`}
+              onClick={invalidate}
+            >
+              {t('mfa.signinAgain')}
+            </Link>
+          </div>
+        )}
+        {flow.kind !== 'codes' && flow.kind !== 'relogin' && (
           <p className="mfa-signin-help">{t('mfa.signinHelp')}</p>
         )}
-        <div className="auth-links auth-links-single">
-          <Link to={paths.login}>{t('mfa.signin')}</Link>
-          <Link to={paths.workspace}>{t('mfa.workspace')}</Link>
-        </div>
+        {flow.kind !== 'relogin' && (
+          <div className="auth-links auth-links-single">
+            <Link to={paths.login}>{t('mfa.signin')}</Link>
+            <Link to={paths.workspace}>{t('mfa.workspace')}</Link>
+          </div>
+        )}
       </div>
     </LoginLayout>
   );

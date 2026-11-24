@@ -61,6 +61,21 @@ func verifyBranchlessPickup(t *testing.T, ctx, guestCtx context.Context, organiz
 			t.Fatalf("concurrent independent Pickup persistence: %+v %v", state.Services, err)
 		}
 	}
+	t.Run("mode_revision_is_recorded_once", func(t *testing.T) {
+		tx, _, err := organizations.Authorized(ctx, owner, org, "organization.read")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer tx.Rollback(ctx)
+		var entries int
+		err = tx.QueryRow(ctx, `SELECT count(*) FROM restaurant_menu_revisions
+			WHERE organization_id=$1 AND actor_id=$2
+			AND before_state='{"service_modes":{"dine_in":false,"takeaway":true,"delivery":false,"pickup":false}}'::jsonb
+			AND after_state='{"service_modes":{"dine_in":false,"takeaway":false,"delivery":false,"pickup":true}}'::jsonb`, org, owner).Scan(&entries)
+		if err != nil || entries != 1 {
+			t.Fatalf("expected one menu revision for Pickup enable and its replays: entries=%d err=%v", entries, err)
+		}
+	})
 	oldReplay, err := service.SaveServices(ctx, owner, org, oldKey, oldInput)
 	if err != nil || oldReplay.Services.Pickup != nil || !oldReplay.Services.Takeaway {
 		t.Fatalf("historical replay changed with current Pickup: %+v %v", oldReplay.Services, err)
@@ -76,6 +91,40 @@ func verifyBranchlessPickup(t *testing.T, ctx, guestCtx context.Context, organiz
 	if err != nil || state.Services.Pickup == nil || !*state.Services.Pickup {
 		t.Fatalf("legacy services must preserve effective Pickup: %v", err)
 	}
+	t.Run("profile_mode_history_rolls_back_with_audit", func(t *testing.T) {
+		countHistory := func() int {
+			t.Helper()
+			tx, _, err := organizations.Authorized(ctx, owner, org, "organization.read")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer tx.Rollback(ctx)
+			var entries int
+			err = tx.QueryRow(ctx, `SELECT count(*) FROM restaurant_menu_revisions
+				WHERE organization_id=$1 AND actor_id=$2
+				AND before_state='{"service_modes":{"dine_in":false,"takeaway":false,"delivery":false,"pickup":true}}'::jsonb
+				AND after_state='{"service_modes":{"dine_in":true,"takeaway":false,"delivery":false,"pickup":true}}'::jsonb`, org, owner).Scan(&entries)
+			if err != nil {
+				t.Fatal(err)
+			}
+			return entries
+		}
+		update := profile
+		update.ServiceModes = restaurant.ServiceModes{DineIn: true}
+		const profileKey = "a0971111-1111-4111-8111-111111111111"
+		// Only the audit insert receives the deliberately invalid text.
+		if _, err := service.SaveProfile(organization.WithRequestID(ctx, "fixture\x00audit"), owner, org, profileKey, update); err == nil {
+			t.Fatal("invalid audit insert did not fail the profile save")
+		}
+		current, err := service.Setup(ctx, owner, org, "")
+		if err != nil || current.Services.DineIn || current.Services.Pickup == nil || !*current.Services.Pickup || countHistory() != 0 {
+			t.Fatalf("audit failure changed service modes or history: %v", err)
+		}
+		saved, err := service.SaveProfile(ctx, owner, org, profileKey, update)
+		if err != nil || !saved.Services.DineIn || saved.Services.Pickup == nil || !*saved.Services.Pickup || countHistory() != 1 {
+			t.Fatalf("profile retry did not preserve Pickup and record one revision: %v", err)
+		}
+	})
 	disabled := restaurant.SetupServicesInput{ServiceModes: restaurant.ServiceModes{Takeaway: true, Pickup: &off}}
 	if _, err = service.SaveServices(ctx, owner, org, key, disabled); !errors.Is(err, restaurant.ErrConflict) {
 		t.Fatalf("changed Pickup replay: %v", err)

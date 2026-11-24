@@ -133,7 +133,7 @@ func (google *GoogleAuth) complete(ctx context.Context, cookie string, identity 
 	if profile.Status != "ACTIVE" {
 		return "", false, ErrInvalidCredentials
 	}
-	token, _, err := google.sessionInTx(ctx, tx, profile.ID)
+	token, _, err := google.sessionInTx(ctx, tx, profile.ID, identity.authenticatedAt)
 	if err != nil {
 		return "", false, err
 	}
@@ -146,13 +146,13 @@ func (google *GoogleAuth) complete(ctx context.Context, cookie string, identity 
 	return token, false, nil
 }
 
-func (google *GoogleAuth) sessionInTx(ctx context.Context, tx pgx.Tx, userID string) (string, string, error) {
+func (google *GoogleAuth) sessionInTx(ctx context.Context, tx pgx.Tx, userID string, proofAt time.Time) (string, string, error) {
 	token, tokenHash, err := RandomToken()
 	if err != nil {
 		return "", "", err
 	}
 	csrf, csrfHash := CSRFForToken(token)
-	if _, err = tx.Exec(ctx, `INSERT INTO auth_sessions(user_id,token_hash,csrf_hash,expires_at) VALUES($1,$2,$3,now()+$4::interval)`, userID, tokenHash[:], csrfHash[:], google.service.SessionTTL); err != nil {
+	if err = insertAuthenticatedSession(ctx, tx, userID, tokenHash[:], csrfHash[:], google.service.SessionTTL, proofAt); err != nil {
 		return "", "", err
 	}
 	if _, err = tx.Exec(ctx, `INSERT INTO auth_audit_events(user_id,event_type) VALUES($1,'LOGIN_SUCCESS')`, userID); err != nil {
@@ -192,6 +192,7 @@ func (google *GoogleAuth) link(ctx context.Context, cookie, email, password stri
 		return Profile{}, "", "", err
 	}
 	valid := VerifyPassword(hash, password)
+	proofAt := time.Now().UTC()
 	if !valid || profile.Status != "ACTIVE" || normalized != pendingEmail {
 		var userID any
 		if profile.ID != "" {
@@ -208,7 +209,7 @@ func (google *GoogleAuth) link(ctx context.Context, cookie, email, password stri
 	if _, err = tx.Exec(ctx, `INSERT INTO auth_external_identities(provider,subject,user_id) VALUES('google',$1,$2)`, subject, profile.ID); err != nil {
 		return Profile{}, "", "", err
 	}
-	token, csrf, err := google.sessionInTx(ctx, tx, profile.ID)
+	token, csrf, err := google.sessionInTx(ctx, tx, profile.ID, proofAt)
 	if err != nil {
 		return Profile{}, "", "", err
 	}

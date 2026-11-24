@@ -21,6 +21,8 @@ func TestSetupRoutesAreRegistered(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, route := range []string{
+		"GET /restaurant/availability",
+		"PUT /restaurant/availability",
 		"GET /restaurant/setup",
 		"PUT /restaurant/setup/profile",
 		"PUT /restaurant/setup/services",

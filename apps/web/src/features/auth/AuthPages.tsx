@@ -81,7 +81,9 @@ function PasswordField({
 }
 
 export function safeReturnTo(value: string | null) {
-  return value === paths.setup ? value : paths.workspace;
+  return value === paths.setup || value === paths.security
+    ? value
+    : paths.workspace;
 }
 
 export function LoginPage() {

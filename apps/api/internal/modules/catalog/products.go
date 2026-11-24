@@ -189,6 +189,10 @@ func (service *Service) UpdateProduct(ctx context.Context, user, org, id string,
 	if err = productReferences(ctx, tx, org, input); err != nil {
 		return privateReadResult(ctx, authorization, Product{}, err)
 	}
+	before, err := catalogMenuState(ctx, tx, org, "products", id)
+	if err != nil {
+		return privateReadResult(ctx, authorization, Product{}, err)
+	}
 	if err = authorization.Recheck(ctx); err != nil {
 		return Product{}, err
 	}
@@ -201,6 +205,9 @@ func (service *Service) UpdateProduct(ctx context.Context, user, org, id string,
 	}
 	item, err := productBy(ctx, tx, org, id)
 	if err != nil {
+		return privateReadResult(ctx, authorization, Product{}, err)
+	}
+	if err = recordCatalogMenuChange(ctx, authorization, org, user, "products", id, before); err != nil {
 		return privateReadResult(ctx, authorization, Product{}, err)
 	}
 	if err = finish(ctx, authorization, org, user, "catalog.product.updated", id); err != nil {

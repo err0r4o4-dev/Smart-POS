@@ -1,5 +1,5 @@
 import { render, renderInEnglish } from '../../test/render';
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, expect, it, vi } from 'vitest';
@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   posRequest: vi.fn(),
   orgRequest: vi.fn(),
   canUpdate: true,
+  userID: 'user-1',
 }));
 
 vi.mock('../../app/AuthProvider', () => ({
@@ -17,7 +18,7 @@ vi.mock('../../app/AuthProvider', () => ({
     state: {
       status: 'authenticated',
       session: {
-        user: { id: 'user-1', display_name: 'Owner' },
+        user: { id: mocks.userID, display_name: 'Owner' },
         csrf_token: 'test-csrf-token',
       },
     },
@@ -135,6 +136,7 @@ beforeEach(() => {
   mocks.posRequest.mockReset();
   mocks.orgRequest.mockReset();
   mocks.canUpdate = true;
+  mocks.userID = 'user-1';
 });
 
 it.each(['hours', 'all'])(
@@ -347,4 +349,69 @@ it('shows the storefront button in English linking to the store website', async 
   expect(link).toHaveAttribute('href', '/shop/my-shop');
   expect(link).toHaveAttribute('target', '_blank');
   expect(link).toHaveAttribute('rel', 'noreferrer');
+});
+
+it('loads the storefront link separately for each account in the same organization', async () => {
+  mocks.posRequest
+    .mockResolvedValueOnce({ slug: 'first-store' })
+    .mockResolvedValueOnce({ slug: 'second-store' });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const page = () => (
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <SettingsPage />
+      </MemoryRouter>
+    </QueryClientProvider>
+  );
+  const { rerender } = renderInEnglish(page());
+  const link = screen.getByRole('link', { name: 'View storefront' });
+  await waitFor(() =>
+    expect(link).toHaveAttribute('href', '/shop/first-store'),
+  );
+
+  mocks.userID = 'user-2';
+  rerender(page());
+  expect(link).toHaveAttribute('href', '/shop');
+  await waitFor(() =>
+    expect(link).toHaveAttribute('href', '/shop/second-store'),
+  );
+});
+
+it('keeps the current account storefront link when a prior request resolves late', async () => {
+  let resolvePriorRequest!: (settings: { slug: string }) => void;
+  const priorRequest = new Promise<{ slug: string }>((resolve) => {
+    resolvePriorRequest = resolve;
+  });
+  mocks.posRequest
+    .mockReturnValueOnce(priorRequest)
+    .mockResolvedValueOnce({ slug: 'current-store' });
+
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const page = () => (
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <SettingsPage />
+      </MemoryRouter>
+    </QueryClientProvider>
+  );
+  const { rerender } = renderInEnglish(page());
+  const link = screen.getByRole('link', { name: 'View storefront' });
+  await waitFor(() => expect(mocks.posRequest).toHaveBeenCalledTimes(1));
+  const priorSignal = mocks.posRequest.mock.calls[0][2].signal;
+
+  mocks.userID = 'user-2';
+  rerender(page());
+  expect(link).toHaveAttribute('href', '/shop');
+  await waitFor(() => expect(link).toHaveAttribute('href', '/shop/current-store'));
+  expect(priorSignal.aborted).toBe(true);
+
+  await act(async () => {
+    resolvePriorRequest({ slug: 'prior-store' });
+    await priorRequest;
+  });
+  expect(link).toHaveAttribute('href', '/shop/current-store');
 });

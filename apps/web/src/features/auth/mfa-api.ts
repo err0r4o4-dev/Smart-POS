@@ -58,7 +58,20 @@ export async function beginMFAEnrollment(
   csrf: string,
   signal?: AbortSignal,
 ): Promise<MFAEnrollment> {
-  const value = await request('/enrollment', {}, csrf, signal);
+  return parseEnrollment(await request('/enrollment', {}, csrf, signal));
+}
+
+export async function beginMFARecovery(
+  recoveryCode: string,
+  csrf: string,
+  signal?: AbortSignal,
+): Promise<MFAEnrollment> {
+  return parseEnrollment(
+    await request('/recovery', { recovery_code: recoveryCode }, csrf, signal),
+  );
+}
+
+function parseEnrollment(value: unknown): MFAEnrollment {
   if (
     !object(value) ||
     typeof value.factor_id !== 'string' ||
@@ -83,7 +96,21 @@ export async function confirmMFAEnrollment(
   csrf: string,
   signal?: AbortSignal,
 ): Promise<{ recovery_codes: string[] }> {
-  const value = await request('/enrollment/confirm', { code }, csrf, signal);
+  return parseRecoveryCodes(await request('/enrollment/confirm', { code }, csrf, signal));
+}
+
+export async function confirmMFARecovery(
+  factorId: string,
+  code: string,
+  csrf: string,
+  signal?: AbortSignal,
+): Promise<{ recovery_codes: string[] }> {
+  return parseRecoveryCodes(
+    await request('/recovery/confirm', { factor_id: factorId, code }, csrf, signal),
+  );
+}
+
+function parseRecoveryCodes(value: unknown): { recovery_codes: string[] } {
   if (
     !object(value) ||
     !Array.isArray(value.recovery_codes) ||

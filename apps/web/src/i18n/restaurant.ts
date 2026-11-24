@@ -2,6 +2,30 @@ import { defineMessages } from './defineMessages';
 
 export const restaurant = defineMessages({
   th: {
+    availabilityTitle: 'เวลาเปิดรับออเดอร์',
+    availabilityDraft: 'การบันทึกค่านี้ยังไม่เปลี่ยนการรับออเดอร์ของหน้าร้าน',
+    availabilityLoading: 'กำลังโหลดเวลาเปิดรับออเดอร์',
+    availabilityReload: 'โหลดอีกครั้ง',
+    availabilityTimezone: 'เขตเวลา',
+    availabilityWindowHint:
+      'ใช้เวลาแบบ HH:mm หากเปิดข้ามคืน ให้ตั้งเวลาสิ้นสุดเป็น 24:00 แล้วเพิ่มช่วงใหม่ของวันถัดไป',
+    availabilityEmpty: 'ยังไม่มีช่วงเวลาเปิดรับออเดอร์',
+    availabilityWindow: 'ช่วงเวลาที่ {number}',
+    availabilityDay: 'วัน',
+    availabilityStart: 'เวลาเปิด',
+    availabilityEnd: 'เวลาปิด',
+    availabilityRemove: 'ลบช่วงที่ {number}',
+    availabilityAdd: 'เพิ่มช่วงเวลา',
+    availabilityPause: 'พักการรับออเดอร์',
+    pauseAll: 'ทุกช่องทาง',
+    takeawayMode: 'ซื้อกลับบ้าน',
+    pickupMode: 'สั่งล่วงหน้าแล้วมารับ',
+    availabilitySave: 'บันทึกเวลาและการพัก',
+    availabilityConflict:
+      'มีการบันทึกค่าที่ใหม่กว่า ค่าที่คุณแก้ยังอยู่ในฟอร์ม',
+    availabilityDiscardReload: 'ทิ้งค่าที่แก้และโหลดค่าล่าสุด',
+    availabilitySaveError:
+      'บันทึกไม่สำเร็จ ตรวจเวลาและช่วงที่ซ้อนกัน หรือยืนยันตัวตนอีกครั้ง',
     posNavigation: 'รับออเดอร์หน้าร้าน',
     ordersNavigation: 'ออเดอร์และคิว',
     salesNavigation: 'ยอดขาย',
@@ -62,6 +86,31 @@ export const restaurant = defineMessages({
     openTableLink: 'เปิดหน้าสั่งอาหาร โต๊ะ {code}',
   },
   en: {
+    availabilityTitle: 'Ordering hours',
+    availabilityDraft:
+      'Saving these settings does not change storefront ordering yet.',
+    availabilityLoading: 'Loading ordering hours',
+    availabilityReload: 'Try loading again',
+    availabilityTimezone: 'Time zone',
+    availabilityWindowHint:
+      'Use HH:mm. For overnight hours, end one window at 24:00 and add a window on the next day.',
+    availabilityEmpty: 'No ordering windows set',
+    availabilityWindow: 'Window {number}',
+    availabilityDay: 'Day',
+    availabilityStart: 'Opens at',
+    availabilityEnd: 'Closes at',
+    availabilityRemove: 'Remove window {number}',
+    availabilityAdd: 'Add window',
+    availabilityPause: 'Pause ordering',
+    pauseAll: 'All service modes',
+    takeawayMode: 'Takeaway',
+    pickupMode: 'Order ahead for pickup',
+    availabilitySave: 'Save hours and pauses',
+    availabilityConflict:
+      'Newer settings were saved. Your edits are still here.',
+    availabilityDiscardReload: 'Discard edits and load latest',
+    availabilitySaveError:
+      'Could not save. Check the hours for overlaps or verify your sign-in and try again.',
     posNavigation: 'Take in-store orders',
     ordersNavigation: 'Orders and queue',
     salesNavigation: 'Sales',

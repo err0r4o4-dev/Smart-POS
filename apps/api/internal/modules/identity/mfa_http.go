@@ -4,9 +4,13 @@ import (
 	"encoding/base32"
 	"errors"
 	"net/http"
+	"regexp"
 
 	"smartpos/api/internal/platform/httpx"
 )
+
+var recoveryCodePattern = regexp.MustCompile(`^[A-Z2-7]{25}[AEIMQUY4]$`)
+var recoveryFactorPattern = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 
 func (handler Handler) mfaError(writer http.ResponseWriter, request *http.Request, err error) {
 	switch {
@@ -85,15 +89,78 @@ func mfaCode(writer http.ResponseWriter, request *http.Request) (string, bool) {
 	if !decode(writer, request, &input) {
 		return "", false
 	}
-	valid := len(input.Code) == 6
-	for _, digit := range input.Code {
-		valid = valid && digit >= '0' && digit <= '9'
-	}
-	if !valid {
+	if !validMFACode(input.Code) {
 		httpx.Error(writer, request, 400, "INVALID_INPUT", "Enter a six-digit MFA code")
 		return "", false
 	}
 	return input.Code, true
+}
+
+func validMFACode(code string) bool {
+	if len(code) != 6 {
+		return false
+	}
+	for _, digit := range code {
+		if digit < '0' || digit > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func (handler Handler) mfaRecoveryBegin(writer http.ResponseWriter, request *http.Request) {
+	if !handler.requireCSRF(writer, request) {
+		return
+	}
+	var input struct {
+		RecoveryCode string `json:"recovery_code"`
+	}
+	if !decode(writer, request, &input) {
+		return
+	}
+	if !recoveryCodePattern.MatchString(input.RecoveryCode) {
+		httpx.Error(writer, request, 400, "INVALID_INPUT", "Enter a valid recovery code")
+		return
+	}
+	token, ok := handler.mfaToken(writer, request)
+	if !ok {
+		return
+	}
+	result, err := handler.MFA.beginRecovery(request.Context(), token, input.RecoveryCode)
+	if err != nil {
+		handler.mfaError(writer, request, err)
+		return
+	}
+	defer clear(result.Secret)
+	secret := base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(result.Secret)
+	httpx.JSON(writer, 200, map[string]any{"data": map[string]any{"factor_id": result.FactorID, "secret": secret, "expires_at": result.ExpiresAt}})
+}
+
+func (handler Handler) mfaRecoveryConfirm(writer http.ResponseWriter, request *http.Request) {
+	if !handler.requireCSRF(writer, request) {
+		return
+	}
+	var input struct {
+		FactorID string `json:"factor_id"`
+		Code     string `json:"code"`
+	}
+	if !decode(writer, request, &input) {
+		return
+	}
+	if !recoveryFactorPattern.MatchString(input.FactorID) || !validMFACode(input.Code) {
+		httpx.Error(writer, request, 400, "INVALID_INPUT", "A replacement factor ID and six-digit MFA code are required")
+		return
+	}
+	token, ok := handler.mfaToken(writer, request)
+	if !ok {
+		return
+	}
+	codes, err := handler.MFA.confirmRecovery(request.Context(), token, input.FactorID, input.Code)
+	if err != nil {
+		handler.mfaError(writer, request, err)
+		return
+	}
+	httpx.JSON(writer, 200, map[string]any{"data": map[string]any{"recovery_codes": codes}})
 }
 
 func (handler Handler) mfaConfirm(writer http.ResponseWriter, request *http.Request) {

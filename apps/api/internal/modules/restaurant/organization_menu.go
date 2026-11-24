@@ -2,11 +2,30 @@ package restaurant
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"github.com/jackc/pgx/v5"
+	"smartpos/api/internal/modules/menurevision"
 	"smartpos/api/internal/modules/organization"
 )
+
+// The caller holds the organization lock and keeps the setup command's replay key separate.
+func appendSetupMenuRevision(ctx context.Context, tx pgx.Tx, org, user string, before, after any) error {
+	oldJSON, err := json.Marshal(before)
+	if err != nil {
+		return err
+	}
+	newJSON, err := json.Marshal(after)
+	if err != nil {
+		return err
+	}
+	err = menurevision.AppendChange(ctx, tx, org, user, oldJSON, newJSON)
+	if errors.Is(err, menurevision.ErrExhausted) {
+		return ErrConflict
+	}
+	return dbError(err)
+}
 
 func readOrganizationMenu(ctx context.Context, tx pgx.Tx, org string, state *SetupState) (bool, int, error) {
 	var saved bool

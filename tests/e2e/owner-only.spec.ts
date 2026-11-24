@@ -73,6 +73,16 @@ async function mockAPI(page: Page, role: string | null) {
           },
         },
       });
+    if (path === '/api/v1/organizations/owner-fixture/restaurant/setup')
+      return route.fulfill({
+        json: {
+          data: {
+            completed: true,
+            readiness: { ready: true, incomplete: [] },
+            steps: [],
+          },
+        },
+      });
     if (path === '/api/v1/storefronts')
       return route.fulfill({
         json: {
@@ -134,7 +144,7 @@ test('owner enters management and retired staff URLs are unavailable (mock API)'
   page,
 }, testInfo) => {
   const requests = await mockAPI(page, 'OWNER');
-  await page.goto('/manage/dashboard');
+  await page.goto('/dashboard');
   await expect(
     page.getByRole('heading', { level: 1, name: 'ภาพรวม' }),
   ).toBeVisible();
@@ -143,6 +153,9 @@ test('owner enters management and retired staff URLs are unavailable (mock API)'
     fullPage: true,
   });
   for (const path of [
+    '/manage/dashboard',
+    '/manage/products',
+    '/account',
     '/work',
     '/work/products',
     '/work/employees',
@@ -171,35 +184,29 @@ for (const role of [
     page,
   }) => {
     await mockAPI(page, role);
-    await page.goto('/manage/products');
+    await page.goto('/menu');
     await expect(page).toHaveURL(/\/403$/);
     await expect(page.locator('[data-workspace="management"]')).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'ภาพรวม' })).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'เมนูอาหาร' })).toHaveCount(
       0,
     );
-    await page.goto('/account');
-    await expect(
-      page.getByRole('heading', { name: 'บัญชีของคุณ' }),
-    ).toBeVisible();
-    await expect(
-      page.getByText('พื้นที่จัดการร้านสำหรับเจ้าของร้านเท่านั้น', {
-        exact: false,
-      }),
-    ).toBeVisible();
-    await expect(page.locator('a[href="/manage/dashboard"]')).toHaveCount(0);
+    await page.goto('/help');
+    await expect(page.locator('[data-workspace="account"]')).toBeVisible();
+    await expect(page.locator('a[href="/dashboard"]')).toHaveCount(0);
+    await page.getByRole('button', { name: 'บัญชีของคุณ' }).click();
     const logout = page.waitForResponse(
       (response) =>
         new URL(response.url()).pathname === '/api/v1/auth/logout' &&
         response.request().method() === 'POST',
     );
-    await page.getByRole('button', { name: 'ออกจากระบบ' }).click();
+    await page.getByRole('menuitem', { name: 'ออกจากระบบ' }).click();
     expect((await logout).status()).toBe(200);
-    await expect(page).toHaveURL(/\/login(?:\?returnTo=%2Faccount)?$/);
+    await expect(page).toHaveURL(/\/login$/);
     await expect(
       page.getByRole('textbox', { name: 'ที่อยู่อีเมล' }),
     ).toBeVisible();
-    await page.goto('/manage/products');
+    await page.goto('/menu');
     await expect(page).toHaveURL(/\/login\?returnTo=/);
   });
 }
@@ -208,15 +215,60 @@ test('anonymous user is redirected from management (mock API)', async ({
   page,
 }) => {
   await mockAPI(page, null);
-  await page.goto('/manage/products');
+  await page.goto('/menu');
   await expect(page).toHaveURL(/\/login\?returnTo=/);
 });
+
+for (const width of [360, 390, 768, 1280]) {
+  test(`retired purchasing and returns bookmarks stay unavailable at ${width}px (mock API)`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const requests = await mockAPI(page, 'OWNER');
+    await page.goto('/');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+      'จัดการร้านให้ง่ายขายได้อย่างมั่นใจ',
+    );
+    for (const path of [
+      '/suppliers',
+      '/purchasing/orders',
+      '/purchasing/orders/new',
+      '/purchasing/orders/00000000-0000-4000-8000-000000000001',
+      '/shelves',
+      '/pos/returns',
+      '/pos/exchanges',
+      '/sales/refunds/00000000-0000-4000-8000-000000000001',
+      '/sales/voids',
+    ]) {
+      await page.goto(path);
+      await expect(page.getByText('404 · NOT FOUND')).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+        'ไม่พบหน้านี้',
+      );
+      await expect(
+        page.getByRole('link', { name: 'กลับพื้นที่ทำงาน' }),
+      ).toHaveAttribute('href', '/workspace');
+      expect(new URL(page.url()).pathname).toBe(path);
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth),
+      ).toBeLessThanOrEqual(width);
+    }
+    expect(
+      requests.filter((path) =>
+        /\/organizations\/[^/]+\/(suppliers|purchasing|shelves|returns|exchanges|refunds|sales)(\/|$)/.test(
+          path,
+        ),
+      ),
+    ).toEqual([]);
+  });
+}
 
 test('public shop remains available without a session (mock API)', async ({
   page,
 }, testInfo) => {
   await mockAPI(page, null);
   await page.goto('/shop');
+  await page.getByRole('link', { name: 'ดูหน้าร้าน', exact: true }).click();
   await expect(page).toHaveURL(/\/shop\/fixture$/);
   await expect(
     page.getByRole('searchbox', { name: 'ค้นหาสินค้า', exact: true }),

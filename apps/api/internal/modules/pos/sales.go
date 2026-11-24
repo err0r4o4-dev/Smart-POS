@@ -146,32 +146,43 @@ func settle(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org
 	return sale, nil
 }
 
-func (service *Service) CompleteCheckout(ctx context.Context, user, org, id string) (Checkout, error) {
-	tx, actor, err := service.begin(ctx, user, org, "pos.checkout")
+func (service *Service) CompleteCheckout(ctx context.Context, user, org, id string) (result Checkout, err error) {
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "pos.checkout")
 	if err != nil {
-		return Checkout{}, err
+		return Checkout{}, dbError(err)
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
+	defer func() {
+		if err != nil {
+			result = Checkout{}
+		}
+	}()
 	item, err := checkout(ctx, tx, actor, user, org, id)
-	if err != nil {
+	if err = writeCheck(ctx, authorization, err); err != nil {
 		return item, err
 	}
 	if item.CashierID != user || !allowed(actor.Permissions, paymentPermission(item.Method)) {
 		return item, organization.ErrDenied
 	}
 	if item.Status == "COMPLETED" {
-		return item, nil
+		return privateReadResult(ctx, authorization, item, nil)
 	}
 	if !allowed([]string{"CONFIRMED", "RECONCILIATION_REQUIRED"}, item.Status) {
 		return item, ErrPending
 	}
-	if _, err = tx.Exec(ctx, "SAVEPOINT sale_posting"); err != nil {
+	_, err = tx.Exec(ctx, "SAVEPOINT sale_posting")
+	if err = writeCheck(ctx, authorization, err); err != nil {
 		return item, err
 	}
 	sale, problem := settle(ctx, tx, actor, user, org, item)
 	if problem != nil {
 		slog.Warn("POS settlement requires reconciliation", "checkout_id", item.ID, "reason", problem.Error())
 		if _, err = tx.Exec(ctx, "ROLLBACK TO SAVEPOINT sale_posting"); err != nil {
+			return item, err
+		}
+		// SQL posting errors must leave the aborted savepoint before checking MFA.
+		if err = writeCheck(ctx, authorization, nil); err != nil {
 			return item, err
 		}
 		code := "SALE_POSTING_FAILED"
@@ -185,23 +196,27 @@ func (service *Service) CompleteCheckout(ctx context.Context, user, org, id stri
 			code = "CUSTOMER_UNAVAILABLE"
 		}
 		_, err = tx.Exec(ctx, "UPDATE pos_checkouts SET status='RECONCILIATION_REQUIRED',failure_code=$3 WHERE organization_id=$1 AND id=$2", org, id, code)
-		if err != nil {
-			return item, dbError(err)
+		if err = writeCheck(ctx, authorization, err); err != nil {
+			return item, err
 		}
-		result, err := checkout(ctx, tx, actor, user, org, id)
-		if err != nil {
+		result, err = checkout(ctx, tx, actor, user, org, id)
+		if err = writeCheck(ctx, authorization, err); err != nil {
 			return result, err
 		}
-		return result, finish(ctx, tx, org, user, "pos.checkout.reconciliation_required", id)
+		return result, finishAuthorized(ctx, authorization, org, user, "pos.checkout.reconciliation_required", id)
 	}
-	if _, err = tx.Exec(ctx, "RELEASE SAVEPOINT sale_posting"); err != nil {
+	if err = writeCheck(ctx, authorization, nil); err != nil {
 		return item, err
 	}
-	result, err := checkout(ctx, tx, actor, user, org, id)
-	if err != nil {
+	_, err = tx.Exec(ctx, "RELEASE SAVEPOINT sale_posting")
+	if err = writeCheck(ctx, authorization, err); err != nil {
+		return item, err
+	}
+	result, err = checkout(ctx, tx, actor, user, org, id)
+	if err = writeCheck(ctx, authorization, err); err != nil {
 		return result, err
 	}
-	return result, finish(ctx, tx, org, user, "pos.sale.completed", sale)
+	return result, finishAuthorized(ctx, authorization, org, user, "pos.sale.completed", sale)
 }
 
 func saleResult(ctx context.Context, tx pgx.Tx, org, id string) (json.RawMessage, error) {
@@ -213,16 +228,18 @@ func saleResult(ctx context.Context, tx pgx.Tx, org, id string) (json.RawMessage
  'movements',COALESCE((SELECT jsonb_agg(to_jsonb(movement)||jsonb_build_object('quantity_delta',movement.quantity_delta::text,'quantity_before',movement.quantity_before::text,'quantity_after',movement.quantity_after::text)) FROM stock_movements movement WHERE movement.organization_id=sale.organization_id AND movement.sale_id=sale.id),'[]'::jsonb),
  'adjustments',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',id,'kind',kind,'number',number,'status',status,'net_difference',net_difference::text)) FROM sale_adjustments WHERE organization_id=sale.organization_id AND (original_sale_id=sale.id OR replacement_sale_id=sale.id)),'[]'::jsonb), 'returns',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',id,'number',number,'status',status)) FROM customer_returns WHERE organization_id=sale.organization_id AND original_sale_id=sale.id),'[]'::jsonb), 'audit',COALESCE((SELECT jsonb_agg(to_jsonb(event) ORDER BY created_at) FROM organization_audit_events event WHERE event.organization_id=sale.organization_id AND event.object_id IN (sale.id,sale.checkout_id)),'[]'::jsonb)) FROM sales sale WHERE organization_id=$1 AND id=$2`, org, id)
 }
-func (service *Service) Sale(ctx context.Context, user, org, id string, receipt bool) (json.RawMessage, error) {
+func (service *Service) Sale(ctx context.Context, user, org, id string, receipt bool) (result json.RawMessage, err error) {
 	permission := "sales.read"
 	if receipt {
 		permission = "receipts.read"
 	}
-	tx, actor, err := service.begin(ctx, user, org, permission)
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, permission)
 	if err != nil {
-		return nil, err
+		return nil, dbError(err)
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
+	defer func() { result, err = privateReadResult(ctx, authorization, result, err) }()
 	if !uuidPattern.MatchString(id) {
 		return nil, ErrInput
 	}

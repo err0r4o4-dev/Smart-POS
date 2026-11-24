@@ -1111,6 +1111,10 @@ func (service *Service) SaveMenu(ctx context.Context, user, org, key string, inp
 		}
 		return SetupState{}, ErrConflict
 	}
+	var before SetupState
+	if _, _, err = readOrganizationMenu(ctx, tx, org, &before); err != nil {
+		return SetupState{}, err
+	}
 	var currency string
 	if err := authorization.Recheck(ctx); err != nil {
 		return SetupState{}, err
@@ -1245,6 +1249,16 @@ func (service *Service) SaveMenu(ctx context.Context, user, org, key string, inp
 		return SetupState{}, err
 	}
 	if err = saveAuthorizedCommand(ctx, authorization, org, command, state); err != nil {
+		return SetupState{}, err
+	}
+	var after SetupState
+	if _, _, err = readOrganizationMenu(ctx, tx, org, &after); err != nil {
+		return SetupState{}, err
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return SetupState{}, err
+	}
+	if err = appendSetupMenuRevision(ctx, tx, org, user, before.Menu, after.Menu); err != nil {
 		return SetupState{}, err
 	}
 	if err = finishSetup(ctx, authorization, org, user, "RESTAURANT_SETUP_MENU"); err != nil {

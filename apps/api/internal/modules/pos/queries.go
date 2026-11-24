@@ -82,7 +82,7 @@ func jsonPage(ctx context.Context, tx pgx.Tx, selectSQL, fromSQL, where string, 
 	return result, rows.Err()
 }
 
-func (service *Service) List(ctx context.Context, user, org, resource string, filters Filter) (Page, error) {
+func (service *Service) List(ctx context.Context, user, org, resource string, filters Filter) (result Page, err error) {
 	permission := "pos.access"
 	switch resource {
 	case "carts":
@@ -96,17 +96,21 @@ func (service *Service) List(ctx context.Context, user, org, resource string, fi
 	case "checkouts":
 		permission = "pos.checkout"
 	}
-	tx, actor, err := service.begin(ctx, user, org, permission)
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, permission)
 	if err != nil {
-		return Page{}, err
+		return Page{}, dbError(err)
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
+	defer func() {
+		result, err = privateReadResult(ctx, authorization, result, err)
+	}()
 	if filters.BranchID != "" {
 		if err = scope(ctx, tx, actor, org, filters.BranchID, false); err != nil {
 			return Page{}, err
 		}
 	}
-	result := Page{Items: []json.RawMessage{}, Page: filters.Page, PageSize: filters.PageSize}
+	result = Page{Items: []json.RawMessage{}, Page: filters.Page, PageSize: filters.PageSize}
 	if resource == "products" {
 		value, err := terminal(ctx, tx, actor, org, filters.TerminalID, true)
 		if err != nil {
@@ -153,12 +157,14 @@ func (service *Service) List(ctx context.Context, user, org, resource string, fi
 	return result, ErrInput
 }
 
-func (service *Service) Shift(ctx context.Context, user, org, id string) (json.RawMessage, error) {
-	tx, actor, err := service.begin(ctx, user, org, "pos.register.history.read")
+func (service *Service) Shift(ctx context.Context, user, org, id string) (result json.RawMessage, err error) {
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "pos.register.history.read")
 	if err != nil {
-		return nil, err
+		return nil, dbError(err)
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
+	defer func() { result, err = privateReadResult(ctx, authorization, result, err) }()
 	if !uuidPattern.MatchString(id) {
 		return nil, ErrInput
 	}

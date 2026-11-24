@@ -211,38 +211,6 @@ func (service *Service) CustomerPaymentReview(ctx context.Context, user, org, or
 	return result, nil
 }
 
-func (service *Service) staffPaymentTx(ctx context.Context, user, org, order string) (pgx.Tx, PaymentAttempt, error) {
-	if service.Organization == nil || service.Organization.Pool == nil {
-		return nil, PaymentAttempt{}, stripe.ErrUnavailable
-	}
-	if !uuidPattern.MatchString(order) {
-		return nil, PaymentAttempt{}, ErrNotFound
-	}
-	tx, actor, err := service.authorized(ctx, user, org, "storefront.manage")
-	if err != nil {
-		return nil, PaymentAttempt{}, err
-	}
-	fail := func(problem error) (pgx.Tx, PaymentAttempt, error) {
-		tx.Rollback(ctx)
-		return nil, PaymentAttempt{}, paymentError(problem)
-	}
-	if !slices.Contains(actor.Permissions, "online_orders.manage") {
-		return fail(organization.ErrDenied)
-	}
-	var branch string
-	if err = tx.QueryRow(ctx, "SELECT branch_id::text FROM online_orders WHERE organization_id=$1 AND id=$2 FOR UPDATE", org, order).Scan(&branch); err != nil {
-		return fail(err)
-	}
-	if !branchAllowed(actor, branch) {
-		return fail(organization.ErrDenied)
-	}
-	attempt, err := readPayment(ctx, tx, org, order)
-	if err != nil {
-		return fail(err)
-	}
-	return tx, attempt, nil
-}
-
 func (service *Service) prepareStaffVerification(ctx context.Context, user, org, key string, input PaymentReconciliationInput, hash string) (PaymentAttempt, *PaymentReview, string, error) {
 	authorization, attempt, err := service.authorizeStaffPayment(ctx, user, org, input.OrderID)
 	if err != nil {

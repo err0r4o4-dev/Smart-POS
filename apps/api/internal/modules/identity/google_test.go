@@ -39,23 +39,31 @@ func TestGoogleIDTokenValidation(test *testing.T) {
 		test.Fatal(err)
 	}
 	nonceHash := sha256.Sum256([]byte("expected-nonce"))
+	issuedAt := time.Now().Truncate(time.Second)
+	proofAt := issuedAt.Add(-2 * time.Minute)
 	for _, tc := range []struct {
 		name            string
 		mutate          func(map[string]any)
 		wrongKey, valid bool
+		authenticatedAt time.Time
 	}{
-		{"valid", func(map[string]any) {}, false, true},
-		{"wrong issuer", func(claimSet map[string]any) { claimSet["iss"] = "https://evil.test" }, false, false},
-		{"wrong audience", func(claimSet map[string]any) { claimSet["aud"] = "another-client" }, false, false},
-		{"expired", func(claimSet map[string]any) { claimSet["exp"] = time.Now().Add(-time.Hour).Unix() }, false, false},
-		{"missing subject", func(claimSet map[string]any) { claimSet["sub"] = "" }, false, false},
-		{"unverified email", func(claimSet map[string]any) { claimSet["email_verified"] = false }, false, false},
-		{"wrong nonce", func(claimSet map[string]any) { claimSet["nonce"] = "wrong" }, false, false},
-		{"wrong signature", func(map[string]any) {}, true, false},
-		{"wrong authorized party", func(claimSet map[string]any) { claimSet["azp"] = "another-client" }, false, false},
+		{"valid", func(map[string]any) {}, false, true, time.Time{}},
+		{"verified authentication time", func(c map[string]any) { c["auth_time"] = proofAt.Unix() }, false, true, proofAt},
+		{"older authentication time preserved", func(c map[string]any) { c["auth_time"] = issuedAt.Add(-time.Hour).Unix() }, false, true, issuedAt.Add(-time.Hour)},
+		{"malformed authentication time", func(c map[string]any) { c["auth_time"] = "123" }, false, true, time.Time{}},
+		{"out of range authentication time", func(c map[string]any) { c["auth_time"] = int64(1<<63 - 1) }, false, true, time.Time{}},
+		{"authentication after token issuance", func(c map[string]any) { c["auth_time"] = issuedAt.Add(time.Second).Unix() }, false, true, time.Time{}},
+		{"wrong issuer", func(c map[string]any) { c["iss"] = "https://evil.test" }, false, false, time.Time{}},
+		{"wrong audience", func(c map[string]any) { c["aud"] = "another-client" }, false, false, time.Time{}},
+		{"expired", func(c map[string]any) { c["exp"] = time.Now().Add(-time.Hour).Unix() }, false, false, time.Time{}},
+		{"missing subject", func(c map[string]any) { c["sub"] = "" }, false, false, time.Time{}},
+		{"unverified email", func(c map[string]any) { c["email_verified"] = false }, false, false, time.Time{}},
+		{"wrong nonce", func(c map[string]any) { c["nonce"] = "wrong"; c["auth_time"] = proofAt.Unix() }, false, false, time.Time{}},
+		{"wrong signature", func(c map[string]any) { c["auth_time"] = proofAt.Unix() }, true, false, time.Time{}},
+		{"wrong authorized party", func(c map[string]any) { c["azp"] = "another-client" }, false, false, time.Time{}},
 	} {
 		test.Run(tc.name, func(test *testing.T) {
-			claims := map[string]any{"iss": "https://accounts.google.com", "aud": "client-id", "sub": "subject-123", "exp": time.Now().Add(time.Hour).Unix(), "iat": time.Now().Unix(), "nonce": "expected-nonce", "email": "User@example.test", "email_verified": true}
+			claims := map[string]any{"iss": "https://accounts.google.com", "aud": "client-id", "sub": "subject-123", "exp": issuedAt.Add(time.Hour).Unix(), "iat": issuedAt.Unix(), "nonce": "expected-nonce", "email": "User@example.test", "email_verified": true}
 			tc.mutate(claims)
 			payload, _ := json.Marshal(claims)
 			part := base64.RawURLEncoding.EncodeToString
@@ -85,6 +93,9 @@ func TestGoogleIDTokenValidation(test *testing.T) {
 			if tc.valid && (identity.subject != "subject-123" || identity.email != "user@example.test") {
 				test.Fatal("incorrect verified identity")
 			}
+			if !identity.authenticatedAt.Equal(tc.authenticatedAt) {
+				test.Errorf("authentication time = %v, want %v", identity.authenticatedAt, tc.authenticatedAt)
+			}
 		})
 	}
 }
@@ -98,6 +109,9 @@ func TestGoogleAuthorizationURLContainsPKCEAndNonce(test *testing.T) {
 	query := got.Query()
 	if got.Host != "accounts.google.com" || query.Get("state") != "state-value" || query.Get("nonce") != "nonce-value" || query.Get("code_challenge_method") != "S256" || query.Get("code_challenge") != oauth2.S256ChallengeFromVerifier("verifier-value") || query.Get("response_type") != "code" || query.Get("scope") != "openid email" {
 		test.Fatal(fmt.Sprintf("unexpected authorization parameters: %v", query))
+	}
+	if len(query["claims"]) != 1 || query.Get("claims") != `{"id_token":{"auth_time":{"essential":true}}}` {
+		test.Fatal("Google authorization request must explicitly request ID token auth_time")
 	}
 }
 

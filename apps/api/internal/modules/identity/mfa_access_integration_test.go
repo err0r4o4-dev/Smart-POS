@@ -152,6 +152,38 @@ func TestMFAGateIsolatedDatabase(t *testing.T) {
 		})
 	}
 	for _, test := range []struct {
+		name, sql string
+		want      error
+	}{
+		{"revoked", `UPDATE auth_sessions SET revoked_at=clock_timestamp() WHERE user_id=$1`, ErrInvalidToken},
+		{"expired", `UPDATE auth_sessions SET expires_at=clock_timestamp()-interval '1 microsecond' WHERE user_id=$1`, ErrInvalidToken},
+		{"future session", `UPDATE auth_sessions SET created_at=clock_timestamp()+interval '1 minute' WHERE user_id=$1`, ErrInvalidToken},
+		{"disabled", `UPDATE users SET status='DISABLED' WHERE id=$1`, ErrInvalidToken},
+		{"unverified", `UPDATE users SET email_verified_at=NULL WHERE id=$1`, ErrMFARequired},
+		{"future verification", `UPDATE users SET email_verified_at=clock_timestamp()+interval '1 minute' WHERE id=$1`, ErrMFARequired},
+	} {
+		t.Run("primary-only "+test.name, func(t *testing.T) {
+			tx, err := pool.Begin(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer tx.Rollback(ctx)
+			if _, err = tx.Exec(ctx, `UPDATE auth_sessions SET mfa_factor_id=NULL,mfa_verified_at=NULL WHERE user_id=$1`, user); err != nil {
+				t.Fatal(err)
+			}
+			if _, err = tx.Exec(ctx, test.sql, user); err != nil {
+				t.Fatal(err)
+			}
+			access, err := RequireMFA(ctx, tx, user)
+			if !errors.Is(err, test.want) || access != nil {
+				t.Fatalf("invalid primary-only authentication misclassified: %v", err)
+			}
+			if err = tx.Rollback(ctx); err != nil || snapshot() != baseline {
+				t.Fatal("primary-only denial changed identity or audit history")
+			}
+		})
+	}
+	for _, test := range []struct {
 		name    string
 		session Session
 		actor   string

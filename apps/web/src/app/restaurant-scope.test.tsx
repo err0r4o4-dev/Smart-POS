@@ -4,11 +4,12 @@ import {
   matchRoutes,
   RouterProvider,
 } from 'react-router-dom';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { expect, it, vi } from 'vitest';
-import { render } from '../test/render';
+import { render, renderInEnglish } from '../test/render';
 import { navigation } from './routes';
+import { AuthProvider } from './AuthProvider';
 import { router } from './router';
 import { ManagementHomePage } from '../features/workspace/WorkspacePages';
 import {
@@ -198,30 +199,179 @@ it('maps customer storefront cart and canonical order tracking routes', () => {
   }
 });
 
-it('redirects legacy customer Stripe return URL /shop/:slug/track/:orderId to /shop/:slug/orders/:orderId with query and hash intact', async () => {
+it.each([true, false])(
+  'checks storefront.manage before following the legacy payment link (allowed=%s)',
+  async (allowed) => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const memoryRouter = createMemoryRouter(router.routes, {
+      initialEntries: [
+        '/manage/settings/storefront/payments?source=bookmark#details',
+      ],
+    });
+    const visited: string[] = [];
+    const unsubscribe = memoryRouter.subscribe((state) =>
+      visited.push(state.location.pathname),
+    );
+    const org = { id: 'test-restaurant', name: 'Test restaurant' };
+    const sandbox = `/organizations/${org.id}/storefront/payment-sandbox`;
+    const responses: Record<string, unknown> = {
+      '/auth/me': {
+        user: {
+          id: 'test-owner',
+          display_name: 'Test Owner',
+          email: 'owner@example.test',
+          email_verified: true,
+          status: 'ACTIVE',
+        },
+        csrf_token: 'synthetic-csrf',
+      },
+      '/organizations': [org],
+      [`/organizations/${org.id}/context`]: {
+        organization: org,
+        membership: { role: 'OWNER', status: 'ACTIVE' },
+        branches: [{ id: 'test-branch', name: 'Test branch' }],
+        permissions: allowed ? ['storefront.manage'] : [],
+      },
+      [`/organizations/${org.id}/restaurant/setup`]: {
+        completed: true,
+        readiness: { ready: true, incomplete: [] },
+        steps: [],
+      },
+      [sandbox]: {
+        provider: 'stripe',
+        mode: 'test',
+        configured: false,
+        amount_minor: 2000,
+        currency: 'thb',
+        customer_checkout_enabled: false,
+      },
+    };
+    const calls: string[] = [];
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async (input) => {
+        const path = new URL(String(input), 'http://localhost').pathname.replace(
+          /^\/api\/v1/,
+          '',
+        );
+        calls.push(path);
+        if (!Object.hasOwn(responses, path))
+          throw new Error(`Unexpected request: ${path}`);
+        return Response.json({ data: responses[path] });
+      });
+    const dialog = HTMLDialogElement.prototype;
+    const close = Object.getOwnPropertyDescriptor(dialog, 'close');
+    if (!close)
+      Object.defineProperty(dialog, 'close', {
+        configurable: true,
+        value: vi.fn(),
+      });
+    try {
+      render(
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <RouterProvider router={memoryRouter} />
+          </AuthProvider>
+        </QueryClientProvider>,
+      );
+      if (allowed) {
+        await waitFor(() => expect(calls).toContain(sandbox));
+        expect(memoryRouter.state.location).toMatchObject({
+          pathname: '/settings/payments',
+          search: '?source=bookmark',
+          hash: '#details',
+        });
+        expect(memoryRouter.state.historyAction).toBe('REPLACE');
+      } else {
+        await waitFor(() =>
+          expect(memoryRouter.state.location.pathname).toBe('/403'),
+        );
+        expect(visited).not.toContain('/settings/payments');
+        expect(calls).not.toContain(sandbox);
+      }
+    } finally {
+      unsubscribe();
+      memoryRouter.dispose();
+      queryClient.clear();
+      fetchSpy.mockRestore();
+      if (!close) Reflect.deleteProperty(dialog, 'close');
+    }
+  },
+);
+
+it('redirects a legacy tracking URL without treating its query as order proof', async () => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  const token = 'a'.repeat(64);
   const memoryRouter = createMemoryRouter(router.routes, {
     initialEntries: [
-      '/shop/restaurant-a/track/order-a?payment_return=1#access=abc',
+      `/shop/restaurant-a/track/order-a?source=bookmark&access=${token}`,
     ],
   });
   const fetchSpy = vi
     .spyOn(globalThis, 'fetch')
     .mockRejectedValue(new Error('Unexpected API request in redirect test'));
   try {
+    renderInEnglish(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={memoryRouter} />
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText(/Incomplete tracking link/)).toBeTruthy();
+    expect(memoryRouter.state.location.pathname).toBe(
+      '/shop/restaurant-a/orders/order-a',
+    );
+    expect(memoryRouter.state.location.search).toBe(
+      `?source=bookmark&access=${token}`,
+    );
+    expect(memoryRouter.state.location.hash).toBe('');
+    expect(fetchSpy).not.toHaveBeenCalled();
+  } finally {
+    memoryRouter.dispose();
+    queryClient.clear();
+    fetchSpy.mockRestore();
+  }
+});
+
+it('sends a legacy tracking fragment in the canonical order proof request only', async () => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const token = 'b'.repeat(64);
+  const memoryRouter = createMemoryRouter(router.routes, {
+    initialEntries: [
+      `/shop/restaurant-a/track/order-a?payment_return=1#access=${token}`,
+    ],
+  });
+  const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    new Response(
+      JSON.stringify({ error: { code: 'NOT_FOUND', message: 'Order not found' } }),
+      { status: 404 },
+    ),
+  );
+  try {
     render(
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={memoryRouter} />
       </QueryClientProvider>,
     );
-    expect(memoryRouter.state.location.pathname).toBe(
-      '/shop/restaurant-a/orders/order-a',
+    expect(await screen.findByText('Order not found')).toBeTruthy();
+    expect(memoryRouter.state.location).toMatchObject({
+      pathname: '/shop/restaurant-a/orders/order-a',
+      search: '?payment_return=1',
+      hash: `#access=${token}`,
+    });
+    expect(fetchSpy).toHaveBeenCalledExactlyOnceWith(
+      '/api/v1/storefronts/restaurant-a/track',
+      expect.objectContaining({
+        method: 'POST',
+        credentials: 'omit',
+        body: JSON.stringify({ order_id: 'order-a', access_token: token }),
+      }),
     );
-    expect(memoryRouter.state.location.search).toBe('?payment_return=1');
-    expect(memoryRouter.state.location.hash).toBe('#access=abc');
-    expect(fetchSpy).not.toHaveBeenCalled();
   } finally {
     memoryRouter.dispose();
     queryClient.clear();

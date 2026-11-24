@@ -1,4 +1,4 @@
--- Active: 1795089294509@@127.0.0.1@15432
+-- Active: 1795089294509@@127.0.0.1@15432@smartpos
 
 # VELOPOS migration task plan
 
@@ -122,6 +122,41 @@ incomplete because UI and runtime availability are separate work.
       provisioning using a verified user ID; no actual grant is authorized here.
 - [?] Manual recovery evidence remains undefined; do not enable unsupported
   privileged recovery. Admin provisioning command has separate local acceptance below.
+
+#### B12 decision draft: loss of TOTP and all recovery codes
+
+Neither option below is approved. Keep privileged access restricted and leave
+the current code-based replacement path unchanged until this policy is settled.
+This is recovery of the same verified user, not restaurant transfer (B10) or
+new platform Admin provisioning.
+
+1. Recommended: require fresh primary proof for the existing account plus
+   corroboration against an authority record established before the request.
+   For Owners, bind evidence to the active Owner and the specific restaurant
+   using the approved B10 verification record when available. For platform
+   Admins, use a separately controlled record of the verified Admin identity
+   and require independent approval by two authorized people. This offers a
+   recovery path but requires reliable records and reviewer coverage; missing
+   or conflicting records keep the case restricted.
+2. Conservative fallback: keep manual recovery unavailable for any role
+   without approved records or reviewer coverage. This avoids forcing a
+   decision from incomplete evidence but leaves affected accounts restricted.
+
+Decisions still needed: which pre-existing records and corroboration are
+acceptable by role, who can review and approve (including reviewer
+unavailability), and which approved channel, access limits and retention
+apply to evidence. Do not collect documents or invent evidence rules while
+these are open.
+
+Proposed acceptance after approval: primary login or email reset alone
+cannot restore privileged access; neither can mismatched, missing, or
+conflicting evidence. Approval is bound to the existing user and case,
+cannot create membership or Admin authority, and cannot authorize a sensitive
+command. Recovery permits only enrollment and confirmation of a new factor;
+successful completion revokes prior sessions and records an audit decision
+without raw evidence or secrets. Verify cross-user and cross-restaurant
+denial, invalidated authority before completion, self-approval denial,
+replay/concurrency and rollback, with isolated tests and independent review.
 
 Next bounded persistence slice (Large/High):
 
@@ -1295,6 +1330,919 @@ Bounded acceptance, 2026-11-23; full migration remains open:
   consumers, sensitive five-minute authority, recovery UX and full T1.3 remain
   open. The user commits; no staging, commit, push or deployment was performed.
 
+POS customer-selection authority (Large/High, bounded acceptance, 2026-11-23):
+
+- [x] Reproduce independent missing/primary-only/mismatched-session denial for
+      SelectCustomer, then acquire the existing typed MFA authorization before
+      cart/customer locks. Preserve Owner-only permissions and existing scope.
+- [x] Recheck after blocking helpers, before effects/private results, and around
+      atomic audit/commit. Return zero Cart on all failed outcomes.
+- [x] Prove runtime-role denial/isolation, lock expiry/cancellation, exact rollback,
+      revision/concurrency and active-customer/checkout compatibility. Match HTTP,
+      OpenAPI/client behavior and obtain independent supplied-source review.
+- [x] Resolve reviewer P3: a primary-only session expiring during the shared MFA
+      security-lock wait must return invalid authentication rather than missing
+      MFA. Real lock-expiry and invalid-primary gate regressions reproduced RED;
+      the minimal empty-factor liveness check passed matching verification and
+      independent re-review. Preserve live primary-only MFA_REQUIRED denial.
+
+Main owns the POS selection service, focused integration/HTTP/client tests and
+matching contract. No schema, provider, retained-data or UI change. The approved
+92-item baseline remains open. Recovery uses a compatible forward build retaining
+all records; an uncertain commit must be reconciled rather than blindly replayed.
+Use this existing tracker rather than creating a duplicate root TODO/plan.
+Current execution uses the existing feature branch; no stage/commit/push/deploy.
+
+Matching evidence, 2026-11-23:
+
+- Direct missing/primary-only/mismatched-session RED and actual cart-lock expiry
+  RED preceded the typed gate and post-helper rechecks. Runtime-role acceptance
+  covers removed/Manager/suspended membership, pinned deployment, revoked session,
+  cross-tenant cart/customer references, cart/checkout/customer lock expiry and
+  cancellation, interruption after reads/writes/audit, aborted SQL, exact twelve-
+  table rollback digests, revision concurrency, clear/HELD/archived behavior and
+  actual selected-customer CASH checkout with exact 10.00 total. Cookie HTTP
+  checks cover denial, success, Origin/CSRF and no-store; client denial never
+  automatically retries. Other-cashier/inactive-branch guards were source-reviewed
+  without dedicated new cases. No production UI or browser/device change.
+- Reviewer P3 reproduced primary-only expiry during the initial user-lock wait
+  returning missing-MFA403. The empty-factor branch now checks current active
+  account and session creation/expiry/revocation after security locks using the
+  database clock. Live unverified-primary onboarding retains MFA_REQUIRED403;
+  an initial verification-inclusive fix failed that existing expectation and was
+  narrowed. Assured-factor behavior and shared raw Authorized remain unchanged.
+- Final isolated full DB: 576 PASS, zero FAIL/SKIP, 217.89s; shared gate34 and
+  Owner55 PASS with exact owned tmpfs container/internal-network cleanup. Empty
+  Pickup reapply, populated downgrade refusal and forward recovery PASS. Ordinary
+  offline Go tests/vet PASS separately; they do not replace DB acceptance.
+- Matching root npm test: web98/883, contracts18/116, logs10, dev-stack7 PASS;
+  focused POS/organization client tests2/45 and typecheck PASS. Process-only
+  TEMP/TMP under task scratch fixed the first root dev-stack sandbox failure;
+  no global setting, permission, production expectation or script was weakened.
+  gofmt, changed TS Prettier and diff whitespace checks PASS.
+- Independent supplied-source reviewer accepted this bounded cutover and the P3
+  correction with no unresolved findings after inspecting current deltas and
+  matching checks; no reviewer tests/shell/network/writes/delegation occurred.
+  Artifacts: `.local/velopos-identity-20261122/pos-reviewed-full.log`,
+  `pos-primary-gate-final.log`, `pos-reviewed-owner.log`,
+  `pos-customer-root-tests-corrected.log` and scoped review packages. RED and failed
+  first-fix logs are retained. T1.3, remaining POS consumers and full migration
+  stay open; uncertain physical commit outcomes still require reconciliation.
+
+POS cart/checkout detail-read authority (Large/High, bounded acceptance, 2026-11-23):
+
+- [x] Reproduce direct Cart and Checkout reads without independent live MFA,
+      then acquire typed authorization and discard partial results on failure.
+- [x] Recheck after the existing blocking read helpers and immediately before
+      private return. Preserve own-cart, Owner, tenant/branch, exact pricing and
+      frozen customer/checkout snapshots; do not migrate shared raw begin.
+- [x] Verify runtime-role cookie HTTP and direct denial, success, isolation,
+      real lock expiry/cancellation, late SQL failures and unchanged business
+      state. Match OpenAPI/client behavior and independent scoped review.
+
+Main owns these two service readers and focused integration/contract/client tests.
+Other POS readers/writers remain separate inventory items. Dependencies are the
+existing typed MFA gate and retained POS helpers. No schema/provider/UI change.
+Recovery uses a compatible forward build preserving all records; read-only
+transactions roll back and must not expose partial business results.
+
+Matching evidence, 2026-11-23:
+
+- Missing/primary-only/mismatched session RED6 preceded typed MFA. Actual lock
+  expiry/cancellation RED4 preceded final guards. Runtime-role focused80 and
+  full626 PASS, zero FAIL/SKIP; full230.68s. Tests cover membership/deployment/
+  tenant/ownership scope, exact amounts and snapshots, revoked cookie HTTP,
+  late projection failure, aborted SQL and twelve-table unchanged-state digests.
+  Expiry is decided at the final database clock check; cancellation is also
+  checked after that decision. An initial test incorrectly expected future
+  expiry after that decision to override it; failed evidence remains retained.
+- Root npm test: web98 files/885 tests, contracts18/116, logs10, dev-stack7 PASS.
+  Focused client2/47, typecheck, offline Go suite/vet, gofmt, changed-file Prettier
+  and diff whitespace PASS. Client tests prove signal forwarding and no denial
+  retry; they do not perform a live request abort. No UI/browser/device claim.
+- Full DB forward recovery and exact ID/label-owned tmpfs container/internal
+  network cleanup PASS. Independent supplied-source reviewer returned bounded
+  PASS with no unresolved findings, without shell/network/writes/test execution.
+  Evidence: `.local/velopos-identity-20261122/pos-read-full.log`,
+  `pos-read-focused-final.log`, `pos-read-root-tests.log`, `pos-read-typecheck.log`
+  and the scoped source/evidence review packages. T1.3 remains open.
+
+POS list-read authority (Large/High, bounded acceptance, 2026-11-23):
+
+- [x] Reproduce independent live-MFA denial for List across terminals, carts,
+      shifts, checkouts, sales, receipts and products, including the barcode
+      HTTP alias. Acquire typed authorization while preserving existing SQL,
+      permissions, tenant/branch/own-cart scope, pagination and exact values.
+- [x] Guard every list return after blocking count/projection/product helpers;
+      discard the entire Page on failure, expiry or cancellation. Preserve
+      MENU_ONLY availability and existing historical compatibility.
+- [x] Prove direct/cookie denial, branch and tenant isolation, actual lock waits,
+      late failure, empty and success pages, unchanged business state, matching
+      API/client checks and scoped independent review on an isolated runtime DB.
+
+Main owns List and its focused integration/client/contract checks. Existing
+typed MFA and privateReadResult are dependencies. Shared raw begin, detail
+readers, writers, schema and UI are outside this bounded step. Recovery retains
+all records through a compatible forward build; read transactions roll back.
+
+Matching List evidence, 2026-11-23:
+
+- Direct RED21 and valid actual-lock RED10 preceded typed MFA/final Page guards.
+  Four immutable sales/receipt lock attempts failed for runtime privileges and
+  are harness failures, not RED. Those paths use count/projection/decision
+  interruption tests instead; no grants were widened. Focused196 PASS,0 FAIL/SKIP
+  covers exact10.00 CASH history, MENU_ONLY, pagination/empty/error results,
+  membership/deployment/branch/tenant/ownership scope, revoked cookies and
+  twelve-table unchanged digests. Full792 PASS,0 FAIL/SKIP,255.48s with recovery
+  and exact ID/label-owned cleanup. Initial full240.00s FAIL hit the test parent
+  deadline after added deliberate waits; harness4->5minutes/browser5->6minutes,
+  assertions and production timeouts unchanged. Failed logs are retained.
+- Root web98/893,contracts18/116,logs10,dev-stack7; client2/55,typecheck,Go suite/
+  vet, formatting and diff whitespace PASS. Initial sandbox Go cache-read failure
+  was resolved through supported check escalation, without ACL/global changes.
+  Independent supplied-source reviewer accepted List/harness with no unresolved
+  findings. Artifacts: `.local/velopos-identity-20261122/pos-list-full-final.log`,
+  `pos-list-focused-final.log`, `pos-list-root-tests.log`, `pos-list-go-final.log`
+  and scoped review packages. Later independent reader RED preparation is not
+  covered by this compiled List acceptance. No live client-abort/browser claim;
+  T1.3 and full migration remain open.
+
+Remaining POS private readers (Large/High, bounded acceptance, 2026-11-23):
+
+- [x] Prove missing/primary-only/mismatched authentication on Shift, Sale,
+      receipt and Quote, plus primary-only cookie payment-method access. Verify
+      no private result survives denied or failed pricing/loyalty helpers.
+- [x] Carry typed MFA through these remaining read-only paths and recheck before
+      all returns. Keep internal helpers, historical snapshots, exact amounts,
+      own-cart rules, Owner history visibility and payment permission filtering.
+- [x] Verify denial/scope/revocation, waits and late failures on isolated runtime
+      DB, HTTP/client/OpenAPI consistency and authorized independent review.
+
+Main owns these reader entry points and bounded tests/contracts. No settlement,
+schema, provider, UI or shared raw authorization change.
+Recovery keeps records through a compatible forward build; reads roll back.
+
+Matching remaining-reader evidence, 2026-11-23:
+
+- Entry RED14 and final-result RED10 preceded typed entry/final guards. Quote
+  loyalty-error prices are now discarded. Focused127 PASS,0 FAIL/SKIP,14.68s;
+  full889 PASS,0 FAIL/SKIP,268.04s on matching production source. Expanded test
+  wrapper initially panicked on untyped nil; corrected typed-zero wrapper only,
+  assertions and production unchanged. Failed evidence retained. Forward recovery,
+  populated downgrade refusal and exact ID/label-owned cleanup PASS.
+- Root98 web files/898tests,contracts18/116,logs10,dev-stack7; typecheck,offline
+  Go suite/vet,formatting/whitespace PASS. Explicit client selection1file/22tests
+  PASS; an extra nonmatching filename added no coverage. Independent scoped
+  source+exact diff review PASS, no unresolved findings. No nonzero loyalty-reward,
+  live browser-abort or full T1.3 claim. Later register-test preparation is excluded
+  from this compiled full binary. Artifacts: pos-other-focused-final.log,
+  pos-other-full.log,pos-other-root-tests.log,pos-other-go.log,pos-other-vet.log,
+  pos-other-typecheck.log and scoped reviewer packages in
+  `.local/velopos-identity-20261122`. T1.3/full migration remain open.
+POS terminal/register mutations (Large/High, bounded acceptance, 2026-11-23):
+
+- [x] Prove independent missing/primary-only/mismatched MFA denial for terminal
+      create/update and shift open/close, including idempotent replay. Main owns
+      service.go SaveTerminal and registers.go entry points; no shared raw begin,
+      cart/checkout/settlement, financial SQL, schema or UI redesign.
+- [x] Carry typed authorization through waits, effects, result reads, audit and
+      commit; return zero results on failure. Preserve revision/own-cashier rules,
+      exact cash, pending reconciliation close guards and immutable closed shifts.
+- [x] Verify isolated runtime DB denial/scope/revocation, expiry/cancel rollback,
+      replay/concurrency/faults, HTTP/client/contracts and independent review.
+
+Dependencies: accepted typed organization MFA and prior POS reader helpers.
+Recovery uses compatible forward code retaining all historical records/keys;
+failed local transactions roll back, uncertain commit requires reconciliation.
+No actual Admin grant, retained database change, commit/push or external action.
+
+Evidence: entry RED12 and result RED8; focused final146 PASS,0 FAIL/SKIP,27.26s.
+Reviewer found changed OpenShift replay returning409 after blocked-header expiry;
+real register_shifts lock RED reproduced it, then successful header recheck fixed
+it. Cancellation and live changed-payload conflict remain covered. Full corrected
+binary1005 PASS,0 FAIL/SKIP,294.22s; recovery/refusal and exact owned cleanup PASS.
+Root98web files/902tests,contracts18/116,logs10,dev-stack7,typecheck,final offline
+Go suite/vet,formatting/whitespace PASS. Independent reviewer bounded PASS with no
+unresolved findings. Logs pos-register-review-{red,green,full,go,vet}.log under
+`.local/velopos-identity-20261122`. Later cart preparation is excluded from this
+compiled full result. No full current-tree, T1.3 or migration completion claim.
+
+POS cart lifecycle mutations (Large/High, bounded acceptance, 2026-11-23):
+
+- [x] Main owns CreateCart/UpdateCart in pos/carts.go and a focused integration
+      test file, HTTP/client contract evidence. Prove missing/primary/mismatched
+      MFA denial before create replay and update/hold/resume/cancel. Reuse typed
+      authorization and accepted write helpers; preserve own-cart, revisions,
+      exact pricing, customer clearing, pending-payment and online-release rules.
+- [x] Recheck after waits/effects/projections/audit, discard failed results and
+      roll back coupled state. Use test-first expiry/cancel/SQL-failure cases,
+      concurrent/replayed commands and positive/negative scope checks.
+- [x] Run isolated runtime DB, contracts/client/Go regressions and authorized
+      independent review. No acceptance until matching required checks pass.
+
+Dependencies: typed MFA and terminal/register helpers; checkout/settlement and
+shared raw begin/finish remain separate. Recovery: compatible forward build,
+retain historical records and keys; reconcile uncertain commit without replay.
+Cart acceptance: focused172 PASS, full1147 PASS/0 FAIL/SKIP in326.50s, exit0.
+Root98 files/907 web tests, contracts18/116,logs10,dev-stack7,typecheck,offline
+Go suite/vet,gofmt/Prettier/whitespace PASS. Independent supplied-source reviewer
+final PASS; no unresolved findings. Populated downgrade refusal/forward recovery
+and full-ID/label task-owned cleanup PASS. Evidence: pos-cart-{focused-final,full}.log
+under .local/velopos-identity-20261122. Full binary predates checkout preparation.
+No T1.3 or full migration completion claim.
+
+POS checkout mutation authority (Large/High, bounded acceptance, 2026-11-23):
+
+- [x] Main owns PrepareCheckout/ConfirmPayment/EndCheckout in checkouts.go and
+      CompleteCheckout in sales.go, plus dedicated tests and affected contracts.
+      Prove independent live MFA before new commands and completed replay; retain
+      method permissions, own cashier, exact money, immutable sale snapshots and
+      atomic posting/reconciliation behavior. Existing settle SQL is unchanged.
+- [x] Carry typed authorization through waits, validation, savepoint recovery,
+      results, audit and commit. Authority failures must return zero Checkout
+      and roll back local effects, including reconciliation writes. Valid funds
+      evidence and domain posting failures retain their established recovery path.
+- [x] Verify isolated runtime DB positive/negative/replay/concurrency/late-failure
+      cases, financial consistency, HTTP/client/contracts and independent review.
+
+Dependencies: accepted typed MFA and POS write checks; cart acceptance passed its bounded full run/review. No shared raw helper migration, provider call or schema edit.
+Recovery retains payment/sale/command identity; uncertain commits require status
+reconciliation. No external transfer, retained DB change, commit/push or release.
+Checkout checkpoint: entry RED30 bypass failures, entry GREEN. Post-result RED16
+valid partial-data failures;4 consequential boundary-not-reached cases excluded.
+Corrected2 test assumptions about existing Owner reconciliation across cashiers.
+Final focused261 PASS/0 FAIL/SKIP,54.48s (session66942,exit0);root98 files/912
+web tests,contracts18/116,logs10,dev-stack7,typecheck,offline Go suite/vet,scoped
+format/whitespace PASS. Savepoint SQL/domain recovery, rollback after payment/
+receipt/shift/audit,exact12.34/20.00/7.66,concurrent same-key posting and5 cookie
+HTTP matrices verified. Final full11691:1378 PASS/0 FAIL/SKIP,379.54s,exit0;
+recovery/down-refusal and full-ID/label task-owned cleanup PASS. Reviewer found
+P3 customer-conflict classification regression; verified RED91054, fixed and
+GREEN66942/full11691. Same independent reviewer final bounded PASS, no unresolved
+findings. Final offline Go suite/vet exit0. New manual-reference,NONE/loyalty,
+rollback and exactly-once replay cases included. Evidence: pos-checkout-final-full.log,
+pos-checkout-customer-review-green.log and scoped review packages under
+.local/velopos-identity-20261122. Full binary predates online preparation.
+Harness8/9min and scratch600000ms accommodate prior326.50s+checkout51.86s;
+assertions,production timeouts and isolated target safeguards preserved.
+
+POS online import/prepaid authority (Large/High, bounded acceptance, 2026-11-23):
+
+- [x] Main owns ImportOnlineOrder in pos/online_orders.go and
+      SettlePrepaidOnlineOrder in pos/prepaid.go, dedicated tests and2 contracts.
+      Prove independent MFA before fresh/import-resume/completed replay. Retain
+      own cashier, scope,revision,paid/unreleased-hold/refund-review predicates,
+      exact amounts and atomic sale/order/event/audit posting.
+- [x] Add live rechecks after waits/helpers/effects/results/audit; zero failed
+      Cart/Checkout; preserve paid evidence and historical IDs on rollback.
+- [x] Verify isolated runtime DB,denial/replay/concurrency/financial failures,
+      HTTP/client/contracts and authorized independent review before acceptance.
+
+Dependencies: accepted cart and checkout helpers; checkout full/review PASS.
+Focused evidence: entry RED15 intended bypass failures; projection RED5 intended
+expiry failures. Focused GREEN session70622: 46 PASS, 0 FAIL/SKIP, 7.65s, exit0.
+Covers actual order lock wait/expiry, interrupted writes (pos_carts, pos_cart_items,
+sales, sale_items, sale_payments, receipts, online_orders, events, audit), tenant/
+membership isolation, direct cookie HTTP matrices (pos-cart, settle-prepaid) and
+concurrent replay idempotency. Root98 files/912 web tests, contracts18/116 routes,
+logs10, dev-stack7, typecheck and offline Go suite/vet PASS. Scoped review package
+prepared under .local/velopos-identity-20261122. Raw pos begin/finish callers reduced to 0; both dead raw helpers removed from pos/service.go.
+No provider calls, schema change or shared settle modification. All POS entrypoints now use typed MFA.
+Recovery: forward compatible build,retained identities; reconcile uncertain commit.
+
+Current verification: independent source review caught a row-scan error path
+that skipped the final authority check; rows now close before writeCheck.
+Two historical settlement fixtures now use the assured session for the actual
+nonmember rather than the Owner's session. The import result now includes its
+stored pricing revision internally so the creation and replay results agree.
+Earlier full runs failed these three checks; both logs are retained. Matching
+full session35841: 1539 PASS, zero FAIL/SKIP, 422.07s, exit0. Focused assured
+HTTP replay session82796: both routes return 200/no-store and exact THB12.34
+without changing business or audit state. Recovery/refusal and ID/label-verified
+cleanup passed. Current offline Go tests/vet, contracts18/116, focused Vitest
+4/75 and formatting/diff checks passed. The independent reviewer accepted the
+scoped source, contracts and evidence with no unresolved findings. Evidence:
+`pos-online-corrected-full.log` and `pos-online-assured-http.log` under
+`.local/velopos-identity-20261122/`.
+
+Inventory and Quality private reads (Large/High, bounded acceptance, 2026-11-23):
+
+- [x] Scope and test-first service checks for List, Get and ReadQuality. Nine
+      negative cases reproduced on isolated PostgreSQL before the typed gate.
+- [x] Carry typed live MFA through private reads; preserve resource permission,
+      branch/tenant scope and exact quantities; discard results on any failure.
+- [x] Verify matching HTTP/contracts, expired/canceled reads, isolation and
+      independent review. Keep all stock write paths and retained data intact.
+
+Main owns Inventory/Quality reader service, related GET contract descriptions
+and focused acceptance checks. Recovery uses a compatible forward build;
+the read-only transaction rolls back and never updates inventory state.
+Matching isolated tests: 69 PASS, zero FAIL/SKIP, 4.93s, including cookie
+denial on 19 GET routes, cross-tenant IDs and a live nonmember, and expiry or
+cancellation after count/detail/quality SQL. Combined full PASS1539 with the
+current production code and initial tests; the added cases ran separately.
+Offline Go suite/vet, contracts18/116, focused Vitest4/75 and format/diff checks
+passed. Message-only independent reviewer accepted the scoped delta and checks;
+no unresolved findings. Evidence: `inventory-read-isolation.log`.
+
+Inventory location and reorder settings authority (High, bounded acceptance, 2026-11-23):
+
+- [x] Prove missing/primary/mismatched MFA denial for location create/update
+      and reorder save/replay. Main owns only these methods and focused tests.
+- [x] Recheck after scope, reads and writes; retain revision, exact quantities,
+      durable replay and audit. Roll back every interrupted transaction.
+- [x] Verify isolated HTTP denial, failure, isolation, replay and concurrent revision
+      behavior; obtain independent review before accepting either mutation.
+
+Dependencies: typed organization MFA, accepted Inventory read checks, existing
+location/reorder permissions and ledger protections. Recovery preserves data and
+uses a compatible forward build; reconcile uncertain commits before retrying.
+
+Current schema43 isolated runtime result: `inventory-read-1795447142495.log`,
+78 PASS, 0 FAIL/SKIP, exit 0. Service success and replay, HTTP MFA denials,
+nonmember and foreign object/branch denials, interrupted writes, competing
+location revisions, exact quantities and audit/operation totals passed. Go tests,
+vet, contract inventory (18 modules/116 routes), OpenAPI formatting and diff
+checks passed. Independent message-only reviewer PASS, with no open findings.
+Remaining Inventory writes and full T1.3 remain open.
+
+Inventory opening balance authority (High, bounded acceptance, 2026-11-23):
+
+- [x] Bind opening balance posting and replay to current typed MFA, retaining
+      inventory permission, active location/branch scope and exact stock quantities.
+- [x] Check rollback of balances, movements, replay and audit on interrupted
+      transactions; run isolated acceptance and independent review.
+
+Dependencies: accepted Inventory settings authority and existing ledger trigger.
+Recovery preserves immutable movements and reconciles uncertain commits by key.
+
+Matching isolated runtime run `inventory-read-1795447388248.log`: 79 PASS,
+0 FAIL/SKIP, exit 0. Verified HTTP MFA denial, nonmember and foreign location
+denials, expiry/cancellation after ledger insertion, exact `4.000` balance and
+one movement, audit and replay operation after an assured retry. Focused Go
+tests/vet, contracts and formatting passed. Independent reviewer PASS.
+Next: live Inventory document and Quality writes; QuickStock has no current
+caller and its former HTTP route is covered by the retired-routes test.
+
+Inventory document creation authority (High, bounded acceptance, 2026-11-23):
+
+- [x] Apply live MFA to adjustment, count and transfer creation and replay.
+- [x] Verify tenant and branch scope, replay and atomic rollback of document,
+      items, saved result and audit in the isolated runtime; obtain review.
+
+Dependencies: existing Inventory permissions, document states, and balance
+snapshots. Recovery preserves prior documents and reconciles uncertain commits
+by original key. Count updates, transitions and Quality writes are separate.
+
+Matching schema43 isolated run `inventory-read-1795447641984.log`: 83 PASS,
+0 FAIL/SKIP, exit 0. Covered HTTP MFA denial on all three create routes,
+nonmember/foreign locations, expiry/cancellation after item insertion, stable
+exact replay, and one document, item, saved operation and audit per kind.
+Go tests/vet, contracts, formatting, diff check and independent review passed.
+
+Loyalty private read authority (High, bounded acceptance, 2026-11-23):
+
+- [x] Require live MFA for programs, accounts and ledger history reads; retain
+      active membership, tenant/branch scoping and existing quantities.
+- [x] Verify no data on denial or interruption, isolated acceptance and review.
+
+Depends on typed organization authorization. Loyalty write commands are separate.
+
+Loyalty write authority (High, bounded acceptance, 2026-11-23):
+
+- [x] Require live MFA for program and account creation/update and points
+      adjustments, including exact replay. Preserve tenant, permission and branch
+      scope, revisions, exact points and atomic mutation/audit/result.
+- [x] Verify all five HTTP routes with primary-only and assured sessions, service
+      denials for nonmembers/foreign branch, and expiry or cancellation after
+      write and during result finalization. Verify zero persisted operation after
+      interruption, exact replay after retry, and no result after replay expiry.
+- [x] Align the five OpenAPI descriptions and obtain independent review.
+
+Schema 43 isolated run `inventory-read-1795449894555.log`: 115 PASS, 0 FAIL/SKIP,
+exit 0; task-owned database and network removed. RED log
+`inventory-read-1795449581087.log` confirmed the missing primary-only gate.
+Contracts: 18 modules/116 routes. Independent review PASS, no actionable findings.
+The final authorization check is before commit; physical commit completion and
+browser behavior are outside this slice. T1.3 remains open.
+
+Pricing read authority (High, bounded acceptance, 2026-11-23):
+
+- [x] Apply live MFA to price-list and promotion collection/detail and discount
+      approval reads. Recheck after the query before returning data. Keep tenant,
+      branch and requester predicates and the existing response shapes.
+- [x] Verify five GET routes with current owner and primary-only sessions, direct
+      nonmember denial, expiry and cancellation after queries, and no-store.
+- [x] Align five OpenAPI descriptions and obtain independent review.
+
+Schema 43 isolated runs: RED `inventory-read-1795450104501.log`; GREEN
+`inventory-read-1795450247509.log`: 121 PASS, 0 FAIL/SKIP, exit 0. Offline Go
+test/vet, contract inventory (18 modules/116 routes), format and diff checks
+passed. Independent review PASS. Approvals were tested with an empty result;
+populated approvals and a branch-scoped member were not exercised by this slice.
+Pricing writes, five-minute sensitive authority and full T1.3 remain open.
+
+Pricing definition write authority (High, bounded acceptance, 2026-11-23):
+
+- [x] Require live MFA for create, update, submit, approve, activate and pause
+      of price lists and promotions. Retain scope, permissions, revisions,
+      state transitions and atomic audits. Return no definition on error.
+- [x] Verify primary-only HTTP denial across 12 routes, direct nonmember
+      denial, expiry and cancellation after SQL mutation, and expiry after
+      audit. Verify successful revisions, states and audit counts after retry.
+- [x] Align 12 OpenAPI descriptions and obtain independent review.
+
+Schema 43 isolated RED `inventory-read-1795450436175.log` reproduced primary-only
+creation success in both resources. GREEN `inventory-read-1795450617661.log`:
+134 PASS, 0 FAIL/SKIP, exit 0. Offline Go test/vet, contracts (18 modules/116
+routes), format and diff checks passed. Independent review PASS. Paused-to-active
+and a branch-scoped member were not exercised. Discount approval writes,
+five-minute sensitive authority and full T1.3 remain open.
+
+Pricing discount approval writes (High, bounded acceptance, 2026-11-23):
+
+- [x] Require live MFA for discount request, approve and reject, including
+      request replay. Preserve existing cashier/branch authority, amount and
+      revision checks, current approver validation and atomic audit effects.
+- [x] Verify three POST routes, exact replay, expiry/cancellation rollback, and
+      no approval data on denial. Align OpenAPI and obtain independent review.
+
+Schema 43 RED `inventory-read-1795450846292.log` reproduced primary-only
+creation success. GREEN `inventory-read-1795450980282.log`: 137 PASS,
+0 FAIL/SKIP, exit 0. Go test/vet, contracts (18 modules/116 routes), format
+and diff checks passed. Independent review PASS for the supplied delta.
+Branch-scoped members, five-minute sensitive authority, and browser behavior
+were outside this acceptance. Continue with Purchasing and Returns under T1.3.
+
+Purchasing read authority (High, bounded acceptance, 2026-11-23):
+
+- [x] Require live MFA on 19 GET routes, retaining permissions, tenant and
+      branch filters. Recheck after scoped reads and before returning data or
+      pagination totals. Align OpenAPI and obtain independent review.
+
+Schema 43 RED `inventory-read-1795451416747.log` reproduced primary-only
+reads. GREEN `inventory-read-1795451538151.log`: 157 PASS, 0 FAIL/SKIP, exit 0.
+Go test/vet, contracts (18 modules/116 routes), format and diff checks passed.
+Independent review PASS. Populated non-supplier detail, branch-scoped members
+and browser behavior were not exercised. Purchasing writes and full T1.3 remain
+open.
+
+Schema 49 Purchasing read follow-up: all 19 GET routes returned `404 NOT_FOUND`
+with no data and `Cache-Control: no-store` to an MFA-verified nonmember. The
+primary-only Owner denials and verified Owner expectations also passed on all
+19 routes. `check-db.mjs inventory-read` exited 0 (267 PASS entries including
+parents, 0 FAIL/SKIP; `inventory-read-1795523252616.log`), with disposal of the
+temporary container and internal network confirmed. Focused Storefront and
+Purchasing Go test and vet passed. Only test coverage changed; populated
+non-supplier details and browser behavior remain unverified.
+
+Schema 49 populated Purchasing document details: the authorized Owner read
+the saved purchase order (draft and submitted), posted receipt and dispatched
+supplier return over HTTP. Each response matched the persisted document ID,
+status, revision and item ID. The primary-only Owner received `403 MFA_REQUIRED`
+and the MFA-verified nonmember received `404 NOT_FOUND` for the same documents,
+without data. All responses used `Cache-Control: no-store`. The isolated
+`check-db.mjs inventory-read` run exited 0 (267 PASS entries including parents,
+0 FAIL/SKIP; `inventory-read-1795523851760.log`); container and network cleanup
+were confirmed. Focused Storefront/Purchasing Go test and vet passed. Only
+test coverage changed; this does not verify other details or browser behavior.
+
+Schema 49 populated shelf and replenishment details: the verified Owner read
+the shelf, its slot and assignment collections, and the completed replenishment
+task over HTTP. The response matched fixture IDs, task revision 3 and quantity
+`1.000`. The primary-only Owner received `403 MFA_REQUIRED` and the MFA-verified
+nonmember received `404 NOT_FOUND` on all four routes without data. All responses
+used `Cache-Control: no-store`. `check-db.mjs inventory-read` exited 0 (271 PASS
+entries including parents, 0 FAIL/SKIP; `inventory-read-1795524443725.log`), with
+temporary container and network cleanup confirmed. Focused Storefront/Purchasing
+Go test and vet passed. Only test coverage changed.
+
+Schema 49 populated receipt discrepancy detail: a receipt with `2.000`
+delivered, `1.000` rejected and a reason posted only the accepted `1.000`.
+The verified Owner read the matching receipt and item through the discrepancy
+detail endpoint. The primary-only Owner received `403 MFA_REQUIRED` and the
+MFA-verified nonmember received `404 NOT_FOUND`, both without data. All
+responses used `Cache-Control: no-store`. `check-db.mjs inventory-read` exited 0
+(271 PASS entries including parents, 0 FAIL/SKIP; `inventory-read-1795525001079.log`),
+and temporary container and network cleanup were confirmed. Focused Go test and
+vet passed. Only tests changed.
+
+Schema 49 populated receipt discrepancy list: filtering by the purchase order
+returned the posted receipt with the expected ID, status and revision, one
+result and a total of one. The same request returned `403 MFA_REQUIRED` for a
+primary-only Owner and `404 NOT_FOUND` for an MFA-verified nonmember, without
+items or a pagination total. All responses used `Cache-Control: no-store`.
+`check-db.mjs inventory-read` exited 0 (271 PASS entries including parents,
+0 FAIL/SKIP; `inventory-read-1795525577209.log`); temporary container and network
+cleanup were confirmed. Focused Storefront/Purchasing Go test and vet passed.
+Only test coverage changed.
+
+Schema 49 retained Purchasing branch assignment: an MFA-verified account
+with an active legacy `PURCHASING_STAFF` membership and a grant for the
+order's own branch received `403 FORBIDDEN` on the order list, the list
+filtered to that branch, and the existing order detail. All three responses
+omitted data and used `Cache-Control: no-store`. The current Owner-only policy
+was unchanged. `check-db.mjs inventory-read` exited 0 (272 PASS entries
+including parents, 0 FAIL/SKIP; `inventory-read-1795526230851.log`), and the
+temporary container and network were removed. Focused Go test and vet passed.
+
+Schema 49 Purchasing logout: the MFA-verified Owner read the populated order
+list and an existing order detail before logout. After the real identity
+service revoked that session, both requests with the same cookie returned
+`401 UNAUTHENTICATED` without data. Direct service calls using the previously
+authenticated context also rejected the session and returned neither order
+data nor pagination metadata. `check-db.mjs inventory-read` exited 0 (273 PASS
+entries including parents, 0 FAIL/SKIP; `inventory-read-1795526545803.log`),
+with temporary container and network cleanup confirmed. Focused Storefront
+and Purchasing Go test and vet passed. Only test coverage changed.
+
+Schema 49 Purchasing logout replay follow-up: while the MFA-verified Owner
+session was active, the original purchase-order create payload and idempotency
+key returned the saved result. After logout, the same HTTP request returned
+`401 UNAUTHENTICATED` without data, and the direct call with the old context
+returned `ErrInvalidToken` without the cached result. Counts for purchasing
+documents, inventory operations and organization audit events were unchanged.
+`check-db.mjs inventory-read` exited 0 (273 PASS entries including parents,
+0 FAIL/SKIP; `inventory-read-1795526787522.log`), with temporary container and
+network cleanup confirmed. Focused Go test and vet passed. Only tests changed.
+
+Schema 49 Purchasing write routes after logout: the previously MFA-verified
+Owner's revoked cookie returned `401 UNAUTHENTICATED` without data on all 38
+write routes. The existing primary-only Owner and MFA-verified nonmember
+cases passed again, and the order replay and unchanged business row-count
+checks remained in place. `check-db.mjs inventory-read` exited 0 (311 PASS
+entries including parents, 0 FAIL/SKIP; `inventory-read-1795527023846.log`),
+with temporary container and network cleanup confirmed. Focused Go test and
+vet passed. This is HTTP entry-gate evidence; only tests changed.
+
+Purchasing supplier write authority (High, bounded acceptance, 2026-11-23):
+
+- [x] Require live MFA on supplier and supplier-product POST/PATCH. Recheck
+      after reads, mutations, projection and audit before commit; preserve scope,
+      archive permission, revision and exact decimals. Align four OpenAPI operations.
+- [x] Require live MFA for order, receipt and supplier return writes and replays.
+      Verify rollback, replay and representative stock effects in isolation.
+- [x] Require live MFA for shelf and replenishment writes, including stock transfer.
+- [x] Continue the separate Returns module, starting with private reads.
+- [x] Require live MFA for customer return creation/transitions and refund
+      settlement, including rollback and cached replay.
+- [x] Require live MFA for exchange and void writes, including savepoint recovery.
+
+Schema 43 RED `inventory-read-1795451871789.log` reproduced a primary-only
+supplier write. GREEN `inventory-read-1795452017807.log`: 158 PASS, 0 FAIL/SKIP,
+exit 0. The four commands verified MFA denial, nonmember denial, expiry and
+cancellation rollback, retry with the expected revision, and one audit event per
+successful command. Go test/vet, contracts, formatting and diff checks passed.
+Independent review PASS for the supplied delta. Browser behavior and expiry
+during COMMIT were not exercised. Full T1.3 remains open.
+
+Customer Returns reads: schema 43 RED `returns-read-1795455159295.log`
+failed the promised MFA response on nine GET routes; the two quote requests
+hit Origin validation, so their RED results are inconclusive. GREEN
+`returns-read-1795455304592.log`: 48 PASS, 0 FAIL/SKIP, exit 0. Verified four
+Owner lists, nonmember denial, 11 HTTP primary-only denials (including two
+POST quotes with valid Origin/CSRF), return-list expiry/cancellation after
+projection, and financial-only returns/exchanges regressions. Go Returns
+test/vet, contract inventory, and diff checks passed. Scoped independent
+review PASS. Browser and other late-expiry paths were not exercised.
+
+Customer return and refund writes: schema 43 RED
+`returns-read-1795455421092.log` returned draft/refund data after authority
+expired. GREEN `returns-read-1795455573949.log`: 52 PASS, 0 FAIL/SKIP, exit 0.
+Verified draft expiry, canceled completion rollback, cash refund expiry and
+same-key retry (one 10.00 disbursement, two settlement events), and denial after
+cached result lookup. Focused Go test/vet and contract inventory passed;
+independent review found no actionable issues. Coverage does not establish all
+nine POST paths, regulated stock mutations, expiry during commit or browser
+behavior. Full T1.3 remains open.
+
+Exchange and void writes: schema 43 RED `returns-read-1795455687844.log`
+returned data on late expiry and persisted the completed exchange. GREEN
+`returns-read-1795455866533.log`: 55 PASS, 0 FAIL/SKIP, exit 0. Verified expiry
+after exchange draft insert and final projection, original revision preserved
+before retry, one replacement, no refund or phantom stock for an equal
+exchange, and Void reconciliation/forward recovery after a SQL failure.
+Focused Go test/vet, contract inventory and diff checks passed. Independent
+review found no actionable issues. Direct expiry after savepoint rollback,
+taxed/non-menu stock and exhaustive route/browser checks were not exercised.
+
+Schema 49 Returns HTTP entry denial: all 25 write routes (9 return/refund and
+16 exchange/void) returned `403 MFA_REQUIRED` with no data and
+`Cache-Control: no-store` for a primary-only Owner with valid session and
+CSRF credentials. The 11 read/quote checks and existing financial-only
+rollback, replay and recovery cases passed in the same run.
+`check-db.mjs returns-read` exited 0 (102 PASS entries including parents,
+0 FAIL/SKIP, 41.69s; `returns-read-1795513361500.log`) and removed the
+disposable container and network after ID/label verification. Focused
+Storefront/Returns Go test and vet passed. Production code was unchanged;
+positive and late-expiry coverage remains representative.
+
+Schema 49 Returns tenant boundary: all 36 mounted operations in the matrix
+(25 writes and 11 reads/quotes) denied a session with MFA but no membership
+in the addressed organization with `404 NOT_FOUND`, no data, and
+`Cache-Control: no-store`. The primary-only Owner matrix passed again.
+`check-db.mjs returns-read` exited 0 (142 PASS entries including parents,
+0 FAIL/SKIP; `returns-read-1795518094831.log`) and removed the disposable
+container and network. Focused Storefront/Returns Go test and vet passed.
+
+Schema 49 Returns revoked session: all 36 mounted operations in the matrix
+(25 writes and 11 reads/quotes) returned `401 UNAUTHENTICATED` without data
+when presented with the revoked cookie of the previously MFA-verified Owner.
+The fixture revoked only the synthetic session and restored it for later
+checks in the disposable database. Existing MFA and nonmember denials and
+financial reversal/refund checks also passed. `check-db.mjs returns-read`
+exited 0 (181 PASS entries including parents, 0 FAIL/SKIP;
+`returns-read-1795527276857.log`), with temporary container and network cleanup
+confirmed. Focused Storefront/Returns Go test and vet passed. This verifies
+the HTTP entry gate; only tests changed.
+
+Schema 49 Returns HTTP success: a verified Owner created, submitted, approved,
+and completed a menu-only return, then reported and confirmed a cash refund.
+All six routes returned the expected success status and `Cache-Control: no-store`.
+Exact completion and confirmation replays returned identical data. The fixture
+still verified rollback on cancellation or expiry, unchanged stock, and one
+10.00 cash disbursement with two settlement events. `check-db.mjs returns-read`
+exited 0 (142 PASS entries including parents, 0 FAIL/SKIP;
+`returns-read-1795520478591.log`) and removed the disposable container and
+network. Focused Storefront/Returns Go test and vet passed.
+
+Schema 49 refund confirmation replay: the same key with a changed note returned
+`409 CONFLICT`; the original payload returned `403 MFA_REQUIRED` from a
+primary-only Owner session and `401 UNAUTHENTICATED` after that session was
+revoked. No denial returned refund data. Readback preserved the confirmed
+status and revision, one 10.00 cash disbursement, and two settlement events.
+`check-db.mjs returns-read` exited 0 (143 PASS entries including parents,
+0 FAIL/SKIP; `returns-read-1795521879123.log`) and confirmed container and
+network cleanup. Focused Storefront/Returns Go test and vet passed.
+
+Schema 49 Returns replay/logout ordering: PostgreSQL reported that actual
+logout waited for the session lock held by a refund confirmation replay after
+its saved-result lookup. The earlier replay returned the saved refund; the
+same service call after logout returned `ErrInvalidToken` without data. The
+fixture still recorded one cash disbursement and two settlement events.
+The initial run compared raw database JSON with compact HTTP JSON; comparing
+decoded values passed. `check-db.mjs returns-read` exited 0 (182 PASS entries
+including parents, 0 FAIL/SKIP; `returns-read-1795527562770.log`), and temporary
+container and network cleanup were confirmed. Focused Go test and vet passed.
+Only tests changed; this verifies replay ordering, not concurrent fresh posting.
+
+Schema 49 first refund confirmation and logout: PostgreSQL showed logout
+waiting on the session lock after the confirmation attempted the cash
+disbursement insert. Canceling the confirmation before commit returned no data
+and left disbursement and settlement-event counts unchanged. Logout then
+succeeded, and a subsequent attempt with the same session was rejected.
+The existing concurrent confirmation test still completed with one
+disbursement. The first harness run timed out on a stale application-name
+filter; using the traced connection's configured name fixed the observation.
+`check-db.mjs returns-read` exited 0 (183 PASS entries including parents,
+0 FAIL/SKIP; `returns-read-1795527839611.log`), with temporary container and
+network cleanup confirmed. Focused Go test and vet passed. Only tests changed.
+
+Schema 49 successful first refund confirmation and logout: a separate cash
+sale and return produced a fresh refund. PostgreSQL showed logout waiting on
+the session lock at the disbursement insert; releasing the confirmation let
+it commit `CONFIRMED` at the next revision. The same HTTP request after
+logout returned `401 UNAUTHENTICATED` without data. The ledger recorded one
+`10.00` disbursement and two settlement events. `check-db.mjs returns-read`
+exited 0 (184 PASS entries including parents, 0 FAIL/SKIP;
+`returns-read-1795528000873.log`), with container and network cleanup confirmed.
+Focused Storefront/Returns Go test and vet passed. Only tests changed.
+
+Schema 49 Returns legacy branch assignment: an active synthetic Cashier
+with MFA and an assignment to the addressed organization's branch received
+`403 FORBIDDEN`, no data, and `Cache-Control: no-store` on all 36 mounted
+operations in the matrix. `check-db.mjs returns-read` exited 0 with 221 PASS
+entries including parents, no FAIL/SKIP, and verified container/network
+cleanup (`returns-read-1795528527088.log`). Focused Storefront/Returns Go
+test and vet passed. Only tests changed.
+
+Schema 49 Returns legacy-role follow-up: the branch-assigned, MFA-verified
+fixture was tested separately as Cashier, Manager, Inventory Staff and
+Purchasing Staff. Each role received `403 FORBIDDEN` with `no-store` and no
+data on all 36 routes (144 role/route pairs). `check-db.mjs returns-read`
+exited 0 with 332 PASS entries including parents, no FAIL/SKIP, and verified
+container/network cleanup (`returns-read-1795528847773.log`). Focused
+Storefront/Returns Go test and vet passed. No production policy changed.
+
+Schema 49 concurrent refund confirmation: two Owner HTTP requests released
+together with the same key and payload both returned `200` and identical data.
+A later exact replay returned the same result. The ledger retained one 10.00
+cash disbursement and two settlement events. `check-db.mjs returns-read` exited
+0 (144 PASS entries including parents, 0 FAIL/SKIP;
+`returns-read-1795522351399.log`) and confirmed container/network cleanup.
+Focused Storefront/Returns Go test and vet passed.
+
+Schema 49 Exchange and Void HTTP success: a verified Owner created, submitted,
+approved, confirmed settlement, and completed both adjustment types through
+their HTTP routes. Both flows retained rollback checks and returned
+`Cache-Control: no-store`. The equal exchange created one replacement without
+a refund or stock movement. Void replay preserved reconciliation after an
+injected posting failure; a new authorized command completed recovery. The
+first exchange replay comparison compared raw JSON bytes despite JSONB key
+ordering (`returns-read-1795520941687.log`). The rerun compared all decoded
+values and exited 0 (142 PASS entries including parents, 0 FAIL/SKIP;
+`returns-read-1795521345022.log`), with container and network cleanup confirmed.
+Focused Storefront/Returns Go test and vet passed. Only test coverage changed.
+
+Purchasing documents: schema 43 RED `inventory-read-1795452249425.log`
+reproduced a primary-only order create; GREEN `inventory-read-1795452525049.log`
+reported 163 PASS, 0 FAIL/SKIP, exit 0. Order create/submit exercised expiry and
+cancellation rollback and fresh-authority replay. Receipt post/supplier return
+dispatch rolled back on expiry after ledger insertion; successful retry and
+replay committed exactly one movement of +1.000/-1.000 respectively. Contract
+inventory and independent review passed. Runtime coverage was representative;
+all 24 routes, multi-line posting, expiry during COMMIT and browser behavior
+were not exercised individually.
+
+Schema 49 Purchasing HTTP denial matrix: all 38 write routes (4 supplier,
+24 purchasing document/draft and 10 shelf/replenishment operations) returned
+`403 MFA_REQUIRED` with `Cache-Control: no-store` and no data for a primary-only
+Owner presenting valid session and CSRF credentials. `check-db.mjs inventory-read`
+exited 0 (225 PASS entries including parents, 0 FAIL/SKIP, 107.92s;
+`inventory-read-1795499902791.log`). The disposable container and network were
+removed after ID/label verification. Focused Storefront/Purchasing Go test and
+vet passed. This extends entry denial evidence; positive and late-expiry paths
+remain representative rather than exhaustive. Production code was unchanged.
+
+Schema 49 Purchasing tenant boundary: all 38 write routes denied a session
+with MFA but no membership in the addressed organization with `404 NOT_FOUND`,
+no data, and `Cache-Control: no-store`. The primary-only Owner matrix passed
+again. `check-db.mjs inventory-read` exited 0 (267 PASS entries including
+parents, 0 FAIL/SKIP; `inventory-read-1795517905354.log`) and removed the
+disposable container and network. Focused Storefront/Purchasing Go test and
+vet passed. This and the Returns extension changed only test coverage.
+
+Schema 49 Supplier HTTP success: after testing session expiry and cancellation
+at the write and audit boundaries, the verified Owner created and updated a
+supplier and its product link through all four HTTP routes. Creates returned
+201 and updates 200, with `Cache-Control: no-store`. Tenant-scoped readback
+confirmed both revisions reached 2, the updated name and exact 4.25 unit cost,
+and exactly two audit events for each record type. `check-db.mjs inventory-read`
+exited 0 (267 PASS entries including parents, 0 FAIL/SKIP;
+`inventory-read-1795518565550.log`), with container and network cleanup
+confirmed. Focused Storefront/Purchasing Go tests and vet passed.
+
+Schema 49 Purchase Order HTTP success: after checking rollback on session
+expiry at the write and cancellation at audit, the verified Owner created a
+draft (`201`, revision 1) and submitted it for approval (`200`, revision 2).
+Both routes returned `Cache-Control: no-store`. Exact idempotency-key replay
+returned identical data; scoped readback confirmed the same document, item,
+status and revision. Session expiry during cached result lookup still returned
+no data. `check-db.mjs inventory-read` exited 0 (267 PASS entries including
+parents, 0 FAIL/SKIP; `inventory-read-1795519236303.log`), with container and
+network cleanup confirmed. Focused Storefront/Purchasing Go tests and vet passed.
+
+Schema 49 Purchasing stock document HTTP success: a verified Owner posted a
+receipt and dispatched a supplier return. Both routes returned `200`,
+`Cache-Control: no-store`, and revision 4 in the expected final state. Expiry
+after the attempted ledger insert left no movement. The next authorized request
+committed exactly one movement per document (`+1.000` receipt, `-1.000` return);
+exact HTTP replay returned the same data and left the movements unchanged.
+`check-db.mjs inventory-read` exited 0 (267 PASS entries including parents,
+0 FAIL/SKIP; `inventory-read-1795519790416.log`), with temporary container and
+network cleanup confirmed. Focused Storefront/Purchasing Go test and vet passed.
+
+Schema 49 Purchasing upstream HTTP transitions: an MFA-verified Owner
+approved and issued the order, submitted and approved the receipt, and
+submitted and approved the supplier return through six mounted routes. Each
+returned `200` and `Cache-Control: no-store`; scoped readback matched the
+expected document, item, state and next revision. The existing stock posting
+rollback and exact replay checks still passed. `check-db.mjs inventory-read`
+exited 0 with 574 PASS entries including parents, no FAIL/SKIP, and verified
+container/network cleanup (`inventory-read-1795529543675.log`). Focused
+Storefront/Purchasing Go test and vet passed. Only tests changed.
+
+Schema 49 Purchasing upstream transition expiry: all six transitions above
+paused at the service layer after the document status update and returned no
+result when the session expired. HTTP readback preserved the previous state,
+item and revision; the authorized HTTP retry with the same key committed the
+intended next state. Scoped independent review is recorded in T5.4.
+`check-db.mjs inventory-read` exited 0 with 580 PASS entries including parents,
+no FAIL/SKIP, and verified container/network cleanup
+(`inventory-read-1795529765610.log`). Focused Go test and vet passed.
+
+Schema 49 receipt posting and supplier return dispatch: two new expiry cases
+pause after the audit insert and assert no result. Readback preserves the
+approved document, item identity and revision; there is no stock movement or
+change to the warehouse balance, document event count, audit count or exact
+replay-key count. The authorized same-key HTTP retry and byte-identical replay
+leave one movement of +1.000 or -1.000 and one new row of each counted type.
+`check-db.mjs inventory-read` exited 0 with 582 PASS entries including parents,
+no FAIL/SKIP, and verified cleanup (`inventory-read-1795530767703.log`).
+Storefront vet and formatting passed. The expiry hook is service-level; parent
+order quantities and expiry during COMMIT are not directly asserted here.
+
+Receipt parent follow-up: both expiry points (after the first stock movement
+and after the audit insert) preserved the parent order's `ORDERED` status,
+revision, `0.000` accepted quantity and zero receipt-specific events. The
+same-key HTTP retry and replay left the parent `RECEIVED` with one additional
+revision, `1.000` accepted and one receipt-specific event. The schema-49
+`check-db.mjs inventory-read` run exited 0 with 582 PASS entries including
+parents, no FAIL/SKIP and verified cleanup (`inventory-read-1795531028458.log`).
+Storefront vet passed. This does not exercise expiry during COMMIT.
+
+Receipt posting and supplier return dispatch replay follow-up: expiry after
+the saved result lookup returned no data for either command. The subsequent
+authorized HTTP replay matched the original bytes. The movement, balance,
+document revision, event, audit, replay-key and receipt-parent assertions
+still matched a single successful write. `check-db.mjs inventory-read`
+exited 0 on schema 49 with 584 PASS entries including parents, no FAIL/SKIP,
+and verified container/network cleanup (`inventory-read-1795531281909.log`).
+Storefront vet passed. The expiry interruption was at the service layer.
+
+HTTP follow-up: the actual receipt-post and supplier-return-dispatch replay
+routes reached the saved-result lookup, then the session expired. Both
+returned `401 UNAUTHENTICATED` and `Cache-Control: no-store` without data.
+The authorized replay still matched the original bytes, and the stock,
+document, audit, replay and receipt-parent readbacks still showed one
+successful write. Schema-49 `check-db.mjs inventory-read` exited 0 with
+591 PASS entries including parents, no FAIL/SKIP and verified cleanup
+(`inventory-read-1795535785629.log`). This does not exercise COMMIT expiry.
+
+HTTP write follow-up: receipt posting and supplier return dispatch also
+returned `401 UNAUTHENTICATED` with `no-store` and no data when the session
+expired after the audit insert, before COMMIT. Both preserved the approved
+document and revision, stock, audit, replay and receipt-parent state. The
+same-key retry and replay still produced one durable write. Schema-49
+`check-db.mjs inventory-read` exited 0 with 593 PASS entries including
+parents and no FAIL/SKIP; all four HTTP expiry cases and cleanup passed
+(`inventory-read-1795536028373.log`). No production code changed.
+OpenAPI now documents the two measured expiry outcomes on receipt posting
+and supplier return dispatch. The description assigns `no-store` to the
+Purchasing handler without claiming it for early middleware denials.
+`node scripts/check-contracts.mjs` passed (18 modules, 116 documented routes).
+
+Shelf and replenishment: schema 43 RED `inventory-read-1795452718310.log`
+reproduced a primary-only shelf write. GREEN `inventory-read-1795454841720.log`:
+164 PASS, 0 FAIL/SKIP, exit 0. Expiry after the first stock movement left the
+warehouse at 3.000; the successful retry and its replay left it at 2.000.
+Expiry during replay returned no data. Independent review found no actionable
+issues in the supplied delta. Runtime checks were representative; not all ten
+routes, concurrent completion, or expiry during COMMIT were exercised.
+
+Isolated schema43 `inventory-read-1795449379519.log`: 109 PASS, no FAIL/SKIP,
+exit 0. Verified all three HTTP MFA denials with no-store, nonmember and
+foreign-branch denial, and no data on expiry/cancellation after projection.
+Go tests/vet, contract inventory, formatting, diff and independent review passed.
+
+Inventory count item update authority (High, bounded acceptance, 2026-11-23):
+
+- [x] Require live MFA for count updates and exact replay while preserving
+      assignee, branch, revision, and exact quantity rules.
+- [x] Verify interrupted writes and replay on the isolated runtime; obtain
+      independent review. Reconcile uncertain commits by the original key.
+
+Schema43 isolated `inventory-read-1795447897071.log`: 84 PASS, no FAIL/SKIP,
+exit 0. Primary-only HTTP denial, nonmember denial, stale revision conflict,
+expiry/cancellation after item update, exact `6.000` at revision 2, byte-stable
+replay and one durable result/audit passed. Go tests, vet, contracts and
+formatting passed. Independent reviewer PASS. Next: document transitions.
+
+Inventory document transition authority (High, bounded acceptance, 2026-11-23):
+
+- [x] Require live MFA for transition commands and their scoped replays.
+- [x] Preserve state, revision, branch, quantity and stock movement rules;
+      verify interrupted posting/transfer rollback and obtain review.
+
+Depends on accepted document creation, count updates and ledger triggers.
+Recover by reconciling the original command key; never reverse ledger rows
+to compensate for an uncertain commit. Purchasing remains a separate caller.
+
+Schema43 isolated `inventory-read-1795448339696.log`: 100 PASS, no FAIL/SKIP,
+exit 0. Covered all 14 HTTP MFA denials, nonmember and replay checks, and
+stock-ledger rollback on expiry/cancellation during count posting and
+cross-branch dispatch/receipt. Quantities and audit counts remained exact.
+Go tests/vet, contracts, formatting, diff and independent review passed.
+Next: Inventory Quality mutations.
+
+Inventory Quality batch and recall authority (High, bounded acceptance, 2026-11-23):
+
+- [x] Require live MFA for batch creation/update and recall creation, including replay.
+- [x] Verify rollback on interrupted writes, current scope and exact replay; obtain review.
+
+Keep immutable lot identity and revision rules. Reconcile uncertain commits
+by original key. Write-off mutations follow separately.
+
+Isolated schema43 `inventory-read-1795448544666.log`: 104 PASS, no FAIL/SKIP,
+exit 0. Three HTTP MFA denials, nonmember checks, expiry/cancellation after
+each mutation, byte-identical replay, exact revisions and audit counts passed.
+Go tests/vet, contract inventory, formatting and independent review passed.
+
+Inventory Quality write-off authority (High, bounded acceptance, 2026-11-23):
+
+- [x] Require live MFA for request, approve, reject, post and exact replay.
+- [x] Prove ledger, document and audit rollback on interrupted posting; verify
+      permission and replay in the isolated runtime and obtain review.
+
+Preserve branch permissions, revisions and exact quantities. Reconcile an
+uncertain commit by its original key before retrying.
+
+Isolated schema43 `inventory-read-1795449156444.log`: 105 PASS, no FAIL/SKIP,
+exit 0. Verified all four HTTP denials, nonmember access denial, expiry and
+cancellation rollback, byte-identical replay, one `-1.000` movement and a
+`3.000` balance. Five saved results and audit events; no repeat effects.
+Go tests/vet, contracts, formatting, diff check and independent review passed.
+
 Customer writer authority (Large/High, bounded acceptance, 2026-11-23):
 
 - [x] Add independent live MFA gates to Save, SaveGroup, Archive and Membership,
@@ -1554,14 +2502,24 @@ Status: BLOCKED for the affected decisions, not for the now-complete import gate
       18 route modules and 115 route entries. Neither proves live schema or parity.
 - [x] Inspect root validation script names/effects; do not run application
       integration/build/browser checks for a documentation-only reconciliation.
+- [x] 2026-11-24 baseline for the implemented slice: HEAD `12ca95a` on
+      `feature/fix-system-` with local changes, required and highest migration
+      version 45, and 18 route modules / 116 entries per T5.1. T5.2 records
+      fresh and synthetic retained-data runs on PostgreSQL 17.6. The checked
+      runner uses a uniquely labelled internal network and tmpfs database,
+      publishes no host port, attaches no retained volume, and checks IDs and
+      labels before removing the resources. See T2.3 for dirty-state recovery
+      and T5.3 for the remaining live browser target limitation.
 - [ ] Confirm selected slice baseline, live dependencies, explicit disposable DB
-      target ownership/recovery and safe test environment before implementation.
+      target ownership/recovery and safe test environment for each subsequent
+      slice before implementation.
 
 Files: source evidence E01-E17 (read only); future scoped compatibility/runbook
 notes if required. Dependencies: T0.1; selected B01/T1.1/T2.1 decisions.
 Acceptance: reproducible source and runtime target evidence for the selected
 slice, no mixed user changes or assumed disposable retained data.
-Status: PARTIAL preparation; database/runtime/route-parity acceptance not run.
+Status: Verified baseline for the implemented slice; later slices and live
+provider/browser acceptance still require their applicable target evidence.
 
 ## Implementation and acceptance tasks
 
@@ -1591,6 +2549,335 @@ Acceptance: Reviewed transition/ownership tables cover valid/invalid transitions
 
 ### T1.2 Specify versioned contracts for each selected slice
 
+- [/] Native modifiers: [D03 wire proposal](design.md#native-menu-modifier-wire-proposal-t12)
+      records Owner and customer projections, revision consistency, replay,
+      retained setup compatibility and customer reconfirmation cases. No route,
+      migration or runtime behavior changed. Quota and bulk import policy remain
+      separate B14 and B16 decisions.
+- [/] [Shared revision cutover](design.md#shared-revision-cutover-prerequisites):
+      traced retained/organization setup, catalog maintenance and import,
+      and variant-wide recall paths that can invalidate a native quote.
+      Added writer coordination, coherent read and payment admission cases.
+      Native activation still requires implementation and independent evidence.
+- [/] Added Go selection validation for groups loaded for one menu item.
+      It rejects duplicate groups/options, choices from the wrong group,
+      unavailable options, and choices outside required/optional bounds.
+      A required group without enough sellable options blocks selection.
+      The focused test first failed to compile without the validator, then
+      `go test ./internal/modules/restaurant -count=1` passed. No service calls
+      it yet; item/tenant resolution, pricing, revision checks and payment
+      integration still need their own evidence.
+- [/] Owner modifier service read reuses live Owner MFA and rechecks it
+      immediately before returning scoped groups. On isolated schema 47,
+      an assured Owner read an empty registered item; an unknown item and
+      missing, primary-only, mismatched and foreign sessions returned no
+      data. `check-db.mjs green` passed 47 entries including parents, no
+      FAIL/SKIP, exit 0 and verified cleanup (`green-1795492521839.log`).
+      First run expected the wrong foreign-account denial category and
+      cleaned up (`green-1795492459001.log`). The full run already in flight
+      predates this service change. No route or revision was exposed;
+      independent review of this authority boundary remains open.
+- [x] Populated Owner read on isolated schema 47 returned both saleable
+      and disabled options with exact `12.35` and `0.00` prices. A second
+      read waited on a verified PostgreSQL lock until its session expired,
+      then returned an invalid-session error with no modifier data.
+      `check-availability.mjs modifiers` exited 0 and verified container
+      and network cleanup (`modifiers-1795492686918.log`).
+- [/] Owner edit domain logic applies only explicitly submitted groups/options
+      to the scoped current item, preserves omitted choices, and normalizes
+      exact two-decimal prices without rounding. Unknown or wrong-parent IDs,
+      duplicate edits and invalid bounds return no candidate state. New choices
+      stay distinct until the future transaction assigns durable IDs. The focused
+      test failed to compile without the helper; the restaurant package passed
+      after implementation. No database write or endpoint uses it yet.
+- [/] Internal Owner modifier command now uses the edit helper, live MFA and
+      the existing organization lock to commit choices, before/after revision
+      and audit together. Migration 49 grants column-limited writes and keeps
+      tenant policies in force. Isolated schema-49 tests proved one save and
+      audit, exact replay, changed-payload and stale-revision rejection
+      (`modifiers-1795493489441.log`, exit 0, cleanup verified). A subsequent
+      isolated schema-49 run proved that audit failure rolled back choices and
+      revision and allowed a retry with the same key. Two writes at one expected
+      revision produced one commit and one conflict, with one revision/audit
+      added. Replaying the first write after later commits returned its original
+      result. `modifiers-1795493688538.log`: exit 0, cleanup verified. Other
+      revision participants and independent review remain required before an
+      HTTP route can be exposed.
+- [/] Organization Setup now appends before/after menu history under the
+      existing organization lock in the same transaction as its menu change
+      and audit. Setup replay retains its own command key and adds no revision;
+      existing modifiers stay intact. On schema 49, the regression first
+      observed revision 3 and no menu history after the price edit
+      (`modifiers-1795493797650.log`). With the change, it observed revision 4
+      with the changed price and rejected a modifier write based on revision 3
+      (`modifiers-1795493910182.log`, exit 0, cleanup verified). Focused Go
+      checks passed for restaurant, storefront and transport.
+- [/] Retained branch setup records changes to the registered menu under
+      its existing Owner MFA transaction and organization lock. A branch-only
+      save leaves the shared revision unchanged; a registered item's price
+      edit advances it once and preserves modifiers and legacy replay.
+      The regression first observed revision 4 instead of 5
+      (`modifiers-1795494035420.log`), then passed on isolated schema 49
+      (`modifiers-1795494099331.log`, exit 0, cleanup verified). Focused Go
+      checks passed for restaurant, storefront and transport.
+- [/] Catalog variant saves now share the setup revision allocator. A price
+      edit for a registered menu variant records the old and new price in the
+      same transaction as the catalog audit. Cost-only and out-of-menu edits
+      do not increment the revision. The schema-49 regression first observed
+      revision 5 with no variant history (`modifiers-1795494203982.log`), then
+      passed with revision 6. An injected audit failure rolled back the price
+      and revision (`modifiers-1795494313520.log`, exit 0, cleanup verified).
+      Focused Go checks passed for catalog, restaurant, storefront and transport.
+      Cross-writer acceptance and independent review remain open.
+- [/] Catalog product and taxonomy edits now append menu history under the
+      existing organization lock and in the same transaction as the audit.
+      Renaming a menu product, registered category and referenced unit advanced
+      the shared revision from 6 to 9; a description-only product update and an
+      unrelated unit rename left it unchanged. Isolated schema-49 regression:
+      revision 6 before the fix (`modifiers-1795494429701.log`), PASS after
+      (`modifiers-1795494508985.log`, exit 0, cleanup verified). Focused Go checks
+      passed for catalog, restaurant, storefront and transport.
+- [/] Existing Catalog Import now records one before/after menu revision
+      for an UPDATE batch that changes the registered menu. It reads affected
+      products under the existing organization lock and import job lock.
+      Preview and completed replay add no revision. An injected completion
+      audit failure left revision 9 and allowed the same import job to retry.
+      The successful batch advanced to revision 10 and recorded both prices.
+      Isolated schema-49 regression: revision 9 before the fix
+      (`modifiers-1795494622585.log`), PASS after
+      (`modifiers-1795494696689.log`, exit 0, cleanup verified). Focused Go checks
+      passed for catalog, restaurant, storefront and transport. This uses the
+      existing catalog import; B16 remains open for native menu import.
+- [/] Inventory Recall now records the first variant-wide recall of a
+      registered menu variant in the same revision transaction as its immutable
+      recall, audit and command result. A lot-only recall, an exact replay,
+      and a later recall of the already recalled variant add no menu revision.
+      An injected audit failure rolled back the recall and allowed retry with
+      the same key. Isolated schema-49 regression: revision 10 before the fix
+      (`modifiers-1795494892358.log`); PASS with revision 11 and the recall
+      transition recorded (`modifiers-1795494961356.log`, exit 0, cleanup
+      verified). Focused Go checks passed for inventory, restaurant, storefront
+      and transport. Payment admission and cross-writer acceptance remain open.
+- [/] Isolated schema-49 concurrency checks observed both lock waits:
+      a modifier edit held the organization lock while blocked on modifier
+      options, and the retained setup or import writer waited behind it.
+      Each pair committed in sequence, kept the new modifier and price, and
+      added exactly two revisions. Replays added none and returned the original
+      modifier result. `modifiers-1795495088070.log`: exit 0, cleanup verified.
+      The inverse order also passed: with setup or import holding the
+      organization lock first, the stale modifier edit and its retry both
+      returned conflict without a result or changes to modifier groups.
+      Each writer committed exactly one revision and preserved its new price.
+      `modifiers-1795495210548.log`: exit 0, cleanup verified.
+- [/] While the first restaurant waited on its organization lock, a second
+      restaurant with a different assured Owner committed under the same
+      request key. The two writes advanced their own revisions to 18 and 1.
+      Scoped runtime queries returned only their own history, and foreign item
+      reads and edits returned no payload. A first fixture reused one account
+      and waited on the existing MFA account lock (`modifiers-1795495324039.log`);
+      the distinct-Owner fixture passed on isolated schema 49
+      (`modifiers-1795495418203.log`, exit 0, cleanup verified).
+      Stale payment admission still needs coverage.
+- [/] Internal Owner read now returns the scoped modifier projection and shared
+      revision under the same organization lock, with live MFA rechecked before
+      returning. On isolated schema 49 it returned the committed revision and
+      choices after each of the four cross-writer sequences; an expired session
+      after a verified lock wait returned neither revision nor choices.
+      `modifiers-1795495573960.log`: exit 0, cleanup verified. Focused Go checks
+      passed for restaurant, storefront and transport. The retained payment
+      path uses an existing order snapshot; native confirmation revalidation
+      still needs its own checkout admission path and acceptance coverage.
+
+- [/] The native quote pricing component resolves selected choices inside the
+      caller's scoped menu transaction and returns stable group/option IDs,
+      labels, exact extra prices, and their sum in minor units. The domain test
+      verifies exact addition and stable ordering; isolated schema 49 verified
+      the stored 12.35 extra and denial of a disabled option
+      (`modifiers-1795495726725.log`, exit 0, cleanup verified). Focused Go
+      checks passed for restaurant, storefront and transport.
+- [/] Internal native menu quote now reads scoped item eligibility, choices
+      and revision within the caller's consistent transaction. It calculates
+      line totals and subtotal from server prices, preserving separate lines
+      when the same item has different selections. The focused Go tests
+      verified line totals of 124.70 and 50.25, subtotal 174.95, the returned
+      revision, and rejection of fractional count quantities. Storefront,
+      restaurant and transport Go tests passed. This quote path still needs
+      isolated PostgreSQL verification, confirmation binding and checkout
+      admission. Retained quote and payment routes are unchanged.
+- [/] Native menu confirmation now binds the restaurant and priced line
+      projection. Revalidation recomputes it within the caller's locked
+      checkout transaction. Go tests show that an unrelated revision can
+      preserve confirmation, but a changed quantity, base or option price,
+      category, unit, or sale eligibility returns a quote conflict and no
+      priced result. Focused storefront, restaurant and transport tests
+      passed. On isolated schema 49, the runtime role priced two selections
+      of one item at 194.70 and 85.25 (subtotal 279.95) and accepted the same
+      confirmation while unchanged. Within savepoints under the organization
+      lock, a category rename, a unit rename, disabling a selected option, and
+      recording a variant-wide recall each returned a quote conflict with no
+      priced result. `modifiers-1795496141334.log`: exit 0, cleanup verified.
+      This verifies repricing against PostgreSQL.
+- [/] Native checkout quote now binds the menu confirmation, fulfillment
+      mode, configured flat delivery fee and final total. With menu subtotal
+      279.95 and delivery fee 15.25, schema-49 acceptance verified total
+      295.20 and accepted the unchanged confirmation. A fee change, mode
+      change or stale menu returned a quote conflict without a payable total.
+      Focused Go checks passed; `modifiers-1795496316630.log`: exit 0, cleanup
+      verified. Cart authority, delivery area validation and actual payment
+      admission remain open, along with the B14 decisions.
+- [/] VLP-015 delivery-area predicate: internal Go validation compares
+      the geographic distance between confirmed points against the restaurant's
+      radius in meters. Focused tests cover in/out near the threshold, missing
+      and invalid points, missing radius, and crossing the antimeridian.
+      Storefront, Restaurant and Transport package tests passed locally.
+      Restaurant radius settings, delivery-point confirmation, checkout
+      enforcement and end-to-end acceptance are still open. No live checkout
+      or public API uses this predicate yet.
+- [/] Internal prepayment check now combines stored mode availability,
+      delivery-area validation and locked quote revalidation. On schema 49,
+      an open Delivery request inside the radius kept its confirmed 295.20
+      total. Missing location, out-of-area delivery, stale confirmation and a
+      mode pause each returned an error with no quote. Go package tests passed;
+      `modifiers-1795497043967.log`: 29 PASS entries including parents, no
+      FAIL/SKIP, exit 0, cleanup verified. Cart authority, the source of
+      confirmed delivery inputs, persisted intents and payment effects remain
+      open. No API exposes this check yet.
+- [x] Single-restaurant pricing boundary: an empty cart and a cart with a
+      valid local line followed by a real second-restaurant variant returned
+      no items, subtotal or confirmation. Revalidation returned ErrQuote with
+      no payable result in both cases. Isolated PostgreSQL schema 49:
+      `modifiers-1795497163145.log`, 30 PASS entries including parents, no
+      FAIL/SKIP, exit 0 and verified cleanup. This does not establish saved-cart
+      ownership, expiry or payment-intent behavior.
+
+- [/] Native order availability: [D02](design.md#native-order-availability-contract-t12-proposal)
+      records the Owner settings contract and public admission predicate for
+      VLP-007/VLP-032. It separates weekly hours and pause from editable setup,
+      preserves legacy fulfillment semantics, and defines checks for races,
+      replay and paid or unknown obligations. The Owner API, schema and web
+      client now have focused evidence under T3.1/T4.1/T5.2/T5.3. Public
+      admission is still open. Changes to unpaid payment attempts depend on B03.
+- [/] Native admission can now read stored service-mode flags and hours in a
+      caller-scoped transaction under the restaurant lock. The caller must
+      establish selling eligibility and sample server time after taking the
+      lock. On isolated PostgreSQL schema 49, no saved schedule denied new
+      orders; a Pickup pause left Takeaway open; a false selling-eligibility
+      input, disabled mode and the exact closing time were denied. Go package tests
+      passed. `modifiers-1795496721575.log`: exit 0, temporary resources removed.
+      On schema 49, the actual Owner pause write and a scoped admission check
+      were tested in both lock orders. PostgreSQL reported the competing
+      transaction waiting; admission first saw open settings, and pause first
+      committed before admission returned PAUSED. `green-1795496914759.log`:
+      50 PASS entries including parents, no FAIL/SKIP, exit 0 and verified
+      cleanup. The internal checkout validator also rejected paused Pickup with
+      `ErrClosed` and no quote, rejected reuse of a Pickup confirmation for
+      Takeaway with `ErrQuote`, and accepted a matching Takeaway confirmation
+      for `279.95` with a `0.00` delivery fee. The schema-49 `check-availability.mjs
+      modifiers` run (`modifiers-1795528259283.log`) exited 0 with 33 PASS
+      entries including parents, no FAIL/SKIP, populated downgrade/reapply,
+      and verified container/network cleanup. This check does not create an
+      order or payment and does not exercise public HTTP or a browser.
+      The public caller, committed order/replay behavior and independent
+      review remain open. No payment or retained route behavior changed.
+- [/] Internal checkout admission now denies `DINE_IN` until it can validate
+      a scoped private table session. With the mode on, hours open and a
+      matching price, the isolated regression first returned a quote
+      (`modifiers-1795535402526.log`); it now returns not found with no quote.
+      The first attempt used a disabled fixture and did not reproduce the
+      issue (`modifiers-1795535334814.log`). `check-availability.mjs modifiers`
+      on schema 49 exited 0 with 33 PASS entries including parents, no FAIL/SKIP,
+      and verified cleanup (`modifiers-1795535462541.log`). Tests retained the
+      Pickup, Takeaway and Delivery checks. Storefront/Restaurant Go tests and
+      Storefront vet passed. No route, migration or session implementation was
+      added; independent review remains open.
+- [/] Native table QR: [D02](design.md#native-table-qr-and-private-session-boundary-t12-proposal)
+      records the existing native setup and legacy checkout callers, separates
+      public table identification from private session authority, and proposes
+      private proof transport, scoped persistence, and lifecycle denials.
+      T1.3 review, reload/lifetime/table-change policy, and the versioned
+      producer/consumer remain open; saved-cart behavior depends on B14.
+- [/] [D02 v1 wire draft](design.md#proposed-v1-paths-and-payloads)
+      specifies resolve, explicit Dine-in start and end payloads and denials.
+      It separates a lost start response from order/payment recovery and
+      specifies how end and order admission interact. Review and session
+      lifecycle decisions are required before exposing these paths.
+      The existing contract checker passed (18 modules, 116 routes), which
+      verifies the retained inventory only; the new paths are design-only.
+- [/] [D02 persistence draft](design.md#proposed-persistence-and-transaction-checks)
+      traces the native table's composite organization key and the existing
+      storefront organization write lock. Requires a post-lock wall-clock
+      expiry check and serial end/admission without touching committed work.
+      No schema or runtime behavior was changed; add contention tests when
+      the session lifecycle and authority are accepted.
+- [/] Internal native QR lookup resolves the issued QR only for an active
+      native table in the addressed restaurant with QR enabled. Its JSON
+      projection contains only the table code and name. On isolated schema 49,
+      repeated scans resolved the same table; missing/wrong QR, a different
+      organization ID, inactive table and disabled QR returned no context.
+      `green-1795497827423.log`: 51 PASS entries including parents, no FAIL/SKIP,
+      exit 0, cleanup verified. No route or private customer session was added.
+- [/] A normal organization setup edit with QR still enabled now preserves
+      the QR of an existing active table. Explicit generation still issues a
+      QR, and the explicit branch path is unchanged. The isolated RED run
+      (`green-1795497994479.log`) reproduced QR reissue on a rename; GREEN
+      (`green-1795498052864.log`, exit 0) verified that the original QR still
+      resolves to the same table with the new name and no token is reissued.
+      Both runs cleaned up their resources. Go package tests and OpenAPI
+      inventory passed. Independent review, browser acceptance and the
+      policy for disabling and re-enabling QR remain open.
+- [/] The setup web client now sends `qr_enabled` for organization edits and
+      retains `generate_qr` for explicit branch setup. The failing client test
+      reproduced `generate_qr: true` on a branchless edit; the client and
+      mounted setup tests now pass for both paths (95/95). Web typecheck
+      and focused ESLint passed. Chromium on the current static build with
+      intercepted APIs verified edits at 390 and 1280 CSS pixels: keyboard
+      submit sent the existing table code and `qr_enabled` without a generation
+      or branch flag, then reached Payments without displaying a new secret.
+      The table field stayed in the viewport with a longer name. The focused
+      Playwright run passed 6/6 including the four Pickup viewports. This is
+      browser behavior with synthetic responses, separate from the Go and
+      PostgreSQL evidence above. A follow-up Chromium run at 360 CSS pixels
+      used the current web build, real Go API, a TOTP-verified fixture Owner
+      and disposable schema-49 PostgreSQL. The form renamed a branchless
+      table, the API returned 200 with no issued QR, and PostgreSQL retained
+      the same table ID and QR hash. The first run reached a later setup
+      step; the successful run returned to the table form before editing.
+      `check-qr-browser.mjs 360` exited 0; both runs removed their isolated
+      container and network. Independent review remains open.
+- [x] QR regression evidence: an ordinary enabled save adding T2 returned
+      only T2's QR, and the original T1 QR and new T2 QR both resolved to
+      their own tables. Explicit rotation of T1 retained its table ID,
+      issued a new QR and caused the previous QR to return not found.
+      `check-db.mjs green` passed on disposable schema 49 and removed its
+      container and internal network (`green-1795498847287.log`).
+      This test-only follow-up leaves disable/re-enable policy and independent
+      review open; no public QR route or private table session was added.
+- [x] Native QR tenant isolation follow-up: two synthetic restaurants both
+      had an active `T1` and issued distinct QR values. Each scoped runtime
+      transaction resolved its own QR and returned no context for the other
+      QR, including when the caller passed the other restaurant ID.
+      Schema-49 `check-db.mjs green` exited 0 with 61 PASS entries including
+      parents, no FAIL/SKIP, and verified tmpfs/network cleanup
+      (`green-1795534562389.log`). This verifies the internal lookup, not
+      public HTTP admission or private session behavior.
+- [x] Retained Guest Tracking contract: OpenAPI now records exact order and
+      storefront proof binding, a proof sent in the JSON body only, and
+      `Cache-Control: no-store` for success and denial. The contract checker
+      ties the route to the write-only proof schema, redacted success shape
+      and standard 404 envelope. `npm run contracts:check` passed (18 modules,
+      116 routes); 56 storefront API, tracking and storefront web tests passed.
+      T1.3 records the isolated HTTP producer evidence. No runtime endpoint,
+      native table session or guest-claim behavior changed.
+- [x] TOTP replacement contract checkpoint: the two `/api/v1/auth/mfa/recovery`
+      operations are wired by the identity Go router and consumed by
+      `mfa-api.ts` and `/security`. Start returns the pending setup data;
+      confirmation returns ten unique recovery codes once and revokes prior
+      sessions. The contract checker now asserts both operations' cookie/CSRF
+      boundary, request fields, proof formats, response references and error
+      envelopes. `npm run contracts:check` (18 modules / 116 web routes),
+      the identity Go package tests (no database DSN) and 19 focused web tests
+      passed. Existing isolated HTTP/replay evidence is recorded under T1.3.
+      No new endpoint or manual recovery policy was introduced.
 - [ ] Inventory affected producers/consumers and define approved request/response/error/event projections, pagination and idempotency. Extend existing contracts or introduce compatible restaurant-native contracts only after ownership is settled.
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.
@@ -1604,7 +2891,161 @@ Acceptance: Every changed route has a producer, consumer and contract test; no g
 
 ### T1.3 Define customer, Owner, Admin and guest authority
 
+- [/] [D05 authority matrix](design.md#authority-matrix-for-the-native-restaurant-flow-t13)
+      records required actor and resource checks, the QR/order-proof boundary,
+      and denial criteria for claims, transfer, revocation and sensitive
+      actions. Runtime coverage, independent review and policy inputs remain open.
 - [ ] Specify single active Owner, platform Admin capabilities, customer/guest proof, required MFA/reauth/recovery, context revocation and legacy branch isolation. No new staff/co-owner module.
+- [x] Platform Admin lifecycle on schema 49: `check-mfa.mjs admin-lifecycle`
+      exited 0 with seven selected subtests and their parent passing, no
+      failures or skips (`admin-lifecycle-1795513914737.log`). Synthetic
+      grant/revoke and replay, eligibility, immutable audit, rollback on
+      audit failure, concurrent duplicate grant, and concurrent MFA revocation
+      passed. The runner confirmed removal of the disposable container and
+      internal network. This refreshes selected lifecycle evidence; it does not
+      provision a real Admin or verify the complete Admin capability matrix.
+- [/] Design and verify five-minute sensitive authority using actual primary proof
+      and current TOTP for the same account and session. The Google callback
+      currently issues a local session without reading the provider's
+      authentication time; local session creation and token issuance cannot
+      establish Google freshness. Use a verified `auth_time` claim where
+      available, fail closed on missing/stale proof for sensitive actions, and
+      preserve standard sign-in. Do not infer freshness for retained sessions.
+      Verify local parser and policy tests before any live provider acceptance.
+- [x] Extract optional Google authentication time only after existing ID token
+      checks. Preserve older timestamps as-is and treat absent, malformed,
+      future, post-issuance and out-of-range data as no freshness evidence.
+      Signed token tests failed before extraction and on the independent review
+      finding for maximum `int64`. Both now pass with
+      `go test ./internal/modules/identity -count=1` and
+      `go vet ./internal/modules/identity`. Scoped independent re-review found
+      no remaining issues. No live provider or database acceptance is implied.
+- [x] Google session persistence (synthetic provider identity, real database):
+      `check-mfa.mjs recovery` exited 0 (`recovery-1795463689882.log`) on
+      isolated PostgreSQL schema 45. The real Google completion service issued
+      sessions for the linked fixture account, preserved recent and older
+      provider timestamps exactly, and stored NULL when proof was absent.
+      The existing recovery HTTP/replay and downgrade checks passed in the
+      same run; task-owned resources were removed. Live provider delivery
+      remains unverified.
+- [x] Persist verified primary proof for newly issued sessions and add the
+      transaction-bound five-minute check for that proof and current TOTP.
+      Schema 44 leaves retained sessions without proof. RED
+      `recent-mfa-1795456369451.log` showed acceptance without primary proof.
+      GREEN `recent-mfa-1795456543469.log`: 35 PASS, 0 FAIL/SKIP, exit 0;
+      current password plus TOTP, wrong session, absent/stale primary proof,
+      ordinary MFA preserved, and expiry before final recheck. Retained fixture
+      digest unchanged; downgrade/reapply without proof passed and populated
+      downgrade refused with session rows unchanged. Full Go test/vet passed.
+      Scoped independent review found no actionable issues.
+- [ ] Apply the recent-proof gate to approved sensitive commands as they are
+      implemented. Verify Google proof delivery and user recovery behavior in
+      the applicable runtime; local tests did not contact Google.
+      T5.4 independently reviewed the isolated PostgreSQL checkpoint for
+      persisting verified Google primary proof. The follow-up isolated schema-45
+      test (`recovery-1795464194834.log`, exit 0) also loads each issued session
+      through the identity service and completes a real TOTP challenge.
+      Before challenge, all three sessions are denied; after challenge, only
+      the recent proof passes the five-minute gate. Older and absent proof are
+      denied even with fresh TOTP. A subsequent run
+      (`recovery-1795464391526.log`, exit 0) extends all three cases through
+      HTTP start and callback, PKCE exchange, signed ID token verification
+      and session issuance with an offline provider fixture. Live Google
+      callback proof delivery remains open.
+      Google authorization now explicitly requests ID-token `auth_time`.
+      Google documents a separate Session age claims setting on the OAuth
+      project; local tests do not establish its configuration or verify claim
+      delivery. The application does not force reauthentication at Google or
+      treat token issuance as fresh primary proof.
+      VLP-070 names receiving-account changes, ownership transfer and ads
+      credit refunds. No corresponding writers were found in the current API.
+      Attach the gate to the verified receiving-account workflow, T3.8 owner
+      transfer and T6.9 credit-refund commands as those writers are implemented.
+      Existing bank-transfer payment settings are booleans, not receiving-account
+      records; inventory transfers and food refunds are separate workflows.
+- [/] Implement restricted TOTP replacement with a recovery code and fresh
+      primary proof. Schema 45 and internal service stage an encrypted replacement
+      bound to its initiating session without consuming the code or modifying
+      the current factor. Confirmation with the new TOTP atomically consumes the
+      code, replaces the factor, creates new verifiers, revokes prior sessions,
+      and audits. Current disposable PostgreSQL evidence:
+      `recovery-1795457059437.log` (exit 0), including cross-account/session denial,
+      stale proof, abandoned staging, concurrent confirmation, replay, audit
+      failure rollback, empty downgrade/reapply and populated downgrade refusal
+      with exact state preservation. Full Go test and vet passed. Scoped
+      independent review of the internal flow excerpts, exact migration, grants
+      and current cleanup behavior found no actionable issues. Public HTTP
+      and typed client are wired; disposable PostgreSQL
+      `recovery-1795457325760.log` (exit 0) covers Origin, CSRF, malformed
+      input, successful start/confirmation, no-store and replay denial.
+      Full Go test/vet, contract inventory, TypeScript and 17 focused MFA
+      tests passed. Scoped independent HTTP/client review found no actionable
+      findings. The `/security` screen now stages the replacement, requires
+      acknowledgement before discarding newly issued codes, and directs the
+      user to sign in again. Lost confirmation leaves no retry action or code
+      redisclosure. Current component/API/redirect tests: 31 PASS; typecheck
+      and build PASS; scoped UI review found no actionable issues. Chromium
+      with intercepted APIs: 4 PASS at 360/390/768/1280px, including keyboard
+      activation, focus, Thai text at enlarged size, lost response, password
+      sign-in and new session challenge. Physical devices, live Google and
+      combined browser-to-database acceptance were not exercised. Manual
+      evidence-based recovery remains unresolved.
+      Fresh isolated PostgreSQL run `recovery-1795458036065.log` (exit 0) also
+      proves recovery through HTTP, actual password sign-in, denial of recent
+      MFA before challenge, rejection of the already consumed confirmation
+      TOTP step, and acceptance of the next replacement TOTP and recent MFA.
+- [/] Reconcile retained private authorization call sites. Removed the two
+      unreachable raw storefront payment helpers; the seven retained payment
+      review, reconciliation and refund callers still use the typed MFA gate.
+      Full Go test/vet and diff checks passed; scoped independent review found
+      no actionable findings. Inventory's only remaining raw
+      authorization caller is the QuickStock service method; its old HTTP route
+      remains retired, and the underlying inventory code is retained.
+      A fresh production-source search found no `QuickStock` callers. The
+      composed API router test verifies the tenant context route is mounted
+      while retired QuickStock, role, member and invitation routes are not
+      registered under any method. `go test ./internal/transport -count=1 -v`
+      passed; this is route registration evidence, not a test of the dormant
+      inventory method or of future sensitive writers.
+- [x] Anonymous HTTP boundary: `TestOrganizationRoutesRejectAnonymousRequests`
+      walks the composed router and sends a request without a session to
+      each mounted organization method/path pair. All 276 returned
+      `401 UNAUTHENTICATED` without a `data` field in the current rerun.
+      `go test ./internal/transport -count=1 -v` exited 0 without database
+      access (`.local/velopos-transport-authority.log`). This covers the outer
+      session gate; it does not establish MFA, resource permissions or guest
+      order proof.
+- [x] Retained guest tracking HTTP boundary: on isolated schema 46, each of
+      two synthetic orders returned a redacted projection with its matching
+      proof. Missing proof, a different order's proof, and the correct proof
+      sent to a second real fixture shop all returned `404 NOT_FOUND` with
+      no order data. The source shop's protected business rows were unchanged.
+      `check-db.mjs guest-proof` exited 0 with 50 PASS entries including
+      parent tests, and its temporary container and network were removed
+      (`guest-proof-1795478088036.log`). This verifies retained tracking, not
+      native table-session proof or member claims.
+- [x] Guest tracking after unpublishing: the public storefront no longer
+      resolved, but the exact proof still returned each cancelled fixture
+      order with private fields omitted. Missing, wrong-order and wrong-shop
+      proof still returned 404. All cases returned `Cache-Control: no-store`
+      and left the protected business rows unchanged. The first run confirmed
+      the existing live-order guard refused unpublishing; the rerun cancelled
+      the two synthetic orders through the existing service before unpublishing.
+      Isolated schema 46: 57 PASS entries including parents, exit 0, verified
+      fixture cleanup (`guest-proof-1795490451178.log`; first run
+      `guest-proof-1795490345643.log`).
+- [/] Reconcile current acceptance against D05. These are checkpoints for
+      currently implemented paths, not acceptance of the full capability matrix.
+
+| Boundary | Existing evidence | Required evidence still open |
+| --- | --- | --- |
+| Anonymous organization requests | Composed router: all 276 mounted method/path pairs denied without data. | This covers only requests without a session. |
+| Retained Purchasing and Returns | Schema 49 HTTP MFA and tenant denial matrices, populated reads, selected write/replay cases, and denial for all four branch-assigned legacy roles and revoked Owner sessions across 36 Returns and 57 Purchasing routes. Purchasing also covered the branch-filtered order list. T5.3 verified nine retired web bookmarks at four emulated widths without calling the retired workflows; current disposition is in the architecture route inventory. | Remaining positive and mid-request expiry outcomes. Test any active replacement journeys separately; retired bookmark coverage does not verify the retained APIs. |
+| Retained guest order proof | Matching proof succeeds on both fixture orders; missing, wrong-order and wrong-shop proof fail, including after unpublishing. | Native private table-session rotation and atomic member claims require their own contracts and runtime checks. |
+| Native Restaurant Owner | Setup and ordering availability have scoped Owner, MFA and cross-restaurant checks. The retired membership and role routes are absent. | Transfer must revoke the former Owner's authority while preserving obligations; no inference about retained ownership from route retirement. B10/B12/B13 apply. |
+| Platform Admin | Schema 49 verifies the audited grant/revoke command lifecycle on synthetic users. | Operation-specific permissions and target checks must be verified with each implemented Admin workflow. Provisioning does not prove these checks. |
+| Fresh proof and recovery | Local five-minute policy and verified-provider-claim fixtures, plus restricted TOTP replacement; see the recorded checkpoints in this task. | Live Google claim delivery, manual B12 evidence policy, and enforcement on the receiving-account, transfer and ads refund writers when implemented. |
+
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.
 
@@ -1648,6 +3089,49 @@ Existing test seams for the future isolated run include storefront payment_check
 
 ### T2.2 Add only the selected slice migrations
 
+- [/] Migration 48 adds append-only restaurant menu revisions with before/after
+      state, actor and optional exact-retry key and fingerprint. Runtime has
+      scoped SELECT/INSERT; cross-restaurant and missing actor context,
+      duplicate revision/key, UPDATE and DELETE were denied. Transaction
+      rollback, empty downgrade/reapply and populated downgrade refusal passed
+      on isolated PostgreSQL (`menu-revisions-1795493210277.log`, exit 0,
+      verified cleanup). The preceding red run confirmed the table was absent.
+      Go requires clean schema 48. Writer integration and independent review
+      remain open.
+- [x] On the current Go build, readiness rejected clean schema 47 and accepted
+      clean schema 48. Scoped modifier reads and the Owner session-expiry case
+      passed on schema 48 (`modifiers-1795493268641.log`, exit 0, verified
+      cleanup). This is a focused rerun, separate from the schema-47 aggregate.
+
+- [/] Migration 47 adds modifier groups and options scoped to registered menu
+      items and pairs them with clean-schema-47 server readiness. No backfill;
+      runtime grants are SELECT only. The Go query loads one item and preserves
+      exact two-decimal option prices. `check-availability.mjs modifiers`
+      on task-owned PostgreSQL 17.6 passed 46-to-47 upgrade, unchanged
+      synthetic profile digest, empty downgrade/reapply, populated downgrade
+      refusal, wrong-item and cross-restaurant key denial, price constraints,
+      and Go reads as `smartpos_runtime` (`modifiers-1795491995467.log`, exit 0).
+      The temporary container and network were removed. Independent review,
+      shared menu revision, Owner writes and actual retained-data acceptance
+      remain open.
+- [x] Schema-47 follow-up: seeded three registered items in two restaurants
+      before upgrading from schema 46. Counts and digests for categories,
+      units, products, variants and registered items matched after upgrade,
+      empty downgrade/reapply and populated downgrade refusal. Go readiness
+      as `smartpos_runtime` rejected clean 46 and dirty 47, accepted clean
+      47, and the scoped modifier read passed again. The test used synthetic
+      data and a simulated dirty marker (`modifiers-1795492161826.log`, exit 0,
+      container/network cleanup verified).
+
+- [/] Migration 46 adds `restaurant_availability` without a backfill or changes
+      to saved profiles. The runtime has scoped SELECT/INSERT/UPDATE and no
+      destructive table privileges. `check-availability.mjs` exited 0 on
+      isolated PostgreSQL (`availability-1795466064531.log`): schema 45 to 46,
+      retained profile digests, empty downgrade/reapply, cross-organization
+      read/update/insert isolation, runtime TRUNCATE denial and populated
+      downgrade refusal passed. Container and network cleanup passed. Go
+      readiness now requires clean schema 46; independent review, service
+      transaction tests and full retained-schema-39 acceptance remain open.
 - [ ] Add scoped keys, uniqueness, immutable ledger/event links, RLS/check/index constraints and readiness updates needed by the selected slice. Recheck latest version before allocating; never edit applied 000001-000039.
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.
@@ -1661,6 +3145,116 @@ Acceptance: Fresh and retained-schema-39 upgrades pass against confirmed isolate
 
 ### T2.3 Prove migration rollback refusal and forward recovery
 
+- [x] Synthetic migration 48 recovery rehearsal: golang-migrate v4.18.3
+      marked an interrupted upgrade `48|t` and refused retry. The history
+      table was absent and baseline and modifier digests were unchanged.
+      After confirming the disposable schema was still at 47, the harness
+      restored its marker and successfully applied the original migration.
+      Empty down/reapply passed. A downgrade with a synthetic history row
+      refused at `47|t`; the history and earlier digests survived both the
+      refusal and recovery to `48|f`. `check-retained-48.mjs retained-48`
+      exited 0 (`retained-48-1795533141444.log`); tmpfs and network cleanup
+      were verified. The first run stopped before the injection because its
+      source lacked migration 47 (`retained-48-1795533033487.log`) and also
+      cleaned up. No tracked migration or operational database changed.
+
+- [x] Schema 49 privilege downgrade and reapply on populated synthetic data
+      (`check-availability.mjs modifiers`, `modifiers-1795497295183.log`, exit 0).
+      The down SQL revoked runtime modifier writes without removing reads.
+      Runtime UPDATE probes were denied for both tables, and the Go readiness
+      check rejected the schema-48 marker. Reapplying the original migration
+      restored both scoped writes and schema-49 readiness. Row counts and
+      digests for groups, options, menu items, revisions and audit events
+      matched throughout. 32 PASS entries including parents, no FAIL/SKIP;
+      task-owned resources removed. The harness moved the version marker on
+      the disposable target; this is not a production downgrade rehearsal.
+
+- [x] Synthetic retained schema 39 through 49: the real golang-migrate
+      v4.18.3 runner marked migration 49 dirty after an injected pre-commit
+      failure and refused to retry. The two modifier tables kept schema-48
+      grants and their rows, revision history and retained fixture digests
+      were unchanged. After verifying that state, the harness recovered the
+      marker to clean 48 and applied the original migration to clean 49.
+      Scoped writes were restored and all compared data stayed intact.
+      `check-retained-46.mjs retained-49` exited 0; evidence is in
+      `retained-49-1795497428795.log` with cleanup verified. No production or
+      retained database was used.
+
+- [x] Populated schema 49 downgrade and reapply through golang-migrate
+      v4.18.3: `check-retained-46.mjs retained-49` exited 0
+      (`retained-49-1795534326291.log`). `down 1` reached clean 48 and
+      revoked modifier INSERT/UPDATE privileges while leaving SELECT in
+      place. `up 1` restored the grants and reached clean 49. Modifier,
+      revision, and retained business/session/audit fixture digests matched
+      before and after both transitions. The task-owned tmpfs container and
+      internal network were removed after ID/label verification. This was a
+      synthetic rehearsal; the current Go build still requires clean 49.
+
+- [x] Synthetic retained schema 39 through 47: real golang-migrate v4.18.3
+      marked interrupted migration 47 dirty and refused retry. Both modifier
+      tables were absent after rollback and existing business, session,
+      recovery and availability digests matched. On the disposable database,
+      after confirming schema 46, marker recovery and original migration
+      reapply succeeded. Empty downgrade/reapply worked; a populated
+      downgrade refused and preserved the group and existing digests.
+      `check-retained-46.mjs retained-47` exited 0 and verified cleanup
+      (`retained-47-1795492987121.log`). No actual retained database was used.
+
+- [x] The platform Admin command guide points to the build's required clean
+      schema and to the disposable recovery evidence here.
+      Migration 43 introduced platform authority; the guide does not authorize
+      recovery on an operational database.
+- [x] 2026-11-24 schema 45 pre-commit recovery rehearsal: `check-db.mjs
+      retained-current` exited 0 (`retained-current-1795459792973.log`). On
+      task-owned PostgreSQL seeded from schema 39, the harness marked version
+      45 dirty, then injected an error after 45's DDL and before commit. The
+      new table was absent, both prior constraints matched, and retained rows
+      and session digests were unchanged. After verifying schema 44 structure,
+      the harness reset only its simulated marker and reapplied the unchanged
+      migration 45. The synthetic schema upgrade and ID/label cleanup passed.
+      This exercises PostgreSQL transaction rollback and forward reapply; it
+      does not test dirty-marker handling by the official migrator.
+- [x] Official migrator checkpoint: `check-db.mjs retained-official` exited 0
+      (`retained-official-1795460052773.log`). The golang-migrate v4.18.3 CLI,
+      built offline from cached source with the PostgreSQL driver, set schema
+      45 dirty after the injected error and refused retry. The pending table
+      was absent, both prior constraints matched and the retained digests were
+      unchanged. Only then did the harness use `force 44` on its disposable
+      database and run the unmodified 45 migration, leaving clean version 45
+      with the original fixtures preserved. ID/label cleanup passed. This was
+      the upstream CLI, not the Docker image; it was not a live recovery.
+- [x] Populated schema 45 downgrade through the same CLI: `check-db.mjs
+      retained-official` exited 0 (`retained-official-1795463784694.log`).
+      With synthetic recovery audit and rate-limit rows present, `down 1`
+      refused and left a dirty target marker at 44, while the actual schema
+      stayed at 45. Recovery row digests, retained business/session digests,
+      the pending table identity and both constraints matched before and after
+      refusal. After those checks, the harness restored the marker to clean 45
+      on its disposable target and verified the same state again. Cleanup by
+      ID/label passed. No migration file or live database changed.
+- [x] Schema 46 pre-commit recovery rehearsal: `check-retained-46.mjs
+      retained-46` exited 0 (`retained-46-1795478894665.log`). After an
+      injected failure before commit, golang-migrate v4.18.3 marked version
+      46 dirty and refused retry. The availability table was absent and
+      schema-45 checks plus retained fixture digests matched. The harness
+      recovered only the disposable marker, then applied the original
+      migration to clean 46 and checked FORCE RLS and the tenant policy.
+      Empty downgrade/reapply and populated downgrade refusal also passed.
+      The first run stopped before the injection because the isolated
+      source lacked version 45 (`retained-46-1795478840066.log`). Both runs
+      removed task-owned resources. No operational database was used.
+- [x] Documented the operational decision points in the [database recovery
+      guide](../../docs/database/overview.md#migration-recovery-for-the-current-velopos-build),
+      including the difference between dirty upgrade and downgrade markers,
+      catalog/data checks before recovery, and handoff to the release operator.
+      This records the procedure; no operational drill or approval is implied.
+- [ ] Operational recovery: the authorized database operator owns target
+      identity, stopping writers and capturing the migration log, schema
+      version, structure and retained-data evidence. The release operator
+      resumes writes only after the database operator verifies the recovered
+      schema and readiness. If the actual structure does not match the prior
+      clean version, stop and obtain a reviewed forward repair; the disposable
+      rehearsal does not authorize resetting real migration metadata.
 - [ ] Exercise empty-target reapply where supported; refuse populated destructive rollback and document forward recovery for partial/dirty states with named operator ownership.
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.
@@ -1674,6 +3268,89 @@ Acceptance: Captured fresh/retained and recovery outputs show no business-data l
 
 ### T3.1 Implement verified setup, menus, modes and table sessions
 
+- [x] Branchless catalog and Owner quote agree on unavailable menu items.
+      Inactive products, categories and units, unsupported currency and a
+      product recall marked the item not saleable and rejected the quote
+      with no items, total or quote ID. The isolated schema-46
+      `check-db.mjs green` run exited 0 with 42 PASS entries including
+      parents, no FAIL/SKIP and verified temporary resource cleanup
+      (`green-1795490666352.log`). No public admission or modifier behavior
+      changed.
+
+- [x] Retained storefront pause compatibility: after a synthetic order was
+      confirmed paid, the real settings service paused the published fixture.
+      A new quote returned `ErrClosed`, while the same paid order stayed in
+      the kitchen queue and reached `PREPARING` and `READY`. The test restored
+      the storefront setting. `check-db.mjs pos-online` exited 0 on isolated
+      PostgreSQL 17.6/schema 46 with 218 PASS entries including parents, no
+      FAIL/SKIP and verified cleanup (`pos-online-1795479980098.log`).
+      See T1.2 for the isolated internal Pickup/Takeaway checkout validator
+      evidence. Public native admission and production provider acceptance
+      remain open.
+
+- [/] Native availability domain: the restaurant module validates weekly
+      windows and evaluates all four modes using the restaurant time zone,
+      selling eligibility, enabled mode and global/per-mode pause. Focused
+      tests cover exclusive close, inclusive open, split overnight windows,
+      invalid/overlapping schedules, empty schedules and Pickup isolation.
+      Added eight UTC instants across spring and autumn offset changes to
+      verify that windows follow the restaurant's local clock. Restaurant
+      package test and vet passed; the package embeds Go's time-zone data.
+      The internal evaluator now uses the stored settings shape for all four
+      pauses and the global pause. Focused tests verify that each individual
+      pause affects only its mode and that an unapproved restaurant is
+      unavailable in every mode. The evaluator has no public caller yet.
+      Restaurant/storefront Go package tests and restaurant vet passed. The
+      predicate is not wired to HTTP or new order admission yet.
+- [/] Owner availability service reads and saves revisioned settings on schema
+      46 using the existing organization lock and live Owner MFA checks. The
+      settings write and audit share one transaction. The isolated `green` run
+      (`green-1795466251050.log`, exit 0) passed initial read, non-Owner denial,
+      stale revision conflict and persistence, plus fresh migrations and
+      verified fixture cleanup. Restaurant/storefront Go test and vet passed.
+      Follow-up isolated `green` run (`green-1795466384798.log`, exit 0): two
+      writers with the same revision produced one commit and one conflict,
+      with exactly one new audit. A forced audit insert failure preserved the
+      saved values, revision and audit count; retry at that revision succeeded.
+      Verified fixture cleanup. Owner GET/PUT now use the tenant cookie and
+      MFA boundary; PUT requires CSRF and a full replacement. OpenAPI and
+      the typed web client match. Isolated schema 46 HTTP checks passed for
+      no cookie, non-Owner, missing CSRF, malformed input, stale revision
+      and save/read round trip (`green-1795466632473.log`, exit 0). Contract
+      check, web typecheck and Go restaurant/transport tests passed. The Owner
+      ordering-hours panel has focused browser evidence in T4.1 and T5.3.
+      The scoped Owner settings review is recorded in T5.4. Native public
+      admission and full T3.1 review remain open.
+- [x] Cross-restaurant availability HTTP regression: an MFA-assured Owner
+      without membership in the target restaurant received `404 NOT_FOUND`
+      without data on GET and PUT, even with valid CSRF and the current revision.
+      The target settings and audit count were unchanged. Isolated schema 46
+      `check-db.mjs green` exited 0 with 36 PASS entries including parent tests
+      (`green-1795478693779.log`); no FAIL/SKIP. Both runs cleaned up their
+      task-owned resources. The first run expected 403 instead of the existing
+      no-membership 404 (`green-1795478604436.log`); only tests changed.
+- [x] On schema 46, saving an all-day schedule with no pauses keeps a native
+      draft unpublished and unable to accept orders. The isolated test
+      verified directory exclusion, public quote/order denial and zero order
+      or payment-attempt rows. See `green-1795468794523.log` and T5.2.
+- [x] Trace the accepted setup-only baseline to this task. The organization
+      setup API persists Pickup separately from Takeaway and accepts Pickup
+      as the sole configured mode. See the Pickup slice above and T5.2's
+      schema-45 aggregate run for isolated database evidence. Legacy branch
+      setup continues to reject the new field. The setup value does not
+      control public admission or prove that a restaurant can sell.
+- [ ] Complete the remaining availability and table boundaries. The existing
+      storefront `accepting_orders` flag is a global switch, not an opening
+      schedule or a per-mode pause. Existing table setup issues table tokens;
+      it does not demonstrate isolation between successive private customer
+      sessions at the same table. Keep existing paid work and retained
+      callers while implementing these boundaries after their contracts and
+      compatibility gates are settled.
+- [?] Merchant verification and receiving-account activation still depend on
+      B10's evidence and review rules, B07 for restricted evidence retention,
+      and B02 for the applicable provider/recipient proof. Keep completing
+      a draft, Admin approval and permission to sell separate. Apply T1.3's
+      recent proof gate to the receiving-account writer when it exists.
 - [ ] Build Admin-verifiable setup, identity/site/receiving-account approval, independent restaurant context, four service modes, opening schedules, global/per-mode pause and private persistent table QR sessions. Add modifier-capable menu foundation with T3.7.
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.
@@ -1687,6 +3364,11 @@ Acceptance: Tests reject selling before approval, unsafe account changes and cro
 
 ### T3.2 Implement persistent carts and single-restaurant checkout intents
 
+- [/] B14 saved-cart preparation: [D06](design.md#saved-cart-versioning-and-expiry-b14-proposal)
+      distinguishes retained browser carts from native guest/member drafts, and
+      proposes conflict, expiry and no-side-effect acceptance cases. The product
+      decision on inactivity duration is pending. Quota hold and allocation
+      remain separate; no runtime cart behavior has changed.
 - [ ] Persist scoped checkout intent/key/fingerprint and immutable order snapshots. Revalidate current menu/options/prices/modes and separate cart save from payment reservations. Guest device carts and member sync integrate with T6.4.
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.
@@ -1752,6 +3434,11 @@ Acceptance: Tests reject unilateral/increasing/post-Preparing routine amendments
 
 ### T3.7 Implement promotions, quotas and benefit reservations
 
+- [/] [D03 modifier ownership and revisions](design.md#modifier-ownership-and-revision-boundary)
+      identifies the registered item/group boundary, preserves choices on
+      legacy setup saves, and defines shared revision and checkout validation
+      obligations for T3.1/T3.7/T3.9. Runtime contracts and implementation
+      remain open. B09/B14 still govern benefit and quota reservation policy.
 - [ ] Add restaurant promotion/coupon eligibility and limits, optional menu/modifier quotas, real-time availability and atomic menu-plus-option/coupon/points reservation at payment.
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.
@@ -1778,6 +3465,99 @@ Acceptance: Race/denial tests prevent dual owners, unverified receiving-account 
 
 ### T3.9 Implement immutable menu history and CSV/Excel bulk editing
 
+- [x] VLP-091 retained paid-order snapshot checkpoint: after a synthetic
+      payment, changing the live variant price from 10.00 to 11.00 and
+      attempting POS settlement left the stored order total and complete
+      item snapshot unchanged. Settlement rejected the price drift without
+      releasing the existing hold or creating a cart, checkout, sale or
+      sale movement. `check-db.mjs pos-online` on schema 49 exited 0 with
+      236 PASS entries including parents, no FAIL/SKIP and verified cleanup
+      (`pos-online-1795533884152.log`). Storefront vet passed. This covers
+      retained checkout price drift, not native modifier/discount snapshots
+      or public native checkout.
+
+- [/] VLP-091 ordering availability: the existing Owner save appends
+      before/after ordering settings to the shared menu revision history in
+      the same transaction as the settings and audit event. The schema-49
+      integration test first found no new revision
+      (`green-1795514902493.log`); it then passed with exact snapshots and
+      rollback on audit failure (`green-1795514967931.log`, exit 0, isolated
+      resources removed). Focused Restaurant/Storefront Go test and vet
+      passed. Independent review and restore-as-new-revision remain open.
+      Follow-up on schema 49: two writers at the same settings revision
+      committed exactly one matching history entry; the stale writer
+      conflicted. A save with unchanged values advanced only the settings
+      revision and preserved the shared menu revision. `check-db.mjs green`
+      exited 0 with 53 PASS entries including parents, no FAIL/SKIP, and
+      verified cleanup (`green-1795515079737.log`).
+- [/] VLP-091 native setup service modes: profile and services saves append
+      the effective before/after modes to the shared menu history in the
+      existing setup transaction. An unchanged projection or replay does not
+      append history. The fixture's concurrent Pickup save and matching
+      replays originally found zero entries (`green-1795515334893.log`);
+      the schema-49 rerun found exactly one and exited 0
+      (`green-1795515591903.log`), with container and network cleanup
+      verified. Focused Restaurant/Storefront Go tests and vet passed.
+      Independent review remains open.
+      Profile follow-up: a forced audit failure left the prior modes and
+      history intact. Retrying with the same key enabled Dine-in, retained
+      Pickup when omitted from the request, and added one matching history
+      entry. Schema-49 `check-db.mjs green` exited 0 with 55 PASS entries
+      including parents, no FAIL/SKIP, and verified container/network cleanup
+      (`green-1795515983794.log`).
+
+- [/] VLP-091 ordering availability restore: the internal Owner command
+      restores a scoped availability snapshot under live MFA and the shared
+      organization lock. It appends a new revision with its source revision
+      and records the audit in the same transaction. An exact retry returns
+      the original result after authorization; a stale base or changed retry
+      conflicts. No public route, migration, or paid-order writer was added.
+      Isolated schema 49 `check-db.mjs green` exited 0 with 56 PASS entries
+      including parents, 0 FAIL/SKIP, and confirmed container/network cleanup
+      (`green-1795517446100.log`). Tests cover persisted before/after, intact
+      source, one audit, failed-audit rollback, missing source, replay, and
+      denial for non-Owner, foreign Owner and Owner without MFA. The earlier
+      runs exposed an audit-count assumption and a fixture without a session
+      context (`green-1795516768561.log`, `green-1795517120530.log`).
+      Independent review and restoration of other menu data remain open.
+      Follow-up expiry tests on schema 49 paused the internal restore after
+      the audit insert and, separately, after the saved-result lookup. Both
+      returned no settings. The interrupted write left the settings, history
+      revision, exact replay key and restore audit unchanged; a valid retry
+      and replay still produced one new revision and one audit. The isolated
+      `check-db.mjs green` run exited 0 with 58 PASS entries including parents,
+      no FAIL/SKIP and verified cleanup (`green-1795533423952.log`). Storefront
+      vet passed. The expiry checks did not cover COMMIT, and the independent
+      review of this T3.9 command remains open.
+      Concurrent same-key follow-up: two restore calls released together
+      returned the same settings. Readback verified the expected settings,
+      one new history revision and one audit; the source revision remained
+      intact. Schema-49 `check-db.mjs green` exited 0 with 59 PASS entries
+      including parents, no FAIL/SKIP and verified cleanup
+      (`green-1795533551483.log`). Storefront vet passed. This exercise does
+      not measure the database lock wait or cover competing distinct keys.
+      Distinct-key follow-up: two restores using the same base revision
+      produced one success and one conflict without settings. The persisted
+      settings matched the winner, with one new revision and audit and no
+      history row for the losing key. Schema-49 `check-db.mjs green` exited 0
+      with 60 PASS entries including parents, no FAIL/SKIP and verified
+      cleanup (`green-1795533676467.log`). Storefront vet passed. The test
+      released both calls together; it did not measure database lock waits.
+      The local review brief `t39-availability-restore-review-brief.md` in
+      `.local/velopos-pickup-20261122` maps the command, its authority and
+      persistence dependencies, and matching acceptance evidence. Review of
+      the command as a whole is pending authorization; no brief was sent.
+
+- [/] [D03 B16 proposal](design.md#b16-proposal-version-1-template-and-apply-policy)
+      defines shared CSV/XLSX rows, parser-based candidate limits, preview
+      outcomes and atomic apply with revision/audit/retry acceptance. B16
+      approval and the T3.7 modifier contract remain open; no import behavior
+      changed.
+- [/] [B16 parser and preview boundary](design.md#retained-parser-and-native-preview-boundary)
+      identifies which retained format checks can be reused and why catalog
+      SKU/job updates cannot identify native menu rows. Stable reference
+      mapping for repeat imports must be selected before implementation.
+      Existing catalog behavior is unchanged.
 - [ ] Reuse safe parsing/preview seams for approved restaurant categories/options/toppings. Add duplicate/error outcomes, price/category/status bulk changes, revision/audit and restore-as-new-revision.
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.
@@ -1791,6 +3571,24 @@ Acceptance: Tests cover malformed/duplicate/wrong-tenant input, selected transac
 
 ### T4.1 Build verified setup and menu management UI
 
+- [/] The Owner ordering-hours panel at `/settings` saves weekly windows,
+      time zone, and global or individual pauses for the four service modes.
+      A stale revision preserves edits until the Owner explicitly discards
+      them and reloads. Copy explains that saving does not change public
+      ordering yet. Focused availability, settings and workspace Vitest
+      cases passed (19/19), and web typecheck passed. See T5.3 for the
+      branchless entry check and remaining browser acceptance.
+
+- [/] Four-mode setup display: an existing organization without a branch can
+      save Pickup independently of Takeaway, including Pickup-only setup. The
+      form explains that saving does not open ordering. Legacy creation and
+      branch setup keep their existing three modes and omit the Pickup field.
+      Focused Vitest: 92/92; web typecheck and changed file formatting pass.
+      Windows Chrome 157 with intercepted API: 4/4 at 360/390/768/1280px,
+      Thai and English, checked keyboard focus, accessible description, no
+      horizontal overflow in the service mode group, and draft payloads.
+      This browser run does not exercise a live database or real touch device;
+      full T4.1 visual, accessibility and workflow acceptance remains open.
 - [ ] Reuse existing provider/layouts/tokens. Expose pending approval/reverification, four modes, per-mode pause, table privacy, modifier/menu availability and controlled bulk-edit outcomes.
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.
@@ -1830,7 +3628,109 @@ Acceptance: Browser tests prove UI cannot bypass server eligibility/permissions,
 
 ### T4.4 Reconcile navigation and legacy route disposition
 
-- [ ] Classify active/compatibility/planned/deprecated routes against approved Customer/Owner/Admin journeys. Preserve retained callers and deny retired staff/co-owner entry without adding a new staff module.
+- [x] Availability settings no longer repopulate a removed tenant query when
+      a save finishes after the form unmounts. The regression reproduced the
+      old cached revision after unmount and eviction; the fix passed 69 tests
+      across the form, settings page, tenant provider and restaurant router.
+      Web typecheck, focused ESLint and independent review passed. This is
+      component evidence for the delayed save. A separate Chromium test at
+      1280 x 900 exercised sign-out and sign-in as the same Owner in the same
+      document with intercepted API responses. After the old PUT response
+      arrived, the form stayed in its loading state while the fresh GET was
+      held, then displayed the fresh result. All nine Availability browser
+      cases passed. No live API or database was used for this browser test.
+      [T5.3](#t5-3) records the separate repeat against Go and PostgreSQL.
+
+- [x] The Owner settings link now uses the tenant query scope (user,
+      organization and branch), so selecting another account in the same
+      organization shows `/shop` until that account's storefront data loads.
+      The query participates in the existing tenant cache cleanup on logout
+      and context selection. The synthetic account-switch regression failed
+      before the fix and passed with 57 settings/router tests. Typecheck and
+      scoped independent review passed. A follow-up component test held the
+      first account's response until the second account loaded. The old
+      request was aborted and its late response did not replace the current
+      link. Settings and router tests passed 58/58; web typecheck passed.
+      A live Chromium follow-up at 1280 x 900 switched between two Owners
+      in the same restaurant without reloading the document. The real API
+      returned 401 after logout. The disposable fixture then replaced the
+      sole active Owner with the second account, which signed in and completed
+      TOTP. While the second storefront request was held, the settings link
+      showed `/shop`; after release it showed the updated fixture slug. The
+      isolated schema-46 run exited 0 and cleaned up its container/network
+      (`browser-account-switch-1795477721837.log`). The first run failed
+      during fixture setup and cleaned up (`browser-account-switch-1795477569313.log`);
+      the intermediate run passed with two concurrent fixture Owners and is
+      superseded (`browser-account-switch-1795477639452.log`). The SQL fixture
+      change does not verify restaurant transfer or PWA behavior.
+
+- [x] Completed organization without a branch: the mounted router now
+      resolves dashboard entry through setup to `/settings` instead of
+      looping between `/dashboard` and `/setup`. Incomplete setup stays
+      at `/setup`, and retained branch completion still reaches the
+      dashboard. Branchless completion still retries with the original
+      operation key. Chrome with intercepted API responses passed 8/8;
+      the organization/workspace Vitest suite passed 173/173 and web
+      typecheck passed.
+
+- [x] Current route checkpoint: `/shop` and its cart/checkout/tracking pages
+      remain active for customers; account `/security` and permission-gated
+      kitchen, order and payment settings pages remain active for Owners.
+      `/shop/:slug/track/:orderId` and `/manage/settings/storefront/payments`
+      remain compatibility redirects. Retired employee/role links and removed
+      ingredient links do not re-enter a workspace; the retired restaurant
+      recipe, forecast and quick-stock APIs are not registered. Keep retained
+      inventory, point-of-sale and other Go callers until replacement acceptance.
+      This does not introduce a platform Admin workspace.
+- [x] Scoped checks: 92 web tests across `restaurant-scope`, `workspace-paths`
+      and `inventory-hooks` passed, covering direct-link denial and a scope
+      change during inventory cache refresh. Go tests for `restaurant`,
+      `organization` and `transport` passed without DB DSNs; the contract
+      checker reported 18 modules and 116 web routes. This does not accept
+      navigation or cache invalidation for planned T4/T6 surfaces.
+- [x] Classify the current Customer/Owner/Admin route surface in
+      [the architecture route inventory](../../docs/architecture/routes.md#current-velopos-route-disposition).
+      Compared mounted React pages, composed Go registration and the
+      documented inventory. Fresh verification: 86 web cases across
+      `restaurant-scope`, `workspace-paths` and `ProtectedRoute`;
+      `TestTenantRouterDoesNotExposeRetiredAuthorityRoutes`; contract
+      inventory (18 modules, 116 unique documented entries); all exit 0.
+      No routes or retained callers changed. Classify new T4/T6 surfaces
+      when their contracts and implementations exist.
+- [x] Legacy Owner payment bookmark regression: the mounted React router
+      allows an Owner with `storefront.manage` to replace the legacy URL with
+      `/settings/payments`, preserving query and fragment. An Owner without
+      that permission reaches `/403` without visiting the canonical page or
+      requesting sandbox status. With intercepted API responses, the two
+      new cases and 86 related web cases passed; TypeScript and focused ESLint
+      also passed. No runtime code, provider or database was exercised or changed
+      outside the app components mounted by the web tests.
+- [x] Legacy Owner payment bookmark, Chrome follow-up:
+      `legacy-payment-bookmark.spec.ts` passed 8/8 at 360, 390, 768 and
+      1280 CSS pixels on a fresh local build with intercepted API responses.
+      Authorized Owners reached `/settings/payments` with query and fragment
+      preserved; Owners without `storefront.manage` reached `/403` without
+      requesting sandbox status. Both states fit each viewport. This is
+      emulated viewport evidence for T5.3, without a live API or physical device.
+- [x] Legacy customer tracking bookmark: mounted router tests verified that
+      a query-only proof shows the incomplete-link state without any fetch.
+      A fragment proof survived the redirect and went only in the JSON body
+      of one credentialless tracking POST. A tracking 404 did not trigger a
+      payment request. The two web suites passed 67/67; web typecheck, focused
+      ESLint and contract inventory (18 modules, 116 routes) passed. This is
+      component coverage with intercepted API responses; see T1.3 for the
+      existing isolated proof enforcement evidence.
+- [x] Legacy customer tracking bookmark, Chrome follow-up:
+      `legacy-tracking-bookmark.spec.ts` passed 6/6 at 360, 390 and 1280
+      CSS pixels on the current local build with intercepted API responses.
+      Query-only proof showed the incomplete-link state without an order
+      API call. Fragment proof went only in the tracking POST body, without
+      cookies, and a 404 did not trigger a payment request. Both states fit
+      their viewport. The initial run exposed the separate auth bootstrap
+      request and the static harness's missing referrer policy. The rerun
+      modelled the anonymous auth response and used Caddy's configured
+      `no-referrer` header; no API request carried the fixture proof in its
+      Referer. This does not verify the live gateway or a real mobile device.
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.
 
@@ -1843,6 +3743,91 @@ Acceptance: Inventory, Go/OpenAPI and React consumers have no unexplained mismat
 
 ### T5.1 Run focused unit, contract and build checks
 
+- [x] Current worktree web and script checks after the Purchases replay
+      coverage update: `node node_modules/vitest/vitest.mjs run --root apps/web
+      --maxWorkers=4` exited 0 with 928 tests in 99 files
+      (`t51-web-1795531501927.log`). The jsdom navigation diagnostic did
+      not fail the run. `node scripts/check-contracts.mjs` exited 0 with 18
+      modules and 116 unique documented routes. `node --test
+      scripts/log-format.test.mjs scripts/dev-stack.test.mjs` exited 0 with
+      17 PASS and no failures or skips, using workspace-local TEMP/TMP.
+      This covers local web and script checks; database and browser evidence
+      remain separate.
+      Follow-up on the same implementation: offline `go test -count=1 ./...`
+      from `apps/api`, root `npm run build` and `npm run lint` all exited 0.
+      Build reported a chunk-size warning; lint reported 0 errors and 12
+      warnings.
+
+- [x] After the Purchasing transition and Returns rollback test updates,
+      offline `go test -count=1 ./...` and `go vet ./...` from `apps/api`
+      exited 0 with integration DSNs unset. `node scripts/check-contracts.mjs`
+      exited 0 with 18 modules and 116 unique documented routes. Web
+      `tsc -b --pretty false` also exited 0. See T1.3 and T5.4 for the
+      separate isolated and independent review evidence.
+
+- [x] After adding the internal native Pickup/Takeaway checkout regression
+      and the retained Returns Cashier matrix, Go formatting on the touched
+      test files, offline `go test -count=1 ./...` and `go vet ./...` from
+      `apps/api`, and `git diff --check` passed. The contract inventory passed
+      for 18 modules and 116 documented routes. The offline Go run did not
+      use a database; see T1.2/T1.3 for the isolated PostgreSQL evidence.
+
+- [x] After adding the internal ordering availability restore, `go test`
+      (with `-count=1`) and `go vet` passed for Restaurant, Storefront and
+      Transport with the single-store DSN unset. `node scripts/check-contracts.mjs`
+      passed 18 modules and 116 routes. Isolated DB evidence is under T3.9.
+
+- [x] Schema-49 checkpoint after the native table QR regression:
+      offline `go test ./... -count=1` and `go vet ./...` exited 0 in
+      `apps/api` with integration DSNs unset for the test run.
+      `node scripts/check-contracts.mjs` passed 18 modules / 116 routes.
+      The separate isolated QR run is recorded under T1.2.
+      The web suite first exited 1 (917 passed, 11 failed, including
+      timeouts and missing UI elements). A rerun with `--maxWorkers=4`
+      and unchanged timeout and assertions exited 0: 928/928 in 99 files
+      (`schema49-web-workers4-1795499088854.log`). The initial failures did
+      not reproduce on that run; the default-worker result remains recorded.
+
+- [x] After adding the T5.2 Availability RLS regression, offline
+      `go test ./internal/modules/storefront ./internal/modules/restaurant
+      ./internal/transport -count=1` and `go vet` on the same packages
+      exited 0 with the single-store DSN unset. `node
+      scripts/check-contracts.mjs` passed 18 modules / 116 routes. The
+      separate PostgreSQL run is recorded under T5.2.
+
+- [x] After the T4.4 late-response regression, root `npm test` exited 0
+      with workspace-local `TEMP` and `TMP`: 923 web tests in 99 files,
+      18 contract modules / 116 routes, 10 log-format tests and 7 dev-stack
+      tests. Web typecheck and focused ESLint for `SettingsPage.test.tsx`
+      exited 0. `npm run build` exited 0 with a chunk-size warning. These
+      checks do not cover a live account switch.
+
+- [x] Follow-up on current schema-46 source: offline `go test ./... -count=1`
+      and `go vet ./...` passed in `apps/api` with no database DSNs. Root
+      `npm test` exited 0 (`schema46-root-test-1795469068278.log`): 921 web
+      tests in 99 files, 18 contract modules / 116 routes, 10 log-format
+      tests and 7 dev-stack tests. `npm run build` exited 0 with the chunk
+      size warning. Live acceptance is tracked separately.
+
+- [x] Current schema-46 availability checkpoint: `go test -count=1` and
+      `go vet` passed for `./internal/modules/restaurant`,
+      `./internal/modules/storefront` and `./internal/transport` with
+      database/browser integration disabled. `npm test --workspace
+      @smartpos/web` passed 920 tests in 99 files. `npm run contracts:check`
+      passed 18 modules / 116 routes. `npm run build` passed with a chunk
+      size warning; `npm run lint` exited 0 with 12 warnings and no errors.
+      This checkpoint covers the current implemented source; browser and
+      isolated database outcomes are tracked separately.
+
+- [x] 2026-11-24 local checkpoint for current schema-45 source: offline
+      `go test ./... -count=1` and `go vet ./...` in `apps/api` passed. The
+      Go run leaves database DSNs unset. Root `npm test` passed with
+      process-local `TEMP` and `TMP` pointed at `.local`: 916 web tests in
+      98 files, 18 contract modules / 116 routes, 10 log tests and 7 dev-stack
+      tests. The first run exited 1 because the dev-watch fixture could not
+      write to the default Windows temp directory. `npm run build` passed
+      (includes TypeScript; chunk-size warning); `npm run lint` passed with
+      0 errors and 12 warnings. This checkpoint covers implemented source only.
 - [ ] Inspect actual scripts/effects, then run focused Go/React tests and npm run contracts:check; expand to affected typecheck/lint/build checks. Inspect current target selection before running any integration script.
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.
@@ -1856,6 +3841,191 @@ Acceptance: Fresh exact commands/exit codes/case counts match changed inputs. Ro
 
 ### T5.2 Run isolated database and retained-data acceptance
 
+- [x] Schema-49 Returns HTTP completion: an approved menu-only return
+      denied session expiry after the completion audit insert and after the
+      saved-result lookup with `401 UNAUTHENTICATED`, `Cache-Control: no-store`
+      and no data. The return, linked refunds, completion audit and exact
+      replay record were unchanged immediately after each denial. A same-key
+      retry completed the return; authorized replay returned identical data
+      without changing those records. `check-db.mjs returns-read` exited 0
+      with 341 PASS entries including parents, 0 FAIL/SKIP and verified
+      container/network cleanup (`returns-read-1795536922925.log`).
+
+- [x] Schema-49 Returns HTTP refund confirmation: expiry after the cash
+      disbursement insert and after saved-result lookup returned
+      `401 UNAUTHENTICATED`, `Cache-Control: no-store` and no data. Before any
+      retry, exact readbacks preserved the refund, disbursements, settlement
+      events and the confirmation idempotency record in both cases. Concurrent
+      same-key retries returned the same result; authorized replay matched it
+      byte for byte. The ledger recorded one 10.00 disbursement and two events.
+      `check-db.mjs returns-read` exited 0 with 339 PASS entries including
+      parents, 0 FAIL/SKIP and verified container/network cleanup
+      (`returns-read-1795536674126.log`). Only tests changed.
+
+- [x] Current schema-49 aggregate Storefront run: `check-db.mjs full`
+      exited 0 with 2,371 PASS entries including parents, no FAIL/SKIP, and
+      553.92s for `TestSingleStoreIsolatedDatabase` (`full-1795534656896.log`).
+      Includes the earlier Purchasing and Returns matrices, two-restaurant
+      QR lookup, availability restore expiry and both concurrent restore cases,
+      and retained paid-order snapshot checks after a price change. It applied
+      all 49 migrations and verified empty Pickup down/reapply, populated
+      downgrade refusal with forward recovery, and cleanup of the task-owned
+      tmpfs container and internal network. Synthetic database evidence only;
+      this does not accept native public Dine-in, retained data, live provider
+      behavior or final cutover.
+
+- [x] Earlier schema-49 aggregate Storefront run: `check-db.mjs full`
+      exited 0 with 2,366 PASS entries including parents, no FAIL/SKIP, and
+      548.79s for `TestSingleStoreIsolatedDatabase` (`full-1795531614977.log`).
+      This includes the Returns MFA matrix and both Purchasing expiry-after-
+      replay cases. All 49 migrations and the empty Pickup down/reapply ran
+      on the disposable PostgreSQL target. The populated downgrade was
+      refused with data preserved; forward recovery passed. Task-owned
+      tmpfs container and internal network cleanup were verified. The run
+      used synthetic fixtures and does not establish retained-data, browser,
+      provider or release acceptance.
+
+- [x] Schema-49 Purchasing after logout: all 19 read and 38 write routes,
+      an explicitly branch-filtered order list, and a previously successful
+      order-create replay returned `401 UNAUTHENTICATED` without data.
+      Document, operation and audit counts stayed unchanged. The isolated
+      `check-db.mjs inventory-read` run exited 0 with 568 PASS entries including
+      parents, no FAIL/SKIP, and verified container/network cleanup
+      (`inventory-read-1795529287708.log`). Focused Storefront/Purchasing Go
+      test and vet passed; only tests changed.
+
+- [x] Schema-49 Purchasing legacy-role matrix: each of four MFA-verified,
+      branch-assigned legacy roles received `403 FORBIDDEN`, no data and
+      `Cache-Control: no-store` on 19 read and 38 write routes plus a
+      branch-filtered order list (232 role/request pairs). The matrix includes
+      the detail path for a populated order. `check-db.mjs inventory-read`
+      exited 0 with 547 PASS entries including parents, no FAIL/SKIP, and
+      verified container/network cleanup (`inventory-read-1795529037525.log`).
+      Focused Storefront/Purchasing Go test and vet passed; only tests changed.
+
+- [x] Schema-49 aggregate Storefront rerun through the Returns Cashier
+      matrix: `check-db.mjs full` exited 0 with 1,982 PASS entries including
+      parents, no FAIL/SKIP, and 538.98s for `TestSingleStoreIsolatedDatabase`
+      (`full-1795528597361.log`). All 49 migrations and the empty Pickup
+      down/reapply ran on the disposable target. The populated downgrade
+      refused with the fixture preserved; container/network cleanup passed.
+      The later Returns and Purchasing multi-role test edits are outside this
+      compiled snapshot and have separate focused checks.
+
+- [x] Schema-49 aggregate Storefront run: `check-db.mjs full` applied all 49
+      migrations to a disposable PostgreSQL 17.6 tmpfs container on an internal
+      network. `TestSingleStoreIsolatedDatabase` and its subtests recorded
+      1,717 PASS entries including parents, no FAIL/SKIP, 541.10s, exit 0
+      (`full-1795499217852.log`). Empty Pickup down/reapply passed; populated
+      rollback refused and preserved the column and fixture row. Cleanup of
+      the container and network passed ID/label verification. This run uses
+      synthetic fixtures; browser and retained-data evidence are separate.
+
+- [x] Schema-49 standalone payment rate-limit smoke:
+      `check-db.mjs rate-limits` exited 0 on a separate disposable PostgreSQL
+      17.6 tmpfs database (`rate-limits-1795499431356.log`). The actual
+      checkout, recover and status routes each passed their database-backed
+      rate-limit middleware and rejected an invalid body before provider
+      dispatch. Four PASS entries including the parent; no failures or
+      skips. The container and network were removed after ID/label checks.
+      This checks scope wiring, not the rate-limit exhaustion threshold.
+
+- [x] Schema-47 aggregate run: `check-db.mjs full` applied all 47 migrations
+      on the isolated PostgreSQL 17.6 tmpfs database and exited 0 with 1,707
+      PASS entries including parent tests, 0 FAIL/SKIP (536.41s;
+      `full-1795492229835.log`). Empty Pickup downgrade/reapply and populated
+      downgrade refusal passed; temporary container/network cleanup was verified.
+      This binary predates the Owner modifier read and edit changes; their
+      separately scoped checks are recorded under T1.2.
+
+- [x] Fresh schema-46 aggregate run, 2026-11-24: `check-db.mjs full`
+      exited 0 (`full-1795490780631.log`). PostgreSQL 17.6 applied all 46
+      migrations; 1,707 PASS entries including parent tests, 0 FAIL/SKIP,
+      536.85s. Empty Pickup downgrade/reapply passed. The populated downgrade
+      refused and preserved the column and fixture data; forward recovery
+      passed. Verified removal of the task-owned tmpfs container and internal
+      network. This run used synthetic fixtures; acceptance on real retained
+      data remains open.
+
+- [/] The tracked `verify:single-store` runner's Go subprocess now allows
+      14 minutes for Go tests and 15 minutes at the subprocess boundary
+      (the suite can use up to 13 minutes). The old 120-second limit was
+      shorter than the separate schema-46 aggregate run (536.02s).
+      `node --check scripts/check-single-store.mjs` and the six output
+      verifier tests passed. The tracked runner's live execution remains
+      unverified in Studio-Acceptance: the local cache lacks both
+      `postgres:17-alpine` and `migrate/migrate:v4.18.3`.
+
+- [x] The branchless Go integration suite now repeats the schema-46
+      Availability RLS checks under `smartpos_runtime` with two synthetic
+      organizations. Five subtests passed, including cross-organization
+      denial and matching-context writes; both fixtures were checked after
+      rollback. `check-db.mjs green` exited 0 with 42 PASS entries including
+      parents, no FAIL/SKIP entries, and verified tmpfs container/network
+      cleanup (`green-1795479643509.log`). Independent test review reported no
+      actionable findings. This checks runtime isolation and does not by itself
+      prove FORCE RLS for the table owner.
+
+- [x] Schema-46 availability RLS with `smartpos_runtime` (no `SUPERUSER`
+      or `BYPASSRLS`): absent and foreign organization context saw no row;
+      matching context could read, insert and update; a foreign update
+      affected zero rows, a foreign insert was denied and DELETE was not
+      granted. Probe transactions preserved the fixture digest.
+      `check-retained-46.mjs retained-46` exited 0 and removed its temporary
+      container/network (`retained-46-1795479222647.log`). The initial run
+      stopped on `psql` command tags in the result parser and cleaned up
+      (`retained-46-1795479153789.log`). No migrations or live data changed.
+
+- [x] Schema-46 aggregate Storefront run: `check-db.mjs full` exited 0
+      (`full-1795468848093.log`). All 46 migrations applied to PostgreSQL 17.6;
+      1,693 PASS entries including parent tests, 0 FAIL/SKIP, 536.02s. Empty
+      Pickup downgrade/reapply, populated downgrade refusal and ID/label
+      checked fixture cleanup passed. This covers the implemented Storefront
+      suite on synthetic data. Real retained-data acceptance remains open.
+
+- [x] Fresh schema 46: `check-db.mjs green` exited 0
+      (`green-1795468794523.log`). The branchless Storefront test passed
+      `availability_settings/open_hours_do_not_publish_draft` plus the
+      concurrent-write, audit rollback and expiry checks. Empty Pickup
+      downgrade/reapply and populated downgrade refusal passed. The runner
+      removed the task-owned container and network after ID/label checks.
+
+- [x] Synthetic retained schema 39 through 46: `check-retained-46.mjs
+      retained-46` exited 0 (`retained-46-1795467377868.log`). Verified
+      digests for 10 business/audit tables, retained sessions and staged
+      recovery records. Using golang-migrate v4.18.3, empty availability
+      downgraded and reapplied; populated availability refused downgrade
+      and kept its row. Verified the schema and digests before restoring
+      the disposable dirty marker to clean 46. Removed only the task-owned
+      tmpfs database and internal network after label/ID checks. No real
+      retained records were read; full T5.2 acceptance remains open.
+
+- [x] 2026-11-24 synthetic retained-data checkpoint: `node
+      .local/velopos-pickup-20261122/check-db.mjs retained-current` exited 0
+      (`retained-current-1795458682585.log`). Seeded schema 39 with the
+      historical synthetic Storefront fixture and one synthetic session, then
+      applied current migrations 40-45 in order. Row counts and content digests
+      matched for ten business/audit tables and the old session columns. No
+      Pickup flags, MFA proof, fresh primary proof or recovery state appeared.
+      Populated Pickup downgrade refused and preserved the row; labelled
+      temporary resources were removed. The first run correctly stopped before
+      migration because the historical fixture created no session. This is
+      synthetic upgrade evidence; no real retained records were read or changed.
+- [x] 2026-11-24 aggregate Storefront checkpoint: `check-db.mjs full` on
+      PostgreSQL 17.6/schema 45 exited 1 (`full-1795458355430.log`). The shared
+      Inventory settings fixture added a third store/membership before the two
+      directory/membership tests; the suite later reached its 480s deadline and
+      remaining cases stopped on the expired context. Cleanup by ID/label passed.
+      The fixture now runs after the shared Storefront cases; the aggregate test
+      and runner budgets increased without changing any individual check.
+      `check-db.mjs fixture-order` exited 0 (`fixture-order-1795458974239.log`):
+      127 PASS entries, 0 FAIL/SKIP, 102.60s; both cardinality checks and the
+      Inventory checks passed. Package Go test and diff check passed. Aggregate
+      rerun (`full-1795458937573.log`) exited 0: 1,688 PASS entries including
+      parent tests, 0 FAIL/SKIP, 535.10s. All 45 migrations applied to isolated
+      tmpfs PostgreSQL; empty Pickup downgrade/reapply, populated downgrade
+      refusal, and ID/label-checked cleanup passed. This proves the combined
+      Storefront suite for implemented code, not all migration acceptance.
 - [ ] Confirm task-owned disposable target and inspect fixture/startup/cleanup effects first. Run fresh/retained migration, tenant/RLS, constraints, replay, concurrency, transaction rollback and forward recovery cases.
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.
@@ -1869,6 +4039,154 @@ Acceptance: Current outputs prove no duplicate financial/quota/points/queue effe
 
 ### T5.3 Run browser, language and accessibility acceptance
 
+- [/] Current-build Chrome rerun: the four-suite run recorded 25 PASS and
+      11 FAIL (`t53-browser-1795532269094.log`). All failures were in
+      `owner-only.spec.ts`. The static runner rejected `/` before React loaded;
+      correcting only the runner recovered all four retired-bookmark cases at
+      360, 390, 768 and 1280 CSS pixels (`t53-bookmarks-1795532493176.log`,
+      4 PASS, exit 0). The Owner fixture now supplies completed setup and
+      exercises the current dashboard, menu, help/account menu and public
+      directory. The final four-suite run passed all 36 cases, exit 0
+      (`t53-final-1795532780195.log`). These runs used intercepted APIs;
+      no physical-device or live API result is implied.
+
+- [x] Retired Purchasing and Returns bookmarks: the current production web
+      build rendered the Thai not-found page at nine bookmarks in headless
+      Chrome at 360, 390, 768 and 1280 CSS pixels. Each kept its URL,
+      exposed a workspace link and fit without horizontal page overflow.
+      No request reached a retired workflow API path. The focused
+      `owner-only.spec.ts` run passed 4/4 with intercepted APIs. The first
+      run used the retired `/manage/dashboard` as its setup page; the rerun
+      used the current landing route. This verifies browser route disposition;
+      retained API acceptance is separate, and no physical device was tested.
+
+- [x] Late Availability save with real Go and PostgreSQL: Chromium at
+      1280 x 900 signed out while the relay held the successful PUT response
+      after revision 1 committed. The same document signed in again, proved
+      TOTP, and showed loading instead of old form data while the successful
+      fresh GET was held. It showed the saved Pickup pause after the GET was
+      released. Exactly one PUT ran and revision stayed 1.
+      `check-recovery-browser.mjs 1280 late-hours` exited 0 with a freshly
+      built Go server, schema 46 and the existing rebuilt web bundle
+      (`browser-late-hours-1795491171650.log`). The task-owned container and
+      network were removed after ID/label checks. This checks same-account
+      session turnover; it does not establish physical-device or screen-reader
+      behavior, a cross-restaurant write, or native ordering admission.
+
+- [x] Ordering-hours keyboard regression: deleting a window with Enter now
+      focuses Add window, so Enter again can add a replacement and continue
+      editing. The 1280px case failed on focus before the fix; after rebuilding,
+      all eight `restaurant-availability.spec.ts` cases passed with intercepted
+      APIs (`availability-keyboard-1795479420800.log`). The keyboard change ran
+      at 360/390/768/1280px, including Thai and English at enlarged text size.
+      Focused Vitest passed 16/16; focused ESLint and build exited 0 (build
+      emitted a chunk-size warning). Physical device and screen reader
+      acceptance remain open.
+
+- [x] Owner ordering-hours panel: `restaurant-availability.spec.ts` passed
+      7/7 with Windows Chrome and intercepted API responses. Checked save
+      and keyboard toggle at 360/390/768/1280px, Thai and English (125%
+      root text size at 390px), save payload and viewport fit. A completed
+      organization without a branch reached the panel; incomplete setup
+      redirected to `/setup`. A 409 preserved typed hours and pause edits
+      until explicit reload, then showed the latest settings. A
+      `403 MFA_REQUIRED` exposed account security in a separate tab,
+      kept the edits and sent no retry until the Owner submitted again.
+      This does not verify real MFA or a live database,
+      a physical touch device or a screen reader.
+
+- [x] Ordering-hours recovery across tabs: rebuilt the web app and ran the
+      eight availability cases using `check-owner-ui.mjs` with the availability
+      spec filter (exit 0; `availability-popup-1795469025762.log`). At 360px
+      the Owner opened `/security` in a new tab, submitted a synthetic TOTP
+      challenge, closed that tab and returned to the unchanged settings form.
+      The form made no automatic PUT; an explicit retry saved the same edits.
+      The APIs were intercepted. The first run used an older web build and
+      failed the MFA link and completed branchless redirect expectations.
+- [x] Live Owner ordering-hours recovery: `check-recovery-browser.mjs 360
+      owner-hours` exited 0 (`browser-owner-hours-1795476846939.log`). Chromium
+      with touch emulation used the built `/settings` and `/security` pages,
+      real Go API and schema-46 PostgreSQL. The fixture cleared only the
+      current session's MFA proof after the form loaded. The first save returned
+      `403 MFA_REQUIRED` and left no availability row. TOTP in the new tab
+      restored session proof. The original form kept its edits and sent no
+      automatic save; one explicit retry persisted revision 1 with Pickup paused.
+      The run used a synthetic restaurant with a retained-style branch and
+      seeded setup records. Docker published no ports and cleanup passed after
+      ID/label checks. Native public admission remains unverified.
+- [x] Desktop follow-up: `check-recovery-browser.mjs 1280 owner-hours`
+      exited 0 (`browser-owner-hours-desktop-1795477356434.log`). Chromium
+      at 1280 x 900 used the rebuilt web app, Go API and isolated schema-46
+      PostgreSQL. It verified the same MFA denial, preserved edits, popup
+      recovery and one explicit save to revision 1. Task-owned Docker
+      container and network cleanup passed. This covers the interaction;
+      visual and assistive technology acceptance remain open.
+
+- [x] 2026-11-24 identity/Owner browser checkpoint: the local
+      `check-owner-ui.mjs` runner served the current web build on loopback and
+      ran `mfa-settings.spec.ts` and `owner-mfa-creation.spec.ts` (exit 0,
+      28 passed in 39.7s; `mfa-browser-current-1795459208661.log`). Chromium
+      156.0.8078.4 on Windows at 360/390/768/1280px covered MFA setup and
+      replacement, lost confirmation, password-to-challenge navigation,
+      Thai/English text, focus, and Owner setup retry with the same key. Narrow
+      cases cover enlarged text and touch emulation. APIs were intercepted;
+      no live browser-to-database, physical-device or screen-reader acceptance.
+- [x] Focused recovery form semantics: Chromium verified accessible
+      descriptions for the recovery-code field and setup key. Keyboard
+      submission of a malformed code kept focus and the entered value and
+      dispatched no recovery request; valid input dispatched exactly one.
+      `check-owner-ui.mjs --grep 'Authenticator replacement'` passed 4 cases on
+      360/390/768/1280px (`mfa-browser-semantics-1795459678641.log`).
+- [x] Legacy Owner payment bookmark: eight Windows Chromium cases passed at
+      360/390/768/1280px with touch emulation at mobile widths. Authorized
+      Owners reached the visible sandbox heading and retained query/fragment;
+      denied Owners reached the visible 403 page without a sandbox request.
+      Both states fit the viewport. The loopback runner served the built app
+      with intercepted API responses and no provider or database access.
+- [x] Live browser-to-database recovery checkpoint: `check-recovery-browser.mjs`
+      exited 0 (`browser-recovery-ui-1795469825350.log`). Windows Chromium at
+      360px with touch emulation drove the built `/security` form against the
+      real Go API and schema-46 PostgreSQL. Verified same-origin login and
+      enrollment, missing-CSRF rejection, replacement, focus and acknowledgement
+      of new recovery codes, revoked session, denied confirmation replay and
+      password sign-in with MFA still required. No API response was mocked.
+      The relay accepted only named Auth methods/paths on Windows loopback;
+      Docker published no ports. Fixture and network cleanup passed after
+      ID/label checks. Live provider, physical-device and wider viewport
+      acceptance remain separate. The account and database were synthetic.
+- [x] Desktop browser recovery follow-up: `check-recovery-browser.mjs 1280`
+      exited 0 (`browser-recovery-desktop-1795469943440.log`). The real
+      schema-46 API revoked both the recovery session and a separate existing
+      browser session. After password sign-in, the TOTP used to confirm
+      replacement returned `INVALID_MFA_PROOF`. A fresh TOTP from the new
+      authenticator passed via `/security`, and the API reported the current
+      session as MFA verified. ID/label-checked fixture cleanup passed.
+- [x] Schema-49 browser recovery at 390 CSS pixels with touch emulation:
+      `check-recovery-browser.mjs 390` exited 0 against the current web build,
+      rebuilt Go API and disposable PostgreSQL
+      (`browser-recovery-schema49-390-1795514383111.log`). Chromium verified
+      TOTP replacement, revocation of both existing sessions, rejection of
+      confirmation and TOTP replay, and a successful fresh challenge with the
+      replacement factor. The runner removed the container and internal network
+      after ID/label checks. The test used synthetic accounts and does not cover
+      manual recovery without codes or a physical device.
+- [x] Historical transport investigation: the Windows Chromium runner
+      cannot reach services on the isolated WSL Docker network through port
+      publication. A disposable HTTP-only preflight on `--internal` returned
+      no published loopback port, then removed its resources by ID/label. WSL
+      had no installed Chromium or Node executable. HTTP-to-PostgreSQL and
+      browser-to-intercepted-API evidence remain separate.
+      A follow-up read-only inventory of the Studio-Acceptance Docker cache
+      found PostgreSQL and the isolated Go/Git tool images, with no local
+      browser runner image available for an offline retry.
+      A follow-up transport probe passed (`browser-stdio-1795469576546.log`):
+      Windows Chromium received a unique marker from a Go HTTP fixture in a
+      task-owned Docker container. A Windows loopback listener relayed only
+      one fixed GET to that container over Docker exec; an unmapped path
+      returned 404. Docker published no port, and the runner removed its
+      container and internal network after ID/label verification. No database
+      or application was started in that probe. The live checkpoint above
+      subsequently verified the relay with Origin, cookies, CSRF and POST.
 - [ ] Exercise primary/negative/recovery journeys at 360px, 390px, 1280px and representative tablet with zoom, long Thai/English content, keyboard/focus, screen-reader semantics and contrast. Check PWA/cache/push where in slice.
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.
@@ -1882,6 +4200,125 @@ Acceptance: Record screenshots/flows, viewport and emulated versus real-device s
 
 ### T5.4 Obtain independent security and correctness review
 
+- [x] Scoped receipt posting and supplier return dispatch MFA review: no
+      actionable findings in the supplied transaction and rollback evidence.
+      Main's isolated schema-49 run `inventory-read-1795530767703.log`
+      exited 0 with 582 PASS entries including parents, no FAIL/SKIP and
+      verified cleanup. The reviewer did not run tests. The receipt parent's
+      status, revision, accepted quantity and received event were added to
+      the follow-up rollback and retry checks. The reviewer accepted the
+      follow-up with no actionable findings against
+      `inventory-read-1795531028458.log` (582 PASS, no FAIL/SKIP, cleanup
+      verified). The reviewer also found no actionable issues in the two
+      service-layer expiry-after-replay-lookup cases and matching HTTP replay
+      assertions (`inventory-read-1795531281909.log`, 584 PASS, no FAIL/SKIP,
+      cleanup verified). HTTP handling of mid-request expiry and expiry during
+      COMMIT remain untested in these cases.
+
+- [x] Scoped Purchasing HTTP expiry follow-up: the same authorized reviewer
+      examined the four receipt-post and supplier-return-dispatch cases and
+      matching OpenAPI wording, with no actionable findings. Main's schema-49
+      `check-db.mjs inventory-read` run exited 0 with 593 PASS entries including
+      parents, no FAIL/SKIP and verified cleanup (`inventory-read-1795536028373.log`).
+      The SQL trace proves the requests reached the handler; expiry after audit
+      or replay lookup returned `401 UNAUTHENTICATED`, `no-store` and no data.
+      Readbacks verify rollback, same-key retry and byte-identical replay without
+      duplicate effects. The reviewer did not run tests. Early middleware
+      denials, expiry during COMMIT and other Purchasing routes were outside
+      this review.
+
+- [x] Scoped Returns HTTP completion MFA review: the authorized reviewer
+      found no actionable findings in the tests and the matching isolated
+      evidence (`returns-read-1795536922925.log`). The reviewer did not run
+      tests. This covers the menu-only fixture, four observed record groups
+      and two interruption points; it does not cover physical COMMIT or
+      other Returns operations.
+
+- [x] Scoped Returns HTTP refund confirmation MFA review: the reviewer found
+      that checking ledger counts only after retry could miss a partial write.
+      The tests now compare the four record groups immediately around each
+      `401`, before any retry. The reviewer inspected the change and matching
+      schema-49 evidence (`returns-read-1795536674126.log`, 339 PASS including
+      parents, 0 FAIL/SKIP) and closed the finding without running tests.
+      This review excludes shift and audit effects, other routes and expiry
+      during physical COMMIT.
+
+- [x] Scoped Purchasing transition MFA review: the authorized reviewer
+      examined the supplied code and matching isolated database evidence
+      for order approval/issue, receipt submit/approval and supplier return
+      submit/approval. No actionable findings. The original schema-49
+      run (`inventory-read-1795529765610.log`, exit 0) recorded 580 PASS
+      entries including parents, no FAIL/SKIP and verified cleanup. All six
+      cases withheld the result on service-layer expiry after the status
+      update, preserved state, item and revision on HTTP readback, and
+      committed the same-key authorized HTTP retry. The reviewer did not run
+      tools. This evidence does not directly count rolled-back audit or
+      replay records or cover expiry during replay, audit or COMMIT. Posting
+      and dispatch are outside this review.
+
+- [x] Scoped Returns refund/logout ordering review: the authorized reviewer
+      examined the supplied transaction, cancellation and replay excerpts and
+      matching isolated PostgreSQL results without running tools. PostgreSQL
+      showed logout waiting in the three tested paths. The reviewer identified
+      missing direct readback of the canceled refund's revision and replay key.
+      The amended test verifies unchanged status, revision, disbursement and
+      settlement-event counts, and no row for the exact confirmation key.
+      `check-db.mjs returns-read` exited 0 with 332 PASS entries including
+      parents, no FAIL/SKIP, and verified cleanup (`returns-read-1795530327707.log`).
+      The reviewer accepted the amended evidence with no actionable findings.
+      This does not verify cancellation or expiry during COMMIT, or other
+      Returns routes.
+
+- [x] Scoped Owner ordering-hours API authority and atomicity review:
+      the authorized reviewer inspected the supplied GET/PUT, authorization,
+      SQL, audit and matching test evidence without running tools. No
+      actionable defect was found. Added the requested primary-only Owner
+      denial checks: valid cookie, and valid CSRF on PUT, still return
+      `403 MFA_REQUIRED` without data. Isolated schema-46 run
+      `green-1795468358496.log` exited 0 and verified cleanup, concurrent
+      revision conflict and audit rollback. Follow-up regression
+      `green-1795468472799.log` (exit 0, isolated schema 46) paused the
+      write at audit insertion until the database clock reached the
+      MFA-verified session's expiry. The final check denied the request
+      without returning settings and rolled back the settings, revision
+      and audit. The task-owned database and network were removed.
+      Public admission remains unverified.
+- [x] Scoped Owner ordering-hours MFA recovery UI review: the authorized
+      reviewer inspected the supplied source and matching Main evidence
+      without running tools or tests and found no actionable findings.
+      Only `MFA_REQUIRED` shows the separate account-security link; edits
+      remain available for an explicit retry. Focused Vitest passed 14/14,
+      web typecheck passed, and the matching Chrome suite with intercepted
+      responses passed 8/8. Actual second-tab MFA and retry against a
+      live session remain unverified. The review does not cover the whole
+      availability service, migration or public admission.
+- [x] Scoped T1.3 Google primary-proof persistence review: the authorized
+      reviewer inspected the relevant source and matching Main test evidence
+      without running tools or tests and found no actionable findings.
+      Isolated PostgreSQL run `recovery-1795463689882.log` (exit 0) verifies
+      recent, older and absent proof with a synthetic identity after token
+      verification. This does not verify live Google callback `auth_time`
+      delivery or a subsequent recent-MFA challenge for that session.
+- [x] Follow-up review of the Google session TOTP and five-minute gate
+      regression in `mfa_recovery_integration_test.go`: the reviewer inspected
+      the test delta and matching Main evidence without running tools or tests
+      and found no actionable findings. `recovery-1795464194834.log` (exit 0)
+      covers recent, stale and absent primary proof before and after TOTP on
+      isolated schema 45. The fixture uses wall-clock TOTP and starts after
+      provider token verification; live callback proof remains unverified.
+- [x] Follow-up review of the synthetic HTTP Google callback fixture found
+      no actionable findings. The local handler verifies the signed token
+      and issues the session used by the three TOTP cases. Main's isolated
+      schema-45 run `recovery-1795464391526.log` exited 0 and verified cleanup;
+      the reviewer inspected supplied evidence and did not run tools.
+      This does not establish live Google claim availability, browser cookie
+      behavior or invalid callback state rejection.
+- [x] Google authorization-request change: the focused URL test failed for
+      the missing `claims` parameter before the change and passed afterward.
+      Identity Go test/vet and isolated schema-45 callback/MFA/recovery
+      (`recovery-1795465032141.log`, exit 0 with cleanup) passed. Scoped
+      independent review found no actionable issues and ran no tools.
+      Live configuration and proof delivery still require verification.
 - [ ] Provide only authorized relevant evidence and inspect findings against actual source/preconditions. Required domains include auth/tenant scope/secrets, financial integrity, callbacks, idempotency, wallet/points/quota concurrency and migration/release safety.
 - [ ] Inspect matching current test evidence and request focused regressions from
       the implementation owner when needed; keep this review read-only.
@@ -1894,6 +4331,22 @@ Acceptance: Separate authorized reviewer independently inspects relevant evidenc
 <a id="t5-5"></a>
 
 ### T5.5 Decide accepted scope and compatibility cutover
+
+- [/] Full-baseline scope reconciliation: the approved register and
+      `requirements.md` contain the same 92 unique VLP IDs. The current
+      requirement annotations list 49 PARTIAL, 35 MISSING, 6 CONFLICTING and
+      2 IMPLEMENTED. Both IMPLEMENTED labels describe static exclusions
+      (VLP-023 LINE and VLP-075 referral rewards). These counts describe the
+      register, not verified release acceptance. Keep the full baseline open;
+      localized Purchasing/Returns compatibility evidence does not authorize
+      a reduced release or removal of retained routes or data.
+
+- [x] Baseline trace check: all 92 scope numbers, A/B/C/D selections, and
+      approved statements in `requirements.md` match the approved register.
+      Every requirement links to both design and task ownership; all 206
+      trace links resolve to a unique anchor. The register SHA-256 still
+      matches the value in `requirements.md`. This verifies scope and
+      traceability only; it does not establish acceptance of a requirement.
 
 - [ ] Compare selected-release acceptance with every VLP item. Keep unimplemented approved scope visible; request explicit agreement for any reduced release, never relabel it unapproved. Record rollout target/version/impact and data-preserving rollback/forward recovery.
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path

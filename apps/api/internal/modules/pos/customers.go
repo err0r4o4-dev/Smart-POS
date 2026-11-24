@@ -13,39 +13,57 @@ type CustomerInput struct {
 }
 
 func (service *Service) SelectCustomer(ctx context.Context, user, org, id string, input CustomerInput) (Cart, error) {
-	tx, actor, err := service.begin(ctx, user, org, "pos.cart.manage")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "pos.cart.manage")
 	if err != nil {
-		return Cart{}, err
+		return Cart{}, dbError(err)
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
+	check := func(problem error) error {
+		if failure := ctx.Err(); failure != nil {
+			return failure
+		}
+		// An aborted SQL transaction cannot recheck assurance or return private data.
+		if problem != nil && tx.Conn().PgConn().TxStatus() == 'E' {
+			return dbError(problem)
+		}
+		if failure := authorization.Recheck(ctx); failure != nil {
+			return failure
+		}
+		return dbError(problem)
+	}
 	if !allowed(actor.Permissions, "customers.select") {
-		return Cart{}, organization.ErrDenied
+		return Cart{}, check(organization.ErrDenied)
 	}
 	cart, err := cartHeader(ctx, tx, actor, user, org, id)
-	if err != nil {
+	if err = check(err); err != nil {
 		return Cart{}, err
 	}
 	if cart.Status != "ACTIVE" && cart.Status != "HELD" || input.Revision != cart.Revision {
 		return Cart{}, ErrConflict
 	}
-	if err = cartUnlocked(ctx, tx, org, id); err != nil {
+	if err = check(cartUnlocked(ctx, tx, org, id)); err != nil {
 		return Cart{}, err
 	}
 	if input.CustomerID != nil {
-		if _, err = customers.ValidateSelection(ctx, tx, actor, org, *input.CustomerID); err != nil {
-			return Cart{}, dbError(err)
+		_, err = customers.ValidateSelection(ctx, tx, actor, org, *input.CustomerID)
+		if err = check(err); err != nil {
+			return Cart{}, err
 		}
 	}
 	_, err = tx.Exec(ctx, "UPDATE pos_carts SET customer_id=$3,revision=revision+1,updated_at=now() WHERE organization_id=$1 AND id=$2", org, id, input.CustomerID)
-	if err != nil {
-		return Cart{}, dbError(err)
+	if err = check(err); err != nil {
+		return Cart{}, err
 	}
 	cart, err = readCart(ctx, tx, actor, user, org, id)
-	if err != nil {
+	if err = check(err); err != nil {
 		return Cart{}, err
 	}
-	if err = finish(ctx, tx, org, user, "pos.cart.customer_selected", id); err != nil {
+	if err = check(organization.RecordAudit(ctx, tx, org, user, "pos.cart.customer_selected", id)); err != nil {
 		return Cart{}, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return Cart{}, dbError(err)
 	}
 	return cart, nil
 }

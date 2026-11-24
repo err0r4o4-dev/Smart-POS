@@ -417,6 +417,7 @@ function renderSetup(initialEntries = ['/setup'], english = false) {
         <Routes>
           <Route path="/setup" element={<SetupPage />} />
           <Route path="/dashboard" element={<h1>แดชบอร์ด</h1>} />
+          <Route path="/settings" element={<h1>Settings</h1>} />
           <Route path="/account" element={<h1>บัญชี</h1>} />
         </Routes>
       </MemoryRouter>
@@ -534,7 +535,8 @@ it('hides ordering and charge inputs without changing hydrated settings on save'
   );
 });
 
-it('validates table rows and enables QR automatically', async () => {
+it.each(['', 'branch'])('validates table rows and enables QR with branch selector %j', async (branchID) => {
+  mocks.branchID = branchID;
   mocks.context = {
     organization: { id: 'org-1' },
     membership: { role: 'OWNER' },
@@ -571,7 +573,7 @@ it('validates table rows and enables QR automatically', async () => {
     '/organizations/org-1/restaurant/setup/tables',
     expect.objectContaining({
       body: expect.objectContaining({
-        generate_qr: true,
+        ...(branchID ? { branch_id: branchID, generate_qr: true } : { qr_enabled: true }),
         zones: [{ name: 'โซนหลัก', code: 'ZONE_1' }],
         tables: [
           { name: 'โต๊ะ 1', code: 'TABLE_1', zone_code: 'ZONE_1', seats: 4 },
@@ -698,6 +700,9 @@ it('creates and saves a profile using only visible store fields', async () => {
   expect(screen.queryByLabelText('รหัสร้าน')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('ชื่อสาขาหลัก')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('รหัสสาขาหลัก')).not.toBeInTheDocument();
+  expect(
+    screen.queryByLabelText('สั่งล่วงหน้าแล้วมารับ'),
+  ).not.toBeInTheDocument();
   fireEvent.change(screen.getByLabelText('ชื่อร้าน'), {
     target: { value: 'ร้านใหม่' },
   });
@@ -1169,6 +1174,9 @@ it('saves current service modes when returning to the profile', async () => {
       profile.organization.name,
     ),
   );
+  expect(
+    screen.queryByLabelText('สั่งล่วงหน้าแล้วมารับ'),
+  ).not.toBeInTheDocument();
   fireEvent.click(screen.getByLabelText('เดลิเวอรี'));
   fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
   await screen.findByRole('heading', { name: 'การชำระเงิน' });
@@ -1184,6 +1192,40 @@ it('saves current service modes when returning to the profile', async () => {
       }),
     ),
   );
+});
+
+it('saves Pickup alone for organization setup without needing a table', async () => {
+  mocks.branchID = '';
+  mocks.context = {
+    organization: { id: 'org-1' },
+    membership: { role: 'OWNER' },
+  };
+  mocks.request.mockResolvedValue({ ...setupState, current_step: 'services' });
+  renderSetup(['/setup'], true);
+  await screen.findByLabelText('Pickup');
+  fireEvent.change(screen.getByLabelText('Store name'), {
+    target: { value: 'Test restaurant' },
+  });
+  fillRequiredContactAndAddress(true);
+  fireEvent.click(screen.getByLabelText('Dine in'));
+  fireEvent.click(screen.getByLabelText('Takeaway'));
+  fireEvent.click(screen.getByLabelText('Pickup'));
+  fireEvent.click(screen.getByRole('button', { name: 'Save and continue' }));
+  await screen.findByRole('heading', { name: 'Payments' });
+  const modes = {
+    dine_in: false,
+    takeaway: false,
+    delivery: false,
+    pickup: true,
+  };
+  for (const step of ['profile', 'services']) {
+    expect(mocks.request).toHaveBeenCalledWith(
+      `/organizations/org-1/restaurant/setup/${step}`,
+      expect.objectContaining({
+        body: expect.objectContaining({ service_modes: modes }),
+      }),
+    );
+  }
 });
 
 it('prevents editing until the initial saved profile has loaded', async () => {
@@ -1852,7 +1894,7 @@ it.each([
     fireEvent.click(screen.getByRole('button', { name: 'Open store' }));
     await waitFor(() => expect(keys).toHaveLength(2));
     expect(keys[1]).toBe(keys[0]);
-    await screen.findByText('แดชบอร์ด');
+    await screen.findByRole('heading', { name: 'Settings' });
     expect(
       Object.keys(sessionStorage).some((name) =>
         name.startsWith('smartpos-completion:'),
@@ -1929,7 +1971,7 @@ it('retains an uncertain completion key through remount and only clears confirme
     'The server has not confirmed the store is ready',
   );
   fireEvent.click(screen.getByRole('button', { name: 'Open store' }));
-  await screen.findByText('แดชบอร์ด');
+  await screen.findByRole('heading', { name: 'Settings' });
   expect(keys).toHaveLength(3);
   expect(new Set(keys).size).toBe(1);
   expect(

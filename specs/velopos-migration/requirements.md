@@ -190,7 +190,7 @@ planning traceability; task presence is not implementation or test completion.
 - Source / approved decision: [approved register](approved-requirements.md), Scope 10 / **B**.
 - **Approved requirement:** เจ้าของบัญชีเดียวดูแลร้านอาหารหลายร้านได้ แต่แต่ละร้านเป็น Entity อิสระ แยกเมนู คิว ออเดอร์ รายรับ การตั้งค่า และสถานะอนุมัติ ไม่มีโครงสร้างหลายสาขาที่ผูกร้านรวมกัน
 - **Verification intent (derived, not a new decision):** เจ้าของสลับร้านที่ตนมีสิทธิ์ได้; ข้อมูล/คิว/ชำระเงินแยกตามร้าน
-- Current implementation: **PARTIAL**. Evidence: E01, E02, E05. Organization-scoped setup is a reuse seam, while operational queue/orders still require branches. Independent restaurant ownership needs a technical mapping decision.
+- Current implementation: **PARTIAL**. Evidence: E01, E02, E05. B01 selects one organization per restaurant and permits an Owner to manage separate organizations. Organization-scoped setup is a reuse seam; existing operational queue/orders still use branch context. The approved mapping does not establish restaurant-native operations or approval isolation.
 - Trace: [D02](design.md#d02); [T1.1](tasks.md#t1-1), [T2.1](tasks.md#t2-1), [T3.1](tasks.md#t3-1).
 
 ### VLP-011 - Hybrid Community Marketplace Directory
@@ -366,7 +366,7 @@ planning traceability; task presence is not implementation or test completion.
 - Source / approved decision: [approved register](approved-requirements.md), Scope 32 / **B**.
 - **Approved requirement:** ร้านควบคุม Pause ทั้งร้านหรือแยกตาม Dine-in, Takeaway, Pickup และ Delivery ได้ร่วมกับตารางเวลาเปิดร้าน ออเดอร์ที่ Paid แล้วต้องทำต่อ
 - **Verification intent (derived, not a new decision):** Pause เฉพาะช่องทางไม่ปิดช่องทางอื่น; คิว Paid ไม่ถูกลบ
-- Current implementation: **PARTIAL**. Evidence: E02, E08. Global accepting_orders and service-mode flags exist; independent pause controls for all four approved sales modes and paid-work continuity need implementation.
+- Current implementation: **PARTIAL**. Evidence: E02, E08, [T3.1](tasks.md#t3-1) and [T4.1](tasks.md#t4-1). Global `accepting_orders` and four setup-mode flags exist. The setup UI exposes Pickup separately from Takeaway for an existing organization without a branch. This value does not change public admission. Per-mode pause and its interaction with paid work remain open.
 - Trace: [D02](design.md#d02); [T3.1](tasks.md#t3-1).
 
 ### VLP-033 - Admin Community/Market/Category Registry
@@ -670,7 +670,7 @@ planning traceability; task presence is not implementation or test completion.
 - Source / approved decision: [approved register](approved-requirements.md), Scope 70 / **B**.
 - **Approved requirement:** ลูกค้ามี Email/Password และ Social Login พร้อม Guest Checkout; มี Email Verification, Password Recovery และ Session Management; Owner/Admin บังคับ MFA และ Re-auth ก่อน Sensitive Actions เช่น บัญชีรับเงิน โอนร้าน คืนเครดิตโฆษณา; Secure Recovery ต้องไม่ให้ Password Reset ข้าม MFA ได้; Backend ใช้ RBAC/Tenant Isolation
 - **Verification intent (derived, not a new decision):** Owner/Admin เปลี่ยน Sensitive Data โดยไม่ผ่าน Re-auth ไม่ได้; Guest ไม่บังคับสมัคร
-- Current implementation: **PARTIAL**. Evidence: E17. Email/password, Google, verification and recovery exist. No MFA/TOTP/WebAuthn evidence was found; role-required MFA, sensitive reauth and MFA-safe recovery remain gaps. Provider/method choices remain TBD.
+- Current implementation: **PARTIAL**. Evidence: E17 and [T1.3](tasks.md#t1-3). Email/password, Google, verified primary proof, TOTP, and recovery-code replacement are implemented. Local database tests cover the replacement transaction, prior session revocation and password sign-in with the new TOTP. Full Owner/Admin enforcement, production consumers for sensitive commands, live Google proof delivery and manual recovery evidence remain open.
 - Trace: [D05](design.md#d05); [T1.3](tasks.md#t1-3), [T6.4](tasks.md#t6-4).
 
 ### VLP-071 - Secure Guest Order Claiming

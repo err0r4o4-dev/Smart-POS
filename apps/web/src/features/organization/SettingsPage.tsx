@@ -26,6 +26,7 @@ import { StandardPageHeader } from '../../components/ui/StandardPage';
 import { posRequest } from '../../lib/pos-api';
 import { organizationRequest } from '../../lib/organization-api';
 import type { ShopSettings } from '../../lib/storefront-api';
+import { AvailabilitySettings } from './AvailabilitySettings';
 import './settings.css';
 
 export interface RestaurantSettingsData {
@@ -57,10 +58,11 @@ export function SettingsPage({
   const currentBranchId =
     branchId || tenant.branchID || initialSettings?.branch_id || 'branch-1';
   const orgId = tenant.context?.organization.id || 'org';
+  const userId = authState.session?.user.id;
 
   // Active storefront settings for public link
   const storefrontQuery = useQuery({
-    queryKey: ['storefront-settings', orgId],
+    queryKey: ['tenant', userId, orgId, 'storefront-settings', tenant.branchID],
     queryFn: async ({ signal }) => {
       try {
         return await posRequest<ShopSettings>(orgId, '/storefront', { signal });
@@ -69,11 +71,11 @@ export function SettingsPage({
       }
     },
     initialData: initialStorefront ?? undefined,
-    enabled: Boolean(orgId && orgId !== 'org'),
+    enabled: Boolean(userId && org?.id),
     retry: false,
   });
 
-  const storefrontPath = storefrontQuery.data?.slug
+  const storefrontPath = userId && storefrontQuery.data?.slug
     ? `/shop/${encodeURIComponent(storefrontQuery.data.slug)}`
     : paths.shop;
 
@@ -280,6 +282,22 @@ export function SettingsPage({
           <span>{localize(statusMessage)}</span>
         </div>
       )}
+
+      {org?.business_type === 'RESTAURANT' &&
+        tenant.context?.membership?.role === 'OWNER' &&
+        authState.session?.user.id &&
+        authState.session.csrf_token && (
+          <AvailabilitySettings
+            key={JSON.stringify([
+              authState.session.user.id,
+              org.id,
+              tenant.branchID,
+            ])}
+            user={authState.session.user.id}
+            organization={org.id}
+            csrf={authState.session.csrf_token}
+          />
+        )}
 
       <form
         id="settings-form"

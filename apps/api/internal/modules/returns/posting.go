@@ -17,30 +17,37 @@ func (service *Service) Transition(ctx context.Context, user, org, id, action, k
 	if action == "complete" {
 		permission = "returns.complete"
 	}
-	tx, actor, err := service.Organization.Authorized(ctx, user, org, permission)
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, permission)
 	if err != nil {
 		return nil, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
 	doc, err := header(ctx, tx, actor, org, id)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
 		return nil, err
 	}
 	if actor.Role != "OWNER" && doc.Creator != user {
 		return nil, organization.ErrDenied
 	}
-	if err = inventory.BranchScope(ctx, tx, actor, org, doc.Branch, true); err != nil {
-		return nil, dbError(err)
+	if err = checkAuthorization(ctx, authorization, dbError(inventory.BranchScope(ctx, tx, actor, org, doc.Branch, true))); err != nil {
+		return nil, err
 	}
 	op, cached, err := inventory.BeginOperation(ctx, tx, user, org, "customer-return."+action, key, struct {
 		ID    string
 		Input ActionInput
 	}{id, input})
-	if err != nil || cached != nil {
-		return cached, dbError(err)
+	if err = checkAuthorization(ctx, authorization, dbError(err)); err != nil {
+		return nil, err
+	}
+	if cached != nil {
+		return cached, nil
 	}
 	var linked bool
 	if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM sale_adjustments WHERE organization_id=$1 AND linked_return_id=$2)", org, id).Scan(&linked); err != nil {
+		return nil, err
+	}
+	if err = checkAuthorization(ctx, authorization, nil); err != nil {
 		return nil, err
 	}
 	if linked {
@@ -54,7 +61,7 @@ func (service *Service) Transition(ctx context.Context, user, org, id, action, k
 		return nil, err
 	}
 	if action == "complete" {
-		if err = post(ctx, tx, actor, user, org, op, doc, nil); err != nil {
+		if err = checkAuthorization(ctx, authorization, post(ctx, tx, actor, user, org, op, doc, nil)); err != nil {
 			return nil, err
 		}
 	}
@@ -63,10 +70,10 @@ func (service *Service) Transition(ctx context.Context, user, org, id, action, k
 		return nil, dbError(err)
 	}
 	value, err := result(ctx, tx, org, id)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
 		return nil, err
 	}
-	return finish(ctx, tx, user, org, op, "returns."+action, id, value)
+	return finishWrite(ctx, authorization, user, org, op, "returns."+action, id, value)
 }
 func post(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org, op string, doc document, refundAmount *string) error {
 	rows, err := tx.Query(ctx, `SELECT item.id::text,item.original_sale_item_id::text,item.variant_id::text,item.quantity::text,item.refund_amount::text,item.disposition,item.destination_location_id::text,sale.quantity::text,sale.line_total::text,item.batch_id::text FROM customer_return_items item JOIN sale_items sale ON sale.organization_id=item.organization_id AND sale.id=item.original_sale_item_id WHERE item.organization_id=$1 AND item.return_id=$2 ORDER BY item.variant_id,item.id`, org, doc.ID)

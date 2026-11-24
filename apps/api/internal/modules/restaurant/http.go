@@ -65,6 +65,16 @@ func endpoint(run func(context.Context, string, string, *http.Request) (any, err
 
 func (handler Handler) TenantRoutes(router chi.Router) {
 	service := handler.Service
+	router.Get("/restaurant/availability", endpoint(func(ctx context.Context, user, org string, _ *http.Request) (any, error) {
+		return service.AvailabilitySettings(ctx, user, org)
+	}))
+	router.Put("/restaurant/availability", endpoint(func(ctx context.Context, user, org string, request *http.Request) (any, error) {
+		input, err := decodeAvailabilitySettings(request)
+		if err != nil {
+			return nil, err
+		}
+		return service.SaveAvailabilitySettings(ctx, user, org, input)
+	}))
 	router.Get("/restaurant/setup", endpoint(func(ctx context.Context, user, org string, request *http.Request) (any, error) {
 		branch := request.URL.Query().Get("branch_id")
 		return service.Setup(ctx, user, org, branch)

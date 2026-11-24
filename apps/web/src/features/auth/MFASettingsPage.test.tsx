@@ -17,6 +17,8 @@ const mocks = vi.hoisted(() => ({
   getMFAStatus: vi.fn(),
   beginMFAEnrollment: vi.fn(),
   confirmMFAEnrollment: vi.fn(),
+  beginMFARecovery: vi.fn(),
+  confirmMFARecovery: vi.fn(),
   verifyMFA: vi.fn(),
 }));
 vi.mock('../../app/AuthProvider', () => ({ useAuth: () => mocks.auth }));
@@ -61,6 +63,7 @@ function page() {
     [
       { path: '/security', element: <Harness /> },
       { path: '/workspace', element: <h1>Workspace</h1> },
+      { path: '/login', element: <h1>Sign-in page</h1> },
     ],
     { initialEntries: ['/security'] },
   );
@@ -85,6 +88,80 @@ async function enroll() {
     screen.getByRole('button', { name: 'Enable MFA' }).closest('form')!,
   );
 }
+
+async function recover() {
+  mocks.getMFAStatus.mockResolvedValue({
+    enabled: true,
+    session_verified: false,
+  });
+  mocks.beginMFARecovery.mockResolvedValue(enrollment);
+  const rendered = page();
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'Use a recovery code' }),
+  );
+  fireEvent.change(screen.getByLabelText('Recovery code', { exact: true }), {
+    target: { value: 'A'.repeat(26) },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Set up replacement' }));
+  expect(await screen.findByLabelText('Authenticator setup key')).toHaveValue(
+    enrollment.secret,
+  );
+  expect(mocks.beginMFARecovery).toHaveBeenCalledWith(
+    'A'.repeat(26),
+    'session-one',
+    expect.any(AbortSignal),
+  );
+  fireEvent.change(screen.getByLabelText('Six-digit code'), {
+    target: { value: '001234' },
+  });
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Replace authenticator' }),
+  );
+  return rendered;
+}
+
+it('shows new recovery codes before clearing the revoked session', async () => {
+  mocks.confirmMFARecovery.mockResolvedValue({ recovery_codes: codes });
+  await recover();
+  expect(await screen.findByText(codes[0])).toBeVisible();
+  expect(mocks.confirmMFARecovery).toHaveBeenCalledWith(
+    'factor',
+    '001234',
+    'session-one',
+    expect.any(AbortSignal),
+  );
+  expect(mocks.auth.clear).not.toHaveBeenCalled();
+  expect(screen.getByRole('button', { name: 'Done' })).toBeDisabled();
+  fireEvent.click(
+    screen.getByRole('checkbox', {
+      name: 'I have stored these codes somewhere safe',
+    }),
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+  expect(screen.queryByText(codes[0])).toBeNull();
+  expect(screen.queryByText('This session is verified')).toBeNull();
+  fireEvent.click(screen.getByRole('link', { name: 'Sign in again' }));
+  expect(
+    await screen.findByRole('heading', { name: 'Sign-in page' }),
+  ).toBeVisible();
+  expect(mocks.auth.clear).toHaveBeenCalledTimes(1);
+});
+
+it('does not retry or claim success when recovery confirmation has no response', async () => {
+  mocks.confirmMFARecovery.mockRejectedValue(new ApiError(0, 'lost response'));
+  await recover();
+  expect(
+    await screen.findByText(
+      /could not confirm whether your authenticator changed/i,
+    ),
+  ).toBeVisible();
+  expect(screen.queryByLabelText('Authenticator setup key')).toBeNull();
+  expect(
+    screen.queryByRole('button', { name: 'Replace authenticator' }),
+  ).toBeNull();
+  expect(mocks.confirmMFARecovery).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole('link', { name: 'Sign in again' })).toBeVisible();
+});
 
 it('uses real API boundaries and retains one-time codes until explicit acknowledgement', async () => {
   const { router } = page();
@@ -285,9 +362,7 @@ it('warns before abandoning pending confirmation and retains its eventual codes'
   expect(router.state.location.pathname).toBe('/security');
   await act(() => pending.resolve({ recovery_codes: codes }));
   expect(await screen.findByText(codes[0])).toBeVisible();
-  expect(
-    screen.getByText(/Using recovery codes is not available yet/),
-  ).toBeVisible();
+  expect(screen.getByText(/Codes are shown only now/)).toBeVisible();
 });
 
 it('removes the pending navigation warning after a rejected confirmation', async () => {

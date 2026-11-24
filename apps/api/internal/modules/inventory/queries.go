@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/jackc/pgx/v5"
 	"net/url"
 	"strconv"
 	"time"
+
+	"smartpos/api/internal/modules/organization"
 )
 
 type Filter struct {
@@ -72,9 +73,11 @@ type Page struct {
 	PageSize int               `json:"page_size"`
 }
 
-func pageQuery(ctx context.Context, tx pgx.Tx, selection, from, where string, args []any, filter Filter) (Page, error) {
+func pageQuery(ctx context.Context, authorization *organization.Authorization, selection, from, where string, args []any, filter Filter) (Page, error) {
+	tx := authorization.Tx
 	result := Page{Items: []json.RawMessage{}, Page: filter.Page, PageSize: filter.PageSize}
-	if err := tx.QueryRow(ctx, "SELECT count(*) "+from+where, args...).Scan(&result.Total); err != nil {
+	err := tx.QueryRow(ctx, "SELECT count(*) "+from+where, args...).Scan(&result.Total)
+	if err = privateReadCheck(ctx, authorization, err); err != nil {
 		return result, err
 	}
 	args = append(args, filter.PageSize, (filter.Page-1)*filter.PageSize)
@@ -97,43 +100,46 @@ const stockFrom = ` FROM (SELECT balance.*,updated_at AS created_at FROM stock_b
 const stockWhere = ` WHERE item.organization_id=$1 AND ($2 OR item.branch_id=ANY($3::uuid[])) AND ($4='' OR item.branch_id=nullif($4,'')::uuid) AND (product.name ILIKE $5 OR variant.sku ILIKE $5 OR EXISTS(SELECT 1 FROM product_barcodes barcode WHERE barcode.organization_id=item.organization_id AND barcode.variant_id=item.variant_id AND barcode.code ILIKE $5)) AND ($6='' OR item.location_id=nullif($6,'')::uuid) AND ($7='' OR item.variant_id=nullif($7,'')::uuid) AND ($8='' OR product.status=$8) AND ($9='' OR location.type=$9) AND ($10='' OR product.category_id=nullif($10,'')::uuid) AND ($11='' OR ($11='ZERO' AND item.quantity=0) OR ($11='POSITIVE' AND item.quantity>0) OR ($11='LOW' AND EXISTS(SELECT 1 FROM inventory_reorder_points threshold WHERE threshold.organization_id=item.organization_id AND threshold.branch_id=item.branch_id AND threshold.variant_id=item.variant_id AND threshold.status='ACTIVE' AND threshold.minimum_quantity>(SELECT COALESCE(sum(balance.quantity),0) FROM stock_balances balance JOIN stock_locations place ON place.organization_id=balance.organization_id AND place.id=balance.location_id WHERE balance.organization_id=item.organization_id AND balance.branch_id=item.branch_id AND balance.variant_id=item.variant_id AND place.status='ACTIVE' AND place.type='WAREHOUSE')))) `
 const stockJSON = `to_jsonb(item)||jsonb_build_object('quantity',item.quantity::text,'reserved',storefront_reserved_quantity(item.organization_id,item.location_id,item.variant_id)::text,'sku',variant.sku,'product_name',product.name,'variant_name',variant.name,'barcode',(SELECT code FROM product_barcodes WHERE organization_id=item.organization_id AND variant_id=item.variant_id ORDER BY is_primary DESC,created_at LIMIT 1),'unit',unit.code,'location_name',location.name,'location_type',location.type,'available',CASE WHEN stock_branch.status='ACTIVE' AND location.status='ACTIVE' AND location.type IN ('WAREHOUSE','SALES_FLOOR','SHELF') AND variant.status='ACTIVE' AND product.status='ACTIVE' THEN greatest(0.000,storefront_sellable_quantity(item.organization_id,item.location_id,item.variant_id)-storefront_reserved_quantity(item.organization_id,item.location_id,item.variant_id))::text ELSE '0.000' END,'availability_status',CASE WHEN location.type='IN_TRANSIT' THEN 'IN_TRANSIT' WHEN stock_branch.status<>'ACTIVE' OR location.status<>'ACTIVE' OR variant.status<>'ACTIVE' OR product.status<>'ACTIVE' OR location.type IN ('QUARANTINE','DAMAGED') THEN 'RESTRICTED' ELSE 'POS_ELIGIBLE' END)`
 
-func (service *Service) List(ctx context.Context, user, org, resource string, filter Filter) (any, error) {
+func (service *Service) List(ctx context.Context, user, org, resource string, filter Filter) (result any, err error) {
 	permission := "inventory.read"
 	if resource == "movements" {
 		permission = "inventory.audit.read"
 	}
-	tx, actor, err := service.begin(ctx, user, org, permission)
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, permission)
 	if err != nil {
 		return nil, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
+	defer finishPrivateRead(ctx, authorization, &result, &err)
 	if filter.BranchID != "" {
-		if err = scope(ctx, tx, actor, org, filter.BranchID, false); err != nil {
+		if err = privateReadCheck(ctx, authorization, scope(ctx, tx, actor, org, filter.BranchID, false)); err != nil {
 			return nil, err
 		}
 	}
 	owner := actor.Role == "OWNER"
 	branches := actor.BranchIDs
 	if filter.LocationID != "" {
-		if _, err = physical(ctx, tx, actor, org, filter.LocationID, false); err != nil {
+		_, err = physical(ctx, tx, actor, org, filter.LocationID, false)
+		if err = privateReadCheck(ctx, authorization, err); err != nil {
 			return nil, err
 		}
 	}
 	if resource == "balances" || resource == "overview" {
 		args := []any{org, owner, branches, filter.BranchID, "%" + filter.Search + "%", filter.LocationID, filter.VariantID, filter.ProductStatus, filter.Type, filter.CategoryID, filter.StockStatus}
 		if resource == "balances" {
-			return pageQuery(ctx, tx, stockJSON, stockFrom, stockWhere, args, filter)
+			return pageQuery(ctx, authorization, stockJSON, stockFrom, stockWhere, args, filter)
 		}
 		summary, err := raw(ctx, tx, `SELECT jsonb_build_object('recorded_variants',count(DISTINCT item.variant_id),'by_unit',COALESCE((SELECT jsonb_agg(to_jsonb(total)) FROM (SELECT unit.code AS unit,location.type,sum(item.quantity)::text AS quantity `+stockFrom+stockWhere+` GROUP BY unit.id,unit.code,location.type ORDER BY unit.code,location.type) total),'[]'::jsonb)) `+stockFrom+stockWhere, args...)
-		if err != nil {
+		if err = privateReadCheck(ctx, authorization, err); err != nil {
 			return nil, err
 		}
 		operations, err := raw(ctx, tx, `SELECT jsonb_build_object('pending_adjustments',count(*) FILTER(WHERE kind='ADJUSTMENT' AND status IN ('DRAFT','PENDING_APPROVAL','APPROVED')),'open_counts',count(*) FILTER(WHERE kind='COUNT' AND status IN ('IN_PROGRESS','SUBMITTED','APPROVED')),'pending_transfers',count(*) FILTER(WHERE kind='TRANSFER' AND status NOT IN ('RECEIVED','CANCELLED'))) FROM inventory_documents WHERE organization_id=$1 AND ($2 OR branch_id=ANY($3::uuid[]) OR destination_branch_id=ANY($3::uuid[])) AND ($4='' OR branch_id=nullif($4,'')::uuid OR destination_branch_id=nullif($4,'')::uuid)`, org, owner, branches, filter.BranchID)
-		if err != nil {
+		if err = privateReadCheck(ctx, authorization, err); err != nil {
 			return nil, err
 		}
 		alerts, err := raw(ctx, tx, `SELECT jsonb_build_object('active_variants',(SELECT count(*) FROM product_variants variant JOIN products product ON product.organization_id=variant.organization_id AND product.id=variant.product_id WHERE variant.organization_id=$1 AND variant.status='ACTIVE' AND product.status='ACTIVE'),'low_stock_variants',count(DISTINCT threshold.variant_id)) FROM inventory_reorder_points threshold WHERE threshold.organization_id=$1 AND ($2 OR threshold.branch_id=ANY($3::uuid[])) AND ($4='' OR threshold.branch_id=nullif($4,'')::uuid) AND threshold.status='ACTIVE' AND threshold.minimum_quantity>(SELECT COALESCE(sum(balance.quantity),0) FROM stock_balances balance JOIN stock_locations place ON place.organization_id=balance.organization_id AND place.id=balance.location_id WHERE balance.organization_id=threshold.organization_id AND balance.branch_id=threshold.branch_id AND balance.variant_id=threshold.variant_id AND place.status='ACTIVE' AND place.type='WAREHOUSE')`, org, owner, branches, filter.BranchID)
-		if err != nil {
+		if err = privateReadCheck(ctx, authorization, err); err != nil {
 			return nil, err
 		}
 		recent := json.RawMessage(`[]`)
@@ -189,27 +195,29 @@ func (service *Service) List(ctx context.Context, user, org, resource string, fi
 	if resource == "balances" {
 		return nil, ErrNotFound
 	}
-	return pageQuery(ctx, tx, selection, from, where, args, filter)
+	return pageQuery(ctx, authorization, selection, from, where, args, filter)
 }
-func (service *Service) Get(ctx context.Context, user, org, resource, id string) (json.RawMessage, error) {
+func (service *Service) Get(ctx context.Context, user, org, resource, id string) (result json.RawMessage, err error) {
 	permission := "inventory.read"
 	if resource == "movements" {
 		permission = "inventory.audit.read"
 	}
-	tx, actor, err := service.begin(ctx, user, org, permission)
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, permission)
 	if err != nil {
 		return nil, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
+	defer finishPrivateRead(ctx, authorization, &result, &err)
 	if !uuidPattern.MatchString(id) {
 		return nil, ErrInput
 	}
 	if kind := map[string]string{"adjustments": "ADJUSTMENT", "counts": "COUNT", "transfers": "TRANSFER"}[resource]; kind != "" {
 		doc, err := document(ctx, tx, org, id, kind)
-		if err != nil {
+		if err = privateReadCheck(ctx, authorization, err); err != nil {
 			return nil, err
 		}
-		if err = documentScope(ctx, tx, actor, org, doc, "read"); err != nil {
+		if err = privateReadCheck(ctx, authorization, documentScope(ctx, tx, actor, org, doc, "read")); err != nil {
 			return nil, err
 		}
 		return documentJSON(ctx, tx, org, id)
@@ -219,10 +227,11 @@ func (service *Service) Get(ctx context.Context, user, org, resource, id string)
 		return nil, ErrNotFound
 	}
 	var branch string
-	if err = tx.QueryRow(ctx, "SELECT branch_id::text FROM "+table+" WHERE organization_id=$1 AND id=$2", org, id).Scan(&branch); err != nil {
-		return nil, databaseError(err)
+	err = tx.QueryRow(ctx, "SELECT branch_id::text FROM "+table+" WHERE organization_id=$1 AND id=$2", org, id).Scan(&branch)
+	if err = privateReadCheck(ctx, authorization, databaseError(err)); err != nil {
+		return nil, err
 	}
-	if err = scope(ctx, tx, actor, org, branch, false); err != nil {
+	if err = privateReadCheck(ctx, authorization, scope(ctx, tx, actor, org, branch, false)); err != nil {
 		return nil, err
 	}
 	selection := "to_jsonb(item)"

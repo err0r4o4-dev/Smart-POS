@@ -344,6 +344,21 @@ func (service *Service) ConfirmImport(ctx context.Context, user, org, id, mode s
 			return privateReadResult(ctx, authorization, ImportJob{}, ErrConflict)
 		}
 	}
+	var affectedProducts []string
+	if mode == "UPDATE" {
+		for _, row := range resolved {
+			if row.Existing != nil {
+				affectedProducts = append(affectedProducts, row.Existing.ProductID)
+			}
+		}
+	}
+	var before []byte
+	if len(affectedProducts) != 0 {
+		before, err = importMenuState(ctx, tx, org, affectedProducts)
+		if err != nil {
+			return privateReadResult(ctx, authorization, ImportJob{}, err)
+		}
+	}
 	result := ImportResult{Total: len(job.Rows)}
 	for index, row := range job.Rows {
 		if err = authorization.Recheck(ctx); err != nil {
@@ -401,6 +416,18 @@ func (service *Service) ConfirmImport(ctx context.Context, user, org, id, mode s
 	}
 	if err = authorization.Recheck(ctx); err != nil {
 		return ImportJob{}, err
+	}
+	if before != nil {
+		after, err := importMenuState(ctx, tx, org, affectedProducts)
+		if err != nil {
+			return privateReadResult(ctx, authorization, ImportJob{}, err)
+		}
+		if err = appendCatalogMenuChange(ctx, authorization, org, user, before, after); err != nil {
+			return privateReadResult(ctx, authorization, ImportJob{}, err)
+		}
+		if err = authorization.Recheck(ctx); err != nil {
+			return ImportJob{}, err
+		}
 	}
 	encoded, _ := json.Marshal(result)
 	_, err = tx.Exec(ctx, "UPDATE product_import_jobs SET status='COMPLETED',mode=$3,result=$4,confirmed_at=now() WHERE organization_id=$1 AND id=$2", org, id, mode, encoded)

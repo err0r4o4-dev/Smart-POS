@@ -4,8 +4,10 @@ import (
 	"context"
 	"crypto/sha256"
 	"crypto/subtle"
+	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -13,7 +15,10 @@ import (
 	"golang.org/x/oauth2"
 )
 
-type googleIdentity struct{ subject, email string }
+type googleIdentity struct {
+	subject, email  string
+	authenticatedAt time.Time
+}
 type googleProvider interface {
 	authorizationURL(state, nonce, verifier string) string
 	exchange(context.Context, string, string, []byte) (googleIdentity, error)
@@ -40,7 +45,8 @@ func NewGoogleAuth(service *Service, clientID, clientSecret, redirectURI string)
 }
 
 func (provider *oidcGoogleProvider) authorizationURL(state, nonce, verifier string) string {
-	return provider.oauth.AuthCodeURL(state, oidc.Nonce(nonce), oauth2.S256ChallengeOption(verifier))
+	return provider.oauth.AuthCodeURL(state, oidc.Nonce(nonce), oauth2.S256ChallengeOption(verifier),
+		oauth2.SetAuthURLParam("claims", `{"id_token":{"auth_time":{"essential":true}}}`))
 }
 
 func (provider *oidcGoogleProvider) exchange(ctx context.Context, code, verifier string, nonceHash []byte) (googleIdentity, error) {
@@ -60,9 +66,10 @@ func (provider *oidcGoogleProvider) exchange(ctx context.Context, code, verifier
 		return googleIdentity{}, err
 	}
 	var claims struct {
-		Email           string `json:"email"`
-		EmailVerified   bool   `json:"email_verified"`
-		AuthorizedParty string `json:"azp"`
+		Email           string          `json:"email"`
+		EmailVerified   bool            `json:"email_verified"`
+		AuthorizedParty string          `json:"azp"`
+		AuthTime        json.RawMessage `json:"auth_time"`
 	}
 	if idToken.Claims(&claims) != nil || !claims.EmailVerified || idToken.Subject == "" || len(idToken.Subject) > 255 || strings.TrimSpace(idToken.Subject) != idToken.Subject {
 		return googleIdentity{}, ErrInvalidToken
@@ -78,5 +85,12 @@ func (provider *oidcGoogleProvider) exchange(ctx context.Context, code, verifier
 	if err != nil {
 		return googleIdentity{}, errors.New("invalid verified email")
 	}
-	return googleIdentity{subject: idToken.Subject, email: email}, nil
+	identity := googleIdentity{subject: idToken.Subject, email: email}
+	// An optional malformed freshness claim must not break ordinary sign-in.
+	if seconds, err := strconv.ParseInt(string(claims.AuthTime), 10, 64); err == nil && seconds > 0 {
+		if !idToken.IssuedAt.IsZero() && seconds <= idToken.IssuedAt.Unix() && seconds <= time.Now().Unix() {
+			identity.authenticatedAt = time.Unix(seconds, 0).UTC()
+		}
+	}
+	return identity, nil
 }

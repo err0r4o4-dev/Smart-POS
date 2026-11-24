@@ -36,12 +36,14 @@ func priceCart(ctx context.Context, tx pgx.Tx, org string, cart *Cart, approval 
 	cart.Total = quote.Total
 	return nil
 }
-func (service *Service) Quote(ctx context.Context, user, org, id, approval string, points ...int64) (pricing.Quote, error) {
-	tx, actor, err := service.begin(ctx, user, org, "pos.checkout")
+func (service *Service) Quote(ctx context.Context, user, org, id, approval string, points ...int64) (result pricing.Quote, err error) {
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "pos.checkout")
 	if err != nil {
-		return pricing.Quote{}, err
+		return pricing.Quote{}, dbError(err)
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
+	defer func() { result, err = privateReadResult(ctx, authorization, result, err) }()
 	cart, err := readCart(ctx, tx, actor, user, org, id)
 	if err != nil {
 		return pricing.Quote{}, err

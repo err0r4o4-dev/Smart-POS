@@ -104,7 +104,7 @@ func verifyPrivateReadWait(t *testing.T, ctx context.Context, pool *pgxpool.Pool
 	}
 	defer blocker.Rollback(ctx)
 	switch table {
-	case "storefronts", "online_orders", "online_order_events", "pos_terminals", "stock_locations", "categories", "brands", "units", "products", "product_barcodes", "product_import_jobs", "customers", "customer_groups":
+	case "users", "storefronts", "online_orders", "online_order_events", "pos_terminals", "pos_carts", "pos_checkouts", "register_shifts", "sales", "receipts", "stock_locations", "categories", "brands", "units", "products", "product_barcodes", "product_import_jobs", "customers", "customer_groups":
 	default:
 		t.Fatal("unrecognized private-read lock target")
 	}
@@ -152,7 +152,7 @@ func verifyPrivateReadWait(t *testing.T, ctx context.Context, pool *pgxpool.Pool
 	}
 }
 
-func privateReadMFAAcceptance(t *testing.T, ctx context.Context, pool *pgxpool.Pool, auth identity.Handler, organizations *organization.Service, owner, guest testsupport.MFASession, org string, shop storefront.Settings, empty organization.Context) {
+func privateReadMFAAcceptance(t *testing.T, ctx context.Context, pool *pgxpool.Pool, auth identity.Handler, organizations *organization.Service, owner, guest testsupport.MFASession, org string, shop storefront.Settings, otherSlug string, empty organization.Context) {
 	t.Helper()
 	service := &storefront.Service{Organization: organizations}
 	user := identity.SessionFromContext(owner.Context).User.ID
@@ -168,7 +168,10 @@ func privateReadMFAAcceptance(t *testing.T, ctx context.Context, pool *pgxpool.P
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = service.CreateOrder(ctx, shop.Slug, "d2000000-0000-4000-8000-000000000004", input); err != nil {
+	secondInput := input
+	secondInput.AccessToken = strings.Repeat("8", 64)
+	second, err := service.CreateOrder(ctx, shop.Slug, "d2000000-0000-4000-8000-000000000004", secondInput)
+	if err != nil {
 		t.Fatal(err)
 	}
 	_, primaryToken, _, err := auth.Service.Login(ctx, "single-store-owner@example.test", "Synthetic-owner-password-2026")
@@ -393,4 +396,75 @@ func privateReadMFAAcceptance(t *testing.T, ctx context.Context, pool *pgxpool.P
 	if _, failure = service.PublicSettings(missing, shop.Slug); failure != nil {
 		t.Fatalf("public settings required employee MFA: %v", failure)
 	}
+	t.Run("guest order proof is bound to the exact order and shop", func(t *testing.T) {
+		// Unpublishing a storefront must still respect its live-order guard.
+		for _, fixture := range []storefront.Order{order, second} {
+			cancelled, err := service.Transition(ctx, user, org, fixture.ID, storefront.TransitionInput{
+				Revision: fixture.Revision, Status: "CANCELLED", Message: "Synthetic tracking fixture",
+			})
+			if err != nil || cancelled.Status != "CANCELLED" {
+				t.Fatalf("cancel guest tracking fixture: %v", err)
+			}
+		}
+		hidden, err := service.SaveSettings(ctx, user, org, storefront.SettingsInput{
+			Slug: shop.Slug, Name: shop.Name, Description: shop.Description,
+			ContactPhone: shop.ContactPhone, PickupInstructions: shop.PickupInstructions,
+			TerminalID: shop.TerminalID, OnlineTerminalID: shop.OnlineTerminalID,
+			Revision: shop.Revision,
+		})
+		if err != nil || hidden.Published || hidden.AcceptingOrders {
+			t.Fatalf("unpublish guest tracking fixture: %v", err)
+		}
+		if _, err = service.PublicSettings(missing, shop.Slug); !errors.Is(err, storefront.ErrNotFound) {
+			t.Fatalf("unpublished storefront still resolves publicly: %v", err)
+		}
+		before := privateReadSnapshot(t, ctx, organizations, user, org)
+		publicRouter := chi.NewRouter()
+		storefront.Handler{Service: service, Authentication: auth}.PublicRoutes(publicRouter)
+		for _, candidate := range []struct {
+			name, slug, orderID, proof string
+			status                     int
+		}{
+			{"matching proof", shop.Slug, order.ID, input.AccessToken, http.StatusOK},
+			{"matching second proof", shop.Slug, second.ID, secondInput.AccessToken, http.StatusOK},
+			{"missing proof", shop.Slug, order.ID, "", http.StatusNotFound},
+			{"different order", shop.Slug, second.ID, input.AccessToken, http.StatusNotFound},
+			{"different shop", otherSlug, order.ID, input.AccessToken, http.StatusNotFound},
+		} {
+			t.Run(candidate.name, func(t *testing.T) {
+				payload, err := json.Marshal(storefront.TrackingInput{OrderID: candidate.orderID, AccessToken: candidate.proof})
+				if err != nil {
+					t.Fatal(err)
+				}
+				request := httptest.NewRequest(http.MethodPost, "/storefronts/"+candidate.slug+"/track", strings.NewReader(string(payload))).WithContext(ctx)
+				request.Header.Set("Origin", testsupport.MFAOrigin)
+				request.Header.Set("Content-Type", "application/json")
+				response := httptest.NewRecorder()
+				publicRouter.ServeHTTP(response, request)
+				if response.Header().Get("Cache-Control") != "no-store" {
+					t.Fatal("guest tracking response must not be stored")
+				}
+				var body struct {
+					Data  *storefront.Order
+					Error struct{ Code string }
+				}
+				if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil || response.Code != candidate.status {
+					t.Fatalf("tracking status = %d, want %d (decode: %v)", response.Code, candidate.status, err)
+				}
+				if candidate.status == http.StatusNotFound {
+					if body.Data != nil || body.Error.Code != "NOT_FOUND" {
+						t.Fatal("proof denial returned order data or a different error")
+					}
+					return
+				}
+				value := body.Data
+				if value == nil || value.ID != candidate.orderID || value.Status != "CANCELLED" || len(value.Items) != 1 || value.CustomerName != "" || value.ContactPhone != "" || value.CustomerNote != "" || value.DeliveryAddress != "" || value.BranchID != "" || value.TerminalID != "" || value.CartID != nil || value.SaleID != nil {
+					t.Fatal("matching proof did not return the redacted order projection")
+				}
+			})
+		}
+		if privateReadSnapshot(t, ctx, organizations, user, org) != before {
+			t.Fatal("guest tracking changed protected business rows")
+		}
+	})
 }

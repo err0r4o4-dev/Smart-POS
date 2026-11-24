@@ -143,6 +143,8 @@ func (handler Handler) Routes(router chi.Router) {
 			private.Post("/mfa/enrollment", handler.mfaBegin)
 			private.Post("/mfa/enrollment/confirm", handler.mfaConfirm)
 			private.Post("/mfa/challenge", handler.mfaChallenge)
+			private.Post("/mfa/recovery", handler.mfaRecoveryBegin)
+			private.Post("/mfa/recovery/confirm", handler.mfaRecoveryConfirm)
 		})
 	})
 }

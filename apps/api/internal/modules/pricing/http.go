@@ -20,6 +20,7 @@ func endpoint(run func(context.Context, string, string, *http.Request) (any, err
 	return func(writer http.ResponseWriter, request *http.Request) {
 		ctx, cancel := context.WithTimeout(request.Context(), 15*time.Second)
 		defer cancel()
+		writer.Header().Set("Cache-Control", "no-store")
 		result, err := run(ctx, identity.SessionFromContext(ctx).User.ID, chi.URLParam(request, "id"), request)
 		if err == nil {
 			httpx.JSON(writer, 200, map[string]any{"data": result})
@@ -27,6 +28,10 @@ func endpoint(run func(context.Context, string, string, *http.Request) (any, err
 		}
 		code, message, status := "DEPENDENCY_UNAVAILABLE", "Pricing service unavailable", 503
 		switch {
+		case errors.Is(err, identity.ErrInvalidToken):
+			code, message, status = "UNAUTHENTICATED", "Sign in again", 401
+		case errors.Is(err, identity.ErrMFARequired):
+			code, message, status = "MFA_REQUIRED", "Multi-factor authentication required", 403
 		case errors.Is(err, ErrInput):
 			code, message, status = "INVALID_INPUT", "Check pricing details", 400
 		case errors.Is(err, ErrConflict):

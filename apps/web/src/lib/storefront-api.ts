@@ -9,6 +9,12 @@ export interface ShopSummary {
 }
 export interface ShopDirectoryEntry extends ShopSummary {
   business_type?: string;
+  delivery_enabled?: boolean;
+  average_rating?: number | null;
+  review_count?: number;
+}
+export interface CustomerReview {
+  rating: number;
 }
 export interface ShopSettings extends ShopSummary {
   description: string;
@@ -80,6 +86,8 @@ export type OrderStatus =
   | 'CANCELLED'
   | 'EXPIRED';
 export interface OnlineOrder {
+  review_eligible?: boolean;
+  review?: CustomerReview;
   readonly stock_policy: StockPolicy;
   table_code?: string;
   id: string;

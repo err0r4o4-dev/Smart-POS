@@ -1,9 +1,13 @@
 import { useLanguage } from '../../app/language';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Button, Card, Loading } from '../../components/ui/primitives';
-import { storefrontRequest, type OnlineOrder } from '../../lib/storefront-api';
+import {
+  storefrontRequest,
+  type CustomerReview,
+  type OnlineOrder,
+} from '../../lib/storefront-api';
 import { ShopError } from './StorefrontPage';
 import { OrderDetails } from './OrderDetails';
 import { ShopOrderSteps } from './ShopOrderSteps';
@@ -19,6 +23,84 @@ type PaymentStatus = {
 const returnLifetimeMs = 60 * 60 * 1000;
 const returnKey = (slug: string, orderId: string) =>
   `shop-payment-return:${encodeURIComponent(slug)}:${encodeURIComponent(orderId)}`;
+
+function OrderReview({
+  slug,
+  orderId,
+  token,
+  saved,
+}: {
+  slug: string;
+  orderId: string;
+  token: string;
+  saved?: CustomerReview;
+}) {
+  const { t } = useLanguage();
+  const client = useQueryClient();
+  const [rating, setRating] = useState('');
+  const submission = useMutation({
+    mutationFn: (score: number) =>
+      storefrontRequest<CustomerReview>(`/${encodeURIComponent(slug)}/review`, {
+        body: { order_id: orderId, access_token: token, rating: score },
+      }),
+    onSuccess: (review) => {
+      client.setQueryData<OnlineOrder>(
+        ['storefront-tracking', slug, orderId, token],
+        (order) => (order ? { ...order, review } : order),
+      );
+      void client.invalidateQueries({ queryKey: ['storefront-directory'] });
+    },
+  });
+  const current = submission.data ?? saved;
+  return (
+    <section
+      className="shop-review-panel"
+      aria-labelledby="shop-review-heading"
+    >
+      <h2 id="shop-review-heading">{t('storefront.rateOrder')}</h2>
+      {current ? (
+        <p role="status">
+          {t('storefront.savedRating', { rating: String(current.rating) })}
+        </p>
+      ) : (
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (/^[1-5]$/.test(rating) && !submission.isPending)
+              submission.mutate(Number(rating));
+          }}
+        >
+          <label>
+            {t('storefront.ratingScale')}
+            <select
+              value={rating}
+              required
+              disabled={submission.isPending}
+              onChange={(event) => setRating(event.target.value)}
+            >
+              <option value="">{t('storefront.chooseRating')}</option>
+              {[1, 2, 3, 4, 5].map((score) => (
+                <option key={score} value={score}>
+                  {score} / 5
+                </option>
+              ))}
+            </select>
+          </label>
+          <Button type="submit" disabled={!rating || submission.isPending}>
+            {t(
+              submission.isPending
+                ? 'storefront.savingRating'
+                : 'storefront.submitRating',
+            )}
+          </Button>
+        </form>
+      )}
+      {submission.isError && (
+        <p role="alert">{t('storefront.ratingSaveError')}</p>
+      )}
+    </section>
+  );
+}
 function paymentStatus(value: unknown): PaymentStatus {
   if (!value || typeof value !== 'object' || Array.isArray(value))
     throw new Error('ข้อมูลสถานะชำระเงินไม่ถูกต้อง');
@@ -222,6 +304,15 @@ function TrackingContents({
           {order.data && (
             <Card className="shop-tracking-card">
               <OrderDetails order={order.data} />
+              {order.data.status === 'COMPLETED' &&
+                order.data.review_eligible === true && (
+                  <OrderReview
+                    slug={slug}
+                    orderId={orderId}
+                    token={token}
+                    saved={order.data.review}
+                  />
+                )}
               {order.data.status === 'PENDING' &&
                 order.data.payment_status === 'UNPAID' && (
                   <section

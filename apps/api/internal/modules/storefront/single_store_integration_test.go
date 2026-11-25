@@ -247,8 +247,11 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 			t.Fatalf("multi-store directory: %v", problem)
 		}
 		for _, entry := range entries {
-			if len(entry) != 4 || entry["business_type"] != "RETAIL" || entry["name"] == nil || entry["accepting_orders"] != true || (entry["slug"] != firstShop.Slug && entry["slug"] != "second-fixture") {
+			if len(entry) != 7 || entry["business_type"] != "RETAIL" || entry["name"] == nil || entry["accepting_orders"] != true || (entry["slug"] != firstShop.Slug && entry["slug"] != "second-fixture") {
 				t.Fatal("unexpected public directory projection")
+			}
+			if entry["average_rating"] != nil || entry["review_count"] != float64(0) || entry["delivery_enabled"] != false {
+				t.Fatal("unexpected unrated storefront metadata")
 			}
 		}
 		tx, _, problem := multi.Authorized(ctx, owner.ID, first.Organization.ID, "storefront.manage")
@@ -424,7 +427,7 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 			t.Fatal(problem)
 		}
 		var entries []map[string]any
-		if problem = json.Unmarshal(result, &entries); problem != nil || len(entries) != 1 || entries[0]["slug"] != firstShop.Slug || len(entries[0]) != 4 || entries[0]["business_type"] != first.Organization.BusinessType {
+		if problem = json.Unmarshal(result, &entries); problem != nil || len(entries) != 1 || entries[0]["slug"] != firstShop.Slug || len(entries[0]) != 7 || entries[0]["business_type"] != first.Organization.BusinessType || entries[0]["average_rating"] != nil || entries[0]["review_count"] != float64(0) {
 			t.Fatalf("unsafe public directory: %v", problem)
 		}
 		if _, problem = shop.PublicSettings(ctx, "second-fixture"); !errors.Is(problem, storefront.ErrNotFound) {
@@ -729,7 +732,7 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 		deliveryAcceptance(t, ctx, guestSession.Context, multi, owner.ID, state.Organization.ID, seedShop(state, "delivery-fixture"), first.Organization.ID, guest.ID)
 	})
 	t.Run("atomic online reservation foundation", func(t *testing.T) {
-		reservationAcceptance(t, ctx, multi, owner.ID, first.Organization.ID, firstShop)
+		reservationAcceptance(t, ctx, multi, owner.ID, first.Organization.ID, firstShop, shop, second.Organization.ID, secondShop.Slug)
 	})
 	t.Run("recipe ingredient reservation and deduction", func(t *testing.T) {
 		state, problem := multi.Create(ctx, owner.ID, "ae111111-1111-4111-8111-111111111111", createInput("INGREDIENT"))

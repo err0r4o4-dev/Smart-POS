@@ -3391,9 +3391,21 @@ Acceptance: Tests reject selling before approval, unsafe account changes and cro
 
 - [/] B14 saved-cart preparation: [D06](design.md#saved-cart-versioning-and-expiry-b14-proposal)
   distinguishes retained browser carts from native guest/member drafts, and
-  proposes conflict, expiry and no-side-effect acceptance cases. The product
-  decision on inactivity duration is pending. Quota hold and allocation
-  remain separate; no runtime cart behavior has changed.
+  proposes conflict, expiry and no-side-effect acceptance cases. The user
+  selected 24-hour guest and 7-day member inactivity windows on 2026-11-25.
+  Quota hold and allocation remain separate; no runtime cart behavior has
+  changed.
+- [/] 2026-11-26 [saved-draft boundary](design.md#saved-draft-implementation-boundary-t32):
+  separates native drafts from retained slug carts and checkout quotes. It
+  specifies the outcomes for an expired read, conflicting create, stale or
+  replaced identity, replay and account switching. Expiry at its exact boundary
+  is unavailable. Guest and member writes must be serialized at their actual
+  storage boundary. No runtime, schema, DB or browser check is claimed. The
+  member slice needs schema review, isolated acceptance and independent review.
+  Evidence: Prettier on this formatted section and `tasks.md`/`TODO.md` passed;
+  `git diff --check` passed for the changed planning files and nothing was
+  staged. Prettier reports an existing style issue elsewhere in `design.md`
+  that also appears in the committed HEAD version.
 - [ ] Persist scoped checkout intent/key/fingerprint and immutable order snapshots. Revalidate current menu/options/prices/modes and separate cart save from payment reservations. Guest device carts and member sync integrate with T6.4.
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.
@@ -3573,16 +3585,40 @@ Acceptance: Race/denial tests prevent dual owners, unverified receiving-account 
   persistence dependencies, and matching acceptance evidence. Review of
   the command as a whole is pending authorization; no brief was sent.
 
-- [/] [D03 B16 proposal](design.md#b16-proposal-version-1-template-and-apply-policy)
-  defines shared CSV/XLSX rows, parser-based candidate limits, preview
-  outcomes and atomic apply with revision/audit/retry acceptance. B16
-  approval and the T3.7 modifier contract remain open; no import behavior
-  changed.
-- [/] [B16 parser and preview boundary](design.md#retained-parser-and-native-preview-boundary)
-  identifies which retained format checks can be reused and why catalog
-  SKU/job updates cannot identify native menu rows. Stable reference
-  mapping for repeat imports must be selected before implementation.
-  Existing catalog behavior is unchanged.
+- [/] B16 v1 file validation (2026-11-26, `feature/fix-systemms`, HEAD
+  `f44e91c`): the [local plan](../../docs/superpowers/plans/2026-11-26-b16-menu-import-validation.md)
+  implements only the format boundary of VLP-092. `catalog.ParseImportTable`
+  wraps the retained reader; the private restaurant validator checks the nine
+  case-sensitive headers, row kinds, opaque references and duplicates, exact
+  prices, statuses and choice bounds. It returns line/field diagnostics without
+  raw values, and no rows if any record is invalid. No caller, route, database,
+  or existing catalog mutation behavior was changed.
+  - Test-first evidence: the IDE reported `UndeclaredName` for the new parser
+    and its result types before implementation. The first attempts to run the
+    focused Go test were blocked by host permission-classifier timeouts, so no
+    Go RED execution log exists. The synthetic CSV/XLSX parity, file rejection,
+    and row diagnostic cases are in `menu_import_template_test.go`.
+  - Offline verification from `apps/api`, with `GOPROXY=off`, `GOSUMDB=off`
+    and `GOTOOLCHAIN=local`: the focused `^TestMenuImportTemplate` run passed;
+    `go test ./internal/modules/catalog ./internal/modules/restaurant -count=1`
+    passed; `go vet` for those two packages exited 0. With `SMARTPOS_*`
+    variables removed, `go test ./... -count=1` passed all test packages.
+    `gofmt -l` for the three changed Go files and `git diff --check` for the
+    B16/tracker paths returned no files. The index had no staged paths. Full
+    `go vet ./...` and `go build ./...` did not start because the classifier
+    timed out repeatedly; no database or browser check was run.
+  - Ruling: run inline on non-overlapping paths in the current checkout, with
+    no staging/commits or reviewer dispatch as required by the current request.
+    The dirty checkout is not a clean acceptance baseline; verify the scoped
+    diff before attributing failures or evidence to this slice.
+- [/] [D03 B16](design.md#b16-proposal-version-1-template-and-apply-policy):
+  the 2026-11-25 approval covers the v1 template/limits, preview and atomic
+  apply, with durable Owner-defined references per restaurant and row kind.
+  [Reference resolution](design.md#retained-parser-and-native-preview-boundary),
+  initial binding for existing entities, preview retention, shared modifier and
+  availability write contracts, revision/audit/replay, independent review and
+  isolated DB/API/UI acceptance remain open. The file validator does not
+  resolve parents, infer a new entity, or prove VLP-091/VLP-092 acceptance.
 - [ ] Reuse safe parsing/preview seams for approved restaurant categories/options/toppings. Add duplicate/error outcomes, price/category/status bulk changes, revision/audit and restore-as-new-revision.
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.

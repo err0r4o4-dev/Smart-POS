@@ -1100,6 +1100,85 @@ paths:
                   { schema: { $ref: '#/components/schemas/StorefrontError' } },
               },
           }
+  /api/v1/storefronts/{slug}/review:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema: { type: string, pattern: '^[a-z][a-z0-9-]{2,49}$' }
+    post:
+      operationId: rateGuestOnlineOrder
+      security: []
+      description: Allowed Origin, 30/IP/minute. The tracking proof must match the exact order and storefront; send it in the body only. Only completed orders can be rated. The first rating is immutable and retries return the stored rating without adding a review. Responses use Cache-Control no-store.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [order_id, access_token, rating]
+              properties:
+                order_id: { type: string, format: uuid }
+                access_token:
+                  { type: string, pattern: '^[a-f0-9]{64}$', writeOnly: true }
+                rating: { type: integer, minimum: 1, maximum: 5 }
+      responses:
+        '200':
+          description: The recorded rating for this order
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    { $ref: '#/components/schemas/StorefrontCustomerReview' }
+        '400':
+          description: Malformed request or rating outside 1 through 5
+          content:
+            {
+              application/json:
+                { schema: { $ref: '#/components/schemas/StorefrontError' } },
+            }
+        '403':
+          description: Origin denied
+          content:
+            {
+              application/json:
+                { schema: { $ref: '#/components/schemas/StorefrontError' } },
+            }
+        '404':
+          description: Invalid tracking proof or inaccessible storefront or order
+          content:
+            {
+              application/json:
+                { schema: { $ref: '#/components/schemas/StorefrontError' } },
+            }
+        '409':
+          description: The order is not completed (REVIEW_NOT_READY)
+          content:
+            {
+              application/json:
+                { schema: { $ref: '#/components/schemas/StorefrontError' } },
+            }
+        '429':
+          description: Per-IP limit exceeded
+          headers:
+            Retry-After:
+              schema: { type: integer, minimum: 1 }
+          content:
+            {
+              application/json:
+                { schema: { $ref: '#/components/schemas/StorefrontError' } },
+            }
+        '503':
+          description: Dependency unavailable
+          content:
+            {
+              application/json:
+                { schema: { $ref: '#/components/schemas/StorefrontError' } },
+            }
   /api/v1/storefronts/{slug}/track:
     parameters:
       - name: slug
@@ -20108,6 +20187,9 @@ components:
         - name
         - accepting_orders
         - business_type
+        - delivery_enabled
+        - average_rating
+        - review_count
       properties:
         slug:
           type: string
@@ -20118,6 +20200,18 @@ components:
         business_type:
           type: string
           description: Saved organization business type for public directory filtering. Clients must tolerate legacy or unknown values. Not a product category.
+        delivery_enabled:
+          type: boolean
+        average_rating:
+          type: number
+          minimum: 1
+          maximum: 5
+          nullable: true
+          description: Mean rounded to one decimal, or null for zero ratings.
+        review_count:
+          type: integer
+          format: int64
+          minimum: 0
     StorefrontCatalogProduct:
       type: object
       additionalProperties: false
@@ -20460,6 +20554,12 @@ components:
           type: string
           pattern: ^[a-f0-9]{64}$
           writeOnly: true
+    StorefrontCustomerReview:
+      type: object
+      additionalProperties: false
+      required: [rating]
+      properties:
+        rating: { type: integer, minimum: 1, maximum: 5 }
     OnlineOrderEvent:
       type: object
       additionalProperties: false
@@ -20495,6 +20595,11 @@ components:
         - items
         - events
       properties:
+        review_eligible:
+          type: boolean
+          description: Set to true on authenticated tracking of a completed order. Omitted on other responses.
+        review:
+          $ref: '#/components/schemas/StorefrontCustomerReview'
         table_code:
           type: string
         fulfillment:

@@ -150,13 +150,11 @@ const shopFilters = [
   { value: 'favorites', label: 'landing.favoriteShops', icon: Heart },
 ] as const;
 
-function storefrontPhoto(type: string, name: string) {
+function shopCover(type: string) {
   if (type === 'CAFE' || type === 'BAR')
     return `${referenceArt}/cover-tea.webp`;
   if (type === 'BAKERY') return '/images/home/cat-desserts.webp';
   if (type === 'FAST_FOOD') return `${referenceArt}/cover-fast-food.webp`;
-  if (/ก๋วยเตี๋ยว|noodles?/i.test(name))
-    return `${referenceArt}/cover-noodles.webp`;
   return `${referenceArt}/cover-restaurant.webp`;
 }
 
@@ -246,11 +244,6 @@ export function LandingPage() {
                 {t('landing.heroTitleLead')}
                 <span className="landing-title-accent">
                   {t('landing.heroTitleAccent')}
-                  <Sparkles
-                    className="landing-title-sparkle"
-                    size={26}
-                    aria-hidden="true"
-                  />
                 </span>
               </h1>
               <p className="landing-hero-description">
@@ -291,11 +284,13 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section className="landing-section" aria-labelledby="landing-areas">
+        <section
+          className="landing-section landing-discovery-section"
+          aria-labelledby="landing-areas"
+        >
           <div className="landing-container">
             <SectionHeading
               id="landing-areas"
-              icon={MapPin}
               title={t('landing.areasTitle')}
               description={t('landing.areasDescription')}
               action={{ to: paths.shop, label: t('landing.viewAllShops') }}
@@ -326,7 +321,6 @@ export function LandingPage() {
           <div className="landing-container">
             <SectionHeading
               id="landing-categories"
-              icon={UtensilsCrossed}
               title={t('landing.categoriesTitle')}
               action={{ to: paths.shop, label: t('landing.viewAllShops') }}
             />
@@ -439,7 +433,7 @@ function SectionHeading({
   children,
 }: {
   id: string;
-  icon: LucideIcon;
+  icon?: LucideIcon;
   title: string;
   description?: string;
   action?: { to: string; label: string };
@@ -449,10 +443,12 @@ function SectionHeading({
     <div className="landing-section-heading">
       <div className="landing-section-lead">
         <h2 id={id} tabIndex={-1}>
-          <span className="landing-section-icon">
-            <Icon size={18} aria-hidden="true" />
-          </span>
-          <span>{title}</span>
+          {Icon && (
+            <span className="landing-section-icon">
+              <Icon size={18} aria-hidden="true" />
+            </span>
+          )}
+          {title}
         </h2>
         {description && <p>{description}</p>}
       </div>
@@ -490,7 +486,10 @@ function RecommendedShops() {
     .slice(0, 4);
 
   return (
-    <section className="landing-section" aria-labelledby="landing-shops">
+    <section
+      className="landing-section landing-discovery-section landing-recommended-section"
+      aria-labelledby="landing-shops"
+    >
       <div className="landing-container">
         <SectionHeading
           id="landing-shops"
@@ -545,43 +544,49 @@ function RecommendedShops() {
                 {shops.map((shop) => {
                   const favorite = saved.isFavorite(shop.slug);
                   const type = normalizeBusinessType(shop.business_type);
+                  const { average_rating: average, review_count: count } = shop;
+                  const hasRating =
+                    typeof average === 'number' &&
+                    average >= 1 &&
+                    average <= 5 &&
+                    typeof count === 'number' &&
+                    Number.isSafeInteger(count) &&
+                    count > 0;
                   return (
                     <li key={shop.slug}>
                       <article className="landing-shop">
-                        <div className="landing-shop-art">
-                          <img
-                            src={storefrontPhoto(type, shop.name)}
-                            alt=""
-                            loading="lazy"
-                          />
-                          <span
-                            className={
-                              shop.accepting_orders
-                                ? 'landing-shop-badge is-open'
-                                : 'landing-shop-badge'
-                            }
-                          >
-                            {t(
-                              shop.accepting_orders
-                                ? 'landing.openNow'
-                                : 'landing.closedNow',
-                            )}
-                          </span>
-                          <button
-                            type="button"
-                            className="landing-shop-favorite"
-                            aria-label={t('landing.favorite', {
-                              name: shop.name,
-                            })}
-                            aria-pressed={favorite}
-                            onClick={() => saved.toggle(shop.slug)}
-                          >
-                            <Heart
-                              size={18}
-                              aria-hidden="true"
-                              fill={favorite ? 'currentColor' : 'none'}
-                            />
-                          </button>
+                        <div className="landing-shop-cover">
+                          <img src={shopCover(type)} alt="" loading="lazy" />
+                          <div className="landing-shop-controls">
+                            <span
+                              className={
+                                shop.accepting_orders
+                                  ? 'landing-shop-badge is-open'
+                                  : 'landing-shop-badge'
+                              }
+                            >
+                              {t(
+                                shop.accepting_orders
+                                  ? 'landing.openNow'
+                                  : 'landing.closedNow',
+                              )}
+                            </span>
+                            <button
+                              type="button"
+                              className="landing-shop-favorite"
+                              aria-label={t('landing.favorite', {
+                                name: shop.name,
+                              })}
+                              aria-pressed={favorite}
+                              onClick={() => saved.toggle(shop.slug)}
+                            >
+                              <Heart
+                                size={18}
+                                aria-hidden="true"
+                                fill={favorite ? 'currentColor' : 'none'}
+                              />
+                            </button>
+                          </div>
                         </div>
                         <div className="landing-shop-body">
                           <div className="landing-shop-title">
@@ -600,6 +605,31 @@ function RecommendedShops() {
                               <span>{businessTypeLabel(type, language)}</span>
                             )}
                           </div>
+                          {(hasRating ||
+                            (count === 0 && average === null) ||
+                            shop.delivery_enabled === true) && (
+                            <div className="landing-shop-details">
+                              {hasRating && (
+                                <div className="landing-shop-review">
+                                  <strong>
+                                    <Star size={15} aria-hidden="true" />
+                                    {average.toFixed(1)} / 5
+                                  </strong>
+                                  <span>
+                                    {t('landing.reviewCount', {
+                                      count: count.toLocaleString(language),
+                                    })}
+                                  </span>
+                                </div>
+                              )}
+                              {count === 0 && average === null && (
+                                <span>{t('landing.noReviews')}</span>
+                              )}
+                              {shop.delivery_enabled === true && (
+                                <span>{t('landing.deliveryAvailable')}</span>
+                              )}
+                            </div>
+                          )}
                           <span
                             className="landing-shop-meta"
                             aria-hidden="true"

@@ -46,6 +46,8 @@ func respond(writer http.ResponseWriter, request *http.Request, result any, err 
 		code, message, status = "PRICE_CHANGED", "ข้อมูลหรือราคาเปลี่ยน กรุณาตรวจยอดใหม่ก่อนส่งออเดอร์", 409
 	case errors.Is(err, ErrStock):
 		code, message, status = "INSUFFICIENT_STOCK", "สินค้าบางรายการไม่พร้อมขายหรือสต็อกไม่พอ กรุณาตรวจตะกร้า", 409
+	case errors.Is(err, ErrReviewNotReady):
+		code, message, status = "REVIEW_NOT_READY", "ให้คะแนนได้หลังออเดอร์เสร็จสมบูรณ์", 409
 	case errors.Is(err, ErrConflict):
 		code, message, status = "CONFLICT", "ข้อมูลเปลี่ยนหรือยังมีออเดอร์/ตะกร้าที่ดำเนินการอยู่ กรุณาโหลดใหม่", 409
 	}
@@ -112,6 +114,9 @@ func (handler Handler) PublicRoutes(router chi.Router) {
 		}))
 		public.With(handler.Authentication.RequirePublicWrite("storefront.track", 120, time.Minute)).Post("/track", writeEndpoint(200, func(ctx context.Context, _, _ string, request *http.Request, input TrackingInput) (any, error) {
 			return service.Track(ctx, chi.URLParam(request, "slug"), input)
+		}))
+		public.With(handler.Authentication.RequirePublicWrite("storefront.review", 30, time.Minute)).Post("/review", writeEndpoint(200, func(ctx context.Context, _, _ string, request *http.Request, input ReviewInput) (any, error) {
+			return service.ReviewOrder(ctx, chi.URLParam(request, "slug"), input)
 		}))
 	})
 }

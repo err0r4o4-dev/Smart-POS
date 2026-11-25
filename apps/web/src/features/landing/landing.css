@@ -195,14 +195,6 @@
 .landing-title-accent {
   color: #b86100;
 }
-.landing-title-sparkle {
-  display: inline-block;
-  margin-inline-start: 6px;
-  vertical-align: 0.45em;
-  color: #f0a000;
-  fill: #ffbc21;
-  pointer-events: none;
-}
 .landing-hero-description {
   margin-top: 2px;
   color: var(--text-strong);
@@ -296,6 +288,12 @@
 .landing-hero + .landing-section {
   padding-top: 12px;
 }
+.landing-section.landing-discovery-section {
+  padding-block-start: max(24px, var(--landing-section-gap));
+}
+.landing-discovery-section .landing-section-heading {
+  margin-bottom: 14px;
+}
 .landing-section h2[tabindex] {
   scroll-margin-top: calc(var(--header-height) + 12px);
 }
@@ -315,9 +313,6 @@
   min-width: 0;
 }
 .landing-section-heading h2 {
-  display: flex;
-  align-items: center;
-  gap: 10px;
   font-size: clamp(1.1875rem, 1.32vw, 1.375rem);
   font-weight: 800;
   letter-spacing: -0.01em;
@@ -326,16 +321,6 @@
 .landing-section-heading p {
   color: var(--text-strong);
   font-size: 0.875rem;
-}
-.landing-section-icon {
-  display: grid;
-  place-items: center;
-  flex: 0 0 32px;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--landing-gold);
-  color: var(--text-primary);
 }
 .landing-section-actions {
   display: flex;
@@ -348,15 +333,17 @@
   align-items: center;
   gap: 6px;
   min-height: 30px;
-  padding-inline: 15px;
-  border-radius: var(--radius-pill);
-  background: var(--brand-soft-gradient);
-  color: var(--text-primary);
+  color: var(--text-strong);
   font-size: 0.875rem;
   font-weight: 700;
 }
 .landing-more-link:hover {
-  background: #ffe4a3;
+  color: var(--text-primary);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+.landing-more-link svg {
+  flex: none;
 }
 
 /* Areas */
@@ -371,14 +358,14 @@
   display: flex;
   align-items: flex-end;
   gap: 10px;
-  min-height: 82px;
+  min-height: 148px;
   height: 100%;
-  padding: 12px 12px 8px 24px;
+  padding: 16px;
   overflow: hidden;
   border-radius: var(--radius-control);
   color: #fff;
   background: #554a38;
-  box-shadow: 0 4px 12px rgb(65 38 13 / 14%);
+  box-shadow: 0 2px 8px rgb(65 38 13 / 10%);
 }
 .landing-area img {
   position: absolute;
@@ -395,9 +382,9 @@
   z-index: -1;
   background: linear-gradient(
     180deg,
-    transparent 5%,
-    rgb(25 14 6 / 10%) 40%,
-    rgb(20 13 7 / 57%) 100%
+    transparent 15%,
+    rgb(20 13 7 / 38%) 47%,
+    rgb(20 13 7 / 92%) 100%
   );
 }
 .landing-area-copy {
@@ -408,20 +395,20 @@
   text-shadow: 0 1px 3px rgb(0 0 0 / 45%);
 }
 .landing-area-copy strong {
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   font-weight: 800;
   line-height: 1.3;
 }
 .landing-area-copy span {
-  font-size: 0.8125rem;
-  opacity: 0.95;
+  font-size: 0.875rem;
+  line-height: 1.5;
 }
 .landing-area-arrow {
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 27px;
-  height: 27px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: #fff;
   color: var(--text-primary);
@@ -460,6 +447,26 @@
 }
 
 /* Recommended shops */
+.landing-recommended-section h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.landing-recommended-section .landing-section-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--landing-gold);
+}
+.landing-recommended-section .landing-more-link {
+  padding-inline: 14px;
+  border-radius: var(--radius-pill);
+  background: var(--primary-subtle);
+  color: var(--text-primary);
+}
 .landing-shop-filter {
   display: flex;
   flex-wrap: wrap;
@@ -470,7 +477,7 @@
   align-items: center;
   gap: 6px;
   min-height: 30px;
-  padding-inline: 12px;
+  padding: 3px 10px;
   border: 0;
   border-radius: var(--radius-pill);
   background: var(--surface);
@@ -486,6 +493,9 @@
 .landing-shop-filter button[aria-pressed='true'] {
   background: var(--landing-gold);
 }
+.landing-shop-filter svg {
+  flex: none;
+}
 .landing-shop-empty {
   padding: 24px 16px;
   border-radius: 12px;
@@ -500,61 +510,73 @@
 }
 .landing-shop {
   position: relative;
+  display: flex;
+  flex-direction: column;
   height: 100%;
   border-radius: var(--radius-control);
   background: var(--surface);
-  box-shadow: 0 2px 10px rgb(40 30 10 / 10%);
+  box-shadow:
+    0 0 0 1px var(--border),
+    0 2px 8px rgb(40 30 10 / 7%);
 }
-.landing-shop-art {
+.landing-shop-cover {
   position: relative;
-  height: 60px;
+  min-block-size: clamp(8.625rem, 11vw, 12rem);
+  border-radius: var(--radius-control) var(--radius-control) 0 0;
+  background: var(--primary-subtle);
 }
-.landing-shop-art img {
+.landing-shop-cover img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
+  border-radius: inherit;
   object-fit: cover;
-  border-radius: var(--radius-control) var(--radius-control) 0 0;
-  background: #fcf4e4;
+}
+.landing-shop-controls {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 9px;
 }
 .landing-shop-badge {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  max-width: calc(100% - 64px);
-  padding: 2px 9px;
+  min-width: 0;
+  padding: 3px 9px;
   border-radius: 8px;
   color: #fff;
   background: #41454c;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 800;
 }
 .landing-shop-badge.is-open {
   background: #087233;
 }
 .landing-shop-favorite {
-  position: absolute;
-  top: 4px;
-  right: 4px;
+  position: relative;
   z-index: 1;
   display: grid;
+  flex: none;
   place-items: center;
   width: 36px;
   height: 36px;
   border: 0;
   border-radius: 50%;
-  background: rgb(22 20 16 / 65%);
+  background: rgb(22 20 16 / 78%);
   color: #fff;
   cursor: pointer;
-  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 50%));
 }
 .landing-shop-favorite[aria-pressed='true'] {
   color: #ff9aa4;
 }
 .landing-shop-body {
-  display: grid;
-  gap: 4px;
-  min-height: 70px;
-  padding: 8px 15px 10px;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+  min-block-size: 82px;
+  padding: 12px 14px 14px;
 }
 .landing-shop-title {
   display: flex;
@@ -565,9 +587,10 @@
 }
 .landing-shop-title h3 {
   min-width: 0;
-  font-size: 1rem;
+  font-size: 1.125rem;
   font-weight: 800;
   line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 .landing-shop-title a {
   color: inherit;
@@ -583,20 +606,43 @@
   outline-offset: 2px;
 }
 .landing-shop-title span {
-  max-width: 100%;
   padding-inline: 7px;
   border-radius: var(--radius-pill);
-  background: #faf3e4;
+  background: var(--primary-subtle);
   color: var(--text-strong);
   font-size: 0.75rem;
-  text-align: center;
+}
+.landing-shop-details {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 3px 12px;
+  color: var(--text-strong);
+  font-size: 0.875rem;
+}
+.landing-shop-review {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+}
+.landing-shop-review strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.landing-shop-review svg {
+  flex: none;
+  color: var(--primary-strong);
+  fill: currentColor;
 }
 .landing-shop-meta {
   display: flex;
   align-items: center;
   gap: 5px;
+  margin-top: auto;
   color: var(--primary-strong);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 700;
 }
 
@@ -922,9 +968,6 @@
   }
 }
 @media (max-width: 1023px) {
-  .landing-title-sparkle {
-    display: none;
-  }
   .landing-hero-art {
     width: 39%;
   }
@@ -1000,9 +1043,6 @@
   .landing-category {
     padding-top: 8px;
   }
-  .landing-shop-art {
-    height: 88px;
-  }
   .landing-section-heading:has(.landing-shop-filter) .landing-section-actions {
     width: 100%;
   }
@@ -1055,20 +1095,23 @@
   .landing-shops {
     grid-template-columns: minmax(0, 1fr);
   }
+  .landing-shop-cover {
+    min-block-size: clamp(8.625rem, 42vw, 11rem);
+  }
   .landing-area {
-    gap: 6px;
-    padding: 10px;
-    min-height: 104px;
+    padding: 46px 12px 12px;
+    min-height: 152px;
   }
   .landing-area-copy strong {
-    font-size: 0.9375rem;
+    font-size: 1rem;
   }
   .landing-categories {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .landing-area-arrow {
-    width: 25px;
-    height: 25px;
+    position: absolute;
+    inset-block-start: 10px;
+    inset-inline-end: 10px;
   }
   .landing-search .button {
     padding-inline: 12px;

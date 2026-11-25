@@ -1,0 +1,22 @@
+BEGIN;
+
+SET LOCAL lock_timeout = '5s';
+SET LOCAL statement_timeout = '30s';
+SET LOCAL row_security = off;
+
+LOCK TABLE storefront_ratings IN ACCESS EXCLUSIVE MODE;
+DO $$ BEGIN
+ IF EXISTS (SELECT 1 FROM storefront_ratings) THEN
+  RAISE EXCEPTION 'Storefront ratings exist; preserve them and use a forward recovery migration';
+ END IF;
+END $$;
+
+CREATE OR REPLACE FUNCTION storefront_directory() RETURNS jsonb
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path=pg_catalog,public SET row_security=off AS $$
+ SELECT COALESCE(jsonb_agg(jsonb_build_object('slug',slug,'name',name,'accepting_orders',accepting_orders,'business_type',business_type) ORDER BY name,slug),'[]'::jsonb)
+ FROM (SELECT shop.slug,shop.name,shop.accepting_orders,org.business_type FROM public.storefronts shop JOIN public.organizations org ON org.id=shop.organization_id WHERE shop.published AND org.status='ACTIVE' ORDER BY shop.name,shop.slug LIMIT 100) visible;
+$$;
+
+DROP TABLE storefront_ratings;
+
+COMMIT;

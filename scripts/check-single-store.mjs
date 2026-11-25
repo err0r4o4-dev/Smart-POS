@@ -601,6 +601,16 @@ COMMIT;`,
     'PASS: migration 33 upgrade/down-to-32/re-upgrade preserves directory, grants and historical counts.',
   );
   run('docker', migrationArgs(database, 'up'));
+  run('docker', migrationArgs(database, 'goto', '50'));
+  if (
+    sql(database, 'SELECT version,dirty FROM schema_migrations') !== '50|f' ||
+    sql(database, "SELECT to_regclass('public.storefront_ratings') IS NULL") !==
+      't'
+  )
+    throw new Error(
+      'Empty ratings migration did not roll back cleanly to version 50.',
+    );
+  run('docker', migrationArgs(database, 'goto', '51'));
   run('docker', migrationArgs(database, 'up'));
   sql(
     database,
@@ -655,6 +665,34 @@ COMMIT;`,
   console.log(
     'PASS: selected integration acceptance cases completed without skips.',
   );
+  const ratingsCount = sql(database, 'SELECT count(*) FROM storefront_ratings');
+  if (ratingsCount !== '0') {
+    const rollback = readFileSync(
+      new URL(
+        '../database/migrations/000051_storefront_ratings.down.sql',
+        import.meta.url,
+      ),
+      'utf8',
+    );
+    let rejected = false;
+    try {
+      sql(database, rollback);
+    } catch (error) {
+      if (!error.message.includes('Storefront ratings exist; preserve them'))
+        throw error;
+      rejected = true;
+    }
+    if (
+      !rejected ||
+      sql(database, 'SELECT count(*) FROM storefront_ratings') !==
+        ratingsCount ||
+      sql(database, 'SELECT version,dirty FROM schema_migrations') !== '51|f'
+    )
+      throw new Error(
+        'Ratings rollback did not preserve existing ratings and schema.',
+      );
+    console.log('PASS: ratings downgrade refuses to discard existing ratings.');
+  }
   verifyPickupRecovery((statement) => sql(database, statement));
   console.log(
     'PASS: Pickup downgrade preserves incomplete data under administrator and FORCE RLS owner roles.',

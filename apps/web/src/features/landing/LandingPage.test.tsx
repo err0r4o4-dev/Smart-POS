@@ -60,6 +60,33 @@ beforeEach(() => {
 
 afterEach(() => vi.unstubAllGlobals());
 
+it('shows a directory rating, distinguishes zero reviews, and omits unavailable scores', async () => {
+  fetchMock.mockResolvedValueOnce({
+    ok: true,
+    json: async () => ({
+      data: [
+        {
+          ...shops[0],
+          average_rating: 4.8,
+          review_count: 126,
+          delivery_enabled: true,
+        },
+        { ...shops[1], average_rating: null, review_count: 0 },
+        { ...shops[1], name: 'ร้านไม่มีข้อมูลคะแนน', slug: 'unavailable' },
+      ],
+    }),
+  });
+  renderLanding();
+  const cards = within(
+    await screen.findByRole('list', { name: 'ร้านแนะนำ' }),
+  ).getAllByRole('article');
+  expect(within(cards[0]).getByText('4.8 / 5')).toBeVisible();
+  expect(within(cards[0]).getByText('126 รีวิว')).toBeVisible();
+  expect(within(cards[0]).getByText('มีจัดส่ง')).toBeVisible();
+  expect(within(cards[1]).getByText('ยังไม่มีรีวิว')).toBeVisible();
+  expect(within(cards[2]).queryByText(/รีวิว|\/ 5/)).not.toBeInTheDocument();
+});
+
 it('presents the mockup sections with the unchanged header destinations', () => {
   renderLanding();
   expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(

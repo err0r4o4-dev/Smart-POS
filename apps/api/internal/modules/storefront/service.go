@@ -102,7 +102,16 @@ func (service *Service) Directory(ctx context.Context) (json.RawMessage, error) 
 			return nil, err
 		}
 		var result []byte
-		err = tx.QueryRow(ctx, `SELECT COALESCE(jsonb_agg(jsonb_build_object('slug',shop.slug,'name',shop.name,'accepting_orders',shop.accepting_orders,'business_type',org.business_type)),'[]'::jsonb) FROM storefronts shop JOIN organizations org ON org.id=shop.organization_id WHERE shop.organization_id=$1 AND shop.published AND org.status='ACTIVE'`, org).Scan(&result)
+		err = tx.QueryRow(ctx, `SELECT COALESCE(jsonb_agg(jsonb_build_object(
+			'slug',shop.slug,'name',shop.name,'accepting_orders',shop.accepting_orders,'business_type',org.business_type,
+			'delivery_enabled',shop.delivery_enabled,'average_rating',reviews.average_rating,'review_count',reviews.review_count
+		)),'[]'::jsonb)
+		FROM storefronts shop JOIN organizations org ON org.id=shop.organization_id
+		CROSS JOIN LATERAL (
+			SELECT round(avg(rating),1) AS average_rating,count(*) AS review_count
+			FROM storefront_ratings WHERE organization_id=shop.organization_id
+		) reviews
+		WHERE shop.organization_id=$1 AND shop.published AND org.status='ACTIVE'`, org).Scan(&result)
 		return json.RawMessage(result), dbError(err)
 	}
 	var result []byte

@@ -230,6 +230,7 @@ const storefrontPaths = [
     '/quote',
     '/orders',
     '/track',
+    '/review',
     '/payment/checkout',
     '/payment/recover',
     '/payment/status',
@@ -613,6 +614,25 @@ assert.equal(
   '#/components/schemas/StorefrontTrackingInput',
 );
 const trackingInput = api.components.schemas.StorefrontTrackingInput;
+const guestReview = api.paths['/api/v1/storefronts/{slug}/review'].post;
+assert.equal(guestReview.requestBody.required, true);
+const reviewInput = guestReview.requestBody.content['application/json'].schema;
+assert.equal(reviewInput.additionalProperties, false);
+assert.deepEqual(reviewInput.required, ['order_id', 'access_token', 'rating']);
+assert.deepEqual(
+  reviewInput.properties.access_token,
+  trackingInput.properties.access_token,
+);
+assert.deepEqual(reviewInput.properties.rating, {
+  type: 'integer',
+  minimum: 1,
+  maximum: 5,
+});
+assert.equal(
+  guestReview.responses['200'].content['application/json'].schema.properties
+    .data.$ref,
+  '#/components/schemas/StorefrontCustomerReview',
+);
 assert.deepEqual(trackingInput.required, ['order_id', 'access_token']);
 assert.equal(trackingInput.additionalProperties, false);
 assert.deepEqual(trackingInput.properties.access_token, {

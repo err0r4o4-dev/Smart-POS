@@ -68,6 +68,48 @@ beforeEach(() => {
   );
 });
 
+it('submits a rating with the existing tracking proof and displays the saved rating', async () => {
+  const completed = { ...order, status: 'COMPLETED', review_eligible: true };
+  request.mockImplementation(async (path: string) =>
+    path.endsWith('/review') ? { rating: 4 } : completed,
+  );
+  view(undefined, true);
+  const score = await screen.findByRole('combobox', {
+    name: 'Rating from 1 to 5',
+  });
+  const submit = screen.getByRole('button', { name: 'Submit rating' });
+  expect(submit).toBeDisabled();
+  fireEvent.change(score, { target: { value: '4' } });
+  fireEvent.click(submit);
+  expect(await screen.findByText('Your rating: 4 / 5')).toBeVisible();
+  expect(request).toHaveBeenCalledWith('/shop/review', {
+    body: { order_id: 'order', access_token: token, rating: 4 },
+  });
+  expect(
+    screen.queryByRole('button', { name: 'Submit rating' }),
+  ).not.toBeInTheDocument();
+});
+
+it('does not offer a rating before completion and shows an existing rating without an edit action', async () => {
+  const original = view(undefined, true);
+  await screen.findByText('WEB-TEST');
+  expect(
+    screen.queryByRole('button', { name: 'Submit rating' }),
+  ).not.toBeInTheDocument();
+  original.unmount();
+  request.mockResolvedValue({
+    ...order,
+    status: 'COMPLETED',
+    review_eligible: true,
+    review: { rating: 5 },
+  });
+  view(undefined, true);
+  expect(await screen.findByText('Your rating: 5 / 5')).toBeVisible();
+  expect(
+    screen.queryByRole('button', { name: 'Submit rating' }),
+  ).not.toBeInTheDocument();
+});
+
 it('shows tracking as the third step without starting a payment', async () => {
   view(undefined, true);
   const steps = screen.getByRole('navigation', { name: 'Order steps' });

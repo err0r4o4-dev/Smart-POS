@@ -43,20 +43,30 @@ func readRefundIntent(ctx context.Context, tx pgx.Tx, org, order string) (Refund
 }
 
 func (service *Service) prepareCustomerCancellation(ctx context.Context, user, org, order, key string, gateway CustomerRefundGateway) (RefundIntent, error) {
-	tx, attempt, err := service.staffPaymentTx(ctx, user, org, order)
+	authorization, attempt, err := service.authorizeStaffPayment(ctx, user, org, order)
 	if err != nil {
 		return RefundIntent{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
+	recheck := func() error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		return authorization.Recheck(ctx)
+	}
 	intent, err := readRefundIntent(ctx, tx, org, order)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return RefundIntent{}, paymentError(err)
+	}
+	if failure := recheck(); failure != nil {
+		return RefundIntent{}, failure
+	}
 	if err == nil {
 		if intent.ID != key {
 			return RefundIntent{}, ErrConflict
 		}
 		return intent, nil
-	}
-	if !errors.Is(err, pgx.ErrNoRows) {
-		return RefundIntent{}, paymentError(err)
 	}
 	if attempt.State != "PAID" || attempt.PaymentIntent == nil {
 		return RefundIntent{}, ErrConflict
@@ -65,6 +75,9 @@ func (service *Service) prepareCustomerCancellation(ctx context.Context, user, o
 	var cart *string
 	if err = tx.QueryRow(ctx, "SELECT status,cart_id::text FROM online_orders WHERE organization_id=$1 AND id=$2", org, order).Scan(&status, &cart); err != nil {
 		return RefundIntent{}, paymentError(err)
+	}
+	if err = recheck(); err != nil {
+		return RefundIntent{}, err
 	}
 	if !slices.Contains([]string{"PENDING", "PREPARING", "READY"}, status) || cart != nil {
 		return RefundIntent{}, ErrConflict
@@ -77,17 +90,32 @@ func (service *Service) prepareCustomerCancellation(ctx context.Context, user, o
 	if err != nil {
 		return RefundIntent{}, paymentError(err)
 	}
+	if err = recheck(); err != nil {
+		return RefundIntent{}, err
+	}
 	if _, err = tx.Exec(ctx, "INSERT INTO online_refund_intents(id,organization_id,order_id,actor_id,purpose,amount_minor,payment_intent,request_fingerprint) VALUES($1,$2,$3,$4,'CANCEL_BEFORE_SHIPMENT',$5,$6,$7)", key, org, order, user, intent.AmountMinor, intent.PaymentIntent, identity); err != nil {
 		return RefundIntent{}, paymentError(err)
 	}
+	if err = recheck(); err != nil {
+		return RefundIntent{}, err
+	}
 	if err = organization.RecordAudit(ctx, tx, org, user, "online_refund.requested", key); err != nil {
 		return RefundIntent{}, paymentError(err)
+	}
+	if err = recheck(); err != nil {
+		return RefundIntent{}, err
 	}
 	intent, err = readRefundIntent(ctx, tx, org, order)
 	if err != nil {
 		return RefundIntent{}, paymentError(err)
 	}
-	return intent, paymentError(tx.Commit(ctx))
+	if err = recheck(); err != nil {
+		return RefundIntent{}, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return RefundIntent{}, paymentError(err)
+	}
+	return intent, nil
 }
 
 func (service *Service) CancelPaidCustomerOrder(ctx context.Context, user, org, order, key string) (RefundIntent, error) {
@@ -114,11 +142,18 @@ func (service *Service) processCustomerRefund(ctx context.Context, user, org, or
 	if discoveredID == "" {
 		intent, err = service.prepareCustomerCancellation(ctx, user, org, order, key, gateway)
 	} else {
-		tx, _, problem := service.staffPaymentTx(ctx, user, org, order)
+		authorization, _, problem := service.authorizeStaffPayment(ctx, user, org, order)
 		if problem != nil {
 			return RefundIntent{}, problem
 		}
+		tx := authorization.Tx
 		intent, err = readRefundIntent(ctx, tx, org, order)
+		if err == nil {
+			err = ctx.Err()
+			if err == nil {
+				err = authorization.Recheck(ctx)
+			}
+		}
 		tx.Rollback(ctx)
 		if err == nil && (intent.ID != key || intent.ProviderID != nil && *intent.ProviderID != discoveredID) {
 			return RefundIntent{}, ErrConflict
@@ -136,6 +171,9 @@ func (service *Service) processCustomerRefund(ctx context.Context, user, org, or
 	}
 	if identity != intent.RequestFingerprint {
 		return RefundIntent{}, ErrConflict
+	}
+	if err = ctx.Err(); err != nil {
+		return RefundIntent{}, err
 	}
 	network, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
@@ -167,14 +205,24 @@ func (service *Service) processCustomerRefund(ctx context.Context, user, org, or
 	if err = refund.Validate(intent.charge(org), expected); err != nil {
 		return RefundIntent{}, paymentError(err)
 	}
-	tx, _, err := service.staffPaymentTx(ctx, user, org, order)
+	authorization, _, err := service.authorizeStaffPayment(ctx, user, org, order)
 	if err != nil {
 		return RefundIntent{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
+	recheck := func() error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		return authorization.Recheck(ctx)
+	}
 	current, err := readRefundIntent(ctx, tx, org, order)
 	if err != nil {
 		return RefundIntent{}, paymentError(err)
+	}
+	if err = recheck(); err != nil {
+		return RefundIntent{}, err
 	}
 	if current.ID != intent.ID || current.RequestFingerprint != identity {
 		return RefundIntent{}, ErrConflict
@@ -198,8 +246,14 @@ func (service *Service) processCustomerRefund(ctx context.Context, user, org, or
 		ID, Outcome, Intent, Currency string
 		Amount                        int64
 	}{refund.ID, outcome, refund.PaymentIntent, refund.Currency, refund.AmountMinor})
+	if err = recheck(); err != nil {
+		return RefundIntent{}, err
+	}
 	if _, err = tx.Exec(ctx, "INSERT INTO online_refund_observations(organization_id,order_id,refund_id,actor_id,source,provider_id,outcome,payment_intent,amount_minor,currency,fingerprint) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT(organization_id,refund_id,source,fingerprint) DO NOTHING", org, order, current.ID, user, source, refund.ID, outcome, refund.PaymentIntent, refund.AmountMinor, refund.Currency, hash); err != nil {
 		return RefundIntent{}, paymentError(err)
+	}
+	if err = recheck(); err != nil {
+		return RefundIntent{}, err
 	}
 	if slices.Contains([]string{"SUCCEEDED", "FAILED", "CANCELED"}, current.State) {
 		if slices.Contains([]string{"SUCCEEDED", "FAILED", "CANCELED"}, outcome) && outcome != current.State {
@@ -208,29 +262,53 @@ func (service *Service) processCustomerRefund(ctx context.Context, user, org, or
 	} else if _, err = tx.Exec(ctx, "UPDATE online_refund_intents SET provider_id=$3,state=$4,revision=revision+1,updated_at=now() WHERE organization_id=$1 AND order_id=$2", org, order, refund.ID, outcome); err != nil {
 		return RefundIntent{}, paymentError(err)
 	}
+	if err = recheck(); err != nil {
+		return RefundIntent{}, err
+	}
 	current, err = readRefundIntent(ctx, tx, org, order)
 	if err != nil {
 		return RefundIntent{}, paymentError(err)
+	}
+	if err = recheck(); err != nil {
+		return RefundIntent{}, err
 	}
 	if current.State == "SUCCEEDED" {
 		if _, err = tx.Exec(ctx, "UPDATE online_payment_attempts SET revision=revision+1,updated_at=now() WHERE organization_id=$1 AND order_id=$2 AND NOT stock_hold_released", org, order); err != nil {
 			return RefundIntent{}, paymentError(err)
 		}
+		if err = recheck(); err != nil {
+			return RefundIntent{}, err
+		}
 		var status string
 		if err = tx.QueryRow(ctx, "SELECT status FROM online_orders WHERE organization_id=$1 AND id=$2", org, order).Scan(&status); err != nil {
 			return RefundIntent{}, paymentError(err)
+		}
+		if err = recheck(); err != nil {
+			return RefundIntent{}, err
 		}
 		if status != "CANCELLED" {
 			if _, err = tx.Exec(ctx, "UPDATE online_orders SET status='CANCELLED',revision=revision+1,updated_at=now() WHERE organization_id=$1 AND id=$2", org, order); err != nil {
 				return RefundIntent{}, paymentError(err)
 			}
+			if err = recheck(); err != nil {
+				return RefundIntent{}, err
+			}
 			if _, err = tx.Exec(ctx, "INSERT INTO online_order_events(organization_id,order_id,status,message,actor_id) VALUES($1,$2,'CANCELLED','Full charge refunded before shipment',$3)", org, order, user); err != nil {
 				return RefundIntent{}, paymentError(err)
+			}
+			if err = recheck(); err != nil {
+				return RefundIntent{}, err
 			}
 			if err = organization.RecordAudit(ctx, tx, org, user, "online_refund.succeeded", current.ID); err != nil {
 				return RefundIntent{}, paymentError(err)
 			}
 		}
 	}
-	return current, paymentError(tx.Commit(ctx))
+	if err = recheck(); err != nil {
+		return RefundIntent{}, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return RefundIntent{}, paymentError(err)
+	}
+	return current, nil
 }

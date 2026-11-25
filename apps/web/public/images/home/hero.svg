@@ -1,0 +1,151 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 300" preserveAspectRatio="xMinYMid slice">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#fff6df"/>
+      <stop offset="1" stop-color="#f7e2bd"/>
+    </linearGradient>
+    <radialGradient id="plate" cx=".5" cy=".38" r=".62">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".78" stop-color="#f6f6f8"/>
+      <stop offset="1" stop-color="#d9dbe2"/>
+    </radialGradient>
+    <radialGradient id="rice" cx=".45" cy=".35" r=".7">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#ece8db"/>
+    </radialGradient>
+    <radialGradient id="pork" cx=".4" cy=".35" r=".7">
+      <stop offset="0" stop-color="#9a5a2c"/>
+      <stop offset="1" stop-color="#5c2e12"/>
+    </radialGradient>
+    <radialGradient id="yolk" cx=".38" cy=".35" r=".65">
+      <stop offset="0" stop-color="#ffd25a"/>
+      <stop offset=".7" stop-color="#ffa41b"/>
+      <stop offset="1" stop-color="#f08a00"/>
+    </radialGradient>
+    <linearGradient id="tea" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#f8d3a4"/>
+      <stop offset=".45" stop-color="#eaa766"/>
+      <stop offset="1" stop-color="#c8783a"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" x2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity=".55"/>
+      <stop offset=".35" stop-color="#fff" stop-opacity=".05"/>
+      <stop offset=".8" stop-color="#fff" stop-opacity=".1"/>
+      <stop offset="1" stop-color="#fff" stop-opacity=".5"/>
+    </linearGradient>
+    <filter id="sh" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="12" stdDeviation="11" flood-color="#5a3a0a" flood-opacity=".24"/>
+    </filter>
+  </defs>
+
+  <rect width="760" height="300" fill="url(#bg)"/>
+  <path d="M96 0 C20 92 26 222 128 300 H300 C214 236 196 112 268 0 Z" fill="#ffc93c"/>
+  <path d="M168 0 C120 80 126 200 196 300 H232 C176 220 172 104 214 0 Z" fill="#ffe08a" opacity=".7"/>
+
+  <!-- back bowl: stir-fried long beans -->
+  <g filter="url(#sh)">
+    <ellipse cx="318" cy="34" rx="96" ry="44" fill="url(#plate)"/>
+    <ellipse cx="318" cy="28" rx="76" ry="30" fill="#f2f3f5"/>
+    <g stroke="#4f8f2b" stroke-width="7" stroke-linecap="round">
+      <path d="M262 26 L300 14"/><path d="M276 38 L322 24"/><path d="M300 44 L350 30"/>
+      <path d="M326 14 L372 22"/><path d="M286 22 L332 36"/><path d="M340 40 L378 30"/>
+    </g>
+    <g stroke="#78b84a" stroke-width="4" stroke-linecap="round">
+      <path d="M268 32 L298 24"/><path d="M318 32 L356 18"/>
+    </g>
+    <circle cx="306" cy="30" r="4" fill="#e03d23"/>
+    <circle cx="348" cy="34" r="3.5" fill="#e03d23"/>
+  </g>
+
+  <!-- back bowl: greens -->
+  <g filter="url(#sh)">
+    <ellipse cx="520" cy="22" rx="64" ry="30" fill="url(#plate)"/>
+    <ellipse cx="520" cy="18" rx="50" ry="20" fill="#f2f3f5"/>
+    <g fill="#5c9e33">
+      <ellipse cx="500" cy="16" rx="14" ry="6" transform="rotate(-20 500 16)"/>
+      <ellipse cx="522" cy="12" rx="15" ry="6" transform="rotate(18 522 12)"/>
+      <ellipse cx="540" cy="20" rx="13" ry="5" transform="rotate(-30 540 20)"/>
+      <ellipse cx="512" cy="24" rx="12" ry="5" transform="rotate(25 512 24)"/>
+    </g>
+    <circle cx="530" cy="22" r="3" fill="#f0c43a"/>
+  </g>
+
+  <!-- main plate -->
+  <g filter="url(#sh)">
+    <ellipse cx="420" cy="214" rx="214" ry="108" fill="url(#plate)"/>
+    <ellipse cx="420" cy="206" rx="182" ry="86" fill="#ffffff"/>
+    <!-- rice -->
+    <path d="M378 236 C366 176 430 150 476 160 C524 152 560 186 548 230 C538 268 400 276 378 236 Z" fill="url(#rice)"/>
+    <g fill="#e6e1cf">
+      <ellipse cx="420" cy="232" rx="5" ry="2.2"/><ellipse cx="452" cy="248" rx="5" ry="2.2" transform="rotate(25 452 248)"/>
+      <ellipse cx="500" cy="242" rx="5" ry="2.2" transform="rotate(-20 500 242)"/><ellipse cx="530" cy="222" rx="5" ry="2.2"/>
+      <ellipse cx="398" cy="214" rx="5" ry="2.2" transform="rotate(30 398 214)"/><ellipse cx="476" cy="258" rx="5" ry="2.2"/>
+    </g>
+    <!-- krapao -->
+    <path d="M262 214 C262 168 330 162 362 184 C396 206 392 254 360 270 C318 290 262 262 262 214 Z" fill="url(#pork)"/>
+    <g fill="#4a220c">
+      <circle cx="290" cy="206" r="8"/><circle cx="312" cy="232" r="9"/><circle cx="338" cy="210" r="7"/>
+      <circle cx="300" cy="254" r="7"/><circle cx="352" cy="244" r="8"/><circle cx="326" cy="262" r="6"/>
+      <circle cx="280" cy="232" r="6"/><circle cx="356" cy="194" r="6"/>
+    </g>
+    <g fill="#8d4a1f">
+      <circle cx="304" cy="196" r="5"/><circle cx="328" cy="240" r="5"/><circle cx="290" cy="242" r="4"/><circle cx="346" cy="226" r="4"/>
+    </g>
+    <g fill="#2f7a22">
+      <ellipse cx="300" cy="186" rx="15" ry="6.5" transform="rotate(-28 300 186)"/>
+      <ellipse cx="342" cy="232" rx="16" ry="6.5" transform="rotate(40 342 232)"/>
+      <ellipse cx="276" cy="222" rx="14" ry="6" transform="rotate(12 276 222)"/>
+      <ellipse cx="318" cy="250" rx="13" ry="5.5" transform="rotate(-40 318 250)"/>
+      <ellipse cx="362" cy="208" rx="12" ry="5" transform="rotate(70 362 208)"/>
+    </g>
+    <g stroke="#5aa83a" stroke-width="5" stroke-linecap="round">
+      <path d="M318 200 L332 192"/><path d="M286 262 L298 256"/>
+    </g>
+    <g fill="#e2381f">
+      <rect x="306" y="214" width="14" height="5" rx="2.5" transform="rotate(-25 306 214)"/>
+      <rect x="280" y="198" width="12" height="5" rx="2.5" transform="rotate(30 280 198)"/>
+      <rect x="336" y="254" width="12" height="5" rx="2.5" transform="rotate(-10 336 254)"/>
+    </g>
+    <!-- fried egg -->
+    <path d="M410 152 C430 110 520 104 548 138 C576 172 548 210 504 208 C470 218 418 204 410 176 Z" fill="#fffdf6"/>
+    <path d="M410 152 C430 110 520 104 548 138 C576 172 548 210 504 208" fill="none" stroke="#d99a3c" stroke-width="5" opacity=".55" stroke-linecap="round"/>
+    <path d="M420 178 C432 196 470 214 504 208" fill="none" stroke="#e5b267" stroke-width="3" opacity=".5"/>
+    <circle cx="482" cy="160" r="30" fill="url(#yolk)"/>
+    <ellipse cx="472" cy="150" rx="10" ry="6" fill="#fff3c4" opacity=".75"/>
+    <!-- cucumber -->
+    <g>
+      <ellipse cx="578" cy="198" rx="30" ry="18" fill="#4e8f2c"/>
+      <ellipse cx="578" cy="196" rx="25" ry="14" fill="#dff1c2"/>
+      <g fill="#b9d98e"><circle cx="572" cy="194" r="2"/><circle cx="584" cy="194" r="2"/><circle cx="578" cy="200" r="2"/></g>
+      <ellipse cx="596" cy="232" rx="30" ry="18" fill="#4e8f2c"/>
+      <ellipse cx="596" cy="230" rx="25" ry="14" fill="#e6f5cd"/>
+      <g fill="#b9d98e"><circle cx="590" cy="228" r="2"/><circle cx="602" cy="228" r="2"/><circle cx="596" cy="234" r="2"/></g>
+    </g>
+  </g>
+
+  <!-- bubble milk tea -->
+  <g filter="url(#sh)">
+    <rect x="688" y="-6" width="12" height="96" rx="5" fill="#1f1f1f" transform="rotate(12 694 42)"/>
+    <path d="M636 72 H748 L734 300 H650 Z" fill="url(#tea)"/>
+    <path d="M636 72 H748 L745 108 H639 Z" fill="#f9dcb3"/>
+    <g fill="#fff" opacity=".35">
+      <rect x="656" y="120" width="26" height="24" rx="5" transform="rotate(-12 669 132)"/>
+      <rect x="696" y="138" width="24" height="22" rx="5" transform="rotate(14 708 149)"/>
+    </g>
+    <g fill="#3a2212">
+      <circle cx="664" cy="282" r="10"/><circle cx="686" cy="288" r="10"/><circle cx="708" cy="282" r="10"/>
+      <circle cx="728" cy="286" r="9"/><circle cx="674" cy="264" r="9.5"/><circle cx="698" cy="266" r="9.5"/>
+      <circle cx="720" cy="262" r="9"/>
+    </g>
+    <g fill="#6b4126">
+      <circle cx="661" cy="279" r="3"/><circle cx="695" cy="263" r="3"/><circle cx="717" cy="259" r="3"/>
+    </g>
+    <path d="M636 72 H748 L734 300 H650 Z" fill="url(#glass)"/>
+    <ellipse cx="692" cy="72" rx="56" ry="9" fill="#fff" opacity=".75"/>
+  </g>
+
+  <!-- garnish -->
+  <path d="M168 270 C192 236 238 232 250 246 C226 252 202 266 182 288 Z" fill="#e2381f"/>
+  <path d="M246 246 C254 236 262 236 266 242" stroke="#2f7a22" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <ellipse cx="150" cy="290" rx="18" ry="8" fill="#2f7a22" transform="rotate(-25 150 290)"/>
+</svg>

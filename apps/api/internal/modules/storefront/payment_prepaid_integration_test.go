@@ -15,7 +15,7 @@ import (
 	"smartpos/api/internal/platform/stripe"
 )
 
-func paymentPrepaidAcceptance(test *testing.T, ctx context.Context, organizations *organization.Service, owner, org string, shop storefront.Settings, foreignOrg, unauthorizedUser string) {
+func paymentPrepaidAcceptance(test *testing.T, ctx, unauthorizedCtx context.Context, organizations *organization.Service, owner, org string, shop storefront.Settings, foreignOrg, unauthorizedUser string) {
 	test.Helper()
 	gateway, err := stripe.NewSandbox("sk_test_synthetic", "http://localhost:8088")
 	if err != nil {
@@ -74,11 +74,38 @@ func paymentPrepaidAcceptance(test *testing.T, ctx context.Context, organization
 	if _, err = service.AcceptCustomerWebhook(ctx, body, paymentSignature(body, now), now); err != nil {
 		test.Fatal(err)
 	}
-	for _, status := range []string{"PREPARING", "READY"} {
-		order, err = service.Transition(ctx, owner, org, order.ID, storefront.TransitionInput{Revision: order.Revision, Status: status})
-		if err != nil {
-			test.Fatal(err)
+	if !test.Run("retained storefront pause blocks new quotes but preserves paid kitchen work", func(test *testing.T) {
+		assertKitchenQueueOrder(test, ctx, organizations, owner, org, shop.BranchID, order.ID, true)
+		settings := storefront.SettingsInput{
+			Slug: shop.Slug, Name: shop.Name, TerminalID: shop.TerminalID,
+			Published: true, AcceptingOrders: false, Revision: shop.Revision,
 		}
+		paused, problem := service.SaveSettings(ctx, owner, org, settings)
+		if problem != nil || paused.AcceptingOrders || !paused.Published {
+			test.Fatalf("could not pause published fixture: %v", problem)
+		}
+		defer func() {
+			settings.AcceptingOrders = true
+			settings.Revision = paused.Revision
+			restored, restoreErr := service.SaveSettings(ctx, owner, org, settings)
+			if restoreErr != nil || !restored.AcceptingOrders {
+				test.Errorf("restore fixture storefront: %v", restoreErr)
+			}
+		}()
+		if _, problem = service.Quote(ctx, shop.Slug, storefront.QuoteInput{Items: items}); !errors.Is(problem, storefront.ErrClosed) {
+			test.Fatalf("paused store accepted a new quote: %v", problem)
+		}
+		assertKitchenQueueOrder(test, ctx, organizations, owner, org, shop.BranchID, order.ID, true)
+		for _, status := range []string{"PREPARING", "READY"} {
+			next, transitionErr := service.Transition(ctx, owner, org, order.ID, storefront.TransitionInput{Revision: order.Revision, Status: status})
+			if transitionErr != nil || next.Status != status {
+				test.Fatalf("paid order could not reach %s while paused: %v", status, transitionErr)
+			}
+			order = next
+		}
+		assertKitchenQueueOrder(test, ctx, organizations, owner, org, shop.BranchID, order.ID, true)
+	}) {
+		return
 	}
 	test.Run("paid evidence does not bypass an own open shift", func(test *testing.T) {
 		if _, problem := point.SettlePrepaidOnlineOrder(ctx, owner, org, order.ID, pos.OnlineOrderInput{Revision: order.Revision}); !errors.Is(problem, pos.ErrConflict) {
@@ -90,7 +117,7 @@ func paymentPrepaidAcceptance(test *testing.T, ctx context.Context, organization
 		test.Fatal(err)
 	}
 	test.Run("tenant member and revision checks precede fulfillment", func(test *testing.T) {
-		if _, problem := point.SettlePrepaidOnlineOrder(ctx, unauthorizedUser, org, order.ID, pos.OnlineOrderInput{Revision: order.Revision}); !errors.Is(problem, pos.ErrNotFound) {
+		if _, problem := point.SettlePrepaidOnlineOrder(unauthorizedCtx, unauthorizedUser, org, order.ID, pos.OnlineOrderInput{Revision: order.Revision}); !errors.Is(problem, pos.ErrNotFound) {
 			test.Fatalf("unauthorized member: %v", problem)
 		}
 		if _, problem := point.SettlePrepaidOnlineOrder(ctx, owner, foreignOrg, order.ID, pos.OnlineOrderInput{Revision: order.Revision}); !errors.Is(problem, pos.ErrNotFound) {
@@ -102,6 +129,26 @@ func paymentPrepaidAcceptance(test *testing.T, ctx context.Context, organization
 		assertUnsettled(test, "READY")
 	})
 	test.Run("price drift rolls back cart and retains paid stock", func(test *testing.T) {
+		readSnapshot := func() string {
+			test.Helper()
+			tx, _, err := organizations.Authorized(ctx, owner, org, "storefront.manage")
+			if err != nil {
+				test.Fatal(err)
+			}
+			defer tx.Rollback(ctx)
+			var snapshot string
+			var lines int
+			err = tx.QueryRow(ctx, `SELECT jsonb_build_object('total', doc.estimated_total,
+				'items', jsonb_agg(to_jsonb(item) ORDER BY item.variant_id))::text, count(*)
+				FROM online_orders doc JOIN online_order_items item
+				ON item.organization_id=doc.organization_id AND item.order_id=doc.id
+				WHERE doc.organization_id=$1 AND doc.id=$2 GROUP BY doc.estimated_total`, org, order.ID).Scan(&snapshot, &lines)
+			if err != nil || lines != 1 {
+				test.Fatalf("paid order snapshot read: lines=%d err=%v", lines, err)
+			}
+			return snapshot
+		}
+		before := readSnapshot()
 		write, _, problem := organizations.Authorized(ctx, owner, org, "storefront.manage")
 		if problem != nil {
 			test.Fatal(problem)
@@ -118,6 +165,9 @@ func paymentPrepaidAcceptance(test *testing.T, ctx context.Context, organization
 			test.Fatalf("paid price drift: %v", problem)
 		}
 		assertUnsettled(test, "READY")
+		if after := readSnapshot(); after != before {
+			test.Fatal("price change or failed settlement rewrote the paid order snapshot")
+		}
 		restore, _, problem := organizations.Authorized(ctx, owner, org, "storefront.manage")
 		if problem != nil {
 			test.Fatal(problem)

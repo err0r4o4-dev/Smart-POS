@@ -33,6 +33,7 @@ import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavig
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
+import { paths } from '../../app/routes';
 import {
   Brand,
   Button,
@@ -75,6 +76,19 @@ import {
   type IssuedTableQRToken,
 } from './setup-api';
 import { validateStoreProfile, type ProfileErrors } from './setup-validation';
+import { ApiError } from '../../lib/api';
+import { getMFAStatus } from '../auth/mfa-api';
+import { MFARequiredState } from './MFARequiredState';
+import {
+  CreationRecoveryError,
+  finishCreation,
+  reserveCreationKey,
+} from './creation-operation';
+import {
+  CompletionRecoveryError,
+  finishCompletion,
+  reserveCompletionKey,
+} from './completion-operation';
 
 const blankBranch: BranchInput = {
   name: '',
@@ -544,6 +558,7 @@ function SetupStepFields({
   form,
   update,
   promptPayAvailable,
+  pickupAvailable,
   savedTableCount,
   profileErrors,
   onValidateProfile,
@@ -555,6 +570,7 @@ function SetupStepFields({
     value: SetupFormState[Key],
   ) => void;
   promptPayAvailable: boolean;
+  pickupAvailable: boolean;
   savedTableCount: number;
   profileErrors: ProfileErrors;
   onValidateProfile: () => void;
@@ -684,6 +700,18 @@ function SetupStepFields({
               })
             }
           />
+          {pickupAvailable && (
+            <SetupToggle
+              label={t('organization.setupPickup')}
+              description={t('organization.setupPickupHint')}
+              checked={form.services.service_modes.pickup ?? false}
+              onChange={(pickup) =>
+                update('services', {
+                  service_modes: { ...form.services.service_modes, pickup },
+                })
+              }
+            />
+          )}
           <SetupToggle
             label={t('organization.setupDelivery')}
             description={t('organization.setupDeliveryHint')}
@@ -823,6 +851,9 @@ function ScopedSetupPage() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const [profileErrors, setProfileErrors] = useState<ProfileErrors>({});
+  const [recovery, setRecovery] = useState<
+    'mfa' | 'signin' | 'creation' | null
+  >(null);
   const [rotationUncertain, setRotationUncertain] = useState(false);
   const [serverState, setServerState] = useState<SetupState | null>(null);
   const [issuedTokens, setIssuedTokens] = useState<IssuedTableQRToken[]>([]);
@@ -834,9 +865,7 @@ function ScopedSetupPage() {
   const moveToStep = (nextStep: SetupStepIndex) => {
     setStep(nextStep);
   };
-  const creationRef = useRef({ key: '', payload: '' });
   const saveCache = useRef<SetupSaveCache>({});
-  const completionRef = useRef({ key: '', orgID: '' });
   const stepHeadingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     stepHeadingRef.current?.focus();
@@ -853,8 +882,7 @@ function ScopedSetupPage() {
   const orgID =
     tenant.context?.organization?.id ?? createdContext?.organizationID ?? '';
   const branchID = tenant.branchID || createdContext?.branchID || '';
-  const setupContext =
-    orgID && branchID ? { organizationID: orgID, branchID } : null;
+  const setupContext = orgID ? { organizationID: orgID, branchID } : null;
   const setupQuery = useQuery({
     queryKey: ['restaurant-setup', state.session?.user.id, orgID, branchID],
     queryFn: ({ signal }) => getSetup(setupContext!, signal),
@@ -941,6 +969,7 @@ function ScopedSetupPage() {
         <Loading>{t('organization.checkingStoreModeAndAccess')}</Loading>
       </main>
     );
+  if (tenant.errorCode === 'MFA_REQUIRED') return <MFARequiredState />;
   if (tenant.error)
     return (
       <main className="setup-page-wrapper">
@@ -958,7 +987,9 @@ function ScopedSetupPage() {
   )
     return <Navigate to="/account" replace />;
   if (setupQuery.data?.complete === true)
-    return <Navigate to="/dashboard" replace />;
+    return (
+      <Navigate to={branchID ? paths.dashboard : paths.settings} replace />
+    );
 
   const localIncomplete = localReadiness(form, t);
   const readinessItems = [
@@ -1088,16 +1119,17 @@ function ScopedSetupPage() {
         return;
       }
       setPending(true);
-      if (completionRef.current.orgID !== setupContext.organizationID)
-        completionRef.current = {
-          key: setupKey(),
-          orgID: setupContext.organizationID,
-        };
+      setRecovery(null);
       try {
+        const completionKey = reserveCompletionKey(
+          state.session.user.id,
+          setupContext,
+          setupKey,
+        );
         const result = await completeSetup(
           setupContext,
           state.session.csrf_token,
-          completionRef.current.key,
+          completionKey,
         );
         if (!activeRef.current) return;
         if (!result.ready) {
@@ -1105,6 +1137,7 @@ function ScopedSetupPage() {
           await setupQuery.refetch();
           return;
         }
+        finishCompletion(state.session.user.id, setupContext, completionKey);
         await tenant.refresh();
         if (!activeRef.current) return;
         await queryClient.invalidateQueries({
@@ -1116,8 +1149,23 @@ function ScopedSetupPage() {
           ],
         });
         if (!activeRef.current) return;
-        navigate(result.dashboard || '/dashboard', { replace: true });
+        navigate(
+          branchID ? result.dashboard || paths.dashboard : paths.settings,
+          { replace: true },
+        );
       } catch (failure) {
+        if (!activeRef.current) return;
+        if (failure instanceof CompletionRecoveryError) {
+          setError(t('mfa.completionStorage'));
+          return;
+        }
+        if (failure instanceof ApiError && failure.code === 'MFA_REQUIRED') {
+          setRecovery('mfa');
+          setError('');
+          return;
+        }
+        if (failure instanceof ApiError && failure.status === 401)
+          setRecovery('signin');
         setError(
           failure instanceof Error
             ? failure.message
@@ -1134,6 +1182,9 @@ function ScopedSetupPage() {
       return;
     }
     setPending(true);
+    setRecovery(null);
+    let creating = false;
+    let freshCreationKey = '';
     try {
       let requestContext = setupContext;
       if (step === 0 && !tenant.context) {
@@ -1150,17 +1201,35 @@ function ScopedSetupPage() {
           contact_phone,
           address,
         };
-        const encoded = JSON.stringify(payload);
-        if (creationRef.current.payload !== encoded)
-          creationRef.current = { key: setupKey(), payload: encoded };
         let nextContext = setupContext;
         if (!nextContext) {
+          const assurance = await getMFAStatus();
+          if (!activeRef.current) return;
+          if (!assurance.session_verified)
+            throw new ApiError(403, '', undefined, 'MFA_REQUIRED');
+          const key = await reserveCreationKey(
+            state.session.user.id,
+            JSON.stringify(payload),
+            () => {
+              freshCreationKey = setupKey();
+              return freshCreationKey;
+            },
+          );
+          if (!activeRef.current) return;
+          creating = true;
           const result = await createOrganization(
             payload,
             state.session.csrf_token,
-            creationRef.current.key,
+            key,
           );
           if (!activeRef.current) return;
+          if (
+            typeof result?.organization?.id !== 'string' ||
+            !result.organization.id
+          )
+            throw new ApiError(502, t('mfa.creationUnknown'));
+          finishCreation(state.session.user.id, key);
+          creating = false;
           nextContext = {
             organizationID: result.organization.id,
             branchID: result.branches?.[0]?.id ?? tenant.branchID,
@@ -1263,11 +1332,45 @@ function ScopedSetupPage() {
       if (!activeRef.current) return;
       moveToStep((step + 1) as SetupStepIndex);
     } catch (failure) {
+      if (!activeRef.current) return;
+      // Only a first submission's explicit pre-write rejection permits new details.
+      if (
+        creating &&
+        freshCreationKey &&
+        failure instanceof ApiError &&
+        failure.status === 400 &&
+        failure.code === 'INVALID_INPUT'
+      ) {
+        finishCreation(state.session.user.id, freshCreationKey);
+        creating = false;
+      }
+      if (failure instanceof ApiError && failure.code === 'MFA_REQUIRED') {
+        setRecovery('mfa');
+        setError('');
+        return;
+      }
+      if (failure instanceof ApiError && failure.status === 401) {
+        setRecovery('signin');
+        setError(t('mfa.creationSignin'));
+        return;
+      }
+      if (failure instanceof CreationRecoveryError) {
+        setRecovery('creation');
+        setError(
+          t(
+            failure.reason === 'changed'
+              ? 'mfa.creationChanged'
+              : 'mfa.creationStorage',
+          ),
+        );
+        return;
+      }
       const message =
         failure instanceof Error
           ? failure.message
           : t('organization.setupSaveFailed');
-      setError(message);
+      if (creating) setRecovery('creation');
+      setError(creating ? t('mfa.creationUnknown') : message);
     } finally {
       setPending(false);
     }
@@ -1474,6 +1577,7 @@ function ScopedSetupPage() {
                             update={update}
                             profileErrors={profileErrors}
                             onValidateProfile={validateProfile}
+                            pickupAvailable={Boolean(orgID) && !branchID}
                             promptPayAvailable={Boolean(
                               serverState?.capabilities.promptPay,
                             )}
@@ -1554,6 +1658,20 @@ function ScopedSetupPage() {
                     <ErrorMessage
                       message={`${localize(error)}${rotationUncertain ? ` ${t('organization.setupRotationUncertain')}` : ''}`}
                     />
+                  )}
+                  {recovery === 'mfa' && <MFARequiredState newTab />}
+                  {recovery === 'signin' && (
+                    <Link
+                      className="button button-secondary"
+                      to="/login?returnTo=%2Fsetup"
+                    >
+                      {t('mfa.signin')}
+                    </Link>
+                  )}
+                  {recovery === 'creation' && (
+                    <Link className="button button-secondary" to="/workspace">
+                      {t('mfa.workspace')}
+                    </Link>
                   )}
                   <div className="setup-actions">
                     <Button

@@ -82,9 +82,31 @@ type IssuedTableQRToken struct {
 }
 
 type ServiceModes struct {
-	DineIn   bool `json:"dine_in"`
-	Takeaway bool `json:"takeaway"`
-	Delivery bool `json:"delivery"`
+	DineIn   bool  `json:"dine_in"`
+	Takeaway bool  `json:"takeaway"`
+	Delivery bool  `json:"delivery"`
+	Pickup   *bool `json:"pickup,omitempty"`
+}
+
+func (modes *ServiceModes) UnmarshalJSON(data []byte) error {
+	type plain ServiceModes
+	var decoded plain
+	decoder := json.NewDecoder(strings.NewReader(string(data)))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&decoded); err != nil {
+		return err
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil {
+		return err
+	}
+	for name, value := range fields {
+		if strings.EqualFold(name, "pickup") && strings.TrimSpace(string(value)) == "null" {
+			return ErrInput
+		}
+	}
+	*modes = ServiceModes(decoded)
+	return nil
 }
 
 type SetupServicesInput struct {
@@ -221,7 +243,9 @@ func (input *SetupProfileInput) normalize(branch string) error {
 }
 
 func (input SetupProfileInput) Validate() error { return input.normalize(input.BranchID) }
-func (modes ServiceModes) any() bool            { return modes.DineIn || modes.Takeaway || modes.Delivery }
+func (modes ServiceModes) any() bool {
+	return modes.DineIn || modes.Takeaway || modes.Delivery || (modes.Pickup != nil && *modes.Pickup)
+}
 
 func (input *SetupTablesInput) normalize(branch string) error {
 	if input.BranchID == "" {
@@ -366,7 +390,8 @@ func setupStepLabel(step int) string {
 	return map[int]string{1: "Restaurant profile", 2: "Services", 3: "Tables and zones", 4: "Menu", 5: "Payments", 6: "Orders"}[step]
 }
 
-func ensureSetupProgress(ctx context.Context, tx pgx.Tx, org, branch, user string) error {
+func ensureSetupProgress(ctx context.Context, authorization *organization.Authorization, org, branch, user string) error {
+	tx := authorization.Tx
 	var existing, status string
 	err := tx.QueryRow(ctx, "SELECT branch_id::text,status FROM restaurant_setup_progress WHERE organization_id=$1", org).Scan(&existing, &status)
 	if err == nil && existing != branch {
@@ -378,17 +403,27 @@ func ensureSetupProgress(ctx context.Context, tx pgx.Tx, org, branch, user strin
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return dbError(err)
 	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return err
+	}
 	_, err = tx.Exec(ctx, `INSERT INTO restaurant_setup_progress(organization_id,branch_id,status,current_step,created_by,updated_by) VALUES($1,$2,'IN_PROGRESS',1,$3,$3) ON CONFLICT (organization_id) DO NOTHING`, org, branch, user)
 	return dbError(err)
 }
 
-func markSetupStep(ctx context.Context, tx pgx.Tx, org, branch, user string, step int) error {
+func markSetupStep(ctx context.Context, authorization *organization.Authorization, org, branch, user string, step int) error {
+	tx := authorization.Tx
+	if err := authorization.Recheck(ctx); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `INSERT INTO restaurant_setup_steps(organization_id,branch_id,step,status,completed_at,updated_by) VALUES($1,$2,$3,'COMPLETED',now(),$4) ON CONFLICT (organization_id,branch_id,step) DO UPDATE SET status='COMPLETED',completed_at=COALESCE(restaurant_setup_steps.completed_at,now()),updated_by=$4,updated_at=now()`, org, branch, step, user); err != nil {
 		return dbError(err)
 	}
 	next := step + 1
 	if next > 6 {
 		next = 6
+	}
+	if err := authorization.Recheck(ctx); err != nil {
+		return err
 	}
 	_, err := tx.Exec(ctx, `UPDATE restaurant_setup_progress SET status='IN_PROGRESS',current_step=GREATEST(current_step,$3),updated_by=$2,updated_at=now() WHERE organization_id=$1 AND branch_id=$4 AND status<>'COMPLETED'`, org, user, next, branch)
 	return dbError(err)
@@ -679,7 +714,8 @@ func populateSetupData(ctx context.Context, tx pgx.Tx, state *SetupState) error 
 	return nil
 }
 
-func setupMenuUnit(ctx context.Context, tx pgx.Tx, org string) (string, error) {
+func setupMenuUnit(ctx context.Context, authorization *organization.Authorization, org string) (string, error) {
+	tx := authorization.Tx
 	var unitID string
 	err := tx.QueryRow(ctx, setupMenuUnitLookupSQL, org, setupDefaultUnitCode).Scan(&unitID)
 	if err == nil {
@@ -687,6 +723,9 @@ func setupMenuUnit(ctx context.Context, tx pgx.Tx, org string) (string, error) {
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return "", dbError(err)
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return "", err
 	}
 	if _, err = tx.Exec(ctx, setupDefaultUnitInsertSQL, org, setupDefaultUnitCode, setupDefaultUnitName); err != nil {
 		return "", dbError(err)
@@ -707,31 +746,42 @@ func setupMenuSKU(item SetupMenuItemInput) string {
 	return "SETUP_" + strings.ToUpper(hex.EncodeToString(digest[:]))
 }
 
-func beginSetup(ctx context.Context, service *Service, user, org, branch string) (pgx.Tx, organization.Member, string, error) {
+func beginSetup(ctx context.Context, service *Service, user, org, branch string) (*organization.Authorization, string, error) {
 	if service.Organization == nil || service.Organization.Pool == nil {
-		return nil, organization.Member{}, "", ErrSetupUnavailable
+		return nil, "", ErrSetupUnavailable
 	}
-	tx, actor, err := service.begin(ctx, user, org, "organization.update")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "organization.update")
 	if err != nil {
-		return nil, organization.Member{}, "", err
+		return nil, "", err
 	}
+	tx := authorization.Tx
 	if err = organization.RequireVerified(ctx, tx, user); err != nil {
 		tx.Rollback(ctx)
-		return nil, organization.Member{}, "", err
+		return nil, "", err
 	}
 	if !uuidPattern.MatchString(branch) {
 		tx.Rollback(ctx)
-		return nil, organization.Member{}, "", ErrInput
+		return nil, "", ErrInput
 	}
-	if err = activeBranch(ctx, tx, actor, org, branch); err != nil {
+	if err = activeBranch(ctx, tx, authorization.Actor, org, branch); err == nil {
+		err = authorization.Recheck(ctx)
+	}
+	if err != nil {
 		tx.Rollback(ctx)
-		return nil, organization.Member{}, "", err
+		return nil, "", err
 	}
-	return tx, actor, branch, nil
+	return authorization, branch, nil
 }
 
-func finishSetup(ctx context.Context, tx pgx.Tx, org, user, event string, result SetupState) error {
+func finishSetup(ctx context.Context, authorization *organization.Authorization, org, user, event string) error {
+	tx := authorization.Tx
+	if err := authorization.Recheck(ctx); err != nil {
+		return err
+	}
 	if err := organization.RecordAudit(ctx, tx, org, user, event, org); err != nil {
+		return err
+	}
+	if err := authorization.Recheck(ctx); err != nil {
 		return err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -751,15 +801,26 @@ func (service *Service) Setup(ctx context.Context, user, org, branch string) (Se
 	if branch == "" {
 		return service.organizationSetup(ctx, user, org)
 	}
-	tx, _, branch, err := beginSetup(ctx, service, user, org, branch)
+	authorization, branch, err := beginSetup(ctx, service, user, org, branch)
 	if err != nil {
 		return SetupState{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
-	return readSetupState(ctx, tx, org, branch)
+	state, err := readSetupState(ctx, tx, org, branch)
+	if err != nil {
+		return SetupState{}, err
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return SetupState{}, err
+	}
+	return state, nil
 }
 
 func (service *Service) SaveProfile(ctx context.Context, user, org, key string, input SetupProfileInput) (SetupState, error) {
+	if input.BranchID != "" && input.ServiceModes.Pickup != nil {
+		return SetupState{}, ErrInput
+	}
 	if input.BranchID == "" {
 		if input.Branch != nil {
 			return SetupState{}, ErrInput
@@ -772,35 +833,45 @@ func (service *Service) SaveProfile(ctx context.Context, user, org, key string, 
 	if err := validateSetupIdempotencyKey(key); err != nil {
 		return SetupState{}, err
 	}
-	tx, _, branch, err := beginSetup(ctx, service, user, org, input.BranchID)
+	authorization, branch, err := beginSetup(ctx, service, user, org, input.BranchID)
 	if err != nil {
 		return SetupState{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
 	if err = input.normalize(branch); err != nil {
 		return SetupState{}, err
 	}
-	command, previous, err := claimCommand(ctx, tx, org, user, "restaurant.setup.profile", key, input)
+	command, previous, err := claimAuthorizedCommand(ctx, authorization, org, user, "restaurant.setup.profile", key, input)
 	if err != nil {
 		return SetupState{}, err
 	}
 	if previous != nil {
 		var state SetupState
 		if json.Unmarshal(previous, &state) == nil {
+			if err = authorization.Recheck(ctx); err != nil {
+				return SetupState{}, err
+			}
 			return state, nil
 		}
 		return SetupState{}, ErrConflict
 	}
 	if input.Branch != nil {
+		if err := authorization.Recheck(ctx); err != nil {
+			return SetupState{}, err
+		}
 		if _, err = tx.Exec(ctx, "UPDATE branches SET name=$3,code=$4,address=$5,phone=$6,email=$7,status='ACTIVE' WHERE organization_id=$1 AND id=$2", org, branch, input.Branch.Name, input.Branch.Code, input.Branch.Address, input.Branch.Phone, input.Branch.Email); err != nil {
 			return SetupState{}, dbError(err)
 		}
+	}
+	if err := authorization.Recheck(ctx); err != nil {
+		return SetupState{}, err
 	}
 	if _, err = tx.Exec(ctx, "UPDATE organizations SET name=$2,code=COALESCE(NULLIF($3,''),code),business_type=$4,contact_email=$5,contact_phone=$6,address=$7,updated_at=now() WHERE id=$1", org, input.Name, input.Code, input.BusinessType, input.ContactEmail, input.ContactPhone, input.Address); err != nil {
 		return SetupState{}, dbError(err)
 	}
 	if input.ServiceModes.any() {
-		if err = saveServiceModes(ctx, tx, org, branch, user, input.ServiceModes); err != nil {
+		if err = saveServiceModes(ctx, authorization, org, branch, user, input.ServiceModes); err != nil {
 			return SetupState{}, err
 		}
 	}
@@ -809,34 +880,46 @@ func (service *Service) SaveProfile(ctx context.Context, user, org, key string, 
 		if marshalErr != nil {
 			return SetupState{}, marshalErr
 		}
+		if err := authorization.Recheck(ctx); err != nil {
+			return SetupState{}, err
+		}
 		if _, err = tx.Exec(ctx, "UPDATE branches SET setup_location=$3,address=$4 WHERE organization_id=$1 AND id=$2", org, branch, locationJSON, input.Location.Address); err != nil {
 			return SetupState{}, dbError(err)
 		}
-	} else if _, err = tx.Exec(ctx, "UPDATE branches SET setup_location=NULL WHERE organization_id=$1 AND id=$2 AND setup_location IS NOT NULL AND setup_location->>'address' IS DISTINCT FROM $3", org, branch, input.Address); err != nil {
-		return SetupState{}, dbError(err)
+	} else {
+		if err = authorization.Recheck(ctx); err != nil {
+			return SetupState{}, err
+		}
+		if _, err = tx.Exec(ctx, "UPDATE branches SET setup_location=NULL WHERE organization_id=$1 AND id=$2 AND setup_location IS NOT NULL AND setup_location->>'address' IS DISTINCT FROM $3", org, branch, input.Address); err != nil {
+			return SetupState{}, dbError(err)
+		}
 	}
-	if err = ensureSetupProgress(ctx, tx, org, branch, user); err != nil {
+	if err = ensureSetupProgress(ctx, authorization, org, branch, user); err != nil {
 		return SetupState{}, err
 	}
-	if err = markSetupStep(ctx, tx, org, branch, user, 1); err != nil {
+	if err = markSetupStep(ctx, authorization, org, branch, user, 1); err != nil {
 		return SetupState{}, err
 	}
 	state, err := readSetupState(ctx, tx, org, branch)
 	if err != nil {
 		return SetupState{}, err
 	}
-	if err = saveCommand(ctx, tx, org, command, state); err != nil {
+	if err = saveAuthorizedCommand(ctx, authorization, org, command, state); err != nil {
 		return SetupState{}, err
 	}
-	if err = finishSetup(ctx, tx, org, user, "RESTAURANT_SETUP_PROFILE", state); err != nil {
+	if err = finishSetup(ctx, authorization, org, user, "RESTAURANT_SETUP_PROFILE"); err != nil {
 		return SetupState{}, err
 	}
 	return state, nil
 }
 
-func saveServiceModes(ctx context.Context, tx pgx.Tx, org, branch, user string, input ServiceModes) error {
+func saveServiceModes(ctx context.Context, authorization *organization.Authorization, org, branch, user string, input ServiceModes) error {
+	tx := authorization.Tx
 	modes := map[string]bool{"DINE_IN": input.DineIn, "TAKEAWAY": input.Takeaway, "DELIVERY": input.Delivery}
 	for mode, enabled := range modes {
+		if err := authorization.Recheck(ctx); err != nil {
+			return err
+		}
 		if _, err := tx.Exec(ctx, `INSERT INTO restaurant_service_modes(organization_id,branch_id,mode,enabled,updated_by) VALUES($1,$2,$3,$4,$5) ON CONFLICT(organization_id,branch_id,mode) DO UPDATE SET enabled=$4,revision=restaurant_service_modes.revision+1,updated_by=$5,updated_at=now()`, org, branch, mode, enabled, user); err != nil {
 			return dbError(err)
 		}
@@ -846,51 +929,55 @@ func saveServiceModes(ctx context.Context, tx pgx.Tx, org, branch, user string, 
 
 func (service *Service) SaveServices(ctx context.Context, user, org, key string, input SetupServicesInput) (SetupState, error) {
 	if input.BranchID == "" {
-		if !input.ServiceModes.any() {
-			return SetupState{}, ErrInput
-		}
 		return service.saveOrganizationSetup(ctx, user, org, key, "services", input)
+	}
+	if input.ServiceModes.Pickup != nil {
+		return SetupState{}, ErrInput
 	}
 	if err := validateSetupIdempotencyKey(key); err != nil {
 		return SetupState{}, err
 	}
-	tx, _, branch, err := beginSetup(ctx, service, user, org, input.BranchID)
+	authorization, branch, err := beginSetup(ctx, service, user, org, input.BranchID)
 	if err != nil {
 		return SetupState{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
 	input.BranchID = branch
 	if !input.ServiceModes.any() {
 		return SetupState{}, ErrInput
 	}
-	command, previous, err := claimCommand(ctx, tx, org, user, "restaurant.setup.services", key, input)
+	command, previous, err := claimAuthorizedCommand(ctx, authorization, org, user, "restaurant.setup.services", key, input)
 	if err != nil {
 		return SetupState{}, err
 	}
 	if previous != nil {
 		var state SetupState
 		if json.Unmarshal(previous, &state) == nil {
+			if err = authorization.Recheck(ctx); err != nil {
+				return SetupState{}, err
+			}
 			return state, nil
 		}
 		return SetupState{}, ErrConflict
 	}
-	if err = ensureSetupProgress(ctx, tx, org, branch, user); err != nil {
+	if err = ensureSetupProgress(ctx, authorization, org, branch, user); err != nil {
 		return SetupState{}, err
 	}
-	if err = saveServiceModes(ctx, tx, org, branch, user, input.ServiceModes); err != nil {
+	if err = saveServiceModes(ctx, authorization, org, branch, user, input.ServiceModes); err != nil {
 		return SetupState{}, err
 	}
-	if err = markSetupStep(ctx, tx, org, branch, user, 2); err != nil {
+	if err = markSetupStep(ctx, authorization, org, branch, user, 2); err != nil {
 		return SetupState{}, err
 	}
 	state, err := readSetupState(ctx, tx, org, branch)
 	if err != nil {
 		return SetupState{}, err
 	}
-	if err = saveCommand(ctx, tx, org, command, state); err != nil {
+	if err = saveAuthorizedCommand(ctx, authorization, org, command, state); err != nil {
 		return SetupState{}, err
 	}
-	if err = finishSetup(ctx, tx, org, user, "RESTAURANT_SETUP_SERVICES", state); err != nil {
+	if err = finishSetup(ctx, authorization, org, user, "RESTAURANT_SETUP_SERVICES"); err != nil {
 		return SetupState{}, err
 	}
 	return state, nil
@@ -906,31 +993,38 @@ func (service *Service) SaveTables(ctx context.Context, user, org, key string, i
 	if err := validateSetupIdempotencyKey(key); err != nil {
 		return SetupState{}, err
 	}
-	tx, _, branch, err := beginSetup(ctx, service, user, org, input.BranchID)
+	authorization, branch, err := beginSetup(ctx, service, user, org, input.BranchID)
 	if err != nil {
 		return SetupState{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
 	if err = input.normalize(branch); err != nil {
 		return SetupState{}, err
 	}
-	command, previous, err := claimCommand(ctx, tx, org, user, "restaurant.setup.tables", key, input)
+	command, previous, err := claimAuthorizedCommand(ctx, authorization, org, user, "restaurant.setup.tables", key, input)
 	if err != nil {
 		return SetupState{}, err
 	}
 	if previous != nil {
 		var state SetupState
 		if json.Unmarshal(previous, &state) == nil {
+			if err = authorization.Recheck(ctx); err != nil {
+				return SetupState{}, err
+			}
 			return state, nil
 		}
 		return SetupState{}, ErrConflict
 	}
-	if err = ensureSetupProgress(ctx, tx, org, branch, user); err != nil {
+	if err = ensureSetupProgress(ctx, authorization, org, branch, user); err != nil {
 		return SetupState{}, err
 	}
 	var stateQR []IssuedTableQRToken
 	for _, zone := range input.Zones {
 		var zoneID string
+		if err := authorization.Recheck(ctx); err != nil {
+			return SetupState{}, err
+		}
 		if err = tx.QueryRow(ctx, `INSERT INTO restaurant_zones(organization_id,branch_id,code,name,created_by,updated_by) VALUES($1,$2,$3,$4,$5,$5) ON CONFLICT(organization_id,branch_id,code) DO UPDATE SET name=$4,updated_by=$5,updated_at=now() RETURNING id::text`, org, branch, zone.Code, zone.Name, user).Scan(&zoneID); err != nil {
 			return SetupState{}, dbError(err)
 		}
@@ -944,21 +1038,30 @@ func (service *Service) SaveTables(ctx context.Context, user, org, key string, i
 			if err != nil {
 				return SetupState{}, err
 			}
+			if err := authorization.Recheck(ctx); err != nil {
+				return SetupState{}, err
+			}
 			if err = tx.QueryRow(ctx, `INSERT INTO restaurant_tables(organization_id,branch_id,code,name,seats,status,qr_token_hash,created_by,updated_by) VALUES($1,$2,$3,$4,$5,'ACTIVE',$6,$7,$7) ON CONFLICT(organization_id,branch_id,code) DO UPDATE SET name=$4,seats=$5,status='ACTIVE',qr_token_hash=CASE WHEN $8 THEN excluded.qr_token_hash ELSE restaurant_tables.qr_token_hash END,updated_by=$7,updated_at=now() RETURNING id::text`, org, branch, table.Code, table.Name, table.Seats, hash, user, input.GenerateQR || input.QREnabled).Scan(&tableID); err != nil {
 				return SetupState{}, dbError(err)
 			}
 			if input.GenerateQR || input.QREnabled {
 				stateQR = append(stateQR, IssuedTableQRToken{TableID: tableID, Code: table.Code, QRToken: token})
 			}
+			if err := authorization.Recheck(ctx); err != nil {
+				return SetupState{}, err
+			}
 			if _, err = tx.Exec(ctx, `INSERT INTO restaurant_table_zones(organization_id,branch_id,table_id,zone_id) VALUES($1,$2,$3,$4) ON CONFLICT(organization_id,branch_id,table_id) DO UPDATE SET zone_id=$4,assigned_at=now()`, org, branch, tableID, zoneID); err != nil {
 				return SetupState{}, dbError(err)
 			}
 		}
 	}
+	if err := authorization.Recheck(ctx); err != nil {
+		return SetupState{}, err
+	}
 	if _, err = tx.Exec(ctx, `INSERT INTO restaurant_settings(organization_id,branch_id,closing_time,timezone,revision,updated_by,table_qr_enabled) VALUES($1,$2,'22:00','Asia/Bangkok',1,$3,$4) ON CONFLICT(organization_id,branch_id) DO UPDATE SET table_qr_enabled=$4,revision=restaurant_settings.revision+1,updated_by=$3,updated_at=now()`, org, branch, user, input.GenerateQR || input.QREnabled); err != nil {
 		return SetupState{}, dbError(err)
 	}
-	if err = markSetupStep(ctx, tx, org, branch, user, 3); err != nil {
+	if err = markSetupStep(ctx, authorization, org, branch, user, 3); err != nil {
 		return SetupState{}, err
 	}
 	state, err := readSetupState(ctx, tx, org, branch)
@@ -966,10 +1069,10 @@ func (service *Service) SaveTables(ctx context.Context, user, org, key string, i
 		return SetupState{}, err
 	}
 	state.IssuedTableQRTokens = stateQR
-	if err = saveCommand(ctx, tx, org, command, state); err != nil {
+	if err = saveAuthorizedCommand(ctx, authorization, org, command, state); err != nil {
 		return SetupState{}, err
 	}
-	if err = finishSetup(ctx, tx, org, user, "RESTAURANT_SETUP_TABLES", state); err != nil {
+	if err = finishSetup(ctx, authorization, org, user, "RESTAURANT_SETUP_TABLES"); err != nil {
 		return SetupState{}, err
 	}
 	return state, nil
@@ -985,30 +1088,41 @@ func (service *Service) SaveMenu(ctx context.Context, user, org, key string, inp
 	if err := validateSetupIdempotencyKey(key); err != nil {
 		return SetupState{}, err
 	}
-	tx, _, branch, err := beginSetup(ctx, service, user, org, input.BranchID)
+	authorization, branch, err := beginSetup(ctx, service, user, org, input.BranchID)
 	if err != nil {
 		return SetupState{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
 	if err = input.normalize(branch); err != nil {
 		return SetupState{}, err
 	}
-	command, previous, err := claimCommand(ctx, tx, org, user, "restaurant.setup.menu", key, input)
+	command, previous, err := claimAuthorizedCommand(ctx, authorization, org, user, "restaurant.setup.menu", key, input)
 	if err != nil {
 		return SetupState{}, err
 	}
 	if previous != nil {
 		var state SetupState
 		if json.Unmarshal(previous, &state) == nil {
+			if err = authorization.Recheck(ctx); err != nil {
+				return SetupState{}, err
+			}
 			return state, nil
 		}
 		return SetupState{}, ErrConflict
 	}
+	var before SetupState
+	if _, _, err = readOrganizationMenu(ctx, tx, org, &before); err != nil {
+		return SetupState{}, err
+	}
 	var currency string
+	if err := authorization.Recheck(ctx); err != nil {
+		return SetupState{}, err
+	}
 	if err = tx.QueryRow(ctx, "SELECT currency FROM organizations WHERE id=$1", org).Scan(&currency); err != nil {
 		return SetupState{}, dbError(err)
 	}
-	unitID, unitErr := setupMenuUnit(ctx, tx, org)
+	unitID, unitErr := setupMenuUnit(ctx, authorization, org)
 	if unitErr != nil {
 		return SetupState{}, unitErr
 	}
@@ -1016,16 +1130,28 @@ func (service *Service) SaveMenu(ctx context.Context, user, org, key string, inp
 	for _, category := range input.Categories {
 		var id string
 		if category.ID != "" {
+			if err := authorization.Recheck(ctx); err != nil {
+				return SetupState{}, err
+			}
 			err = tx.QueryRow(ctx, "SELECT id::text FROM categories WHERE organization_id=$1 AND id=$2 AND status='ACTIVE'", org, category.ID).Scan(&id)
 			if errors.Is(err, pgx.ErrNoRows) {
 				return SetupState{}, ErrInput
 			}
 			if err == nil {
+				if err := authorization.Recheck(ctx); err != nil {
+					return SetupState{}, err
+				}
 				_, err = tx.Exec(ctx, "UPDATE categories SET name=$3,updated_at=now() WHERE organization_id=$1 AND id=$2", org, id, category.Name)
 			}
 		} else {
+			if err := authorization.Recheck(ctx); err != nil {
+				return SetupState{}, err
+			}
 			err = tx.QueryRow(ctx, "SELECT id::text FROM categories WHERE organization_id=$1 AND lower(btrim(name))=lower($2) AND status='ACTIVE'", org, category.Name).Scan(&id)
 			if errors.Is(err, pgx.ErrNoRows) {
+				if err := authorization.Recheck(ctx); err != nil {
+					return SetupState{}, err
+				}
 				err = tx.QueryRow(ctx, "INSERT INTO categories(organization_id,name,status) VALUES($1,$2,'ACTIVE') RETURNING id::text", org, category.Name).Scan(&id)
 			}
 		}
@@ -1042,6 +1168,9 @@ func (service *Service) SaveMenu(ctx context.Context, user, org, key string, inp
 			}
 			categoryID = item.CategoryID
 			var categoryExists string
+			if err := authorization.Recheck(ctx); err != nil {
+				return SetupState{}, err
+			}
 			if err = tx.QueryRow(ctx, "SELECT id::text FROM categories WHERE organization_id=$1 AND id=$2 AND status='ACTIVE'", org, categoryID).Scan(&categoryExists); errors.Is(err, pgx.ErrNoRows) {
 				return SetupState{}, ErrInput
 			}
@@ -1051,6 +1180,9 @@ func (service *Service) SaveMenu(ctx context.Context, user, org, key string, inp
 		}
 		var variantID, productID string
 		if item.VariantID != "" {
+			if err := authorization.Recheck(ctx); err != nil {
+				return SetupState{}, err
+			}
 			err = tx.QueryRow(ctx, "SELECT variant.id::text,product.id::text FROM product_variants variant JOIN products product ON product.organization_id=variant.organization_id AND product.id=variant.product_id WHERE variant.organization_id=$1 AND variant.id=$2", org, item.VariantID).Scan(&variantID, &productID)
 			if errors.Is(err, pgx.ErrNoRows) {
 				return SetupState{}, ErrInput
@@ -1062,6 +1194,9 @@ func (service *Service) SaveMenu(ctx context.Context, user, org, key string, inp
 				return SetupState{}, ErrInput
 			}
 		} else if item.SKU != "" {
+			if err := authorization.Recheck(ctx); err != nil {
+				return SetupState{}, err
+			}
 			err = tx.QueryRow(ctx, "SELECT variant.id::text,product.id::text FROM product_variants variant JOIN products product ON product.organization_id=variant.organization_id AND product.id=variant.product_id WHERE variant.organization_id=$1 AND variant.sku=$2", org, item.SKU).Scan(&variantID, &productID)
 			if errors.Is(err, pgx.ErrNoRows) {
 				err = nil
@@ -1071,16 +1206,31 @@ func (service *Service) SaveMenu(ctx context.Context, user, org, key string, inp
 		}
 		if variantID == "" {
 			sku := setupMenuSKU(item)
+			if err := authorization.Recheck(ctx); err != nil {
+				return SetupState{}, err
+			}
 			err = tx.QueryRow(ctx, "SELECT id::text,product_id::text FROM product_variants WHERE organization_id=$1 AND sku=$2", org, sku).Scan(&variantID, &productID)
 		}
 		if errors.Is(err, pgx.ErrNoRows) {
+			if err := authorization.Recheck(ctx); err != nil {
+				return SetupState{}, err
+			}
 			err = tx.QueryRow(ctx, "INSERT INTO products(organization_id,name,category_id,status,created_by,updated_by) VALUES($1,$2,$3,'ACTIVE',$4,$4) RETURNING id::text", org, item.Name, categoryID, user).Scan(&productID)
 			if err == nil {
 				sku := setupMenuSKU(item)
+				if err := authorization.Recheck(ctx); err != nil {
+					return SetupState{}, err
+				}
 				err = tx.QueryRow(ctx, `INSERT INTO product_variants(organization_id,product_id,sku,name,unit_id,cost_price,selling_price,currency,status) VALUES($1,$2,$3,$4,$5,0,$6::numeric,$7,'ACTIVE') RETURNING id::text`, org, productID, sku, item.Name, unitID, item.Price, currency).Scan(&variantID)
 			}
 		} else if err == nil {
+			if err := authorization.Recheck(ctx); err != nil {
+				return SetupState{}, err
+			}
 			if _, err = tx.Exec(ctx, "UPDATE products SET name=$3,category_id=$4,updated_by=$5,updated_at=now() WHERE organization_id=$1 AND id=$2", org, productID, item.Name, categoryID, user); err == nil {
+				if err := authorization.Recheck(ctx); err != nil {
+					return SetupState{}, err
+				}
 				_, err = tx.Exec(ctx, "UPDATE product_variants SET name=$3,selling_price=$4::numeric,updated_at=now() WHERE organization_id=$1 AND id=$2", org, variantID, item.Name, item.Price)
 			}
 		}
@@ -1088,20 +1238,30 @@ func (service *Service) SaveMenu(ctx context.Context, user, org, key string, inp
 			return SetupState{}, dbError(err)
 		}
 	}
-	if err = ensureSetupProgress(ctx, tx, org, branch, user); err != nil {
+	if err = ensureSetupProgress(ctx, authorization, org, branch, user); err != nil {
 		return SetupState{}, err
 	}
-	if err = markSetupStep(ctx, tx, org, branch, user, 4); err != nil {
+	if err = markSetupStep(ctx, authorization, org, branch, user, 4); err != nil {
 		return SetupState{}, err
 	}
 	state, err := readSetupState(ctx, tx, org, branch)
 	if err != nil {
 		return SetupState{}, err
 	}
-	if err = saveCommand(ctx, tx, org, command, state); err != nil {
+	if err = saveAuthorizedCommand(ctx, authorization, org, command, state); err != nil {
 		return SetupState{}, err
 	}
-	if err = finishSetup(ctx, tx, org, user, "RESTAURANT_SETUP_MENU", state); err != nil {
+	var after SetupState
+	if _, _, err = readOrganizationMenu(ctx, tx, org, &after); err != nil {
+		return SetupState{}, err
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return SetupState{}, err
+	}
+	if err = appendSetupMenuRevision(ctx, tx, org, user, before.Menu, after.Menu); err != nil {
+		return SetupState{}, err
+	}
+	if err = finishSetup(ctx, authorization, org, user, "RESTAURANT_SETUP_MENU"); err != nil {
 		return SetupState{}, err
 	}
 	return state, nil
@@ -1117,46 +1277,53 @@ func (service *Service) SavePayments(ctx context.Context, user, org, key string,
 	if err := validateSetupIdempotencyKey(key); err != nil {
 		return SetupState{}, err
 	}
-	tx, _, branch, err := beginSetup(ctx, service, user, org, input.BranchID)
+	authorization, branch, err := beginSetup(ctx, service, user, org, input.BranchID)
 	if err != nil {
 		return SetupState{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
 	input.BranchID = branch
 	if err = input.Validate(); err != nil {
 		return SetupState{}, err
 	}
-	command, previous, err := claimCommand(ctx, tx, org, user, "restaurant.setup.payments", key, input)
+	command, previous, err := claimAuthorizedCommand(ctx, authorization, org, user, "restaurant.setup.payments", key, input)
 	if err != nil {
 		return SetupState{}, err
 	}
 	if previous != nil {
 		var state SetupState
 		if json.Unmarshal(previous, &state) == nil {
+			if err = authorization.Recheck(ctx); err != nil {
+				return SetupState{}, err
+			}
 			return state, nil
 		}
 		return SetupState{}, ErrConflict
 	}
 	methods := map[string]bool{"CASH": input.Cash, "QR_MANUAL": input.PromptPay, "BANK_TRANSFER_MANUAL": input.BankTransfer, "CARD": false}
 	for method, enabled := range methods {
+		if err := authorization.Recheck(ctx); err != nil {
+			return SetupState{}, err
+		}
 		if _, err = tx.Exec(ctx, `INSERT INTO restaurant_payment_settings(organization_id,branch_id,method,enabled,updated_by) VALUES($1,$2,$3,$4,$5) ON CONFLICT(organization_id,branch_id,method) DO UPDATE SET enabled=$4,revision=restaurant_payment_settings.revision+1,updated_by=$5,updated_at=now()`, org, branch, method, enabled, user); err != nil {
 			return SetupState{}, dbError(err)
 		}
 	}
-	if err = ensureSetupProgress(ctx, tx, org, branch, user); err != nil {
+	if err = ensureSetupProgress(ctx, authorization, org, branch, user); err != nil {
 		return SetupState{}, err
 	}
-	if err = markSetupStep(ctx, tx, org, branch, user, 5); err != nil {
+	if err = markSetupStep(ctx, authorization, org, branch, user, 5); err != nil {
 		return SetupState{}, err
 	}
 	state, err := readSetupState(ctx, tx, org, branch)
 	if err != nil {
 		return SetupState{}, err
 	}
-	if err = saveCommand(ctx, tx, org, command, state); err != nil {
+	if err = saveAuthorizedCommand(ctx, authorization, org, command, state); err != nil {
 		return SetupState{}, err
 	}
-	if err = finishSetup(ctx, tx, org, user, "RESTAURANT_SETUP_PAYMENTS", state); err != nil {
+	if err = finishSetup(ctx, authorization, org, user, "RESTAURANT_SETUP_PAYMENTS"); err != nil {
 		return SetupState{}, err
 	}
 	return state, nil
@@ -1172,45 +1339,55 @@ func (service *Service) SaveOrders(ctx context.Context, user, org, key string, i
 	if err := validateSetupIdempotencyKey(key); err != nil {
 		return SetupState{}, err
 	}
-	tx, _, branch, err := beginSetup(ctx, service, user, org, input.BranchID)
+	authorization, branch, err := beginSetup(ctx, service, user, org, input.BranchID)
 	if err != nil {
 		return SetupState{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
 	if err = input.normalize(branch); err != nil {
 		return SetupState{}, err
 	}
-	command, previous, err := claimCommand(ctx, tx, org, user, "restaurant.setup.orders", key, input)
+	command, previous, err := claimAuthorizedCommand(ctx, authorization, org, user, "restaurant.setup.orders", key, input)
 	if err != nil {
 		return SetupState{}, err
 	}
 	if previous != nil {
 		var state SetupState
 		if json.Unmarshal(previous, &state) == nil {
+			if err = authorization.Recheck(ctx); err != nil {
+				return SetupState{}, err
+			}
 			return state, nil
 		}
 		return SetupState{}, ErrConflict
 	}
+	if err := authorization.Recheck(ctx); err != nil {
+		return SetupState{}, err
+	}
 	if _, err = tx.Exec(ctx, `INSERT INTO restaurant_settings(organization_id,branch_id,closing_time,timezone,revision,updated_by,qr_ordering_enabled,kitchen_enabled,auto_confirm_orders,table_qr_enabled) VALUES($1,$2,'22:00','Asia/Bangkok',1,$3,$4,$5,$6,false) ON CONFLICT(organization_id,branch_id) DO UPDATE SET qr_ordering_enabled=$4,kitchen_enabled=$5,auto_confirm_orders=$6,revision=restaurant_settings.revision+1,updated_by=$3,updated_at=now()`, org, branch, user, input.QROrdering, input.KitchenQueue, input.AutoConfirm); err != nil {
 		return SetupState{}, dbError(err)
+	}
+	if err := authorization.Recheck(ctx); err != nil {
+		return SetupState{}, err
 	}
 	if _, err = tx.Exec(ctx, `INSERT INTO restaurant_charge_settings(organization_id,branch_id,vat_rate,service_charge_rate,charge_mode,updated_by) VALUES($1,$2,$3::numeric,$4::numeric,'ADDED_TO_SUBTOTAL',$5) ON CONFLICT(organization_id,branch_id) DO UPDATE SET vat_rate=$3::numeric,service_charge_rate=$4::numeric,revision=restaurant_charge_settings.revision+1,updated_by=$5,updated_at=now()`, org, branch, input.VATRate, input.ServiceChargeRate, user); err != nil {
 		return SetupState{}, dbError(err)
 	}
-	if err = ensureSetupProgress(ctx, tx, org, branch, user); err != nil {
+	if err = ensureSetupProgress(ctx, authorization, org, branch, user); err != nil {
 		return SetupState{}, err
 	}
-	if err = markSetupStep(ctx, tx, org, branch, user, 6); err != nil {
+	if err = markSetupStep(ctx, authorization, org, branch, user, 6); err != nil {
 		return SetupState{}, err
 	}
 	state, err := readSetupState(ctx, tx, org, branch)
 	if err != nil {
 		return SetupState{}, err
 	}
-	if err = saveCommand(ctx, tx, org, command, state); err != nil {
+	if err = saveAuthorizedCommand(ctx, authorization, org, command, state); err != nil {
 		return SetupState{}, err
 	}
-	if err = finishSetup(ctx, tx, org, user, "RESTAURANT_SETUP_ORDERS", state); err != nil {
+	if err = finishSetup(ctx, authorization, org, user, "RESTAURANT_SETUP_ORDERS"); err != nil {
 		return SetupState{}, err
 	}
 	return state, nil
@@ -1223,18 +1400,22 @@ func (service *Service) Complete(ctx context.Context, user, org, branch, key str
 	if err := validateSetupIdempotencyKey(key); err != nil {
 		return SetupState{}, err
 	}
-	tx, _, branch, err := beginSetup(ctx, service, user, org, branch)
+	authorization, branch, err := beginSetup(ctx, service, user, org, branch)
 	if err != nil {
 		return SetupState{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
-	command, previous, err := claimCommand(ctx, tx, org, user, "restaurant.setup.complete", key, SetupCompleteInput{BranchID: branch})
+	command, previous, err := claimAuthorizedCommand(ctx, authorization, org, user, "restaurant.setup.complete", key, SetupCompleteInput{BranchID: branch})
 	if err != nil {
 		return SetupState{}, err
 	}
 	if previous != nil {
 		var state SetupState
 		if json.Unmarshal(previous, &state) == nil {
+			if err = authorization.Recheck(ctx); err != nil {
+				return SetupState{}, err
+			}
 			return state, nil
 		}
 		return SetupState{}, ErrConflict
@@ -1244,7 +1425,10 @@ func (service *Service) Complete(ctx context.Context, user, org, branch, key str
 		return SetupState{}, err
 	}
 	if state.Completed {
-		if err = saveCommand(ctx, tx, org, command, state); err != nil {
+		if err = saveAuthorizedCommand(ctx, authorization, org, command, state); err != nil {
+			return SetupState{}, err
+		}
+		if err = authorization.Recheck(ctx); err != nil {
 			return SetupState{}, err
 		}
 		if err = tx.Commit(ctx); err != nil {
@@ -1255,11 +1439,17 @@ func (service *Service) Complete(ctx context.Context, user, org, branch, key str
 	if !state.Ready {
 		return SetupState{}, ErrConflict
 	}
-	if err = ensureSetupProgress(ctx, tx, org, branch, user); err != nil {
+	if err = ensureSetupProgress(ctx, authorization, org, branch, user); err != nil {
+		return SetupState{}, err
+	}
+	if err := authorization.Recheck(ctx); err != nil {
 		return SetupState{}, err
 	}
 	if _, err = tx.Exec(ctx, `INSERT INTO restaurant_trials(organization_id,branch_id,status,trial_days,started_at,ends_at,updated_by) VALUES($1,$2,'ACTIVE',30,now(),now()+interval '30 days',$3) ON CONFLICT(organization_id) DO NOTHING`, org, branch, user); err != nil {
 		return SetupState{}, dbError(err)
+	}
+	if err := authorization.Recheck(ctx); err != nil {
+		return SetupState{}, err
 	}
 	progressUpdate, err := tx.Exec(ctx, `UPDATE restaurant_setup_progress SET status='COMPLETED',current_step=6,completed_at=now(),updated_by=$3,updated_at=now() WHERE organization_id=$1 AND branch_id=$2 AND status<>'COMPLETED'`, org, branch, user)
 	if err != nil {
@@ -1272,10 +1462,10 @@ func (service *Service) Complete(ctx context.Context, user, org, branch, key str
 	if err != nil {
 		return SetupState{}, err
 	}
-	if err = saveCommand(ctx, tx, org, command, state); err != nil {
+	if err = saveAuthorizedCommand(ctx, authorization, org, command, state); err != nil {
 		return SetupState{}, err
 	}
-	if err = finishSetup(ctx, tx, org, user, "RESTAURANT_SETUP_COMPLETED", state); err != nil {
+	if err = finishSetup(ctx, authorization, org, user, "RESTAURANT_SETUP_COMPLETED"); err != nil {
 		return SetupState{}, err
 	}
 	return state, nil

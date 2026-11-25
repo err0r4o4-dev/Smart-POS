@@ -27,6 +27,10 @@ func respond(writer http.ResponseWriter, request *http.Request, result any, err 
 	}
 	code, message, status := "DEPENDENCY_UNAVAILABLE", "Catalog service unavailable", 503
 	switch {
+	case errors.Is(err, identity.ErrInvalidToken):
+		code, message, status = "UNAUTHENTICATED", "Sign in again", 401
+	case errors.Is(err, identity.ErrMFARequired):
+		code, message, status = "MFA_REQUIRED", "Verify MFA before managing the catalog", 403
 	case errors.Is(err, ErrInput):
 		code, message, status = "INVALID_INPUT", "Check catalog values, references, prices and barcode checksum", 400
 	case errors.Is(err, organization.ErrDenied):
@@ -101,12 +105,7 @@ func (handler Handler) TenantRoutes(router chi.Router) {
 		tenant := private
 		handler.importRoutes(tenant)
 		tenant.Get("/products/{productId}/labels", endpoint(200, func(ctx context.Context, user, org string, request *http.Request) (any, error) {
-			tx, err := service.begin(ctx, user, org, "catalog.labels.print")
-			if err != nil {
-				return nil, err
-			}
-			defer tx.Rollback(ctx)
-			return productBy(ctx, tx, org, chi.URLParam(request, "productId"))
+			return service.Labels(ctx, user, org, chi.URLParam(request, "productId"))
 		}))
 		for _, kind := range []string{"categories", "brands", "units"} {
 			tenant.Get("/"+kind, endpoint(200, func(ctx context.Context, user, org string, request *http.Request) (any, error) {

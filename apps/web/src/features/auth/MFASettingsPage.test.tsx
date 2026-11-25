@@ -1,0 +1,460 @@
+import { act, fireEvent, screen } from '@testing-library/react';
+import { createMemoryRouter, RouterProvider } from 'react-router-dom';
+import { useReducer } from 'react';
+import { beforeEach, expect, it, vi } from 'vitest';
+import { renderInEnglish as render } from '../../test/render';
+import { MFASettingsPage } from './MFASettingsPage';
+import { ApiError } from '../../lib/api';
+
+const mocks = vi.hoisted(() => ({
+  auth: {
+    clear: vi.fn(),
+    state: {
+      status: 'authenticated',
+      session: {
+        user: { id: 'one', email: 'owner@example.test' },
+        csrf_token: 'session-one',
+      },
+    },
+  },
+  getMFAStatus: vi.fn(),
+  beginMFAEnrollment: vi.fn(),
+  confirmMFAEnrollment: vi.fn(),
+  beginMFARecovery: vi.fn(),
+  confirmMFARecovery: vi.fn(),
+  verifyMFA: vi.fn(),
+}));
+vi.mock('../../app/AuthProvider', () => ({ useAuth: () => mocks.auth }));
+vi.mock('./mfa-api', () => mocks);
+
+const codes = Array.from({ length: 10 }, (_, i) => `${'A'.repeat(25)}${i}`);
+const enrollment = {
+  factor_id: 'factor',
+  secret: 'A'.repeat(32),
+  expires_at: '2026-11-22T12:05:00Z',
+};
+
+beforeEach(() => {
+  vi.resetAllMocks();
+  mocks.auth.state.session = {
+    user: { id: 'one', email: 'owner@example.test' },
+    csrf_token: 'session-one',
+  };
+  mocks.getMFAStatus.mockResolvedValue({
+    enabled: false,
+    session_verified: false,
+  });
+  mocks.beginMFAEnrollment.mockResolvedValue(enrollment);
+  mocks.confirmMFAEnrollment.mockResolvedValue({ recovery_codes: codes });
+});
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((accept, decline) => {
+    resolve = accept;
+    reject = decline;
+  });
+  return { promise, resolve, reject };
+}
+
+function page() {
+  let redraw!: () => void;
+  function Harness() {
+    const [, update] = useReducer((value) => value + 1, 0);
+    redraw = update;
+    return <MFASettingsPage />;
+  }
+  const router = createMemoryRouter(
+    [
+      { path: '/security', element: <Harness /> },
+      { path: '/workspace', element: <h1>Workspace</h1> },
+      { path: '/login', element: <h1>Sign-in page</h1> },
+    ],
+    { initialEntries: ['/security'] },
+  );
+  return {
+    router,
+    redraw: () => redraw(),
+    ...render(<RouterProvider router={router} />),
+  };
+}
+
+async function enroll() {
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'Set up authenticator' }),
+  );
+  expect(await screen.findByLabelText('Authenticator setup key')).toHaveValue(
+    enrollment.secret,
+  );
+  fireEvent.change(screen.getByLabelText('Six-digit code'), {
+    target: { value: '001234' },
+  });
+  fireEvent.submit(
+    screen.getByRole('button', { name: 'Enable MFA' }).closest('form')!,
+  );
+}
+
+async function recover() {
+  mocks.getMFAStatus.mockResolvedValue({
+    enabled: true,
+    session_verified: false,
+  });
+  mocks.beginMFARecovery.mockResolvedValue(enrollment);
+  const rendered = page();
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'Use a recovery code' }),
+  );
+  fireEvent.change(screen.getByLabelText('Recovery code', { exact: true }), {
+    target: { value: 'A'.repeat(26) },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Set up replacement' }));
+  expect(await screen.findByLabelText('Authenticator setup key')).toHaveValue(
+    enrollment.secret,
+  );
+  expect(mocks.beginMFARecovery).toHaveBeenCalledWith(
+    'A'.repeat(26),
+    'session-one',
+    expect.any(AbortSignal),
+  );
+  fireEvent.change(screen.getByLabelText('Six-digit code'), {
+    target: { value: '001234' },
+  });
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Replace authenticator' }),
+  );
+  return rendered;
+}
+
+it('shows new recovery codes before clearing the revoked session', async () => {
+  mocks.confirmMFARecovery.mockResolvedValue({ recovery_codes: codes });
+  await recover();
+  expect(await screen.findByText(codes[0])).toBeVisible();
+  expect(mocks.confirmMFARecovery).toHaveBeenCalledWith(
+    'factor',
+    '001234',
+    'session-one',
+    expect.any(AbortSignal),
+  );
+  expect(mocks.auth.clear).not.toHaveBeenCalled();
+  expect(screen.getByRole('button', { name: 'Done' })).toBeDisabled();
+  fireEvent.click(
+    screen.getByRole('checkbox', {
+      name: 'I have stored these codes somewhere safe',
+    }),
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+  expect(screen.queryByText(codes[0])).toBeNull();
+  expect(screen.queryByText('This session is verified')).toBeNull();
+  fireEvent.click(screen.getByRole('link', { name: 'Sign in again' }));
+  expect(
+    await screen.findByRole('heading', { name: 'Sign-in page' }),
+  ).toBeVisible();
+  expect(mocks.auth.clear).toHaveBeenCalledTimes(1);
+});
+
+it('does not retry or claim success when recovery confirmation has no response', async () => {
+  mocks.confirmMFARecovery.mockRejectedValue(new ApiError(0, 'lost response'));
+  await recover();
+  expect(
+    await screen.findByText(
+      /could not confirm whether your authenticator changed/i,
+    ),
+  ).toBeVisible();
+  expect(screen.queryByLabelText('Authenticator setup key')).toBeNull();
+  expect(
+    screen.queryByRole('button', { name: 'Replace authenticator' }),
+  ).toBeNull();
+  expect(mocks.confirmMFARecovery).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole('link', { name: 'Sign in again' })).toBeVisible();
+});
+
+it('uses real API boundaries and retains one-time codes until explicit acknowledgement', async () => {
+  const { router } = page();
+  await enroll();
+  expect(await screen.findByText(codes[0])).toBeVisible();
+  expect(mocks.confirmMFAEnrollment).toHaveBeenCalledWith(
+    '001234',
+    'session-one',
+    expect.any(AbortSignal),
+  );
+  expect(screen.getByRole('button', { name: 'Done' })).toBeDisabled();
+  await act(() => router.navigate('/workspace'));
+  expect(
+    await screen.findByText('Keep your recovery codes before leaving'),
+  ).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Stay here' }));
+  expect(screen.getByText(codes[0])).toBeVisible();
+  fireEvent.click(
+    screen.getByRole('checkbox', {
+      name: 'I have stored these codes somewhere safe',
+    }),
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+  expect(
+    await screen.findByRole('heading', { name: 'Workspace' }),
+  ).toBeVisible();
+  expect(router.state.location.pathname).toBe('/workspace');
+  expect(screen.queryByText(codes[0])).toBeNull();
+  expect(localStorage.getItem('mfa')).toBeNull();
+});
+
+it('shows a scannable QR code with a manual-key fallback during enrollment', async () => {
+  page();
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'Set up authenticator' }),
+  );
+  expect(
+    await screen.findByRole('img', {
+      name: 'QR code for setting up your authenticator app',
+    }),
+  ).toBeVisible();
+  expect(screen.getByText("Can't scan? Enter the key manually")).toBeVisible();
+  expect(screen.getByLabelText('Authenticator setup key')).toHaveValue(
+    enrollment.secret,
+  );
+});
+
+it('asks for a fresh sign-in instead of repeating setup when enrollment proof is stale', async () => {
+  mocks.beginMFAEnrollment.mockRejectedValueOnce(new ApiError(400, 'stale'));
+  page();
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'Set up authenticator' }),
+  );
+  expect(
+    await screen.findByText(/Setup must start within 5 minutes of signing in/),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole('button', { name: 'Set up authenticator' }),
+  ).toBeNull();
+  const link = screen.getByRole('link', { name: 'Sign in again' });
+  expect(link).toHaveAttribute('href', '/login?returnTo=%2Fsecurity');
+  fireEvent.click(link);
+  expect(
+    await screen.findByRole('heading', { name: 'Sign-in page' }),
+  ).toBeVisible();
+  expect(mocks.auth.clear).toHaveBeenCalledTimes(1);
+  expect(mocks.beginMFAEnrollment).toHaveBeenCalledTimes(1);
+});
+
+it('keeps loading and dependency failure recoverable without automatic mutation', async () => {
+  const pending = deferred<{ enabled: boolean; session_verified: boolean }>();
+  mocks.getMFAStatus.mockReturnValueOnce(pending.promise);
+  page();
+  expect(screen.getByText('Checking MFA…')).toBeVisible();
+  await act(() => pending.resolve({ enabled: false, session_verified: false }));
+  expect(
+    await screen.findByRole('button', { name: 'Set up authenticator' }),
+  ).toBeEnabled();
+  expect(mocks.beginMFAEnrollment).not.toHaveBeenCalled();
+});
+
+it('recovers status failure and does not render raw server errors', async () => {
+  mocks.getMFAStatus.mockRejectedValueOnce(new Error('private-response'));
+  page();
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'Check status again' }),
+  );
+  expect(
+    await screen.findByRole('button', { name: 'Set up authenticator' }),
+  ).toBeEnabled();
+  expect(screen.queryByText('private-response')).toBeNull();
+});
+
+it('prevents duplicate enrollment and ignores the result after a session change', async () => {
+  const pending = deferred<typeof enrollment>();
+  mocks.beginMFAEnrollment.mockReturnValueOnce(pending.promise);
+  const view = page();
+  const begin = await screen.findByRole('button', {
+    name: 'Set up authenticator',
+  });
+  fireEvent.click(begin);
+  fireEvent.click(begin);
+  expect(mocks.beginMFAEnrollment).toHaveBeenCalledTimes(1);
+  const signal = mocks.beginMFAEnrollment.mock.calls[0][1] as AbortSignal;
+  mocks.auth.state.session = {
+    user: { id: 'two', email: 'second@example.test' },
+    csrf_token: 'session-two',
+  };
+  act(view.redraw);
+  expect(signal.aborted).toBe(true);
+  await act(() => pending.resolve(enrollment));
+  expect(
+    await screen.findByRole('button', { name: 'Set up authenticator' }),
+  ).toBeEnabled();
+  expect(screen.queryByLabelText('Authenticator setup key')).toBeNull();
+});
+
+it('retains the lost-confirmation warning after status says enabled', async () => {
+  mocks.confirmMFAEnrollment.mockRejectedValueOnce(
+    new Error('connection lost'),
+  );
+  page();
+  await enroll();
+  const check = await screen.findByRole('button', {
+    name: 'Check status again',
+  });
+  expect(mocks.confirmMFAEnrollment).toHaveBeenCalledTimes(1);
+  mocks.getMFAStatus.mockResolvedValue({
+    enabled: true,
+    session_verified: true,
+  });
+  fireEvent.click(check);
+  expect(await screen.findByText('MFA is enabled')).toBeVisible();
+  expect(
+    screen.getByText(
+      /Code regeneration and administrator recovery are not available yet/,
+    ),
+  ).toBeVisible();
+  expect(screen.queryByRole('button', { name: 'Enable MFA' })).toBeNull();
+});
+
+it('preserves a correctable proof error and offers a primary sign-in escape', async () => {
+  mocks.confirmMFAEnrollment.mockRejectedValueOnce(
+    new ApiError(400, 'private-proof'),
+  );
+  page();
+  await enroll();
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'invalid or expired',
+  );
+  expect(screen.getByLabelText('Six-digit code')).toHaveValue('001234');
+  expect(screen.getByLabelText('Authenticator setup key')).toHaveValue(
+    enrollment.secret,
+  );
+  expect(screen.getByRole('link', { name: 'Sign in again' })).toHaveAttribute(
+    'href',
+    '/login',
+  );
+  expect(screen.queryByText('private-proof')).toBeNull();
+});
+
+it('validates literal six-digit strings and verifies an enabled factor', async () => {
+  mocks.getMFAStatus.mockResolvedValue({
+    enabled: true,
+    session_verified: false,
+  });
+  mocks.verifyMFA.mockResolvedValue({ session_verified: true });
+  const { router } = page();
+  const input = await screen.findByLabelText('Six-digit code');
+  const form = input.closest('form')!;
+  fireEvent.change(input, { target: { value: '123' } });
+  fireEvent.submit(form);
+  expect(mocks.verifyMFA).not.toHaveBeenCalled();
+  fireEvent.change(input, { target: { value: '001234' } });
+  fireEvent.submit(form);
+  expect(
+    await screen.findByRole('heading', { name: 'Workspace' }),
+  ).toBeVisible();
+  expect(router.state.location.pathname).toBe('/workspace');
+  expect(mocks.verifyMFA).toHaveBeenCalledWith(
+    '001234',
+    'session-one',
+    expect.any(AbortSignal),
+  );
+});
+
+it('clears displayed secrets when proof is denied for the session', async () => {
+  mocks.confirmMFAEnrollment.mockRejectedValueOnce(
+    new ApiError(401, 'expired'),
+  );
+  page();
+  await enroll();
+  await screen.findByRole('link', { name: 'Sign in again' });
+  await vi.waitFor(() => expect(mocks.auth.clear).toHaveBeenCalledOnce());
+  expect(screen.queryByLabelText('Authenticator setup key')).toBeNull();
+  expect(screen.queryByLabelText('Six-digit code')).toBeNull();
+});
+
+it('guards reload and allows an explicit decision to leave one-time codes', async () => {
+  const { router } = page();
+  await enroll();
+  await screen.findByText(codes[0]);
+  const unload = new Event('beforeunload', { cancelable: true });
+  window.dispatchEvent(unload);
+  expect(unload.defaultPrevented).toBe(true);
+  await act(() => router.navigate('/workspace'));
+  fireEvent.click(
+    await screen.findByRole('button', {
+      name: 'Leave and clear displayed codes',
+    }),
+  );
+  expect(
+    await screen.findByRole('heading', { name: 'Workspace' }),
+  ).toBeVisible();
+  expect(screen.queryByText(codes[0])).toBeNull();
+});
+
+it('clears one-time codes when the authenticated session changes', async () => {
+  const view = page();
+  await enroll();
+  await screen.findByText(codes[0]);
+  mocks.auth.state.session = {
+    user: { id: 'one', email: 'owner@example.test' },
+    csrf_token: 'session-new',
+  };
+  act(view.redraw);
+  expect(screen.queryByText(codes[0])).toBeNull();
+  expect(
+    await screen.findByRole('button', { name: 'Set up authenticator' }),
+  ).toBeEnabled();
+});
+
+it('warns before abandoning pending confirmation and retains its eventual codes', async () => {
+  const pending = deferred<{ recovery_codes: string[] }>();
+  mocks.confirmMFAEnrollment.mockReturnValueOnce(pending.promise);
+  const { router } = page();
+  await enroll();
+  await act(() => router.navigate('/workspace'));
+  expect(
+    await screen.findByText('Confirmation may still complete'),
+  ).toBeVisible();
+  const unload = new Event('beforeunload', { cancelable: true });
+  window.dispatchEvent(unload);
+  expect(unload.defaultPrevented).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Stay here' }));
+  expect(router.state.location.pathname).toBe('/security');
+  await act(() => pending.resolve({ recovery_codes: codes }));
+  expect(await screen.findByText(codes[0])).toBeVisible();
+  expect(screen.getByText(/Codes are shown only now/)).toBeVisible();
+});
+
+it('removes the pending navigation warning after a rejected confirmation', async () => {
+  const pending = deferred<{ recovery_codes: string[] }>();
+  mocks.confirmMFAEnrollment.mockReturnValueOnce(pending.promise);
+  const { router } = page();
+  await enroll();
+  await act(() => router.navigate('/workspace'));
+  expect(
+    await screen.findByText('Confirmation may still complete'),
+  ).toBeVisible();
+  await act(() => pending.reject(new ApiError(400, 'invalid')));
+  expect(screen.queryByText('Confirmation may still complete')).toBeNull();
+  expect(router.state.location.pathname).toBe('/security');
+  const unload = new Event('beforeunload', { cancelable: true });
+  window.dispatchEvent(unload);
+  expect(unload.defaultPrevented).toBe(false);
+  await act(() => router.navigate('/workspace'));
+  expect(
+    await screen.findByRole('heading', { name: 'Workspace' }),
+  ).toBeVisible();
+});
+
+it('aborts a pending confirmation only after an explicit decision to leave', async () => {
+  const pending = deferred<{ recovery_codes: string[] }>();
+  mocks.confirmMFAEnrollment.mockReturnValueOnce(pending.promise);
+  const { router } = page();
+  await enroll();
+  const signal = mocks.confirmMFAEnrollment.mock.calls[0][2] as AbortSignal;
+  await act(() => router.navigate('/workspace'));
+  expect(signal.aborted).toBe(false);
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'Leave this page' }),
+  );
+  expect(signal.aborted).toBe(true);
+  await act(() => pending.resolve({ recovery_codes: codes }));
+  expect(
+    await screen.findByRole('heading', { name: 'Workspace' }),
+  ).toBeVisible();
+  expect(screen.queryByText(codes[0])).toBeNull();
+});

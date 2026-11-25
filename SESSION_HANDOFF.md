@@ -1,99 +1,189 @@
 # SESSION HANDOFF BRIEF
 
-Handoff ID: HND-20261116-020613
-Timestamp: 2026-11-16T02:06:13+07:00 (Asia/Bangkok)
-Branch/Workspace: feature/fix-flowsss | D:\!Project\smartPOS(Web_Application)
-HEAD: a86d5d1
+Handoff ID: HND-20261125-022537
+Timestamp: 2026-11-25T02:25:37+07:00 (Asia/Bangkok)
+Branch/Workspace: feature/fix-system- | D:\!Project\smartPOS(Web_Application)
+HEAD: 9b41cd7822e2e98363f8e6a204ace3a0f746e0bd
 
 ## 1. Objective And Authorization
 
-Active Task ID: `TODO.md:1`, Restaurant without legacy POS / stock (2026-11-15).
-Plan: `docs/superpowers/plans/2026-11-15-restaurant-without-legacy-pos.md`.
-
-Replace the new flow with one restaurant per organization, without business
-branches, hidden default branches, stock, POS carts or shifts as prerequisites.
-Preserve historical retail, financial and stock records and unresolved transactions.
-Local implementation, isolated task-owned DB checks and scoped independent review
-are authorized. The user commits manually. Do not commit, push, deploy, create Git
-branches or migrate primary/retained databases. The existing Git branch is not a
-business branch. This save does not resume implementation.
+Complete the VELOPOS migration across all 92 approved requirements. Use
+`specs/velopos-migration/tasks.md` as the tracker and read its
+`approved-requirements.md`, `requirements.md`, and `design.md` siblings.
+Goal is **paused** by user request; this handoff does not resume it. No
+reduced release or cutover is authorized. Preserve the separate Account
+redesign worktree changes and root `TODO.md`.
 
 ## 2. Completed And Verified Work
 
-HEAD contains internal branchless creation/setup and migration37. Uncommitted
-menu work adds an explicit organization catalog registry and guarded migration38.
-Menu remains optional; legacy and foreign identity reuse is rejected.
+Prior-session evidence, recorded in the tracker under T5.2/T5.4:
 
-Latest slice adds organization-only storefront drafts and migration39. Verified
-owners can save exact fees with revision checks and atomic audits. Source kind
-is immutable. Restaurant drafts require their own profile and cannot publish,
-accept orders or enter legacy catalog/publication paths. No infrastructure is
-created. UI and public creation are unchanged. RequiredVersion is 39.
+- Purchasing receipt posting and supplier-return dispatch: schema 49,
+  `check-db.mjs inventory-read`, `inventory-read-1795536028373.log`.
+  Exit 0, 593 PASS including parent entries, 0 FAIL/SKIP, cleanup verified.
+  At the tested audit and replay lookup points, expired authority returned
+  `401 UNAUTHENTICATED`, `Cache-Control: no-store`, and no data. Readbacks
+  verified rollback, same-key retry, and replay without duplicate effects.
+- Returns HTTP checkpoints cover menu-only return completion, cash refund
+  confirmation, equal-value exchange completion, and void completion after
+  reconciliation. State was checked immediately after denial and before
+  retry. An authorized same-key retry completed once; replay added no
+  effects. The latest isolated schema-49 `check-db.mjs returns-read` run,
+  `returns-read-1795544189732.log`, exited 0 with 343 PASS including parent
+  entries, 0 FAIL/SKIP; the task-owned container and network were removed.
+- Scoped independent review found no actionable findings on the latest Void
+  delta. Prior targeted `go test` and `go vet` for Returns and Storefront
+  passed. This handoff does not rerun application or database checks.
 
-Changed files: `restaurant/{organization_setup.go,setup.go,setup_test.go}`;
-new `restaurant/organization_menu.go`; storefront service/domain/catalog,
-branchless setup/menu/settings tests, single-store tests and new
-`storefront/organization_settings.go`; platform database version; migrations38/39;
-setup-api test; OpenAPI; contract checker; TODO and the existing plan.
-All module paths are under `apps/api/internal/modules`; web test is under
-`apps/web/src/features/organization`. Preserve the entire dirty worktree.
-
-Implementation-session evidence, not rerun for this handoff:
-
-- PASS: in `apps/api`, `GOPROXY=off`, DB/browser variables empty,
-  `go test ./... -count=1` (17 tested packages); scoped `go vet` for storefront,
-  restaurant and platform/database. These package runs skip DB/browser acceptance.
-- PASS: `npm run contracts:check` (18 modules/115 routes), scoped Prettier/gofmt
-  and `git diff --check`.
-- PASS: `RESTAURANT_SOURCE_FOCUSED=1` with baseline empty,
-  `node .local/restaurant-source-db-check.mjs`: PostgreSQL17.6 tmpfs, migrations1-39,
-  runtime role, 1.82s; branchless slice0.52s. Covers races, scope, exact fees,
-  slug rollback, SQL/RLS/FK guards, no public visibility and legacy regressions.
-  Empty down/reapply37-39, populated down refusals and owned cleanup PASS.
-  Evidence: `.local/restaurant-branchless-settings-db.log`.
-- Scoped independent supplied-source review: no confirmed P1/P2 in
-  migration39/settings/catalog/contract. Reviewer ran no tools/tests; closed.
-  No production delta after review. Later collision test passes focused rerun.
+Latest VELOPOS changes are in
+`apps/api/internal/modules/storefront/menu_only_returns_integration_test.go`
+and `specs/velopos-migration/tasks.md`. The latest change adds test coverage
+and records evidence.
 
 ## 3. Pending Work
 
-Use `TODO.md:1` and its organization storefront draft checkpoint at `TODO.md:184`.
-Full operational organization catalog/order/payment settlement, dining/queue,
-public creation/UI cutover, legacy caller retirement and whole-flow acceptance
-remain open. Do not close the task or enable draft publication prematurely.
+T1.3 and the migration remain open. The next slice is the Returns HTTP list:
+verify the existing authority contract when the session expires after a
+projection reads seeded records. Expect `401 UNAUTHENTICATED`, `no-store`,
+and no returned data. Existing coverage tests the service at that point
+and HTTP denial at entry. Discovery only for this follow-up: no edits or tests.
 
 ## 4. Verified Decisions
 
-Preserve exact money, atomic replay/audit, tenant isolation and immutable history.
-Paid-before-kitchen requires PAID payment, unreleased hold and refund/reconciliation
-exclusions. Existing prepaid settlement still depends on POS/shift; replacement
-is pending. No per-variant stock_policy exists. Legacy catalog/stock interactions
-with registered menu identities still require acceptance.
-Populated down39 refuses with: `Restaurant storefront data exists; use forward recovery`.
+Google plus email/password, with TOTP and single-use recovery codes for
+privileged accounts. Sensitive actions require primary authentication plus
+TOTP within five minutes. Keep B12 manual recovery disabled until loss of
+both TOTP and all recovery codes has an approved process; do not collect
+personal evidence. Live Google `auth_time`, Dine-in session policy, B14
+saved cart/quota, B16 bulk import, and PromptPay provider/policy remain open.
+Start other listed tasks only when their dependencies are satisfied.
 
 ## 5. Known Failures And Limits
 
-Full isolated DB run FAIL4.57s: directory storefronts_check; foreign invitation;
-pinned invitation; reconciliation authority-revoked GET mismatch. No fresh baseline
-overlay this slice. Full run precedes the final collision-only test addition.
-Evidence: `.local/restaurant-branchless-settings-full.log`; cleanup PASS.
-First focused attempt had an incorrect test error expectation; test corrected,
-production mapping unchanged. Attempt log retained.
-
-Earlier web732PASS/10FAIL and dev-stack6/7PASS (CSP failure) remain unresolved;
-no baseline-pass claim. No fresh frontend/browser checks for this draft slice.
-Whole-flow independent review and release readiness remain unmet.
-Git status works despite a global-ignore permission warning. Go cache/WSL DB
-checks require native escalation; do not bypass sandbox controls. No agents or
-tool sessions remain running. No tests ran merely to save this handoff.
+`returns-read-1795544096847.log` stopped at a fixture assertion. Entry into
+reconciliation had already written an `adjustments.complete` audit. The
+corrected run captured it in the baseline and verified the denial did not
+change it. The recorded checks do not cover expiry during physical COMMIT,
+every route, or full release readiness.
 
 ## 6. Resume Boundary
 
-Next Authorized Action: on explicit continuation, reconcile this brief with
-Git/TODO, then scope the registry-backed operational storefront/order boundary
-and direct settlement dependencies before editing. Retain unpublished drafts.
-Required Approval: none for settled authorized local work; native gates remain.
-External actions, primary DB changes and commits require specific authorization.
+Wait for the user to resume Goal. Then inspect the Returns HTTP list and
+reuse the fixture and SQL trace in `returns_read_mfa_integration_test.go`
+or `menu_only_returns_integration_test.go`. Run the focused
+`check-db.mjs returns-read` from `.local/velopos-pickup-20261122` only on
+the confirmed isolated disposable WSL `Studio-Acceptance` target through
+the supported approval path. Obtain independent review of the new slice.
+The existing reviewer authorization is limited to relevant redacted MFA
+and permission evidence, with no shell, network, direct file reads,
+writes, or delegation. Do not stage, commit, push, deploy, alter primary
+or retained databases, grant real Admin access, or use external services
+without exact authorization.
+
+---
+
+# HISTORICAL BRIEF - SUPERSEDED
+
+The previous handoff and its history follow unchanged. Their statuses and
+next actions are historical.
+
+# SESSION HANDOFF BRIEF
+
+Handoff ID: HND-20261123-214500
+Timestamp: 2026-11-23T21:45:00+07:00 (Asia/Bangkok)
+Branch/Workspace: feature/fix-system- | D:\!Project\smartPOS(Web_Application)
+HEAD: 12ca95ae3d58da593af8bc99b471ebd863615b9f (fix-bug)
+
+## 1. Objective And Authorization
+
+Active Task ID: VELOPOS migration; T1.3 authority cutover remains incomplete.
+Authoritative tracker: specs/velopos-migration/tasks.md; no root TODO found.
+Read its pproved-requirements.md,
+equirements.md and design.md siblings.
+Complete the approved migration without narrowing it to accepted slices.
+
+Goal status: ACTIVE. The user commits: never stage, commit, push or deploy.
+Preserve retained data and unrelated user changes. Prior authorization covers
+reversible local implementation, isolated task-owned disposable DB checks, and
+scoped read-only independent review (/root/pos_customer_review). Native approvals
+remain binding; primary/retained DB changes, actual Admin grants, paid/external
+effects and project-data transmission require exact authorization.
+
+## 2. Completed And Verified Work
+
+### Accepted Slices
+
+- Pickup (VLP-032), internal TOTP/crypto, MFA API/storage, audited Admin provisioning
+  command (schema43), organization/storefront/catalog/customer authority slices accepted.
+- POS Cart lifecycle mutations: CreateCart/UpdateCart typed live MFA, zero-results,
+  rollback/audit. Full session79207: 1147 PASS, 0 FAIL/SKIP, 326.50s, exit0.
+- POS Checkout mutation authority: PrepareCheckout, ConfirmPayment, EndCheckout,
+  CompleteCheckout typed live MFA, live rechecks, savepoint SQL/domain recovery.
+  Focused session66942: 261 PASS, 0 FAIL/SKIP, 54.48s, exit0.
+  Full session11691: 1378 PASS, 0 FAIL/SKIP, 379.54s, exit0.
+  Reviewer P3 customer classification regression reproduced RED91054, fixed,
+  verified GREEN, and bounded independent review passed with no remaining findings.
+
+### Current POS Online Import / Prepaid Authority Slice
+
+- Production implementation:
+  - pps/api/internal/modules/pos/online_orders.go: ImportOnlineOrder with
+    AuthorizeMFA("online_orders.manage"), named zero return on error, writeCheck
+    after every DB/helper step, inishAuthorized on create/resume, privateReadResult
+    on active replay.
+  - pps/api/internal/modules/pos/prepaid.go: SettlePrepaidOnlineOrder with
+    AuthorizeMFA("online_orders.manage"), named zero return on error, writeCheck
+    after every step, inishAuthorized on completion, privateReadResult on replay.
+- Dedicated integration tests:
+  - pps/api/internal/modules/storefront/pos_online_mutation_mfa_integration_test.go
+  - Registered in single_store_integration_test.go and check-db.mjs.
+- Verified test evidence:
+  - Entry RED: 15 intended bypass failures (pos-online-entry-red-valid.log).
+  - Projection RED: 5 intended private projection expiry failures (pos-online-result-red.log).
+  - Focused GREEN session70622: 46 PASS, 0 FAIL/SKIP, 7.65s, exit0 (pos-online-result-green.log).
+    Covers projection expiry/cancel, aborted projection, order lock wait/expiry,
+    interrupted writes (pos_carts, pos_cart_items, sales, sale_items, sale_payments,
+    receipts, online_orders, events, audit), tenant/membership isolation, cookie HTTP
+    matrices, and concurrent replay idempotency.
+  - Offline Go test/vet in apps/api: ok pos 0.131s, vet clean 0 errors (pos-online-final-go.log, pos-online-final-vet.log).
+  - Root checks: contracts 18 modules/116 routes PASS, vitest 98 files/912 tests PASS,
+    tsc -b clean 0 errors, dev-stack 7/7 PASS, log-format 10/10 PASS, git diff --check PASS.
+  - Review package prepared: .local/velopos-identity-20261122/pos-online-review-source.md
+    and pos-online-review-evidence.md.
+  - Raw service.begin and inish callers in pps/api/internal/modules/pos/ reduced to 0; both dead raw helpers removed from pos/service.go. Offline Go test and vet pass cleanly.
+
+## 3. Pending Work
+
+1. Run Full acceptance suite (check-db.mjs full) on isolated database for the combined
+   POS tree including online import/prepaid.
+2. Independent review verdict for POS Online slice (/root/pos_customer_review).
+3. Remove dead raw egin and inish helpers in pps/api/internal/modules/pos/service.go.
+4. Proceed with remaining tracker dependencies in specs/velopos-migration/tasks.md
+   towards full T1.3 authority cutover and downstream migration phases.
+
+## 4. Verified Decisions
+
+Google plus Email/Password; Owner/Admin TOTP and single-use recovery codes.
+Sensitive actions require fresh primary authentication plus TOTP within five minutes.
+Platform Admin uses audited server command with verified user ID; no actual grant.
+PromptPay direct merchant food settlement; manual merchant refunds.
+Preserve exact money units, tenant isolation, immutable history, idempotency,
+and atomic effects. Reconcile uncertain commits without blind replay.
+
+## 5. Known Failures And Limits
+
+- Escalated execution approval in sandbox environment experienced reviewer timeouts;
+  local workspace-only Go cache (.local/gocache) allows offline Go build/test/vet
+  without requiring elevation. WSL-based check-db runs require the approved isolated runner.
+- Manual privileged recovery evidence and PromptPay provider remain unresolved product inputs.
+- No frontend visual/mobile readiness claim; no deployment or external network access.
+
+## 6. Resume Boundary
+
+Next Authorized Action: Run full isolated DB check for POS Online, obtain independent
+reviewer verdict, clean up unused raw POS helpers, and continue tracker tasks.
+Required Approval: None for settled authorized local work within approved scope.
+External actions, primary DB changes and commits remain strictly unauthorized.
 
 ---
 

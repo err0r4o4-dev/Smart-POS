@@ -179,82 +179,109 @@ func (service *Service) Track(ctx context.Context, slug string, input TrackingIn
 	return readOrder(ctx, tx, *org, input.OrderID, true)
 }
 func (service *Service) Order(ctx context.Context, user, org, id string) (Order, error) {
-	tx, actor, err := service.authorized(ctx, user, org, "online_orders.read")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "online_orders.read")
 	if err != nil {
-		return Order{}, err
+		return Order{}, dbError(err)
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
 	if !uuidPattern.MatchString(id) {
 		return Order{}, ErrNotFound
 	}
 	result, err := readOrder(ctx, tx, org, id, false)
 	if err != nil {
-		return result, err
+		return Order{}, err
 	}
-	if !branchAllowed(actor, result.BranchID) {
+	if !branchAllowed(authorization.Actor, result.BranchID) {
 		return Order{}, organization.ErrDenied
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Order{}, err
 	}
 	return result, nil
 }
 func (service *Service) Orders(ctx context.Context, user, org, branch, status string, page int) (Page[Order], error) {
 	result := Page[Order]{Items: []Order{}, Page: page, PageSize: 20}
-	tx, actor, err := service.authorized(ctx, user, org, "online_orders.read")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "online_orders.read")
 	if err != nil {
-		return result, err
+		return Page[Order]{}, dbError(err)
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
 	if !uuidPattern.MatchString(branch) || page < 1 || page > 10000 {
-		return result, ErrInput
+		return Page[Order]{}, ErrInput
 	}
-	if !branchAllowed(actor, branch) {
-		return result, organization.ErrDenied
+	if !branchAllowed(authorization.Actor, branch) {
+		return Page[Order]{}, organization.ErrDenied
 	}
 	if status != "" && status != "PENDING" && status != "PREPARING" && status != "READY" && status != "COMPLETED" && status != "REJECTED" && status != "CANCELLED" && status != "EXPIRED" {
-		return result, ErrInput
+		return Page[Order]{}, ErrInput
 	}
 	where := ` FROM online_orders WHERE organization_id=$1 AND branch_id=$2 AND ($3='' OR CASE WHEN status IN ('PENDING','PREPARING','READY') AND NOT storefront_order_live(organization_id,id) THEN 'EXPIRED' ELSE status END=$3)`
 	if err = tx.QueryRow(ctx, "SELECT count(*)"+where, org, branch, status).Scan(&result.Total); err != nil {
-		return result, err
+		return Page[Order]{}, err
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Page[Order]{}, err
 	}
 	rows, err := tx.Query(ctx, "SELECT id::text"+where+" ORDER BY created_at DESC,id DESC LIMIT 20 OFFSET $4", org, branch, status, (page-1)*20)
 	if err != nil {
-		return result, err
+		return Page[Order]{}, err
 	}
 	ids := []string{}
 	for rows.Next() {
 		var id string
 		if err = rows.Scan(&id); err != nil {
 			rows.Close()
-			return result, err
+			return Page[Order]{}, err
 		}
 		ids = append(ids, id)
 	}
 	err = rows.Err()
 	rows.Close()
 	if err != nil {
-		return result, err
+		return Page[Order]{}, err
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Page[Order]{}, err
 	}
 	for _, id := range ids {
 		value, err := readOrder(ctx, tx, org, id, false)
 		if err != nil {
-			return result, err
+			return Page[Order]{}, err
+		}
+		if err = authorization.Recheck(ctx); err != nil {
+			return Page[Order]{}, err
 		}
 		result.Items = append(result.Items, value)
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Page[Order]{}, err
 	}
 	return result, nil
 }
 func (service *Service) Transition(ctx context.Context, user, org, id string, input TransitionInput) (Order, error) {
-	tx, actor, err := service.authorized(ctx, user, org, "online_orders.manage")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "online_orders.manage")
 	if err != nil {
-		return Order{}, err
+		return Order{}, dbError(err)
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
+	recheck := func() error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		return authorization.Recheck(ctx)
+	}
 	if !uuidPattern.MatchString(id) || !text(input.Message, 1000, false) {
 		return Order{}, ErrInput
 	}
 	current, err := readOrder(ctx, tx, org, id, false)
+	if failure := recheck(); failure != nil {
+		return Order{}, failure
+	}
 	if err != nil {
-		return current, err
+		return Order{}, err
 	}
 	if !branchAllowed(actor, current.BranchID) {
 		return Order{}, organization.ErrDenied
@@ -269,55 +296,88 @@ func (service *Service) Transition(ctx context.Context, user, org, id string, in
 		var paymentState string
 		var holdReleased bool
 		err = tx.QueryRow(ctx, "SELECT state, stock_hold_released FROM online_payment_attempts WHERE organization_id=$1 AND order_id=$2", org, id).Scan(&paymentState, &holdReleased)
+		if failure := recheck(); failure != nil {
+			return Order{}, failure
+		}
 		if errors.Is(err, pgx.ErrNoRows) {
-			return current, ErrConflict
+			return Order{}, ErrConflict
 		} else if err != nil {
-			return current, dbError(err)
+			return Order{}, dbError(err)
 		}
 		if paymentState != "PAID" || holdReleased {
-			return current, ErrConflict
+			return Order{}, ErrConflict
 		}
 		var blocked bool
 		err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM online_refund_intents WHERE organization_id=$1 AND order_id=$2 AND state IN ('REQUESTED','PENDING','REQUIRES_ACTION','SUCCEEDED')) OR EXISTS(SELECT 1 FROM online_payment_reconciliations WHERE organization_id=$1 AND order_id=$2 AND action='FULFILLMENT_REVIEW')", org, id).Scan(&blocked)
+		if failure := recheck(); failure != nil {
+			return Order{}, failure
+		}
 		if err != nil {
-			return current, dbError(err)
+			return Order{}, dbError(err)
 		}
 		if blocked {
-			return current, ErrConflict
+			return Order{}, ErrConflict
 		}
 		shop := Settings{TerminalID: current.TerminalID, BranchID: current.BranchID}
 		shop, err = orderSaleSource(ctx, tx, org, id, shop)
+		if failure := recheck(); failure != nil {
+			return Order{}, failure
+		}
 		if err != nil {
-			return current, err
+			return Order{}, err
 		}
 		for _, line := range current.Items {
 			value, err := productForOrder(ctx, tx, org, shop, line.VariantID, id)
+			if failure := recheck(); failure != nil {
+				return Order{}, failure
+			}
 			if err != nil {
-				return current, err
+				return Order{}, err
 			}
 			enough := true
 			if value.Available != nil {
 				if err = tx.QueryRow(ctx, "SELECT $1::numeric>=$2::numeric", *value.Available, line.Quantity).Scan(&enough); err != nil {
-					return current, err
+					return Order{}, err
 				}
 			}
+			if err = recheck(); err != nil {
+				return Order{}, err
+			}
 			if !value.Saleable || !enough {
-				return current, ErrStock
+				return Order{}, ErrStock
 			}
 		}
 	}
+	if err = recheck(); err != nil {
+		return Order{}, err
+	}
 	if _, err = tx.Exec(ctx, "UPDATE online_orders SET status=$3,revision=revision+1,updated_at=now() WHERE organization_id=$1 AND id=$2", org, id, input.Status); err != nil {
-		return current, dbError(err)
+		return Order{}, dbError(err)
+	}
+	if err = recheck(); err != nil {
+		return Order{}, err
 	}
 	if _, err = tx.Exec(ctx, "INSERT INTO online_order_events(organization_id,order_id,status,message,actor_id) VALUES($1,$2,$3,$4,$5)", org, id, input.Status, input.Message, user); err != nil {
-		return current, err
+		return Order{}, err
+	}
+	if err = recheck(); err != nil {
+		return Order{}, err
 	}
 	if err = organization.RecordAudit(ctx, tx, org, user, "online_order."+input.Status, id); err != nil {
-		return current, err
+		return Order{}, err
+	}
+	if err = recheck(); err != nil {
+		return Order{}, err
 	}
 	result, err := readOrder(ctx, tx, org, id, false)
-	if err != nil {
-		return result, err
+	if failure := recheck(); failure != nil {
+		return Order{}, failure
 	}
-	return result, dbError(tx.Commit(ctx))
+	if err != nil {
+		return Order{}, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return Order{}, dbError(err)
+	}
+	return result, nil
 }

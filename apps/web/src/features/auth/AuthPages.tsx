@@ -12,7 +12,7 @@ import {
 import { useLanguage } from '../../app/language';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Button, Loading, Tag } from '../../components/ui/primitives';
+import { Brand, Button, Loading, Tag } from '../../components/ui/primitives';
 import { AuthLayout } from '../../layouts/AuthLayout';
 import { LoginLayout } from '../../layouts/LoginLayout';
 import { forgotPassword, register, resetPassword } from '../../lib/api';
@@ -81,7 +81,9 @@ function PasswordField({
 }
 
 export function safeReturnTo(value: string | null) {
-  return value === paths.setup ? value : paths.workspace;
+  return value === paths.setup || value === paths.security
+    ? value
+    : paths.workspace;
 }
 
 export function LoginPage() {
@@ -118,10 +120,9 @@ export function LoginPage() {
   return (
     <LoginLayout>
       <div className="auth-header-card">
-        <Tag tone="amber">
-          <Store size={17} aria-hidden="true" />
-          {t('auth.accountAccess')}
-        </Tag>
+        <div className="login-card-brand" aria-hidden="true">
+          <Brand />
+        </div>
         <h2 id="login-title">{t('auth.welcomeBack')}</h2>
         <p>{t('auth.signInForStoreOwnersManagersAnd')}</p>
       </div>
@@ -167,6 +168,12 @@ export function LoginPage() {
             </div>
           </div>
           <PasswordField value={password} onChange={setPassword} />
+          <Link
+            to="/forgot-password"
+            className="auth-recovery-link login-recovery-link"
+          >
+            {t('auth.forgotPassword')}
+          </Link>
           <ErrorMessage message={localize(error ?? '')} />
           <Button type="submit" className="auth-submit-btn">
             {pending ? (
@@ -189,11 +196,8 @@ export function LoginPage() {
         />
       )}
       <div className="auth-links">
-        <Link to="/forgot-password" className="auth-link-subtle">
-          {t('auth.forgotPassword')}
-        </Link>
         <div className="auth-link-register-prompt">
-          <span>Don't have an account? </span>
+          <span>{t('auth.noAccountYet')}</span>
           <Link to="/register">
             {t('auth.createAccount')}
             <ChevronRight size={18} aria-hidden="true" />
@@ -244,9 +248,9 @@ export function RegisterPage() {
       <LoginLayout titleId="verify-title" story="verify">
         <div className="auth-header-card">
           <Tag tone="amber">{t('auth.createAccount2')}</Tag>
-          <h2 id="verify-title">
+          <h1 id="verify-title">
             {language === 'en' ? 'Verify your email' : 'ยืนยันอีเมล'}
-          </h2>
+          </h1>
           <p>
             {language === 'en'
               ? 'Your account was created. Verify your email before setting up your store.'
@@ -408,7 +412,7 @@ export function ForgotPasswordPage() {
           <KeyRound size={17} aria-hidden="true" />
           {t('auth.accountRecovery')}
         </Tag>
-        <h2 id="forgot-title">{t('auth.resetYourPassword')}</h2>
+        <h1 id="forgot-title">{t('auth.resetYourPassword')}</h1>
         <p>{t('auth.enterYourEmailIfAnEligibleAccount')}</p>
       </div>
       <form onSubmit={submit} className="auth-form-body">
@@ -496,7 +500,7 @@ export function ResetPasswordPage() {
     <AuthLayout titleId="reset-title" story="reset">
       <div className="auth-header-card">
         <Tag tone="amber">{t('auth.secureReset')}</Tag>
-        <h2 id="reset-title">{t('auth.chooseANewPassword')}</h2>
+        <h1 id="reset-title">{t('auth.chooseANewPassword')}</h1>
       </div>
       {done ? (
         <p className="auth-status-banner">

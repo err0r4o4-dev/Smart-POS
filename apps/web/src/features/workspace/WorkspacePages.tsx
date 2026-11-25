@@ -20,6 +20,7 @@ import {
 import { Card, ErrorState, Loading, Tag } from '../../components/ui/primitives';
 import { StandardPageHeader } from '../../components/ui/StandardPage';
 import { WorkspaceAreaGate } from './WorkspaceRouting';
+import { MFARequiredState } from '../organization/MFARequiredState';
 
 export function OrganizationWorkspaceProvider() {
   return (
@@ -35,6 +36,7 @@ export function WorkspaceEntryPage() {
   const tenant = useOrganization();
   if (tenant.loading)
     return <Loading>{t('workspace.selectingWorkspace')}</Loading>;
+  if (tenant.errorCode === 'MFA_REQUIRED') return <MFARequiredState />;
   if (tenant.error)
     return (
       <ErrorState

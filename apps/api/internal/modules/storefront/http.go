@@ -30,6 +30,10 @@ func respond(writer http.ResponseWriter, request *http.Request, result any, err 
 	}
 	code, message, status := "DEPENDENCY_UNAVAILABLE", "ระบบยังไม่พร้อม กรุณาลองใหม่", 503
 	switch {
+	case errors.Is(err, identity.ErrInvalidToken):
+		code, message, status = "UNAUTHENTICATED", "Authentication required", 401
+	case errors.Is(err, identity.ErrMFARequired):
+		code, message, status = "MFA_REQUIRED", "Verify MFA in account security before continuing", 403
 	case errors.Is(err, ErrInput):
 		code, message, status = "INVALID_INPUT", "ตรวจสอบข้อมูล จำนวนสินค้า และเบอร์ติดต่อ", 400
 	case errors.Is(err, ErrNotFound):

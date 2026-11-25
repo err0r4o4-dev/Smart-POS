@@ -18,6 +18,7 @@ export const paths = {
   verifyEmail: '/verify-email',
   forgotPassword: '/forgot-password',
   resetPassword: '/reset-password',
+  security: '/security',
   setup: '/setup',
   settings: '/settings',
   storefrontSettings: '/settings/storefront',

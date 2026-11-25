@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"smartpos/api/internal/modules/identity"
 	"smartpos/api/internal/modules/organization"
 	"smartpos/api/internal/modules/storefront"
 	"smartpos/api/internal/platform/stripe"
@@ -26,7 +27,7 @@ func (gateway *refundGatewayFixture) RetrieveCustomerRefund(ctx context.Context,
 	return gateway.getRefund(ctx, charge, id)
 }
 
-func deliveryAcceptance(test *testing.T, ctx context.Context, organizations *organization.Service, owner, org string, shop storefront.Settings, foreignOrg, unauthorizedUser string) {
+func deliveryAcceptance(test *testing.T, ctx, unauthorizedContext context.Context, organizations *organization.Service, owner, org string, shop storefront.Settings, foreignOrg, unauthorizedUser string) {
 	test.Helper()
 	service := &storefront.Service{Organization: organizations}
 	variant := seedSourceProduct(test, ctx, organizations, owner, org, shop.BranchID, shop.LocationID, shop.LocationID)
@@ -78,6 +79,7 @@ func deliveryAcceptance(test *testing.T, ctx context.Context, organizations *org
 		if _, problem = service.AcceptCustomerWebhook(ctx, body, paymentSignature(body, now), now); problem != nil {
 			test.Fatal(problem)
 		}
+		assertKitchenQueueOrder(test, ctx, organizations, owner, org, shop.BranchID, orderID, true)
 		key := "5a333333-3333-4333-8333-333333333333"
 		creates, retrieves := 0, 0
 		var frozen stripe.CustomerRefundCharge
@@ -109,11 +111,15 @@ func deliveryAcceptance(test *testing.T, ctx context.Context, organizations *org
 			}
 			return stripe.CustomerRefund{ID: "re_deliveryRefund", Object: "refund", Status: "pending", AmountMinor: charge.AmountMinor, Currency: "thb", PaymentIntent: charge.PaymentIntent, Metadata: map[string]string{"smartpos_purpose": stripe.CustomerRefundPurpose, "organization_id": org, "order_id": orderID, "refund_id": charge.RefundID}}, nil
 		}
+		refundStatus := "requires_action"
 		gateway.getRefund = func(_ context.Context, charge stripe.CustomerRefundCharge, id string) (stripe.CustomerRefund, error) {
 			retrieves++
-			return stripe.CustomerRefund{ID: id, Object: "refund", Status: "succeeded", AmountMinor: charge.AmountMinor, Currency: "thb", PaymentIntent: charge.PaymentIntent, Metadata: map[string]string{"smartpos_purpose": stripe.CustomerRefundPurpose, "organization_id": org, "order_id": orderID, "refund_id": charge.RefundID}}, nil
+			return stripe.CustomerRefund{ID: id, Object: "refund", Status: refundStatus, AmountMinor: charge.AmountMinor, Currency: "thb", PaymentIntent: charge.PaymentIntent, Metadata: map[string]string{"smartpos_purpose": stripe.CustomerRefundPurpose, "organization_id": org, "order_id": orderID, "refund_id": charge.RefundID}}, nil
 		}
-		if _, problem = service.CancelPaidCustomerOrder(ctx, unauthorizedUser, org, orderID, key); !errors.Is(problem, storefront.ErrNotFound) {
+		if _, problem = service.CancelPaidCustomerOrder(ctx, unauthorizedUser, org, orderID, key); !errors.Is(problem, identity.ErrInvalidToken) {
+			test.Fatalf("mismatched refund actor: %v", problem)
+		}
+		if _, problem = service.CancelPaidCustomerOrder(unauthorizedContext, unauthorizedUser, org, orderID, key); !errors.Is(problem, storefront.ErrNotFound) {
 			test.Fatalf("nonmember refund: %v", problem)
 		}
 		if _, problem = service.CancelPaidCustomerOrder(ctx, owner, foreignOrg, orderID, key); !errors.Is(problem, storefront.ErrNotFound) {
@@ -140,6 +146,7 @@ func deliveryAcceptance(test *testing.T, ctx context.Context, organizations *org
 			}
 		}
 		assertHeld("PENDING", false)
+		assertKitchenQueueOrder(test, ctx, organizations, owner, org, shop.BranchID, orderID, false)
 		for _, statement := range []string{
 			"UPDATE online_refund_intents SET amount_minor=amount_minor-1,revision=revision+1 WHERE organization_id=$1 AND order_id=$2",
 			"UPDATE online_refund_intents SET state='SUCCEEDED',provider_id='re_fake',revision=revision+1 WHERE organization_id=$1 AND order_id=$2",
@@ -162,17 +169,26 @@ func deliveryAcceptance(test *testing.T, ctx context.Context, organizations *org
 			test.Fatalf("pending refund: %+v %v", pending, problem)
 		}
 		assertHeld("PENDING", false)
+		assertKitchenQueueOrder(test, ctx, organizations, owner, org, shop.BranchID, orderID, false)
+		requiresAction, problem := service.CancelPaidCustomerOrder(ctx, owner, org, orderID, key)
+		if problem != nil || requiresAction.State != "REQUIRES_ACTION" || requiresAction.ID != pending.ID {
+			test.Fatalf("refund requires action: %+v %v", requiresAction, problem)
+		}
+		assertHeld("PENDING", false)
+		assertKitchenQueueOrder(test, ctx, organizations, owner, org, shop.BranchID, orderID, false)
+		refundStatus = "succeeded"
 		completed, problem := service.CancelPaidCustomerOrder(ctx, owner, org, orderID, key)
-		if problem != nil || completed.State != "SUCCEEDED" || completed.ID != pending.ID || creates != 2 || retrieves != 1 {
+		if problem != nil || completed.State != "SUCCEEDED" || completed.ID != pending.ID || creates != 2 || retrieves != 2 {
 			test.Fatalf("known refund recovery: %+v %v calls %d/%d", completed, problem, creates, retrieves)
 		}
 		assertHeld("CANCELLED", true)
+		assertKitchenQueueOrder(test, ctx, organizations, owner, org, shop.BranchID, orderID, false)
 		review, problem := service.CustomerPaymentReview(ctx, owner, org, orderID)
 		if problem != nil || review.Status != "REFUNDED" {
 			test.Fatalf("refund review status: %+v %v", review, problem)
 		}
 		replay, problem := service.CancelPaidCustomerOrder(ctx, owner, org, orderID, key)
-		if problem != nil || replay.ID != completed.ID || retrieves != 1 || creates != 2 {
+		if problem != nil || replay.ID != completed.ID || retrieves != 2 || creates != 2 {
 			test.Fatalf("refund replay: %+v %v", replay, problem)
 		}
 		if _, problem = service.CancelPaidCustomerOrder(ctx, owner, org, orderID, "5a444444-4444-4444-8444-444444444444"); !errors.Is(problem, storefront.ErrConflict) {

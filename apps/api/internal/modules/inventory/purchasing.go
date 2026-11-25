@@ -61,37 +61,40 @@ func PostSupply(ctx context.Context, tx pgx.Tx, actor organization.Member, user,
 	return nil
 }
 
-func (service *Service) Replenish(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org, op, branch, source, destination, variant, amount string, batch *string) (string, error) {
+func (service *Service) Replenish(ctx context.Context, authorization *organization.Authorization, user, org, op, branch, source, destination, variant, amount string, batch *string) (string, error) {
+	tx, actor := authorization.Tx, authorization.Actor
+	check := func(err error) error { return privateReadCheck(ctx, authorization, err) }
 	var available string
 	sellable := true
-	if err := QualityAvailability(ctx, tx, org, source, variant, batch, &available, &sellable); err != nil {
+	if err := check(QualityAvailability(ctx, tx, org, source, variant, batch, &available, &sellable)); err != nil {
 		return "", err
 	}
 	if !sellable {
 		return "", ErrConflict
 	}
-	if err := SupplyLocation(ctx, tx, actor, org, branch, source, "RECEIPT"); err != nil {
+	if err := check(SupplyLocation(ctx, tx, actor, org, branch, source, "RECEIPT")); err != nil {
 		return "", err
 	}
-	if err := SaleLocation(ctx, tx, actor, org, branch, destination); err != nil {
+	if err := check(SaleLocation(ctx, tx, actor, org, branch, destination)); err != nil {
 		return "", err
 	}
 	if source == destination {
 		return "", ErrInput
 	}
-	if err := validVariant(ctx, tx, org, variant, amount, true); err != nil {
+	if err := check(validVariant(ctx, tx, org, variant, amount, true)); err != nil {
 		return "", err
 	}
 	var id string
 	err := tx.QueryRow(ctx, `INSERT INTO inventory_documents(organization_id,kind,status,branch_id,location_id,destination_branch_id,destination_location_id,reason_code,created_by,approved_by,approved_at) VALUES($1,'TRANSFER','APPROVED',$2,$3,$2,$4,'SHELF_REPLENISHMENT',$5,$5,now()) RETURNING id::text`, org, branch, source, destination, user).Scan(&id)
-	if err != nil {
-		return "", databaseError(err)
+	if err = check(databaseError(err)); err != nil {
+		return "", err
 	}
-	if _, err = tx.Exec(ctx, `INSERT INTO inventory_document_items(organization_id,document_id,variant_id,quantity,batch_id) VALUES($1,$2,$3,$4,$5)`, org, id, variant, amount, batch); err != nil {
-		return "", databaseError(err)
+	_, err = tx.Exec(ctx, `INSERT INTO inventory_document_items(organization_id,document_id,variant_id,quantity,batch_id) VALUES($1,$2,$3,$4,$5)`, org, id, variant, amount, batch)
+	if err = check(databaseError(err)); err != nil {
+		return "", err
 	}
 	doc := Document{ID: id, Kind: "TRANSFER", Status: "APPROVED", BranchID: branch, LocationID: source, DestinationBranchID: &branch, DestinationLocationID: &destination, Reason: "SHELF_REPLENISHMENT", CreatedBy: user}
-	next, err := service.moveTransfer(ctx, tx, actor, user, org, op, doc, []storedItem{{VariantID: variant, Quantity: amount, BatchID: batch}}, "dispatch")
+	next, err := service.moveTransfer(ctx, tx, actor, user, org, op, doc, []storedItem{{VariantID: variant, Quantity: amount, BatchID: batch}}, "dispatch", check)
 	if err != nil {
 		return "", err
 	}
@@ -99,8 +102,11 @@ func (service *Service) Replenish(ctx context.Context, tx pgx.Tx, actor organiza
 		return "", ErrConflict
 	}
 	_, err = tx.Exec(ctx, `UPDATE inventory_documents SET status='RECEIVED',dispatched_by=$3,received_by=$3,dispatched_at=now(),received_at=now(),revision=revision+1 WHERE organization_id=$1 AND id=$2`, org, id, user)
-	if err != nil {
-		return "", databaseError(err)
+	if err = check(databaseError(err)); err != nil {
+		return "", err
 	}
-	return id, organization.RecordAudit(ctx, tx, org, user, "inventory.transfer.replenished", id)
+	if err = check(organization.RecordAudit(ctx, tx, org, user, "inventory.transfer.replenished", id)); err != nil {
+		return "", err
+	}
+	return id, nil
 }

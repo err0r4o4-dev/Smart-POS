@@ -35,17 +35,6 @@ func raw(ctx context.Context, tx pgx.Tx, query string, args ...any) (json.RawMes
 	err := tx.QueryRow(ctx, query, args...).Scan(&result)
 	return result, dbError(err)
 }
-func finish(ctx context.Context, tx pgx.Tx, user, org, op, event, id string, result json.RawMessage) (json.RawMessage, error) {
-	if op != "" {
-		if err := inventory.CompleteSale(ctx, tx, org, op, result); err != nil {
-			return nil, err
-		}
-	}
-	if err := organization.RecordAudit(ctx, tx, org, user, event, id); err != nil {
-		return nil, err
-	}
-	return result, dbError(tx.Commit(ctx))
-}
 func nullable(value string) any {
 	if value == "" {
 		return nil
@@ -71,10 +60,11 @@ func (service *Service) SaveSupplier(ctx context.Context, user, org, id string, 
 	if id != "" {
 		permission = "supplier.update"
 	}
-	tx, actor, err := service.Organization.Authorized(ctx, user, org, permission)
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, permission)
 	if err != nil {
 		return nil, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
 	if input.Status == "" {
 		input.Status = "ACTIVE"
@@ -92,21 +82,21 @@ func (service *Service) SaveSupplier(ctx context.Context, user, org, id string, 
 		return nil, organization.ErrDenied
 	}
 	if id != "" {
-		if err = checkRevision(ctx, tx, org, "suppliers", id, input.Revision); err != nil {
+		if err = checkAuthorization(ctx, authorization, checkRevision(ctx, tx, org, "suppliers", id, input.Revision)); err != nil {
 			return nil, err
 		}
 		_, err = tx.Exec(ctx, `UPDATE suppliers SET code=$3,name=$4,contact_person=$5,email=$6,phone=$7,address=$8,tax_identifier=$9,notes=$10,status=$11,revision=revision+1,updated_by=$12,updated_at=now() WHERE organization_id=$1 AND id=$2`, org, id, input.Code, input.Name, input.ContactPerson, input.Email, input.Phone, input.Address, input.TaxIdentifier, input.Notes, input.Status, user)
 	} else {
 		err = tx.QueryRow(ctx, `INSERT INTO suppliers(organization_id,code,name,contact_person,email,phone,address,tax_identifier,notes,status,created_by,updated_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$11) RETURNING id::text`, org, input.Code, input.Name, input.ContactPerson, input.Email, input.Phone, input.Address, input.TaxIdentifier, input.Notes, input.Status, user).Scan(&id)
 	}
-	if err != nil {
-		return nil, dbError(err)
-	}
-	result, err := raw(ctx, tx, "SELECT to_jsonb(item) FROM suppliers item WHERE organization_id=$1 AND id=$2", org, id)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, dbError(err)); err != nil {
 		return nil, err
 	}
-	return finish(ctx, tx, user, org, "", "supplier.saved", id, result)
+	result, err := raw(ctx, tx, "SELECT to_jsonb(item) FROM suppliers item WHERE organization_id=$1 AND id=$2", org, id)
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
+		return nil, err
+	}
+	return finishWrite(ctx, authorization, user, org, "", "supplier.saved", id, result)
 }
 
 type variantInfo struct{ Name, SKU, UnitID, UnitType, UnitName, Factor, PurchaseType string }
@@ -129,24 +119,25 @@ func conversion(ctx context.Context, tx pgx.Tx, org, variant, unit string) (vari
 	return item, nil
 }
 func (service *Service) SaveProduct(ctx context.Context, user, org, supplier, id string, input ProductInput) (json.RawMessage, error) {
-	tx, _, err := service.Organization.Authorized(ctx, user, org, "supplier.update")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "supplier.update")
 	if err != nil {
 		return nil, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
 	if !uuidPattern.MatchString(supplier) {
 		return nil, ErrInput
 	}
 	var status string
 	err = tx.QueryRow(ctx, "SELECT status FROM suppliers WHERE organization_id=$1 AND id=$2", org, supplier).Scan(&status)
-	if err != nil {
-		return nil, dbError(err)
+	if err = checkAuthorization(ctx, authorization, dbError(err)); err != nil {
+		return nil, err
 	}
 	if status != "ACTIVE" {
 		return nil, ErrConflict
 	}
 	item, err := conversion(ctx, tx, org, input.VariantID, input.PurchaseUnitID)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
 		return nil, err
 	}
 	if input.Status == "" {
@@ -168,30 +159,30 @@ func (service *Service) SaveProduct(ctx context.Context, user, org, supplier, id
 		if err != nil || ((item.PurchaseType == "COUNT" || item.PurchaseType == "PACKAGING") && amount%1000 != 0) {
 			return nil, ErrInput
 		}
-		if err = inventory.ValidateQuantity(ctx, tx, org, input.VariantID, fixed(base, 3), true); err != nil {
+		if err = checkAuthorization(ctx, authorization, inventory.ValidateQuantity(ctx, tx, org, input.VariantID, fixed(base, 3), true)); err != nil {
 			return nil, err
 		}
 	}
 	if id != "" {
-		if err = checkRevision(ctx, tx, org, "supplier_products", id, input.Revision); err != nil {
+		if err = checkAuthorization(ctx, authorization, checkRevision(ctx, tx, org, "supplier_products", id, input.Revision)); err != nil {
 			return nil, err
 		}
 		changed, err := tx.Exec(ctx, `UPDATE supplier_products SET supplier_sku=$4,purchase_unit_id=$5,unit_cost=$6,minimum_order_quantity=$7,order_multiple=$8,lead_time_days=$9,is_preferred=$10,status=$11,revision=revision+1,updated_at=now() WHERE organization_id=$1 AND id=$2 AND supplier_id=$3 AND variant_id=$12`, org, id, supplier, input.SupplierSKU, input.PurchaseUnitID, input.UnitCost, input.Minimum, input.Multiple, input.LeadTime, input.Preferred, input.Status, input.VariantID)
-		if err != nil {
-			return nil, dbError(err)
+		if err = checkAuthorization(ctx, authorization, dbError(err)); err != nil {
+			return nil, err
 		}
 		if changed.RowsAffected() != 1 {
 			return nil, ErrConflict
 		}
 	} else {
 		err = tx.QueryRow(ctx, `INSERT INTO supplier_products(organization_id,supplier_id,variant_id,purchase_unit_id,supplier_sku,unit_cost,minimum_order_quantity,order_multiple,lead_time_days,is_preferred,status) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id::text`, org, supplier, input.VariantID, input.PurchaseUnitID, input.SupplierSKU, input.UnitCost, input.Minimum, input.Multiple, input.LeadTime, input.Preferred, input.Status).Scan(&id)
-		if err != nil {
-			return nil, dbError(err)
+		if err = checkAuthorization(ctx, authorization, dbError(err)); err != nil {
+			return nil, err
 		}
 	}
 	result, err := raw(ctx, tx, `SELECT to_jsonb(item)||jsonb_build_object('unit_cost',unit_cost::text,'minimum_order_quantity',minimum_order_quantity::text,'order_multiple',order_multiple::text) FROM supplier_products item WHERE organization_id=$1 AND id=$2`, org, id)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
 		return nil, err
 	}
-	return finish(ctx, tx, user, org, "", "supplier.product.saved", id, result)
+	return finishWrite(ctx, authorization, user, org, "", "supplier.product.saved", id, result)
 }

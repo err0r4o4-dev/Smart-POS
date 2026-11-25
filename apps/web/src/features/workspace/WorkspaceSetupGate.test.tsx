@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   branch: 'branch-1',
   user: 'owner-1',
   role: 'OWNER',
+  mfaRequired: false,
 }));
 vi.mock('../../app/AuthProvider', () => ({
   useAuth: () => ({
@@ -34,7 +35,8 @@ vi.mock('../../app/OrganizationProvider', () => ({
     },
     branchID: mocks.branch,
     loading: false,
-    error: '',
+    error: mocks.mfaRequired ? 'Verify MFA' : '',
+    errorCode: mocks.mfaRequired ? 'MFA_REQUIRED' : undefined,
     storeMode: 'multi',
   }),
 }));
@@ -47,11 +49,26 @@ beforeEach(() => {
   mocks.branch = 'branch-1';
   mocks.user = 'owner-1';
   mocks.role = 'OWNER';
+  mocks.mfaRequired = false;
   mocks.getSetup.mockResolvedValue({
     complete: false,
     readiness: { ready: true },
   });
 });
+it.each(['/workspace', '/dashboard', '/pos/checkout'])(
+  'opens the MFA form directly when entering %s requires MFA',
+  async (path) => {
+    mocks.mfaRequired = true;
+    mount(path);
+    expect(
+      await screen.findByRole('heading', { name: 'Verify your code' }),
+    ).toBeInTheDocument();
+    expect(mocks.getSetup).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole('heading', { name: 'Working page' }),
+    ).not.toBeInTheDocument();
+  },
+);
 afterEach(() =>
   notifyManager.setScheduler((callback) => setTimeout(callback, 0)),
 );
@@ -65,6 +82,7 @@ function mount(
       <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route element={<WorkspaceAreaGate />}>
+            <Route path="/workspace" element={<h1>Working page</h1>} />
             <Route
               path="/dashboard"
               element={
@@ -82,6 +100,7 @@ function mount(
             <Route path="/setup" element={<h1>Setup</h1>} />
             <Route path="/help" element={<h1>Help</h1>} />
           </Route>
+          <Route path="/security" element={<h1>Verify your code</h1>} />
           <Route path="/403" element={<h1>Forbidden</h1>} />
         </Routes>
       </MemoryRouter>

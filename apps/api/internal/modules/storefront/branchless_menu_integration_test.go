@@ -11,7 +11,7 @@ import (
 	"smartpos/api/internal/modules/restaurant"
 )
 
-func verifyBranchlessMenu(testContext *testing.T, ctx context.Context, organizations *organization.Service, owner, guest, org string) {
+func verifyBranchlessMenu(testContext *testing.T, ctx, guestCtx context.Context, organizations *organization.Service, owner, guest, org string) {
 	testContext.Helper()
 	service := &restaurant.Service{Organization: organizations}
 	input := restaurant.SetupMenuInput{Categories: []restaurant.SetupCategoryInput{{Name: "Meals"}}, Items: []restaurant.SetupMenuItemInput{{Category: "Meals", Name: "Soup", SKU: "SOUP", Price: "45.25"}}}
@@ -39,7 +39,7 @@ func verifyBranchlessMenu(testContext *testing.T, ctx context.Context, organizat
 			testContext.Fatalf("branchless concurrent menu: %v", err)
 		}
 	}
-	if _, err := service.SaveMenu(ctx, guest, org, key, input); !errors.Is(err, organization.ErrDenied) && !errors.Is(err, organization.ErrNotFound) {
+	if _, err := service.SaveMenu(guestCtx, guest, org, key, input); !errors.Is(err, organization.ErrDenied) && !errors.Is(err, organization.ErrNotFound) {
 		testContext.Fatalf("foreign menu write accepted: %v", err)
 	}
 	changed := input

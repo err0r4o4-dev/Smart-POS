@@ -67,7 +67,7 @@ func createLegacyIngredientFixture(ctx context.Context, organizations *organizat
 	return service.Track(ctx, shop.Slug, storefront.TrackingInput{OrderID: key, AccessToken: input.AccessToken})
 }
 
-func ingredientReservationAcceptance(test *testing.T, ctx context.Context, organizations *organization.Service, owner, org string, shop storefront.Settings, foreignOrg, unauthorizedUser string) {
+func ingredientReservationAcceptance(test *testing.T, ctx, unauthorizedCtx context.Context, organizations *organization.Service, owner, org string, shop storefront.Settings, foreignOrg, unauthorizedUser string) {
 	test.Helper()
 	begin := func(scope string) pgx.Tx {
 		test.Helper()
@@ -333,7 +333,7 @@ func ingredientReservationAcceptance(test *testing.T, ctx context.Context, organ
 		}
 	}
 	test.Run("denied and failed settlement retains every hold", func(current *testing.T) {
-		if _, problem := point.SettlePrepaidOnlineOrder(ctx, unauthorizedUser, org, order.ID, pos.OnlineOrderInput{Revision: order.Revision}); !errors.Is(problem, pos.ErrNotFound) {
+		if _, problem := point.SettlePrepaidOnlineOrder(unauthorizedCtx, unauthorizedUser, org, order.ID, pos.OnlineOrderInput{Revision: order.Revision}); !errors.Is(problem, pos.ErrNotFound) {
 			current.Fatalf("unauthorized settlement: %v", problem)
 		}
 		if _, problem := point.SettlePrepaidOnlineOrder(ctx, owner, foreignOrg, order.ID, pos.OnlineOrderInput{Revision: order.Revision}); !errors.Is(problem, pos.ErrNotFound) {

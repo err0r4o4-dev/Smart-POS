@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"smartpos/api/internal/modules/identity"
 )
 
 type OrganizationInput struct {
@@ -164,26 +165,34 @@ func (service *Service) authorized(ctx context.Context, userID, orgID, permissio
 	if err != nil {
 		return nil, Member{}, err
 	}
-	fail := func(problem error) (pgx.Tx, Member, error) { tx.Rollback(ctx); return nil, Member{}, problem }
-	var identifier string
-	err = tx.QueryRow(ctx, "SELECT id FROM organizations WHERE id=$1 AND status='ACTIVE' FOR UPDATE", orgID).Scan(&identifier)
+	actor, err := authorizeTransaction(ctx, tx, userID, orgID, permission)
 	if err != nil {
-		return fail(dbError(err))
+		tx.Rollback(ctx)
+		return nil, Member{}, err
+	}
+	return tx, actor, nil
+}
+
+func authorizeTransaction(ctx context.Context, tx pgx.Tx, userID, orgID, permission string) (Member, error) {
+	var identifier string
+	err := tx.QueryRow(ctx, "SELECT id FROM organizations WHERE id=$1 AND status='ACTIVE' FOR UPDATE", orgID).Scan(&identifier)
+	if err != nil {
+		return Member{}, dbError(err)
 	}
 	actor, err := memberBy(ctx, tx, orgID, "m.user_id", userID)
 	if errors.Is(err, ErrNotFound) {
-		return fail(ErrNotFound)
+		return Member{}, ErrNotFound
 	}
 	if err != nil {
-		return fail(err)
+		return Member{}, err
 	}
 	if actor.Status != "ACTIVE" {
-		return fail(ErrNotFound)
+		return Member{}, ErrNotFound
 	}
 	if actor.Role != "OWNER" || !hasPermission(actor.Role, permission) {
-		return fail(ErrDenied)
+		return Member{}, ErrDenied
 	}
-	return tx, actor, nil
+	return actor, nil
 }
 func audit(ctx context.Context, tx pgx.Tx, orgID, actor, event, object string, branches []string) error {
 	requestID, _ := ctx.Value(auditKey{}).(string)
@@ -220,6 +229,10 @@ func (service *Service) List(ctx context.Context, userID string) ([]Organization
 		return nil, err
 	}
 	defer tx.Rollback(ctx)
+	access, err := identity.RequireMFA(ctx, tx, userID)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := tx.Query(ctx, `SELECT o.id,o.name,o.code,o.business_type,o.contact_email,o.contact_phone,o.address,o.currency,o.status FROM organizations o JOIN organization_memberships m ON m.organization_id=o.id WHERE m.user_id=$1 AND m.role='OWNER' AND m.status='ACTIVE' AND o.status='ACTIVE' AND ($2::uuid IS NULL OR o.id=$2) ORDER BY o.name`, userID, service.storeFilter())
 	if err != nil {
 		return nil, err
@@ -233,14 +246,32 @@ func (service *Service) List(ctx context.Context, userID string) ([]Organization
 		}
 		result = append(result, org)
 	}
-	return result, rows.Err()
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	if err = access.Recheck(ctx); err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 func (service *Service) Context(ctx context.Context, userID, orgID string) (Context, error) {
-	tx, actor, err := service.authorized(ctx, userID, orgID, "organization.read")
+	tx, err := service.transaction(ctx, userID, orgID)
 	if err != nil {
 		return Context{}, err
 	}
 	defer tx.Rollback(ctx)
+	access, err := identity.RequireMFA(ctx, tx, userID)
+	if err != nil {
+		return Context{}, err
+	}
+	actor, err := authorizeTransaction(ctx, tx, userID, orgID, "organization.read")
+	if err != nil {
+		return Context{}, err
+	}
+	if err = access.Recheck(ctx); err != nil {
+		return Context{}, err
+	}
 	org, err := readOrganization(ctx, tx, orgID)
 	if err != nil {
 		return Context{}, err
@@ -251,7 +282,13 @@ func (service *Service) Context(ctx context.Context, userID, orgID string) (Cont
 		org.Address = ""
 	}
 	allowed, err := branches(ctx, tx, orgID, actor, true)
-	return Context{org, actor, allowed, actor.Permissions}, err
+	if err != nil {
+		return Context{}, err
+	}
+	if err = access.Recheck(ctx); err != nil {
+		return Context{}, err
+	}
+	return Context{org, actor, allowed, actor.Permissions}, nil
 }
 func (service *Service) Create(ctx context.Context, userID, key string, input CreateInput) (Context, error) {
 	return service.create(ctx, userID, key, input, false)
@@ -289,7 +326,14 @@ func (service *Service) create(ctx context.Context, userID, key string, input Cr
 	if err = RequireVerified(ctx, tx, userID); err != nil {
 		return Context{}, err
 	}
+	access, err := identity.RequireMFA(ctx, tx, userID)
+	if err != nil {
+		return Context{}, err
+	}
 	if _, err = tx.Exec(ctx, "SELECT pg_advisory_xact_lock(hashtextextended($1,0))", userID+key); err != nil {
+		return Context{}, err
+	}
+	if err = access.Recheck(ctx); err != nil {
 		return Context{}, err
 	}
 	var oldID string
@@ -332,6 +376,9 @@ func (service *Service) create(ctx context.Context, userID, key string, input Cr
 	if err = audit(ctx, tx, orgID, userID, "ORGANIZATION_CREATED", orgID, branchIDs); err != nil {
 		return Context{}, err
 	}
+	if err = access.Recheck(ctx); err != nil {
+		return Context{}, err
+	}
 	if err = tx.Commit(ctx); err != nil {
 		return Context{}, dbError(err)
 	}
@@ -341,21 +388,34 @@ func (service *Service) Update(ctx context.Context, userID, orgID string, input 
 	if input.validate() != nil {
 		return Organization{}, ErrInput
 	}
-	tx, _, err := service.authorized(ctx, userID, orgID, "organization.update")
+	authorization, err := service.AuthorizeMFA(ctx, userID, orgID, "organization.update")
 	if err != nil {
 		return Organization{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
+	if err = authorization.Recheck(ctx); err != nil {
+		return Organization{}, err
+	}
 	_, err = tx.Exec(ctx, "UPDATE organizations SET name=$2,code=$3,business_type=$4,contact_email=$5,contact_phone=$6,address=$7,updated_at=now() WHERE id=$1", orgID, input.Name, input.Code, input.BusinessType, input.ContactEmail, input.ContactPhone, input.Address)
 	if err != nil {
 		return Organization{}, dbError(err)
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Organization{}, err
 	}
 	if err = audit(ctx, tx, orgID, userID, "ORGANIZATION_UPDATED", orgID, nil); err != nil {
 		return Organization{}, err
 	}
 	result, err := readOrganization(ctx, tx, orgID)
 	if err != nil {
-		return result, err
+		return Organization{}, err
 	}
-	return result, dbError(tx.Commit(ctx))
+	if err = authorization.Recheck(ctx); err != nil {
+		return Organization{}, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return Organization{}, dbError(err)
+	}
+	return result, nil
 }

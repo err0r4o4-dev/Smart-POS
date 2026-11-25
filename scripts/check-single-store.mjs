@@ -5,6 +5,7 @@ import { createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { setTimeout } from 'node:timers/promises';
 import { assertIntegrationTestsRan } from './single-store-test-output.mjs';
+import { verifyPickupRecovery } from './pickup-recovery-check.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const apiRoot = fileURLToPath(new URL('../apps/api/', import.meta.url));
@@ -34,7 +35,9 @@ function run(program, args, options = {}) {
     }).trim();
   } catch (error) {
     throw new Error(
-      redact(`${program} failed: ${error.stderr ?? ''}\n${error.stdout ?? ''}`),
+      redact(
+        `${program} failed (${error.code ?? error.signal ?? error.status ?? 'unknown'}): ${error.stderr ?? ''}\n${error.stdout ?? ''}`,
+      ),
     );
   }
 }
@@ -631,6 +634,7 @@ COMMIT;`,
     [
       'test',
       '-count=1',
+      '-timeout=14m',
       '-v',
       './internal/modules/storefront',
       '-run',
@@ -638,8 +642,8 @@ COMMIT;`,
     ],
     {
       cwd: apiRoot,
-      timeout:
-        process.env.SMARTPOS_RESTAURANT_BROWSER === '1' ? 300_000 : 120_000,
+      // The aggregate allows up to 13 minutes and needs time to report its result.
+      timeout: 15 * 60_000,
       env: {
         ...process.env,
         SMARTPOS_SINGLE_STORE_TEST_DSN: `postgres://smartpos_dev:${password}@127.0.0.1:${port}/${database}?sslmode=disable`,
@@ -650,6 +654,10 @@ COMMIT;`,
   assertIntegrationTestsRan(testOutput);
   console.log(
     'PASS: selected integration acceptance cases completed without skips.',
+  );
+  verifyPickupRecovery((statement) => sql(database, statement));
+  console.log(
+    'PASS: Pickup downgrade preserves incomplete data under administrator and FORCE RLS owner roles.',
   );
 } catch (error) {
   console.error(redact(error.message));

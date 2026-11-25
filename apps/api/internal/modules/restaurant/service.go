@@ -36,8 +36,8 @@ func dbError(err error) error {
 	return err
 }
 
-func (service *Service) begin(ctx context.Context, user, org, permission string) (pgx.Tx, organization.Member, error) {
-	return service.Organization.Authorized(ctx, user, org, permission)
+func (service *Service) begin(ctx context.Context, user, org, permission string) (*organization.Authorization, error) {
+	return service.Organization.AuthorizeMFA(ctx, user, org, permission)
 }
 
 func branchScope(actor organization.Member, branch string) error {
@@ -66,8 +66,15 @@ func activeBranch(ctx context.Context, tx pgx.Tx, actor organization.Member, org
 	return nil
 }
 
-func finish(ctx context.Context, tx pgx.Tx, org, user, event, id string) error {
+func finish(ctx context.Context, authorization *organization.Authorization, org, user, event, id string) error {
+	tx := authorization.Tx
+	if err := authorization.Recheck(ctx); err != nil {
+		return err
+	}
 	if err := organization.RecordAudit(ctx, tx, org, user, event, id); err != nil {
+		return err
+	}
+	if err := authorization.Recheck(ctx); err != nil {
 		return err
 	}
 	return dbError(tx.Commit(ctx))
@@ -91,30 +98,50 @@ func (service *Service) Settings(ctx context.Context, user, org, branch string) 
 	if !uuidPattern.MatchString(branch) {
 		return Settings{}, ErrInput
 	}
-	tx, actor, err := service.begin(ctx, user, org, "storefront.manage")
+	authorization, err := service.begin(ctx, user, org, "storefront.manage")
 	if err != nil {
 		return Settings{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
-	if err = activeBranch(ctx, tx, actor, org, branch); err != nil {
+	if err = activeBranch(ctx, tx, authorization.Actor, org, branch); err != nil {
 		return Settings{}, err
 	}
-	return readSettings(ctx, tx, org, branch)
+
+	if err = authorization.Recheck(ctx); err != nil {
+		return Settings{}, err
+	}
+	result, err := readSettings(ctx, tx, org, branch)
+	if err != nil {
+		return Settings{}, err
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Settings{}, err
+	}
+	return result, nil
 }
 
 func (service *Service) SaveSettings(ctx context.Context, user, org string, input SettingsInput) (Settings, error) {
 	if input.normalize() != nil {
 		return Settings{}, ErrInput
 	}
-	tx, actor, err := service.begin(ctx, user, org, "storefront.manage")
+	authorization, err := service.begin(ctx, user, org, "storefront.manage")
 	if err != nil {
 		return Settings{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
-	if err = activeBranch(ctx, tx, actor, org, input.BranchID); err != nil {
+	if err = activeBranch(ctx, tx, authorization.Actor, org, input.BranchID); err != nil {
+		return Settings{}, err
+	}
+
+	if err = authorization.Recheck(ctx); err != nil {
 		return Settings{}, err
 	}
 	if input.Revision == 0 {
+		if err = authorization.Recheck(ctx); err != nil {
+			return Settings{}, err
+		}
 		command, problem := tx.Exec(ctx, `INSERT INTO restaurant_settings(organization_id,branch_id,closing_time,timezone,revision,updated_by) VALUES($1,$2,$3::time,$4,1,$5) ON CONFLICT(organization_id,branch_id) DO NOTHING`, org, input.BranchID, input.ClosingTime, input.Timezone, user)
 		if problem != nil {
 			return Settings{}, dbError(problem)
@@ -123,6 +150,9 @@ func (service *Service) SaveSettings(ctx context.Context, user, org string, inpu
 			return Settings{}, ErrConflict
 		}
 	} else {
+		if err = authorization.Recheck(ctx); err != nil {
+			return Settings{}, err
+		}
 		command, problem := tx.Exec(ctx, `UPDATE restaurant_settings SET closing_time=$3::time,timezone=$4,revision=revision+1,updated_by=$5,updated_at=now() WHERE organization_id=$1 AND branch_id=$2 AND revision=$6`, org, input.BranchID, input.ClosingTime, input.Timezone, user, input.Revision)
 		if problem != nil {
 			return Settings{}, dbError(problem)
@@ -135,7 +165,10 @@ func (service *Service) SaveSettings(ctx context.Context, user, org string, inpu
 	if err != nil {
 		return Settings{}, err
 	}
-	return result, finish(ctx, tx, org, user, "restaurant.settings.updated", input.BranchID)
+	if err = finish(ctx, authorization, org, user, "restaurant.settings.updated", input.BranchID); err != nil {
+		return Settings{}, err
+	}
+	return result, nil
 }
 
 func recipeQuery() string {
@@ -159,12 +192,17 @@ func (service *Service) Recipes(ctx context.Context, user, org, branch string) (
 	if !uuidPattern.MatchString(branch) {
 		return nil, ErrInput
 	}
-	tx, actor, err := service.begin(ctx, user, org, "catalog.read")
+	authorization, err := service.begin(ctx, user, org, "catalog.read")
 	if err != nil {
 		return nil, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
-	if err = activeBranch(ctx, tx, actor, org, branch); err != nil {
+	if err = activeBranch(ctx, tx, authorization.Actor, org, branch); err != nil {
+		return nil, err
+	}
+
+	if err = authorization.Recheck(ctx); err != nil {
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, recipeQuery()+" ORDER BY menu.name", org, branch)
@@ -184,40 +222,64 @@ func (service *Service) Recipes(ctx context.Context, user, org, branch string) (
 		}
 		result = append(result, item)
 	}
-	return result, rows.Err()
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 func (service *Service) SaveRecipe(ctx context.Context, user, org, id, key string, input RecipeInput) (Recipe, error) {
 	if input.normalize() != nil || id != "" && (!uuidPattern.MatchString(id) || input.Revision < 1) || id == "" && input.Revision != 0 {
 		return Recipe{}, ErrInput
 	}
-	tx, actor, err := service.begin(ctx, user, org, "catalog.update")
+	authorization, err := service.begin(ctx, user, org, "catalog.update")
 	if err != nil {
 		return Recipe{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
-	if err = activeBranch(ctx, tx, actor, org, input.BranchID); err != nil {
+	if err = activeBranch(ctx, tx, authorization.Actor, org, input.BranchID); err != nil {
+		return Recipe{}, err
+	}
+
+	if err = authorization.Recheck(ctx); err != nil {
 		return Recipe{}, err
 	}
 	commandID := ""
 	if id == "" {
 		var previous []byte
-		commandID, previous, err = claimCommand(ctx, tx, org, user, "recipe.create", key, input)
+		commandID, previous, err = claimAuthorizedCommand(ctx, authorization, org, user, "recipe.create", key, input)
 		if err != nil {
 			return Recipe{}, err
 		}
 		if previous != nil {
 			var result Recipe
-			err = json.Unmarshal(previous, &result)
-			return result, err
+			if err = json.Unmarshal(previous, &result); err != nil {
+				return Recipe{}, err
+			}
+			if err = authorization.Recheck(ctx); err != nil {
+				return Recipe{}, err
+			}
+			return result, nil
 		}
 	}
 	if err = validateRecipeVariants(ctx, tx, org, id, input); err != nil {
 		return Recipe{}, err
 	}
 	if id == "" {
+		if err = authorization.Recheck(ctx); err != nil {
+			return Recipe{}, err
+		}
 		err = tx.QueryRow(ctx, "INSERT INTO restaurant_recipes(organization_id,branch_id,menu_variant_id,status,created_by,updated_by) VALUES($1,$2,$3,$4,$5,$5) RETURNING id::text", org, input.BranchID, input.MenuVariantID, input.Status, user).Scan(&id)
 	} else {
+		if err = authorization.Recheck(ctx); err != nil {
+			return Recipe{}, err
+		}
 		command, problem := tx.Exec(ctx, "UPDATE restaurant_recipes SET menu_variant_id=$3,status=$4,revision=revision+1,updated_by=$5,updated_at=now() WHERE organization_id=$1 AND id=$2 AND branch_id=$6 AND revision=$7", org, id, input.MenuVariantID, input.Status, user, input.BranchID, input.Revision)
 		if problem != nil {
 			return Recipe{}, dbError(problem)
@@ -229,10 +291,16 @@ func (service *Service) SaveRecipe(ctx context.Context, user, org, id, key strin
 	if err != nil {
 		return Recipe{}, dbError(err)
 	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Recipe{}, err
+	}
 	if _, err = tx.Exec(ctx, "DELETE FROM restaurant_recipe_items WHERE organization_id=$1 AND recipe_id=$2", org, id); err != nil {
 		return Recipe{}, dbError(err)
 	}
 	for _, item := range input.Items {
+		if err = authorization.Recheck(ctx); err != nil {
+			return Recipe{}, err
+		}
 		if _, err = tx.Exec(ctx, "INSERT INTO restaurant_recipe_items(organization_id,recipe_id,ingredient_variant_id,quantity,unit_id) SELECT $1,$2,id,$4::numeric,unit_id FROM product_variants WHERE organization_id=$1 AND id=$3", org, id, item.IngredientVariantID, item.Quantity); err != nil {
 			return Recipe{}, dbError(err)
 		}
@@ -241,10 +309,13 @@ func (service *Service) SaveRecipe(ctx context.Context, user, org, id, key strin
 	if err != nil {
 		return Recipe{}, err
 	}
-	if err = saveCommand(ctx, tx, org, commandID, result); err != nil {
+	if err = saveAuthorizedCommand(ctx, authorization, org, commandID, result); err != nil {
 		return Recipe{}, err
 	}
-	return result, finish(ctx, tx, org, user, "restaurant.recipe.saved", id)
+	if err = finish(ctx, authorization, org, user, "restaurant.recipe.saved", id); err != nil {
+		return Recipe{}, err
+	}
+	return result, nil
 }
 
 func newToken() (string, string, error) {
@@ -261,12 +332,17 @@ func (service *Service) Tables(ctx context.Context, user, org, branch string) ([
 	if !uuidPattern.MatchString(branch) {
 		return nil, ErrInput
 	}
-	tx, actor, err := service.begin(ctx, user, org, "online_orders.manage")
+	authorization, err := service.begin(ctx, user, org, "online_orders.manage")
 	if err != nil {
 		return nil, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
-	if err = activeBranch(ctx, tx, actor, org, branch); err != nil {
+	if err = activeBranch(ctx, tx, authorization.Actor, org, branch); err != nil {
+		return nil, err
+	}
+
+	if err = authorization.Recheck(ctx); err != nil {
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, "SELECT id::text,branch_id::text,code,name,seats,status,revision,created_at,updated_at FROM restaurant_tables WHERE organization_id=$1 AND branch_id=$2 ORDER BY code", org, branch)
@@ -282,33 +358,51 @@ func (service *Service) Tables(ctx context.Context, user, org, branch string) ([
 		}
 		result = append(result, item)
 	}
-	return result, rows.Err()
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 func (service *Service) SaveTable(ctx context.Context, user, org, id, key string, input TableInput) (Table, error) {
 	if input.normalize() != nil || id != "" && (!uuidPattern.MatchString(id) || input.Revision < 1) || id == "" && input.Revision != 0 {
 		return Table{}, ErrInput
 	}
-	tx, actor, err := service.begin(ctx, user, org, "online_orders.manage")
+	authorization, err := service.begin(ctx, user, org, "online_orders.manage")
 	if err != nil {
 		return Table{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
-	if err = activeBranch(ctx, tx, actor, org, input.BranchID); err != nil {
+	if err = activeBranch(ctx, tx, authorization.Actor, org, input.BranchID); err != nil {
+		return Table{}, err
+	}
+
+	if err = authorization.Recheck(ctx); err != nil {
 		return Table{}, err
 	}
 	commandID := ""
 	qrToken := ""
 	if id == "" {
 		var previous []byte
-		commandID, previous, err = claimCommand(ctx, tx, org, user, "table.create", key, input)
+		commandID, previous, err = claimAuthorizedCommand(ctx, authorization, org, user, "table.create", key, input)
 		if err != nil {
 			return Table{}, err
 		}
 		if previous != nil {
 			var result Table
-			err = json.Unmarshal(previous, &result)
-			return result, err
+			if err = json.Unmarshal(previous, &result); err != nil {
+				return Table{}, err
+			}
+			if err = authorization.Recheck(ctx); err != nil {
+				return Table{}, err
+			}
+			return result, nil
 		}
 	}
 	hash := ""
@@ -317,8 +411,14 @@ func (service *Service) SaveTable(ctx context.Context, user, org, id, key string
 		if err != nil {
 			return Table{}, err
 		}
+		if err = authorization.Recheck(ctx); err != nil {
+			return Table{}, err
+		}
 		err = tx.QueryRow(ctx, "INSERT INTO restaurant_tables(organization_id,branch_id,code,name,seats,status,qr_token_hash,created_by,updated_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$8) RETURNING id::text", org, input.BranchID, input.Code, input.Name, input.Seats, input.Status, hash, user).Scan(&id)
 	} else {
+		if err = authorization.Recheck(ctx); err != nil {
+			return Table{}, err
+		}
 		command, problem := tx.Exec(ctx, "UPDATE restaurant_tables SET code=$3,name=$4,seats=$5,status=$6,revision=revision+1,updated_by=$7,updated_at=now() WHERE organization_id=$1 AND id=$2 AND branch_id=$8 AND revision=$9", org, id, input.Code, input.Name, input.Seats, input.Status, user, input.BranchID, input.Revision)
 		if problem != nil {
 			return Table{}, dbError(problem)
@@ -331,27 +431,38 @@ func (service *Service) SaveTable(ctx context.Context, user, org, id, key string
 		return Table{}, dbError(err)
 	}
 	var result Table
+	if err = authorization.Recheck(ctx); err != nil {
+		return Table{}, err
+	}
 	err = tx.QueryRow(ctx, "SELECT id::text,branch_id::text,code,name,seats,status,revision,created_at,updated_at FROM restaurant_tables WHERE organization_id=$1 AND id=$2", org, id).Scan(&result.ID, &result.BranchID, &result.Code, &result.Name, &result.Seats, &result.Status, &result.Revision, &result.CreatedAt, &result.UpdatedAt)
 	if err != nil {
 		return Table{}, dbError(err)
 	}
 	result.QRToken = qrToken
-	if err = saveCommand(ctx, tx, org, commandID, result); err != nil {
+	if err = saveAuthorizedCommand(ctx, authorization, org, commandID, result); err != nil {
 		return Table{}, err
 	}
-	return result, finish(ctx, tx, org, user, "restaurant.table.saved", id)
+	if err = finish(ctx, authorization, org, user, "restaurant.table.saved", id); err != nil {
+		return Table{}, err
+	}
+	return result, nil
 }
 
 func (service *Service) Queue(ctx context.Context, user, org, branch string) ([]QueueItem, error) {
 	if !uuidPattern.MatchString(branch) {
 		return nil, ErrInput
 	}
-	tx, actor, err := service.begin(ctx, user, org, "online_orders.read")
+	authorization, err := service.begin(ctx, user, org, "online_orders.read")
 	if err != nil {
 		return nil, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
-	if err = activeBranch(ctx, tx, actor, org, branch); err != nil {
+	if err = activeBranch(ctx, tx, authorization.Actor, org, branch); err != nil {
+		return nil, err
+	}
+
+	if err = authorization.Recheck(ctx); err != nil {
 		return nil, err
 	}
 	var now time.Time
@@ -378,5 +489,13 @@ func (service *Service) Queue(ctx context.Context, user, org, branch string) ([]
 		item.QueueNumber = queueNumber(number, legacy)
 		result = append(result, item)
 	}
-	return result, rows.Err()
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return nil, err
+	}
+	return result, nil
 }

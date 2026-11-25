@@ -1,0 +1,43 @@
+.organization-mfa-required {
+  box-sizing: border-box;
+  width: min(calc(100% - 2 * var(--space-4)), 42rem);
+  margin: var(--space-8) auto;
+  padding: var(--space-6);
+  color: var(--text-primary);
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.organization-mfa-required h1,
+.organization-mfa-required h3 {
+  margin: 0;
+  font-size: 1.5em;
+  line-height: 1.35;
+}
+
+.organization-mfa-required p {
+  margin: 1em 0;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+.organization-mfa-required .button {
+  min-height: 44px;
+  height: auto;
+  padding: var(--space-3) var(--space-4);
+  font-size: 1em;
+  line-height: 1.5;
+  text-align: center;
+  white-space: normal;
+}
+
+.organization-mfa-required-inline {
+  width: 100%;
+  margin: var(--space-6) 0 0;
+  padding: var(--space-4) 0 0;
+  border-top: 1px solid var(--border);
+}
+
+.organization-mfa-required-inline h3 {
+  font-size: 1.125em;
+}

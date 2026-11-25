@@ -140,21 +140,28 @@ func QuoteCart(ctx context.Context, tx pgx.Tx, org, branch string, inputs []Line
 	}
 	return Evaluate(lines, eligible)
 }
-func (service *Service) List(ctx context.Context, user, org, table, id string) (any, error) {
-	permission := "pricing.read"
-	if table == "promotions" {
+func (service *Service) List(ctx context.Context, user, org, table, id string) (result any, err error) {
+	var permission string
+	switch table {
+	case "price_lists":
+		permission = "pricing.read"
+	case "promotions":
 		permission = "promotions.read"
+	default:
+		return nil, ErrInput
 	}
-	tx, actor, err := service.Organization.Authorized(ctx, user, org, permission)
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, permission)
 	if err != nil {
 		return nil, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
+	defer finishRead(ctx, authorization, &result, &err)
 	values, err := definitions(ctx, tx, org, table)
 	if err != nil {
 		return nil, err
 	}
-	result := []Definition{}
+	visible := []Definition{}
 	for _, item := range values {
 		if actor.Role != "OWNER" && item.BranchID != "" && !contains(actor.BranchIDs, item.BranchID) {
 			continue
@@ -162,14 +169,15 @@ func (service *Service) List(ctx context.Context, user, org, table, id string) (
 		if id != "" && item.ID == id {
 			return item, nil
 		}
-		result = append(result, item)
+		visible = append(visible, item)
 	}
 	if id != "" {
 		return nil, ErrNotFound
 	}
-	return result, nil
+	return visible, nil
 }
-func references(ctx context.Context, tx pgx.Tx, org string, input Definition) error {
+func references(ctx context.Context, authorization *organization.Authorization, org string, input Definition) error {
+	tx := authorization.Tx
 	ids := []string{}
 	for _, item := range input.Items {
 		ids = append(ids, item.VariantID)
@@ -178,7 +186,8 @@ func references(ctx context.Context, tx pgx.Tx, org string, input Definition) er
 		ids = append(ids, input.Rule.VariantIDs...)
 		for _, id := range input.Rule.CategoryIDs {
 			var exists bool
-			if err := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM categories WHERE organization_id=$1 AND id=$2)", org, id).Scan(&exists); err != nil {
+			err := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM categories WHERE organization_id=$1 AND id=$2)", org, id).Scan(&exists)
+			if err = checkAuthorization(ctx, authorization, err); err != nil {
 				return err
 			}
 			if !exists {
@@ -188,7 +197,8 @@ func references(ctx context.Context, tx pgx.Tx, org string, input Definition) er
 	}
 	for _, id := range ids {
 		var exists bool
-		if err := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM product_variants WHERE organization_id=$1 AND id=$2)", org, id).Scan(&exists); err != nil {
+		err := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM product_variants WHERE organization_id=$1 AND id=$2)", org, id).Scan(&exists)
+		if err = checkAuthorization(ctx, authorization, err); err != nil {
 			return err
 		}
 		if !exists {
@@ -198,24 +208,28 @@ func references(ctx context.Context, tx pgx.Tx, org string, input Definition) er
 	return nil
 }
 func (service *Service) Save(ctx context.Context, user, org, table, id string, input Definition) (Definition, error) {
+	if table != "price_lists" && table != "promotions" {
+		return Definition{}, ErrInput
+	}
 	permission := "pricing.manage"
 	promotion := table == "promotions"
 	if promotion {
 		permission = "promotions.manage"
 	}
-	tx, actor, err := service.Organization.Authorized(ctx, user, org, permission)
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, permission)
 	if err != nil {
 		return Definition{}, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
 	if err = input.Validate(promotion); err != nil {
-		return input, err
+		return Definition{}, err
 	}
-	if err = Scope(ctx, tx, actor, org, input.BranchID, true); err != nil {
-		return input, err
+	if err = checkAuthorization(ctx, authorization, Scope(ctx, tx, actor, org, input.BranchID, true)); err != nil {
+		return Definition{}, err
 	}
-	if err = references(ctx, tx, org, input); err != nil {
-		return input, err
+	if err = references(ctx, authorization, org, input); err != nil {
+		return Definition{}, err
 	}
 	column := "items"
 	var data []byte
@@ -225,6 +239,7 @@ func (service *Service) Save(ctx context.Context, user, org, table, id string, i
 	} else {
 		data, _ = json.Marshal(input.Items)
 	}
+	stale := false
 	if id == "" {
 		query := "INSERT INTO " + table + "(organization_id,branch_id,name,priority,starts_at,ends_at," + column + ",created_by"
 		values := ") VALUES($1,nullif($2,'')::uuid,$3,$4,$5,$6,$7,$8"
@@ -237,7 +252,7 @@ func (service *Service) Save(ctx context.Context, user, org, table, id string, i
 		err = tx.QueryRow(ctx, query+values+") RETURNING id::text", args...).Scan(&id)
 	} else {
 		if !UUID.MatchString(id) {
-			return input, ErrInput
+			return Definition{}, ErrInput
 		}
 		query := "UPDATE " + table + " SET name=$3,priority=$4,starts_at=$5,ends_at=$6," + column + "=$7,revision=revision+1"
 		args := []any{org, id, input.Name, input.Priority, input.StartsAt, input.EndsAt, data, input.Revision, input.BranchID}
@@ -246,20 +261,20 @@ func (service *Service) Save(ctx context.Context, user, org, table, id string, i
 			args = append(args, input.Rule.UsageLimit)
 		}
 		tag, problem := tx.Exec(ctx, query+" WHERE organization_id=$1 AND id=$2 AND revision=$8 AND branch_id IS NOT DISTINCT FROM nullif($9,'')::uuid AND status='DRAFT'", args...)
-		err = problem
-		if err == nil && tag.RowsAffected() != 1 {
-			return input, ErrConflict
-		}
+		err, stale = problem, tag.RowsAffected() != 1
 	}
-	if err != nil {
-		return input, dbError(err)
+	if err = checkAuthorization(ctx, authorization, dbError(err)); err != nil {
+		return Definition{}, err
 	}
-	if err = organization.RecordAudit(ctx, tx, org, user, "pricing."+table+".saved", id); err != nil {
-		return input, err
+	if stale {
+		return Definition{}, ErrConflict
+	}
+	if err = checkAuthorization(ctx, authorization, organization.RecordAudit(ctx, tx, org, user, "pricing."+table+".saved", id)); err != nil {
+		return Definition{}, err
 	}
 	values, err := definitions(ctx, tx, org, table)
-	if err != nil {
-		return input, err
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
+		return Definition{}, err
 	}
 	for _, value := range values {
 		if value.ID == id {
@@ -267,9 +282,15 @@ func (service *Service) Save(ctx context.Context, user, org, table, id string, i
 			break
 		}
 	}
-	return input, dbError(tx.Commit(ctx))
+	if err = tx.Commit(ctx); err != nil {
+		return Definition{}, dbError(err)
+	}
+	return input, nil
 }
 func (service *Service) Transition(ctx context.Context, user, org, table, id, action string, revision int64) (Definition, error) {
+	if table != "price_lists" && table != "promotions" {
+		return Definition{}, ErrInput
+	}
 	permission := "pricing.manage"
 	if table == "promotions" {
 		permission = "promotions.manage"
@@ -277,16 +298,17 @@ func (service *Service) Transition(ctx context.Context, user, org, table, id, ac
 	if action == "approve" {
 		permission = "pricing.approve"
 	}
-	tx, actor, err := service.Organization.Authorized(ctx, user, org, permission)
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, permission)
 	if err != nil {
 		return Definition{}, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
 	if !UUID.MatchString(id) {
 		return Definition{}, ErrInput
 	}
 	values, err := definitions(ctx, tx, org, table)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
 		return Definition{}, err
 	}
 	var item Definition
@@ -299,11 +321,11 @@ func (service *Service) Transition(ctx context.Context, user, org, table, id, ac
 	if item.ID == "" {
 		return item, ErrNotFound
 	}
-	if err = Scope(ctx, tx, actor, org, item.BranchID, true); err != nil {
-		return item, err
+	if err = checkAuthorization(ctx, authorization, Scope(ctx, tx, actor, org, item.BranchID, true)); err != nil {
+		return Definition{}, err
 	}
 	if item.Revision != revision {
-		return item, ErrConflict
+		return Definition{}, ErrConflict
 	}
 	next := ""
 	switch action {
@@ -325,7 +347,7 @@ func (service *Service) Transition(ctx context.Context, user, org, table, id, ac
 		}
 	}
 	if next == "" {
-		return item, ErrConflict
+		return Definition{}, ErrConflict
 	}
 	query := "UPDATE " + table + " SET status=$3,revision=revision+1"
 	args := []any{org, id, next}
@@ -334,13 +356,16 @@ func (service *Service) Transition(ctx context.Context, user, org, table, id, ac
 		args = append(args, user)
 	}
 	_, err = tx.Exec(ctx, query+" WHERE organization_id=$1 AND id=$2", args...)
-	if err != nil {
-		return item, dbError(err)
+	if err = checkAuthorization(ctx, authorization, dbError(err)); err != nil {
+		return Definition{}, err
 	}
 	item.Status = next
 	item.Revision++
-	if err = organization.RecordAudit(ctx, tx, org, user, "pricing."+table+"."+action, id); err != nil {
-		return item, err
+	if err = checkAuthorization(ctx, authorization, organization.RecordAudit(ctx, tx, org, user, "pricing."+table+"."+action, id)); err != nil {
+		return Definition{}, err
 	}
-	return item, dbError(tx.Commit(ctx))
+	if err = tx.Commit(ctx); err != nil {
+		return Definition{}, dbError(err)
+	}
+	return item, nil
 }

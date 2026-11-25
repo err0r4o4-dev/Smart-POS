@@ -22,6 +22,7 @@ type Profile struct {
 }
 
 type Session struct {
+	ID        string `json:"-"`
 	User      Profile
 	CSRFHash  [32]byte
 	CSRFToken string
@@ -126,6 +127,7 @@ func (service *Service) Login(ctx context.Context, email, password string) (Prof
 		return Profile{}, "", "", err
 	}
 	valid := VerifyPassword(hash, password)
+	proofAt := time.Now().UTC()
 	if !valid || profile.Status != "ACTIVE" {
 		var userID any
 		if profile.ID != "" {
@@ -155,7 +157,7 @@ func (service *Service) Login(ctx context.Context, email, password string) (Prof
 	if err != nil {
 		return Profile{}, "", "", err
 	}
-	if _, err = tx.Exec(ctx, "INSERT INTO auth_sessions (user_id,token_hash,csrf_hash,expires_at) VALUES ($1,$2,$3,now()+$4::interval)", profile.ID, tokenHash[:], csrfHash[:], service.SessionTTL); err != nil {
+	if err = insertAuthenticatedSession(ctx, tx, profile.ID, tokenHash[:], csrfHash[:], service.SessionTTL, proofAt); err != nil {
 		return Profile{}, "", "", err
 	}
 	if _, err = tx.Exec(ctx, "INSERT INTO auth_audit_events (user_id,event_type) VALUES ($1,'LOGIN_SUCCESS')", profile.ID); err != nil {
@@ -167,6 +169,19 @@ func (service *Service) Login(ctx context.Context, email, password string) (Prof
 	return profile, token, csrf, nil
 }
 
+func insertAuthenticatedSession(ctx context.Context, tx pgx.Tx, userID string, tokenHash, csrfHash []byte, ttl time.Duration, proofAt time.Time) error {
+	var proof *time.Time
+	if !proofAt.IsZero() {
+		proof = &proofAt
+	}
+	// One database timestamp bounds proof and keeps issuance and expiry consistent.
+	_, err := tx.Exec(ctx, `INSERT INTO auth_sessions(user_id,token_hash,csrf_hash,created_at,expires_at,primary_verified_at)
+	 SELECT $1,$2,$3,issued.at,issued.at+$4::interval,
+	        CASE WHEN $5::timestamptz<=issued.at THEN $5::timestamptz END
+	 FROM (SELECT clock_timestamp() AS at) issued`, userID, tokenHash, csrfHash, ttl, proof)
+	return err
+}
+
 func (service *Service) Current(ctx context.Context, token string) (Session, error) {
 	tokenHash, err := TokenHash(token)
 	if err != nil {
@@ -175,7 +190,7 @@ func (service *Service) Current(ctx context.Context, token string) (Session, err
 	var session Session
 	session.User.Onboarding = "PENDING_ORGANIZATION"
 	var csrfHash []byte
-	err = service.Pool.QueryRow(ctx, `SELECT u.id,u.email,u.display_name,u.status,u.email_verified_at IS NOT NULL,s.csrf_hash FROM auth_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>now() AND u.status='ACTIVE'`, tokenHash[:]).Scan(&session.User.ID, &session.User.Email, &session.User.DisplayName, &session.User.Status, &session.User.EmailVerified, &csrfHash)
+	err = service.Pool.QueryRow(ctx, `SELECT u.id,u.email,u.display_name,u.status,u.email_verified_at IS NOT NULL,s.csrf_hash,s.id FROM auth_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>now() AND u.status='ACTIVE'`, tokenHash[:]).Scan(&session.User.ID, &session.User.Email, &session.User.DisplayName, &session.User.Status, &session.User.EmailVerified, &csrfHash, &session.ID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Session{}, ErrInvalidToken
 	}

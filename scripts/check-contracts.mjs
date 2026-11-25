@@ -12,15 +12,15 @@ assert.ok(
   ),
   'Employee and role management must not be part of the active route inventory',
 );
-const expected = [7, 4, 9, 6, 9, 11, 7, 8, 5, 5, 4, 6, 7, 2, 10, 4, 8, 3];
+const expected = [8, 4, 9, 6, 9, 11, 7, 8, 5, 5, 4, 6, 7, 2, 10, 4, 8, 3];
 assert.equal(modules.length, 18);
 assert.deepEqual(
   modules.map((item) => item.routes.length),
   expected,
 );
 const routes = modules.flatMap((item) => item.routes);
-assert.equal(routes.length, 115);
-assert.equal(new Set(routes).size, 115);
+assert.equal(routes.length, 116);
+assert.equal(new Set(routes).size, 116);
 for (const route of [
   '/restaurant/recipes',
   '/restaurant/quick-stock',
@@ -41,6 +41,72 @@ for (const item of modules) {
     assert.ok(routeDocs.includes('`' + route + '`'), `Missing route ${route}`);
 }
 const api = YAML.parse(readFileSync('packages/contracts/openapi.yaml', 'utf8'));
+for (const [path, method, response] of [
+  ['', 'get', 'MFAStatusResponse'],
+  ['/enrollment', 'post', 'MFAEnrollmentResponse'],
+  ['/enrollment/confirm', 'post', 'MFARecoveryResponse'],
+  ['/challenge', 'post', 'MFAVerifiedResponse'],
+  ['/recovery', 'post', 'MFAEnrollmentResponse'],
+  ['/recovery/confirm', 'post', 'MFARecoveryResponse'],
+]) {
+  const operation = api.paths['/api/v1/auth/mfa' + path]?.[method];
+  assert.deepEqual(operation?.security, [{ sessionCookie: [] }]);
+  assert.equal(
+    operation.responses['200'].content['application/json'].schema.$ref,
+    '#/components/schemas/' + response,
+  );
+  if (method === 'post')
+    assert.ok(
+      operation.parameters.some(
+        (parameter) => parameter.name === 'X-CSRF-Token' && parameter.required,
+      ),
+    );
+}
+const recoveryCodePattern = '^[A-Z2-7]{25}[AEIMQUY4]$';
+for (const [path, name, fields] of [
+  ['/recovery', 'MFARecoveryStartInput', ['recovery_code']],
+  ['/recovery/confirm', 'MFARecoveryConfirmInput', ['factor_id', 'code']],
+]) {
+  const operation = api.paths['/api/v1/auth/mfa' + path].post;
+  assert.equal(operation.requestBody.required, true);
+  assert.equal(
+    operation.requestBody.content['application/json'].schema.$ref,
+    '#/components/schemas/' + name,
+  );
+  const input = api.components.schemas[name];
+  assert.equal(input.additionalProperties, false);
+  assert.deepEqual(input.required, fields);
+  for (const status of ['400', '401', '403', '415', '429', '503'])
+    assert.equal(
+      operation.responses[status].$ref,
+      '#/components/responses/AuthError',
+    );
+}
+const recoveryStart = api.components.schemas.MFARecoveryStartInput.properties;
+assert.equal(recoveryStart.recovery_code.pattern, recoveryCodePattern);
+assert.equal(recoveryStart.recovery_code.writeOnly, true);
+const recoveryConfirm =
+  api.components.schemas.MFARecoveryConfirmInput.properties;
+assert.equal(recoveryConfirm.factor_id.format, 'uuid');
+assert.equal(recoveryConfirm.code.pattern, '^[0-9]{6}$');
+assert.equal(recoveryConfirm.code.writeOnly, true);
+const recoveryCodes =
+  api.components.schemas.MFARecoveryResponse.properties.data.properties
+    .recovery_codes;
+assert.deepEqual(
+  [
+    recoveryCodes.minItems,
+    recoveryCodes.maxItems,
+    recoveryCodes.uniqueItems,
+    recoveryCodes.items.pattern,
+  ],
+  [10, 10, true, recoveryCodePattern],
+);
+assert.equal(api.components.schemas.MFAProofInput.additionalProperties, false);
+assert.equal(
+  api.components.schemas.MFAProofInput.properties.code.pattern,
+  '^[0-9]{6}$',
+);
 assert.equal(
   api.paths['/api/v1/auth/register'].post.responses['201'].content[
     'application/json'
@@ -141,6 +207,7 @@ const sandboxPaths = [
   (suffix) => '/api/v1/organizations/{id}/storefront/payment-sandbox' + suffix,
 );
 const restaurantPaths = [
+  '/availability',
   '/settings',
   '/tables',
   '/tables/{tableId}',
@@ -377,6 +444,12 @@ assert.deepEqual(
     '/api/v1/auth/login',
     '/api/v1/auth/logout',
     '/api/v1/auth/me',
+    '/api/v1/auth/mfa',
+    '/api/v1/auth/mfa/enrollment',
+    '/api/v1/auth/mfa/enrollment/confirm',
+    '/api/v1/auth/mfa/challenge',
+    '/api/v1/auth/mfa/recovery',
+    '/api/v1/auth/mfa/recovery/confirm',
     '/api/v1/auth/register',
     '/api/v1/auth/reset-password',
     '/api/v1/auth/email/verify',
@@ -531,6 +604,37 @@ assert.ok(
 assert.ok(
   !api.components.schemas.POSCheckout.required.includes('credit_amount'),
 );
+const guestTracking = api.paths['/api/v1/storefronts/{slug}/track'].post;
+assert.deepEqual(guestTracking.security, []);
+assert.deepEqual(guestTracking.parameters, []);
+assert.equal(guestTracking.requestBody.required, true);
+assert.equal(
+  guestTracking.requestBody.content['application/json'].schema.$ref,
+  '#/components/schemas/StorefrontTrackingInput',
+);
+const trackingInput = api.components.schemas.StorefrontTrackingInput;
+assert.deepEqual(trackingInput.required, ['order_id', 'access_token']);
+assert.equal(trackingInput.additionalProperties, false);
+assert.deepEqual(trackingInput.properties.access_token, {
+  type: 'string',
+  pattern: '^[a-f0-9]{64}$',
+  writeOnly: true,
+});
+assert.equal(
+  guestTracking.responses['200'].content['application/json'].schema.properties
+    .data.$ref,
+  '#/components/schemas/PublicOnlineOrder',
+);
+assert.equal(
+  guestTracking.responses['404'].content['application/json'].schema.$ref,
+  '#/components/schemas/StorefrontError',
+);
+for (const status of ['200', '404']) {
+  assert.deepEqual(
+    guestTracking.responses[status].headers['Cache-Control'].schema.enum,
+    ['no-store'],
+  );
+}
 for (const suffix of ['checkout', 'recover', 'status']) {
   const operation =
     api.paths[`/api/v1/storefronts/{slug}/payment/${suffix}`].post;
@@ -617,6 +721,28 @@ assert.ok(
 );
 const restaurantQueue =
   api.paths['/api/v1/organizations/{id}/restaurant/queue'].get;
+const availability =
+  api.paths['/api/v1/organizations/{id}/restaurant/availability'];
+for (const operation of [availability.get, availability.put]) {
+  assert.deepEqual(operation.security, [{ sessionCookie: [] }]);
+  assert.equal(
+    operation.responses['200'].content['application/json'].schema.$ref,
+    '#/components/schemas/RestaurantAvailabilityResponse',
+  );
+}
+assert.deepEqual(availability.put.parameters, [
+  { $ref: '#/components/parameters/CSRF' },
+]);
+assert.equal(
+  availability.put.requestBody.content['application/json'].schema.$ref,
+  '#/components/schemas/RestaurantAvailabilitySettings',
+);
+const availabilitySettings =
+  api.components.schemas.RestaurantAvailabilitySettings;
+assert.deepEqual(
+  availabilitySettings.required,
+  Object.keys(availabilitySettings.properties),
+);
 assert.deepEqual(restaurantQueue.security, [{ sessionCookie: [] }]);
 assert.match(restaurantQueue.description, /durable queue numbers/i);
 assert.doesNotMatch(restaurantQueue.description, /no daily queue allocation/i);
@@ -1096,5 +1222,5 @@ for (const name of ['product_id', 'variant_id', 'category_id']) {
   assert.equal(restaurantMenuItem.properties[name].format, 'uuid');
 }
 console.log(
-  'PASS: 18 modules, 115 unique documented routes, owner-only access, Stripe sandbox/storefront/POS contracts and service health wiring',
+  'PASS: 18 modules, 116 unique documented routes, owner-only access, Stripe sandbox/storefront/POS contracts and service health wiring',
 );

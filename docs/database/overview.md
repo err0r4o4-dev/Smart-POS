@@ -1,12 +1,42 @@
 # Database foundation
 
-## Current online extension (2026-10-12)
+## Migration recovery for the current VELOPOS build
 
-**PARTIAL / PAUSED by user request.** Go requires version23 with `dirty=false`; this is checked-in readiness behavior, not proof of a migrated primary database. Official migrations14–23 add storefront orders, reservations, optional source separation, internal payment attempts/inbox/holds/observations/prepaid linkage/reconciliation, delivery snapshots and pre-shipment refund intents/observations. Existing history remains immutable; no direct stock-balance rewrite or primary migration is authorized by this documentation refresh.
+The required clean schema comes from `RequiredVersion` in
+[`database.go`](../../apps/api/internal/platform/database/database.go). The
+API rejects a missing, dirty, or mismatched version at readiness. Readiness
+does not prove that the physical schema or retained records are intact.
+
+The authorized database operator verifies the target and release artifact,
+stops affected writers, and retains the migration log, starting version,
+schema evidence and approved backup or restore reference. Record the observed
+version and dirty flag, the failed migration and its direction. Keep database
+URLs, credentials and record content out of incident notes.
+
+| Observed failure                                                           | Evidence needed before deciding how to recover                                                                                                                                                                                   |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Upgrade stops before commit                                                | Verify the preceding schema still exists, the new objects and effects are absent, and retained checks match the pre-run baseline. A dirty marker alone does not prove rollback.                                                  |
+| Populated downgrade is refused                                             | Verify the newer schema and its data still exist. The dirty marker can name the _older_ attempted version. Keep the newer schema and select a compatible forward build; do not drop retained records to make the downgrade pass. |
+| Commit result is unknown or the structure matches neither expected version | Keep writes stopped. Record the observed differences and obtain a reviewed forward repair or restore plan before changing migration metadata or rerunning anything.                                                              |
+
+Changing migration metadata requires separate authorization on an operational
+target. Once the authorized recovery completes, the database operator checks
+the expected clean version, relevant schema/policies, and retained-data and
+transaction checks. The release operator resumes writes after reviewing that
+evidence and confirming readiness for the matching API build.
+
+[T2.3](../../specs/velopos-migration/tasks.md#t2-3) records the isolated
+rehearsals, including the schema 46 pre-commit failure and populated downgrade
+refusal. Those used synthetic records; they do not establish recovery on an
+operational database.
+
+## Historical online extension (2026-10-12)
+
+**Historical status: partial and paused by user request.** Official migrations14–23 added storefront orders, reservations, optional source separation, internal payment attempts/inbox/holds/observations/prepaid linkage/reconciliation, delivery snapshots and pre-shipment refund intents/observations. Existing history remains immutable.
 
 Fresh owned-tmpfs schema23 acceptance was recorded in the prior implementation task. Retained-data upgrade and primary rollout have not been performed. The phase-specific migration evidence below is historical; use [current payment/delivery scope and limitations](../architecture/payment-sandbox.md#current-online-flow-status-2026-10-12), [migration filenames](../../README.md#database-migrations) and [recorded verification](../development/verification.md) rather than treating an older schema number as current readiness.
 
-Current Go schema/readiness requirement is exact clean version **23**, not the observed primary-database version. Migrations1–11 unchanged. Forward-only12 adds loyalty_programs/accounts/immutable loyalty_ledger and reservations;13 adds product_batches, quality_stock_balances, quality_write_offs, quality_recalls and tenant-safe batch references. Existing movement ledger remains authoritative; tracked+untracked equals aggregate transactionally. FORCE RLS, scoped runtime grants and immutable/deferred consistency guards apply. See [Loyalty](../architecture/loyalty.md), [Quality](../architecture/quality.md) and [fresh-chain/final evidence](../development/phase57-verification.md). No primary volume migrated for acceptance.
+That build required exact clean version **23**, which was not the observed primary-database version. Migrations1–11 unchanged. Forward-only12 adds loyalty_programs/accounts/immutable loyalty_ledger and reservations;13 adds product_batches, quality_stock_balances, quality_write_offs, quality_recalls and tenant-safe batch references. Existing movement ledger remains authoritative; tracked+untracked equals aggregate transactionally. FORCE RLS, scoped runtime grants and immutable/deferred consistency guards apply. See [Loyalty](../architecture/loyalty.md), [Quality](../architecture/quality.md) and [fresh-chain/final evidence](../development/phase57-verification.md). No primary volume migrated for acceptance.
 
 Migration 000001 creates organizations/branches: UUID keys supplied by app, timestamptz, composite tenant references, organization-scoped unique branch code, explicit checks. Migration 000002 adds global users, hashed auth sessions, hashed reset tokens, auth audit events and hashed rate-limit keys. No seed credentials/users/sales or extensions.
 
@@ -28,7 +58,7 @@ The organization/branch Phase 1C catalog and Phase 2 inventory tables ENABLE and
 
 Tenant tables carry organization_id; branch tables also branch_id. Composite FKs prevent cross-tenant references. Unique/index keys include tenant and derive from queries. Catalog money uses NUMERIC(18,2), organization currency and exact decimal strings. Phase 3 calculates THB using integer cents and big-integer multiplication with HALF_UP rounding per line; stored amounts and API strings remain exact. Phase 2 supplies NUMERIC(18,3) quantities, an append-only ledger and transactional balance projections; see inventory-ledger.md.
 
-`npm run migrate` runs pinned golang-migrate up locally, also automatic before API starts. Migrations are forward-only; do not run down/drop automatically. Add sequential migrations; never edit deployed migrations. Non-disposable changes require backup/rollback approval. Readiness rejects missing/dirty/other schema versions (required version13). Do not run the default stack/migrate command against a persistent primary volume as part of verification without approval.
+`npm run migrate` runs pinned golang-migrate up locally, also automatic before API starts. Migrations are forward-only; do not run down/drop automatically. Add sequential migrations; never edit deployed migrations. Non-disposable changes require backup/rollback approval. Do not run the default stack/migrate command against a persistent primary volume as part of verification without approval.
 
 ## Phase 1C catalog migration
 
@@ -42,7 +72,7 @@ All seven tables FORCE RLS using transaction-local organization context. Runtime
 
 Runtime is SELECT-only on stock_balances and SELECT/INSERT-only on stock_movements. Append-only triggers also reject ledger UPDATE/DELETE; the SECURITY DEFINER posting trigger has fixed search_path, revoked PUBLIC execution, explicit tenant/user/unfinished-operation validation and locked quantity/version updates. A Variant unit cannot change after stock history. Opening is positive, once per identity and before any ledger history. No existing migration 1–4 was edited, no down migration or original-volume change was performed.
 
-Migration up and repeated no-change were verified only in smartpos-auth-test, together with rollback-only constraints, RLS, precision, grants and reconciliation assertions. Inventory originally required clean schema5, POS introduced6; current Go readiness requires clean23; the schema5/6 verification here is historical. Production needs distinct least-privileged runtime LOGIN and migration credentials plus backup/recovery planning; see [ledger design](inventory-ledger.md).
+Migration up and repeated no-change were verified only in smartpos-auth-test, together with rollback-only constraints, RLS, precision, grants and reconciliation assertions. Inventory originally required clean schema5 and POS introduced6; the schema5/6 verification here is historical. Production needs distinct least-privileged runtime LOGIN and migration credentials plus backup/recovery planning; see [ledger design](inventory-ledger.md).
 
 ## Phase 3 POS and sales migration
 

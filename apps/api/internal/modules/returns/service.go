@@ -76,49 +76,44 @@ func saleScope(ctx context.Context, tx pgx.Tx, actor organization.Member, user, 
 func result(ctx context.Context, tx pgx.Tx, org, id string) (json.RawMessage, error) {
 	return raw(ctx, tx, `SELECT to_jsonb(doc)||jsonb_build_object('amount',doc.amount::text,'items',COALESCE((SELECT jsonb_agg(to_jsonb(item)||jsonb_build_object('quantity',item.quantity::text,'refund_amount',item.refund_amount::text,'original_unit_price',item.original_unit_price::text,'original_paid_amount',item.original_paid_amount::text,'product_name',sale.product_name,'sku',sale.sku,'movement_id',movement.id) ORDER BY item.id) FROM customer_return_items item JOIN sale_items sale ON sale.organization_id=item.organization_id AND sale.id=item.original_sale_item_id LEFT JOIN stock_movements movement ON movement.organization_id=item.organization_id AND movement.customer_return_item_id=item.id WHERE item.organization_id=doc.organization_id AND item.return_id=doc.id),'[]'::jsonb),'refund_id',(SELECT id FROM customer_refunds WHERE organization_id=doc.organization_id AND return_id=doc.id)) FROM customer_returns doc WHERE doc.organization_id=$1 AND doc.id=$2`, org, id)
 }
-func finish(ctx context.Context, tx pgx.Tx, user, org, op, event, id string, value json.RawMessage) (json.RawMessage, error) {
-	if err := inventory.CompleteSale(ctx, tx, org, op, value); err != nil {
-		return nil, dbError(err)
-	}
-	if err := organization.RecordAudit(ctx, tx, org, user, event, id); err != nil {
-		return nil, err
-	}
-	return value, dbError(tx.Commit(ctx))
-}
 func prior(ctx context.Context, tx pgx.Tx, org, saleItem string) (string, string, error) {
 	var quantity, amount string
 	err := tx.QueryRow(ctx, `SELECT COALESCE(sum(item.quantity),0)::text,COALESCE(sum(item.refund_amount),0)::text FROM customer_return_items item JOIN customer_returns doc ON doc.organization_id=item.organization_id AND doc.id=item.return_id WHERE item.organization_id=$1 AND item.original_sale_item_id=$2 AND doc.status='COMPLETED'`, org, saleItem).Scan(&quantity, &amount)
 	return quantity, amount, err
 }
 func (service *Service) Create(ctx context.Context, user, org, key string, input CreateInput) (json.RawMessage, error) {
-	tx, actor, err := service.Organization.Authorized(ctx, user, org, "returns.create")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "returns.create")
 	if err != nil {
 		return nil, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
 	if !validText(input.Reason, 2000, true) || len(input.Items) < 1 || len(input.Items) > 100 {
 		return nil, ErrInput
 	}
 	branch, err := saleScope(ctx, tx, actor, user, org, input.SaleID)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
 		return nil, err
 	}
-	if err = inventory.BranchScope(ctx, tx, actor, org, branch, true); err != nil {
-		return nil, dbError(err)
+	if err = checkAuthorization(ctx, authorization, dbError(inventory.BranchScope(ctx, tx, actor, org, branch, true))); err != nil {
+		return nil, err
 	}
 	op, cached, err := inventory.BeginOperation(ctx, tx, user, org, "customer-return.create", key, input)
-	if err != nil || cached != nil {
-		return cached, dbError(err)
+	if err = checkAuthorization(ctx, authorization, dbError(err)); err != nil {
+		return nil, err
+	}
+	if cached != nil {
+		return cached, nil
 	}
 	id, err := createDocument(ctx, tx, actor, user, org, branch, input)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
 		return nil, err
 	}
 	value, err := result(ctx, tx, org, id)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
 		return nil, err
 	}
-	return finish(ctx, tx, user, org, op, "returns.created", id, value)
+	return finishWrite(ctx, authorization, user, org, op, "returns.created", id, value)
 }
 
 func createDocument(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org, branch string, input CreateInput) (string, error) {

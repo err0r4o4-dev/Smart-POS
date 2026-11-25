@@ -17,6 +17,21 @@ import (
 	"smartpos/api/internal/platform/stripe"
 )
 
+func assertKitchenQueueOrder(test *testing.T, ctx context.Context, organizations *organization.Service, owner, org, branch, order string, want bool) {
+	test.Helper()
+	queue, err := (&restaurant.Service{Organization: organizations}).Queue(ctx, owner, org, branch)
+	if err != nil {
+		test.Fatalf("kitchen queue authorization/query: %v", err)
+	}
+	found := false
+	for _, item := range queue {
+		found = found || item.OrderID == order
+	}
+	if found != want {
+		test.Fatalf("kitchen eligibility: present=%v want=%v", found, want)
+	}
+}
+
 func restaurantQueueAcceptance(test *testing.T, ctx context.Context, organizations *organization.Service, owner, org string, shop storefront.Settings, foreignOrg string) {
 	test.Helper()
 	gateway, err := stripe.NewSandbox("sk_test_synthetic", "http://localhost:8088")

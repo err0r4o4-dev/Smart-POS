@@ -1,5 +1,11 @@
 import { lazy } from 'react';
 
+export const MFASettingsPage = lazy(() =>
+  import('../features/auth/MFASettingsPage').then((module) => ({
+    default: module.MFASettingsPage,
+  })),
+);
+
 export const RestaurantPage = lazy(() =>
   import('../features/restaurant/RestaurantPage').then((module) => ({
     default: module.RestaurantPage,

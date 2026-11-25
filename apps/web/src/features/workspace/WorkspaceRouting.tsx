@@ -14,8 +14,13 @@ import { businessArea, workspacePath } from '../../app/workspace-paths';
 import { ErrorState, Loading } from '../../components/ui/primitives';
 import { useQuery } from '@tanstack/react-query';
 import { getSetup } from '../organization/setup-api';
+import { MFARequiredState } from '../organization/MFARequiredState';
 
-function SetupCompletionGate() {
+function SetupCompletionGate({
+  allowOrganizationSetup,
+}: {
+  allowOrganizationSetup: boolean;
+}) {
   const { t, localize } = useLanguage();
   const { state } = useAuth();
   const tenant = useOrganization();
@@ -29,14 +34,15 @@ function SetupCompletionGate() {
       branchID,
     ],
     queryFn: ({ signal }) => getSetup({ organizationID, branchID }, signal),
-    enabled: Boolean(branchID),
+    enabled: Boolean(branchID) || allowOrganizationSetup,
     retry: false,
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: 'always',
     refetchInterval: 30_000,
   });
-  if (!branchID) return <Navigate to={paths.setup} replace />;
+  if (!branchID && !allowOrganizationSetup)
+    return <Navigate to={paths.setup} replace />;
   if (setup.isError)
     return (
       <ErrorState
@@ -65,6 +71,7 @@ export function WorkspaceAreaGate() {
   ) {
     if (tenant.loading)
       return <Loading>{t('workspace.checkingManagementWorkspace')}</Loading>;
+    if (tenant.errorCode === 'MFA_REQUIRED') return <MFARequiredState />;
     if (tenant.error)
       return (
         <ErrorState
@@ -83,6 +90,7 @@ export function WorkspaceAreaGate() {
       return <Navigate to={paths.forbidden} replace />;
     return (
       <SetupCompletionGate
+        allowOrganizationSetup={pathname === paths.settings}
         key={JSON.stringify([
           state.session?.user.id,
           tenant.context.organization.id,
@@ -102,6 +110,7 @@ export function LegacyWorkspaceRedirect({ path }: { path: string }) {
   const { search, hash } = useLocation();
   if (tenant.loading)
     return <Loading>{t('workspace.selectingWorkspace')}</Loading>;
+  if (tenant.errorCode === 'MFA_REQUIRED') return <MFARequiredState />;
   if (tenant.error)
     return (
       <ErrorState

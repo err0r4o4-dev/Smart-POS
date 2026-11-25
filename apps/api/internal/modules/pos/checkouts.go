@@ -61,12 +61,14 @@ func checkout(ctx context.Context, tx pgx.Tx, actor organization.Member, user, o
 	return item, err
 }
 func (service *Service) Checkout(ctx context.Context, user, org, id string) (Checkout, error) {
-	tx, actor, err := service.begin(ctx, user, org, "pos.checkout")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "pos.checkout")
 	if err != nil {
-		return Checkout{}, err
+		return Checkout{}, dbError(err)
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
-	return checkout(ctx, tx, actor, user, org, id)
+	item, err := checkout(ctx, tx, actor, user, org, id)
+	return privateReadResult(ctx, authorization, item, err)
 }
 func paymentPermission(method string) string {
 	if method == "NONE" {
@@ -78,12 +80,18 @@ func paymentPermission(method string) string {
 	return "pos.payment.manual_confirm"
 }
 
-func (service *Service) PrepareCheckout(ctx context.Context, user, org, key string, input CheckoutInput) (Checkout, error) {
-	tx, actor, err := service.begin(ctx, user, org, "pos.checkout")
+func (service *Service) PrepareCheckout(ctx context.Context, user, org, key string, input CheckoutInput) (result Checkout, err error) {
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "pos.checkout")
 	if err != nil {
-		return Checkout{}, err
+		return Checkout{}, dbError(err)
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
+	defer func() {
+		if err != nil {
+			result = Checkout{}
+		}
+	}()
 	if !uuidPattern.MatchString(key) || !uuidPattern.MatchString(input.CartID) || !allowed(actor.Permissions, paymentPermission(input.Method)) {
 		return Checkout{}, ErrInput
 	}
@@ -91,31 +99,37 @@ func (service *Service) PrepareCheckout(ctx context.Context, user, org, key stri
 	var id, previous string
 	err = tx.QueryRow(ctx, "SELECT id::text,fingerprint FROM pos_checkouts WHERE organization_id=$1 AND cashier_id=$2 AND idempotency_key=$3", org, user, key).Scan(&id, &previous)
 	if err == nil {
+		if err = writeCheck(ctx, authorization, nil); err != nil {
+			return Checkout{}, err
+		}
 		if hash != previous {
 			return Checkout{}, ErrConflict
 		}
 		result, problem := checkout(ctx, tx, actor, user, org, id)
-		if problem != nil {
-			return result, problem
+		if err = writeCheck(ctx, authorization, problem); err != nil {
+			return result, err
 		}
 		if result.Status != "COMPLETED" {
-			if problem = pricing.CurrentApprover(ctx, tx, org, result.Pricing.ApprovalID); problem != nil {
+			if problem = writeCheck(ctx, authorization, pricing.CurrentApprover(ctx, tx, org, result.Pricing.ApprovalID)); problem != nil {
 				return result, problem
 			}
 		}
 		if result.Status == "AWAITING_PAYMENT" {
-			problem = revalidate(ctx, tx, org, result)
+			problem = writeCheck(ctx, authorization, revalidate(ctx, tx, org, result))
 			if problem == nil {
-				problem = validateReward(ctx, tx, actor, org, result)
+				problem = writeCheck(ctx, authorization, validateReward(ctx, tx, actor, org, result))
 			}
 		}
-		return result, problem
+		return privateReadResult(ctx, authorization, result, problem)
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
+		return Checkout{}, writeCheck(ctx, authorization, err)
+	}
+	if err = writeCheck(ctx, authorization, nil); err != nil {
 		return Checkout{}, err
 	}
 	cart, err := readCart(ctx, tx, actor, user, org, input.CartID)
-	if err != nil {
+	if err = writeCheck(ctx, authorization, err); err != nil {
 		return Checkout{}, err
 	}
 	if cart.Status != "ACTIVE" || cart.Revision != input.Revision || len(cart.Items) == 0 {
@@ -124,6 +138,9 @@ func (service *Service) PrepareCheckout(ctx context.Context, user, org, key stri
 	customerCode := ""
 	if cart.CustomerID != nil {
 		selected, problem := customers.ValidateSelection(ctx, tx, actor, org, *cart.CustomerID)
+		if err = writeCheck(ctx, authorization, nil); err != nil {
+			return Checkout{}, err
+		}
 		if problem != nil {
 			if problem == customers.ErrConflict {
 				return Checkout{}, ErrCustomer
@@ -133,25 +150,25 @@ func (service *Service) PrepareCheckout(ctx context.Context, user, org, key stri
 		customerCode = selected.Code
 	}
 	value, err := terminal(ctx, tx, actor, org, cart.TerminalID, true)
-	if err != nil {
+	if err = writeCheck(ctx, authorization, err); err != nil {
 		return Checkout{}, err
 	}
 	shift, err := ownShift(ctx, tx, org, value.ID, user)
-	if err != nil {
+	if err = writeCheck(ctx, authorization, err); err != nil {
 		return Checkout{}, err
 	}
-	if err = cartUnlocked(ctx, tx, org, cart.ID); err != nil {
+	if err = writeCheck(ctx, authorization, cartUnlocked(ctx, tx, org, cart.ID)); err != nil {
 		return Checkout{}, err
 	}
 	if cart.ReviewRequired {
 		return Checkout{}, ErrPrice
 	}
-	if err = priceCart(ctx, tx, org, &cart, input.ApprovalID); err != nil {
+	if err = writeCheck(ctx, authorization, priceCart(ctx, tx, org, &cart, input.ApprovalID)); err != nil {
 		return Checkout{}, err
 	}
 	quote, problem := loyalty.Quote(ctx, tx, actor, org, cart.CustomerID, cart.Pricing, input.LoyaltyPoints)
-	if problem != nil {
-		return Checkout{}, dbError(problem)
+	if err = writeCheck(ctx, authorization, problem); err != nil {
+		return Checkout{}, err
 	}
 	cart.Pricing = quote
 	cart.Total = quote.Total
@@ -193,32 +210,39 @@ func (service *Service) PrepareCheckout(ctx context.Context, user, org, key stri
 	}
 	quoteData, _ := json.Marshal(cart.Pricing)
 	err = tx.QueryRow(ctx, `INSERT INTO pos_checkouts(organization_id,branch_id,terminal_id,shift_id,cart_id,cashier_id,cart_revision,idempotency_key,fingerprint,status,method,currency,total,received,change,items,pricing_snapshot,customer_id,customer_code_snapshot) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'AWAITING_PAYMENT',$10,'THB',$11,$12,$13,$14,$15,$16,$17) RETURNING id::text`, org, cart.BranchID, cart.TerminalID, shift, cart.ID, user, cart.Revision, key, hash, input.Method, cart.Total, input.Received, change, items, quoteData, cart.CustomerID, customerCode).Scan(&id)
+	if err = writeCheck(ctx, authorization, err); err != nil {
+		return Checkout{}, err
+	}
+	if input.Method == "NONE" {
+		_, err = tx.Exec(ctx, "UPDATE pos_checkouts SET status='CONFIRMED',confirmation_key=$3,confirmed_by=$4,confirmed_at=now() WHERE organization_id=$1 AND id=$2", org, id, key, user)
+		if err = writeCheck(ctx, authorization, err); err != nil {
+			return Checkout{}, err
+		}
+	}
+	result, err = checkout(ctx, tx, actor, user, org, id)
+	if err = writeCheck(ctx, authorization, err); err != nil {
+		return result, err
+	}
+	return result, finishAuthorized(ctx, authorization, org, user, "pos.checkout.prepared", id)
+}
+
+func (service *Service) ConfirmPayment(ctx context.Context, user, org, id, key string, input ConfirmationInput) (result Checkout, err error) {
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "pos.checkout")
 	if err != nil {
 		return Checkout{}, dbError(err)
 	}
-	if input.Method == "NONE" {
-		if _, err = tx.Exec(ctx, "UPDATE pos_checkouts SET status='CONFIRMED',confirmation_key=$3,confirmed_by=$4,confirmed_at=now() WHERE organization_id=$1 AND id=$2", org, id, key, user); err != nil {
-			return Checkout{}, dbError(err)
-		}
-	}
-	result, err := checkout(ctx, tx, actor, user, org, id)
-	if err != nil {
-		return result, err
-	}
-	return result, finish(ctx, tx, org, user, "pos.checkout.prepared", id)
-}
-
-func (service *Service) ConfirmPayment(ctx context.Context, user, org, id, key string, input ConfirmationInput) (Checkout, error) {
-	tx, actor, err := service.begin(ctx, user, org, "pos.checkout")
-	if err != nil {
-		return Checkout{}, err
-	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
+	defer func() {
+		if err != nil {
+			result = Checkout{}
+		}
+	}()
 	if !uuidPattern.MatchString(key) || !input.Acknowledged || !text(input.Reference, 200, false) {
 		return Checkout{}, ErrInput
 	}
 	item, err := checkout(ctx, tx, actor, user, org, id)
-	if err != nil {
+	if err = writeCheck(ctx, authorization, err); err != nil {
 		return item, err
 	}
 	if item.CashierID != user || !allowed(actor.Permissions, paymentPermission(item.Method)) {
@@ -228,65 +252,80 @@ func (service *Service) ConfirmPayment(ctx context.Context, user, org, id, key s
 		return item, ErrInput
 	}
 	if item.Status == "AWAITING_PAYMENT" {
-		if err = validateReward(ctx, tx, actor, org, item); err != nil {
+		if err = writeCheck(ctx, authorization, validateReward(ctx, tx, actor, org, item)); err != nil {
 			return item, err
 		}
 	}
 	if item.Status != "AWAITING_PAYMENT" {
 		if item.Status != "COMPLETED" {
-			if err = pricing.CurrentApprover(ctx, tx, org, item.Pricing.ApprovalID); err != nil {
+			if err = writeCheck(ctx, authorization, pricing.CurrentApprover(ctx, tx, org, item.Pricing.ApprovalID)); err != nil {
 				return item, err
 			}
 		}
 		var previous string
 		err = tx.QueryRow(ctx, "SELECT COALESCE(confirmation_key::text,'') FROM pos_checkouts WHERE organization_id=$1 AND id=$2", org, id).Scan(&previous)
-		if err != nil {
+		if err = writeCheck(ctx, authorization, err); err != nil {
 			return item, err
 		}
 		if previous != key || item.Reference != input.Reference || allowed([]string{"CANCELLED", "RESOLVED"}, item.Status) {
 			return item, ErrConflict
 		}
-		return item, nil
+		return privateReadResult(ctx, authorization, item, nil)
 	}
-	if _, err = terminal(ctx, tx, actor, org, item.TerminalID, true); err != nil {
+	_, err = terminal(ctx, tx, actor, org, item.TerminalID, true)
+	if err = writeCheck(ctx, authorization, err); err != nil {
 		return item, err
 	}
-	shift, err := ownShift(ctx, tx, org, item.TerminalID, user)
-	if err != nil || shift != item.ShiftID {
+	shift, problem := ownShift(ctx, tx, org, item.TerminalID, user)
+	if err = writeCheck(ctx, authorization, nil); err != nil {
+		return item, err
+	}
+	if problem != nil || shift != item.ShiftID {
 		return item, ErrConflict
 	}
 	_, err = tx.Exec(ctx, "UPDATE pos_checkouts SET status='CONFIRMED',confirmation_key=$3,confirmed_by=$4,confirmed_at=now(),reference=$5 WHERE organization_id=$1 AND id=$2", org, id, key, user, input.Reference)
-	if err != nil {
-		return item, dbError(err)
+	if err = writeCheck(ctx, authorization, err); err != nil {
+		return item, err
 	}
-	if problem := revalidate(ctx, tx, org, item); problem != nil {
+	problem = revalidate(ctx, tx, org, item)
+	if err = writeCheck(ctx, authorization, nil); err != nil {
+		return item, err
+	}
+	if problem != nil {
 		code := "PRICING_CHANGED"
 		if errors.Is(problem, ErrCustomer) {
 			code = "CUSTOMER_UNAVAILABLE"
 		}
-		if _, err = tx.Exec(ctx, "UPDATE pos_checkouts SET status='RECONCILIATION_REQUIRED',failure_code=$3 WHERE organization_id=$1 AND id=$2", org, id, code); err != nil {
-			return item, dbError(err)
+		_, err = tx.Exec(ctx, "UPDATE pos_checkouts SET status='RECONCILIATION_REQUIRED',failure_code=$3 WHERE organization_id=$1 AND id=$2", org, id, code)
+		if err = writeCheck(ctx, authorization, err); err != nil {
+			return item, err
 		}
 	}
-	result, err := checkout(ctx, tx, actor, user, org, id)
-	if err != nil {
+	result, err = checkout(ctx, tx, actor, user, org, id)
+	if err = writeCheck(ctx, authorization, err); err != nil {
 		return result, err
 	}
-	return result, finish(ctx, tx, org, user, "pos.payment.confirmed", id)
+	return result, finishAuthorized(ctx, authorization, org, user, "pos.payment.confirmed", id)
 }
 
-func (service *Service) EndCheckout(ctx context.Context, user, org, id, action string, input ConfirmationInput) (Checkout, error) {
+func (service *Service) EndCheckout(ctx context.Context, user, org, id, action string, input ConfirmationInput) (result Checkout, err error) {
 	permission := "pos.checkout"
 	if action == "resolve" {
 		permission = "pos.payment.reconcile"
 	}
-	tx, actor, err := service.begin(ctx, user, org, permission)
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, permission)
 	if err != nil {
-		return Checkout{}, err
+		return Checkout{}, dbError(err)
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
+	defer func() {
+		if err != nil {
+			result = Checkout{}
+		}
+	}()
 	item, err := checkout(ctx, tx, actor, user, org, id)
-	if err != nil {
+	if err = writeCheck(ctx, authorization, err); err != nil {
 		return item, err
 	}
 	if action == "cancel" {
@@ -294,7 +333,7 @@ func (service *Service) EndCheckout(ctx context.Context, user, org, id, action s
 			return item, organization.ErrDenied
 		}
 		if item.Status == "CANCELLED" {
-			return item, nil
+			return privateReadResult(ctx, authorization, item, nil)
 		}
 		if item.Status != "AWAITING_PAYMENT" {
 			return item, ErrPending
@@ -305,19 +344,19 @@ func (service *Service) EndCheckout(ctx context.Context, user, org, id, action s
 			return item, ErrInput
 		}
 		if item.Status == "RESOLVED" {
-			return item, nil
+			return privateReadResult(ctx, authorization, item, nil)
 		}
 		if !allowed([]string{"CONFIRMED", "RECONCILIATION_REQUIRED"}, item.Status) {
 			return item, ErrConflict
 		}
 		_, err = tx.Exec(ctx, "UPDATE pos_checkouts SET status='RESOLVED',resolution_note=$3,resolved_by=$4,resolved_at=now() WHERE organization_id=$1 AND id=$2", org, id, input.Note, user)
 	}
-	if err != nil {
-		return item, dbError(err)
+	if err = writeCheck(ctx, authorization, err); err != nil {
+		return item, err
 	}
-	result, err := checkout(ctx, tx, actor, user, org, id)
-	if err != nil {
+	result, err = checkout(ctx, tx, actor, user, org, id)
+	if err = writeCheck(ctx, authorization, err); err != nil {
 		return result, err
 	}
-	return result, finish(ctx, tx, org, user, "pos.checkout."+action, id)
+	return result, finishAuthorized(ctx, authorization, org, user, "pos.checkout."+action, id)
 }

@@ -3,7 +3,10 @@ package catalog
 import (
 	"context"
 	"encoding/json"
+	"errors"
+
 	"github.com/jackc/pgx/v5"
+	"smartpos/api/internal/modules/menurevision"
 	"smartpos/api/internal/modules/organization"
 )
 
@@ -41,7 +44,8 @@ func variants(ctx context.Context, tx pgx.Tx, org, product string) ([]Variant, e
 	}
 	return items, nil
 }
-func saveVariant(ctx context.Context, tx pgx.Tx, org, product, id string, input VariantInput) (Variant, error) {
+func saveVariant(ctx context.Context, authorization *organization.Authorization, org, product, id string, input VariantInput) (Variant, error) {
+	tx := authorization.Tx
 	if err := input.validate(); err != nil {
 		return Variant{}, err
 	}
@@ -65,6 +69,9 @@ func saveVariant(ctx context.Context, tx pgx.Tx, org, product, id string, input 
 		if count >= 100 {
 			return Variant{}, ErrConflict
 		}
+		if err := authorization.Recheck(ctx); err != nil {
+			return Variant{}, err
+		}
 		row = tx.QueryRow(ctx, "INSERT INTO product_variants(organization_id,product_id,sku,name,attributes,unit_id,cost_price,selling_price,status,currency) SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,currency FROM organizations WHERE id=$1 RETURNING "+variantColumns, org, product, input.SKU, input.Name, attributes, input.UnitID, input.CostPrice, input.SellingPrice, input.Status)
 	} else {
 		current, err := readVariant(tx.QueryRow(ctx, "SELECT "+variantColumns+" FROM product_variants WHERE organization_id=$1 AND product_id=$2 AND id=$3", org, product, id))
@@ -83,31 +90,61 @@ func saveVariant(ctx context.Context, tx pgx.Tx, org, product, id string, input 
 				return Variant{}, ErrConflict
 			}
 		}
+		if err := authorization.Recheck(ctx); err != nil {
+			return Variant{}, err
+		}
 		row = tx.QueryRow(ctx, "UPDATE product_variants SET name=$4,attributes=$5,unit_id=$6,cost_price=$7,selling_price=$8,status=$9,revision=revision+1,updated_at=now() WHERE organization_id=$1 AND product_id=$2 AND id=$3 RETURNING "+variantColumns, org, product, id, input.Name, attributes, input.UnitID, input.CostPrice, input.SellingPrice, input.Status)
 	}
 	item, err := readVariant(row)
 	if err != nil {
 		return item, err
 	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Variant{}, err
+	}
 	item.Barcodes, err = barcodes(ctx, tx, org, item.ID)
 	return item, err
 }
+func variantMenuState(ctx context.Context, tx pgx.Tx, item Variant) ([]byte, error) {
+	var registered bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (
+	  SELECT 1 FROM restaurant_menu_items m
+	  JOIN products p ON p.organization_id=m.organization_id AND p.id=m.product_id
+	  JOIN restaurant_menu_categories c ON c.organization_id=p.organization_id AND c.category_id=p.category_id
+	  WHERE m.organization_id=$1 AND m.product_id=$2 AND m.variant_id=$3
+	)`, item.OrganizationID, item.ProductID, item.ID).Scan(&registered); err != nil || !registered {
+		return nil, err
+	}
+	return json.Marshal(struct {
+		VariantID    string `json:"variant_id"`
+		Name         string `json:"name"`
+		UnitID       string `json:"unit_id"`
+		SellingPrice string `json:"selling_price"`
+		Status       string `json:"status"`
+	}{item.ID, item.Name, item.UnitID, item.SellingPrice, item.Status})
+}
+
 func (service *Service) SaveVariant(ctx context.Context, user, org, product, id string, input VariantInput) (Variant, error) {
 	permission := "catalog.update"
 	if id == "" {
 		permission = "catalog.create"
 	}
-	tx, actor, err := service.Organization.Authorized(ctx, user, org, permission)
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, permission)
 	if err != nil {
 		return Variant{}, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
 	if !uuidPattern.MatchString(product) || (id != "" && !uuidPattern.MatchString(id)) {
 		return Variant{}, ErrNotFound
 	}
+	var before []byte
 	if id != "" {
 		current, err := readVariant(tx.QueryRow(ctx, "SELECT "+variantColumns+" FROM product_variants WHERE organization_id=$1 AND product_id=$2 AND id=$3", org, product, id))
 		if err != nil {
+			return privateReadResult(ctx, authorization, Variant{}, err)
+		}
+		if err = authorization.Recheck(ctx); err != nil {
 			return Variant{}, err
 		}
 		if input.Status == "ARCHIVED" || current.Status == "ARCHIVED" {
@@ -121,11 +158,31 @@ func (service *Service) SaveVariant(ctx context.Context, user, org, product, id 
 				return Variant{}, organization.ErrDenied
 			}
 		}
+		before, err = variantMenuState(ctx, tx, current)
+		if err != nil {
+			return privateReadResult(ctx, authorization, Variant{}, err)
+		}
 	}
-	item, err := saveVariant(ctx, tx, org, product, id, input)
+	item, err := saveVariant(ctx, authorization, org, product, id, input)
 	if err != nil {
-		return item, err
+		return privateReadResult(ctx, authorization, Variant{}, err)
 	}
-	err = finish(ctx, tx, org, user, "catalog.variant.saved", item.ID)
-	return item, err
+	if before != nil {
+		after, err := variantMenuState(ctx, tx, item)
+		if err != nil {
+			return privateReadResult(ctx, authorization, Variant{}, err)
+		}
+		if err = authorization.Recheck(ctx); err != nil {
+			return Variant{}, err
+		}
+		if err = menurevision.AppendChange(ctx, tx, org, user, before, after); errors.Is(err, menurevision.ErrExhausted) {
+			return Variant{}, ErrConflict
+		} else if err != nil {
+			return privateReadResult(ctx, authorization, Variant{}, err)
+		}
+	}
+	if err = finish(ctx, authorization, org, user, "catalog.variant.saved", item.ID); err != nil {
+		return Variant{}, err
+	}
+	return item, nil
 }

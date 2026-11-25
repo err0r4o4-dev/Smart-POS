@@ -12,35 +12,45 @@ import (
 	"smartpos/api/internal/modules/organization"
 )
 
-func (service *Service) beginOrganizationSetup(ctx context.Context, user, org string) (pgx.Tx, error) {
+func (service *Service) beginOrganizationSetup(ctx context.Context, user, org string) (*organization.Authorization, error) {
 	if service.Organization == nil || service.Organization.Pool == nil {
 		return nil, ErrSetupUnavailable
 	}
-	tx, _, err := service.begin(ctx, user, org, "organization.update")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "organization.update")
 	if err != nil {
 		return nil, err
 	}
-	if err = organization.RequireVerified(ctx, tx, user); err == nil {
-		var businessType string
-		err = tx.QueryRow(ctx, "SELECT business_type FROM organizations WHERE id=$1", org).Scan(&businessType)
-		if err == nil && businessType != "RESTAURANT" {
-			err = ErrConflict
-		}
+	tx := authorization.Tx
+	var businessType string
+	err = tx.QueryRow(ctx, "SELECT business_type FROM organizations WHERE id=$1", org).Scan(&businessType)
+	if err == nil && businessType != "RESTAURANT" {
+		err = ErrConflict
+	}
+	if err == nil {
+		err = authorization.Recheck(ctx)
 	}
 	if err != nil {
 		tx.Rollback(ctx)
 		return nil, dbError(err)
 	}
-	return tx, nil
+	return authorization, nil
 }
 
 func (service *Service) organizationSetup(ctx context.Context, user, org string) (SetupState, error) {
-	tx, err := service.beginOrganizationSetup(ctx, user, org)
+	authorization, err := service.beginOrganizationSetup(ctx, user, org)
 	if err != nil {
 		return SetupState{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
-	return readOrganizationSetup(ctx, tx, org)
+	state, err := readOrganizationSetup(ctx, tx, org)
+	if err != nil {
+		return SetupState{}, err
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return SetupState{}, err
+	}
+	return state, nil
 }
 
 func readOrganizationSetup(ctx context.Context, tx pgx.Tx, org string) (SetupState, error) {
@@ -51,15 +61,16 @@ func readOrganizationSetup(ctx context.Context, tx pgx.Tx, org string) (SetupSta
 		return state, dbError(err)
 	}
 	var profileSaved, servicesSaved, tablesSaved, paymentsSaved, ordersSaved bool
-	var cash, bank, tableQR, orderQR, kitchen, autoConfirm bool
+	var cash, bank, tableQR, orderQR, kitchen, autoConfirm, pickup bool
+	state.Services.Pickup = &pickup
 	var location []byte
 	vat, serviceCharge := "0.00", "0.00"
 	err = tx.QueryRow(ctx, `SELECT profile_saved,services_saved,tables_saved,payments_saved,orders_saved,
-	 dine_in,takeaway,delivery,cash_enabled,bank_transfer_enabled,table_qr_enabled,
+	 dine_in,takeaway,delivery,pickup,cash_enabled,bank_transfer_enabled,table_qr_enabled,
 	 qr_ordering_enabled,kitchen_enabled,auto_confirm_orders,vat_rate::text,service_charge_rate::text,
 	 location,completed_at IS NOT NULL FROM restaurant_profiles WHERE organization_id=$1`, org).Scan(
 		&profileSaved, &servicesSaved, &tablesSaved, &paymentsSaved, &ordersSaved,
-		&state.Services.DineIn, &state.Services.Takeaway, &state.Services.Delivery, &cash, &bank, &tableQR,
+		&state.Services.DineIn, &state.Services.Takeaway, &state.Services.Delivery, &pickup, &cash, &bank, &tableQR,
 		&orderQR, &kitchen, &autoConfirm, &vat, &serviceCharge, &location, &state.Completed)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return state, dbError(err)
@@ -136,7 +147,8 @@ func readOrganizationSetup(ctx context.Context, tx pgx.Tx, org string) (SetupSta
 	return state, nil
 }
 
-func claimOrganizationSetup(ctx context.Context, tx pgx.Tx, org, user, operation, key string, input any) ([]byte, error) {
+func claimOrganizationSetup(ctx context.Context, authorization *organization.Authorization, org, user, operation, key string, input any) ([]byte, error) {
+	tx := authorization.Tx
 	encoded, err := json.Marshal(input)
 	if err != nil {
 		return nil, ErrInput
@@ -147,6 +159,11 @@ func claimOrganizationSetup(ctx context.Context, tx pgx.Tx, org, user, operation
 	var previous []byte
 	err = tx.QueryRow(ctx, `SELECT fingerprint,result FROM restaurant_setup_commands
 	 WHERE organization_id=$1 AND actor_id=$2 AND operation=$3 AND idempotency_key=$4`, org, user, operation, key).Scan(&savedFingerprint, &previous)
+	if err == nil || errors.Is(err, pgx.ErrNoRows) {
+		if failure := authorization.Recheck(ctx); failure != nil {
+			return nil, failure
+		}
+	}
 	if err == nil {
 		if fingerprint != savedFingerprint || len(previous) == 0 {
 			return nil, ErrConflict
@@ -165,12 +182,13 @@ func (service *Service) saveOrganizationSetup(ctx context.Context, user, org, ke
 	if err := validateSetupIdempotencyKey(key); err != nil {
 		return SetupState{}, err
 	}
-	tx, err := service.beginOrganizationSetup(ctx, user, org)
+	authorization, err := service.beginOrganizationSetup(ctx, user, org)
 	if err != nil {
 		return SetupState{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
-	previous, err := claimOrganizationSetup(ctx, tx, org, user, operation, key, input)
+	previous, err := claimOrganizationSetup(ctx, authorization, org, user, operation, key, input)
 	if err != nil {
 		return SetupState{}, err
 	}
@@ -179,7 +197,13 @@ func (service *Service) saveOrganizationSetup(ctx context.Context, user, org, ke
 		if err = json.Unmarshal(previous, &state); err != nil {
 			return SetupState{}, ErrConflict
 		}
+		if err = authorization.Recheck(ctx); err != nil {
+			return SetupState{}, err
+		}
 		return state, nil
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return SetupState{}, err
 	}
 	if _, err = tx.Exec(ctx, `INSERT INTO restaurant_profiles(organization_id,created_by,updated_by)
 	 VALUES($1,$2,$2) ON CONFLICT(organization_id) DO NOTHING`, org, user); err != nil {
@@ -187,18 +211,26 @@ func (service *Service) saveOrganizationSetup(ctx context.Context, user, org, ke
 	}
 	state, err := readOrganizationSetup(ctx, tx, org)
 	if err != nil {
-		return state, err
+		return SetupState{}, err
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return SetupState{}, err
 	}
 	if state.Completed && operation != "complete" {
-		return state, ErrConflict
+		return SetupState{}, ErrConflict
 	}
 	var tokens []IssuedTableQRToken
 	if !state.Completed {
+		beforeMenu := state.Menu
+		beforeModes := state.Services
 		switch operation {
 		case "profile":
 			profile := input.(SetupProfileInput)
 			_, err = tx.Exec(ctx, `UPDATE organizations SET name=$2,code=COALESCE(NULLIF($3,''),code),business_type=$4,
 			 contact_email=$5,contact_phone=$6,address=$7,updated_at=now() WHERE id=$1`, org, profile.Name, profile.Code, profile.BusinessType, profile.ContactEmail, profile.ContactPhone, profile.Address)
+			if err == nil {
+				err = authorization.Recheck(ctx)
+			}
 			if err == nil {
 				var location any
 				if profile.Location != nil {
@@ -210,17 +242,15 @@ func (service *Service) saveOrganizationSetup(ctx context.Context, user, org, ke
 					 WHERE organization_id=$1`, org, location, profile.Address)
 				}
 			}
-			if err == nil && profile.ServiceModes.any() {
-				modes := profile.ServiceModes
-				_, err = tx.Exec(ctx, "UPDATE restaurant_profiles SET services_saved=true,dine_in=$2,takeaway=$3,delivery=$4 WHERE organization_id=$1", org, modes.DineIn, modes.Takeaway, modes.Delivery)
+			if err == nil && (profile.ServiceModes.any() || profile.ServiceModes.Pickup != nil) {
+				err = saveOrganizationServiceModes(ctx, authorization, org, profile.ServiceModes, state.Services)
 			}
 		case "services":
-			modes := input.(SetupServicesInput).ServiceModes
-			_, err = tx.Exec(ctx, "UPDATE restaurant_profiles SET services_saved=true,dine_in=$2,takeaway=$3,delivery=$4 WHERE organization_id=$1", org, modes.DineIn, modes.Takeaway, modes.Delivery)
+			err = saveOrganizationServiceModes(ctx, authorization, org, input.(SetupServicesInput).ServiceModes, state.Services)
 		case "tables":
-			tokens, err = saveOrganizationTables(ctx, tx, org, user, input.(SetupTablesInput))
+			tokens, err = saveOrganizationTables(ctx, authorization, org, user, input.(SetupTablesInput))
 		case "menu":
-			err = saveOrganizationMenu(ctx, tx, org, user, input.(SetupMenuInput))
+			err = saveOrganizationMenu(ctx, authorization, org, user, input.(SetupMenuInput))
 		case "payments":
 			payments := input.(SetupPaymentsInput)
 			_, err = tx.Exec(ctx, "UPDATE restaurant_profiles SET payments_saved=true,cash_enabled=$2,bank_transfer_enabled=$3 WHERE organization_id=$1", org, payments.Cash, payments.BankTransfer)
@@ -230,21 +260,46 @@ func (service *Service) saveOrganizationSetup(ctx context.Context, user, org, ke
 			 auto_confirm_orders=$4,vat_rate=$5::numeric,service_charge_rate=$6::numeric WHERE organization_id=$1`, org, orders.QROrdering, orders.KitchenQueue, orders.AutoConfirm, orders.VATRate, orders.ServiceChargeRate)
 		case "complete":
 			if !state.Ready {
-				return state, ErrConflict
+				return SetupState{}, ErrConflict
 			}
 			_, err = tx.Exec(ctx, "UPDATE restaurant_profiles SET completed_at=now(),trial_ends_at=now()+interval '30 days' WHERE organization_id=$1 AND completed_at IS NULL", org)
 		default:
-			return state, ErrInput
+			return SetupState{}, ErrInput
 		}
 		if err != nil {
 			return SetupState{}, dbError(err)
+		}
+		if err = authorization.Recheck(ctx); err != nil {
+			return SetupState{}, err
 		}
 		if _, err = tx.Exec(ctx, "UPDATE restaurant_profiles SET revision=revision+1,updated_by=$2,updated_at=now() WHERE organization_id=$1", org, user); err != nil {
 			return SetupState{}, dbError(err)
 		}
 		state, err = readOrganizationSetup(ctx, tx, org)
 		if err != nil {
-			return state, err
+			return SetupState{}, err
+		}
+		if err = authorization.Recheck(ctx); err != nil {
+			return SetupState{}, err
+		}
+		if operation == "menu" {
+			if err = appendSetupMenuRevision(ctx, tx, org, user, beforeMenu, state.Menu); err != nil {
+				return SetupState{}, err
+			}
+			if err = authorization.Recheck(ctx); err != nil {
+				return SetupState{}, err
+			}
+		}
+		if operation == "profile" || operation == "services" {
+			type snapshot struct {
+				Modes ServiceModes `json:"service_modes"`
+			}
+			if err = appendSetupMenuRevision(ctx, tx, org, user, snapshot{beforeModes}, snapshot{state.Services}); err != nil {
+				return SetupState{}, err
+			}
+			if err = authorization.Recheck(ctx); err != nil {
+				return SetupState{}, err
+			}
 		}
 		state.IssuedTableQRTokens = tokens
 		if err = organization.RecordAudit(ctx, tx, org, user, "RESTAURANT_SETUP_"+strings.ToUpper(operation), org); err != nil {
@@ -255,6 +310,9 @@ func (service *Service) saveOrganizationSetup(ctx context.Context, user, org, ke
 	if err != nil {
 		return SetupState{}, err
 	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return SetupState{}, err
+	}
 	result, err := tx.Exec(ctx, `UPDATE restaurant_setup_commands SET result=$5
 	 WHERE organization_id=$1 AND actor_id=$2 AND operation=$3 AND idempotency_key=$4 AND result IS NULL`, org, user, operation, key, encoded)
 	if err != nil {
@@ -263,22 +321,70 @@ func (service *Service) saveOrganizationSetup(ctx context.Context, user, org, ke
 	if result.RowsAffected() != 1 {
 		return SetupState{}, ErrConflict
 	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return SetupState{}, err
+	}
 	if err = tx.Commit(ctx); err != nil {
 		return SetupState{}, dbError(err)
 	}
 	return state, nil
 }
 
-func saveOrganizationTables(ctx context.Context, tx pgx.Tx, org, user string, input SetupTablesInput) ([]IssuedTableQRToken, error) {
+func saveOrganizationServiceModes(ctx context.Context, authorization *organization.Authorization, org string, modes, current ServiceModes) error {
+	// Resolve omission only after fingerprinting and replay, under the organization lock.
+	if modes.Pickup == nil {
+		modes.Pickup = current.Pickup
+	}
+	if !modes.any() {
+		return ErrInput
+	}
+	if err := authorization.Recheck(ctx); err != nil {
+		return err
+	}
+	_, err := authorization.Tx.Exec(ctx, "UPDATE restaurant_profiles SET services_saved=true,dine_in=$2,takeaway=$3,delivery=$4,pickup=$5 WHERE organization_id=$1", org, modes.DineIn, modes.Takeaway, modes.Delivery, modes.Pickup)
+	return dbError(err)
+}
+
+func saveOrganizationTables(ctx context.Context, authorization *organization.Authorization, org, user string, input SetupTablesInput) ([]IssuedTableQRToken, error) {
+	tx := authorization.Tx
+	if err := authorization.Recheck(ctx); err != nil {
+		return nil, err
+	}
+	preserveQR := map[string]bool{}
+	if input.QREnabled && !input.GenerateQR {
+		rows, err := tx.Query(ctx, `SELECT t.code FROM restaurant_dining_tables t
+			JOIN restaurant_profiles p ON p.organization_id=t.organization_id
+			WHERE t.organization_id=$1 AND t.status='ACTIVE' AND p.table_qr_enabled`, org)
+		if err != nil {
+			return nil, dbError(err)
+		}
+		codes, err := pgx.CollectRows(rows, pgx.RowTo[string])
+		if err != nil {
+			return nil, dbError(err)
+		}
+		for _, code := range codes {
+			preserveQR[code] = true
+		}
+		if err = authorization.Recheck(ctx); err != nil {
+			return nil, err
+		}
+	}
 	if _, err := tx.Exec(ctx, "UPDATE restaurant_dining_tables SET status='INACTIVE',updated_by=$2,updated_at=now() WHERE organization_id=$1 AND status='ACTIVE'", org, user); err != nil {
 		return nil, dbError(err)
+	}
+	if err := authorization.Recheck(ctx); err != nil {
+		return nil, err
 	}
 	if _, err := tx.Exec(ctx, "UPDATE restaurant_dining_zones SET status='INACTIVE',updated_by=$2,updated_at=now() WHERE organization_id=$1 AND status='ACTIVE'", org, user); err != nil {
 		return nil, dbError(err)
 	}
 	tokens := []IssuedTableQRToken{}
-	issueQR := input.GenerateQR || input.QREnabled
+	rotated := []string{}
+	enableQR := input.GenerateQR || input.QREnabled
 	for _, zone := range input.Zones {
+		if err := authorization.Recheck(ctx); err != nil {
+			return nil, err
+		}
 		var zoneID string
 		if err := tx.QueryRow(ctx, `INSERT INTO restaurant_dining_zones(organization_id,code,name,created_by,updated_by)
 		 VALUES($1,$2,$3,$4,$4) ON CONFLICT(organization_id,code) DO UPDATE SET name=$3,status='ACTIVE',updated_by=$4,updated_at=now() RETURNING id::text`, org, zone.Code, zone.Name, user).Scan(&zoneID); err != nil {
@@ -288,11 +394,15 @@ func saveOrganizationTables(ctx context.Context, tx pgx.Tx, org, user string, in
 			if table.ZoneCode != zone.Code {
 				continue
 			}
+			if err := authorization.Recheck(ctx); err != nil {
+				return nil, err
+			}
 			token, hash, err := newToken()
 			if err != nil {
 				return nil, err
 			}
 			var tableID string
+			issueQR := enableQR && !preserveQR[table.Code]
 			err = tx.QueryRow(ctx, `INSERT INTO restaurant_dining_tables(organization_id,zone_id,code,name,seats,qr_token_hash,created_by,updated_by)
 			 VALUES($1,$2,$3,$4,$5,$6,$7,$7) ON CONFLICT(organization_id,code) DO UPDATE SET zone_id=$2,name=$4,seats=$5,status='ACTIVE',
 			 qr_token_hash=CASE WHEN $8 THEN excluded.qr_token_hash ELSE restaurant_dining_tables.qr_token_hash END,
@@ -302,9 +412,21 @@ func saveOrganizationTables(ctx context.Context, tx pgx.Tx, org, user string, in
 			}
 			if issueQR {
 				tokens = append(tokens, IssuedTableQRToken{TableID: tableID, Code: table.Code, QRToken: token})
+				rotated = append(rotated, tableID)
 			}
 		}
 	}
-	_, err := tx.Exec(ctx, "UPDATE restaurant_profiles SET tables_saved=true,table_qr_enabled=$2 WHERE organization_id=$1", org, issueQR)
+	if err := authorization.Recheck(ctx); err != nil {
+		return nil, err
+	}
+	// Closing a table, disabling QR or rotating a table's QR ends its open
+	// Dine-in sessions in the same transaction, under the organization lock.
+	if err := endChangedTableSessions(ctx, tx, org, enableQR, rotated); err != nil {
+		return nil, err
+	}
+	if err := authorization.Recheck(ctx); err != nil {
+		return nil, err
+	}
+	_, err := tx.Exec(ctx, "UPDATE restaurant_profiles SET tables_saved=true,table_qr_enabled=$2 WHERE organization_id=$1", org, enableQR)
 	return tokens, dbError(err)
 }

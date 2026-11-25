@@ -47,16 +47,18 @@ func nullable(value string) any {
 	}
 	return value
 }
-func (service *Service) List(ctx context.Context, user, org, kind string, input Filter) (json.RawMessage, error) {
+func (service *Service) List(ctx context.Context, user, org, kind string, input Filter) (value json.RawMessage, err error) {
 	permission := "returns.read"
 	if kind == "refunds" {
 		permission = "refunds.read"
 	}
-	tx, actor, err := service.Organization.Authorized(ctx, user, org, permission)
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, permission)
 	if err != nil {
 		return nil, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
+	defer finishRead(ctx, authorization, &value, &err)
 	if input.Branch != "" {
 		if err = inventory.BranchScope(ctx, tx, actor, org, input.Branch, false); err != nil {
 			return nil, dbError(err)
@@ -72,16 +74,18 @@ func (service *Service) List(ctx context.Context, user, org, kind string, input 
 	}
 	return raw(ctx, tx, query, org, nullable(input.Branch), branches, nullable(input.Sale), input.Status, input.Search, actor.Role != "OWNER", user, input.PageSize, (input.Page-1)*input.PageSize, input.Page)
 }
-func (service *Service) Get(ctx context.Context, user, org, kind, id string) (json.RawMessage, error) {
+func (service *Service) Get(ctx context.Context, user, org, kind, id string) (value json.RawMessage, err error) {
 	permission := "returns.read"
 	if kind == "refunds" {
 		permission = "refunds.read"
 	}
-	tx, actor, err := service.Organization.Authorized(ctx, user, org, permission)
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, permission)
 	if err != nil {
 		return nil, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
+	defer finishRead(ctx, authorization, &value, &err)
 	if kind == "sale" {
 		if _, err = saleScope(ctx, tx, actor, user, org, id); err != nil {
 			return nil, err

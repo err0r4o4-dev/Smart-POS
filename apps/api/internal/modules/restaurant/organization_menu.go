@@ -2,10 +2,30 @@ package restaurant
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"github.com/jackc/pgx/v5"
+	"smartpos/api/internal/modules/menurevision"
+	"smartpos/api/internal/modules/organization"
 )
+
+// The caller holds the organization lock and keeps the setup command's replay key separate.
+func appendSetupMenuRevision(ctx context.Context, tx pgx.Tx, org, user string, before, after any) error {
+	oldJSON, err := json.Marshal(before)
+	if err != nil {
+		return err
+	}
+	newJSON, err := json.Marshal(after)
+	if err != nil {
+		return err
+	}
+	err = menurevision.AppendChange(ctx, tx, org, user, oldJSON, newJSON)
+	if errors.Is(err, menurevision.ErrExhausted) {
+		return ErrConflict
+	}
+	return dbError(err)
+}
 
 func readOrganizationMenu(ctx context.Context, tx pgx.Tx, org string, state *SetupState) (bool, int, error) {
 	var saved bool
@@ -61,14 +81,28 @@ func readOrganizationMenu(ctx context.Context, tx pgx.Tx, org string, state *Set
 	return saved, len(items), nil
 }
 
-func saveOrganizationMenu(ctx context.Context, tx pgx.Tx, org, user string, input SetupMenuInput) error {
+func saveOrganizationMenu(ctx context.Context, authorization *organization.Authorization, org, user string, input SetupMenuInput) error {
+	tx := authorization.Tx
 	var currency string
 	if err := tx.QueryRow(ctx, "SELECT currency FROM organizations WHERE id=$1", org).Scan(&currency); err != nil {
 		return dbError(err)
 	}
-	unit, err := setupMenuUnit(ctx, tx, org)
+	var unit string
+	err := tx.QueryRow(ctx, setupMenuUnitLookupSQL, org, setupDefaultUnitCode).Scan(&unit)
+	if errors.Is(err, pgx.ErrNoRows) {
+		if err = authorization.Recheck(ctx); err != nil {
+			return err
+		}
+		if _, err = tx.Exec(ctx, setupDefaultUnitInsertSQL, org, setupDefaultUnitCode, setupDefaultUnitName); err != nil {
+			return dbError(err)
+		}
+		err = tx.QueryRow(ctx, setupMenuUnitLookupSQL, org, setupDefaultUnitCode).Scan(&unit)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrConflict
+		}
+	}
 	if err != nil {
-		return err
+		return dbError(err)
 	}
 	categoryIDs := map[string]string{}
 	for _, category := range input.Categories {
@@ -88,6 +122,9 @@ func saveOrganizationMenu(ctx context.Context, tx pgx.Tx, org, user string, inpu
 					return ErrConflict
 				}
 				if err == nil {
+					err = authorization.Recheck(ctx)
+				}
+				if err == nil {
 					_, err = tx.Exec(ctx, "UPDATE categories SET name=$3,revision=revision+1,updated_at=now() WHERE organization_id=$1 AND id=$2", org, id, category.Name)
 				}
 			}
@@ -96,7 +133,13 @@ func saveOrganizationMenu(ctx context.Context, tx pgx.Tx, org, user string, inpu
 			 JOIN categories category ON category.organization_id=menu.organization_id AND category.id=menu.category_id
 			 WHERE menu.organization_id=$1 AND lower(btrim(category.name))=lower($2) AND category.status='ACTIVE'`, org, category.Name).Scan(&id)
 			if errors.Is(err, pgx.ErrNoRows) {
+				if err = authorization.Recheck(ctx); err != nil {
+					return err
+				}
 				err = tx.QueryRow(ctx, "INSERT INTO categories(organization_id,name,status) VALUES($1,$2,'ACTIVE') RETURNING id::text", org, category.Name).Scan(&id)
+				if err == nil {
+					err = authorization.Recheck(ctx)
+				}
 				if err == nil {
 					_, err = tx.Exec(ctx, "INSERT INTO restaurant_menu_categories(organization_id,category_id) VALUES($1,$2)", org, id)
 				}
@@ -129,10 +172,19 @@ func saveOrganizationMenu(ctx context.Context, tx pgx.Tx, org, user string, inpu
 			err = tx.QueryRow(ctx, "SELECT id::text,product_id::text FROM product_variants WHERE organization_id=$1 AND sku=$2", org, sku).Scan(&variant, &product)
 		}
 		if errors.Is(err, pgx.ErrNoRows) {
+			if err = authorization.Recheck(ctx); err != nil {
+				return err
+			}
 			err = tx.QueryRow(ctx, "INSERT INTO products(organization_id,name,category_id,status,created_by,updated_by) VALUES($1,$2,$3,'ACTIVE',$4,$4) RETURNING id::text", org, item.Name, category, user).Scan(&product)
+			if err == nil {
+				err = authorization.Recheck(ctx)
+			}
 			if err == nil {
 				err = tx.QueryRow(ctx, `INSERT INTO product_variants(organization_id,product_id,sku,name,unit_id,cost_price,selling_price,currency,status)
 				 VALUES($1,$2,$3,$4,$5,0,$6::numeric,$7,'ACTIVE') RETURNING id::text`, org, product, sku, item.Name, unit, item.Price, currency).Scan(&variant)
+			}
+			if err == nil {
+				err = authorization.Recheck(ctx)
 			}
 			if err == nil {
 				_, err = tx.Exec(ctx, "INSERT INTO restaurant_menu_items(organization_id,product_id,variant_id) VALUES($1,$2,$3)", org, product, variant)
@@ -150,7 +202,13 @@ func saveOrganizationMenu(ctx context.Context, tx pgx.Tx, org, user string, inpu
 				return ErrConflict
 			}
 			if err == nil {
+				err = authorization.Recheck(ctx)
+			}
+			if err == nil {
 				_, err = tx.Exec(ctx, "UPDATE products SET name=$3,category_id=$4,revision=revision+1,updated_by=$5,updated_at=now() WHERE organization_id=$1 AND id=$2", org, product, item.Name, category, user)
+			}
+			if err == nil {
+				err = authorization.Recheck(ctx)
 			}
 			if err == nil {
 				_, err = tx.Exec(ctx, "UPDATE product_variants SET name=$3,selling_price=$4::numeric,revision=revision+1,updated_at=now() WHERE organization_id=$1 AND id=$2", org, variant, item.Name, item.Price)
@@ -163,6 +221,9 @@ func saveOrganizationMenu(ctx context.Context, tx pgx.Tx, org, user string, inpu
 			return ErrInput
 		}
 		seen[variant] = true
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return err
 	}
 	_, err = tx.Exec(ctx, "UPDATE restaurant_profiles SET menu_saved=true WHERE organization_id=$1", org)
 	return dbError(err)

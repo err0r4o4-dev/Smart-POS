@@ -105,16 +105,19 @@ func products(ctx context.Context, tx pgx.Tx, org string, shop Settings, search 
 }
 func (service *Service) Products(ctx context.Context, user, org, slug, search string, page int) (Page[Product], error) {
 	var tx pgx.Tx
-	var actor organization.Member
+	var authorization *organization.Authorization
 	var err error
 	public := slug != ""
 	if public {
 		tx, org, err = service.public(ctx, slug, false)
 	} else {
-		tx, actor, err = service.authorized(ctx, user, org, "storefront.manage")
+		authorization, err = service.Organization.AuthorizeMFA(ctx, user, org, "storefront.manage")
+		if err == nil {
+			tx = authorization.Tx
+		}
 	}
 	if err != nil {
-		return Page[Product]{}, err
+		return Page[Product]{}, dbError(err)
 	}
 	defer tx.Rollback(ctx)
 	shop, err := settings(ctx, tx, org)
@@ -124,6 +127,12 @@ func (service *Service) Products(ctx context.Context, user, org, slug, search st
 	if public && !shop.Published {
 		return Page[Product]{}, ErrNotFound
 	}
+	if !public {
+		if err = authorization.Recheck(ctx); err != nil {
+			return Page[Product]{}, err
+		}
+	}
+	var result Page[Product]
 	if shop.TerminalID == "" {
 		if public {
 			return Page[Product]{}, ErrNotFound
@@ -135,21 +144,33 @@ func (service *Service) Products(ctx context.Context, user, org, slug, search st
 		if source != "RESTAURANT" {
 			return Page[Product]{}, ErrConflict
 		}
-		if err = organization.RequireVerified(ctx, tx, user); err != nil {
+		if err = authorization.Recheck(ctx); err != nil {
 			return Page[Product]{}, err
 		}
-		return organizationProducts(ctx, tx, org, strings.TrimSpace(search), page)
+		result, err = organizationProducts(ctx, tx, org, strings.TrimSpace(search), page)
+	} else {
+		if !public && !branchAllowed(authorization.Actor, shop.BranchID) {
+			return Page[Product]{}, organization.ErrDenied
+		}
+		result, err = products(ctx, tx, org, shop, strings.TrimSpace(search), page, public)
 	}
-	if !public && !branchAllowed(actor, shop.BranchID) {
-		return Page[Product]{}, organization.ErrDenied
+	if public {
+		return result, err
 	}
-	return products(ctx, tx, org, shop, strings.TrimSpace(search), page, public)
+	if err != nil {
+		return Page[Product]{}, err
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Page[Product]{}, err
+	}
+	return result, nil
 }
 func (service *Service) Publish(ctx context.Context, user, org, id string, input PublishInput) (Product, error) {
-	tx, actor, err := service.authorized(ctx, user, org, "storefront.manage")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "storefront.manage")
 	if err != nil {
-		return Product{}, err
+		return Product{}, dbError(err)
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
 	if !uuidPattern.MatchString(id) {
 		return Product{}, ErrInput
@@ -169,23 +190,38 @@ func (service *Service) Publish(ctx context.Context, user, org, id string, input
 	}
 	value, err := product(ctx, tx, org, shop, id)
 	if err != nil {
-		return value, err
+		return Product{}, err
 	}
 	if input.Published && !value.Saleable {
-		return value, ErrConflict
+		return Product{}, ErrConflict
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Product{}, err
 	}
 	if _, err = tx.Exec(ctx, `INSERT INTO storefront_products(organization_id,variant_id,published,is_sold_out) VALUES($1,$2,$3,$4) ON CONFLICT(organization_id,variant_id) DO UPDATE SET published=excluded.published,is_sold_out=excluded.is_sold_out`, org, id, input.Published, input.IsSoldOut); err != nil {
-		return value, dbError(err)
+		return Product{}, dbError(err)
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Product{}, err
 	}
 	if _, err = tx.Exec(ctx, "UPDATE storefronts SET revision=revision+1,updated_at=now() WHERE organization_id=$1", org); err != nil {
-		return value, err
+		return Product{}, err
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Product{}, err
 	}
 	if err = organization.RecordAudit(ctx, tx, org, user, "storefront.product.updated", id); err != nil {
-		return value, err
+		return Product{}, err
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Product{}, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return Product{}, dbError(err)
 	}
 	value.Published = input.Published
 	value.IsSoldOut = input.IsSoldOut
-	return value, dbError(tx.Commit(ctx))
+	return value, nil
 }
 func quote(ctx context.Context, tx pgx.Tx, org string, shop Settings, items []ItemInput, modes ...string) (Quote, error) {
 	mode := "PICKUP"

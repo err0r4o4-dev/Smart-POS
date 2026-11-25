@@ -36,12 +36,18 @@ func onlineOrderLink(ctx context.Context, tx pgx.Tx, org, cart string) (*OnlineO
 	}
 	return &result, dbError(err)
 }
-func (service *Service) ImportOnlineOrder(ctx context.Context, user, org, id string, input OnlineOrderInput) (Cart, error) {
-	tx, actor, err := service.begin(ctx, user, org, "online_orders.manage")
+func (service *Service) ImportOnlineOrder(ctx context.Context, user, org, id string, input OnlineOrderInput) (result Cart, err error) {
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "online_orders.manage")
 	if err != nil {
-		return Cart{}, err
+		return Cart{}, dbError(err)
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
+	defer func() {
+		if err != nil {
+			result = Cart{}
+		}
+	}()
 	if !allowed(actor.Permissions, "pos.cart.manage") || !allowed(actor.Permissions, "pos.checkout") {
 		return Cart{}, organization.ErrDenied
 	}
@@ -53,109 +59,119 @@ func (service *Service) ImportOnlineOrder(ctx context.Context, user, org, id str
 	var expires time.Time
 	var cartID *string
 	err = tx.QueryRow(ctx, "SELECT status,branch_id::text,terminal_id::text,stock_location_id::text,revision,expires_at,cart_id::text,stock_policy FROM online_orders WHERE organization_id=$1 AND id=$2 FOR UPDATE", org, id).Scan(&status, &branch, &terminalID, &location, &revision, &expires, &cartID, &policy)
-	if err != nil {
-		return Cart{}, dbError(err)
+	if err = writeCheck(ctx, authorization, err); err != nil {
+		return Cart{}, err
 	}
-	if err = scope(ctx, tx, actor, org, branch, true); err != nil {
+	if err = writeCheck(ctx, authorization, scope(ctx, tx, actor, org, branch, true)); err != nil {
 		return Cart{}, err
 	}
 	if status != "READY" {
 		return Cart{}, ErrConflict
 	}
 	var paymentBacked bool
-	if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM online_payment_attempts WHERE organization_id=$1 AND order_id=$2)", org, id).Scan(&paymentBacked); err != nil {
+	err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM online_payment_attempts WHERE organization_id=$1 AND order_id=$2)", org, id).Scan(&paymentBacked)
+	if err = writeCheck(ctx, authorization, err); err != nil {
 		return Cart{}, err
 	}
 	if paymentBacked {
 		return Cart{}, ErrConflict
 	}
 	value, err := terminal(ctx, tx, actor, org, terminalID, true)
-	if err != nil {
+	if err = writeCheck(ctx, authorization, err); err != nil {
 		return Cart{}, err
 	}
 	if value.BranchID != branch || value.StockLocationID != location {
 		return Cart{}, ErrConflict
 	}
-	if _, err = ownShift(ctx, tx, org, value.ID, user); err != nil {
+	_, err = ownShift(ctx, tx, org, value.ID, user)
+	if err = writeCheck(ctx, authorization, err); err != nil {
 		return Cart{}, err
 	}
 	if cartID != nil {
 		current, err := cartHeader(ctx, tx, actor, user, org, *cartID)
-		if err != nil {
+		if err = writeCheck(ctx, authorization, err); err != nil {
 			return current, err
 		}
 		if current.Status == "HELD" {
-			if err = cartUnlocked(ctx, tx, org, *cartID); err != nil {
+			if err = writeCheck(ctx, authorization, cartUnlocked(ctx, tx, org, *cartID)); err != nil {
 				return current, err
 			}
-			if _, err = tx.Exec(ctx, "UPDATE pos_carts SET status='ACTIVE',revision=revision+1,updated_at=now() WHERE organization_id=$1 AND id=$2", org, *cartID); err != nil {
+			_, err = tx.Exec(ctx, "UPDATE pos_carts SET status='ACTIVE',revision=revision+1,updated_at=now() WHERE organization_id=$1 AND id=$2", org, *cartID)
+			if err = writeCheck(ctx, authorization, err); err != nil {
 				return current, err
 			}
-			result, err := readCart(ctx, tx, actor, user, org, *cartID)
-			if err != nil {
+			result, err = readCart(ctx, tx, actor, user, org, *cartID)
+			if err = writeCheck(ctx, authorization, err); err != nil {
 				return result, err
 			}
-			return result, finish(ctx, tx, org, user, "online_order.pos_cart.resumed", id)
+			return result, finishAuthorized(ctx, authorization, org, user, "online_order.pos_cart.resumed", id)
 		}
 		if current.Status != "ACTIVE" {
 			return current, ErrConflict
 		}
-		return readCart(ctx, tx, actor, user, org, *cartID)
+		result, err = readCart(ctx, tx, actor, user, org, *cartID)
+		return privateReadResult(ctx, authorization, result, err)
 	}
 	if revision != input.Revision || !expires.After(time.Now()) {
 		return Cart{}, ErrConflict
 	}
 	rows, err := tx.Query(ctx, "SELECT variant_id::text,quantity::text FROM online_order_items WHERE organization_id=$1 AND order_id=$2 ORDER BY variant_id", org, id)
 	if err != nil {
-		return Cart{}, err
+		return Cart{}, writeCheck(ctx, authorization, err)
 	}
 	items := []ItemInput{}
 	for rows.Next() {
 		var item ItemInput
 		if err = rows.Scan(&item.VariantID, &item.Quantity); err != nil {
 			rows.Close()
-			return Cart{}, err
+			return Cart{}, writeCheck(ctx, authorization, err)
 		}
 		items = append(items, item)
 	}
 	err = rows.Err()
 	rows.Close()
-	if err != nil {
+	if err = writeCheck(ctx, authorization, err); err != nil {
 		return Cart{}, err
 	}
 	if validateItems(items) != nil {
 		return Cart{}, ErrInput
 	}
 	var next string
-	if err = tx.QueryRow(ctx, "INSERT INTO pos_carts(organization_id,branch_id,terminal_id,cashier_id,create_key,stock_policy) VALUES($1,$2,$3,$4,gen_random_uuid(),$5) RETURNING id::text", org, branch, terminalID, user, policy).Scan(&next); err != nil {
-		return Cart{}, dbError(err)
+	err = tx.QueryRow(ctx, "INSERT INTO pos_carts(organization_id,branch_id,terminal_id,cashier_id,create_key,stock_policy) VALUES($1,$2,$3,$4,gen_random_uuid(),$5) RETURNING id::text", org, branch, terminalID, user, policy).Scan(&next)
+	if err = writeCheck(ctx, authorization, err); err != nil {
+		return Cart{}, err
 	}
 	for _, inputItem := range items {
 		item, err := variant(ctx, tx, org, location, inputItem.VariantID, inputItem.Quantity, "")
-		if err != nil {
+		if err = writeCheck(ctx, authorization, err); err != nil {
 			return Cart{}, err
 		}
 		if !item.Saleable {
 			return Cart{}, ErrConflict
 		}
-		if _, err = tx.Exec(ctx, "INSERT INTO pos_cart_items(organization_id,cart_id,variant_id,quantity,unit_price) VALUES($1,$2,$3,$4,$5)", org, next, item.VariantID, item.Quantity, item.UnitPrice); err != nil {
-			return Cart{}, dbError(err)
+		_, err = tx.Exec(ctx, "INSERT INTO pos_cart_items(organization_id,cart_id,variant_id,quantity,unit_price) VALUES($1,$2,$3,$4,$5)", org, next, item.VariantID, item.Quantity, item.UnitPrice)
+		if err = writeCheck(ctx, authorization, err); err != nil {
+			return Cart{}, err
 		}
 	}
-	if _, err = tx.Exec(ctx, "UPDATE online_orders SET cart_id=$3,revision=revision+1,updated_at=now() WHERE organization_id=$1 AND id=$2", org, id, next); err != nil {
-		return Cart{}, dbError(err)
+	_, err = tx.Exec(ctx, "UPDATE online_orders SET cart_id=$3,revision=revision+1,updated_at=now() WHERE organization_id=$1 AND id=$2", org, id, next)
+	if err = writeCheck(ctx, authorization, err); err != nil {
+		return Cart{}, err
 	}
-	result, err := readCart(ctx, tx, actor, user, org, next)
-	if err != nil {
+	result, err = readCart(ctx, tx, actor, user, org, next)
+	if err = writeCheck(ctx, authorization, err); err != nil {
 		return result, err
 	}
-	if _, err = tx.Exec(ctx, "UPDATE pos_carts SET pricing_revision=$3 WHERE organization_id=$1 AND id=$2", org, next, result.Pricing.Revision); err != nil {
+	_, err = tx.Exec(ctx, "UPDATE pos_carts SET pricing_revision=$3 WHERE organization_id=$1 AND id=$2", org, next, result.Pricing.Revision)
+	if err = writeCheck(ctx, authorization, err); err != nil {
 		return result, err
 	}
-	if _, err = tx.Exec(ctx, "INSERT INTO online_order_events(organization_id,order_id,status,message,actor_id) VALUES($1,$2,'READY','พนักงานเปิดออเดอร์เข้า POS เพื่อทบทวนยอดและรับชำระ',$3)", org, id, user); err != nil {
+	result.StoredPricingRevision = result.Pricing.Revision
+	_, err = tx.Exec(ctx, "INSERT INTO online_order_events(organization_id,order_id,status,message,actor_id) VALUES($1,$2,'READY','พนักงานเปิดออเดอร์เข้า POS เพื่อทบทวนยอดและรับชำระ',$3)", org, id, user)
+	if err = writeCheck(ctx, authorization, err); err != nil {
 		return result, err
 	}
-	return result, finish(ctx, tx, org, user, "online_order.pos_cart.created", id)
+	return result, finishAuthorized(ctx, authorization, org, user, "online_order.pos_cart.created", id)
 }
 func validateOnlineCart(ctx context.Context, tx pgx.Tx, org, cart string, items []ItemInput) error {
 	link, err := onlineOrderLink(ctx, tx, org, cart)

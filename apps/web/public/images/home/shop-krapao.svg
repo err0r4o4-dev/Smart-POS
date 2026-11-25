@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 70" preserveAspectRatio="xMidYMid slice">
+  <rect width="300" height="70" fill="#2a1712"/>
+  <rect x="0" y="0" width="300" height="12" fill="#3d201a"/>
+  <rect x="34" y="12" width="232" height="34" rx="3" fill="#c81e2a"/>
+  <rect x="34" y="12" width="232" height="34" rx="3" fill="none" stroke="#ffcf5a" stroke-width="2"/>
+  <text x="150" y="38" text-anchor="middle" font-family="'Noto Sans Thai Variable','Noto Sans Thai',sans-serif" font-size="21" font-weight="800" fill="#fff6dc">กะเพราพี่ต้น</text>
+  <rect y="46" width="300" height="24" fill="#3a221a"/>
+  <g fill="#ffd36b" opacity=".9"><circle cx="24" cy="6" r="3"/><circle cx="96" cy="6" r="3"/><circle cx="168" cy="6" r="3"/><circle cx="240" cy="6" r="3"/><circle cx="284" cy="6" r="3"/></g>
+  <g fill="#f2a63a" opacity=".85">
+    <rect x="10" y="52" width="30" height="12" rx="2"/><rect x="50" y="52" width="40" height="12" rx="2"/><rect x="210" y="52" width="40" height="12" rx="2"/><rect x="260" y="52" width="30" height="12" rx="2"/>
+  </g>
+  <g fill="#6b3a24"><rect x="100" y="54" width="100" height="16" rx="2"/></g>
+  <g fill="#ffe7b0"><circle cx="122" cy="60" r="4"/><circle cx="150" cy="60" r="4"/><circle cx="178" cy="60" r="4"/></g>
+</svg>

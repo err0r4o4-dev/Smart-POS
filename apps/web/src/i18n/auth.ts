@@ -1,6 +1,9 @@
 import { defineMessages } from './defineMessages';
 export const auth = defineMessages({
   th: {
+    securityStoryTitle: 'ปกป้องบัญชีของคุณ',
+    securityStorySummary:
+      'เพิ่มการยืนยันตัวตน และเก็บรหัสกู้คืนไว้ในที่ปลอดภัย',
     verificationTitle: 'ยืนยันอีเมล',
     verificationRequired:
       'กรุณายืนยันอีเมลก่อนตั้งค่าหรือจัดการร้าน ลิงก์มีอายุ 24 ชั่วโมง',
@@ -39,9 +42,22 @@ export const auth = defineMessages({
     googleLinkAction: 'ยืนยันบัญชีและเชื่อม Google',
     checkInbox: 'ตรวจสอบกล่องจดหมายและโฟลเดอร์สแปม แล้วเปิดลิงก์ยืนยันอีเมล',
     requestAnotherReset: 'ขอลิงก์ตั้งรหัสผ่านใหม่',
-    storeSimplified: 'จัดการร้านให้ง่ายขึ้น',
+    storeSimplified: 'จัดการร้าน',
+    storeSimplifiedAccent: 'ให้ง่ายขึ้น',
+    restaurantPos: 'แพลตฟอร์มจัดการร้านอาหารครบวงจร',
+    navHome: 'หน้าแรก',
+    navFeatures: 'ฟีเจอร์',
+    navStores: 'สำหรับร้านค้า',
+    navGuide: 'คู่มือการใช้งาน',
+    navContact: 'ติดต่อเรา',
+    featureMenu: 'จัดการเมนู',
+    featureOrders: 'จัดการคำสั่งซื้อ',
+    featureKitchen: 'จัดการคิวในครัว',
+    featureReports: 'รายงานยอดขาย',
+    featureBranches: 'จัดการหลายสาขา',
+    noAccountYet: 'ยังไม่มีบัญชีร้านค้า?',
     storeSummary:
-      'ครบทุกการจัดการร้านค้า ตั้งแต่สินค้า สต็อก ไปจนถึงการขาย และรายงานยอดขาย',
+      'ระบบ POS สำหรับร้านอาหาร และแพลตฟอร์มรวมร้านในชุมชน สั่งง่าย จัดการง่าย เติบโตได้มากกว่า',
     storeIllustration:
       'เครื่องขายหน้าร้าน เครื่องพิมพ์ใบเสร็จ และต้นไม้บนเคาน์เตอร์ร้านค้า',
     backToHome: 'กลับหน้าหลัก',
@@ -108,6 +124,9 @@ export const auth = defineMessages({
     account: 'บัญชี',
   },
   en: {
+    securityStoryTitle: 'Protect your account',
+    securityStorySummary:
+      'Add a second sign-in step and keep recovery codes somewhere safe.',
     verificationTitle: 'Verify your email',
     verificationRequired:
       'Verify your email before setting up or managing your store. The link expires in 24 hours.',
@@ -147,7 +166,20 @@ export const auth = defineMessages({
     checkInbox:
       'Check your inbox and spam folder, then open the email verification link.',
     requestAnotherReset: 'Request a new reset link',
-    storeSimplified: 'Run your store, simply.',
+    storeSimplified: 'Run your store,',
+    storeSimplifiedAccent: ' simply.',
+    restaurantPos: 'All-in-one restaurant platform',
+    navHome: 'Home',
+    navFeatures: 'Features',
+    navStores: 'For stores',
+    navGuide: 'User guide',
+    navContact: 'Contact',
+    featureMenu: 'Menu management',
+    featureOrders: 'Order management',
+    featureKitchen: 'Kitchen queue',
+    featureReports: 'Sales reports',
+    featureBranches: 'Branch management',
+    noAccountYet: 'New to VELOPOS?',
     storeSummary:
       'Everything for your store, from products and inventory to sales and reporting.',
     storeIllustration:

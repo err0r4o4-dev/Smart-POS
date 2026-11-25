@@ -200,9 +200,9 @@ export function VerificationFlow({
   return (
     <LoginLayout titleId="verification-title" story="verify">
       <div className="auth-header-card">
-        <h2 id="verification-title">
+        <h1 id="verification-title">
           {en ? 'Verify your email' : 'ยืนยันอีเมล'}
-        </h2>
+        </h1>
       </div>
       {status === 'verified' ? (
         <>

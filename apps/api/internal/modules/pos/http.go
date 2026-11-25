@@ -24,6 +24,10 @@ func respond(writer http.ResponseWriter, request *http.Request, result any, err 
 	}
 	code, message, status := "DEPENDENCY_UNAVAILABLE", "POS service unavailable", 503
 	switch {
+	case errors.Is(err, identity.ErrInvalidToken):
+		code, message, status = "UNAUTHENTICATED", "Sign in to continue", 401
+	case errors.Is(err, identity.ErrMFARequired):
+		code, message, status = "MFA_REQUIRED", "Verify MFA to continue", 403
 	case errors.Is(err, ErrInput):
 		code, message, status = "INVALID_INPUT", "Check submitted POS details", 400
 	case errors.Is(err, ErrNotFound):
@@ -129,10 +133,11 @@ func (handler Handler) TenantRoutes(router chi.Router) {
 			return result, err
 		}))
 		tenant.Get("/payment-methods", endpoint(200, func(ctx context.Context, user, org string, request *http.Request) (any, error) {
-			tx, actor, err := service.begin(ctx, user, org, "pos.access")
+			authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "pos.access")
 			if err != nil {
-				return nil, err
+				return nil, dbError(err)
 			}
+			tx, actor := authorization.Tx, authorization.Actor
 			defer tx.Rollback(ctx)
 			methods := []string{}
 			if allowed(actor.Permissions, "pos.payment.cash") {
@@ -141,7 +146,7 @@ func (handler Handler) TenantRoutes(router chi.Router) {
 			if allowed(actor.Permissions, "pos.payment.manual_confirm") {
 				methods = append(methods, "QR_MANUAL", "BANK_TRANSFER_MANUAL")
 			}
-			return methods, nil
+			return privateReadResult(ctx, authorization, methods, nil)
 		}))
 		tenant.Post("/terminals", writeEndpoint(201, func(ctx context.Context, user, org string, request *http.Request, input TerminalInput) (any, error) {
 			return service.SaveTerminal(ctx, user, org, "", input)

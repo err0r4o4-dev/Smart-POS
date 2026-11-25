@@ -30,13 +30,23 @@ func (service *Service) FlagCustomerPaymentFulfillment(ctx context.Context, user
 	if !uuidPattern.MatchString(key) || !slices.Contains([]string{"PRICE_CHANGED", "QUALITY_BLOCKED", "STOCK_UNAVAILABLE", "SOURCE_UNAVAILABLE", "OTHER_FULFILLMENT_BLOCKED"}, reason) {
 		return PaymentReview{}, ErrInput
 	}
-	tx, attempt, err := service.staffPaymentTx(ctx, user, org, order)
+	authorization, attempt, err := service.authorizeStaffPayment(ctx, user, org, order)
 	if err != nil {
 		return PaymentReview{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
+	recheck := func() error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		return authorization.Recheck(ctx)
+	}
 	hash := reconciliationFingerprint(order, "", "FULFILLMENT_REVIEW", reason)
 	previous, err := replayReconciliation(ctx, tx, user, key, hash, attempt)
+	if failure := recheck(); failure != nil {
+		return PaymentReview{}, failure
+	}
 	if err != nil {
 		return PaymentReview{}, err
 	}
@@ -44,21 +54,40 @@ func (service *Service) FlagCustomerPaymentFulfillment(ctx context.Context, user
 		return *previous, nil
 	}
 	current, err := readPaymentReview(ctx, tx, attempt, "")
+	if failure := recheck(); failure != nil {
+		return PaymentReview{}, failure
+	}
 	if err != nil {
 		return PaymentReview{}, err
 	}
 	if attempt.State != "PAID" || current.Status == "SETTLED" {
 		return PaymentReview{}, ErrConflict
 	}
-	id, err := appendReconciliation(ctx, tx, user, key, hash, "FULFILLMENT_REVIEW", reason, nil, attempt)
+	var id string
+	err = tx.QueryRow(ctx, `INSERT INTO online_payment_reconciliations(organization_id,order_id,actor_id,idempotency_key,request_fingerprint,action,reason_code,session_id,observation_id,payment_state) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id::text`, attempt.OrganizationID, attempt.OrderID, user, key, hash, "FULFILLMENT_REVIEW", reason, attempt.SessionID, nil, attempt.State).Scan(&id)
 	if err != nil {
+		return PaymentReview{}, paymentError(err)
+	}
+	if err = recheck(); err != nil {
+		return PaymentReview{}, err
+	}
+	if err = organization.RecordAudit(ctx, tx, org, user, "online_payment.reconciled", id); err != nil {
+		return PaymentReview{}, paymentError(err)
+	}
+	if err = recheck(); err != nil {
 		return PaymentReview{}, err
 	}
 	result, err := readPaymentReview(ctx, tx, attempt, id)
+	if failure := recheck(); failure != nil {
+		return PaymentReview{}, failure
+	}
 	if err != nil {
 		return PaymentReview{}, err
 	}
-	return result, paymentError(tx.Commit(ctx))
+	if err = tx.Commit(ctx); err != nil {
+		return PaymentReview{}, paymentError(err)
+	}
+	return result, nil
 }
 
 func (service *Service) ReconcileCustomerPayment(ctx context.Context, user, org, key string, input PaymentReconciliationInput) (PaymentReview, error) {
@@ -73,6 +102,9 @@ func (service *Service) ReconcileCustomerPayment(ctx context.Context, user, org,
 	if previous != nil {
 		return *previous, nil
 	}
+	if err = ctx.Err(); err != nil {
+		return PaymentReview{}, err
+	}
 	network, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	session, err := service.CustomerPayments.RetrieveCustomerCheckout(network, attempt.Charge(), input.SessionID)
@@ -82,17 +114,32 @@ func (service *Service) ReconcileCustomerPayment(ctx context.Context, user, org,
 	if err = session.Validate(attempt.Charge(), input.SessionID); err != nil {
 		return PaymentReview{}, paymentError(err)
 	}
-	tx, attempt, err := service.staffPaymentTx(ctx, user, org, input.OrderID)
+	authorization, attempt, err := service.authorizeStaffPayment(ctx, user, org, input.OrderID)
 	if err != nil {
 		return PaymentReview{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
-	if previous, err = replayReconciliation(ctx, tx, user, key, hash, attempt); err != nil {
+	recheck := func() error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		return authorization.Recheck(ctx)
+	}
+	previous, err = replayReconciliation(ctx, tx, user, key, hash, attempt)
+	if failure := recheck(); failure != nil {
+		return PaymentReview{}, failure
+	}
+	if err != nil {
 		return PaymentReview{}, err
-	} else if previous != nil {
+	}
+	if previous != nil {
 		return *previous, nil
 	}
 	currentIdentity, err := service.staffDispatchIdentity(ctx, tx, attempt)
+	if failure := recheck(); failure != nil {
+		return PaymentReview{}, failure
+	}
 	if err != nil {
 		return PaymentReview{}, err
 	}
@@ -108,79 +155,96 @@ func (service *Service) ReconcileCustomerPayment(ctx context.Context, user, org,
 		if err != nil {
 			return PaymentReview{}, err
 		}
+		if err = recheck(); err != nil {
+			return PaymentReview{}, err
+		}
 	}
 	var observation string
-	attempt, observation, err = storeCustomerObservation(ctx, tx, attempt, session, "RETRIEVE")
+	attempt, observation, err = storeStaffObservation(ctx, authorization, attempt, session)
 	if err != nil {
 		return PaymentReview{}, err
 	}
-	reconciliation, err := appendReconciliation(ctx, tx, user, key, hash, "VERIFY_SESSION", "PROVIDER_LOOKUP", &observation, attempt)
+	var reconciliation string
+	err = tx.QueryRow(ctx, `INSERT INTO online_payment_reconciliations(organization_id,order_id,actor_id,idempotency_key,request_fingerprint,action,reason_code,session_id,observation_id,payment_state) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id::text`, org, attempt.OrderID, user, key, hash, "VERIFY_SESSION", "PROVIDER_LOOKUP", attempt.SessionID, &observation, attempt.State).Scan(&reconciliation)
 	if err != nil {
+		return PaymentReview{}, paymentError(err)
+	}
+	if err = recheck(); err != nil {
+		return PaymentReview{}, err
+	}
+	if err = organization.RecordAudit(ctx, tx, org, user, "online_payment.reconciled", reconciliation); err != nil {
+		return PaymentReview{}, paymentError(err)
+	}
+	if err = recheck(); err != nil {
 		return PaymentReview{}, err
 	}
 	result, err := readPaymentReview(ctx, tx, attempt, reconciliation)
+	if failure := recheck(); failure != nil {
+		return PaymentReview{}, failure
+	}
 	if err != nil {
 		return PaymentReview{}, err
 	}
-	return result, paymentError(tx.Commit(ctx))
+	if err = tx.Commit(ctx); err != nil {
+		return PaymentReview{}, paymentError(err)
+	}
+	return result, nil
 }
 
 func (service *Service) CustomerPaymentReview(ctx context.Context, user, org, order string) (PaymentReview, error) {
-	tx, attempt, err := service.staffPaymentTx(ctx, user, org, order)
+	authorization, attempt, err := service.authorizeStaffPayment(ctx, user, org, order)
 	if err != nil {
 		return PaymentReview{}, err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
-	return readPaymentReview(ctx, tx, attempt, "")
-}
-
-func (service *Service) staffPaymentTx(ctx context.Context, user, org, order string) (pgx.Tx, PaymentAttempt, error) {
-	if service.Organization == nil || service.Organization.Pool == nil {
-		return nil, PaymentAttempt{}, stripe.ErrUnavailable
+	result, err := readPaymentReview(ctx, tx, attempt, "")
+	if failure := ctx.Err(); failure != nil {
+		return PaymentReview{}, failure
 	}
-	if !uuidPattern.MatchString(order) {
-		return nil, PaymentAttempt{}, ErrNotFound
+	if failure := authorization.Recheck(ctx); failure != nil {
+		return PaymentReview{}, failure
 	}
-	tx, actor, err := service.authorized(ctx, user, org, "storefront.manage")
 	if err != nil {
-		return nil, PaymentAttempt{}, err
+		return PaymentReview{}, err
 	}
-	fail := func(problem error) (pgx.Tx, PaymentAttempt, error) {
-		tx.Rollback(ctx)
-		return nil, PaymentAttempt{}, paymentError(problem)
-	}
-	if !slices.Contains(actor.Permissions, "online_orders.manage") {
-		return fail(organization.ErrDenied)
-	}
-	var branch string
-	if err = tx.QueryRow(ctx, "SELECT branch_id::text FROM online_orders WHERE organization_id=$1 AND id=$2 FOR UPDATE", org, order).Scan(&branch); err != nil {
-		return fail(err)
-	}
-	if !branchAllowed(actor, branch) {
-		return fail(organization.ErrDenied)
-	}
-	attempt, err := readPayment(ctx, tx, org, order)
-	if err != nil {
-		return fail(err)
-	}
-	return tx, attempt, nil
+	return result, nil
 }
 
 func (service *Service) prepareStaffVerification(ctx context.Context, user, org, key string, input PaymentReconciliationInput, hash string) (PaymentAttempt, *PaymentReview, string, error) {
-	tx, attempt, err := service.staffPaymentTx(ctx, user, org, input.OrderID)
+	authorization, attempt, err := service.authorizeStaffPayment(ctx, user, org, input.OrderID)
 	if err != nil {
 		return PaymentAttempt{}, nil, "", err
 	}
+	tx := authorization.Tx
 	defer tx.Rollback(ctx)
+	recheck := func() error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		return authorization.Recheck(ctx)
+	}
 	previous, err := replayReconciliation(ctx, tx, user, key, hash, attempt)
-	if err != nil || previous != nil {
-		return attempt, previous, "", err
+	if failure := recheck(); failure != nil {
+		return PaymentAttempt{}, nil, "", failure
+	}
+	if err != nil {
+		return PaymentAttempt{}, nil, "", err
+	}
+	if previous != nil {
+		return attempt, previous, "", nil
 	}
 	if attempt.SessionID != nil && *attempt.SessionID != input.SessionID {
 		return PaymentAttempt{}, nil, "", ErrConflict
 	}
 	identity, err := service.staffDispatchIdentity(ctx, tx, attempt)
-	return attempt, nil, identity, err
+	if failure := recheck(); failure != nil {
+		return PaymentAttempt{}, nil, "", failure
+	}
+	if err != nil {
+		return PaymentAttempt{}, nil, "", err
+	}
+	return attempt, nil, identity, nil
 }
 
 func (service *Service) staffDispatchIdentity(ctx context.Context, tx pgx.Tx, attempt PaymentAttempt) (string, error) {

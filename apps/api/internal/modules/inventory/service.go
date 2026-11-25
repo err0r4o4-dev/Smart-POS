@@ -133,12 +133,13 @@ func complete(ctx context.Context, tx pgx.Tx, user, org, op, event, object strin
 	return result, databaseError(tx.Commit(ctx))
 }
 func (service *Service) SaveLocation(ctx context.Context, user, org, id string, input LocationInput) (json.RawMessage, error) {
-	tx, actor, err := service.begin(ctx, user, org, "inventory.location.manage")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "inventory.location.manage")
 	if err != nil {
 		return nil, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
-	if err = scope(ctx, tx, actor, org, input.BranchID, true); err != nil {
+	if err = privateReadCheck(ctx, authorization, scope(ctx, tx, actor, org, input.BranchID, true)); err != nil {
 		return nil, err
 	}
 	if input.Status == "" {
@@ -149,7 +150,7 @@ func (service *Service) SaveLocation(ctx context.Context, user, org, id string, 
 	}
 	if input.ParentID != nil {
 		parent, err := physical(ctx, tx, actor, org, *input.ParentID, true)
-		if err != nil {
+		if err = privateReadCheck(ctx, authorization, err); err != nil {
 			return nil, err
 		}
 		if parent.BranchID != input.BranchID || parent.ID == id {
@@ -157,7 +158,7 @@ func (service *Service) SaveLocation(ctx context.Context, user, org, id string, 
 		}
 		var cycle bool
 		err = tx.QueryRow(ctx, `WITH RECURSIVE parents AS (SELECT id,parent_location_id FROM stock_locations WHERE organization_id=$1 AND id=$2 UNION SELECT child.id,child.parent_location_id FROM stock_locations child JOIN parents parent ON child.id=parent.parent_location_id WHERE child.organization_id=$1) SELECT EXISTS(SELECT 1 FROM parents WHERE id=nullif($3,'')::uuid)`, org, *input.ParentID, id).Scan(&cycle)
-		if err != nil {
+		if err = privateReadCheck(ctx, authorization, err); err != nil {
 			return nil, err
 		}
 		if cycle {
@@ -166,7 +167,7 @@ func (service *Service) SaveLocation(ctx context.Context, user, org, id string, 
 	}
 	if id != "" {
 		current, err := physical(ctx, tx, actor, org, id, false)
-		if err != nil {
+		if err = privateReadCheck(ctx, authorization, err); err != nil {
 			return nil, err
 		}
 		if current.System || current.Revision != input.Revision || current.BranchID != input.BranchID {
@@ -174,7 +175,7 @@ func (service *Service) SaveLocation(ctx context.Context, user, org, id string, 
 		}
 		var blocked bool
 		err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM stock_movements WHERE organization_id=$1 AND location_id=$2) AND $3 OR $4 AND (EXISTS(SELECT 1 FROM stock_balances WHERE organization_id=$1 AND location_id=$2 AND quantity<>0) OR EXISTS(SELECT 1 FROM stock_locations WHERE organization_id=$1 AND parent_location_id=$2 AND status='ACTIVE') OR EXISTS(SELECT 1 FROM inventory_documents WHERE organization_id=$1 AND (location_id=$2 OR destination_location_id=$2) AND status NOT IN ('POSTED','RECEIVED','CANCELLED','REJECTED')))`, org, id, current.Type != input.Type, input.Status == "INACTIVE").Scan(&blocked)
-		if err != nil {
+		if err = privateReadCheck(ctx, authorization, err); err != nil {
 			return nil, err
 		}
 		if blocked {
@@ -184,14 +185,14 @@ func (service *Service) SaveLocation(ctx context.Context, user, org, id string, 
 	} else {
 		err = tx.QueryRow(ctx, "INSERT INTO stock_locations(organization_id,branch_id,code,name,type,parent_location_id,status,description,created_by,updated_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$9) RETURNING id::text", org, input.BranchID, input.Code, input.Name, input.Type, input.ParentID, input.Status, input.Description, user).Scan(&id)
 	}
-	if err != nil {
-		return nil, databaseError(err)
-	}
-	result, err := raw(ctx, tx, "SELECT to_jsonb(item) FROM stock_locations item WHERE organization_id=$1 AND id=$2", org, id)
-	if err != nil {
+	if err = privateReadCheck(ctx, authorization, databaseError(err)); err != nil {
 		return nil, err
 	}
-	return complete(ctx, tx, user, org, "", "inventory.location.saved", id, result)
+	result, err := raw(ctx, tx, "SELECT to_jsonb(item) FROM stock_locations item WHERE organization_id=$1 AND id=$2", org, id)
+	if err = privateReadCheck(ctx, authorization, err); err != nil {
+		return nil, err
+	}
+	return completeAuthorized(ctx, authorization, user, org, "", "inventory.location.saved", id, result)
 }
 func validVariant(ctx context.Context, tx pgx.Tx, org, id, value string, active bool) error {
 	amount, err := quantity(value)
@@ -226,33 +227,37 @@ func postMovement(ctx context.Context, tx pgx.Tx, user, org, op, doc, loc, varia
 	return nil
 }
 func (service *Service) Opening(ctx context.Context, user, org, key string, input Command) (json.RawMessage, error) {
-	tx, actor, err := service.begin(ctx, user, org, "inventory.opening_balance.create")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "inventory.opening_balance.create")
 	if err != nil {
 		return nil, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
 	if err = input.validate("OPENING"); err != nil {
 		return nil, err
 	}
 	location, err := physical(ctx, tx, actor, org, input.LocationID, true)
-	if err != nil {
+	if err = privateReadCheck(ctx, authorization, err); err != nil {
 		return nil, err
 	}
 	if input.BranchID != "" && input.BranchID != location.BranchID {
 		return nil, ErrInput
 	}
 	op, cached, err := operation(ctx, tx, user, org, "opening", key, input)
-	if err != nil || cached != nil {
-		return cached, err
+	if err = privateReadCheck(ctx, authorization, err); err != nil {
+		return nil, err
+	}
+	if cached != nil {
+		return cached, nil
 	}
 	for _, item := range input.Items {
-		if err = validVariant(ctx, tx, org, item.VariantID, item.Quantity, true); err != nil {
+		if err = privateReadCheck(ctx, authorization, validVariant(ctx, tx, org, item.VariantID, item.Quantity, true)); err != nil {
 			return nil, err
 		}
-		if err = postMovement(ctx, tx, user, org, op, "", input.LocationID, item.VariantID, "OPENING_BALANCE", item.Quantity, input.ReasonCode, item.BatchID); err != nil {
+		if err = privateReadCheck(ctx, authorization, postMovement(ctx, tx, user, org, op, "", input.LocationID, item.VariantID, "OPENING_BALANCE", item.Quantity, input.ReasonCode, item.BatchID)); err != nil {
 			return nil, err
 		}
 	}
 	result := json.RawMessage(fmt.Sprintf(`{"id":%q,"status":"POSTED"}`, op))
-	return complete(ctx, tx, user, org, op, "inventory.opening.posted", op, result)
+	return completeAuthorized(ctx, authorization, user, org, op, "inventory.opening.posted", op, result)
 }

@@ -18,6 +18,7 @@ type Handler struct{ Service *Service }
 
 func endpoint(status int, run func(context.Context, string, string, *http.Request) (any, error)) http.HandlerFunc {
 	return func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Cache-Control", "no-store")
 		session := identity.SessionFromContext(request.Context())
 		if session.User.ID == "" {
 			httpx.Error(writer, request, 401, "UNAUTHENTICATED", "Sign in required")
@@ -32,6 +33,10 @@ func endpoint(status int, run func(context.Context, string, string, *http.Reques
 		}
 		code, message, status := "DEPENDENCY_UNAVAILABLE", "Purchasing service unavailable", 503
 		switch {
+		case errors.Is(err, identity.ErrInvalidToken):
+			code, message, status = "UNAUTHENTICATED", "Sign in again", 401
+		case errors.Is(err, identity.ErrMFARequired):
+			code, message, status = "MFA_REQUIRED", "Multi-factor authentication required", 403
 		case errors.Is(err, ErrInput):
 			code, message, status = "INVALID_INPUT", "Check quantities, units and submitted fields", 400
 		case errors.Is(err, ErrNotFound) || errors.Is(err, organization.ErrNotFound):

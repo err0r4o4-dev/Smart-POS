@@ -61,6 +61,100 @@ describe('organization-scoped setup client', () => {
     );
   });
 
+  it.each(['', 'legacy-branch'])(
+    'uses the correct QR flags for branch selector %j',
+    async (branchID) => {
+      const zones = [{ code: 'MAIN', name: 'Main room' }];
+      await saveSetupStep(
+        'tables',
+        {
+          zones,
+          tables: [
+            { code: 'T1', name: 'Renamed', zone: 'Main room', seats: 4 },
+          ],
+          qr_enabled: true,
+        },
+        { ...context, branchID },
+        'csrf',
+        'table-key',
+      );
+      expect(organizationRequest).toHaveBeenCalledWith(
+        '/organizations/restaurant-id/restaurant/setup/tables',
+        {
+          method: 'PUT',
+          body: {
+            zones,
+            tables: [
+              { code: 'T1', name: 'Renamed', zone_code: 'MAIN', seats: 4 },
+            ],
+            ...(branchID
+              ? { branch_id: branchID, generate_qr: true }
+              : { qr_enabled: true }),
+          },
+          csrf: 'csrf',
+          key: 'table-key',
+        },
+      );
+    },
+  );
+
+  it.each([true, false])(
+    'preserves explicit Pickup=%s independently of Takeaway',
+    async (pickup) => {
+      const modes = {
+        dine_in: false,
+        takeaway: false,
+        delivery: false,
+        pickup,
+      };
+      vi.mocked(organizationRequest).mockResolvedValueOnce({
+        ...response,
+        services: modes,
+      });
+      const state = await saveSetupStep(
+        'services',
+        { service_modes: modes },
+        context,
+        'csrf',
+        'pickup-key',
+      );
+      expect(state.services?.service_modes).toEqual(modes);
+      expect(organizationRequest).toHaveBeenCalledWith(
+        '/organizations/restaurant-id/restaurant/setup/services',
+        {
+          method: 'PUT',
+          body: { service_modes: modes },
+          csrf: 'csrf',
+          key: 'pickup-key',
+        },
+      );
+    },
+  );
+
+  it('keeps Pickup absent in historical responses and legacy request payloads', async () => {
+    const state = await getSetup(context);
+    expect(state.services?.service_modes).not.toHaveProperty('pickup');
+    await saveSetupStep(
+      'services',
+      { service_modes: response.services },
+      { ...context, branchID: 'legacy-branch' },
+      'csrf',
+      'legacy-key',
+    );
+    expect(organizationRequest).toHaveBeenLastCalledWith(
+      '/organizations/restaurant-id/restaurant/setup/services',
+      {
+        method: 'PUT',
+        body: {
+          branch_id: 'legacy-branch',
+          service_modes: { dine_in: false, takeaway: true, delivery: false },
+        },
+        csrf: 'csrf',
+        key: 'legacy-key',
+      },
+    );
+  });
+
   it('completes without a branch while preserving the completion gate', async () => {
     expect(await completeSetup(context, 'csrf', 'complete-key')).toEqual({
       ready: false,

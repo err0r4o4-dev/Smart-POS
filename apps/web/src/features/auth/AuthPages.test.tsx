@@ -36,7 +36,7 @@ it('places the store illustration before the login panel and preserves account l
   const loginPanel = screen.getByRole('region', { name: 'Welcome back.' });
   expect(
     within(introduction).getByRole('img', { name: /point-of-sale terminal/i }),
-  ).toHaveAttribute('src', '/images/auth-pos-reference.png');
+  ).toHaveAttribute('src', '/images/auth-pos-studio.svg');
   expect(
     introduction.compareDocumentPosition(loginPanel) &
       Node.DOCUMENT_POSITION_FOLLOWING,
@@ -116,12 +116,12 @@ it('renders the register page in the split layout and validates mismatched passw
     </BrowserRouter>,
   );
   const introduction = screen.getByRole('region', {
-    name: 'A fresh start for your store.',
+    name: /run your store/i,
   });
   const registerPanel = screen.getByRole('region', { name: 'Get started.' });
   expect(
     within(introduction).getByRole('img', { name: /point-of-sale terminal/i }),
-  ).toHaveAttribute('src', '/images/auth-pos-reference.png');
+  ).toHaveAttribute('src', '/images/auth-pos-studio.svg');
   expect(
     introduction.compareDocumentPosition(registerPanel) &
       Node.DOCUMENT_POSITION_FOLLOWING,

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/base64"
 	"errors"
 	"net"
 	"net/netip"
@@ -33,6 +34,8 @@ type Config struct {
 	GoogleClientID            string
 	GoogleClientSecret        string
 	GoogleRedirectURI         string
+	MFAEncryptionKeyID        string
+	MFAEncryptionKey          []byte
 }
 
 func Load() (Config, error) { return Parse(os.Getenv) }
@@ -143,5 +146,16 @@ func Parse(getenv func(string) string) (Config, error) {
 	if singleStore != "" && !organizationIDPattern.MatchString(singleStore) {
 		return Config{}, errors.New("SINGLE_STORE_ORGANIZATION_ID must be one organization UUID")
 	}
-	return Config{Address: address, DatabaseURL: databaseURL, Environment: environment, PublicOrigin: origin, AllowedOrigins: origins, SessionTTL: time.Duration(hours) * time.Hour, SMTPAddr: smtpAddr, SMTPUser: getenv("SMTP_USER"), SMTPPassword: getenv("SMTP_PASSWORD"), MailFrom: mailFrom, TrustedProxyIP: trustedProxyIP, PaymentSandbox: sandbox, CustomerPayments: customerPayments, SingleStoreOrganizationID: strings.ToLower(singleStore), GoogleClientID: googleID, GoogleClientSecret: googleSecret, GoogleRedirectURI: googleRedirect}, nil
+	keyID, encodedKey := getenv("MFA_ENCRYPTION_KEY_ID"), getenv("MFA_ENCRYPTION_KEY")
+	var mfaKey []byte
+	if keyID != "" || encodedKey != "" {
+		if !regexp.MustCompile(`^[A-Za-z0-9._-]{1,100}$`).MatchString(keyID) {
+			return Config{}, errors.New("MFA_ENCRYPTION_KEY_ID must contain 1 through 100 ASCII letters, digits, dots, underscores or hyphens")
+		}
+		mfaKey, err = base64.StdEncoding.Strict().DecodeString(encodedKey)
+		if err != nil || len(mfaKey) != 32 || base64.StdEncoding.EncodeToString(mfaKey) != encodedKey {
+			return Config{}, errors.New("MFA_ENCRYPTION_KEY must be canonical standard Base64 encoding of exactly 32 bytes")
+		}
+	}
+	return Config{Address: address, DatabaseURL: databaseURL, Environment: environment, PublicOrigin: origin, AllowedOrigins: origins, SessionTTL: time.Duration(hours) * time.Hour, SMTPAddr: smtpAddr, SMTPUser: getenv("SMTP_USER"), SMTPPassword: getenv("SMTP_PASSWORD"), MailFrom: mailFrom, TrustedProxyIP: trustedProxyIP, PaymentSandbox: sandbox, CustomerPayments: customerPayments, SingleStoreOrganizationID: strings.ToLower(singleStore), GoogleClientID: googleID, GoogleClientSecret: googleSecret, GoogleRedirectURI: googleRedirect, MFAEncryptionKeyID: keyID, MFAEncryptionKey: mfaKey}, nil
 }

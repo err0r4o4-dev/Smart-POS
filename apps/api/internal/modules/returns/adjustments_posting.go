@@ -12,17 +12,18 @@ import (
 )
 
 func (service *Service) TransitionAdjustment(ctx context.Context, user, org, kind, id, action, key string, input SettlementInput) (json.RawMessage, error) {
-	tx, actor, err := service.Organization.Authorized(ctx, user, org, permissionFor(kind, action))
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, permissionFor(kind, action))
 	if err != nil {
 		return nil, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
 	doc, err := adjustmentHeader(ctx, tx, actor, user, org, kind, id)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
 		return nil, err
 	}
-	if err = inventory.BranchScope(ctx, tx, actor, org, doc.Branch, true); err != nil {
-		return nil, dbError(err)
+	if err = checkAuthorization(ctx, authorization, dbError(inventory.BranchScope(ctx, tx, actor, org, doc.Branch, true))); err != nil {
+		return nil, err
 	}
 	if action == "complete" && actor.Role != "OWNER" && strings.HasPrefix(doc.Difference, "-") {
 		return nil, organization.ErrDenied
@@ -34,8 +35,11 @@ func (service *Service) TransitionAdjustment(ctx context.Context, user, org, kin
 		ID    string
 		Input SettlementInput
 	}{id, input})
-	if err != nil || cached != nil {
-		return cached, dbError(err)
+	if err = checkAuthorization(ctx, authorization, dbError(err)); err != nil {
+		return nil, err
+	}
+	if cached != nil {
+		return cached, nil
 	}
 	if input.Revision != doc.Revision {
 		return nil, ErrConflict
@@ -72,7 +76,7 @@ func (service *Service) TransitionAdjustment(ctx context.Context, user, org, kin
 		if doc.Status != "APPROVED" {
 			return nil, ErrConflict
 		}
-		if err = acknowledgeAdjustment(ctx, tx, actor, user, org, doc, input); err != nil {
+		if err = checkAuthorization(ctx, authorization, acknowledgeAdjustment(ctx, tx, actor, user, org, doc, input)); err != nil {
 			return nil, err
 		}
 		event = "ACKNOWLEDGED"
@@ -91,6 +95,9 @@ func (service *Service) TransitionAdjustment(ctx context.Context, user, org, kin
 			if _, rollbackErr := tx.Exec(ctx, "ROLLBACK TO SAVEPOINT adjustment_posting"); rollbackErr != nil {
 				return nil, rollbackErr
 			}
+			if problem := checkAuthorization(ctx, authorization, nil); problem != nil {
+				return nil, problem
+			}
 			if doc.Difference == "0.00" {
 				return nil, adjustmentError(err)
 			}
@@ -98,10 +105,13 @@ func (service *Service) TransitionAdjustment(ctx context.Context, user, org, kin
 			event = next
 		} else {
 			value, problem := adjustmentResult(ctx, tx, org, id)
-			if problem != nil {
+			if problem = checkAuthorization(ctx, authorization, problem); problem != nil {
 				return nil, problem
 			}
-			return value, dbError(tx.Commit(ctx))
+			if problem = tx.Commit(ctx); problem != nil {
+				return nil, dbError(problem)
+			}
+			return value, nil
 		}
 	default:
 		return nil, ErrInput
@@ -125,10 +135,10 @@ func (service *Service) TransitionAdjustment(ctx context.Context, user, org, kin
 		}
 	}
 	value, err := adjustmentResult(ctx, tx, org, id)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
 		return nil, err
 	}
-	return finish(ctx, tx, user, org, op, "adjustments."+action, id, value)
+	return finishWrite(ctx, authorization, user, org, op, "adjustments."+action, id, value)
 }
 func containsStatus(value string, states ...string) bool {
 	for _, status := range states {

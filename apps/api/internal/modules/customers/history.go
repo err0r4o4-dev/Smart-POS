@@ -37,70 +37,90 @@ type History struct {
 func (service *Service) History(ctx context.Context, user, org, id string, filters Filter) (History, error) {
 	result := History{Page: Page{Items: []json.RawMessage{}}}
 	if !UUID.MatchString(id) || filters.validate() != nil {
-		return result, ErrInput
+		return History{}, ErrInput
 	}
 	result.Page.Page = filters.Page
 	result.PageSize = filters.PageSize
-	tx, actor, err := service.begin(ctx, user, org, "customers.history.read", filters)
+	authorization, err := service.beginMFA(ctx, user, org, "customers.history.read", filters)
 	if err != nil {
-		return result, err
+		return History{}, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
 	if _, err = read(ctx, tx, actor, org, id); err != nil {
-		return result, err
+		return privateReadResult(ctx, authorization, result, err)
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return History{}, err
 	}
 	args := []any{org, id, actor.BranchIDs, actor.Role == "OWNER", nullable(filters.BranchID), nullable(filters.From), nullable(filters.To)}
 	err = tx.QueryRow(ctx, historySQL+`SELECT count(*),count(*) FILTER(WHERE kind='SALE'),count(*) FILTER(WHERE kind='REPLACEMENT'),COALESCE(sum(paid),0)::numeric(18,2)::text,COALESCE(sum(refunded),0)::numeric(18,2)::text,COALESCE(sum(pending_refund),0)::numeric(18,2)::text,COALESCE(sum(paid-refunded),0)::numeric(18,2)::text FROM filtered`, args...).Scan(&result.Total, &result.Summary.Purchases, &result.Summary.Replacements, &result.Summary.Paid, &result.Summary.Refunded, &result.Summary.PendingRefund, &result.Summary.NetCollected)
 	if err != nil {
-		return result, err
+		return privateReadResult(ctx, authorization, result, err)
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return History{}, err
 	}
 	args = append(args, filters.PageSize, (filters.Page-1)*filters.PageSize)
 	rows, err := tx.Query(ctx, historySQL+`SELECT to_jsonb(item)||jsonb_build_object('amount',amount::numeric(18,2)::text,'paid',paid::numeric(18,2)::text,'refunded',refunded::numeric(18,2)::text,'pending_refund',pending_refund::numeric(18,2)::text,'return_credit',return_credit::numeric(18,2)::text) FROM filtered item ORDER BY occurred_at DESC,id,kind LIMIT $8 OFFSET $9`, args...)
 	if err != nil {
-		return result, err
+		return privateReadResult(ctx, authorization, result, err)
 	}
 	defer rows.Close()
 	items := []json.RawMessage{}
 	for rows.Next() {
 		var data []byte
 		if err = rows.Scan(&data); err != nil {
-			return result, err
+			rows.Close()
+			return privateReadResult(ctx, authorization, result, err)
 		}
 		items = append(items, json.RawMessage(data))
 	}
 	result.Items = items
-	return result, rows.Err()
+	err = rows.Err()
+	rows.Close()
+	return privateReadResult(ctx, authorization, result, err)
 }
 func (service *Service) Audit(ctx context.Context, user, org, id string, filters Filter) (Page, error) {
 	result := Page{Items: []json.RawMessage{}, Page: filters.Page, PageSize: filters.PageSize}
 	if !UUID.MatchString(id) || filters.validate() != nil {
-		return result, ErrInput
+		return Page{}, ErrInput
 	}
-	tx, actor, err := service.begin(ctx, user, org, "customers.history.read", Filter{})
+	authorization, err := service.beginMFA(ctx, user, org, "customers.history.read", Filter{})
 	if err != nil {
-		return result, err
+		return Page{}, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
 	if _, err = read(ctx, tx, actor, org, id); err != nil {
-		return result, err
+		return privateReadResult(ctx, authorization, result, err)
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Page{}, err
 	}
 	where := " FROM organization_audit_events WHERE organization_id=$1 AND object_id=$2 AND event_type LIKE 'customers.%'"
 	if err = tx.QueryRow(ctx, "SELECT count(*)"+where, org, id).Scan(&result.Total); err != nil {
-		return result, err
+		return privateReadResult(ctx, authorization, result, err)
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Page{}, err
 	}
 	rows, err := tx.Query(ctx, "SELECT jsonb_build_object('id',id,'actor_id',actor_id,'event_type',event_type,'created_at',created_at)"+where+" ORDER BY created_at DESC,id LIMIT $3 OFFSET $4", org, id, filters.PageSize, (filters.Page-1)*filters.PageSize)
 	if err != nil {
-		return result, err
+		return privateReadResult(ctx, authorization, result, err)
 	}
 	defer rows.Close()
 	items := []json.RawMessage{}
 	for rows.Next() {
 		var data []byte
 		if err = rows.Scan(&data); err != nil {
-			return result, err
+			rows.Close()
+			return privateReadResult(ctx, authorization, result, err)
 		}
 		items = append(items, json.RawMessage(data))
 	}
 	result.Items = items
-	return result, rows.Err()
+	err = rows.Err()
+	rows.Close()
+	return privateReadResult(ctx, authorization, result, err)
 }

@@ -8,12 +8,13 @@ import (
 	"strings"
 	"testing"
 
+	"smartpos/api/internal/modules/identity"
 	"smartpos/api/internal/modules/organization"
 	"smartpos/api/internal/modules/restaurant"
 	"smartpos/api/internal/modules/storefront"
 )
 
-func verifyBranchlessCatalog(testContext *testing.T, ctx context.Context, organizations *organization.Service, owner, guest, org, slug string) {
+func verifyBranchlessCatalog(testContext *testing.T, ctx, guestCtx context.Context, organizations *organization.Service, owner, guest, org, slug string) {
 	testContext.Helper()
 	service := &storefront.Service{Organization: organizations}
 	page, err := service.Products(ctx, owner, org, "", "", 1)
@@ -94,10 +95,10 @@ func verifyBranchlessCatalog(testContext *testing.T, ctx context.Context, organi
 			testContext.Fatalf("invalid catalog query accepted: %v", problem)
 		}
 	}
-	if _, problem := service.Products(ctx, guest, org, "", "", 1); !errors.Is(problem, organization.ErrDenied) {
+	if _, problem := service.Products(guestCtx, guest, org, "", "", 1); !errors.Is(problem, organization.ErrDenied) {
 		testContext.Fatalf("manager read owner catalog: %v", problem)
 	}
-	if _, problem := service.Products(ctx, "11111111-1111-4111-8111-111111111111", org, "", "", 1); !errors.Is(problem, storefront.ErrNotFound) {
+	if _, problem := service.Products(ctx, "11111111-1111-4111-8111-111111111111", org, "", "", 1); !errors.Is(problem, identity.ErrInvalidToken) {
 		testContext.Fatalf("foreign user read catalog: %v", problem)
 	}
 	pinned := &storefront.Service{Organization: &organization.Service{Pool: organizations.Pool, SingleStoreOrganizationID: "11111111-1111-4111-8111-111111111111"}}
@@ -154,18 +155,27 @@ func verifyBranchlessCatalog(testContext *testing.T, ctx context.Context, organi
 func verifyBranchlessCatalogSaleability(testContext *testing.T, ctx context.Context, organizations *organization.Service, owner, org, variant string) {
 	testContext.Helper()
 	service := &storefront.Service{Organization: organizations}
-	mutate := func(statement string) {
-		testContext.Helper()
+	mutate := func(t *testing.T, statement string) {
+		t.Helper()
 		tx, _, err := organizations.Authorized(ctx, owner, org, "storefront.manage")
 		if err != nil {
-			testContext.Fatal(err)
+			t.Fatal(err)
 		}
 		defer tx.Rollback(ctx)
 		if _, err = tx.Exec(ctx, statement, org, variant); err != nil {
-			testContext.Fatal(err)
+			t.Fatal(err)
 		}
 		if err = tx.Commit(ctx); err != nil {
-			testContext.Fatal(err)
+			t.Fatal(err)
+		}
+	}
+	assertCannotQuote := func(t *testing.T) {
+		t.Helper()
+		quote, err := service.QuoteOrganization(ctx, owner, org, storefront.QuoteInput{
+			Items: []storefront.ItemInput{{VariantID: variant, Quantity: "1.000"}},
+		})
+		if !errors.Is(err, storefront.ErrStock) || quote.ID != "" || quote.Total != "" || len(quote.Items) != 0 {
+			t.Fatalf("unavailable item produced a quote or wrong error: %v", err)
 		}
 	}
 	for _, candidate := range []struct{ name, update, restore string }{
@@ -175,19 +185,21 @@ func verifyBranchlessCatalogSaleability(testContext *testing.T, ctx context.Cont
 		{"currency", "UPDATE product_variants SET currency='USD' WHERE organization_id=$1 AND id=$2", "UPDATE product_variants SET currency='THB' WHERE organization_id=$1 AND id=$2"},
 	} {
 		testContext.Run("catalog blocks inactive "+candidate.name, func(testContext *testing.T) {
-			mutate(candidate.update)
-			defer mutate(candidate.restore)
+			mutate(testContext, candidate.update)
+			defer mutate(testContext, candidate.restore)
 			page, err := service.Products(ctx, owner, org, "", "", 1)
 			if err != nil || len(page.Items) != 1 || page.Items[0].Saleable {
 				testContext.Fatalf("unsafe menu marked saleable: %v", err)
 			}
+			assertCannotQuote(testContext)
 		})
 	}
-	mutate(`INSERT INTO quality_recalls(organization_id,variant_id,reason,created_by)
+	mutate(testContext, `INSERT INTO quality_recalls(organization_id,variant_id,reason,created_by)
 	 SELECT variant.organization_id,variant.id,'Synthetic private catalog recall',product.created_by FROM product_variants variant
 	 JOIN products product ON product.organization_id=variant.organization_id AND product.id=variant.product_id WHERE variant.organization_id=$1 AND variant.id=$2`)
 	page, err := service.Products(ctx, owner, org, "", "", 1)
 	if err != nil || len(page.Items) != 1 || page.Items[0].Saleable {
 		testContext.Fatalf("recalled menu marked saleable: %v", err)
 	}
+	assertCannotQuote(testContext)
 }

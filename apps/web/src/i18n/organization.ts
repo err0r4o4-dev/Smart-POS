@@ -120,6 +120,8 @@ export const organization = defineMessages({
       'เลือกได้มากกว่าหนึ่งรูปแบบ และต้องเลือกอย่างน้อยหนึ่งรูปแบบ',
     setupDineInHint: 'รับลูกค้าที่โต๊ะ พร้อมเพิ่มชื่อโต๊ะด้านล่าง',
     setupTakeawayHint: 'ลูกค้ารับอาหารกลับ ไม่ต้องตั้งค่าโต๊ะ',
+    setupPickupHint:
+      'ตั้งค่าให้ลูกค้าสั่งล่วงหน้าแล้วมารับเมื่ออาหารพร้อม การบันทึกยังไม่เปิดรับออเดอร์',
     setupDeliveryHint: 'จัดส่งอาหารให้ลูกค้า ไม่ต้องตั้งค่าโต๊ะ',
     setupDefaultZone: 'พื้นที่หลัก',
     setupDefaultZoneNumber: 'โซน {number}',
@@ -141,6 +143,7 @@ export const organization = defineMessages({
       'ชื่อโซนต้องไม่ว่างหรือซ้ำกัน และยาวไม่เกิน 100 ตัวอักษร',
     setupDineIn: 'ทานที่ร้าน',
     setupTakeaway: 'ซื้อกลับบ้าน',
+    setupPickup: 'สั่งล่วงหน้าแล้วมารับ',
     setupDelivery: 'เดลิเวอรี',
     setupFirstZone: 'ชื่อโซนแรก',
     setupFirstTable: 'ชื่อโต๊ะแรก',
@@ -503,6 +506,8 @@ export const organization = defineMessages({
     setupServicesHint: 'Select one or more service modes',
     setupDineInHint: 'Serve customers at tables; add table names below',
     setupTakeawayHint: 'Customers collect their food; no tables needed',
+    setupPickupHint:
+      'Customers order ahead and collect when ready. Saving this option does not open ordering.',
     setupDeliveryHint: 'Deliver food to customers; no tables needed',
     setupDefaultZone: 'Main area',
     setupDefaultZoneNumber: 'Zone {number}',
@@ -524,6 +529,7 @@ export const organization = defineMessages({
       'Zone names must be unique, non-empty and no longer than 100 characters',
     setupDineIn: 'Dine in',
     setupTakeaway: 'Takeaway',
+    setupPickup: 'Pickup',
     setupDelivery: 'Delivery',
     setupFirstZone: 'First zone name',
     setupFirstTable: 'First table name',

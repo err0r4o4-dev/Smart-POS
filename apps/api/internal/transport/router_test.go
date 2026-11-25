@@ -6,10 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"smartpos/api/internal/modules/identity"
 	"smartpos/api/internal/platform/httpx"
 )
@@ -17,6 +20,39 @@ import (
 type readinessStub struct {
 	err        error
 	panicValue bool
+}
+
+func TestTenantRouterDoesNotExposeRetiredAuthorityRoutes(t *testing.T) {
+	router := Router(readinessStub{}, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)), identity.Handler{Service: &identity.Service{}})
+	routes, ok := router.(chi.Routes)
+	if !ok {
+		t.Fatal("expected to inspect the composed API routes")
+	}
+	const tenant = "/api/v1/organizations/{id}"
+	retired := map[string]bool{
+		"/api/v1/invitations/accept":           true,
+		tenant + "/roles":                      true,
+		tenant + "/members":                    true,
+		tenant + "/members/{memberId}":         true,
+		tenant + "/invitations":                true,
+		tenant + "/invitations/{invitationId}": true,
+		tenant + "/restaurant/quick-stock":     true,
+	}
+	var tenantMounted bool
+	if err := chi.Walk(routes, func(method, path string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
+		if path == tenant+"/context" && method == http.MethodGet {
+			tenantMounted = true
+		}
+		if retired[path] {
+			t.Errorf("retired API is registered: %s %s", method, path)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if !tenantMounted {
+		t.Fatal("test did not inspect the mounted tenant routes")
+	}
 }
 
 func TestSandboxRoutesRequireAuthentication(t *testing.T) {
@@ -30,6 +66,50 @@ func TestSandboxRoutesRequireAuthentication(t *testing.T) {
 			t.Fatalf("%s %s: %d", route.method, route.suffix, response.Code)
 		}
 	}
+}
+
+func TestOrganizationRoutesRejectAnonymousRequests(t *testing.T) {
+	const root = "/api/v1/organizations"
+	const fixtureID = "11111111-1111-4111-8111-111111111111"
+	router := Router(readinessStub{}, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)), identity.Handler{Service: &identity.Service{}})
+	routes, ok := router.(chi.Routes)
+	if !ok {
+		t.Fatal("expected to inspect the composed API routes")
+	}
+	parameter := regexp.MustCompile(`\{[^{}]+\}`)
+	count := 0
+	if err := chi.Walk(routes, func(method, path string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
+		if path != root && !strings.HasPrefix(path, root+"/") {
+			return nil
+		}
+		count++
+		t.Run(method+" "+path, func(t *testing.T) {
+			target := parameter.ReplaceAllString(path, fixtureID)
+			request := httptest.NewRequest(method, target, nil)
+			response := httptest.NewRecorder()
+			router.ServeHTTP(response, request)
+			if response.Code != http.StatusUnauthorized {
+				t.Fatalf("expected authentication denial, got HTTP %d", response.Code)
+			}
+			var body struct {
+				Data  json.RawMessage
+				Error struct{ Code string }
+			}
+			if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil || body.Error.Code != "UNAUTHENTICATED" {
+				t.Fatalf("expected UNAUTHENTICATED, got %q (decode: %v)", body.Error.Code, err)
+			}
+			if len(body.Data) != 0 {
+				t.Fatal("anonymous denial must omit data")
+			}
+		})
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if count == 0 {
+		t.Fatal("test did not inspect any organization routes")
+	}
+	t.Logf("checked %d mounted organization method/path pairs", count)
 }
 
 func (stub readinessStub) Ready(ctx context.Context) error {

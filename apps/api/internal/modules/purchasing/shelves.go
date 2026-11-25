@@ -38,10 +38,11 @@ func shelfJSON(ctx context.Context, tx pgx.Tx, org, id string) (json.RawMessage,
 	return raw(ctx, tx, `SELECT to_jsonb(shelf)||jsonb_build_object('slots',COALESCE((SELECT jsonb_agg(to_jsonb(slot) ORDER BY position,code) FROM shelf_slots slot WHERE slot.organization_id=shelf.organization_id AND slot.shelf_id=shelf.id),'[]'::jsonb),'assignments',COALESCE((SELECT jsonb_agg(`+assignmentJSON+` ORDER BY slot.position)`+assignmentJoins+` WHERE assignment.organization_id=$1 AND assignment.shelf_id=$2),'[]'::jsonb)) FROM shelves shelf WHERE organization_id=$1 AND id=$2`, org, id)
 }
 func (service *Service) SaveShelf(ctx context.Context, user, org, id string, input ShelfInput) (json.RawMessage, error) {
-	tx, actor, err := service.Organization.Authorized(ctx, user, org, "shelf.manage")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "shelf.manage")
 	if err != nil {
 		return nil, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
 	if input.Status == "" {
 		input.Status = "ACTIVE"
@@ -49,23 +50,23 @@ func (service *Service) SaveShelf(ctx context.Context, user, org, id string, inp
 	if !codePattern.MatchString(input.Code) || !text(input.Name, 200, true) || !text(input.Zone, 200, false) || !text(input.Description, 2000, false) || !contains([]string{"ACTIVE", "INACTIVE", "ARCHIVED"}, input.Status) {
 		return nil, ErrInput
 	}
-	if err = inventory.BranchScope(ctx, tx, actor, org, input.BranchID, true); err != nil {
+	if err = checkAuthorization(ctx, authorization, inventory.BranchScope(ctx, tx, actor, org, input.BranchID, true)); err != nil {
 		return nil, err
 	}
-	if err = inventory.SaleLocation(ctx, tx, actor, org, input.BranchID, input.LocationID); err != nil {
+	if err = checkAuthorization(ctx, authorization, inventory.SaleLocation(ctx, tx, actor, org, input.BranchID, input.LocationID)); err != nil {
 		return nil, err
 	}
 	var locationType string
 	err = tx.QueryRow(ctx, "SELECT type FROM stock_locations WHERE organization_id=$1 AND id=$2", org, input.LocationID).Scan(&locationType)
-	if err != nil {
-		return nil, dbError(err)
+	if err = checkAuthorization(ctx, authorization, dbError(err)); err != nil {
+		return nil, err
 	}
 	if !contains([]string{"SHELF", "SALES_FLOOR"}, locationType) {
 		return nil, ErrInput
 	}
 	if id != "" {
 		current, err := readShelf(ctx, tx, actor, org, id, false)
-		if err != nil {
+		if err = checkAuthorization(ctx, authorization, err); err != nil {
 			return nil, err
 		}
 		if current.Revision != input.Revision || current.Branch != input.BranchID || current.Location != input.LocationID {
@@ -74,7 +75,7 @@ func (service *Service) SaveShelf(ctx context.Context, user, org, id string, inp
 		if input.Status != "ACTIVE" {
 			var pending bool
 			err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM replenishment_tasks WHERE organization_id=$1 AND shelf_id=$2 AND status IN ('OPEN','ASSIGNED','IN_PROGRESS'))", org, id).Scan(&pending)
-			if err != nil {
+			if err = checkAuthorization(ctx, authorization, err); err != nil {
 				return nil, err
 			}
 			if pending {
@@ -85,22 +86,24 @@ func (service *Service) SaveShelf(ctx context.Context, user, org, id string, inp
 	} else {
 		err = tx.QueryRow(ctx, `INSERT INTO shelves(organization_id,branch_id,stock_location_id,code,name,zone,description,status,created_by,updated_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$9) RETURNING id::text`, org, input.BranchID, input.LocationID, input.Code, input.Name, input.Zone, input.Description, input.Status, user).Scan(&id)
 	}
-	if err != nil {
-		return nil, dbError(err)
+	if err = checkAuthorization(ctx, authorization, dbError(err)); err != nil {
+		return nil, err
 	}
 	result, err := shelfJSON(ctx, tx, org, id)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
 		return nil, err
 	}
-	return finish(ctx, tx, user, org, "", "shelf.saved", id, result)
+	return finishWrite(ctx, authorization, user, org, "", "shelf.saved", id, result)
 }
 func (service *Service) SaveSlot(ctx context.Context, user, org, shelfID string, input SlotInput) (json.RawMessage, error) {
-	tx, actor, err := service.Organization.Authorized(ctx, user, org, "shelf.manage")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "shelf.manage")
 	if err != nil {
 		return nil, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
-	if _, err = readShelf(ctx, tx, actor, org, shelfID, true); err != nil {
+	_, err = readShelf(ctx, tx, actor, org, shelfID, true)
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
 		return nil, err
 	}
 	if !codePattern.MatchString(input.Code) || input.Position < 0 || input.Position > 10000 {
@@ -108,7 +111,7 @@ func (service *Service) SaveSlot(ctx context.Context, user, org, shelfID string,
 	}
 	var count int
 	err = tx.QueryRow(ctx, "SELECT count(*) FROM shelf_slots WHERE organization_id=$1 AND shelf_id=$2", org, shelfID).Scan(&count)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
 		return nil, err
 	}
 	if count >= 100 {
@@ -116,23 +119,24 @@ func (service *Service) SaveSlot(ctx context.Context, user, org, shelfID string,
 	}
 	var id string
 	err = tx.QueryRow(ctx, `INSERT INTO shelf_slots(organization_id,shelf_id,code,position) VALUES($1,$2,$3,$4) RETURNING id::text`, org, shelfID, input.Code, input.Position).Scan(&id)
-	if err != nil {
-		return nil, dbError(err)
+	if err = checkAuthorization(ctx, authorization, dbError(err)); err != nil {
+		return nil, err
 	}
 	result, err := raw(ctx, tx, "SELECT to_jsonb(slot) FROM shelf_slots slot WHERE organization_id=$1 AND id=$2", org, id)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
 		return nil, err
 	}
-	return finish(ctx, tx, user, org, "", "shelf.slot.created", id, result)
+	return finishWrite(ctx, authorization, user, org, "", "shelf.slot.created", id, result)
 }
 func (service *Service) SaveAssignment(ctx context.Context, user, org, shelfID, id string, input AssignmentInput) (json.RawMessage, error) {
-	tx, actor, err := service.Organization.Authorized(ctx, user, org, "shelf.assignment.manage")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "shelf.assignment.manage")
 	if err != nil {
 		return nil, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
 	current, err := readShelf(ctx, tx, actor, org, shelfID, true)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
 		return nil, err
 	}
 	if !uuidPattern.MatchString(input.SlotID) || !uuidPattern.MatchString(input.VariantID) {
@@ -154,13 +158,13 @@ func (service *Service) SaveAssignment(ctx context.Context, user, org, shelfID, 
 		return nil, ErrInput
 	}
 	for _, amount := range []string{input.Minimum, input.Target, input.Capacity} {
-		if err = inventory.ValidateQuantity(ctx, tx, org, input.VariantID, amount, false); err != nil {
+		if err = checkAuthorization(ctx, authorization, inventory.ValidateQuantity(ctx, tx, org, input.VariantID, amount, false)); err != nil {
 			return nil, err
 		}
 	}
 	var recorded string
 	err = tx.QueryRow(ctx, `SELECT COALESCE((SELECT quantity FROM stock_balances WHERE organization_id=$1 AND location_id=$2 AND variant_id=$3),0)::text`, org, current.Location, input.VariantID).Scan(&recorded)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
 		return nil, err
 	}
 	stock, _ := decimal(recorded, 3)
@@ -168,35 +172,35 @@ func (service *Service) SaveAssignment(ctx context.Context, user, org, shelfID, 
 		return nil, ErrConflict
 	}
 	if id != "" {
-		if err = checkRevision(ctx, tx, org, "shelf_assignments", id, input.Revision); err != nil {
+		if err = checkAuthorization(ctx, authorization, checkRevision(ctx, tx, org, "shelf_assignments", id, input.Revision)); err != nil {
 			return nil, err
 		}
 		var pending bool
 		err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM replenishment_tasks WHERE organization_id=$1 AND assignment_id=$2 AND status IN ('OPEN','ASSIGNED','IN_PROGRESS'))", org, id).Scan(&pending)
-		if err != nil {
+		if err = checkAuthorization(ctx, authorization, err); err != nil {
 			return nil, err
 		}
 		if pending {
 			return nil, ErrConflict
 		}
 		changed, err := tx.Exec(ctx, `UPDATE shelf_assignments SET slot_id=$4,minimum_quantity=$5,target_quantity=$6,capacity_quantity=$7,status=$8,revision=revision+1 WHERE organization_id=$1 AND id=$2 AND shelf_id=$3 AND variant_id=$9`, org, id, shelfID, input.SlotID, input.Minimum, input.Target, input.Capacity, input.Status, input.VariantID)
-		if err != nil {
-			return nil, dbError(err)
+		if err = checkAuthorization(ctx, authorization, dbError(err)); err != nil {
+			return nil, err
 		}
 		if changed.RowsAffected() != 1 {
 			return nil, ErrConflict
 		}
 	} else {
 		err = tx.QueryRow(ctx, `INSERT INTO shelf_assignments(organization_id,shelf_id,slot_id,variant_id,minimum_quantity,target_quantity,capacity_quantity,status) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id::text`, org, shelfID, input.SlotID, input.VariantID, input.Minimum, input.Target, input.Capacity, input.Status).Scan(&id)
-		if err != nil {
-			return nil, dbError(err)
+		if err = checkAuthorization(ctx, authorization, dbError(err)); err != nil {
+			return nil, err
 		}
 	}
 	result, err := raw(ctx, tx, `SELECT `+assignmentJSON+assignmentJoins+` WHERE assignment.organization_id=$1 AND assignment.id=$2`, org, id)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
 		return nil, err
 	}
-	return finish(ctx, tx, user, org, "", "shelf.assignment.saved", id, result)
+	return finishWrite(ctx, authorization, user, org, "", "shelf.assignment.saved", id, result)
 }
 
 type assignment struct{ ID, Shelf, Variant, Location, Branch, Status, ShelfStatus, Minimum, Target, Capacity string }
@@ -227,42 +231,46 @@ func (service *Service) CreateTask(ctx context.Context, user, org, key string, i
 	if input.BatchID != nil && (!uuidPattern.MatchString(*input.BatchID) || !input.BatchVerified) {
 		return nil, ErrInput
 	}
-	tx, actor, err := service.Organization.Authorized(ctx, user, org, "shelf.replenishment.create")
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "shelf.replenishment.create")
 	if err != nil {
 		return nil, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
 	item, err := readAssignment(ctx, tx, actor, org, input.AssignmentID)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
 		return nil, err
 	}
 	op, cached, err := inventory.BeginOperation(ctx, tx, user, org, "shelf.task.create", key, input)
-	if err != nil || cached != nil {
-		return cached, err
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
+		return nil, err
+	}
+	if cached != nil {
+		return cached, nil
 	}
 	if item.Status != "ACTIVE" || item.ShelfStatus != "ACTIVE" {
 		return nil, ErrConflict
 	}
-	if err = inventory.SupplyLocation(ctx, tx, actor, org, item.Branch, input.SourceID, "RECEIPT"); err != nil {
+	if err = checkAuthorization(ctx, authorization, inventory.SupplyLocation(ctx, tx, actor, org, item.Branch, input.SourceID, "RECEIPT")); err != nil {
 		return nil, err
 	}
-	if err = inventory.SaleLocation(ctx, tx, actor, org, item.Branch, item.Location); err != nil {
+	if err = checkAuthorization(ctx, authorization, inventory.SaleLocation(ctx, tx, actor, org, item.Branch, item.Location)); err != nil {
 		return nil, err
 	}
 	requested, err := decimal(input.Quantity, 3)
 	if err != nil || requested <= 0 || input.SourceID == item.Location {
 		return nil, ErrInput
 	}
-	if err = inventory.ValidateQuantity(ctx, tx, org, item.Variant, input.Quantity, true); err != nil {
+	if err = checkAuthorization(ctx, authorization, inventory.ValidateQuantity(ctx, tx, org, item.Variant, input.Quantity, true)); err != nil {
 		return nil, err
 	}
 	recorded, err := balance(ctx, tx, org, item.Location, item.Variant)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
 		return nil, err
 	}
 	var availableText string
 	sellable := true
-	if err = inventory.QualityAvailability(ctx, tx, org, input.SourceID, item.Variant, input.BatchID, &availableText, &sellable); err != nil {
+	if err = checkAuthorization(ctx, authorization, inventory.QualityAvailability(ctx, tx, org, input.SourceID, item.Variant, input.BatchID, &availableText, &sellable)); err != nil {
 		return nil, err
 	}
 	if !sellable {
@@ -282,14 +290,14 @@ func (service *Service) CreateTask(ctx context.Context, user, org, key string, i
 	}
 	var id string
 	err = tx.QueryRow(ctx, `INSERT INTO replenishment_tasks(organization_id,branch_id,shelf_id,assignment_id,source_location_id,quantity,created_by,batch_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id::text`, org, item.Branch, item.Shelf, item.ID, input.SourceID, input.Quantity, user, input.BatchID).Scan(&id)
-	if err != nil {
-		return nil, dbError(err)
-	}
-	result, err := taskJSON(ctx, tx, org, id)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, dbError(err)); err != nil {
 		return nil, err
 	}
-	return finish(ctx, tx, user, org, op, "shelf.task.created", id, result)
+	result, err := taskJSON(ctx, tx, org, id)
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
+		return nil, err
+	}
+	return finishWrite(ctx, authorization, user, org, op, "shelf.task.created", id, result)
 }
 func taskTransition(status, action string) (string, error) {
 	if status == "IN_PROGRESS" && action == "assign" {
@@ -306,10 +314,11 @@ func (service *Service) ActTask(ctx context.Context, user, org, id, action, key 
 	if action == "cancel" {
 		permission = "shelf.replenishment.create"
 	}
-	tx, actor, err := service.Organization.Authorized(ctx, user, org, permission)
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, permission)
 	if err != nil {
 		return nil, err
 	}
+	tx, actor := authorization.Tx, authorization.Actor
 	defer tx.Rollback(ctx)
 	if !uuidPattern.MatchString(id) || !text(input.Reason, 2000, false) {
 		return nil, ErrInput
@@ -319,16 +328,19 @@ func (service *Service) ActTask(ctx context.Context, user, org, id, action, key 
 	var batch *string
 	var revision int64
 	err = tx.QueryRow(ctx, `SELECT assignment_id::text,source_location_id::text,status,quantity::text,assigned_to::text,revision,batch_id::text FROM replenishment_tasks WHERE organization_id=$1 AND id=$2 FOR UPDATE`, org, id).Scan(&assignmentID, &source, &status, &quantity, &assigned, &revision, &batch)
-	if err != nil {
-		return nil, dbError(err)
+	if err = checkAuthorization(ctx, authorization, dbError(err)); err != nil {
+		return nil, err
 	}
 	item, err := readAssignment(ctx, tx, actor, org, assignmentID)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
 		return nil, err
 	}
 	op, cached, err := inventory.BeginOperation(ctx, tx, user, org, "shelf.task:"+id+":"+action, key, input)
-	if err != nil || cached != nil {
-		return cached, err
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
+		return nil, err
+	}
+	if cached != nil {
+		return cached, nil
 	}
 	if revision != input.Revision {
 		return nil, ErrConflict
@@ -346,15 +358,15 @@ func (service *Service) ActTask(ctx context.Context, user, org, id, action, key 
 		}
 		var eligible bool
 		err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM organization_memberships member JOIN users account ON account.id=member.user_id WHERE member.organization_id=$1 AND member.user_id=$2 AND member.status='ACTIVE' AND member.role='OWNER' AND account.status='ACTIVE')`, org, input.AssignedTo).Scan(&eligible)
-		if err != nil {
+		if err = checkAuthorization(ctx, authorization, err); err != nil {
 			return nil, err
 		}
 		if !eligible {
 			return nil, organization.ErrDenied
 		}
 		_, err = tx.Exec(ctx, `UPDATE replenishment_tasks SET assigned_to=$3 WHERE organization_id=$1 AND id=$2`, org, id, input.AssignedTo)
-		if err != nil {
-			return nil, dbError(err)
+		if err = checkAuthorization(ctx, authorization, dbError(err)); err != nil {
+			return nil, err
 		}
 	} else if input.AssignedTo != "" {
 		return nil, ErrInput
@@ -366,7 +378,7 @@ func (service *Service) ActTask(ctx context.Context, user, org, id, action, key 
 		}
 		requested, _ := decimal(quantity, 3)
 		recorded, err := balance(ctx, tx, org, item.Location, item.Variant)
-		if err != nil {
+		if err = checkAuthorization(ctx, authorization, err); err != nil {
 			return nil, err
 		}
 		capacity, _ := decimal(item.Capacity, 3)
@@ -375,25 +387,25 @@ func (service *Service) ActTask(ctx context.Context, user, org, id, action, key 
 			return nil, ErrConflict
 		}
 		available, err := balance(ctx, tx, org, source, item.Variant)
-		if err != nil {
+		if err = checkAuthorization(ctx, authorization, err); err != nil {
 			return nil, err
 		}
 		if requested > available {
 			return nil, ErrStock
 		}
 		adapter := inventory.Service{Organization: service.Organization}
-		transfer, err = adapter.Replenish(ctx, tx, actor, user, org, op, item.Branch, source, item.Location, item.Variant, quantity, batch)
-		if err != nil {
+		transfer, err = adapter.Replenish(ctx, authorization, user, org, op, item.Branch, source, item.Location, item.Variant, quantity, batch)
+		if err = checkAuthorization(ctx, authorization, err); err != nil {
 			return nil, err
 		}
 	}
 	_, err = tx.Exec(ctx, `UPDATE replenishment_tasks SET status=$3,revision=revision+1,transfer_id=$4,inventory_operation_id=CASE WHEN $3='COMPLETED' THEN $5::uuid ELSE NULL END,completed_by=CASE WHEN $3='COMPLETED' THEN $6::uuid ELSE NULL END,completed_at=CASE WHEN $3='COMPLETED' THEN now() ELSE NULL END WHERE organization_id=$1 AND id=$2`, org, id, next, nullable(transfer), op, user)
-	if err != nil {
-		return nil, dbError(err)
-	}
-	result, err := taskJSON(ctx, tx, org, id)
-	if err != nil {
+	if err = checkAuthorization(ctx, authorization, dbError(err)); err != nil {
 		return nil, err
 	}
-	return finish(ctx, tx, user, org, op, "shelf.task."+action, id, result)
+	result, err := taskJSON(ctx, tx, org, id)
+	if err = checkAuthorization(ctx, authorization, err); err != nil {
+		return nil, err
+	}
+	return finishWrite(ctx, authorization, user, org, op, "shelf.task."+action, id, result)
 }

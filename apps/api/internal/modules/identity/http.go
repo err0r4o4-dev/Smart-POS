@@ -21,6 +21,7 @@ import (
 type Handler struct {
 	Service        *Service
 	Google         *GoogleAuth
+	MFA            *MFAService
 	Origins        []string
 	Production     bool
 	TrustedProxyIP netip.Addr
@@ -138,6 +139,12 @@ func (handler Handler) Routes(router chi.Router) {
 			private.Use(handler.RequireAuth)
 			private.Get("/me", handler.me)
 			private.Post("/logout", handler.logout)
+			private.Get("/mfa", handler.mfaStatus)
+			private.Post("/mfa/enrollment", handler.mfaBegin)
+			private.Post("/mfa/enrollment/confirm", handler.mfaConfirm)
+			private.Post("/mfa/challenge", handler.mfaChallenge)
+			private.Post("/mfa/recovery", handler.mfaRecoveryBegin)
+			private.Post("/mfa/recovery/confirm", handler.mfaRecoveryConfirm)
 		})
 	})
 }

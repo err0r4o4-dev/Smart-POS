@@ -42,7 +42,12 @@ export interface SetupProfileInput {
     OrganizationInput,
     'name' | 'business_type' | 'contact_email' | 'contact_phone' | 'address'
   >;
-  service_modes: { dine_in: boolean; takeaway: boolean; delivery: boolean };
+  service_modes: {
+    dine_in: boolean;
+    takeaway: boolean;
+    delivery: boolean;
+    pickup?: boolean;
+  };
 }
 
 export interface SetupLocation {
@@ -67,7 +72,7 @@ interface SetupProfileState extends SetupProfileInput {
 }
 
 export interface SetupServicesInput {
-  service_modes: { dine_in: boolean; takeaway: boolean; delivery: boolean };
+  service_modes: SetupProfileInput['service_modes'];
 }
 
 export interface SetupTablesInput {
@@ -322,7 +327,9 @@ function toBackendPayload(
         zone_code:
           zoneCodes[input.zones.findIndex((zone) => zone.name === table.zone)],
       })),
-      generate_qr: input.qr_enabled,
+      ...(branchID
+        ? { generate_qr: input.qr_enabled }
+        : { qr_enabled: input.qr_enabled }),
     };
   }
   if (step === 'menu')

@@ -1,5 +1,29 @@
 # Complete route inventory
 
+## Current VELOPOS route disposition
+
+`apps/web/src/app/router.tsx` defines mounted web pages; the composed Go router
+defines mounted API operations. The 116 entries in `packages/contracts/routes.json`
+include historical and planned web routes. The count does not describe the
+number of mounted pages. The table below supersedes conflicting older phase
+descriptions for the affected journeys.
+
+| Journey | Disposition | Current surface and boundary |
+| --- | --- | --- |
+| Customer storefront | Active | `/shop`, `/shop/:slug`, `/shop/:slug/cart`, `/shop/:slug/checkout`; private tracking is `/shop/:slug/orders/:orderId` and requires the order access token. |
+| Older tracking links | Compatibility redirect | `/shop/:slug/track/:orderId` forwards to the canonical order page and preserves the search and fragment. It does not bypass order access checks. |
+| Account security | Active | `/security` requires a session and works outside restaurant context. Recovery-code TOTP replacement is wired; manual privileged recovery remains pending. |
+| Owner operations | Active | `/dashboard`, `/orders`, `/orders/:orderId`, `/kitchen`, `/settings` and `/settings/storefront` are mounted under session and organization gates. Order and kitchen pages require `online_orders.read`. |
+| Owner payment diagnostics | Active and compatibility redirect | `/settings/payments` is the canonical sandbox page behind the management and `storefront.manage` gates. `/manage/settings/storefront/payments` redirects to it. This is not merchant-direct PromptPay. |
+| Purchasing and POS return bookmarks | Retired web pages; retained API | `/suppliers`, `/purchasing/orders` and its tested new/detail bookmarks, `/shelves`, `/pos/returns` and `/pos/exchanges` show the not-found page. The retained organization-scoped Purchasing and Returns APIs still enforce live Owner MFA and operation-specific authorization. The route inventory retains historical entries. |
+| Older sales links | Deprecated presentation | `/sales/voids` and `/sales/refunds`, including descendants, render the system page. The current authorized refunds page is `/refunds`. This does not remove retained Go services or records. |
+| Staff and ingredient routes | Retired | `/work`, employee and role pages, and recipe, quick-stock and forecast pages do not enter a workspace. The retired organization member, role, invitation and restaurant quick-stock API paths are not mounted. |
+| Platform Admin | Planned workspace | The audited server command is the current provisioning path. No platform Admin web workspace or self-service grant route is mounted. |
+
+Current Owner screens and retained POS/API compatibility do not establish the
+future T3/T4/T6 capabilities. See [T4.4](../../specs/velopos-migration/tasks.md#t4-4)
+for verification and cutover limits.
+
 ## Owner-only transition (2026-11-05)
 
 The approved change retires `/work`, `/employees`, `/employees/:id` and
@@ -36,6 +60,7 @@ Storefront adds seven logical routes; backoffice routes use the management works
 | Authentication | `/verify-email` | Email confirmation and resend; no automatic login | 1 | public; session refresh for signed-in users |
 | Authentication | `/forgot-password` | Implemented Phase 1A | 1 | public Origin-validated entry |
 | Authentication | `/reset-password` | Implemented Phase 1A | 1 | public token + Origin-validated entry |
+| Authentication | `/security` | MFA enrollment/challenge and one-time recovery-code display; mandatory authority gates pending | 1 | verified session; independent of organization context |
 | Authentication | `/setup` | Implemented Phase 1B | 1 | session; no existing tenant required for creation |
 | Authentication | `/account` | Implemented Phase 1A | 1 | session |
 | Dashboard | `/dashboard` | Foundation shell (business dashboard planned) | 3 | session + tenant + branch permission |

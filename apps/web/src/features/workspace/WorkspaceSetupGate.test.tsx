@@ -55,17 +55,20 @@ beforeEach(() => {
     readiness: { ready: true },
   });
 });
-it('offers account security when the parent workspace gate receives MFA_REQUIRED', async () => {
-  mocks.mfaRequired = true;
-  mount();
-  expect(
-    await screen.findByRole('link', { name: 'ความปลอดภัยของบัญชี' }),
-  ).toHaveAttribute('href', '/security');
-  expect(mocks.getSetup).not.toHaveBeenCalled();
-  expect(
-    screen.queryByRole('heading', { name: 'Working page' }),
-  ).not.toBeInTheDocument();
-});
+it.each(['/workspace', '/dashboard', '/pos/checkout'])(
+  'opens the MFA form directly when entering %s requires MFA',
+  async (path) => {
+    mocks.mfaRequired = true;
+    mount(path);
+    expect(
+      await screen.findByRole('heading', { name: 'Verify your code' }),
+    ).toBeInTheDocument();
+    expect(mocks.getSetup).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole('heading', { name: 'Working page' }),
+    ).not.toBeInTheDocument();
+  },
+);
 afterEach(() =>
   notifyManager.setScheduler((callback) => setTimeout(callback, 0)),
 );
@@ -79,6 +82,7 @@ function mount(
       <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route element={<WorkspaceAreaGate />}>
+            <Route path="/workspace" element={<h1>Working page</h1>} />
             <Route
               path="/dashboard"
               element={
@@ -96,6 +100,7 @@ function mount(
             <Route path="/setup" element={<h1>Setup</h1>} />
             <Route path="/help" element={<h1>Help</h1>} />
           </Route>
+          <Route path="/security" element={<h1>Verify your code</h1>} />
           <Route path="/403" element={<h1>Forbidden</h1>} />
         </Routes>
       </MemoryRouter>

@@ -25,7 +25,7 @@ it('provides one full-page brand header that links home on sign-in', () => {
   expect(screen.getByRole('main')).toHaveAttribute('id', 'main-content');
 });
 
-it('keeps the separate back link below the header on supporting account pages', () => {
+it('keeps the separate back link in the card on supporting account pages', () => {
   render(
     <MemoryRouter>
       <LoginLayout story="recover" titleId="recovery-title">
@@ -33,10 +33,9 @@ it('keeps the separate back link below the header on supporting account pages', 
       </LoginLayout>
     </MemoryRouter>,
   );
-  const header = screen.getByRole('banner');
   const back = screen.getByRole('link', { name: 'Back to home' });
   expect(back).toHaveAttribute('href', '/');
   expect(
-    header.compareDocumentPosition(back) & Node.DOCUMENT_POSITION_FOLLOWING,
-  ).toBeTruthy();
+    screen.getByRole('region', { name: 'Reset password' }),
+  ).toContainElement(back);
 });

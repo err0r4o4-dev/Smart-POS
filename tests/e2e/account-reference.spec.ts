@@ -60,6 +60,38 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
+for (const width of [390, 1440]) {
+  test(`round trip to registration preserves the sign-in visual at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/login');
+    await page.getByRole('button', { name: 'English', exact: true }).click();
+    const visual = page.getByRole('region', { name: /run your store/i });
+    const snapshot = async () => {
+      await page.evaluate(async () => {
+        await document.fonts.ready;
+        window.scrollTo(0, 0);
+      });
+      return {
+        copy: await visual.innerText(),
+        art: await visual.getByRole('img').boundingBox(),
+      };
+    };
+    const signIn = await snapshot();
+    await page.getByRole('link', { name: 'Create account' }).click();
+    await expect(page).toHaveURL(/\/register$/);
+    await expect(page.getByLabel('Display name')).toBeVisible();
+    await expect(visual).toBeVisible();
+    expect(await snapshot()).toEqual(signIn);
+    await page
+      .getByRole('link', { name: 'Already have an account? Sign in' })
+      .click();
+    await expect(page).toHaveURL(/\/login$/);
+    expect(await snapshot()).toEqual(signIn);
+  });
+}
+
 for (const width of [320, 390, 768, 1024, 1440]) {
   for (const account of accountPages) {
     test(
@@ -324,6 +356,9 @@ for (const width of [320, 768, 901, 1024, 1440, 1920]) {
     expect(
       Math.abs(expandedArtwork.height - originalArtwork.height),
     ).toBeLessThanOrEqual(1);
+    expect(Math.abs(expandedArtwork.y - originalArtwork.y)).toBeLessThanOrEqual(
+      1,
+    );
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(width);
@@ -333,15 +368,6 @@ for (const width of [320, 768, 901, 1024, 1440, 1920]) {
     if (width >= 768) {
       expect(image.y).toBeGreaterThanOrEqual(copy.y + copy.height);
       expect(image.x + image.width).toBeLessThanOrEqual(panel.x);
-      const visual = (await page.locator('.login-visual').boundingBox())!;
-      expect(
-        Math.abs(
-          visual.y +
-            visual.height / 2 -
-            expandedCard.y -
-            expandedCard.height / 2,
-        ),
-      ).toBeLessThanOrEqual(1);
     } else {
       expect(panel.y).toBeGreaterThanOrEqual(copy.y + copy.height);
       expect(panel.y).toBeGreaterThanOrEqual(image.y + image.height);

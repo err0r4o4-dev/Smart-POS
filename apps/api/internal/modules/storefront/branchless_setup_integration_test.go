@@ -110,6 +110,47 @@ func verifyBranchlessSetup(t *testing.T, ctx, guestCtx context.Context, organiza
 	if issued.TableID != originalQR.TableID || issued.Code != originalQR.Code || issued.QRToken == originalQR.QRToken {
 		t.Fatal("explicit QR rotation did not replace the token on the same table")
 	}
+	t.Run("native table sessions", func(t *testing.T) {
+		// Dedicated restaurants keep this suite's setup commands and QR state
+		// separate from the shared branchless fixture's later invariants.
+		tables := restaurant.SetupTablesInput{GenerateQR: true,
+			Zones: []restaurant.SetupZoneInput{{Code: "MAIN", Name: "Dining room"}},
+			Tables: []restaurant.SetupTableInput{
+				{Code: "T1", Name: "Table one", Seats: 4, ZoneCode: "MAIN"},
+				{Code: "T2", Name: "Table two", Seats: 2, ZoneCode: "MAIN"},
+			},
+		}
+		fixture := func(seed, name string) (string, restaurant.IssuedTableQRToken) {
+			t.Helper()
+			created, problem := organizations.CreateRestaurant(ctx, owner, seed+"0-1111-4111-8111-111111111111", organization.OrganizationInput{Name: name, BusinessType: "RESTAURANT"})
+			if problem != nil {
+				t.Fatal(problem)
+			}
+			id := created.Organization.ID
+			if _, problem = service.SaveProfile(ctx, owner, id, seed+"1-1111-4111-8111-111111111111", restaurant.SetupProfileInput{Name: name, BusinessType: "RESTAURANT"}); problem != nil {
+				t.Fatal(problem)
+			}
+			if _, problem = service.SaveServices(ctx, owner, id, seed+"2-1111-4111-8111-111111111111", restaurant.SetupServicesInput{ServiceModes: restaurant.ServiceModes{DineIn: true}}); problem != nil {
+				t.Fatal(problem)
+			}
+			state, problem := service.SaveTables(ctx, owner, id, seed+"3-1111-4111-8111-111111111111", tables)
+			if problem != nil || len(state.IssuedTableQRTokens) != 2 {
+				t.Fatalf("session fixture tables: %v", problem)
+			}
+			for _, token := range state.IssuedTableQRTokens {
+				if token.Code == "T1" {
+					return id, token
+				}
+			}
+			t.Fatal("session fixture T1 QR missing")
+			return "", restaurant.IssuedTableQRToken{}
+		}
+		sessionOrg, sessionQR := fixture("a071111", "Session restaurant")
+		otherOrg, otherQR := fixture("a072222", "Session isolation restaurant")
+		current := tables
+		current.GenerateQR = false
+		verifyNativeTableSessions(t, ctx, organizations, owner, sessionOrg, current, sessionQR, otherOrg, otherQR)
+	})
 	if _, err = service.SavePayments(ctx, owner, org, "88711111-1111-4111-8111-111111111111", restaurant.SetupPaymentsInput{Cash: true}); err != nil {
 		t.Fatal(err)
 	}

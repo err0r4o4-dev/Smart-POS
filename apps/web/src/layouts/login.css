@@ -30,17 +30,11 @@
   color: inherit;
 }
 
-.account-navigation {
-  width: 100%;
-  max-width: var(--layout-container-max);
-  margin-inline: auto;
-  padding: var(--space-2) var(--layout-gutter);
-}
-
 .login-back-link {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
+  margin-block-start: var(--space-2);
   gap: 12px;
   color: var(--text-strong);
   font-size: 14px;
@@ -55,14 +49,37 @@
   flex: 1;
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(320px, 1fr);
-  align-content: safe center;
-  align-items: center;
+  align-content: start;
+  align-items: start;
   gap: clamp(var(--space-6), 4.75vw, var(--space-16));
   padding-block: var(--space-8) max(var(--space-8), env(safe-area-inset-bottom));
   width: 100%;
   max-width: var(--layout-container-max);
   margin-inline: auto;
   padding-inline: var(--layout-shell-start) var(--layout-shell-end);
+}
+
+@media (width >= 768px) {
+  .login-shell {
+    --account-column-min-height: calc(
+      100svh - var(--header-height) - var(--space-8) -
+        max(var(--space-8), env(safe-area-inset-bottom))
+    );
+  }
+
+  /* Center each column in the viewport independently of the form height. */
+  .login-visual,
+  .login-panel {
+    min-height: var(--account-column-min-height);
+  }
+
+  .login-visual {
+    justify-content: center;
+  }
+
+  .login-panel .login-card-stage {
+    align-items: safe center;
+  }
 }
 
 .login-visual {
@@ -161,6 +178,10 @@
   display: block;
   width: 100%;
   height: auto;
+  mask-image:
+    linear-gradient(to right, transparent, #000 5% 95%, transparent),
+    linear-gradient(to bottom, transparent, #000 7% 90%, transparent);
+  mask-composite: intersect;
 }
 
 .login-panel {
@@ -496,14 +517,14 @@
   stroke-width: 1.1;
 }
 
-[data-account-story='login'] .login-visual-copy em {
+.login-visual-copy em {
   position: relative;
   color: #c76900;
   font-style: italic;
   text-decoration: none;
 }
 
-[data-account-story='login'] .login-visual-copy em::after {
+.login-visual-copy em::after {
   content: '';
   position: absolute;
   inset: auto 0 -0.05em;
@@ -523,25 +544,25 @@
   line-height: 1.6;
 }
 
-[data-account-story='login'] .login-story-badge {
+.login-story-badge {
   margin-bottom: var(--space-3);
   padding: 7px 14px;
   color: #241b0c;
   background: linear-gradient(#fff1d1, #ffe3a0);
 }
 
-[data-account-story='login'] .login-story-badge svg {
+.login-story-badge svg {
   color: #d77900;
 }
 
-[data-account-story='login'] .login-feature-list {
+.login-feature-list {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: var(--space-2);
   scroll-margin-block-start: var(--space-4);
 }
 
-[data-account-story='login'] .login-feature-list li {
+.login-feature-list li {
   min-width: 0;
   max-width: none;
   overflow-wrap: anywhere;
@@ -549,7 +570,7 @@
   color: #3f4a5d;
 }
 
-[data-account-story='login'] .login-feature-list span {
+.login-feature-list span {
   width: clamp(var(--space-10), 9cqi, var(--space-12));
   border-color: #fffcf5;
   border-radius: var(--radius-control);
@@ -561,29 +582,17 @@
     inset 0 1px 0 #fff;
 }
 
-[data-account-story='login'] .login-feature-list svg {
+.login-feature-list svg {
   width: 54%;
   height: 54%;
 }
 
-.login-scene-labels {
-  display: none;
-}
-
-.login-scene-trend,
-.login-scene-note {
+.login-scene-trend {
   position: absolute;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   border: 1px solid #fffbf3;
-  box-shadow:
-    0 12px 22px -15px #805627b8,
-    0 3px 7px -4px #a1764657,
-    inset 0 1px 0 #fff;
-}
-
-.login-scene-trend {
   z-index: -1;
   top: 8%;
   right: 27%;
@@ -592,57 +601,16 @@
   border-radius: 17px;
   background: linear-gradient(135deg, #ffe6a1, #ffbd22);
   color: #fff6d0;
+  box-shadow:
+    0 12px 22px -15px #805627b8,
+    0 3px 7px -4px #a1764657,
+    inset 0 1px 0 #fff;
 }
 
 .login-scene-trend svg {
   width: 64%;
   height: 68%;
   stroke-width: 1.7;
-}
-
-.login-scene-note {
-  gap: var(--space-2);
-  width: 24%;
-  min-height: var(--space-12);
-  padding: var(--space-2);
-  border-radius: var(--radius-control);
-  background: linear-gradient(135deg, #fffefa, #fff5e4f5);
-  color: #142032;
-  font-size: var(--font-label);
-  line-height: 1.26;
-  font-weight: 750;
-}
-
-.login-scene-note svg {
-  flex: 0 0 22%;
-  width: 22%;
-  height: auto;
-  color: #d87a08;
-}
-
-.login-scene-orders {
-  left: 0;
-  top: 23%;
-}
-
-.login-scene-orders svg {
-  color: #278741;
-}
-
-.login-scene-kitchen,
-.login-scene-sales,
-.login-scene-start {
-  right: 0;
-}
-
-.login-scene-kitchen {
-  top: 16%;
-}
-.login-scene-sales {
-  top: 37%;
-}
-.login-scene-start {
-  top: 58%;
 }
 
 .login-card-brand {
@@ -731,13 +699,13 @@
     font-size: var(--font-page);
   }
 
-  .login-scene-labels {
-    display: contents;
+  .login-scene-trend {
+    display: flex;
   }
 }
 
 @media (768px <= width < 1180px) {
-  [data-account-story='login'] .login-visual-copy .login-story-badge {
+  .login-visual-copy .login-story-badge {
     display: none;
   }
 }
@@ -747,7 +715,7 @@
     grid-template-columns: minmax(0, 1fr) minmax(320px, 1fr);
   }
 
-  [data-account-story='login'] .login-feature-list li {
+  .login-feature-list li {
     font-size: var(--font-label);
   }
 }
@@ -761,7 +729,7 @@
   }
 
   .login-ambient-tile,
-  [data-account-story='login'] .login-feature-list {
+  .login-feature-list {
     display: none;
   }
 

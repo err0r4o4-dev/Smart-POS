@@ -65,7 +65,7 @@ for (const width of [320, 360, 390, 767, 768, 1023, 1024, 1280, 1536, 1920]) {
       expect(bounds.x).toBeCloseTo((width - expectedWidth) / 2, 0);
     }
     const header = await page.locator('.landing-header').boundingBox();
-    expect(header!.height).toBeCloseTo(54, 0);
+    expect(header!.height).toBeCloseTo(66, 0);
     if (width < 768) {
       const copy = (await page.locator('.landing-hero-copy').boundingBox())!;
       const food = (await page.locator('.landing-hero-art').boundingBox())!;
@@ -122,10 +122,7 @@ test('filters published stores, keeps favorites, and opens the shop cart selecto
   await page.reload();
   await page.getByRole('button', { name: 'ร้านโปรด', exact: true }).click();
   await expect(list.getByRole('link', { name: 'กะเพราพี่ต้น' })).toBeVisible();
-  await page
-    .getByRole('banner')
-    .getByRole('link', { name: 'ตะกร้าสินค้า' })
-    .click();
+  await page.goto('/shop?view=cart');
   await expect(
     page.getByRole('link', { name: 'เปิดตะกร้า' }).first(),
   ).toHaveAttribute('href', '/shop/krapao/cart');

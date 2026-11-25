@@ -9,6 +9,7 @@ import {
   Link,
   useBeforeUnload,
   useBlocker,
+  useLocation,
   useNavigate,
 } from 'react-router-dom';
 import { ShieldCheck } from 'lucide-react';
@@ -63,6 +64,7 @@ function MFAFlow({
   invalidSession: () => void;
 }) {
   const { t, formatDateTime } = useLanguage();
+  const required = useLocation().state?.mfaRequired === true;
   const navigate = useNavigate();
   const [flow, setFlow] = useState<Flow>({ kind: 'loading' });
   const [enterWorkspace, setEnterWorkspace] = useState(false);
@@ -528,7 +530,7 @@ function MFAFlow({
         {flow.kind !== 'relogin' && flow.kind !== 'stale' && (
           <div className="auth-links auth-links-single">
             <Link to={paths.login}>{t('mfa.signin')}</Link>
-            <Link to={paths.workspace}>{t('mfa.workspace')}</Link>
+            {!required && <Link to={paths.workspace}>{t('mfa.workspace')}</Link>}
           </div>
         )}
       </div>

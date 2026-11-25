@@ -163,7 +163,7 @@ export function LandingPage() {
         {t('landing.skipToContent')}
       </a>
       <header className="landing-header">
-        <div className="landing-container landing-header-inner">
+        <div className="layout-shell landing-header-inner">
           <Link
             className="landing-brand-link"
             to="/"
@@ -637,18 +637,12 @@ function LandingNavigation({
         </a>
       </div>
       <div className="landing-nav-actions">
-        <Link
-          className="landing-nav-link landing-cart-link"
-          to={paths.shop + '?view=cart'}
-          aria-label={t('landing.cart')}
-        >
-          <ShoppingCart size={20} aria-hidden="true" />
-          <span>{t('landing.cart')}</span>
-        </Link>
-        {compactLanguage && (
+        {compactLanguage ? (
           <div className="landing-menu-language">
             <LanguageSwitcher />
           </div>
+        ) : (
+          <LanguageSwitcher />
         )}
         <a className="landing-nav-link" href="#for-merchants" onClick={close}>
           <Store size={17} aria-hidden="true" />

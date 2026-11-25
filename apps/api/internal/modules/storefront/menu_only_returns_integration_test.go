@@ -237,6 +237,43 @@ func menuOnlyReturnsAcceptance(test *testing.T, ctx context.Context, organizatio
 		t.Helper()
 		expiredReturnsRequest(t, newRequest(t, session, path, key, payload), prefix)
 	}
+	// Every Returns write records its audit row last before commit; this digest
+	// detects any record that survives a denied attempt in this organization.
+	returnsDigest := func(t *testing.T) string {
+		t.Helper()
+		tx, _, err := organizations.Authorized(ctx, owner, org, "pos.checkout")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer tx.Rollback(ctx)
+		state := ""
+		for _, table := range []string{"customer_returns", "customer_return_items", "customer_refunds", "refund_settlement_events",
+			"register_cash_disbursements", "sale_adjustments", "adjustment_settlement_events", "sales", "pos_checkouts",
+			"stock_movements", "inventory_operations", "organization_audit_events"} {
+			var digest string
+			if err := tx.QueryRow(ctx, "SELECT count(*)::text||':'||md5(coalesce(string_agg(to_jsonb(t)::text,E'\\n' ORDER BY to_jsonb(t)::text),'')) FROM "+table+" t WHERE organization_id=$1", org).Scan(&digest); err != nil {
+				t.Fatal(err)
+			}
+			state += table + "=" + digest + ";"
+		}
+		return state
+	}
+	// guardedPost first denies the exact request on expiry after its audit insert,
+	// proves nothing persisted, then sends the same request with live authority.
+	guardedPost := func(t *testing.T, path, key string, payload any, status int) json.RawMessage {
+		t.Helper()
+		ok := t.Run("HTTP expires after audit insert "+path, func(t *testing.T) {
+			before := returnsDigest(t)
+			expiredReturnsHTTP(t, path, key, payload, "INSERT INTO organization_audit_events")
+			if returnsDigest(t) != before {
+				t.Fatal("expired HTTP write changed persisted Returns state before retry")
+			}
+		})
+		if !ok {
+			t.FailNow()
+		}
+		return post(t, path, key, payload, status)
+	}
 	input := returns.CreateInput{SaleID: saleID, Reason: "Menu return", Items: []returns.LineInput{{SaleItemID: originalItem, Quantity: "1.000", Disposition: "RESTOCK", Destination: &shop.LocationID}}}
 	createKey := key()
 	test.Run("return draft rolls back on expiry", func(t *testing.T) {
@@ -245,7 +282,7 @@ func menuOnlyReturnsAcceptance(test *testing.T, ctx context.Context, organizatio
 				return (&returns.Service{Organization: traced.Organization}).Create(request, owner, org, createKey, input)
 			}, true)
 	})
-	doc := decode(post(test, "/returns", createKey, input, http.StatusCreated), nil)
+	doc := decode(guardedPost(test, "/returns", createKey, input, http.StatusCreated), nil)
 	if doc.Status != "DRAFT" || doc.Amount != "10.00" || len(doc.Items) != 1 || doc.Items[0].Quantity != "1.000" || doc.Items[0].RefundAmount != "10.00" || doc.Items[0].Disposition != "NO_STOCK_RETURN" || doc.Items[0].Destination != nil || doc.Items[0].MovementID != nil {
 		test.Fatalf("return draft: %+v", doc)
 	}
@@ -317,7 +354,7 @@ func menuOnlyReturnsAcceptance(test *testing.T, ctx context.Context, organizatio
 			doc = decode(data, nil)
 			continue
 		}
-		doc = decode(post(test, path, actionKey, actionInput, http.StatusOK), nil)
+		doc = decode(guardedPost(test, path, actionKey, actionInput, http.StatusOK), nil)
 	}
 	if doc.Status != "COMPLETED" || doc.RefundID == "" || doc.Amount != "10.00" || len(doc.Items) != 1 || doc.Items[0].MovementID != nil {
 		test.Fatalf("completed return: %+v", doc)
@@ -339,7 +376,7 @@ func menuOnlyReturnsAcceptance(test *testing.T, ctx context.Context, organizatio
 	if refund.Status != "PENDING_SETTLEMENT" || refund.Amount != "10.00" {
 		test.Fatalf("pending refund: %+v", refund)
 	}
-	refund = decode(post(test, "/refunds/"+refund.ID+"/report-settlement", key(), returns.SettlementInput{Revision: refund.Revision, Method: "CASH_REFUND", ShiftID: &shift, Note: "Cash returned", Acknowledged: true}, http.StatusOK), nil)
+	refund = decode(guardedPost(test, "/refunds/"+refund.ID+"/report-settlement", key(), returns.SettlementInput{Revision: refund.Revision, Method: "CASH_REFUND", ShiftID: &shift, Note: "Cash returned", Acknowledged: true}, http.StatusOK), nil)
 	if refund.Status != "SETTLEMENT_REPORTED" {
 		test.Fatalf("reported refund: %+v", refund)
 	}
@@ -568,14 +605,14 @@ func menuOnlyReturnsAcceptance(test *testing.T, ctx context.Context, organizatio
 				return (&returns.Service{Organization: traced.Organization}).SaveAdjustment(request, owner, org, "EXCHANGE", "", exchangeKey, exchangeInput)
 			}, true)
 	})
-	exchange := decode(post(test, "/exchanges", exchangeKey, exchangeInput, http.StatusCreated), nil)
+	exchange := decode(guardedPost(test, "/exchanges", exchangeKey, exchangeInput, http.StatusCreated), nil)
 	if exchange.Status != "DRAFT" || exchange.ReturnCredit != "10.00" || exchange.ReplacementTotal != "10.00" || exchange.Difference != "0.00" || exchange.ReturnID == "" {
 		test.Fatalf("exchange draft: %+v", exchange)
 	}
 	for _, action := range []string{"submit", "approve"} {
-		exchange = decode(post(test, "/exchanges/"+exchange.ID+"/"+action, key(), returns.SettlementInput{Revision: exchange.Revision}, http.StatusOK), nil)
+		exchange = decode(guardedPost(test, "/exchanges/"+exchange.ID+"/"+action, key(), returns.SettlementInput{Revision: exchange.Revision}, http.StatusOK), nil)
 	}
-	exchange = decode(post(test, "/exchanges/"+exchange.ID+"/confirm-settlement", key(), returns.SettlementInput{Revision: exchange.Revision, Method: "NONE", Note: "Equal exchange", Acknowledged: true}, http.StatusOK), nil)
+	exchange = decode(guardedPost(test, "/exchanges/"+exchange.ID+"/confirm-settlement", key(), returns.SettlementInput{Revision: exchange.Revision, Method: "NONE", Note: "Equal exchange", Acknowledged: true}, http.StatusOK), nil)
 	if exchange.Status != "AWAITING_SETTLEMENT" {
 		test.Fatalf("exchange acknowledgement: %+v", exchange)
 	}
@@ -696,13 +733,13 @@ func menuOnlyReturnsAcceptance(test *testing.T, ctx context.Context, organizatio
 			SaleID: exchange.ReplacementSaleID, Reason: "Menu void",
 			Items: []returns.LineInput{{SaleItemID: saleItem(exchange.ReplacementSaleID), Quantity: "1.000", Disposition: "NO_STOCK_RETURN"}},
 		}}
-		doc := decode(post(t, "/sales/voids", key(), input, http.StatusCreated), nil)
+		doc := decode(guardedPost(t, "/sales/voids", key(), input, http.StatusCreated), nil)
 		seededVoid = doc.ID
 		voidPath := "/sales/voids/" + doc.ID
 		for _, action := range []string{"submit", "approve"} {
-			doc = decode(post(t, voidPath+"/"+action, key(), returns.SettlementInput{Revision: doc.Revision}, http.StatusOK), nil)
+			doc = decode(guardedPost(t, voidPath+"/"+action, key(), returns.SettlementInput{Revision: doc.Revision}, http.StatusOK), nil)
 		}
-		doc = decode(post(t, voidPath+"/confirm-settlement", key(), returns.SettlementInput{
+		doc = decode(guardedPost(t, voidPath+"/confirm-settlement", key(), returns.SettlementInput{
 			Revision: doc.Revision, Method: "MANUAL_BANK_REFUND", Reference: "synthetic-reconciliation", Note: "Refund acknowledged", Acknowledged: true,
 		}, http.StatusOK), nil)
 		trace := &customerReadFailureTrace{prefix: "INSERT INTO customer_refunds", remaining: 1}

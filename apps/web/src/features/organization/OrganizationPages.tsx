@@ -969,8 +969,7 @@ function ScopedSetupPage() {
         <Loading>{t('organization.checkingStoreModeAndAccess')}</Loading>
       </main>
     );
-  if (tenant.errorCode === 'MFA_REQUIRED')
-    return <MFARequiredState accountPage />;
+  if (tenant.errorCode === 'MFA_REQUIRED') return <MFARequiredState />;
   if (tenant.error)
     return (
       <main className="setup-page-wrapper">

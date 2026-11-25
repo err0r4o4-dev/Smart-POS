@@ -239,11 +239,7 @@ for (const width of [320, 390, 767, 768, 1023, 1024, 1279, 1280, 1440, 1920]) {
       const gutter = width < 768 ? 16 : 24;
       const contentInset = Math.max(gutter, (hostBox.width - 1232) / 2);
       const shellInset =
-        path === '/'
-          ? Math.max(gutter, (hostBox.width - 1284) / 2)
-          : path === '/dashboard'
-            ? gutter
-            : (gutter + contentInset) / 2;
+        path === '/dashboard' ? gutter : (gutter + contentInset) / 2;
       const inner = header.locator(
         '.landing-header-inner, .storefront-header-inner',
       );
@@ -262,7 +258,7 @@ for (const width of [320, 390, 767, 768, 1023, 1024, 1279, 1280, 1440, 1920]) {
         hostBox.x + hostBox.width - shellInset,
         0,
       );
-      expect((await header.boundingBox())!.height).toBe(path === '/' ? 54 : 66);
+      expect((await header.boundingBox())!.height).toBe(66);
       const footer = page.locator(
         '.footer, .landing-footer-inner, .shop-directory-footer',
       );
@@ -326,9 +322,7 @@ for (const path of ['/', '/shop', '/login', '/setup']) {
         element.style.fontSize = `${size * 2}px`;
     });
     const header = page.locator('header').first();
-    expect((await header.boundingBox())!.height).toBeGreaterThanOrEqual(
-      path === '/' ? 54 : 66,
-    );
+    expect((await header.boundingBox())!.height).toBeGreaterThanOrEqual(66);
     for (const control of await header
       .locator('a:visible, button:visible')
       .all()) {

@@ -1,7 +1,6 @@
 import {
   ArrowLeft,
   ChartNoAxesColumnIncreasing,
-  ChefHat,
   Layers,
   ShoppingCart,
   Store,
@@ -34,13 +33,7 @@ export function LoginLayout({
   story?: 'login' | 'register' | 'verify' | 'recover' | 'reset' | 'security';
 }) {
   const { t } = useLanguage();
-  const storyTitle =
-    story === 'login'
-      ? t('auth.storeSimplified')
-      : t(`auth.${story}StoryTitle`);
-  const storySummary =
-    story === 'login' ? t('auth.storeSummary') : t(`auth.${story}StorySummary`);
-  const storyAccent = story === 'login' ? t('auth.storeSimplifiedAccent') : '';
+  const storyAccent = t('auth.storeSimplifiedAccent');
   const StoryHeading = story === 'login' || story === 'register' ? 'h1' : 'h2';
 
   return (
@@ -61,41 +54,30 @@ export function LoginLayout({
       <div className="login-ambient-tile" aria-hidden="true">
         <Utensils />
       </div>
-      {story !== 'login' && (
-        <div className="account-navigation">
-          <a href="/" className="login-back-link">
-            <ArrowLeft size={17} aria-hidden="true" />
-            <span>{t('auth.backToHome')}</span>
-          </a>
-        </div>
-      )}
       <main id="main-content" className="login-shell">
         <section className="login-visual" aria-labelledby="login-visual-title">
           <div className="login-visual-copy">
-            {story === 'login' && (
-              <p className="login-story-badge">
-                <Zap size={16} aria-hidden="true" />
-                {t('auth.restaurantPos')}
-              </p>
-            )}
+            <p className="login-story-badge">
+              <Zap size={16} aria-hidden="true" />
+              {t('auth.restaurantPos')}
+            </p>
             <StoryHeading id="login-visual-title">
-              {storyTitle + (storyAccent.startsWith(' ') ? ' ' : '')}
-              {storyAccent && <em>{storyAccent.trimStart()}</em>}
+              {t('auth.storeSimplified') +
+                (storyAccent.startsWith(' ') ? ' ' : '')}
+              <em>{storyAccent.trimStart()}</em>
             </StoryHeading>
-            <p>{storySummary}</p>
+            <p>{t('auth.storeSummary')}</p>
           </div>
-          {story === 'login' && (
-            <ul id="login-features" className="login-feature-list">
-              {storeFeatures.map(([Icon, label]) => (
-                <li key={label}>
-                  <span>
-                    <Icon size={23} aria-hidden="true" />
-                  </span>
-                  {t(label)}
-                </li>
-              ))}
-            </ul>
-          )}
+          <ul id="login-features" className="login-feature-list">
+            {storeFeatures.map(([Icon, label]) => (
+              <li key={label}>
+                <span>
+                  <Icon size={23} aria-hidden="true" />
+                </span>
+                {t(label)}
+              </li>
+            ))}
+          </ul>
           <div className="login-illustration">
             <img
               className="login-visual-art"
@@ -104,35 +86,23 @@ export function LoginLayout({
               width={620}
               height={326}
             />
-            {story === 'login' && (
-              <div className="login-scene-labels" aria-hidden="true">
-                <span className="login-scene-trend">
-                  <TrendingUp />
-                </span>
-                <span className="login-scene-note login-scene-orders">
-                  <ShoppingCart />
-                  {t('auth.sceneOrders')}
-                </span>
-                <span className="login-scene-note login-scene-kitchen">
-                  <ChefHat />
-                  {t('auth.sceneKitchen')}
-                </span>
-                <span className="login-scene-note login-scene-sales">
-                  <ChartNoAxesColumnIncreasing />
-                  {t('auth.sceneSales')}
-                </span>
-                <span className="login-scene-note login-scene-start">
-                  <Zap />
-                  {t('auth.sceneStart')}
-                </span>
-              </div>
-            )}
+            <span className="login-scene-trend" aria-hidden="true">
+              <TrendingUp />
+            </span>
           </div>
         </section>
 
         <section className="login-panel" aria-labelledby={titleId}>
           <div className="login-card-stage">
-            <div className="auth-glass-card login-card">{children}</div>
+            <div className="auth-glass-card login-card">
+              {children}
+              {story !== 'login' && (
+                <a href="/" className="login-back-link">
+                  <ArrowLeft size={17} aria-hidden="true" />
+                  <span>{t('auth.backToHome')}</span>
+                </a>
+              )}
+            </div>
           </div>
         </section>
       </main>

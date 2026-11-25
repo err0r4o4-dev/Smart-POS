@@ -1,6 +1,5 @@
 .landing-page {
   --landing-width: 1284px;
-  --landing-header-height: 54px;
   background: var(--surface);
   overflow-wrap: anywhere;
 }
@@ -12,7 +11,7 @@
 
 /* Header */
 .landing-header {
-  min-height: var(--landing-header-height);
+  min-height: var(--header-height);
   position: sticky;
   top: 0;
   z-index: 20;
@@ -29,8 +28,8 @@
   justify-content: space-between;
   align-items: center;
   gap: var(--header-gap);
-  min-height: calc(var(--landing-header-height) - 1px);
-  padding-block: 4px;
+  min-height: calc(var(--header-height) - 1px);
+  padding-block: var(--header-padding-block);
   box-sizing: border-box;
 }
 .landing-brand-link {
@@ -80,7 +79,7 @@
   gap: 4px;
 }
 .landing-nav-links {
-  margin-inline: clamp(0px, calc((100vw - 1140px) * 0.23), 86px) auto;
+  margin-inline: auto;
 }
 .landing-nav-actions {
   gap: 12px;
@@ -100,18 +99,6 @@
 }
 .landing-nav-link.is-active {
   background: var(--primary-soft);
-}
-.landing-nav-link.is-active svg {
-  fill: var(--primary);
-}
-.landing-cart-link {
-  padding-inline: 10px;
-}
-.landing-desktop-navigation .landing-cart-link {
-  margin-right: 4px;
-}
-.landing-desktop-navigation .landing-cart-link span {
-  display: none;
 }
 .landing-nav-link:focus-visible,
 .landing-page a:focus-visible,
@@ -800,7 +787,7 @@
 }
 
 /* Header */
-@media (max-width: 1050px) {
+@media (max-width: 1180px) {
   .landing-desktop-navigation {
     display: none;
   }

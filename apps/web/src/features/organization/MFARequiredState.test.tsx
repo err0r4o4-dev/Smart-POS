@@ -4,22 +4,24 @@ import { screen } from '@testing-library/react';
 import { renderInEnglish } from '../../test/render';
 import { MFARequiredState } from './MFARequiredState';
 
-it('offers account security outside organization access', () => {
+it('offers account security in a new tab without navigating away from a draft', () => {
   renderInEnglish(
     <MemoryRouter>
-      <MFARequiredState />
+      <MFARequiredState newTab />
     </MemoryRouter>,
   );
   expect(
     screen.getByRole('heading', {
-      level: 1,
+      level: 3,
       name: 'MFA verification required',
     }),
   ).toBeVisible();
   expect(screen.getByRole('alert')).toHaveTextContent(
     'Verify MFA for this session',
   );
-  expect(
-    screen.getByRole('link', { name: 'Go to MFA verification' }),
-  ).toHaveAttribute('href', '/security');
+  const link = screen.getByRole('link', {
+    name: 'Open account security (new tab)',
+  });
+  expect(link).toHaveAttribute('href', '/security');
+  expect(link).toHaveAttribute('target', '_blank');
 });

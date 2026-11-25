@@ -2884,6 +2884,46 @@ Acceptance: Reviewed transition/ownership tables cover valid/invalid transitions
       the identity Go package tests (no database DSN) and 19 focused web tests
       passed. Existing isolated HTTP/replay evidence is recorded under T1.3.
       No new endpoint or manual recovery policy was introduced.
+- [/] Native Dine-in table sessions, internal layer (2026-11-25). Migration 50
+      adds `restaurant_table_sessions`:
+      - organization-scoped composite table reference, FORCE RLS, no DELETE grant
+      - proof digest only, snapshot of the table's QR hash
+      - exact 2-hour lifetime CHECK, ENDED/reason/time consistency CHECKs
+      - a guarded down migration that refuses while rows exist
+      Readiness now requires schema 50. The restaurant package:
+      - starts a session under the caller's organization lock after QR
+        resolution and Dine-in admission, using one database instant for
+        creation and expiry
+      - reads and ends by proof without the organization lock; missing,
+        foreign, ended, expired, closed-table, rotated-QR and disabled-QR
+        proofs are all not found
+      - ends a table's unexpired sessions in Owner table setup when the table
+        is closed, QR is disabled or the QR is rotated
+      A pre-code independent review found P1 (two clock reads could break the
+      lifetime CHECK) and four P2s; all were applied before implementation.
+      The proof unit test failed before the code existed and now passes.
+      Isolated schema-50 `check-db.mjs table-sessions` exited 0 with 77 PASS
+      including parents, 0 FAIL/SKIP (`table-sessions-1795595306469.log`):
+      - independent starts, denials, tenant isolation, end
+      - expiry, setup ending and expired rows left unchanged
+      - end while the organization lock is held
+      - start/save serialization in both orders
+      - WITH CHECK refusal of a cross-restaurant insert
+      - empty down/reapply, populated down refusal with 33 rows unchanged
+      Full offline Go test/vet and contracts (18 modules, 116 routes) passed.
+      Code review found no P1. Its P2 reverse-order case and the P3 stored-hash
+      and cross-restaurant insert items were added and pass.
+      No public route was added. Migration 39 keeps restaurant storefronts
+      unpublished until Admin approval (VLP-009), so a public path would be
+      unreachable. The route slice must:
+      - check proof/QR format before any transaction
+      - add separate rate-limit scopes, `no-store` and a uniform 404
+      - map `restaurant.ErrClosed` to `409 STORE_CLOSED`
+      - add OpenAPI and the web consumer
+      Native Dine-in checkout still denies `DINE_IN`. Still open: a session
+      cap and retention, ending sessions on unpublish/suspension,
+      duplicate-tab sessionStorage behavior, and not treating a session as
+      proof of presence.
 - [ ] Inventory affected producers/consumers and define approved request/response/error/event projections, pagination and idempotency. Extend existing contracts or introduce compatible restaurant-native contracts only after ownership is settled.
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.
@@ -3046,7 +3086,7 @@ Acceptance: Every changed route has a producer, consumer and contract test; no g
 | Boundary | Existing evidence | Required evidence still open |
 | --- | --- | --- |
 | Anonymous organization requests | Composed router: all 276 mounted method/path pairs denied without data. | This covers only requests without a session. |
-| Retained Purchasing and Returns | Schema 49 HTTP MFA and tenant denial matrices, populated reads, selected write/replay cases, and denial for all four branch-assigned legacy roles and revoked Owner sessions across 36 Returns and 57 Purchasing routes. Purchasing also covered the branch-filtered order list. Owner HTTP expiry after projection is covered for all nine Returns GET routes (see T5.2). T5.3 verified nine retired web bookmarks at four emulated widths without calling the retired workflows; current disposition is in the architecture route inventory. | Remaining positive and mid-request expiry outcomes for other routes and for branch-scoped non-Owner reads. Test any active replacement journeys separately; retired bookmark coverage does not verify the retained APIs. |
+| Retained Purchasing and Returns | Schema 49 HTTP MFA and tenant denial matrices, populated reads, selected write/replay cases, and denial for all four branch-assigned legacy roles and revoked Owner sessions across 36 Returns and 57 Purchasing routes. Purchasing also covered the branch-filtered order list. Owner HTTP expiry after projection is covered for all nine Returns GET routes, and expiry after the final audit insert for 12 non-completion writes plus the four completion and confirmation writes (see T5.2). T5.3 verified nine retired web bookmarks at four emulated widths without calling the retired workflows; current disposition is in the architecture route inventory. | Remaining positive and mid-request expiry outcomes for other routes and for branch-scoped non-Owner reads. Test any active replacement journeys separately; retired bookmark coverage does not verify the retained APIs. |
 | Retained guest order proof | Matching proof succeeds on both fixture orders; missing, wrong-order and wrong-shop proof fail, including after unpublishing. | Native private table-session rotation and atomic member claims require their own contracts and runtime checks. |
 | Native Restaurant Owner | Setup and ordering availability have scoped Owner, MFA and cross-restaurant checks. The retired membership and role routes are absent. | Transfer must revoke the former Owner's authority while preserving obligations; no inference about retained ownership from route retirement. B10/B12/B13 apply. |
 | Platform Admin | Schema 49 verifies the audited grant/revoke command lifecycle on synthetic users. | Operation-specific permissions and target checks must be verified with each implemented Admin workflow. Provisioning does not prove these checks. |
@@ -3847,6 +3887,23 @@ Acceptance: Fresh exact commands/exit codes/case counts match changed inputs. Ro
 
 ### T5.2 Run isolated database and retained-data acceptance
 
+- [x] Schema-49 Returns HTTP writes after audit insert: return create,
+      submit and approve; refund report-settlement; and exchange and void
+      create, submit, approve and confirm-settlement (12 requests). Each
+      request was first sent with the session expiring after its final
+      `organization_audit_events` insert. Each returned `401 UNAUTHENTICATED`,
+      `Cache-Control: no-store` and no `data`. An organization-scoped digest
+      of 12 Returns, refund, adjustment, sale, checkout, stock, idempotency
+      and audit tables was unchanged immediately after each denial. The same
+      key and payload then succeeded with live authority, and every existing
+      downstream assertion passed. `check-db.mjs returns-read` exited 0 with
+      365 PASS entries including parents, 0 FAIL/SKIP and verified cleanup
+      (`returns-read-1795592712407.log`). Only tests changed. Source check:
+      `AuthorizeMFA` writes no audit row, and Returns document numbers use
+      `gen_random_uuid()` defaults, so a rolled-back attempt consumes no
+      number. Not covered: expiry at the earlier `finishWrite` rechecks,
+      reject/cancel transitions, and tables outside the digest.
+
 - [x] Schema-49 Returns HTTP reads after projection: for the returns,
       refunds, exchanges and voids lists, the return, refund, exchange and
       void details, and the returnable-sale read, an authorized Owner GET
@@ -4268,6 +4325,33 @@ Acceptance: Record screenshots/flows, viewport and emulated versus real-device s
       denials, expiry during COMMIT and other Purchasing routes were outside
       this review.
 
+- [x] Scoped native Dine-in session review (plan and code): the authorized
+      reviewer used only supplied material and ran no tools.
+      - Plan review: P1 (separate clock reads could violate the lifetime
+        CHECK) and four P2s (organization lock on end, late format parsing,
+        rotation enforced only by the hook, unbounded hook scan). All were
+        fixed before code.
+      - Code review: no P1. P2: the start-waits-on-save order was untested.
+        P3s: recomputed QR hash, unverified cross-restaurant WITH CHECK. All
+        three were added; `table-sessions-1795595306469.log` has 77 PASS,
+        0 FAIL/SKIP.
+      - Main checked against source that error checks come before the
+        admission denial and that the lock test holds the same organization
+        row.
+      - The reviewer agreed with deferring routes. Remaining P3: the locking
+        precondition is documented but not enforced.
+
+- [x] Scoped Returns HTTP write audit-expiry review: the authorized
+      reviewer inspected the supplied test delta, `finishWrite` path and
+      Main's evidence (`returns-read-1795592712407.log`, 365 PASS including
+      parents, 0 FAIL/SKIP) without running tools or tests. It found no
+      P1/P2 issues. Main checked two P3 questions against source: no earlier
+      audit writer exists on these paths, and document numbers are UUID
+      defaults, not sequences. Open P3 limits: the write set of each method
+      is not mapped against the 12-table digest; the earlier `finishWrite`
+      rechecks and reject/cancel transitions are not exercised; and the 12
+      additional 1-second waits add runtime and timing sensitivity.
+
 - [x] Scoped Returns HTTP read-expiry review: the authorized reviewer
       inspected the supplied test delta, handler and read-path excerpts and
       Main's evidence without running tools or tests. It found no P1/P2
@@ -4625,6 +4709,11 @@ Returns checkpoints verify menu-only completion and cash refund confirmation
 at the observed HTTP interruption points. B12 manual recovery and live Google
 proof delivery remain open. Follow the T1.2 Dine-in policy dependencies before
 exposing a public session route, and the B14 and B16 decisions before adding
-native saved-cart or bulk-import persistence. Start other listed tasks when
+native saved-cart or bulk-import persistence. On 2026-11-25 the user selected
+the Dine-in session policy (same-tab reload restores, 2-hour lifetime, table
+close/QR disable/rotation ends open sessions), B14 saved-cart retention
+(guest 24 hours, member 7 days) and approved B16 with Owner-defined durable
+references. B14 quota/payment holds and B02/B03 payment inputs remain open.
+Start other listed tasks when
 their actual dependencies are satisfied. The local execution authorization
 above applies; no reduced release, cutover or deployment is authorized.

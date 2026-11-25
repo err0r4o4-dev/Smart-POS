@@ -15,6 +15,9 @@ import (
 var ErrInput = errors.New("invalid restaurant input")
 var ErrConflict = errors.New("restaurant state conflict")
 var ErrNotFound = errors.New("restaurant resource not found")
+
+// ErrClosed means the restaurant cannot admit the requested mode right now.
+var ErrClosed = errors.New("restaurant not admitting this mode")
 var uuidPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 var codePattern = regexp.MustCompile(`^[A-Z0-9][A-Z0-9_-]{0,39}$`)
 var timePattern = regexp.MustCompile(`^(?:[01][0-9]|2[0-3]):[0-5][0-9]$`)

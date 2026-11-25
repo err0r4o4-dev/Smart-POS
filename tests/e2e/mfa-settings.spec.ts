@@ -19,16 +19,23 @@ const recoveryCodes = Array.from(
 for (const [width, path] of [
   [390, '/setup'],
   [1440, '/workspace'],
+  [1280, '/login'],
 ] as const) {
-  test(`required MFA uses the account shell on ${path} at ${width}px`, async ({
+  test(`required MFA opens the code form directly from ${path} at ${width}px`, async ({
     page,
   }, testInfo) => {
+    let signedIn = path !== '/login';
     let verified = false;
     await page.setViewportSize({ width, height: 900 });
     await page.route('**/api/**', async (route) => {
       const request = route.request();
       switch (new URL(request.url()).pathname) {
         case '/api/v1/auth/me':
+          return signedIn
+            ? route.fulfill({ json: { data: session } })
+            : route.fulfill({ status: 401, json: {} });
+        case '/api/v1/auth/login':
+          signedIn = true;
           return route.fulfill({ json: { data: session } });
         case '/api/v1/organizations':
           return verified
@@ -44,7 +51,8 @@ for (const [width, path] of [
             json: { data: { enabled: true, session_verified: verified } },
           });
         case '/api/v1/auth/mfa/challenge':
-          expect(request.postDataJSON()).toEqual({ code: '123456' });
+          if (request.postDataJSON().code !== '123456')
+            return route.fulfill({ status: 400, json: {} });
           verified = true;
           return route.fulfill({ json: { data: { session_verified: true } } });
         default:
@@ -52,17 +60,30 @@ for (const [width, path] of [
       }
     });
     await page.goto(path);
+    if (path === '/login') {
+      await page.getByRole('button', { name: 'English', exact: true }).click();
+      await page.getByLabel('Email address').fill(session.user.email);
+      await page.getByLabel('Password', { exact: true }).fill('test-password');
+      await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+    }
+    await expect(page).toHaveURL(/\/security$/);
     const banner = page.getByRole('banner');
     await banner.getByRole('button', { name: 'English', exact: true }).click();
     await expect(banner.getByRole('link')).toHaveAttribute('href', '/');
     await expect(banner.getByRole('navigation')).toHaveCount(0);
     await expect(page.getByRole('main')).toHaveCount(1);
-    const gate = page.getByRole('region', {
-      name: 'MFA verification required',
-    });
-    await expect(gate.getByRole('link')).toHaveCount(1);
-    const action = gate.getByRole('link', { name: 'Go to MFA verification' });
-    await expect(action).toBeVisible();
+    const code = page.getByRole('textbox', { name: 'Six-digit code' });
+    const verify = page.getByRole('button', { name: 'Verify code' });
+    await expect(code).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'MFA verification required' }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole('link', { name: 'Back to workspace' }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole('link', { name: 'Back to home' }),
+    ).toHaveAttribute('href', '/');
     await expect
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
       .toBeLessThanOrEqual(width);
@@ -70,11 +91,13 @@ for (const [width, path] of [
       path: testInfo.outputPath('mfa-required.png'),
       fullPage: true,
     });
-    await action.press('Enter');
+    await code.fill('000000');
+    await code.press('Enter');
+    await expect(page.getByRole('alert')).toBeVisible();
     await expect(page).toHaveURL(/\/security$/);
-    await page.getByRole('textbox', { name: 'Six-digit code' }).fill('123456');
-    await page.getByRole('button', { name: 'Verify code' }).click();
-    await expect(page).toHaveURL(/\/(workspace|setup)$/);
+    await code.fill('123456');
+    await verify.click();
+    await expect(page).toHaveURL(/\/setup$/);
     expect(verified).toBe(true);
   });
 }

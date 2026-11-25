@@ -526,9 +526,11 @@ proof for payment recovery, without checking the dining session.
   recoverable only through its order proof. Do not copy the session proof
   into order snapshots, payment records or replay results.
 
-The remaining decisions are whether a reload restores the session in the
-same tab or requires a new start; the session lifetime; and whether closing
-a table, disabling QR or rotating it also ends existing sessions. Resolve is
+Decisions selected by the user on 2026-11-25: a reload in the same tab
+restores the session; a session lasts 2 hours from its start; and closing
+the table, disabling QR or rotating it ends that table's open sessions.
+Ending a session never changes committed orders, payments or queue
+entries. Resolve is
 subject to the current table and QR configuration in every case. Same-tab
 recovery, if selected, must prove possession of the current session and must
 be separate from the QR landing flow. A fresh scan, browser tab opened from
@@ -779,8 +781,8 @@ cannot identify native categories, groups or options. Migration 38 keys the
 native menu by restaurant/category or restaurant/variant, and migration 47
 keys modifier options by their owning group. The proposed `ref` has no
 durable mapping in those tables. B16 must select how repeated templates bind
-an existing entity after rename, for example by a durable restaurant-scoped
-reference or a tenant-scoped reference issued by an existing-menu template.
+an existing entity after rename. The user selected (2026-11-25) a durable
+Owner-defined reference, stored per restaurant and row kind, as the binding.
 Do not infer the mapping from a display name or treat an unmatched update as
 an insert. Verify that unknown or foreign references cannot update another
 restaurant and that moving an existing item retains its identity and history.
@@ -1176,8 +1178,9 @@ a stale client cannot overwrite a recreated draft; reading does not extend
 expiry; a second guest device or foreign member cannot see the draft; changing
 accounts does not import the prior draft; restoring the draft creates no hold,
 order or payment. Verify guest same-browser concurrency separately from
-member cross-device concurrency. Guest and member inactivity durations await
-the product decision. Payment hold duration and quota allocation remain
+member cross-device concurrency. Inactivity durations selected by the user
+on 2026-11-25: 24 hours for a guest draft and 7 days for a member draft,
+measured from the last edit. Payment hold duration and quota allocation remain
 separate B14 decisions; unknown payment continues to retain the hold.
 
 <a id="d07"></a>

@@ -379,6 +379,7 @@ func saveOrganizationTables(ctx context.Context, authorization *organization.Aut
 		return nil, dbError(err)
 	}
 	tokens := []IssuedTableQRToken{}
+	rotated := []string{}
 	enableQR := input.GenerateQR || input.QREnabled
 	for _, zone := range input.Zones {
 		if err := authorization.Recheck(ctx); err != nil {
@@ -411,8 +412,17 @@ func saveOrganizationTables(ctx context.Context, authorization *organization.Aut
 			}
 			if issueQR {
 				tokens = append(tokens, IssuedTableQRToken{TableID: tableID, Code: table.Code, QRToken: token})
+				rotated = append(rotated, tableID)
 			}
 		}
+	}
+	if err := authorization.Recheck(ctx); err != nil {
+		return nil, err
+	}
+	// Closing a table, disabling QR or rotating a table's QR ends its open
+	// Dine-in sessions in the same transaction, under the organization lock.
+	if err := endChangedTableSessions(ctx, tx, org, enableQR, rotated); err != nil {
+		return nil, err
 	}
 	if err := authorization.Recheck(ctx); err != nil {
 		return nil, err

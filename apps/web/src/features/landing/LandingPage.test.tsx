@@ -82,6 +82,10 @@ it('presents the mockup sections with the unchanged header destinations', () => 
     'href',
     '/login',
   );
+  expect(nav.getByRole('button', { name: 'English' })).toBeVisible();
+  expect(
+    nav.queryByRole('link', { name: 'ตะกร้าสินค้า' }),
+  ).not.toBeInTheDocument();
   for (const name of [
     'สำรวจร้านตามพื้นที่',
     'เลือกตามประเภทอาหาร',

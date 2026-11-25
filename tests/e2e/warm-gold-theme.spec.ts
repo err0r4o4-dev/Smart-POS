@@ -609,12 +609,21 @@ for (const width of [320, 390, 767, 768, 1023, 1024, 1279, 1280, 1440, 1920]) {
         .first();
       await expect(header).toBeVisible();
       expect((await header.boundingBox())!.height).toBe(66);
+      // The login card steps its padding with the viewport; other cards keep 24px.
+      const loginPadding =
+        width < 768 ? '20px' : width >= 1280 ? '32px' : '24px';
       for (const card of await page
         .locator('.card, .setup-card, .settings-card, .login-card')
         .all()) {
         if (!(await card.isVisible())) continue;
+        const isLogin = await card.evaluate((element) =>
+          element.classList.contains('login-card'),
+        );
         for (const side of ['top', 'right', 'bottom', 'left']) {
-          await expect(card).toHaveCSS(`padding-${side}`, '24px');
+          await expect(card).toHaveCSS(
+            `padding-${side}`,
+            isLogin ? loginPadding : '24px',
+          );
         }
       }
       for (const grid of await page

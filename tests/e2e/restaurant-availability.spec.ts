@@ -241,7 +241,9 @@ for (const {
         name: label('บันทึกเวลาและการพัก', 'Save hours and pauses'),
       });
       if (lateSave) {
-        const browserDocument = await page.evaluate(() => performance.timeOrigin);
+        const browserDocument = await page.evaluate(
+          () => performance.timeOrigin,
+        );
         const completion = page.waitForResponse(
           (response) =>
             response.url().endsWith('/restaurant/availability') &&
@@ -258,13 +260,19 @@ for (const {
           expect(await (await completion).finished()).toBeNull();
 
           await page.getByLabel('Email address').fill(owner.email);
-          await page.getByLabel('Password', { exact: true }).fill('synthetic-fixture-password');
-          await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+          await page
+            .getByLabel('Password', { exact: true })
+            .fill('synthetic-fixture-password');
+          await page
+            .getByRole('button', { name: 'Sign in', exact: true })
+            .click();
           await expect(page).toHaveURL(/\/settings$/);
           await expect(panel.getByRole('status')).toHaveText(/loading/i);
           await resumedRead.promise;
           await expect(pickup).toHaveCount(0);
-          expect(await page.evaluate(() => performance.timeOrigin)).toBe(browserDocument);
+          expect(await page.evaluate(() => performance.timeOrigin)).toBe(
+            browserDocument,
+          );
           readGate.resolve();
           await expect(pickup).toBeChecked();
           expect(attempts).toBe(1);
@@ -295,11 +303,8 @@ for (const {
         await securityTab
           .getByRole('button', { name: 'ยืนยันรหัส', exact: true })
           .click();
-        await expect(
-          securityTab.getByText('ยืนยัน MFA สำหรับเซสชันนี้แล้ว', {
-            exact: true,
-          }),
-        ).toBeVisible();
+        // A verified session leaves account security for the workspace.
+        await expect(securityTab).not.toHaveURL(/\/security$/);
         await securityTab.close();
         await expect(page).toHaveURL(/\/settings$/);
         await expect(

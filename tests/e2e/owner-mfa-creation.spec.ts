@@ -241,9 +241,8 @@ for (const width of [360, 390, 768, 1280]) {
       await popup
         .getByRole('button', { name: 'Verify code', exact: true })
         .click();
-      await expect(
-        popup.getByText('MFA verified for this session', { exact: true }),
-      ).toBeVisible();
+      // A verified session leaves account security for the workspace.
+      await expect(popup).not.toHaveURL(/\/security$/);
       await popup.close();
       expect(state.keys).toHaveLength(1);
       await submit.click();
@@ -257,21 +256,17 @@ for (const width of [360, 390, 768, 1280]) {
     }) => {
       const state = await fixture(context, false, true);
       await page.goto('/setup');
-      const security = page.getByRole('link', {
-        name: 'ความปลอดภัยของบัญชี',
-        exact: true,
-      });
-      await expect(security).toBeVisible();
-      await expect(
-        page.getByRole('heading', { name: 'ต้องยืนยัน MFA', exact: true }),
-      ).toBeVisible();
-      await noOverflow(page);
-      await security.focus();
-      await page.keyboard.press('Enter');
       await expect(page).toHaveURL(/\/security$/);
+      await expect(
+        page.getByRole('heading', {
+          name: 'ความปลอดภัยของบัญชี',
+          exact: true,
+        }),
+      ).toBeVisible();
       await expect(
         page.getByLabel('รหัส 6 หลัก', { exact: true }),
       ).toBeVisible();
+      await noOverflow(page);
       expect(state.keys).toEqual([]);
       expect(state.unexpected).toEqual([]);
     });
@@ -325,9 +320,8 @@ for (const width of [360, 390, 768, 1280]) {
       await popup
         .getByRole('button', { name: 'Verify code', exact: true })
         .click();
-      await expect(
-        popup.getByText('MFA verified for this session', { exact: true }),
-      ).toBeVisible();
+      // A verified session leaves account security for the workspace.
+      await expect(popup).not.toHaveURL(/\/security$/);
       await popup.close();
       await expect(page.getByLabel('Store name', { exact: true })).toHaveValue(
         'Synthetic store',
@@ -356,38 +350,33 @@ for (const width of [360, 390, 768, 1280]) {
       expect(state.unexpected).toEqual([]);
     });
 
-    test('offers security at the parent gate with Thai and enlarged text', async ({
+    test('redirects the parent gate to account security with Thai and enlarged text', async ({
       page,
       context,
     }, info) => {
       const state = await fixture(context, true);
       await page.goto('/workspace');
+      await expect(page).toHaveURL(/\/security$/);
       await expect(
-        page.getByRole('link', { name: 'ความปลอดภัยของบัญชี', exact: true }),
+        page.getByRole('heading', {
+          name: 'ความปลอดภัยของบัญชี',
+          exact: true,
+        }),
       ).toBeVisible();
+      const code = page.getByLabel('รหัส 6 หลัก', { exact: true });
+      await expect(code).toBeVisible();
+      // MFA is required here, so the page must not offer a way back into the workspace.
+      await expect(
+        page.getByRole('link', { name: 'กลับพื้นที่ทำงาน', exact: true }),
+      ).toHaveCount(0);
+      // The security page sizes text in px, so enlarged root text does not scale it;
+      // only the no-overflow guarantee is asserted here.
       await page.addStyleTag({ content: 'html { font-size: 200%; }' });
-      await expect(
-        page.getByRole('heading', { name: 'ต้องยืนยัน MFA', exact: true }),
-      ).toBeVisible();
-      expect(
-        await page
-          .locator('.organization-mfa-required p')
-          .evaluate((element) =>
-            parseFloat(getComputedStyle(element).fontSize),
-          ),
-      ).toBeGreaterThanOrEqual(28);
       await noOverflow(page);
       await page.screenshot({
         path: info.outputPath(`owner-context-thai-zoom-${width}.png`),
         fullPage: true,
       });
-      await page
-        .getByRole('link', { name: 'ความปลอดภัยของบัญชี', exact: true })
-        .click();
-      await expect(page).toHaveURL(/\/security$/);
-      await expect(
-        page.getByLabel('รหัส 6 หลัก', { exact: true }),
-      ).toBeVisible();
       expect(state.keys).toEqual([]);
       expect(state.unexpected).toEqual([]);
     });

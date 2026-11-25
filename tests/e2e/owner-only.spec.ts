@@ -227,7 +227,7 @@ for (const width of [360, 390, 768, 1280]) {
     const requests = await mockAPI(page, 'OWNER');
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      'จัดการร้านให้ง่ายขายได้อย่างมั่นใจ',
+      'ค้นหาร้านอาหารในชุมชนของคุณ',
     );
     for (const path of [
       '/suppliers',

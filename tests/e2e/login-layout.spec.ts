@@ -42,7 +42,7 @@ for (const width of [320, 360, 390, 767, 768, 900, 1024, 1280, 1440, 1672]) {
       .poll(() =>
         illustration.evaluate((image: HTMLImageElement) => image.naturalWidth),
       )
-      .toBe(620);
+      .toBe(1729);
     await expect
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
       .toBeLessThanOrEqual(width);

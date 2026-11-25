@@ -140,6 +140,27 @@ it('recovers when the published restaurants request fails', async () => {
   expect(await screen.findByRole('link', { name: 'ครัวกะเพรา' })).toBeVisible();
 });
 
+it('includes an orderable store even when it follows four closed stores', async () => {
+  fetchMock.mockResolvedValueOnce({
+    ok: true,
+    json: async () => ({
+      data: [
+        ...['a', 'b', 'c', 'd'].map((slug) => ({
+          ...shops[1],
+          slug,
+          name: `Closed ${slug}`,
+        })),
+        shops[0],
+      ],
+    }),
+  });
+  renderLanding();
+
+  const list = await screen.findByRole('list', { name: 'ร้านแนะนำ' });
+  expect(within(list).getAllByRole('link')).toHaveLength(4);
+  expect(within(list).getByRole('link', { name: 'ครัวกะเพรา' })).toBeVisible();
+});
+
 it('sends hero searches to the shop directory', () => {
   renderLanding();
   fireEvent.change(screen.getByRole('searchbox', { name: 'ค้นหาร้านอาหาร' }), {

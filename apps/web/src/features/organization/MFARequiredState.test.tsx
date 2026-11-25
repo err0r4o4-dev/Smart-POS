@@ -13,11 +13,11 @@ it('offers account security in a new tab without navigating away from a draft', 
   expect(
     screen.getByRole('heading', {
       level: 3,
-      name: 'MFA verification required',
+      name: 'Verify your identity',
     }),
   ).toBeVisible();
   expect(screen.getByRole('alert')).toHaveTextContent(
-    'Verify MFA for this session',
+    'For your security, verify your identity to continue.',
   );
   const link = screen.getByRole('link', {
     name: 'Open account security (new tab)',

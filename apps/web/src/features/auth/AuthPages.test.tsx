@@ -30,15 +30,13 @@ it('places the store illustration before the login panel and preserves account l
       <LoginPage />
     </BrowserRouter>,
   );
-  const introduction = screen.getByRole('region', {
-    name: 'Run your store, simply.',
+  const illustration = screen.getByRole('img', {
+    name: /point-of-sale terminal/i,
   });
-  const loginPanel = screen.getByRole('region', { name: 'Welcome back.' });
+  const loginPanel = screen.getByRole('region', { name: 'Sign in' });
+  expect(illustration).toHaveAttribute('src', '/images/auth-pos-studio.svg');
   expect(
-    within(introduction).getByRole('img', { name: /point-of-sale terminal/i }),
-  ).toHaveAttribute('src', '/images/auth-pos-studio.svg');
-  expect(
-    introduction.compareDocumentPosition(loginPanel) &
+    illustration.compareDocumentPosition(loginPanel) &
       Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
   expect(within(loginPanel).getByLabelText('Email address')).toHaveValue('');
@@ -98,7 +96,7 @@ it('removes the reset token from the URL before submission but retains it for th
   fireEvent.change(screen.getByLabelText('Confirm password'), {
     target: { value: 'a long valid password' },
   });
-  fireEvent.click(screen.getByRole('button', { name: 'Change password' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save new password' }));
   expect(
     (await screen.findByRole('link', { name: 'Sign in again' })).closest('p'),
   ).toHaveTextContent(/Password changed/);
@@ -115,15 +113,13 @@ it('renders the register page in the split layout and validates mismatched passw
       <RegisterPage />
     </BrowserRouter>,
   );
-  const introduction = screen.getByRole('region', {
-    name: /run your store/i,
+  const illustration = screen.getByRole('img', {
+    name: /point-of-sale terminal/i,
   });
-  const registerPanel = screen.getByRole('region', { name: 'Get started.' });
+  const registerPanel = screen.getByRole('region', { name: 'Create account' });
+  expect(illustration).toHaveAttribute('src', '/images/auth-pos-studio.svg');
   expect(
-    within(introduction).getByRole('img', { name: /point-of-sale terminal/i }),
-  ).toHaveAttribute('src', '/images/auth-pos-studio.svg');
-  expect(
-    introduction.compareDocumentPosition(registerPanel) &
+    illustration.compareDocumentPosition(registerPanel) &
       Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
   expect(within(registerPanel).getByLabelText('Display name')).toHaveValue('');

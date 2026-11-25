@@ -27,13 +27,13 @@ it('switches the actual auth page without losing form state, then retains langua
     target: { value: 'draft-password' },
   });
   fireEvent.click(screen.getByRole('button', { name: 'English' }));
-  expect(screen.getByRole('heading', { name: 'Welcome back.' })).toBeVisible();
+  expect(screen.getByRole('heading', { name: 'Sign in' })).toBeVisible();
   expect(screen.getByLabelText('Email address')).toHaveValue(
     'synthetic@example.test',
   );
   expect(screen.getByLabelText('Password')).toHaveValue('draft-password');
   fireEvent.click(screen.getByRole('link', { name: 'Create account' }));
-  expect(screen.getByRole('heading', { name: 'Get started.' })).toBeVisible();
+  expect(screen.getByRole('heading', { name: 'Create account' })).toBeVisible();
   expect(screen.getByRole('button', { name: 'English' })).toHaveAttribute(
     'aria-pressed',
     'true',

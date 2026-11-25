@@ -1,5 +1,4 @@
 import {
-  ArrowLeft,
   ChartNoAxesColumnIncreasing,
   Layers,
   ShoppingCart,
@@ -34,7 +33,6 @@ export function LoginLayout({
 }) {
   const { t } = useLanguage();
   const storyAccent = t('auth.storeSimplifiedAccent');
-  const StoryHeading = story === 'login' || story === 'register' ? 'h1' : 'h2';
 
   return (
     <div className="account-shell" data-account-story={story}>
@@ -55,18 +53,18 @@ export function LoginLayout({
         <Utensils />
       </div>
       <main id="main-content" className="login-shell">
-        <section className="login-visual" aria-labelledby="login-visual-title">
+        <div className="login-visual">
           <div className="login-visual-copy">
             <p className="login-story-badge">
               <Zap size={16} aria-hidden="true" />
               {t('auth.restaurantPos')}
             </p>
-            <StoryHeading id="login-visual-title">
+            <p id="login-visual-title" className="login-visual-heading">
               {t('auth.storeSimplified') +
                 (storyAccent.startsWith(' ') ? ' ' : '')}
               <em>{storyAccent.trimStart()}</em>
-            </StoryHeading>
-            <p>{t('auth.storeSummary')}</p>
+            </p>
+            <p className="login-visual-summary">{t('auth.storeSummary')}</p>
           </div>
           <ul id="login-features" className="login-feature-list">
             {storeFeatures.map(([Icon, label]) => (
@@ -90,19 +88,11 @@ export function LoginLayout({
               <TrendingUp />
             </span>
           </div>
-        </section>
+        </div>
 
         <section className="login-panel" aria-labelledby={titleId}>
           <div className="login-card-stage">
-            <div className="auth-glass-card login-card">
-              {children}
-              {story !== 'login' && (
-                <a href="/" className="login-back-link">
-                  <ArrowLeft size={17} aria-hidden="true" />
-                  <span>{t('auth.backToHome')}</span>
-                </a>
-              )}
-            </div>
+            <div className="auth-glass-card login-card">{children}</div>
           </div>
         </section>
       </main>

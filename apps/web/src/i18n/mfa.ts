@@ -2,13 +2,13 @@ import { defineMessages } from './defineMessages';
 
 export const mfa = defineMessages({
   th: {
-    requiredTitle: 'ต้องยืนยัน MFA',
+    requiredTitle: 'ยืนยันตัวตนเพิ่มเติม',
     goToVerification: 'ไปยืนยัน MFA',
     creationUnknown:
       'ยังไม่ทราบผลการสร้างร้าน ตรวจร้านของคุณก่อน หรือส่งซ้ำด้วยข้อมูลเดิมในแท็บนี้ ห้ามเริ่มคำขอใหม่หรือปิดแท็บนี้จนกว่าจะทราบผล',
     requiredHelp:
-      'ยืนยัน MFA สำหรับเซสชันนี้ก่อนสร้างหรือเข้าถึงร้าน เปิดความปลอดภัยของบัญชีเพื่อตั้งค่าหรือยืนยันรหัสจากแอป',
-    securityNewTab: 'เปิดความปลอดภัยของบัญชี (แท็บใหม่)',
+      'เพื่อความปลอดภัย โปรดยืนยันตัวตนก่อนดำเนินการต่อ ไปที่ความปลอดภัยของบัญชีเพื่อตั้งค่าแอปยืนยันตัวตนหรือกรอกรหัสจากแอป',
+    securityNewTab: 'ไปที่ความปลอดภัยของบัญชี (เปิดแท็บใหม่)',
     returnToRetry:
       'ยืนยันเสร็จแล้ว กลับแท็บนี้และลองรายการเดิมอีกครั้ง ข้อมูลร้านจะยังอยู่',
     creationSignin:
@@ -21,12 +21,12 @@ export const mfa = defineMessages({
       'บันทึกหรืออ่านคีย์กู้คำขอไม่ได้ จึงยังไม่ส่งคำขอเปิดร้าน เปิดใช้พื้นที่จัดเก็บของเบราว์เซอร์และลองอีกครั้ง หากเคยส่งแล้ว ให้ตรวจสถานะร้านก่อน อย่าล้างข้อมูลแท็บนี้จนกว่าจะทราบผล',
     title: 'ความปลอดภัยของบัญชี',
     intro: 'ใช้แอปยืนยันตัวตนเพื่อเพิ่มการป้องกันให้บัญชีของคุณ',
-    checking: 'กำลังตรวจสอบ MFA…',
+    checking: 'กำลังตรวจสอบการยืนยันตัวตน…',
     begin: 'ตั้งค่าแอปยืนยันตัวตน',
-    disabled: 'ยังไม่ได้เปิดใช้ MFA',
-    enabled: 'เปิดใช้ MFA แล้ว',
-    verified: 'ยืนยัน MFA สำหรับเซสชันนี้แล้ว',
-    challenge: 'ยืนยันด้วยรหัสจากแอปเพื่อใช้งานในเซสชันนี้',
+    disabled: 'ยังไม่ได้ตั้งค่าแอปยืนยันตัวตน',
+    enabled: 'ตั้งค่าแอปยืนยันตัวตนแล้ว',
+    verified: 'ยืนยันตัวตนเรียบร้อยแล้ว',
+    challenge: 'กรอกรหัส 6 หลักจากแอปยืนยันตัวตน',
     qrHelp:
       'สแกนคิวอาร์โค้ดนี้ด้วยแอปยืนยันตัวตน เช่น Google Authenticator หรือ Microsoft Authenticator แล้วกรอกรหัส 6 หลักที่แอปแสดง',
     qrLabel: 'คิวอาร์โค้ดสำหรับตั้งค่าแอปยืนยันตัวตน',
@@ -86,12 +86,12 @@ export const mfa = defineMessages({
     workspace: 'กลับพื้นที่ทำงาน',
   },
   en: {
-    requiredTitle: 'MFA verification required',
+    requiredTitle: 'Verify your identity',
     goToVerification: 'Go to MFA verification',
     creationUnknown:
       'The creation outcome is unknown. Check your stores, or retry the same details in this tab. Keep this tab open and avoid starting a new request until the outcome is known.',
     requiredHelp:
-      'Verify MFA for this session before creating or accessing a store. Open account security to set up or verify your authenticator.',
+      'For your security, verify your identity to continue. Open Account security to set up your authenticator app or enter a code from it.',
     securityNewTab: 'Open account security (new tab)',
     returnToRetry:
       'After verification, return to this tab and retry the same action. Your store details stay here.',

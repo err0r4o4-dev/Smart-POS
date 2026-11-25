@@ -69,7 +69,7 @@ it('offers a replacement for an expired reset link without clearing the session'
   fireEvent.change(screen.getByLabelText('Confirm password'), {
     target: { value: 'long-valid-password' },
   });
-  fireEvent.click(screen.getByRole('button', { name: 'Change password' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save new password' }));
   expect(await screen.findByRole('alert')).toHaveTextContent(
     /invalid or expired/i,
   );

@@ -6,7 +6,7 @@ export const auth = defineMessages({
       'เพิ่มการยืนยันตัวตน และเก็บรหัสกู้คืนไว้ในที่ปลอดภัย',
     verificationTitle: 'ยืนยันอีเมล',
     verificationRequired:
-      'กรุณายืนยันอีเมลก่อนตั้งค่าหรือจัดการร้าน ลิงก์มีอายุ 24 ชั่วโมง',
+      'เปิดอีเมลที่ได้รับ แล้วกดลิงก์เพื่อยืนยันอีเมลก่อนตั้งค่าหรือจัดการร้าน ลิงก์มีอายุ 24 ชั่วโมง',
     verificationSuccess:
       'ยืนยันอีเมลแล้ว กรุณาเข้าสู่ระบบหากยังไม่ได้เข้าสู่ระบบ',
     verificationContinue: 'ดำเนินการต่อ',
@@ -60,14 +60,12 @@ export const auth = defineMessages({
       'ระบบ POS สำหรับร้านอาหาร และแพลตฟอร์มรวมร้านในชุมชน สั่งง่าย จัดการง่าย เติบโตได้มากกว่า',
     storeIllustration:
       'เครื่องขายหน้าร้าน เครื่องพิมพ์ใบเสร็จ และต้นไม้บนเคาน์เตอร์ร้านค้า',
-    backToHome: 'กลับหน้าหลัก',
     password: 'รหัสผ่าน',
     hidePassword: 'ซ่อนรหัสผ่าน',
     showPassword: 'แสดงรหัสผ่าน',
     hide: 'ซ่อน',
     show: 'แสดง',
     signInUnavailable: 'ไม่สามารถเข้าสู่ระบบได้',
-    welcomeBack: 'ยินดีต้อนรับกลับ',
     ownerOnlyAccess:
       'พื้นที่จัดการร้านสำหรับเจ้าของร้านเท่านั้น หากต้องการความช่วยเหลือ โปรดติดต่อผู้ดูแลระบบ',
     noOwnedStore: 'คุณยังไม่มีร้านที่เป็นเจ้าของ สามารถตั้งค่าร้านใหม่ได้',
@@ -81,7 +79,8 @@ export const auth = defineMessages({
     createAccount: 'สร้างบัญชี',
     passwordsDoNotMatch: 'รหัสผ่านไม่ตรงกัน',
     registrationUnavailable: 'ไม่สามารถสมัครบัญชีได้',
-    getStarted: 'เริ่มต้นใช้งาน',
+    registerInstructions:
+      'กรอกข้อมูลเพื่อสร้างบัญชี แล้วจึงยืนยันอีเมลเพื่อตั้งค่าร้าน',
     organizationSetupFollowsInAFuturePhase:
       'การตั้งค่าองค์กรจะตามมาในเฟสถัดไป ยังไม่ได้รับสิทธิ์เข้าร้าน',
     displayName: 'ชื่อที่แสดง',
@@ -90,21 +89,22 @@ export const auth = defineMessages({
     confirmPassword: 'ยืนยันรหัสผ่าน',
     creatingAccount: 'กำลังสร้างบัญชี…',
     alreadyHaveAnAccountSignIn: 'มีบัญชีแล้ว? เข้าสู่ระบบ',
-    resetRequestUnavailable: 'ไม่สามารถขอเปลี่ยนรหัสผ่านได้',
-    resetYourPassword: 'รีเซ็ตรหัสผ่าน',
-    enterYourEmailIfAnEligibleAccount:
-      'กรอกอีเมล หากมีบัญชีที่เข้าเงื่อนไข ระบบจะส่งลิงก์รีเซ็ตรหัสผ่านให้',
+    resetRequestUnavailable: 'ขอลิงก์ตั้งรหัสผ่านใหม่ไม่สำเร็จ โปรดลองอีกครั้ง',
+    forgotPasswordTitle: 'ลืมรหัสผ่าน',
+    forgotPasswordInstructions:
+      'กรอกอีเมลที่ใช้สมัครบัญชีเพื่อขอลิงก์ตั้งรหัสผ่านใหม่',
     sending: 'กำลังส่ง…',
-    requestResetLink: 'ขอลิงก์รีเซ็ตรหัสผ่าน',
+    requestResetLink: 'ขอลิงก์ตั้งรหัสผ่านใหม่',
     backToSignIn: 'กลับไปเข้าสู่ระบบ',
-    passwordResetUnavailable: 'ไม่สามารถรีเซ็ตรหัสผ่านได้',
+    passwordResetUnavailable: 'ตั้งรหัสผ่านใหม่ไม่สำเร็จ',
     chooseANewPassword: 'ตั้งรหัสผ่านใหม่',
+    resetPasswordInstructions: 'กรอกรหัสผ่านใหม่ แล้วกรอกอีกครั้งเพื่อยืนยัน',
     passwordChangedExistingSessionsWereRevoked:
-      'เปลี่ยนรหัสผ่านแล้ว เซสชันเดิมถูกยกเลิก',
+      'ตั้งรหัสผ่านใหม่แล้ว ระบบออกจากบัญชีบนอุปกรณ์ที่เข้าสู่ระบบไว้',
     signInAgain: 'เข้าสู่ระบบอีกครั้ง',
-    thisResetLinkIsMissingAToken: 'ลิงก์รีเซ็ตนี้ไม่มีโทเคน',
-    resetting: 'กำลังรีเซ็ต…',
-    changePassword: 'เปลี่ยนรหัสผ่าน',
+    thisResetLinkIsMissingAToken: 'ลิงก์นี้ใช้ไม่ได้ โปรดขอลิงก์ใหม่',
+    resetting: 'กำลังบันทึกรหัสผ่านใหม่…',
+    changePassword: 'บันทึกรหัสผ่านใหม่',
     logoutUnavailable: 'ไม่สามารถออกจากระบบได้',
     yourAccount: 'บัญชีของคุณ',
     profile: 'โปรไฟล์',
@@ -184,14 +184,12 @@ export const auth = defineMessages({
       'Everything for your store, from products and inventory to sales and reporting.',
     storeIllustration:
       'Point-of-sale terminal, receipt printer and plant on a shop counter',
-    backToHome: 'Back to home',
     password: 'Password',
     hidePassword: 'Hide password',
     showPassword: 'Show password',
     hide: 'Hide',
     show: 'Show',
     signInUnavailable: 'Sign in unavailable',
-    welcomeBack: 'Welcome back.',
     ownerOnlyAccess:
       'Store management is available to owners only. Contact your administrator for help.',
     noOwnedStore: 'You do not have an owned store. You can set up a new store.',
@@ -204,7 +202,8 @@ export const auth = defineMessages({
     createAccount: 'Create account',
     passwordsDoNotMatch: 'Passwords do not match',
     registrationUnavailable: 'Registration unavailable',
-    getStarted: 'Get started.',
+    registerInstructions:
+      'Enter your details to create an account, then verify your email to set up your store.',
     organizationSetupFollowsInAFuturePhase:
       'Organization setup follows in a future phase. No store access is granted yet.',
     displayName: 'Display name',
@@ -213,21 +212,25 @@ export const auth = defineMessages({
     confirmPassword: 'Confirm password',
     creatingAccount: 'Creating account…',
     alreadyHaveAnAccountSignIn: 'Already have an account? Sign in',
-    resetRequestUnavailable: 'Reset request unavailable',
-    resetYourPassword: 'Reset your password.',
-    enterYourEmailIfAnEligibleAccount:
-      'Enter your email. If an eligible account exists, we will send a reset link.',
+    resetRequestUnavailable:
+      'We couldn’t request a reset link. Please try again.',
+    forgotPasswordTitle: 'Forgot password',
+    forgotPasswordInstructions:
+      'Enter the email address you used to create your account.',
     sending: 'Sending…',
     requestResetLink: 'Request reset link',
     backToSignIn: 'Back to sign in',
     passwordResetUnavailable: 'Password reset unavailable',
     chooseANewPassword: 'Choose a new password.',
+    resetPasswordInstructions:
+      'Enter your new password, then enter it again to confirm.',
     passwordChangedExistingSessionsWereRevoked:
       'Password changed. Existing sessions were revoked.',
     signInAgain: 'Sign in again',
-    thisResetLinkIsMissingAToken: 'This reset link is missing a token.',
-    resetting: 'Resetting…',
-    changePassword: 'Change password',
+    thisResetLinkIsMissingAToken:
+      'This link cannot be used. Request a new reset link.',
+    resetting: 'Saving your new password…',
+    changePassword: 'Save new password',
     logoutUnavailable: 'Logout unavailable',
     yourAccount: 'Your account',
     profile: 'Profile',

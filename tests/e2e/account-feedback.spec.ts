@@ -112,7 +112,7 @@ for (const width of [320, 768, 1440]) {
         });
         await email.fill('person@example.test');
         const submit = page.getByRole('button', {
-          name: en ? 'Request reset link' : 'ขอลิงก์รีเซ็ตรหัสผ่าน',
+          name: en ? 'Request reset link' : 'ขอลิงก์ตั้งรหัสผ่านใหม่',
           exact: true,
         });
         await submit.click();

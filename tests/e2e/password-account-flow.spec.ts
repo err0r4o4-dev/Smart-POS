@@ -253,7 +253,7 @@ for (const width of [390, 1440]) {
       await openEnglish(page, '/reset-password?token=synthetic-expired-reset');
       expect(page.url()).not.toContain('synthetic-expired-reset');
       await fillPassword(page);
-      await page.getByRole('button', { name: 'Change password' }).click();
+      await page.getByRole('button', { name: 'Save new password' }).click();
       await expect(page.getByRole('alert')).toContainText(
         /invalid or expired/i,
       );
@@ -280,7 +280,7 @@ for (const width of [390, 1440]) {
       state.verified = true;
       await openEnglish(page, '/reset-password?token=synthetic-reset-token');
       await fillPassword(page);
-      await page.getByRole('button', { name: 'Change password' }).click();
+      await page.getByRole('button', { name: 'Save new password' }).click();
       await expect(page.getByRole('status')).toContainText(
         /sessions were revoked/i,
       );

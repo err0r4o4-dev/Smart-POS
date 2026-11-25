@@ -798,7 +798,7 @@ for (const width of [320, 768, 1440]) {
       } else {
         await expect(
           page.getByRole('button', {
-            name: 'ขอลิงก์รีเซ็ตรหัสผ่าน',
+            name: 'ขอลิงก์ตั้งรหัสผ่านใหม่',
             exact: true,
           }),
         ).toBeVisible();

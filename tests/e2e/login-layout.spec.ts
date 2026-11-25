@@ -27,12 +27,15 @@ for (const width of [320, 360, 390, 767, 768, 900, 1024, 1280, 1440, 1672]) {
     await page.goto('/login');
     await page.getByRole('button', { name: 'ไทย', exact: true }).click();
     await expect(
-      page.getByRole('heading', { name: 'ยินดีต้อนรับกลับ' }),
+      page.getByRole('heading', { name: 'เข้าสู่ระบบ', exact: true }),
     ).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
 
-    const visual = page.getByRole('region', { name: 'จัดการร้านให้ง่ายขึ้น' });
-    const panel = page.getByRole('region', { name: 'ยินดีต้อนรับกลับ' });
+    const visual = page.locator('.login-visual');
+    const panel = page.getByRole('region', {
+      name: 'เข้าสู่ระบบ',
+      exact: true,
+    });
     await expect(panel.getByRole('button', { name: /Google/ })).toBeEnabled();
     const illustration = visual.getByRole('img', {
       name: /เครื่องขายหน้าร้าน/,
@@ -59,10 +62,7 @@ for (const width of [320, 360, 390, 767, 768, 900, 1024, 1280, 1440, 1672]) {
       expect(panelBounds!.y).toBeGreaterThanOrEqual(
         visualBounds!.y + visualBounds!.height - 1,
       );
-      const title = visual.getByRole('heading');
-      expect((await illustration.boundingBox())!.y).toBeLessThan(
-        (await title.boundingBox())!.y,
-      );
+      await expect(visual.getByText('จัดการร้านให้ง่ายขึ้น')).toBeHidden();
     }
     await page.screenshot({
       path: testInfo.outputPath(`login-th-${width}.png`),

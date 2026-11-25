@@ -6,7 +6,6 @@ import {
   Lock,
   Eye,
   EyeOff,
-  Store,
   UserRound,
 } from 'lucide-react';
 import { useLanguage } from '../../app/language';
@@ -123,7 +122,7 @@ export function LoginPage() {
         <div className="login-card-brand" aria-hidden="true">
           <Brand />
         </div>
-        <h2 id="login-title">{t('auth.welcomeBack')}</h2>
+        <h1 id="login-title">{t('auth.signIn')}</h1>
         <p>{t('auth.signInForStoreOwnersManagersAnd')}</p>
       </div>
       {params.has('registered') && (
@@ -274,16 +273,8 @@ export function RegisterPage() {
   return (
     <LoginLayout titleId="register-title" story="register">
       <div className="auth-header-card">
-        <Tag tone="amber">
-          <Store size={17} aria-hidden="true" />
-          {t('auth.createAccount2')}
-        </Tag>
-        <h2 id="register-title">{t('auth.getStarted')}</h2>
-        <p>
-          {language === 'en'
-            ? 'Create an account and verify your email to set up your store.'
-            : 'สร้างบัญชีและยืนยันอีเมลเพื่อตั้งค่าร้าน'}
-        </p>
+        <h1 id="register-title">{t('auth.createAccount')}</h1>
+        <p>{t('auth.registerInstructions')}</p>
       </div>
       <form onSubmit={submit} className="auth-form-body">
         <fieldset disabled={pending}>
@@ -364,9 +355,7 @@ export function RegisterPage() {
       </form>
       <GoogleAuth mode="register" disabled={pending} returnTo="/setup" />
       <div className="auth-links auth-links-single">
-        <div className="auth-link-register-prompt">
-          <Link to="/login">{t('auth.alreadyHaveAnAccountSignIn')}</Link>
-        </div>
+        <Link to="/login">{t('auth.alreadyHaveAnAccountSignIn')}</Link>
         <Link to={paths.verifyEmail}>{t('auth.verificationRecovery')}</Link>
       </div>
     </LoginLayout>
@@ -412,8 +401,8 @@ export function ForgotPasswordPage() {
           <KeyRound size={17} aria-hidden="true" />
           {t('auth.accountRecovery')}
         </Tag>
-        <h1 id="forgot-title">{t('auth.resetYourPassword')}</h1>
-        <p>{t('auth.enterYourEmailIfAnEligibleAccount')}</p>
+        <h1 id="forgot-title">{t('auth.forgotPasswordTitle')}</h1>
+        <p>{t('auth.forgotPasswordInstructions')}</p>
       </div>
       <form onSubmit={submit} className="auth-form-body">
         <fieldset disabled={pending}>
@@ -501,6 +490,7 @@ export function ResetPasswordPage() {
       <div className="auth-header-card">
         <Tag tone="amber">{t('auth.secureReset')}</Tag>
         <h1 id="reset-title">{t('auth.chooseANewPassword')}</h1>
+        {!done && token && <p>{t('auth.resetPasswordInstructions')}</p>}
       </div>
       {done ? (
         <p className="auth-status-banner">

@@ -146,24 +146,16 @@ for (const width of [320, 700, 701, 1440]) {
       const header = page.getByRole('banner');
       const brand = header.getByRole('link', { name: /VELO/ });
       await expect(brand).toBeVisible();
-      const home =
-        path === '/login'
-          ? brand
-          : page.getByRole('link', { name: 'กลับหน้าหลัก', exact: true });
-      await expect(home).toHaveAttribute('href', '/');
-      if (path !== '/login') {
-        const headerBounds = await header.boundingBox();
-        const homeBounds = await home.boundingBox();
-        expect(homeBounds!.y).toBeGreaterThanOrEqual(
-          headerBounds!.y + headerBounds!.height,
-        );
-      }
-      await home.focus();
+      await expect(brand).toHaveAttribute('href', '/');
+      await expect(page.getByRole('main').locator('a[href="/"]')).toHaveCount(
+        0,
+      );
+      await brand.focus();
       await page.keyboard.press('Shift+Tab');
       await page.keyboard.press('Tab');
-      await expect(home).toBeFocused();
+      await expect(brand).toBeFocused();
       expect(
-        await home.evaluate(
+        await brand.evaluate(
           (element) => getComputedStyle(element).outlineStyle,
         ),
       ).not.toBe('none');
@@ -191,13 +183,13 @@ for (const width of [320, 700, 701, 1440]) {
       }
       if (path === '/reset-password') {
         await expect(
-          page.getByRole('button', { name: 'เปลี่ยนรหัสผ่าน' }),
+          page.getByRole('button', { name: 'บันทึกรหัสผ่านใหม่' }),
         ).toBeDisabled();
         await expect(
           page.getByRole('link', { name: 'ขอลิงก์ตั้งรหัสผ่านใหม่' }),
         ).toBeVisible();
       }
-      await home.evaluate((element: HTMLElement) => element.blur());
+      await brand.evaluate((element: HTMLElement) => element.blur());
       await page.evaluate(() => window.scrollTo(0, 0));
       await page.screenshot({
         path: testInfo.outputPath('account.png'),

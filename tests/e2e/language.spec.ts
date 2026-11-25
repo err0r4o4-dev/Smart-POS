@@ -138,7 +138,7 @@ for (const width of [320, 375, 768, 1440]) {
     });
     await page.reload();
     await expect(
-      page.getByRole('heading', { name: 'Welcome back.' }),
+      page.getByRole('heading', { name: 'Sign in', exact: true }),
     ).toBeVisible();
     await page.goto('/shop');
     await expect(

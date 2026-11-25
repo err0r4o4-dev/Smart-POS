@@ -76,14 +76,12 @@ for (const [width, path] of [
     const verify = page.getByRole('button', { name: 'Verify code' });
     await expect(code).toBeVisible();
     await expect(
-      page.getByRole('heading', { name: 'MFA verification required' }),
+      page.getByRole('heading', { name: 'Verify your identity' }),
     ).toHaveCount(0);
     await expect(
       page.getByRole('link', { name: 'Back to workspace' }),
     ).toHaveCount(0);
-    await expect(
-      page.getByRole('link', { name: 'Back to home' }),
-    ).toHaveAttribute('href', '/');
+    await expect(page.getByRole('main').locator('a[href="/"]')).toHaveCount(0);
     await expect
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
       .toBeLessThanOrEqual(width);

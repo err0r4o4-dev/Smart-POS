@@ -110,7 +110,7 @@ test('real registration, login, persistence, logout, recovery and reset security
     });
     await page.getByLabel('Password', { exact: true }).fill(newPassword);
     await page.getByLabel('Confirm password').fill(newPassword);
-    await page.getByRole('button', { name: 'Change password' }).click();
+    await page.getByRole('button', { name: 'Save new password' }).click();
     await expect(page.getByRole('status')).toContainText('Password changed');
     expect(
       (
@@ -122,7 +122,7 @@ test('real registration, login, persistence, logout, recovery and reset security
     await page.goto(`/reset-password?token=${encodeURIComponent(token)}`);
     await page.getByLabel('Password', { exact: true }).fill(newPassword);
     await page.getByLabel('Confirm password').fill(newPassword);
-    await page.getByRole('button', { name: 'Change password' }).click();
+    await page.getByRole('button', { name: 'Save new password' }).click();
     await expect(page.getByRole('alert')).toContainText('invalid or expired');
     await page.goto('/login');
     await page.getByLabel('Email address').fill(email);
@@ -158,7 +158,7 @@ test('real registration, login, persistence, logout, recovery and reset security
     await page.goto(`/reset-password?token=${encodeURIComponent(token)}`);
     await page.getByLabel('Password', { exact: true }).fill(oldPassword);
     await page.getByLabel('Confirm password').fill(oldPassword);
-    await page.getByRole('button', { name: 'Change password' }).click();
+    await page.getByRole('button', { name: 'Save new password' }).click();
     await expect(page.getByRole('alert')).toContainText('invalid or expired');
   });
 });

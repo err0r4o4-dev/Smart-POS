@@ -25,7 +25,7 @@ it('provides one full-page brand header that links home on sign-in', () => {
   expect(screen.getByRole('main')).toHaveAttribute('id', 'main-content');
 });
 
-it('keeps the separate back link in the card on supporting account pages', () => {
+it('keeps the header as the only home link on supporting account pages', () => {
   render(
     <MemoryRouter>
       <LoginLayout story="recover" titleId="recovery-title">
@@ -33,9 +33,14 @@ it('keeps the separate back link in the card on supporting account pages', () =>
       </LoginLayout>
     </MemoryRouter>,
   );
-  const back = screen.getByRole('link', { name: 'Back to home' });
-  expect(back).toHaveAttribute('href', '/');
+  const header = screen.getByRole('banner');
   expect(
-    screen.getByRole('region', { name: 'Reset password' }),
-  ).toContainElement(back);
+    within(header).getByRole('link', { name: 'VELO POS home' }),
+  ).toHaveAttribute('href', '/');
+  expect(
+    within(screen.getByRole('region', { name: 'Reset password' })).queryByRole(
+      'link',
+      { name: 'Back to home' },
+    ),
+  ).not.toBeInTheDocument();
 });

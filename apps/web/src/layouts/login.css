@@ -30,21 +30,6 @@
   color: inherit;
 }
 
-.login-back-link {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  margin-block-start: var(--space-2);
-  gap: 12px;
-  color: var(--text-strong);
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.login-back-link:hover {
-  color: var(--primary-strong);
-}
-
 .login-shell {
   flex: 1;
   display: grid;
@@ -90,7 +75,7 @@
   gap: var(--group-gap);
 }
 
-.login-visual-copy :is(h1, h2) {
+.login-visual-copy .login-visual-heading {
   margin: 0;
   color: #0c1829;
   font-size: clamp(var(--font-page-mobile), 8cqi, var(--font-display));
@@ -108,7 +93,7 @@
   text-underline-offset: 0.18em;
 }
 
-.login-visual-copy p {
+.login-visual-copy .login-visual-summary {
   max-width: 48ch;
   margin: var(--space-4) 0 0;
   color: var(--text-strong);
@@ -369,6 +354,7 @@
 
 .login-card .auth-links.auth-links-single {
   justify-content: center;
+  text-align: center;
 }
 
 .login-card .auth-links a,
@@ -387,17 +373,6 @@
 
 .login-card .auth-links a svg {
   flex-shrink: 0;
-}
-
-.login-card .auth-link-register-prompt {
-  display: flex;
-  flex: 1;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  column-gap: var(--space-2);
-  color: var(--text-secondary);
-  font-size: var(--font-caption);
 }
 
 .login-card .auth-form-body .login-recovery-link {
@@ -535,7 +510,7 @@
   pointer-events: none;
 }
 
-.login-visual-copy p:not(.login-story-badge) {
+.login-visual-copy .login-visual-summary {
   max-width: 47ch;
   margin-top: var(--heading-gap);
   color: #4f5b6d;
@@ -729,7 +704,8 @@
   }
 
   .login-ambient-tile,
-  .login-feature-list {
+  .login-feature-list,
+  .login-visual-copy {
     display: none;
   }
 
@@ -743,23 +719,10 @@
 
   .login-visual {
     align-items: center;
-    gap: var(--space-1);
-    text-align: center;
   }
 
   .login-illustration {
-    order: -1;
     width: min(50%, 12rem);
-  }
-
-  .login-visual-copy :is(h1, h2) {
-    font-size: var(--font-section);
-  }
-
-  .login-visual-copy p:not(.login-story-badge) {
-    margin: var(--space-2) auto 0;
-    max-width: 40ch;
-    font-size: var(--font-caption);
   }
 
   .login-card.auth-glass-card {
@@ -770,7 +733,7 @@
     display: none;
   }
 
-  [data-account-story='login'] .auth-header-card h2 {
+  [data-account-story='login'] .auth-header-card h1 {
     margin-top: 0;
   }
 }

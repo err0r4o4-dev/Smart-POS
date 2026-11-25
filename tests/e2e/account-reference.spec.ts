@@ -2,10 +2,35 @@ import { expect, test } from '@playwright/test';
 
 test.use({ channel: process.env.E2E_BROWSER_CHANNEL });
 
+for (const width of [320, 390, 767, 768, 1440]) {
+  test(`account artwork and heading adapt at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 720 });
+    await page.goto('/login');
+    await page.getByRole('button', { name: 'ไทย', exact: true }).click();
+
+    const illustration = page.locator('.login-visual-art');
+    await expect(illustration).toBeVisible();
+    await expect
+      .poll(() =>
+        illustration.evaluate((image: HTMLImageElement) => image.naturalWidth),
+      )
+      .toBeGreaterThan(0);
+    const promo = page.locator('.login-visual-copy');
+    if (width < 768) await expect(promo).toBeHidden();
+    else await expect(promo).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+      'เข้าสู่ระบบ',
+    );
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+      .toBeLessThanOrEqual(width);
+  });
+}
+
 const accountPages = [
-  { path: '/login', title: 'ยินดีต้อนรับกลับ' },
-  { path: '/register', title: 'เริ่มต้นใช้งาน' },
-  { path: '/forgot-password', title: 'รีเซ็ตรหัสผ่าน' },
+  { path: '/login', title: 'เข้าสู่ระบบ' },
+  { path: '/register', title: 'สร้างบัญชี' },
+  { path: '/forgot-password', title: 'ลืมรหัสผ่าน' },
 ];
 
 test('account routes reuse the sign-in frame on desktop and mobile', async ({
@@ -67,15 +92,18 @@ for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/login');
     await page.getByRole('button', { name: 'English', exact: true }).click();
-    const visual = page.getByRole('region', { name: /run your store/i });
+    const visual = page.locator('.login-visual');
+    const artwork = visual.getByRole('img');
     const snapshot = async () => {
+      await expect(artwork).toBeVisible();
       await page.evaluate(async () => {
         await document.fonts.ready;
         window.scrollTo(0, 0);
       });
       return {
-        copy: await visual.innerText(),
-        art: await visual.getByRole('img').boundingBox(),
+        copyVisible: await visual.locator('.login-visual-copy').isVisible(),
+        copy: await visual.locator('.login-visual-copy').textContent(),
+        art: await artwork.boundingBox(),
       };
     };
     const signIn = await snapshot();
@@ -83,12 +111,12 @@ for (const width of [390, 1440]) {
     await expect(page).toHaveURL(/\/register$/);
     await expect(page.getByLabel('Display name')).toBeVisible();
     await expect(visual).toBeVisible();
-    expect(await snapshot()).toEqual(signIn);
+    await expect.poll(snapshot).toEqual(signIn);
     await page
       .getByRole('link', { name: 'Already have an account? Sign in' })
       .click();
     await expect(page).toHaveURL(/\/login$/);
-    expect(await snapshot()).toEqual(signIn);
+    await expect.poll(snapshot).toEqual(signIn);
   });
 }
 
@@ -108,6 +136,18 @@ for (const width of [320, 390, 768, 1024, 1440]) {
         await page.evaluate(() => document.fonts.ready);
         const card = page.locator('.login-card');
         const cardBounds = await card.boundingBox();
+        if (account.path === '/register' && (width === 390 || width === 768)) {
+          const signIn = card.getByRole('link', {
+            name: 'มีบัญชีแล้ว? เข้าสู่ระบบ',
+          });
+          const resend = card.getByRole('link', { name: /ส่งอีเมลอีกครั้ง/ });
+          const signInBox = (await signIn.boundingBox())!;
+          const resendBox = (await resend.boundingBox())!;
+          expect(signInBox.width).toBeGreaterThan(100);
+          expect(resendBox.y).toBeGreaterThanOrEqual(
+            signInBox.y + signInBox.height,
+          );
+        }
         expect(cardBounds!.x).toBeGreaterThanOrEqual(0);
         expect(cardBounds!.x + cardBounds!.width).toBeLessThanOrEqual(width);
         expect(
@@ -195,9 +235,9 @@ for (const width of [390, 768, 900, 901, 1024, 1920]) {
     await page.evaluate(() => document.fonts.ready);
     const artwork = page.locator('.login-illustration');
     const art = (await artwork.boundingBox())!;
-    const heading = (await page.locator('.login-visual-copy').boundingBox())!;
     const card = (await page.locator('.login-card').boundingBox())!;
     if (width >= 768) {
+      const heading = (await page.locator('.login-visual-copy').boundingBox())!;
       expect(art.x + art.width).toBeLessThanOrEqual(card.x);
       expect(art.y).toBeGreaterThanOrEqual(heading.y + heading.height);
     } else {
@@ -362,14 +402,13 @@ for (const width of [320, 768, 901, 1024, 1440, 1920]) {
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(width);
-    const copy = (await page.locator('.login-visual-copy').boundingBox())!;
     const image = (await page.locator('.login-visual-art').boundingBox())!;
     const panel = (await page.locator('.login-panel').boundingBox())!;
     if (width >= 768) {
+      const copy = (await page.locator('.login-visual-copy').boundingBox())!;
       expect(image.y).toBeGreaterThanOrEqual(copy.y + copy.height);
       expect(image.x + image.width).toBeLessThanOrEqual(panel.x);
     } else {
-      expect(panel.y).toBeGreaterThanOrEqual(copy.y + copy.height);
       expect(panel.y).toBeGreaterThanOrEqual(image.y + image.height);
     }
     await page.screenshot({

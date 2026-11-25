@@ -5,7 +5,6 @@ import {
   ArrowRight,
   BookOpen,
   CheckCircle2,
-  ChevronDown,
   Clock,
   CookingPot,
   HelpCircle,
@@ -18,10 +17,9 @@ import {
   X,
 } from 'lucide-react';
 import { StandardPageHeader } from '../../components/ui/StandardPage';
+import { FaqList } from './FaqList';
+import { faqs, type CategoryKey } from './faq-content';
 import './help.css';
-
-type CategoryKey =
-  'all' | 'getting-started' | 'pos' | 'kitchen' | 'menu' | 'faq';
 
 interface GuideItem {
   id: string;
@@ -33,26 +31,10 @@ interface GuideItem {
   steps?: TranslationKey[];
 }
 
-interface FaqItem {
-  id: string;
-  category: CategoryKey;
-  questionKey: TranslationKey;
-  answerKey: TranslationKey;
-}
-
 export function HelpPage() {
   const { t } = useLanguage();
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<CategoryKey>('all');
-  const [openFaqs, setOpenFaqs] = useState<Record<string, boolean>>({});
-
-  const toggleFaq = (id: string) => {
-    setOpenFaqs((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
-  };
-
   const categories: { key: CategoryKey; label: string }[] = useMemo(
     () => [
       { key: 'all', label: t('help.categoryAll') },
@@ -112,42 +94,6 @@ export function HelpPage() {
     [],
   );
 
-  const faqs: FaqItem[] = useMemo(
-    () => [
-      {
-        id: 'faq-kitchen',
-        category: 'kitchen',
-        questionKey: 'help.faqKitchenQueueQ',
-        answerKey: 'help.faqKitchenQueueA',
-      },
-      {
-        id: 'faq-permission',
-        category: 'getting-started',
-        questionKey: 'help.faqPermissionQ',
-        answerKey: 'help.faqPermissionA',
-      },
-      {
-        id: 'faq-shift',
-        category: 'pos',
-        questionKey: 'help.faqShiftQ',
-        answerKey: 'help.faqShiftA',
-      },
-      {
-        id: 'faq-offline',
-        category: 'faq',
-        questionKey: 'help.faqOfflineQ',
-        answerKey: 'help.faqOfflineA',
-      },
-      {
-        id: 'faq-online-order',
-        category: 'menu',
-        questionKey: 'help.faqOnlineOrderQ',
-        answerKey: 'help.faqOnlineOrderA',
-      },
-    ],
-    [],
-  );
-
   const normalizedQuery = search.trim().toLowerCase();
 
   const filteredGuides = useMemo(() => {
@@ -189,7 +135,7 @@ export function HelpPage() {
         question.includes(normalizedQuery) || answer.includes(normalizedQuery)
       );
     });
-  }, [faqs, activeCategory, normalizedQuery, t]);
+  }, [activeCategory, normalizedQuery, t]);
 
   const totalResultsCount = filteredGuides.length + filteredFaqs.length;
 
@@ -351,50 +297,7 @@ export function HelpPage() {
         </div>
       )}
 
-      {/* FAQs Section */}
-      {filteredFaqs.length > 0 && (
-        <section className="help-faq-section" aria-labelledby="help-faq-title">
-          <h2 id="help-faq-title" className="help-section-title">
-            <HelpCircle size={20} className="help-icon" aria-hidden="true" />
-            {t('help.faqSectionTitle')}
-          </h2>
-          <div className="help-faq-list">
-            {filteredFaqs.map((faq) => {
-              const isOpen = !!openFaqs[faq.id];
-              return (
-                <div
-                  key={faq.id}
-                  className={`help-faq-item ${isOpen ? 'open' : ''}`}
-                >
-                  <button
-                    type="button"
-                    className="help-faq-trigger"
-                    aria-expanded={isOpen}
-                    aria-controls={`${faq.id}-answer`}
-                    onClick={() => toggleFaq(faq.id)}
-                  >
-                    <span>{t(faq.questionKey)}</span>
-                    <ChevronDown
-                      size={18}
-                      className="help-faq-chevron"
-                      aria-hidden="true"
-                    />
-                  </button>
-                  {isOpen && (
-                    <div
-                      id={`${faq.id}-answer`}
-                      className="help-faq-answer"
-                      role="region"
-                    >
-                      <p>{t(faq.answerKey)}</p>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
+      <FaqList items={filteredFaqs} showHeading />
 
       {/* Empty State when search returns 0 */}
       {totalResultsCount === 0 && (

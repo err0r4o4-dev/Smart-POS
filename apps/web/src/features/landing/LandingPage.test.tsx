@@ -192,6 +192,9 @@ it('links category and area shortcuts to directory searches', () => {
 it('provides the mockup footer columns and a language selector', () => {
   renderLanding();
   const footer = within(screen.getByRole('contentinfo'));
+  expect(
+    footer.getByRole('link', { name: 'คำถามที่พบบ่อย (FAQ)' }),
+  ).toHaveAttribute('href', '/faq');
   for (const name of [
     'เกี่ยวกับ VELOPOS',
     'เมนูหลัก',

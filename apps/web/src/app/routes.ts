@@ -24,6 +24,7 @@ export const paths = {
   storefrontSettings: '/settings/storefront',
   paymentSettings: '/settings/payments',
   help: '/help',
+  faq: '/faq',
   forbidden: '/403',
   notFound: '/404',
 } as const;

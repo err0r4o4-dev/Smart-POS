@@ -716,7 +716,7 @@ function LandingFooter({ t }: { t: Translate }) {
     {
       title: 'landing.footerSupport',
       links: [
-        ['landing.footerFaq', paths.help],
+        ['landing.footerFaq', paths.faq],
         ['landing.footerContact', paths.help],
         ['landing.footerReport', paths.help],
       ],

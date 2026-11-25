@@ -106,7 +106,7 @@ test('watch syncs web and api source without host dependencies or environment fi
     '.cache/',
     '.env*',
     'server',
-    '*.exe',
+    '*.exe',     
     'Dockerfile',
     'go.mod',
     'go.sum',

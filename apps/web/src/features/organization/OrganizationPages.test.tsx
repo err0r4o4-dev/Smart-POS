@@ -535,54 +535,59 @@ it('hides ordering and charge inputs without changing hydrated settings on save'
   );
 });
 
-it.each(['', 'branch'])('validates table rows and enables QR with branch selector %j', async (branchID) => {
-  mocks.branchID = branchID;
-  mocks.context = {
-    organization: { id: 'org-1' },
-    membership: { role: 'OWNER' },
-  };
-  renderSetup();
-  await waitFor(() =>
-    expect(screen.getByLabelText('ชื่อร้าน')).toHaveValue('ร้านเดิม'),
-  );
-  expect(screen.getByRole('button', { name: 'ลบโต๊ะ 1' })).toBeDisabled();
-  expect(
-    screen.queryByRole('button', { name: 'เพิ่มโซน' }),
-  ).not.toBeInTheDocument();
-  expect(
-    screen.queryByLabelText('เปิดใช้ QR สำหรับโต๊ะ'),
-  ).not.toBeInTheDocument();
-  expect(screen.queryByLabelText('จำนวนที่นั่ง 1')).not.toBeInTheDocument();
-  expect(screen.queryByLabelText('โซนของโต๊ะ 1')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'เพิ่มโต๊ะ' }));
-  expect(screen.getByLabelText('ชื่อ/เลขโต๊ะ 2')).toHaveFocus();
-  fireEvent.change(screen.getByLabelText('ชื่อ/เลขโต๊ะ 2'), {
-    target: { value: ' ' },
-  });
-  fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  expect(screen.getByRole('alert')).toHaveTextContent('ชื่อโต๊ะ');
-  expect(
-    mocks.request.mock.calls.some(([path]) => path.endsWith('/tables')),
-  ).toBe(false);
-  fireEvent.change(screen.getByLabelText('ชื่อ/เลขโต๊ะ 2'), {
-    target: { value: 'โต๊ะ 2' },
-  });
-  fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
-  await screen.findByText('ขั้นตอนที่ 2 จาก 3');
-  expect(mocks.request).toHaveBeenCalledWith(
-    '/organizations/org-1/restaurant/setup/tables',
-    expect.objectContaining({
-      body: expect.objectContaining({
-        ...(branchID ? { branch_id: branchID, generate_qr: true } : { qr_enabled: true }),
-        zones: [{ name: 'โซนหลัก', code: 'ZONE_1' }],
-        tables: [
-          { name: 'โต๊ะ 1', code: 'TABLE_1', zone_code: 'ZONE_1', seats: 4 },
-          { name: 'โต๊ะ 2', code: 'TABLE_2', zone_code: 'ZONE_1', seats: 2 },
-        ],
+it.each(['', 'branch'])(
+  'validates table rows and enables QR with branch selector %j',
+  async (branchID) => {
+    mocks.branchID = branchID;
+    mocks.context = {
+      organization: { id: 'org-1' },
+      membership: { role: 'OWNER' },
+    };
+    renderSetup();
+    await waitFor(() =>
+      expect(screen.getByLabelText('ชื่อร้าน')).toHaveValue('ร้านเดิม'),
+    );
+    expect(screen.getByRole('button', { name: 'ลบโต๊ะ 1' })).toBeDisabled();
+    expect(
+      screen.queryByRole('button', { name: 'เพิ่มโซน' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText('เปิดใช้ QR สำหรับโต๊ะ'),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('จำนวนที่นั่ง 1')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('โซนของโต๊ะ 1')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'เพิ่มโต๊ะ' }));
+    expect(screen.getByLabelText('ชื่อ/เลขโต๊ะ 2')).toHaveFocus();
+    fireEvent.change(screen.getByLabelText('ชื่อ/เลขโต๊ะ 2'), {
+      target: { value: ' ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
+    expect(screen.getByRole('alert')).toHaveTextContent('ชื่อโต๊ะ');
+    expect(
+      mocks.request.mock.calls.some(([path]) => path.endsWith('/tables')),
+    ).toBe(false);
+    fireEvent.change(screen.getByLabelText('ชื่อ/เลขโต๊ะ 2'), {
+      target: { value: 'โต๊ะ 2' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /บันทึกและถัดไป/ }));
+    await screen.findByText('ขั้นตอนที่ 2 จาก 3');
+    expect(mocks.request).toHaveBeenCalledWith(
+      '/organizations/org-1/restaurant/setup/tables',
+      expect.objectContaining({
+        body: expect.objectContaining({
+          ...(branchID
+            ? { branch_id: branchID, generate_qr: true }
+            : { qr_enabled: true }),
+          zones: [{ name: 'โซนหลัก', code: 'ZONE_1' }],
+          tables: [
+            { name: 'โต๊ะ 1', code: 'TABLE_1', zone_code: 'ZONE_1', seats: 4 },
+            { name: 'โต๊ะ 2', code: 'TABLE_2', zone_code: 'ZONE_1', seats: 2 },
+          ],
+        }),
       }),
-    }),
-  );
-});
+    );
+  },
+);
 
 it('requires a service mode and a table only when dine-in is selected', () => {
   renderSetup();

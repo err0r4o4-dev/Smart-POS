@@ -435,12 +435,12 @@ state. A native Dine-in mutation must validate both the table context and
 the matching private session proof at the server. Keep Dine-in sessions out
 of saved-cart sync/recovery and reorder.
 
-| Operation | Authority and result |
-| --- | --- |
-| Resolve QR | The public QR resolves only against an active native table in the addressed restaurant, and returns public table/menu context. Repeated scans do not resume or close another session. |
-| Start Dine-in | An explicit start from that QR creates an independent server-side session and issues its private proof. An explicit Takeaway choice skips this operation. |
+| Operation                    | Authority and result                                                                                                                                                                                                                                                                          |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Resolve QR                   | The public QR resolves only against an active native table in the addressed restaurant, and returns public table/menu context. Repeated scans do not resume or close another session.                                                                                                         |
+| Start Dine-in                | An explicit start from that QR creates an independent server-side session and issues its private proof. An explicit Takeaway choice skips this operation.                                                                                                                                     |
 | Read or change session state | Require matching private proof, organization, table and session state in the transaction. The server derives the table assignment from the validated session; caller-provided IDs do not grant access. Missing, foreign, expired and ended proofs get the same denial and no private payload. |
-| End or expire | End the session without releasing reservations, altering committed orders, or changing queue entries. Once ended or expired, it cannot open another order. Customers use the separate order proof for committed obligations; the QR cannot recover that proof. |
+| End or expire                | End the session without releasing reservations, altering committed orders, or changing queue entries. Once ended or expired, it cannot open another order. Customers use the separate order proof for committed obligations; the QR cannot recover that proof.                                |
 
 For the first wire contract, propose a server-generated opaque proof with
 256 bits of randomness, returned only at session creation and submitted in
@@ -462,11 +462,11 @@ native dining tables. Use the canonical slug to load the existing public menu
 separately. The legacy `table_token` parameter on `/quote` and `/orders` keeps
 its existing meaning and is not accepted as native session proof.
 
-| POST path | JSON request | Success response |
-| --- | --- | --- |
-| `/table-qr/resolve` | `{"qr_token":"..."}` | `200`, `{"data":{"table":{"code":"...","name":"..."}}}`. Does not create, select or end a session. |
-| `/table-sessions` | `{"qr_token":"..."}` | `201`, `{"data":{"table":{"code":"...","name":"..."},"session_proof":"...","expires_at":"..."}}`. Call only on explicit Dine-in selection; recheck QR and Dine-in admission in the write transaction. |
-| `/table-sessions/end` | `{"session_proof":"..."}` | `204`, empty body. End only the session selected by this proof within the addressed restaurant. |
+| POST path             | JSON request              | Success response                                                                                                                                                                                      |
+| --------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/table-qr/resolve`   | `{"qr_token":"..."}`      | `200`, `{"data":{"table":{"code":"...","name":"..."}}}`. Does not create, select or end a session.                                                                                                    |
+| `/table-sessions`     | `{"qr_token":"..."}`      | `201`, `{"data":{"table":{"code":"...","name":"..."},"session_proof":"...","expires_at":"..."}}`. Call only on explicit Dine-in selection; recheck QR and Dine-in admission in the write transaction. |
+| `/table-sessions/end` | `{"session_proof":"..."}` | `204`, empty body. End only the session selected by this proof within the addressed restaurant.                                                                                                       |
 
 `qr_token` uses the existing 64 lowercase hexadecimal character format.
 `session_proof` is an independently generated 32-byte value encoded as
@@ -626,11 +626,11 @@ and `normalizeItems` rejects a second line with the same variant. Keep that
 behavior for existing consumers; the native path must distinguish lines by
 item and selection rather than using the variant alone.
 
-| Operation | Proposed wire behavior |
-| --- | --- |
-| Read for Owner | Under the current restaurant and verified Owner authority, return the menu revision and the addressed item's groups and options, including inactive options. Each group has a stable ID, label, and integer minimum and maximum choices; each option has a stable ID, label, exact THB extra price as a decimal string, and sale status. |
-| Edit for Owner | Submit the item scope, expected menu revision, an idempotency key, and explicit group/option changes. Omitted groups or options are unchanged. Validate the resulting state and return the committed projection and revision. The established setup command remains compatible and preserves choices. |
-| Read for customer | Once public admission is approved, return the current revision, item and group IDs, labels, choice bounds and sellable option IDs, labels and extra prices. Exclude inactive options and Owner history. A required group without enough sellable choices makes the item unavailable; it cannot be bypassed by omitting selections. |
+| Operation                      | Proposed wire behavior                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Read for Owner                 | Under the current restaurant and verified Owner authority, return the menu revision and the addressed item's groups and options, including inactive options. Each group has a stable ID, label, and integer minimum and maximum choices; each option has a stable ID, label, exact THB extra price as a decimal string, and sale status.                                                                                                          |
+| Edit for Owner                 | Submit the item scope, expected menu revision, an idempotency key, and explicit group/option changes. Omitted groups or options are unchanged. Validate the resulting state and return the committed projection and revision. The established setup command remains compatible and preserves choices.                                                                                                                                             |
+| Read for customer              | Once public admission is approved, return the current revision, item and group IDs, labels, choice bounds and sellable option IDs, labels and extra prices. Exclude inactive options and Owner history. A required group without enough sellable choices makes the item unavailable; it cannot be bypassed by omitting selections.                                                                                                                |
 | Revalidate customer selections | Each cart line submits its item ID, quantity, and distinct option IDs grouped by group ID. Resolve them under the addressed restaurant and line item. Compute prices on the server. An invalid or no longer sellable selection, or a changed displayed price, requires the customer to review and confirm current choices and totals before payment. Do not substitute choices, mutate paid orders, or allocate quota during a read or cart save. |
 
 Read and write projections must use a coherent revision: a response cannot
@@ -649,12 +649,12 @@ what the organization catalog and quote return without updating that profile.
 Public activation must wait until the following paths observe one menu
 revision boundary for registered items and categories.
 
-| Existing writer | What must participate in the native revision |
-| --- | --- |
-| `restaurant/organization_menu.go` and `restaurant/setup.go` | The organization menu command can register and update items. Retained `SaveMenu` can still update shared catalog rows. Include a retained write when it touches a row used by the native projection; retain its request shape, existing authorization and distinct replay contract. |
-| `catalog/products.go`, `catalog/variants.go`, `catalog/service.go` | Product names, category assignment and status, variant name, price, unit and status, and referenced category/unit changes can alter current menu projections. Limit revision participation to changes relevant to the restaurant menu. |
-| `catalog/imports.go` | `ConfirmImport` updates existing variants through `saveVariant` and can write the product directly. The committed batch must include all affected changes in the same revision and roll back that revision on failure. Preview and replay must not increment it. |
-| `inventory/quality.go` | A variant-wide recall suppresses sale in both organization readers. Its publication must invalidate an earlier purchase confirmation. Keep the recall's existing authorization and immutable evidence; a menu restore must not reopen a recalled item. |
+| Existing writer                                                    | What must participate in the native revision                                                                                                                                                                                                                                        |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `restaurant/organization_menu.go` and `restaurant/setup.go`        | The organization menu command can register and update items. Retained `SaveMenu` can still update shared catalog rows. Include a retained write when it touches a row used by the native projection; retain its request shape, existing authorization and distinct replay contract. |
+| `catalog/products.go`, `catalog/variants.go`, `catalog/service.go` | Product names, category assignment and status, variant name, price, unit and status, and referenced category/unit changes can alter current menu projections. Limit revision participation to changes relevant to the restaurant menu.                                              |
+| `catalog/imports.go`                                               | `ConfirmImport` updates existing variants through `saveVariant` and can write the product directly. The committed batch must include all affected changes in the same revision and roll back that revision on failure. Preview and replay must not increment it.                    |
+| `inventory/quality.go`                                             | A variant-wide recall suppresses sale in both organization readers. Its publication must invalidate an earlier purchase confirmation. Keep the recall's existing authorization and immutable evidence; a menu restore must not reopen a recalled item.                              |
 
 Migration 48 provides an append-only revision table. The proposed writer
 reads the last committed revision after taking the existing organization row
@@ -731,12 +731,12 @@ template_version,row_kind,ref,parent_ref,name,price,sale_status,min_choices,max_
 
 Proposed fields by row kind:
 
-| Row kind | Stable reference | Editable fields |
-| --- | --- | --- |
-| `CATEGORY` | `ref` | `name` |
-| `ITEM` | `ref`, `parent_ref` (category) | `name`, `price`, `sale_status` |
-| `GROUP` | `ref`, `parent_ref` (item) | `name`, `min_choices`, `max_choices` |
-| `OPTION` | `ref`, `parent_ref` (group) | `name`, `price` (extra charge), `sale_status` |
+| Row kind   | Stable reference               | Editable fields                               |
+| ---------- | ------------------------------ | --------------------------------------------- |
+| `CATEGORY` | `ref`                          | `name`                                        |
+| `ITEM`     | `ref`, `parent_ref` (category) | `name`, `price`, `sale_status`                |
+| `GROUP`    | `ref`, `parent_ref` (item)     | `name`, `min_choices`, `max_choices`          |
+| `OPTION`   | `ref`, `parent_ref` (group)    | `name`, `price` (extra charge), `sale_status` |
 
 References address entities within the current restaurant and row kind, not
 display names or database IDs from another tenant. Reject duplicate entity
@@ -847,13 +847,13 @@ These are required boundaries for native operations. Retained branch
 operations continue to use their own organization, branch and permission
 checks until their replacements are accepted.
 
-| Actor | Required authority | Denial and acceptance evidence |
-| --- | --- | --- |
-| Public visitor | Only the approved public restaurant and menu projection. A persistent QR can identify a table but grants no private access. | Public responses contain no customer/session/order credentials, payment evidence or internal audit. |
-| Guest | No account for checkout. Private order operations require server-validated proof for that exact order and restaurant; a Dine-in session has separate proof under D02. | Deny order number, contact info, QR, wrong order proof and proof from another restaurant. An order claim also requires a signed-in member and must atomically prevent a second claim. |
-| Member | Active signed-in identity plus an explicit owner predicate on the requested customer record or order. Claims are per order and do not change payment, reviews or points. | Deny foreign member, guest order without valid claim and a session revoked before access. Use the same predicate for reads, mutations and timeline subscriptions. |
-| Restaurant Owner | Active Owner of the addressed organization, active session and current MFA for protected operations. Only one account can hold native Owner authority per restaurant. An Owner of multiple restaurants selects one context per request. | Verify ownership under the transaction boundary. Deny missing MFA, wrong restaurant, stale or revoked session, and old Owner after transfer. Never infer which retained Owner to keep or widen a branch grant. |
-| Platform Admin | Separate server-provisioned active authority, current MFA and permission for the particular approved operation and target. Owner membership cannot confer platform authority. | Verify removal and session revocation, deny Owner self-elevation, and audit attributable actions. Approval of transfer or receiving-account activation requires its own evidence workflow. |
+| Actor                        | Required authority                                                                                                                                                                                                                                                   | Denial and acceptance evidence                                                                                                                                                                                                             |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Public visitor               | Only the approved public restaurant and menu projection. A persistent QR can identify a table but grants no private access.                                                                                                                                          | Public responses contain no customer/session/order credentials, payment evidence or internal audit.                                                                                                                                        |
+| Guest                        | No account for checkout. Private order operations require server-validated proof for that exact order and restaurant; a Dine-in session has separate proof under D02.                                                                                                | Deny order number, contact info, QR, wrong order proof and proof from another restaurant. An order claim also requires a signed-in member and must atomically prevent a second claim.                                                      |
+| Member                       | Active signed-in identity plus an explicit owner predicate on the requested customer record or order. Claims are per order and do not change payment, reviews or points.                                                                                             | Deny foreign member, guest order without valid claim and a session revoked before access. Use the same predicate for reads, mutations and timeline subscriptions.                                                                          |
+| Restaurant Owner             | Active Owner of the addressed organization, active session and current MFA for protected operations. Only one account can hold native Owner authority per restaurant. An Owner of multiple restaurants selects one context per request.                              | Verify ownership under the transaction boundary. Deny missing MFA, wrong restaurant, stale or revoked session, and old Owner after transfer. Never infer which retained Owner to keep or widen a branch grant.                             |
+| Platform Admin               | Separate server-provisioned active authority, current MFA and permission for the particular approved operation and target. Owner membership cannot confer platform authority.                                                                                        | Verify removal and session revocation, deny Owner self-elevation, and audit attributable actions. Approval of transfer or receiving-account activation requires its own evidence workflow.                                                 |
 | Elevated sensitive operation | The actor must pass the applicable Owner or Admin gate plus fresh verified primary proof and current TOTP for the same account and session within five minutes. Apply to receiving-account changes, transfer and ads credit refunds when their native writers exist. | Deny a fresh login alone, a fresh TOTP paired with absent or old primary proof, a recovery code alone, and proof expiring before the final authorization checkpoint. Denial may not mutate the target or return a previous private result. |
 
 Scope each command replay, stream, attachment and export to the actual

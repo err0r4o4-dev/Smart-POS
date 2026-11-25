@@ -96,7 +96,9 @@ export async function confirmMFAEnrollment(
   csrf: string,
   signal?: AbortSignal,
 ): Promise<{ recovery_codes: string[] }> {
-  return parseRecoveryCodes(await request('/enrollment/confirm', { code }, csrf, signal));
+  return parseRecoveryCodes(
+    await request('/enrollment/confirm', { code }, csrf, signal),
+  );
 }
 
 export async function confirmMFARecovery(
@@ -106,7 +108,12 @@ export async function confirmMFARecovery(
   signal?: AbortSignal,
 ): Promise<{ recovery_codes: string[] }> {
   return parseRecoveryCodes(
-    await request('/recovery/confirm', { factor_id: factorId, code }, csrf, signal),
+    await request(
+      '/recovery/confirm',
+      { factor_id: factorId, code },
+      csrf,
+      signal,
+    ),
   );
 }
 

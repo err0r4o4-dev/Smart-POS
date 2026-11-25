@@ -1499,7 +1499,7 @@ Matching remaining-reader evidence, 2026-11-23:
   pos-other-full.log,pos-other-root-tests.log,pos-other-go.log,pos-other-vet.log,
   pos-other-typecheck.log and scoped reviewer packages in
   `.local/velopos-identity-20261122`. T1.3/full migration remain open.
-POS terminal/register mutations (Large/High, bounded acceptance, 2026-11-23):
+  POS terminal/register mutations (Large/High, bounded acceptance, 2026-11-23):
 
 - [x] Prove independent missing/primary-only/mismatched MFA denial for terminal
       create/update and shift open/close, including idempotent replay. Main owns
@@ -2556,33 +2556,33 @@ Acceptance: Reviewed transition/ownership tables cover valid/invalid transitions
 ### T1.2 Specify versioned contracts for each selected slice
 
 - [/] Native modifiers: [D03 wire proposal](design.md#native-menu-modifier-wire-proposal-t12)
-      records Owner and customer projections, revision consistency, replay,
-      retained setup compatibility and customer reconfirmation cases. No route,
-      migration or runtime behavior changed. Quota and bulk import policy remain
-      separate B14 and B16 decisions.
+  records Owner and customer projections, revision consistency, replay,
+  retained setup compatibility and customer reconfirmation cases. No route,
+  migration or runtime behavior changed. Quota and bulk import policy remain
+  separate B14 and B16 decisions.
 - [/] [Shared revision cutover](design.md#shared-revision-cutover-prerequisites):
-      traced retained/organization setup, catalog maintenance and import,
-      and variant-wide recall paths that can invalidate a native quote.
-      Added writer coordination, coherent read and payment admission cases.
-      Native activation still requires implementation and independent evidence.
+  traced retained/organization setup, catalog maintenance and import,
+  and variant-wide recall paths that can invalidate a native quote.
+  Added writer coordination, coherent read and payment admission cases.
+  Native activation still requires implementation and independent evidence.
 - [/] Added Go selection validation for groups loaded for one menu item.
-      It rejects duplicate groups/options, choices from the wrong group,
-      unavailable options, and choices outside required/optional bounds.
-      A required group without enough sellable options blocks selection.
-      The focused test first failed to compile without the validator, then
-      `go test ./internal/modules/restaurant -count=1` passed. No service calls
-      it yet; item/tenant resolution, pricing, revision checks and payment
-      integration still need their own evidence.
+  It rejects duplicate groups/options, choices from the wrong group,
+  unavailable options, and choices outside required/optional bounds.
+  A required group without enough sellable options blocks selection.
+  The focused test first failed to compile without the validator, then
+  `go test ./internal/modules/restaurant -count=1` passed. No service calls
+  it yet; item/tenant resolution, pricing, revision checks and payment
+  integration still need their own evidence.
 - [/] Owner modifier service read reuses live Owner MFA and rechecks it
-      immediately before returning scoped groups. On isolated schema 47,
-      an assured Owner read an empty registered item; an unknown item and
-      missing, primary-only, mismatched and foreign sessions returned no
-      data. `check-db.mjs green` passed 47 entries including parents, no
-      FAIL/SKIP, exit 0 and verified cleanup (`green-1795492521839.log`).
-      First run expected the wrong foreign-account denial category and
-      cleaned up (`green-1795492459001.log`). The full run already in flight
-      predates this service change. No route or revision was exposed;
-      independent review of this authority boundary remains open.
+  immediately before returning scoped groups. On isolated schema 47,
+  an assured Owner read an empty registered item; an unknown item and
+  missing, primary-only, mismatched and foreign sessions returned no
+  data. `check-db.mjs green` passed 47 entries including parents, no
+  FAIL/SKIP, exit 0 and verified cleanup (`green-1795492521839.log`).
+  First run expected the wrong foreign-account denial category and
+  cleaned up (`green-1795492459001.log`). The full run already in flight
+  predates this service change. No route or revision was exposed;
+  independent review of this authority boundary remains open.
 - [x] Populated Owner read on isolated schema 47 returned both saleable
       and disabled options with exact `12.35` and `0.00` prices. A second
       read waited on a verified PostgreSQL lock until its session expired,
@@ -2590,164 +2590,164 @@ Acceptance: Reviewed transition/ownership tables cover valid/invalid transitions
       `check-availability.mjs modifiers` exited 0 and verified container
       and network cleanup (`modifiers-1795492686918.log`).
 - [/] Owner edit domain logic applies only explicitly submitted groups/options
-      to the scoped current item, preserves omitted choices, and normalizes
-      exact two-decimal prices without rounding. Unknown or wrong-parent IDs,
-      duplicate edits and invalid bounds return no candidate state. New choices
-      stay distinct until the future transaction assigns durable IDs. The focused
-      test failed to compile without the helper; the restaurant package passed
-      after implementation. No database write or endpoint uses it yet.
+  to the scoped current item, preserves omitted choices, and normalizes
+  exact two-decimal prices without rounding. Unknown or wrong-parent IDs,
+  duplicate edits and invalid bounds return no candidate state. New choices
+  stay distinct until the future transaction assigns durable IDs. The focused
+  test failed to compile without the helper; the restaurant package passed
+  after implementation. No database write or endpoint uses it yet.
 - [/] Internal Owner modifier command now uses the edit helper, live MFA and
-      the existing organization lock to commit choices, before/after revision
-      and audit together. Migration 49 grants column-limited writes and keeps
-      tenant policies in force. Isolated schema-49 tests proved one save and
-      audit, exact replay, changed-payload and stale-revision rejection
-      (`modifiers-1795493489441.log`, exit 0, cleanup verified). A subsequent
-      isolated schema-49 run proved that audit failure rolled back choices and
-      revision and allowed a retry with the same key. Two writes at one expected
-      revision produced one commit and one conflict, with one revision/audit
-      added. Replaying the first write after later commits returned its original
-      result. `modifiers-1795493688538.log`: exit 0, cleanup verified. Other
-      revision participants and independent review remain required before an
-      HTTP route can be exposed.
+  the existing organization lock to commit choices, before/after revision
+  and audit together. Migration 49 grants column-limited writes and keeps
+  tenant policies in force. Isolated schema-49 tests proved one save and
+  audit, exact replay, changed-payload and stale-revision rejection
+  (`modifiers-1795493489441.log`, exit 0, cleanup verified). A subsequent
+  isolated schema-49 run proved that audit failure rolled back choices and
+  revision and allowed a retry with the same key. Two writes at one expected
+  revision produced one commit and one conflict, with one revision/audit
+  added. Replaying the first write after later commits returned its original
+  result. `modifiers-1795493688538.log`: exit 0, cleanup verified. Other
+  revision participants and independent review remain required before an
+  HTTP route can be exposed.
 - [/] Organization Setup now appends before/after menu history under the
-      existing organization lock in the same transaction as its menu change
-      and audit. Setup replay retains its own command key and adds no revision;
-      existing modifiers stay intact. On schema 49, the regression first
-      observed revision 3 and no menu history after the price edit
-      (`modifiers-1795493797650.log`). With the change, it observed revision 4
-      with the changed price and rejected a modifier write based on revision 3
-      (`modifiers-1795493910182.log`, exit 0, cleanup verified). Focused Go
-      checks passed for restaurant, storefront and transport.
+  existing organization lock in the same transaction as its menu change
+  and audit. Setup replay retains its own command key and adds no revision;
+  existing modifiers stay intact. On schema 49, the regression first
+  observed revision 3 and no menu history after the price edit
+  (`modifiers-1795493797650.log`). With the change, it observed revision 4
+  with the changed price and rejected a modifier write based on revision 3
+  (`modifiers-1795493910182.log`, exit 0, cleanup verified). Focused Go
+  checks passed for restaurant, storefront and transport.
 - [/] Retained branch setup records changes to the registered menu under
-      its existing Owner MFA transaction and organization lock. A branch-only
-      save leaves the shared revision unchanged; a registered item's price
-      edit advances it once and preserves modifiers and legacy replay.
-      The regression first observed revision 4 instead of 5
-      (`modifiers-1795494035420.log`), then passed on isolated schema 49
-      (`modifiers-1795494099331.log`, exit 0, cleanup verified). Focused Go
-      checks passed for restaurant, storefront and transport.
+  its existing Owner MFA transaction and organization lock. A branch-only
+  save leaves the shared revision unchanged; a registered item's price
+  edit advances it once and preserves modifiers and legacy replay.
+  The regression first observed revision 4 instead of 5
+  (`modifiers-1795494035420.log`), then passed on isolated schema 49
+  (`modifiers-1795494099331.log`, exit 0, cleanup verified). Focused Go
+  checks passed for restaurant, storefront and transport.
 - [/] Catalog variant saves now share the setup revision allocator. A price
-      edit for a registered menu variant records the old and new price in the
-      same transaction as the catalog audit. Cost-only and out-of-menu edits
-      do not increment the revision. The schema-49 regression first observed
-      revision 5 with no variant history (`modifiers-1795494203982.log`), then
-      passed with revision 6. An injected audit failure rolled back the price
-      and revision (`modifiers-1795494313520.log`, exit 0, cleanup verified).
-      Focused Go checks passed for catalog, restaurant, storefront and transport.
-      Cross-writer acceptance and independent review remain open.
+  edit for a registered menu variant records the old and new price in the
+  same transaction as the catalog audit. Cost-only and out-of-menu edits
+  do not increment the revision. The schema-49 regression first observed
+  revision 5 with no variant history (`modifiers-1795494203982.log`), then
+  passed with revision 6. An injected audit failure rolled back the price
+  and revision (`modifiers-1795494313520.log`, exit 0, cleanup verified).
+  Focused Go checks passed for catalog, restaurant, storefront and transport.
+  Cross-writer acceptance and independent review remain open.
 - [/] Catalog product and taxonomy edits now append menu history under the
-      existing organization lock and in the same transaction as the audit.
-      Renaming a menu product, registered category and referenced unit advanced
-      the shared revision from 6 to 9; a description-only product update and an
-      unrelated unit rename left it unchanged. Isolated schema-49 regression:
-      revision 6 before the fix (`modifiers-1795494429701.log`), PASS after
-      (`modifiers-1795494508985.log`, exit 0, cleanup verified). Focused Go checks
-      passed for catalog, restaurant, storefront and transport.
+  existing organization lock and in the same transaction as the audit.
+  Renaming a menu product, registered category and referenced unit advanced
+  the shared revision from 6 to 9; a description-only product update and an
+  unrelated unit rename left it unchanged. Isolated schema-49 regression:
+  revision 6 before the fix (`modifiers-1795494429701.log`), PASS after
+  (`modifiers-1795494508985.log`, exit 0, cleanup verified). Focused Go checks
+  passed for catalog, restaurant, storefront and transport.
 - [/] Existing Catalog Import now records one before/after menu revision
-      for an UPDATE batch that changes the registered menu. It reads affected
-      products under the existing organization lock and import job lock.
-      Preview and completed replay add no revision. An injected completion
-      audit failure left revision 9 and allowed the same import job to retry.
-      The successful batch advanced to revision 10 and recorded both prices.
-      Isolated schema-49 regression: revision 9 before the fix
-      (`modifiers-1795494622585.log`), PASS after
-      (`modifiers-1795494696689.log`, exit 0, cleanup verified). Focused Go checks
-      passed for catalog, restaurant, storefront and transport. This uses the
-      existing catalog import; B16 remains open for native menu import.
+  for an UPDATE batch that changes the registered menu. It reads affected
+  products under the existing organization lock and import job lock.
+  Preview and completed replay add no revision. An injected completion
+  audit failure left revision 9 and allowed the same import job to retry.
+  The successful batch advanced to revision 10 and recorded both prices.
+  Isolated schema-49 regression: revision 9 before the fix
+  (`modifiers-1795494622585.log`), PASS after
+  (`modifiers-1795494696689.log`, exit 0, cleanup verified). Focused Go checks
+  passed for catalog, restaurant, storefront and transport. This uses the
+  existing catalog import; B16 remains open for native menu import.
 - [/] Inventory Recall now records the first variant-wide recall of a
-      registered menu variant in the same revision transaction as its immutable
-      recall, audit and command result. A lot-only recall, an exact replay,
-      and a later recall of the already recalled variant add no menu revision.
-      An injected audit failure rolled back the recall and allowed retry with
-      the same key. Isolated schema-49 regression: revision 10 before the fix
-      (`modifiers-1795494892358.log`); PASS with revision 11 and the recall
-      transition recorded (`modifiers-1795494961356.log`, exit 0, cleanup
-      verified). Focused Go checks passed for inventory, restaurant, storefront
-      and transport. Payment admission and cross-writer acceptance remain open.
+  registered menu variant in the same revision transaction as its immutable
+  recall, audit and command result. A lot-only recall, an exact replay,
+  and a later recall of the already recalled variant add no menu revision.
+  An injected audit failure rolled back the recall and allowed retry with
+  the same key. Isolated schema-49 regression: revision 10 before the fix
+  (`modifiers-1795494892358.log`); PASS with revision 11 and the recall
+  transition recorded (`modifiers-1795494961356.log`, exit 0, cleanup
+  verified). Focused Go checks passed for inventory, restaurant, storefront
+  and transport. Payment admission and cross-writer acceptance remain open.
 - [/] Isolated schema-49 concurrency checks observed both lock waits:
-      a modifier edit held the organization lock while blocked on modifier
-      options, and the retained setup or import writer waited behind it.
-      Each pair committed in sequence, kept the new modifier and price, and
-      added exactly two revisions. Replays added none and returned the original
-      modifier result. `modifiers-1795495088070.log`: exit 0, cleanup verified.
-      The inverse order also passed: with setup or import holding the
-      organization lock first, the stale modifier edit and its retry both
-      returned conflict without a result or changes to modifier groups.
-      Each writer committed exactly one revision and preserved its new price.
-      `modifiers-1795495210548.log`: exit 0, cleanup verified.
+  a modifier edit held the organization lock while blocked on modifier
+  options, and the retained setup or import writer waited behind it.
+  Each pair committed in sequence, kept the new modifier and price, and
+  added exactly two revisions. Replays added none and returned the original
+  modifier result. `modifiers-1795495088070.log`: exit 0, cleanup verified.
+  The inverse order also passed: with setup or import holding the
+  organization lock first, the stale modifier edit and its retry both
+  returned conflict without a result or changes to modifier groups.
+  Each writer committed exactly one revision and preserved its new price.
+  `modifiers-1795495210548.log`: exit 0, cleanup verified.
 - [/] While the first restaurant waited on its organization lock, a second
-      restaurant with a different assured Owner committed under the same
-      request key. The two writes advanced their own revisions to 18 and 1.
-      Scoped runtime queries returned only their own history, and foreign item
-      reads and edits returned no payload. A first fixture reused one account
-      and waited on the existing MFA account lock (`modifiers-1795495324039.log`);
-      the distinct-Owner fixture passed on isolated schema 49
-      (`modifiers-1795495418203.log`, exit 0, cleanup verified).
-      Stale payment admission still needs coverage.
+  restaurant with a different assured Owner committed under the same
+  request key. The two writes advanced their own revisions to 18 and 1.
+  Scoped runtime queries returned only their own history, and foreign item
+  reads and edits returned no payload. A first fixture reused one account
+  and waited on the existing MFA account lock (`modifiers-1795495324039.log`);
+  the distinct-Owner fixture passed on isolated schema 49
+  (`modifiers-1795495418203.log`, exit 0, cleanup verified).
+  Stale payment admission still needs coverage.
 - [/] Internal Owner read now returns the scoped modifier projection and shared
-      revision under the same organization lock, with live MFA rechecked before
-      returning. On isolated schema 49 it returned the committed revision and
-      choices after each of the four cross-writer sequences; an expired session
-      after a verified lock wait returned neither revision nor choices.
-      `modifiers-1795495573960.log`: exit 0, cleanup verified. Focused Go checks
-      passed for restaurant, storefront and transport. The retained payment
-      path uses an existing order snapshot; native confirmation revalidation
-      still needs its own checkout admission path and acceptance coverage.
+  revision under the same organization lock, with live MFA rechecked before
+  returning. On isolated schema 49 it returned the committed revision and
+  choices after each of the four cross-writer sequences; an expired session
+  after a verified lock wait returned neither revision nor choices.
+  `modifiers-1795495573960.log`: exit 0, cleanup verified. Focused Go checks
+  passed for restaurant, storefront and transport. The retained payment
+  path uses an existing order snapshot; native confirmation revalidation
+  still needs its own checkout admission path and acceptance coverage.
 
 - [/] The native quote pricing component resolves selected choices inside the
-      caller's scoped menu transaction and returns stable group/option IDs,
-      labels, exact extra prices, and their sum in minor units. The domain test
-      verifies exact addition and stable ordering; isolated schema 49 verified
-      the stored 12.35 extra and denial of a disabled option
-      (`modifiers-1795495726725.log`, exit 0, cleanup verified). Focused Go
-      checks passed for restaurant, storefront and transport.
+  caller's scoped menu transaction and returns stable group/option IDs,
+  labels, exact extra prices, and their sum in minor units. The domain test
+  verifies exact addition and stable ordering; isolated schema 49 verified
+  the stored 12.35 extra and denial of a disabled option
+  (`modifiers-1795495726725.log`, exit 0, cleanup verified). Focused Go
+  checks passed for restaurant, storefront and transport.
 - [/] Internal native menu quote now reads scoped item eligibility, choices
-      and revision within the caller's consistent transaction. It calculates
-      line totals and subtotal from server prices, preserving separate lines
-      when the same item has different selections. The focused Go tests
-      verified line totals of 124.70 and 50.25, subtotal 174.95, the returned
-      revision, and rejection of fractional count quantities. Storefront,
-      restaurant and transport Go tests passed. This quote path still needs
-      isolated PostgreSQL verification, confirmation binding and checkout
-      admission. Retained quote and payment routes are unchanged.
+  and revision within the caller's consistent transaction. It calculates
+  line totals and subtotal from server prices, preserving separate lines
+  when the same item has different selections. The focused Go tests
+  verified line totals of 124.70 and 50.25, subtotal 174.95, the returned
+  revision, and rejection of fractional count quantities. Storefront,
+  restaurant and transport Go tests passed. This quote path still needs
+  isolated PostgreSQL verification, confirmation binding and checkout
+  admission. Retained quote and payment routes are unchanged.
 - [/] Native menu confirmation now binds the restaurant and priced line
-      projection. Revalidation recomputes it within the caller's locked
-      checkout transaction. Go tests show that an unrelated revision can
-      preserve confirmation, but a changed quantity, base or option price,
-      category, unit, or sale eligibility returns a quote conflict and no
-      priced result. Focused storefront, restaurant and transport tests
-      passed. On isolated schema 49, the runtime role priced two selections
-      of one item at 194.70 and 85.25 (subtotal 279.95) and accepted the same
-      confirmation while unchanged. Within savepoints under the organization
-      lock, a category rename, a unit rename, disabling a selected option, and
-      recording a variant-wide recall each returned a quote conflict with no
-      priced result. `modifiers-1795496141334.log`: exit 0, cleanup verified.
-      This verifies repricing against PostgreSQL.
+  projection. Revalidation recomputes it within the caller's locked
+  checkout transaction. Go tests show that an unrelated revision can
+  preserve confirmation, but a changed quantity, base or option price,
+  category, unit, or sale eligibility returns a quote conflict and no
+  priced result. Focused storefront, restaurant and transport tests
+  passed. On isolated schema 49, the runtime role priced two selections
+  of one item at 194.70 and 85.25 (subtotal 279.95) and accepted the same
+  confirmation while unchanged. Within savepoints under the organization
+  lock, a category rename, a unit rename, disabling a selected option, and
+  recording a variant-wide recall each returned a quote conflict with no
+  priced result. `modifiers-1795496141334.log`: exit 0, cleanup verified.
+  This verifies repricing against PostgreSQL.
 - [/] Native checkout quote now binds the menu confirmation, fulfillment
-      mode, configured flat delivery fee and final total. With menu subtotal
-      279.95 and delivery fee 15.25, schema-49 acceptance verified total
-      295.20 and accepted the unchanged confirmation. A fee change, mode
-      change or stale menu returned a quote conflict without a payable total.
-      Focused Go checks passed; `modifiers-1795496316630.log`: exit 0, cleanup
-      verified. Cart authority, delivery area validation and actual payment
-      admission remain open, along with the B14 decisions.
+  mode, configured flat delivery fee and final total. With menu subtotal
+  279.95 and delivery fee 15.25, schema-49 acceptance verified total
+  295.20 and accepted the unchanged confirmation. A fee change, mode
+  change or stale menu returned a quote conflict without a payable total.
+  Focused Go checks passed; `modifiers-1795496316630.log`: exit 0, cleanup
+  verified. Cart authority, delivery area validation and actual payment
+  admission remain open, along with the B14 decisions.
 - [/] VLP-015 delivery-area predicate: internal Go validation compares
-      the geographic distance between confirmed points against the restaurant's
-      radius in meters. Focused tests cover in/out near the threshold, missing
-      and invalid points, missing radius, and crossing the antimeridian.
-      Storefront, Restaurant and Transport package tests passed locally.
-      Restaurant radius settings, delivery-point confirmation, checkout
-      enforcement and end-to-end acceptance are still open. No live checkout
-      or public API uses this predicate yet.
+  the geographic distance between confirmed points against the restaurant's
+  radius in meters. Focused tests cover in/out near the threshold, missing
+  and invalid points, missing radius, and crossing the antimeridian.
+  Storefront, Restaurant and Transport package tests passed locally.
+  Restaurant radius settings, delivery-point confirmation, checkout
+  enforcement and end-to-end acceptance are still open. No live checkout
+  or public API uses this predicate yet.
 - [/] Internal prepayment check now combines stored mode availability,
-      delivery-area validation and locked quote revalidation. On schema 49,
-      an open Delivery request inside the radius kept its confirmed 295.20
-      total. Missing location, out-of-area delivery, stale confirmation and a
-      mode pause each returned an error with no quote. Go package tests passed;
-      `modifiers-1795497043967.log`: 29 PASS entries including parents, no
-      FAIL/SKIP, exit 0, cleanup verified. Cart authority, the source of
-      confirmed delivery inputs, persisted intents and payment effects remain
-      open. No API exposes this check yet.
+  delivery-area validation and locked quote revalidation. On schema 49,
+  an open Delivery request inside the radius kept its confirmed 295.20
+  total. Missing location, out-of-area delivery, stale confirmation and a
+  mode pause each returned an error with no quote. Go package tests passed;
+  `modifiers-1795497043967.log`: 29 PASS entries including parents, no
+  FAIL/SKIP, exit 0, cleanup verified. Cart authority, the source of
+  confirmed delivery inputs, persisted intents and payment effects remain
+  open. No API exposes this check yet.
 - [x] Single-restaurant pricing boundary: an empty cart and a cart with a
       valid local line followed by a real second-restaurant variant returned
       no items, subtotal or confirmation. Revalidation returned ErrQuote with
@@ -2757,99 +2757,98 @@ Acceptance: Reviewed transition/ownership tables cover valid/invalid transitions
       ownership, expiry or payment-intent behavior.
 
 - [/] Native order availability: [D02](design.md#native-order-availability-contract-t12-proposal)
-      records the Owner settings contract and public admission predicate for
-      VLP-007/VLP-032. It separates weekly hours and pause from editable setup,
-      preserves legacy fulfillment semantics, and defines checks for races,
-      replay and paid or unknown obligations. The Owner API, schema and web
-      client now have focused evidence under T3.1/T4.1/T5.2/T5.3. Public
-      admission is still open. Changes to unpaid payment attempts depend on B03.
+  records the Owner settings contract and public admission predicate for
+  VLP-007/VLP-032. It separates weekly hours and pause from editable setup,
+  preserves legacy fulfillment semantics, and defines checks for races,
+  replay and paid or unknown obligations. The Owner API, schema and web
+  client now have focused evidence under T3.1/T4.1/T5.2/T5.3. Public
+  admission is still open. Changes to unpaid payment attempts depend on B03.
 - [/] Native admission can now read stored service-mode flags and hours in a
-      caller-scoped transaction under the restaurant lock. The caller must
-      establish selling eligibility and sample server time after taking the
-      lock. On isolated PostgreSQL schema 49, no saved schedule denied new
-      orders; a Pickup pause left Takeaway open; a false selling-eligibility
-      input, disabled mode and the exact closing time were denied. Go package tests
-      passed. `modifiers-1795496721575.log`: exit 0, temporary resources removed.
-      On schema 49, the actual Owner pause write and a scoped admission check
-      were tested in both lock orders. PostgreSQL reported the competing
-      transaction waiting; admission first saw open settings, and pause first
-      committed before admission returned PAUSED. `green-1795496914759.log`:
-      50 PASS entries including parents, no FAIL/SKIP, exit 0 and verified
-      cleanup. The internal checkout validator also rejected paused Pickup with
-      `ErrClosed` and no quote, rejected reuse of a Pickup confirmation for
-      Takeaway with `ErrQuote`, and accepted a matching Takeaway confirmation
-      for `279.95` with a `0.00` delivery fee. The schema-49 `check-availability.mjs
-      modifiers` run (`modifiers-1795528259283.log`) exited 0 with 33 PASS
-      entries including parents, no FAIL/SKIP, populated downgrade/reapply,
-      and verified container/network cleanup. This check does not create an
-      order or payment and does not exercise public HTTP or a browser.
-      The public caller, committed order/replay behavior and independent
-      review remain open. No payment or retained route behavior changed.
+  caller-scoped transaction under the restaurant lock. The caller must
+  establish selling eligibility and sample server time after taking the
+  lock. On isolated PostgreSQL schema 49, no saved schedule denied new
+  orders; a Pickup pause left Takeaway open; a false selling-eligibility
+  input, disabled mode and the exact closing time were denied. Go package tests
+  passed. `modifiers-1795496721575.log`: exit 0, temporary resources removed.
+  On schema 49, the actual Owner pause write and a scoped admission check
+  were tested in both lock orders. PostgreSQL reported the competing
+  transaction waiting; admission first saw open settings, and pause first
+  committed before admission returned PAUSED. `green-1795496914759.log`:
+  50 PASS entries including parents, no FAIL/SKIP, exit 0 and verified
+  cleanup. The internal checkout validator also rejected paused Pickup with
+  `ErrClosed` and no quote, rejected reuse of a Pickup confirmation for
+  Takeaway with `ErrQuote`, and accepted a matching Takeaway confirmation
+  for `279.95` with a `0.00` delivery fee. The schema-49 `check-availability.mjs modifiers` run (`modifiers-1795528259283.log`) exited 0 with 33 PASS
+  entries including parents, no FAIL/SKIP, populated downgrade/reapply,
+  and verified container/network cleanup. This check does not create an
+  order or payment and does not exercise public HTTP or a browser.
+  The public caller, committed order/replay behavior and independent
+  review remain open. No payment or retained route behavior changed.
 - [/] Internal checkout admission now denies `DINE_IN` until it can validate
-      a scoped private table session. With the mode on, hours open and a
-      matching price, the isolated regression first returned a quote
-      (`modifiers-1795535402526.log`); it now returns not found with no quote.
-      The first attempt used a disabled fixture and did not reproduce the
-      issue (`modifiers-1795535334814.log`). `check-availability.mjs modifiers`
-      on schema 49 exited 0 with 33 PASS entries including parents, no FAIL/SKIP,
-      and verified cleanup (`modifiers-1795535462541.log`). Tests retained the
-      Pickup, Takeaway and Delivery checks. Storefront/Restaurant Go tests and
-      Storefront vet passed. No route, migration or session implementation was
-      added; independent review remains open.
+  a scoped private table session. With the mode on, hours open and a
+  matching price, the isolated regression first returned a quote
+  (`modifiers-1795535402526.log`); it now returns not found with no quote.
+  The first attempt used a disabled fixture and did not reproduce the
+  issue (`modifiers-1795535334814.log`). `check-availability.mjs modifiers`
+  on schema 49 exited 0 with 33 PASS entries including parents, no FAIL/SKIP,
+  and verified cleanup (`modifiers-1795535462541.log`). Tests retained the
+  Pickup, Takeaway and Delivery checks. Storefront/Restaurant Go tests and
+  Storefront vet passed. No route, migration or session implementation was
+  added; independent review remains open.
 - [/] Native table QR: [D02](design.md#native-table-qr-and-private-session-boundary-t12-proposal)
-      records the existing native setup and legacy checkout callers, separates
-      public table identification from private session authority, and proposes
-      private proof transport, scoped persistence, and lifecycle denials.
-      T1.3 review, reload/lifetime/table-change policy, and the versioned
-      producer/consumer remain open; saved-cart behavior depends on B14.
+  records the existing native setup and legacy checkout callers, separates
+  public table identification from private session authority, and proposes
+  private proof transport, scoped persistence, and lifecycle denials.
+  T1.3 review, reload/lifetime/table-change policy, and the versioned
+  producer/consumer remain open; saved-cart behavior depends on B14.
 - [/] [D02 v1 wire draft](design.md#proposed-v1-paths-and-payloads)
-      specifies resolve, explicit Dine-in start and end payloads and denials.
-      It separates a lost start response from order/payment recovery and
-      specifies how end and order admission interact. Review and session
-      lifecycle decisions are required before exposing these paths.
-      The existing contract checker passed (18 modules, 116 routes), which
-      verifies the retained inventory only; the new paths are design-only.
+  specifies resolve, explicit Dine-in start and end payloads and denials.
+  It separates a lost start response from order/payment recovery and
+  specifies how end and order admission interact. Review and session
+  lifecycle decisions are required before exposing these paths.
+  The existing contract checker passed (18 modules, 116 routes), which
+  verifies the retained inventory only; the new paths are design-only.
 - [/] [D02 persistence draft](design.md#proposed-persistence-and-transaction-checks)
-      traces the native table's composite organization key and the existing
-      storefront organization write lock. Requires a post-lock wall-clock
-      expiry check and serial end/admission without touching committed work.
-      No schema or runtime behavior was changed; add contention tests when
-      the session lifecycle and authority are accepted.
+  traces the native table's composite organization key and the existing
+  storefront organization write lock. Requires a post-lock wall-clock
+  expiry check and serial end/admission without touching committed work.
+  No schema or runtime behavior was changed; add contention tests when
+  the session lifecycle and authority are accepted.
 - [/] Internal native QR lookup resolves the issued QR only for an active
-      native table in the addressed restaurant with QR enabled. Its JSON
-      projection contains only the table code and name. On isolated schema 49,
-      repeated scans resolved the same table; missing/wrong QR, a different
-      organization ID, inactive table and disabled QR returned no context.
-      `green-1795497827423.log`: 51 PASS entries including parents, no FAIL/SKIP,
-      exit 0, cleanup verified. No route or private customer session was added.
+  native table in the addressed restaurant with QR enabled. Its JSON
+  projection contains only the table code and name. On isolated schema 49,
+  repeated scans resolved the same table; missing/wrong QR, a different
+  organization ID, inactive table and disabled QR returned no context.
+  `green-1795497827423.log`: 51 PASS entries including parents, no FAIL/SKIP,
+  exit 0, cleanup verified. No route or private customer session was added.
 - [/] A normal organization setup edit with QR still enabled now preserves
-      the QR of an existing active table. Explicit generation still issues a
-      QR, and the explicit branch path is unchanged. The isolated RED run
-      (`green-1795497994479.log`) reproduced QR reissue on a rename; GREEN
-      (`green-1795498052864.log`, exit 0) verified that the original QR still
-      resolves to the same table with the new name and no token is reissued.
-      Both runs cleaned up their resources. Go package tests and OpenAPI
-      inventory passed. Independent review, browser acceptance and the
-      policy for disabling and re-enabling QR remain open.
+  the QR of an existing active table. Explicit generation still issues a
+  QR, and the explicit branch path is unchanged. The isolated RED run
+  (`green-1795497994479.log`) reproduced QR reissue on a rename; GREEN
+  (`green-1795498052864.log`, exit 0) verified that the original QR still
+  resolves to the same table with the new name and no token is reissued.
+  Both runs cleaned up their resources. Go package tests and OpenAPI
+  inventory passed. Independent review, browser acceptance and the
+  policy for disabling and re-enabling QR remain open.
 - [/] The setup web client now sends `qr_enabled` for organization edits and
-      retains `generate_qr` for explicit branch setup. The failing client test
-      reproduced `generate_qr: true` on a branchless edit; the client and
-      mounted setup tests now pass for both paths (95/95). Web typecheck
-      and focused ESLint passed. Chromium on the current static build with
-      intercepted APIs verified edits at 390 and 1280 CSS pixels: keyboard
-      submit sent the existing table code and `qr_enabled` without a generation
-      or branch flag, then reached Payments without displaying a new secret.
-      The table field stayed in the viewport with a longer name. The focused
-      Playwright run passed 6/6 including the four Pickup viewports. This is
-      browser behavior with synthetic responses, separate from the Go and
-      PostgreSQL evidence above. A follow-up Chromium run at 360 CSS pixels
-      used the current web build, real Go API, a TOTP-verified fixture Owner
-      and disposable schema-49 PostgreSQL. The form renamed a branchless
-      table, the API returned 200 with no issued QR, and PostgreSQL retained
-      the same table ID and QR hash. The first run reached a later setup
-      step; the successful run returned to the table form before editing.
-      `check-qr-browser.mjs 360` exited 0; both runs removed their isolated
-      container and network. Independent review remains open.
+  retains `generate_qr` for explicit branch setup. The failing client test
+  reproduced `generate_qr: true` on a branchless edit; the client and
+  mounted setup tests now pass for both paths (95/95). Web typecheck
+  and focused ESLint passed. Chromium on the current static build with
+  intercepted APIs verified edits at 390 and 1280 CSS pixels: keyboard
+  submit sent the existing table code and `qr_enabled` without a generation
+  or branch flag, then reached Payments without displaying a new secret.
+  The table field stayed in the viewport with a longer name. The focused
+  Playwright run passed 6/6 including the four Pickup viewports. This is
+  browser behavior with synthetic responses, separate from the Go and
+  PostgreSQL evidence above. A follow-up Chromium run at 360 CSS pixels
+  used the current web build, real Go API, a TOTP-verified fixture Owner
+  and disposable schema-49 PostgreSQL. The form renamed a branchless
+  table, the API returned 200 with no issued QR, and PostgreSQL retained
+  the same table ID and QR hash. The first run reached a later setup
+  step; the successful run returned to the table form before editing.
+  `check-qr-browser.mjs 360` exited 0; both runs removed their isolated
+  container and network. Independent review remains open.
 - [x] QR regression evidence: an ordinary enabled save adding T2 returned
       only T2's QR, and the original T1 QR and new T2 QR both resolved to
       their own tables. Explicit rotation of T1 retained its table ID,
@@ -2885,45 +2884,28 @@ Acceptance: Reviewed transition/ownership tables cover valid/invalid transitions
       passed. Existing isolated HTTP/replay evidence is recorded under T1.3.
       No new endpoint or manual recovery policy was introduced.
 - [/] Native Dine-in table sessions, internal layer (2026-11-25). Migration 50
-      adds `restaurant_table_sessions`:
-      - organization-scoped composite table reference, FORCE RLS, no DELETE grant
-      - proof digest only, snapshot of the table's QR hash
-      - exact 2-hour lifetime CHECK, ENDED/reason/time consistency CHECKs
-      - a guarded down migration that refuses while rows exist
-      Readiness now requires schema 50. The restaurant package:
-      - starts a session under the caller's organization lock after QR
-        resolution and Dine-in admission, using one database instant for
-        creation and expiry
-      - reads and ends by proof without the organization lock; missing,
-        foreign, ended, expired, closed-table, rotated-QR and disabled-QR
-        proofs are all not found
-      - ends a table's unexpired sessions in Owner table setup when the table
-        is closed, QR is disabled or the QR is rotated
-      A pre-code independent review found P1 (two clock reads could break the
-      lifetime CHECK) and four P2s; all were applied before implementation.
-      The proof unit test failed before the code existed and now passes.
-      Isolated schema-50 `check-db.mjs table-sessions` exited 0 with 77 PASS
-      including parents, 0 FAIL/SKIP (`table-sessions-1795595306469.log`):
-      - independent starts, denials, tenant isolation, end
-      - expiry, setup ending and expired rows left unchanged
-      - end while the organization lock is held
-      - start/save serialization in both orders
-      - WITH CHECK refusal of a cross-restaurant insert
-      - empty down/reapply, populated down refusal with 33 rows unchanged
-      Full offline Go test/vet and contracts (18 modules, 116 routes) passed.
-      Code review found no P1. Its P2 reverse-order case and the P3 stored-hash
-      and cross-restaurant insert items were added and pass.
-      No public route was added. Migration 39 keeps restaurant storefronts
-      unpublished until Admin approval (VLP-009), so a public path would be
-      unreachable. The route slice must:
-      - check proof/QR format before any transaction
-      - add separate rate-limit scopes, `no-store` and a uniform 404
-      - map `restaurant.ErrClosed` to `409 STORE_CLOSED`
-      - add OpenAPI and the web consumer
-      Native Dine-in checkout still denies `DINE_IN`. Still open: a session
-      cap and retention, ending sessions on unpublish/suspension,
-      duplicate-tab sessionStorage behavior, and not treating a session as
-      proof of presence.
+  adds `restaurant_table_sessions`: - organization-scoped composite table reference, FORCE RLS, no DELETE grant - proof digest only, snapshot of the table's QR hash - exact 2-hour lifetime CHECK, ENDED/reason/time consistency CHECKs - a guarded down migration that refuses while rows exist
+  Readiness now requires schema 50. The restaurant package: - starts a session under the caller's organization lock after QR
+  resolution and Dine-in admission, using one database instant for
+  creation and expiry - reads and ends by proof without the organization lock; missing,
+  foreign, ended, expired, closed-table, rotated-QR and disabled-QR
+  proofs are all not found - ends a table's unexpired sessions in Owner table setup when the table
+  is closed, QR is disabled or the QR is rotated
+  A pre-code independent review found P1 (two clock reads could break the
+  lifetime CHECK) and four P2s; all were applied before implementation.
+  The proof unit test failed before the code existed and now passes.
+  Isolated schema-50 `check-db.mjs table-sessions` exited 0 with 77 PASS
+  including parents, 0 FAIL/SKIP (`table-sessions-1795595306469.log`): - independent starts, denials, tenant isolation, end - expiry, setup ending and expired rows left unchanged - end while the organization lock is held - start/save serialization in both orders - WITH CHECK refusal of a cross-restaurant insert - empty down/reapply, populated down refusal with 33 rows unchanged
+  Full offline Go test/vet and contracts (18 modules, 116 routes) passed.
+  Code review found no P1. Its P2 reverse-order case and the P3 stored-hash
+  and cross-restaurant insert items were added and pass.
+  No public route was added. Migration 39 keeps restaurant storefronts
+  unpublished until Admin approval (VLP-009), so a public path would be
+  unreachable. The route slice must: - check proof/QR format before any transaction - add separate rate-limit scopes, `no-store` and a uniform 404 - map `restaurant.ErrClosed` to `409 STORE_CLOSED` - add OpenAPI and the web consumer
+  Native Dine-in checkout still denies `DINE_IN`. Still open: a session
+  cap and retention, ending sessions on unpublish/suspension,
+  duplicate-tab sessionStorage behavior, and not treating a session as
+  proof of presence.
 - [ ] Inventory affected producers/consumers and define approved request/response/error/event projections, pagination and idempotency. Extend existing contracts or introduce compatible restaurant-native contracts only after ownership is settled.
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.
@@ -2938,9 +2920,9 @@ Acceptance: Every changed route has a producer, consumer and contract test; no g
 ### T1.3 Define customer, Owner, Admin and guest authority
 
 - [/] [D05 authority matrix](design.md#authority-matrix-for-the-native-restaurant-flow-t13)
-      records required actor and resource checks, the QR/order-proof boundary,
-      and denial criteria for claims, transfer, revocation and sensitive
-      actions. Runtime coverage, independent review and policy inputs remain open.
+  records required actor and resource checks, the QR/order-proof boundary,
+  and denial criteria for claims, transfer, revocation and sensitive
+  actions. Runtime coverage, independent review and policy inputs remain open.
 - [ ] Specify single active Owner, platform Admin capabilities, customer/guest proof, required MFA/reauth/recovery, context revocation and legacy branch isolation. No new staff/co-owner module.
 - [x] Platform Admin lifecycle on schema 49: `check-mfa.mjs admin-lifecycle`
       exited 0 with seven selected subtests and their parent passing, no
@@ -2951,13 +2933,13 @@ Acceptance: Every changed route has a producer, consumer and contract test; no g
       internal network. This refreshes selected lifecycle evidence; it does not
       provision a real Admin or verify the complete Admin capability matrix.
 - [/] Design and verify five-minute sensitive authority using actual primary proof
-      and current TOTP for the same account and session. The Google callback
-      currently issues a local session without reading the provider's
-      authentication time; local session creation and token issuance cannot
-      establish Google freshness. Use a verified `auth_time` claim where
-      available, fail closed on missing/stale proof for sensitive actions, and
-      preserve standard sign-in. Do not infer freshness for retained sessions.
-      Verify local parser and policy tests before any live provider acceptance.
+  and current TOTP for the same account and session. The Google callback
+  currently issues a local session without reading the provider's
+  authentication time; local session creation and token issuance cannot
+  establish Google freshness. Use a verified `auth_time` claim where
+  available, fail closed on missing/stale proof for sensitive actions, and
+  preserve standard sign-in. Do not infer freshness for retained sessions.
+  Verify local parser and policy tests before any live provider acceptance.
 - [x] Extract optional Google authentication time only after existing ID token
       checks. Preserve older timestamps as-is and treat absent, malformed,
       future, post-issuance and out-of-range data as no freshness evidence.
@@ -3010,49 +2992,49 @@ Acceptance: Every changed route has a producer, consumer and contract test; no g
       Existing bank-transfer payment settings are booleans, not receiving-account
       records; inventory transfers and food refunds are separate workflows.
 - [/] Implement restricted TOTP replacement with a recovery code and fresh
-      primary proof. Schema 45 and internal service stage an encrypted replacement
-      bound to its initiating session without consuming the code or modifying
-      the current factor. Confirmation with the new TOTP atomically consumes the
-      code, replaces the factor, creates new verifiers, revokes prior sessions,
-      and audits. Current disposable PostgreSQL evidence:
-      `recovery-1795457059437.log` (exit 0), including cross-account/session denial,
-      stale proof, abandoned staging, concurrent confirmation, replay, audit
-      failure rollback, empty downgrade/reapply and populated downgrade refusal
-      with exact state preservation. Full Go test and vet passed. Scoped
-      independent review of the internal flow excerpts, exact migration, grants
-      and current cleanup behavior found no actionable issues. Public HTTP
-      and typed client are wired; disposable PostgreSQL
-      `recovery-1795457325760.log` (exit 0) covers Origin, CSRF, malformed
-      input, successful start/confirmation, no-store and replay denial.
-      Full Go test/vet, contract inventory, TypeScript and 17 focused MFA
-      tests passed. Scoped independent HTTP/client review found no actionable
-      findings. The `/security` screen now stages the replacement, requires
-      acknowledgement before discarding newly issued codes, and directs the
-      user to sign in again. Lost confirmation leaves no retry action or code
-      redisclosure. Current component/API/redirect tests: 31 PASS; typecheck
-      and build PASS; scoped UI review found no actionable issues. Chromium
-      with intercepted APIs: 4 PASS at 360/390/768/1280px, including keyboard
-      activation, focus, Thai text at enlarged size, lost response, password
-      sign-in and new session challenge. Physical devices, live Google and
-      combined browser-to-database acceptance were not exercised. Manual
-      evidence-based recovery remains unresolved.
-      Fresh isolated PostgreSQL run `recovery-1795458036065.log` (exit 0) also
-      proves recovery through HTTP, actual password sign-in, denial of recent
-      MFA before challenge, rejection of the already consumed confirmation
-      TOTP step, and acceptance of the next replacement TOTP and recent MFA.
+  primary proof. Schema 45 and internal service stage an encrypted replacement
+  bound to its initiating session without consuming the code or modifying
+  the current factor. Confirmation with the new TOTP atomically consumes the
+  code, replaces the factor, creates new verifiers, revokes prior sessions,
+  and audits. Current disposable PostgreSQL evidence:
+  `recovery-1795457059437.log` (exit 0), including cross-account/session denial,
+  stale proof, abandoned staging, concurrent confirmation, replay, audit
+  failure rollback, empty downgrade/reapply and populated downgrade refusal
+  with exact state preservation. Full Go test and vet passed. Scoped
+  independent review of the internal flow excerpts, exact migration, grants
+  and current cleanup behavior found no actionable issues. Public HTTP
+  and typed client are wired; disposable PostgreSQL
+  `recovery-1795457325760.log` (exit 0) covers Origin, CSRF, malformed
+  input, successful start/confirmation, no-store and replay denial.
+  Full Go test/vet, contract inventory, TypeScript and 17 focused MFA
+  tests passed. Scoped independent HTTP/client review found no actionable
+  findings. The `/security` screen now stages the replacement, requires
+  acknowledgement before discarding newly issued codes, and directs the
+  user to sign in again. Lost confirmation leaves no retry action or code
+  redisclosure. Current component/API/redirect tests: 31 PASS; typecheck
+  and build PASS; scoped UI review found no actionable issues. Chromium
+  with intercepted APIs: 4 PASS at 360/390/768/1280px, including keyboard
+  activation, focus, Thai text at enlarged size, lost response, password
+  sign-in and new session challenge. Physical devices, live Google and
+  combined browser-to-database acceptance were not exercised. Manual
+  evidence-based recovery remains unresolved.
+  Fresh isolated PostgreSQL run `recovery-1795458036065.log` (exit 0) also
+  proves recovery through HTTP, actual password sign-in, denial of recent
+  MFA before challenge, rejection of the already consumed confirmation
+  TOTP step, and acceptance of the next replacement TOTP and recent MFA.
 - [/] Reconcile retained private authorization call sites. Removed the two
-      unreachable raw storefront payment helpers; the seven retained payment
-      review, reconciliation and refund callers still use the typed MFA gate.
-      Full Go test/vet and diff checks passed; scoped independent review found
-      no actionable findings. Inventory's only remaining raw
-      authorization caller is the QuickStock service method; its old HTTP route
-      remains retired, and the underlying inventory code is retained.
-      A fresh production-source search found no `QuickStock` callers. The
-      composed API router test verifies the tenant context route is mounted
-      while retired QuickStock, role, member and invitation routes are not
-      registered under any method. `go test ./internal/transport -count=1 -v`
-      passed; this is route registration evidence, not a test of the dormant
-      inventory method or of future sensitive writers.
+  unreachable raw storefront payment helpers; the seven retained payment
+  review, reconciliation and refund callers still use the typed MFA gate.
+  Full Go test/vet and diff checks passed; scoped independent review found
+  no actionable findings. Inventory's only remaining raw
+  authorization caller is the QuickStock service method; its old HTTP route
+  remains retired, and the underlying inventory code is retained.
+  A fresh production-source search found no `QuickStock` callers. The
+  composed API router test verifies the tenant context route is mounted
+  while retired QuickStock, role, member and invitation routes are not
+  registered under any method. `go test ./internal/transport -count=1 -v`
+  passed; this is route registration evidence, not a test of the dormant
+  inventory method or of future sensitive writers.
 - [x] Anonymous HTTP boundary: `TestOrganizationRoutesRejectAnonymousRequests`
       walks the composed router and sends a request without a session to
       each mounted organization method/path pair. All 276 returned
@@ -3081,16 +3063,16 @@ Acceptance: Every changed route has a producer, consumer and contract test; no g
       fixture cleanup (`guest-proof-1795490451178.log`; first run
       `guest-proof-1795490345643.log`).
 - [/] Reconcile current acceptance against D05. These are checkpoints for
-      currently implemented paths, not acceptance of the full capability matrix.
+  currently implemented paths, not acceptance of the full capability matrix.
 
-| Boundary | Existing evidence | Required evidence still open |
-| --- | --- | --- |
-| Anonymous organization requests | Composed router: all 276 mounted method/path pairs denied without data. | This covers only requests without a session. |
+| Boundary                        | Existing evidence                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Required evidence still open                                                                                                                                                                                             |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Anonymous organization requests | Composed router: all 276 mounted method/path pairs denied without data.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | This covers only requests without a session.                                                                                                                                                                             |
 | Retained Purchasing and Returns | Schema 49 HTTP MFA and tenant denial matrices, populated reads, selected write/replay cases, and denial for all four branch-assigned legacy roles and revoked Owner sessions across 36 Returns and 57 Purchasing routes. Purchasing also covered the branch-filtered order list. Owner HTTP expiry after projection is covered for all nine Returns GET routes, and expiry after the final audit insert for 12 non-completion writes plus the four completion and confirmation writes (see T5.2). T5.3 verified nine retired web bookmarks at four emulated widths without calling the retired workflows; current disposition is in the architecture route inventory. | Remaining positive and mid-request expiry outcomes for other routes and for branch-scoped non-Owner reads. Test any active replacement journeys separately; retired bookmark coverage does not verify the retained APIs. |
-| Retained guest order proof | Matching proof succeeds on both fixture orders; missing, wrong-order and wrong-shop proof fail, including after unpublishing. | Native private table-session rotation and atomic member claims require their own contracts and runtime checks. |
-| Native Restaurant Owner | Setup and ordering availability have scoped Owner, MFA and cross-restaurant checks. The retired membership and role routes are absent. | Transfer must revoke the former Owner's authority while preserving obligations; no inference about retained ownership from route retirement. B10/B12/B13 apply. |
-| Platform Admin | Schema 49 verifies the audited grant/revoke command lifecycle on synthetic users. | Operation-specific permissions and target checks must be verified with each implemented Admin workflow. Provisioning does not prove these checks. |
-| Fresh proof and recovery | Local five-minute policy and verified-provider-claim fixtures, plus restricted TOTP replacement; see the recorded checkpoints in this task. | Live Google claim delivery, manual B12 evidence policy, and enforcement on the receiving-account, transfer and ads refund writers when implemented. |
+| Retained guest order proof      | Matching proof succeeds on both fixture orders; missing, wrong-order and wrong-shop proof fail, including after unpublishing.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Native private table-session rotation and atomic member claims require their own contracts and runtime checks.                                                                                                           |
+| Native Restaurant Owner         | Setup and ordering availability have scoped Owner, MFA and cross-restaurant checks. The retired membership and role routes are absent.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Transfer must revoke the former Owner's authority while preserving obligations; no inference about retained ownership from route retirement. B10/B12/B13 apply.                                                          |
+| Platform Admin                  | Schema 49 verifies the audited grant/revoke command lifecycle on synthetic users.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Operation-specific permissions and target checks must be verified with each implemented Admin workflow. Provisioning does not prove these checks.                                                                        |
+| Fresh proof and recovery        | Local five-minute policy and verified-provider-claim fixtures, plus restricted TOTP replacement; see the recorded checkpoints in this task.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Live Google claim delivery, manual B12 evidence policy, and enforcement on the receiving-account, transfer and ads refund writers when implemented.                                                                      |
 
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.
@@ -3136,30 +3118,30 @@ Existing test seams for the future isolated run include storefront payment_check
 ### T2.2 Add only the selected slice migrations
 
 - [/] Migration 48 adds append-only restaurant menu revisions with before/after
-      state, actor and optional exact-retry key and fingerprint. Runtime has
-      scoped SELECT/INSERT; cross-restaurant and missing actor context,
-      duplicate revision/key, UPDATE and DELETE were denied. Transaction
-      rollback, empty downgrade/reapply and populated downgrade refusal passed
-      on isolated PostgreSQL (`menu-revisions-1795493210277.log`, exit 0,
-      verified cleanup). The preceding red run confirmed the table was absent.
-      Go requires clean schema 48. Writer integration and independent review
-      remain open.
+  state, actor and optional exact-retry key and fingerprint. Runtime has
+  scoped SELECT/INSERT; cross-restaurant and missing actor context,
+  duplicate revision/key, UPDATE and DELETE were denied. Transaction
+  rollback, empty downgrade/reapply and populated downgrade refusal passed
+  on isolated PostgreSQL (`menu-revisions-1795493210277.log`, exit 0,
+  verified cleanup). The preceding red run confirmed the table was absent.
+  Go requires clean schema 48. Writer integration and independent review
+  remain open.
 - [x] On the current Go build, readiness rejected clean schema 47 and accepted
       clean schema 48. Scoped modifier reads and the Owner session-expiry case
       passed on schema 48 (`modifiers-1795493268641.log`, exit 0, verified
       cleanup). This is a focused rerun, separate from the schema-47 aggregate.
 
 - [/] Migration 47 adds modifier groups and options scoped to registered menu
-      items and pairs them with clean-schema-47 server readiness. No backfill;
-      runtime grants are SELECT only. The Go query loads one item and preserves
-      exact two-decimal option prices. `check-availability.mjs modifiers`
-      on task-owned PostgreSQL 17.6 passed 46-to-47 upgrade, unchanged
-      synthetic profile digest, empty downgrade/reapply, populated downgrade
-      refusal, wrong-item and cross-restaurant key denial, price constraints,
-      and Go reads as `smartpos_runtime` (`modifiers-1795491995467.log`, exit 0).
-      The temporary container and network were removed. Independent review,
-      shared menu revision, Owner writes and actual retained-data acceptance
-      remain open.
+  items and pairs them with clean-schema-47 server readiness. No backfill;
+  runtime grants are SELECT only. The Go query loads one item and preserves
+  exact two-decimal option prices. `check-availability.mjs modifiers`
+  on task-owned PostgreSQL 17.6 passed 46-to-47 upgrade, unchanged
+  synthetic profile digest, empty downgrade/reapply, populated downgrade
+  refusal, wrong-item and cross-restaurant key denial, price constraints,
+  and Go reads as `smartpos_runtime` (`modifiers-1795491995467.log`, exit 0).
+  The temporary container and network were removed. Independent review,
+  shared menu revision, Owner writes and actual retained-data acceptance
+  remain open.
 - [x] Schema-47 follow-up: seeded three registered items in two restaurants
       before upgrading from schema 46. Counts and digests for categories,
       units, products, variants and registered items matched after upgrade,
@@ -3170,14 +3152,14 @@ Existing test seams for the future isolated run include storefront payment_check
       container/network cleanup verified).
 
 - [/] Migration 46 adds `restaurant_availability` without a backfill or changes
-      to saved profiles. The runtime has scoped SELECT/INSERT/UPDATE and no
-      destructive table privileges. `check-availability.mjs` exited 0 on
-      isolated PostgreSQL (`availability-1795466064531.log`): schema 45 to 46,
-      retained profile digests, empty downgrade/reapply, cross-organization
-      read/update/insert isolation, runtime TRUNCATE denial and populated
-      downgrade refusal passed. Container and network cleanup passed. Go
-      readiness now requires clean schema 46; independent review, service
-      transaction tests and full retained-schema-39 acceptance remain open.
+  to saved profiles. The runtime has scoped SELECT/INSERT/UPDATE and no
+  destructive table privileges. `check-availability.mjs` exited 0 on
+  isolated PostgreSQL (`availability-1795466064531.log`): schema 45 to 46,
+  retained profile digests, empty downgrade/reapply, cross-organization
+  read/update/insert isolation, runtime TRUNCATE denial and populated
+  downgrade refusal passed. Container and network cleanup passed. Go
+  readiness now requires clean schema 46; independent review, service
+  transaction tests and full retained-schema-39 acceptance remain open.
 - [ ] Add scoped keys, uniqueness, immutable ledger/event links, RLS/check/index constraints and readiness updates needed by the selected slice. Recheck latest version before allocating; never edit applied 000001-000039.
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.
@@ -3250,8 +3232,7 @@ Acceptance: Fresh and retained-schema-39 upgrades pass against confirmed isolate
       schema and to the disposable recovery evidence here.
       Migration 43 introduced platform authority; the guide does not authorize
       recovery on an operational database.
-- [x] 2026-11-24 schema 45 pre-commit recovery rehearsal: `check-db.mjs
-      retained-current` exited 0 (`retained-current-1795459792973.log`). On
+- [x] 2026-11-24 schema 45 pre-commit recovery rehearsal: `check-db.mjs retained-current` exited 0 (`retained-current-1795459792973.log`). On
       task-owned PostgreSQL seeded from schema 39, the harness marked version
       45 dirty, then injected an error after 45's DDL and before commit. The
       new table was absent, both prior constraints matched, and retained rows
@@ -3269,8 +3250,7 @@ Acceptance: Fresh and retained-schema-39 upgrades pass against confirmed isolate
       database and run the unmodified 45 migration, leaving clean version 45
       with the original fixtures preserved. ID/label cleanup passed. This was
       the upstream CLI, not the Docker image; it was not a live recovery.
-- [x] Populated schema 45 downgrade through the same CLI: `check-db.mjs
-      retained-official` exited 0 (`retained-official-1795463784694.log`).
+- [x] Populated schema 45 downgrade through the same CLI: `check-db.mjs retained-official` exited 0 (`retained-official-1795463784694.log`).
       With synthetic recovery audit and rate-limit rows present, `down 1`
       refused and left a dirty target marker at 44, while the actual schema
       stayed at 45. Recovery row digests, retained business/session digests,
@@ -3278,8 +3258,7 @@ Acceptance: Fresh and retained-schema-39 upgrades pass against confirmed isolate
       refusal. After those checks, the harness restored the marker to clean 45
       on its disposable target and verified the same state again. Cleanup by
       ID/label passed. No migration file or live database changed.
-- [x] Schema 46 pre-commit recovery rehearsal: `check-retained-46.mjs
-      retained-46` exited 0 (`retained-46-1795478894665.log`). After an
+- [x] Schema 46 pre-commit recovery rehearsal: `check-retained-46.mjs retained-46` exited 0 (`retained-46-1795478894665.log`). After an
       injected failure before commit, golang-migrate v4.18.3 marked version
       46 dirty and refused retry. The availability table was absent and
       schema-45 checks plus retained fixture digests matched. The harness
@@ -3335,38 +3314,38 @@ Acceptance: Captured fresh/retained and recovery outputs show no business-data l
       remain open.
 
 - [/] Native availability domain: the restaurant module validates weekly
-      windows and evaluates all four modes using the restaurant time zone,
-      selling eligibility, enabled mode and global/per-mode pause. Focused
-      tests cover exclusive close, inclusive open, split overnight windows,
-      invalid/overlapping schedules, empty schedules and Pickup isolation.
-      Added eight UTC instants across spring and autumn offset changes to
-      verify that windows follow the restaurant's local clock. Restaurant
-      package test and vet passed; the package embeds Go's time-zone data.
-      The internal evaluator now uses the stored settings shape for all four
-      pauses and the global pause. Focused tests verify that each individual
-      pause affects only its mode and that an unapproved restaurant is
-      unavailable in every mode. The evaluator has no public caller yet.
-      Restaurant/storefront Go package tests and restaurant vet passed. The
-      predicate is not wired to HTTP or new order admission yet.
+  windows and evaluates all four modes using the restaurant time zone,
+  selling eligibility, enabled mode and global/per-mode pause. Focused
+  tests cover exclusive close, inclusive open, split overnight windows,
+  invalid/overlapping schedules, empty schedules and Pickup isolation.
+  Added eight UTC instants across spring and autumn offset changes to
+  verify that windows follow the restaurant's local clock. Restaurant
+  package test and vet passed; the package embeds Go's time-zone data.
+  The internal evaluator now uses the stored settings shape for all four
+  pauses and the global pause. Focused tests verify that each individual
+  pause affects only its mode and that an unapproved restaurant is
+  unavailable in every mode. The evaluator has no public caller yet.
+  Restaurant/storefront Go package tests and restaurant vet passed. The
+  predicate is not wired to HTTP or new order admission yet.
 - [/] Owner availability service reads and saves revisioned settings on schema
-      46 using the existing organization lock and live Owner MFA checks. The
-      settings write and audit share one transaction. The isolated `green` run
-      (`green-1795466251050.log`, exit 0) passed initial read, non-Owner denial,
-      stale revision conflict and persistence, plus fresh migrations and
-      verified fixture cleanup. Restaurant/storefront Go test and vet passed.
-      Follow-up isolated `green` run (`green-1795466384798.log`, exit 0): two
-      writers with the same revision produced one commit and one conflict,
-      with exactly one new audit. A forced audit insert failure preserved the
-      saved values, revision and audit count; retry at that revision succeeded.
-      Verified fixture cleanup. Owner GET/PUT now use the tenant cookie and
-      MFA boundary; PUT requires CSRF and a full replacement. OpenAPI and
-      the typed web client match. Isolated schema 46 HTTP checks passed for
-      no cookie, non-Owner, missing CSRF, malformed input, stale revision
-      and save/read round trip (`green-1795466632473.log`, exit 0). Contract
-      check, web typecheck and Go restaurant/transport tests passed. The Owner
-      ordering-hours panel has focused browser evidence in T4.1 and T5.3.
-      The scoped Owner settings review is recorded in T5.4. Native public
-      admission and full T3.1 review remain open.
+  46 using the existing organization lock and live Owner MFA checks. The
+  settings write and audit share one transaction. The isolated `green` run
+  (`green-1795466251050.log`, exit 0) passed initial read, non-Owner denial,
+  stale revision conflict and persistence, plus fresh migrations and
+  verified fixture cleanup. Restaurant/storefront Go test and vet passed.
+  Follow-up isolated `green` run (`green-1795466384798.log`, exit 0): two
+  writers with the same revision produced one commit and one conflict,
+  with exactly one new audit. A forced audit insert failure preserved the
+  saved values, revision and audit count; retry at that revision succeeded.
+  Verified fixture cleanup. Owner GET/PUT now use the tenant cookie and
+  MFA boundary; PUT requires CSRF and a full replacement. OpenAPI and
+  the typed web client match. Isolated schema 46 HTTP checks passed for
+  no cookie, non-Owner, missing CSRF, malformed input, stale revision
+  and save/read round trip (`green-1795466632473.log`, exit 0). Contract
+  check, web typecheck and Go restaurant/transport tests passed. The Owner
+  ordering-hours panel has focused browser evidence in T4.1 and T5.3.
+  The scoped Owner settings review is recorded in T5.4. Native public
+  admission and full T3.1 review remain open.
 - [x] Cross-restaurant availability HTTP regression: an MFA-assured Owner
       without membership in the target restaurant received `404 NOT_FOUND`
       without data on GET and PUT, even with valid CSRF and the current revision.
@@ -3393,10 +3372,10 @@ Acceptance: Captured fresh/retained and recovery outputs show no business-data l
       callers while implementing these boundaries after their contracts and
       compatibility gates are settled.
 - [?] Merchant verification and receiving-account activation still depend on
-      B10's evidence and review rules, B07 for restricted evidence retention,
-      and B02 for the applicable provider/recipient proof. Keep completing
-      a draft, Admin approval and permission to sell separate. Apply T1.3's
-      recent proof gate to the receiving-account writer when it exists.
+  B10's evidence and review rules, B07 for restricted evidence retention,
+  and B02 for the applicable provider/recipient proof. Keep completing
+  a draft, Admin approval and permission to sell separate. Apply T1.3's
+  recent proof gate to the receiving-account writer when it exists.
 - [ ] Build Admin-verifiable setup, identity/site/receiving-account approval, independent restaurant context, four service modes, opening schedules, global/per-mode pause and private persistent table QR sessions. Add modifier-capable menu foundation with T3.7.
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.
@@ -3411,10 +3390,10 @@ Acceptance: Tests reject selling before approval, unsafe account changes and cro
 ### T3.2 Implement persistent carts and single-restaurant checkout intents
 
 - [/] B14 saved-cart preparation: [D06](design.md#saved-cart-versioning-and-expiry-b14-proposal)
-      distinguishes retained browser carts from native guest/member drafts, and
-      proposes conflict, expiry and no-side-effect acceptance cases. The product
-      decision on inactivity duration is pending. Quota hold and allocation
-      remain separate; no runtime cart behavior has changed.
+  distinguishes retained browser carts from native guest/member drafts, and
+  proposes conflict, expiry and no-side-effect acceptance cases. The product
+  decision on inactivity duration is pending. Quota hold and allocation
+  remain separate; no runtime cart behavior has changed.
 - [ ] Persist scoped checkout intent/key/fingerprint and immutable order snapshots. Revalidate current menu/options/prices/modes and separate cart save from payment reservations. Guest device carts and member sync integrate with T6.4.
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.
@@ -3481,10 +3460,10 @@ Acceptance: Tests reject unilateral/increasing/post-Preparing routine amendments
 ### T3.7 Implement promotions, quotas and benefit reservations
 
 - [/] [D03 modifier ownership and revisions](design.md#modifier-ownership-and-revision-boundary)
-      identifies the registered item/group boundary, preserves choices on
-      legacy setup saves, and defines shared revision and checkout validation
-      obligations for T3.1/T3.7/T3.9. Runtime contracts and implementation
-      remain open. B09/B14 still govern benefit and quota reservation policy.
+  identifies the registered item/group boundary, preserves choices on
+  legacy setup saves, and defines shared revision and checkout validation
+  obligations for T3.1/T3.7/T3.9. Runtime contracts and implementation
+  remain open. B09/B14 still govern benefit and quota reservation policy.
 - [ ] Add restaurant promotion/coupon eligibility and limits, optional menu/modifier quotas, real-time availability and atomic menu-plus-option/coupon/points reservation at payment.
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.
@@ -3523,87 +3502,87 @@ Acceptance: Race/denial tests prevent dual owners, unverified receiving-account 
       or public native checkout.
 
 - [/] VLP-091 ordering availability: the existing Owner save appends
-      before/after ordering settings to the shared menu revision history in
-      the same transaction as the settings and audit event. The schema-49
-      integration test first found no new revision
-      (`green-1795514902493.log`); it then passed with exact snapshots and
-      rollback on audit failure (`green-1795514967931.log`, exit 0, isolated
-      resources removed). Focused Restaurant/Storefront Go test and vet
-      passed. Independent review and restore-as-new-revision remain open.
-      Follow-up on schema 49: two writers at the same settings revision
-      committed exactly one matching history entry; the stale writer
-      conflicted. A save with unchanged values advanced only the settings
-      revision and preserved the shared menu revision. `check-db.mjs green`
-      exited 0 with 53 PASS entries including parents, no FAIL/SKIP, and
-      verified cleanup (`green-1795515079737.log`).
+  before/after ordering settings to the shared menu revision history in
+  the same transaction as the settings and audit event. The schema-49
+  integration test first found no new revision
+  (`green-1795514902493.log`); it then passed with exact snapshots and
+  rollback on audit failure (`green-1795514967931.log`, exit 0, isolated
+  resources removed). Focused Restaurant/Storefront Go test and vet
+  passed. Independent review and restore-as-new-revision remain open.
+  Follow-up on schema 49: two writers at the same settings revision
+  committed exactly one matching history entry; the stale writer
+  conflicted. A save with unchanged values advanced only the settings
+  revision and preserved the shared menu revision. `check-db.mjs green`
+  exited 0 with 53 PASS entries including parents, no FAIL/SKIP, and
+  verified cleanup (`green-1795515079737.log`).
 - [/] VLP-091 native setup service modes: profile and services saves append
-      the effective before/after modes to the shared menu history in the
-      existing setup transaction. An unchanged projection or replay does not
-      append history. The fixture's concurrent Pickup save and matching
-      replays originally found zero entries (`green-1795515334893.log`);
-      the schema-49 rerun found exactly one and exited 0
-      (`green-1795515591903.log`), with container and network cleanup
-      verified. Focused Restaurant/Storefront Go tests and vet passed.
-      Independent review remains open.
-      Profile follow-up: a forced audit failure left the prior modes and
-      history intact. Retrying with the same key enabled Dine-in, retained
-      Pickup when omitted from the request, and added one matching history
-      entry. Schema-49 `check-db.mjs green` exited 0 with 55 PASS entries
-      including parents, no FAIL/SKIP, and verified container/network cleanup
-      (`green-1795515983794.log`).
+  the effective before/after modes to the shared menu history in the
+  existing setup transaction. An unchanged projection or replay does not
+  append history. The fixture's concurrent Pickup save and matching
+  replays originally found zero entries (`green-1795515334893.log`);
+  the schema-49 rerun found exactly one and exited 0
+  (`green-1795515591903.log`), with container and network cleanup
+  verified. Focused Restaurant/Storefront Go tests and vet passed.
+  Independent review remains open.
+  Profile follow-up: a forced audit failure left the prior modes and
+  history intact. Retrying with the same key enabled Dine-in, retained
+  Pickup when omitted from the request, and added one matching history
+  entry. Schema-49 `check-db.mjs green` exited 0 with 55 PASS entries
+  including parents, no FAIL/SKIP, and verified container/network cleanup
+  (`green-1795515983794.log`).
 
 - [/] VLP-091 ordering availability restore: the internal Owner command
-      restores a scoped availability snapshot under live MFA and the shared
-      organization lock. It appends a new revision with its source revision
-      and records the audit in the same transaction. An exact retry returns
-      the original result after authorization; a stale base or changed retry
-      conflicts. No public route, migration, or paid-order writer was added.
-      Isolated schema 49 `check-db.mjs green` exited 0 with 56 PASS entries
-      including parents, 0 FAIL/SKIP, and confirmed container/network cleanup
-      (`green-1795517446100.log`). Tests cover persisted before/after, intact
-      source, one audit, failed-audit rollback, missing source, replay, and
-      denial for non-Owner, foreign Owner and Owner without MFA. The earlier
-      runs exposed an audit-count assumption and a fixture without a session
-      context (`green-1795516768561.log`, `green-1795517120530.log`).
-      Independent review and restoration of other menu data remain open.
-      Follow-up expiry tests on schema 49 paused the internal restore after
-      the audit insert and, separately, after the saved-result lookup. Both
-      returned no settings. The interrupted write left the settings, history
-      revision, exact replay key and restore audit unchanged; a valid retry
-      and replay still produced one new revision and one audit. The isolated
-      `check-db.mjs green` run exited 0 with 58 PASS entries including parents,
-      no FAIL/SKIP and verified cleanup (`green-1795533423952.log`). Storefront
-      vet passed. The expiry checks did not cover COMMIT, and the independent
-      review of this T3.9 command remains open.
-      Concurrent same-key follow-up: two restore calls released together
-      returned the same settings. Readback verified the expected settings,
-      one new history revision and one audit; the source revision remained
-      intact. Schema-49 `check-db.mjs green` exited 0 with 59 PASS entries
-      including parents, no FAIL/SKIP and verified cleanup
-      (`green-1795533551483.log`). Storefront vet passed. This exercise does
-      not measure the database lock wait or cover competing distinct keys.
-      Distinct-key follow-up: two restores using the same base revision
-      produced one success and one conflict without settings. The persisted
-      settings matched the winner, with one new revision and audit and no
-      history row for the losing key. Schema-49 `check-db.mjs green` exited 0
-      with 60 PASS entries including parents, no FAIL/SKIP and verified
-      cleanup (`green-1795533676467.log`). Storefront vet passed. The test
-      released both calls together; it did not measure database lock waits.
-      The local review brief `t39-availability-restore-review-brief.md` in
-      `.local/velopos-pickup-20261122` maps the command, its authority and
-      persistence dependencies, and matching acceptance evidence. Review of
-      the command as a whole is pending authorization; no brief was sent.
+  restores a scoped availability snapshot under live MFA and the shared
+  organization lock. It appends a new revision with its source revision
+  and records the audit in the same transaction. An exact retry returns
+  the original result after authorization; a stale base or changed retry
+  conflicts. No public route, migration, or paid-order writer was added.
+  Isolated schema 49 `check-db.mjs green` exited 0 with 56 PASS entries
+  including parents, 0 FAIL/SKIP, and confirmed container/network cleanup
+  (`green-1795517446100.log`). Tests cover persisted before/after, intact
+  source, one audit, failed-audit rollback, missing source, replay, and
+  denial for non-Owner, foreign Owner and Owner without MFA. The earlier
+  runs exposed an audit-count assumption and a fixture without a session
+  context (`green-1795516768561.log`, `green-1795517120530.log`).
+  Independent review and restoration of other menu data remain open.
+  Follow-up expiry tests on schema 49 paused the internal restore after
+  the audit insert and, separately, after the saved-result lookup. Both
+  returned no settings. The interrupted write left the settings, history
+  revision, exact replay key and restore audit unchanged; a valid retry
+  and replay still produced one new revision and one audit. The isolated
+  `check-db.mjs green` run exited 0 with 58 PASS entries including parents,
+  no FAIL/SKIP and verified cleanup (`green-1795533423952.log`). Storefront
+  vet passed. The expiry checks did not cover COMMIT, and the independent
+  review of this T3.9 command remains open.
+  Concurrent same-key follow-up: two restore calls released together
+  returned the same settings. Readback verified the expected settings,
+  one new history revision and one audit; the source revision remained
+  intact. Schema-49 `check-db.mjs green` exited 0 with 59 PASS entries
+  including parents, no FAIL/SKIP and verified cleanup
+  (`green-1795533551483.log`). Storefront vet passed. This exercise does
+  not measure the database lock wait or cover competing distinct keys.
+  Distinct-key follow-up: two restores using the same base revision
+  produced one success and one conflict without settings. The persisted
+  settings matched the winner, with one new revision and audit and no
+  history row for the losing key. Schema-49 `check-db.mjs green` exited 0
+  with 60 PASS entries including parents, no FAIL/SKIP and verified
+  cleanup (`green-1795533676467.log`). Storefront vet passed. The test
+  released both calls together; it did not measure database lock waits.
+  The local review brief `t39-availability-restore-review-brief.md` in
+  `.local/velopos-pickup-20261122` maps the command, its authority and
+  persistence dependencies, and matching acceptance evidence. Review of
+  the command as a whole is pending authorization; no brief was sent.
 
 - [/] [D03 B16 proposal](design.md#b16-proposal-version-1-template-and-apply-policy)
-      defines shared CSV/XLSX rows, parser-based candidate limits, preview
-      outcomes and atomic apply with revision/audit/retry acceptance. B16
-      approval and the T3.7 modifier contract remain open; no import behavior
-      changed.
+  defines shared CSV/XLSX rows, parser-based candidate limits, preview
+  outcomes and atomic apply with revision/audit/retry acceptance. B16
+  approval and the T3.7 modifier contract remain open; no import behavior
+  changed.
 - [/] [B16 parser and preview boundary](design.md#retained-parser-and-native-preview-boundary)
-      identifies which retained format checks can be reused and why catalog
-      SKU/job updates cannot identify native menu rows. Stable reference
-      mapping for repeat imports must be selected before implementation.
-      Existing catalog behavior is unchanged.
+  identifies which retained format checks can be reused and why catalog
+  SKU/job updates cannot identify native menu rows. Stable reference
+  mapping for repeat imports must be selected before implementation.
+  Existing catalog behavior is unchanged.
 - [ ] Reuse safe parsing/preview seams for approved restaurant categories/options/toppings. Add duplicate/error outcomes, price/category/status bulk changes, revision/audit and restore-as-new-revision.
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.
@@ -3618,23 +3597,23 @@ Acceptance: Tests cover malformed/duplicate/wrong-tenant input, selected transac
 ### T4.1 Build verified setup and menu management UI
 
 - [/] The Owner ordering-hours panel at `/settings` saves weekly windows,
-      time zone, and global or individual pauses for the four service modes.
-      A stale revision preserves edits until the Owner explicitly discards
-      them and reloads. Copy explains that saving does not change public
-      ordering yet. Focused availability, settings and workspace Vitest
-      cases passed (19/19), and web typecheck passed. See T5.3 for the
-      branchless entry check and remaining browser acceptance.
+  time zone, and global or individual pauses for the four service modes.
+  A stale revision preserves edits until the Owner explicitly discards
+  them and reloads. Copy explains that saving does not change public
+  ordering yet. Focused availability, settings and workspace Vitest
+  cases passed (19/19), and web typecheck passed. See T5.3 for the
+  branchless entry check and remaining browser acceptance.
 
 - [/] Four-mode setup display: an existing organization without a branch can
-      save Pickup independently of Takeaway, including Pickup-only setup. The
-      form explains that saving does not open ordering. Legacy creation and
-      branch setup keep their existing three modes and omit the Pickup field.
-      Focused Vitest: 92/92; web typecheck and changed file formatting pass.
-      Windows Chrome 157 with intercepted API: 4/4 at 360/390/768/1280px,
-      Thai and English, checked keyboard focus, accessible description, no
-      horizontal overflow in the service mode group, and draft payloads.
-      This browser run does not exercise a live database or real touch device;
-      full T4.1 visual, accessibility and workflow acceptance remains open.
+  save Pickup independently of Takeaway, including Pickup-only setup. The
+  form explains that saving does not open ordering. Legacy creation and
+  branch setup keep their existing three modes and omit the Pickup field.
+  Focused Vitest: 92/92; web typecheck and changed file formatting pass.
+  Windows Chrome 157 with intercepted API: 4/4 at 360/390/768/1280px,
+  Thai and English, checked keyboard focus, accessible description, no
+  horizontal overflow in the service mode group, and draft payloads.
+  This browser run does not exercise a live database or real touch device;
+  full T4.1 visual, accessibility and workflow acceptance remains open.
 - [ ] Reuse existing provider/layouts/tokens. Expose pending approval/reverification, four modes, per-mode pause, table privacy, modifier/menu availability and controlled bulk-edit outcomes.
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.
@@ -3790,12 +3769,10 @@ Acceptance: Inventory, Go/OpenAPI and React consumers have no unexplained mismat
 ### T5.1 Run focused unit, contract and build checks
 
 - [x] Current worktree web and script checks after the Purchases replay
-      coverage update: `node node_modules/vitest/vitest.mjs run --root apps/web
-      --maxWorkers=4` exited 0 with 928 tests in 99 files
+      coverage update: `node node_modules/vitest/vitest.mjs run --root apps/web --maxWorkers=4` exited 0 with 928 tests in 99 files
       (`t51-web-1795531501927.log`). The jsdom navigation diagnostic did
       not fail the run. `node scripts/check-contracts.mjs` exited 0 with 18
-      modules and 116 unique documented routes. `node --test
-      scripts/log-format.test.mjs scripts/dev-stack.test.mjs` exited 0 with
+      modules and 116 unique documented routes. `node --test scripts/log-format.test.mjs scripts/dev-stack.test.mjs` exited 0 with
       17 PASS and no failures or skips, using workspace-local TEMP/TMP.
       This covers local web and script checks; database and browser evidence
       remain separate.
@@ -3835,10 +3812,8 @@ Acceptance: Inventory, Go/OpenAPI and React consumers have no unexplained mismat
       not reproduce on that run; the default-worker result remains recorded.
 
 - [x] After adding the T5.2 Availability RLS regression, offline
-      `go test ./internal/modules/storefront ./internal/modules/restaurant
-      ./internal/transport -count=1` and `go vet` on the same packages
-      exited 0 with the single-store DSN unset. `node
-      scripts/check-contracts.mjs` passed 18 modules / 116 routes. The
+      `go test ./internal/modules/storefront ./internal/modules/restaurant ./internal/transport -count=1` and `go vet` on the same packages
+      exited 0 with the single-store DSN unset. `node scripts/check-contracts.mjs` passed 18 modules / 116 routes. The
       separate PostgreSQL run is recorded under T5.2.
 
 - [x] After the T4.4 late-response regression, root `npm test` exited 0
@@ -3858,8 +3833,7 @@ Acceptance: Inventory, Go/OpenAPI and React consumers have no unexplained mismat
 - [x] Current schema-46 availability checkpoint: `go test -count=1` and
       `go vet` passed for `./internal/modules/restaurant`,
       `./internal/modules/storefront` and `./internal/transport` with
-      database/browser integration disabled. `npm test --workspace
-      @smartpos/web` passed 920 tests in 99 files. `npm run contracts:check`
+      database/browser integration disabled. `npm test --workspace @smartpos/web` passed 920 tests in 99 files. `npm run contracts:check`
       passed 18 modules / 116 routes. `npm run build` passed with a chunk
       size warning; `npm run lint` exited 0 with 12 warnings and no errors.
       This checkpoint covers the current implemented source; browser and
@@ -4046,13 +4020,13 @@ Acceptance: Fresh exact commands/exit codes/case counts match changed inputs. Ro
       data remains open.
 
 - [/] The tracked `verify:single-store` runner's Go subprocess now allows
-      14 minutes for Go tests and 15 minutes at the subprocess boundary
-      (the suite can use up to 13 minutes). The old 120-second limit was
-      shorter than the separate schema-46 aggregate run (536.02s).
-      `node --check scripts/check-single-store.mjs` and the six output
-      verifier tests passed. The tracked runner's live execution remains
-      unverified in Studio-Acceptance: the local cache lacks both
-      `postgres:17-alpine` and `migrate/migrate:v4.18.3`.
+  14 minutes for Go tests and 15 minutes at the subprocess boundary
+  (the suite can use up to 13 minutes). The old 120-second limit was
+  shorter than the separate schema-46 aggregate run (536.02s).
+  `node --check scripts/check-single-store.mjs` and the six output
+  verifier tests passed. The tracked runner's live execution remains
+  unverified in Studio-Acceptance: the local cache lacks both
+  `postgres:17-alpine` and `migrate/migrate:v4.18.3`.
 
 - [x] The branchless Go integration suite now repeats the schema-46
       Availability RLS checks under `smartpos_runtime` with two synthetic
@@ -4088,8 +4062,7 @@ Acceptance: Fresh exact commands/exit codes/case counts match changed inputs. Ro
       downgrade/reapply and populated downgrade refusal passed. The runner
       removed the task-owned container and network after ID/label checks.
 
-- [x] Synthetic retained schema 39 through 46: `check-retained-46.mjs
-      retained-46` exited 0 (`retained-46-1795467377868.log`). Verified
+- [x] Synthetic retained schema 39 through 46: `check-retained-46.mjs retained-46` exited 0 (`retained-46-1795467377868.log`). Verified
       digests for 10 business/audit tables, retained sessions and staged
       recovery records. Using golang-migrate v4.18.3, empty availability
       downgraded and reapplied; populated availability refused downgrade
@@ -4098,8 +4071,7 @@ Acceptance: Fresh exact commands/exit codes/case counts match changed inputs. Ro
       tmpfs database and internal network after label/ID checks. No real
       retained records were read; full T5.2 acceptance remains open.
 
-- [x] 2026-11-24 synthetic retained-data checkpoint: `node
-      .local/velopos-pickup-20261122/check-db.mjs retained-current` exited 0
+- [x] 2026-11-24 synthetic retained-data checkpoint: `node .local/velopos-pickup-20261122/check-db.mjs retained-current` exited 0
       (`retained-current-1795458682585.log`). Seeded schema 39 with the
       historical synthetic Storefront fixture and one synthetic session, then
       applied current migrations 40-45 in order. Row counts and content digests
@@ -4138,15 +4110,15 @@ Acceptance: Current outputs prove no duplicate financial/quota/points/queue effe
 ### T5.3 Run browser, language and accessibility acceptance
 
 - [/] Current-build Chrome rerun: the four-suite run recorded 25 PASS and
-      11 FAIL (`t53-browser-1795532269094.log`). All failures were in
-      `owner-only.spec.ts`. The static runner rejected `/` before React loaded;
-      correcting only the runner recovered all four retired-bookmark cases at
-      360, 390, 768 and 1280 CSS pixels (`t53-bookmarks-1795532493176.log`,
-      4 PASS, exit 0). The Owner fixture now supplies completed setup and
-      exercises the current dashboard, menu, help/account menu and public
-      directory. The final four-suite run passed all 36 cases, exit 0
-      (`t53-final-1795532780195.log`). These runs used intercepted APIs;
-      no physical-device or live API result is implied.
+  11 FAIL (`t53-browser-1795532269094.log`). All failures were in
+  `owner-only.spec.ts`. The static runner rejected `/` before React loaded;
+  correcting only the runner recovered all four retired-bookmark cases at
+  360, 390, 768 and 1280 CSS pixels (`t53-bookmarks-1795532493176.log`,
+  4 PASS, exit 0). The Owner fixture now supplies completed setup and
+  exercises the current dashboard, menu, help/account menu and public
+  directory. The final four-suite run passed all 36 cases, exit 0
+  (`t53-final-1795532780195.log`). These runs used intercepted APIs;
+  no physical-device or live API result is implied.
 
 - [x] Retired Purchasing and Returns bookmarks: the current production web
       build rendered the Thai not-found page at nine bookmarks in headless
@@ -4201,8 +4173,7 @@ Acceptance: Current outputs prove no duplicate financial/quota/points/queue effe
       The form made no automatic PUT; an explicit retry saved the same edits.
       The APIs were intercepted. The first run used an older web build and
       failed the MFA link and completed branchless redirect expectations.
-- [x] Live Owner ordering-hours recovery: `check-recovery-browser.mjs 360
-      owner-hours` exited 0 (`browser-owner-hours-1795476846939.log`). Chromium
+- [x] Live Owner ordering-hours recovery: `check-recovery-browser.mjs 360 owner-hours` exited 0 (`browser-owner-hours-1795476846939.log`). Chromium
       with touch emulation used the built `/settings` and `/security` pages,
       real Go API and schema-46 PostgreSQL. The fixture cleared only the
       current session's MFA proof after the form loaded. The first save returned
@@ -4326,20 +4297,16 @@ Acceptance: Record screenshots/flows, viewport and emulated versus real-device s
       this review.
 
 - [x] Scoped native Dine-in session review (plan and code): the authorized
-      reviewer used only supplied material and ran no tools.
-      - Plan review: P1 (separate clock reads could violate the lifetime
-        CHECK) and four P2s (organization lock on end, late format parsing,
-        rotation enforced only by the hook, unbounded hook scan). All were
-        fixed before code.
-      - Code review: no P1. P2: the start-waits-on-save order was untested.
-        P3s: recomputed QR hash, unverified cross-restaurant WITH CHECK. All
-        three were added; `table-sessions-1795595306469.log` has 77 PASS,
-        0 FAIL/SKIP.
-      - Main checked against source that error checks come before the
-        admission denial and that the lock test holds the same organization
-        row.
-      - The reviewer agreed with deferring routes. Remaining P3: the locking
-        precondition is documented but not enforced.
+      reviewer used only supplied material and ran no tools. - Plan review: P1 (separate clock reads could violate the lifetime
+      CHECK) and four P2s (organization lock on end, late format parsing,
+      rotation enforced only by the hook, unbounded hook scan). All were
+      fixed before code. - Code review: no P1. P2: the start-waits-on-save order was untested.
+      P3s: recomputed QR hash, unverified cross-restaurant WITH CHECK. All
+      three were added; `table-sessions-1795595306469.log` has 77 PASS,
+      0 FAIL/SKIP. - Main checked against source that error checks come before the
+      admission denial and that the lock test holds the same organization
+      row. - The reviewer agreed with deferring routes. Remaining P3: the locking
+      precondition is documented but not enforced.
 
 - [x] Scoped Returns HTTP write audit-expiry review: the authorized
       reviewer inspected the supplied test delta, `finishWrite` path and
@@ -4487,13 +4454,13 @@ Acceptance: Separate authorized reviewer independently inspects relevant evidenc
 ### T5.5 Decide accepted scope and compatibility cutover
 
 - [/] Full-baseline scope reconciliation: the approved register and
-      `requirements.md` contain the same 92 unique VLP IDs. The current
-      requirement annotations list 49 PARTIAL, 35 MISSING, 6 CONFLICTING and
-      2 IMPLEMENTED. Both IMPLEMENTED labels describe static exclusions
-      (VLP-023 LINE and VLP-075 referral rewards). These counts describe the
-      register, not verified release acceptance. Keep the full baseline open;
-      localized Purchasing/Returns compatibility evidence does not authorize
-      a reduced release or removal of retained routes or data.
+  `requirements.md` contain the same 92 unique VLP IDs. The current
+  requirement annotations list 49 PARTIAL, 35 MISSING, 6 CONFLICTING and
+  2 IMPLEMENTED. Both IMPLEMENTED labels describe static exclusions
+  (VLP-023 LINE and VLP-075 referral rewards). These counts describe the
+  register, not verified release acceptance. Keep the full baseline open;
+  localized Purchasing/Returns compatibility evidence does not authorize
+  a reduced release or removal of retained routes or data.
 
 - [x] Baseline trace check: all 92 scope numbers, A/B/C/D selections, and
       approved statements in `requirements.md` match the approved register.

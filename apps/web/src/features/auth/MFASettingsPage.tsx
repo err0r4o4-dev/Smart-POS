@@ -530,7 +530,9 @@ function MFAFlow({
         {flow.kind !== 'relogin' && flow.kind !== 'stale' && (
           <div className="auth-links auth-links-single">
             <Link to={paths.login}>{t('mfa.signin')}</Link>
-            {!required && <Link to={paths.workspace}>{t('mfa.workspace')}</Link>}
+            {!required && (
+              <Link to={paths.workspace}>{t('mfa.workspace')}</Link>
+            )}
           </div>
         )}
       </div>

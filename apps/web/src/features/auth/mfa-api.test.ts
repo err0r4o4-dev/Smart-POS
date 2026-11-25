@@ -27,13 +27,11 @@ it('uses same-origin protected MFA contracts without caching or retry', async ()
     },
     { session_verified: true },
   ];
-  const fetcher = vi
-    .fn()
-    .mockImplementation(async () => ({
-      ok: true,
-      status: 200,
-      json: async () => ({ data: responses.shift() }),
-    }));
+  const fetcher = vi.fn().mockImplementation(async () => ({
+    ok: true,
+    status: 200,
+    json: async () => ({ data: responses.shift() }),
+  }));
   vi.stubGlobal('fetch', fetcher);
   await expect(getMFAStatus()).resolves.toEqual({
     enabled: false,
@@ -72,13 +70,11 @@ it('uses same-origin protected MFA contracts without caching or retry', async ()
 });
 
 it('rejects malformed assurance and never treats unavailable MFA as verified', async () => {
-  const fetcher = vi
-    .fn()
-    .mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ data: { enabled: false, session_verified: true } }),
-    });
+  const fetcher = vi.fn().mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: async () => ({ data: { enabled: false, session_verified: true } }),
+  });
   vi.stubGlobal('fetch', fetcher);
   await expect(getMFAStatus()).rejects.toBeInstanceOf(ApiError);
   fetcher.mockResolvedValue({
@@ -104,24 +100,41 @@ it('does not retry confirmation after a lost response', async () => {
 it('stages a replacement with the recovery code and never retries a lost confirmation', async () => {
   const factor_id = '41000000-0000-4000-8000-000000000001';
   const recovery_code = 'A'.repeat(26);
-  const staged = { factor_id, secret: 'A'.repeat(32), expires_at: '2026-11-24T12:00:00Z' };
-  const fetcher = vi.fn()
-    .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ data: staged }) })
+  const staged = {
+    factor_id,
+    secret: 'A'.repeat(32),
+    expires_at: '2026-11-24T12:00:00Z',
+  };
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: staged }),
+    })
     .mockRejectedValueOnce(new TypeError('network unavailable'));
   vi.stubGlobal('fetch', fetcher);
-  await expect(beginMFARecovery(recovery_code, 'synthetic-csrf')).resolves.toEqual(staged);
-  await expect(confirmMFARecovery(factor_id, '012345', 'synthetic-csrf')).rejects.toMatchObject({ status: 0 });
+  await expect(
+    beginMFARecovery(recovery_code, 'synthetic-csrf'),
+  ).resolves.toEqual(staged);
+  await expect(
+    confirmMFARecovery(factor_id, '012345', 'synthetic-csrf'),
+  ).rejects.toMatchObject({ status: 0 });
   for (const [index, [path, body]] of [
     ['/recovery', { recovery_code }],
     ['/recovery/confirm', { factor_id, code: '012345' }],
   ].entries()) {
-    expect(fetcher).toHaveBeenNthCalledWith(index + 1, `/api/v1/auth/mfa${path}`, expect.objectContaining({
-      method: 'POST',
-      credentials: 'same-origin',
-      cache: 'no-store',
-      body: JSON.stringify(body),
-      headers: expect.objectContaining({ 'X-CSRF-Token': 'synthetic-csrf' }),
-    }));
+    expect(fetcher).toHaveBeenNthCalledWith(
+      index + 1,
+      `/api/v1/auth/mfa${path}`,
+      expect.objectContaining({
+        method: 'POST',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        body: JSON.stringify(body),
+        headers: expect.objectContaining({ 'X-CSRF-Token': 'synthetic-csrf' }),
+      }),
+    );
   }
   expect(fetcher).toHaveBeenCalledTimes(2);
 });

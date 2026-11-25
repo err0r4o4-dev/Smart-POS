@@ -75,9 +75,10 @@ export function SettingsPage({
     retry: false,
   });
 
-  const storefrontPath = userId && storefrontQuery.data?.slug
-    ? `/shop/${encodeURIComponent(storefrontQuery.data.slug)}`
-    : paths.shop;
+  const storefrontPath =
+    userId && storefrontQuery.data?.slug
+      ? `/shop/${encodeURIComponent(storefrontQuery.data.slug)}`
+      : paths.shop;
 
   // State for all settings sections
   const [name, setName] = useState(org?.name || 'VELO Cafe & Restaurant');

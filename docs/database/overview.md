@@ -13,11 +13,11 @@ schema evidence and approved backup or restore reference. Record the observed
 version and dirty flag, the failed migration and its direction. Keep database
 URLs, credentials and record content out of incident notes.
 
-| Observed failure | Evidence needed before deciding how to recover |
-| --- | --- |
-| Upgrade stops before commit | Verify the preceding schema still exists, the new objects and effects are absent, and retained checks match the pre-run baseline. A dirty marker alone does not prove rollback. |
-| Populated downgrade is refused | Verify the newer schema and its data still exist. The dirty marker can name the *older* attempted version. Keep the newer schema and select a compatible forward build; do not drop retained records to make the downgrade pass. |
-| Commit result is unknown or the structure matches neither expected version | Keep writes stopped. Record the observed differences and obtain a reviewed forward repair or restore plan before changing migration metadata or rerunning anything. |
+| Observed failure                                                           | Evidence needed before deciding how to recover                                                                                                                                                                                   |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Upgrade stops before commit                                                | Verify the preceding schema still exists, the new objects and effects are absent, and retained checks match the pre-run baseline. A dirty marker alone does not prove rollback.                                                  |
+| Populated downgrade is refused                                             | Verify the newer schema and its data still exist. The dirty marker can name the _older_ attempted version. Keep the newer schema and select a compatible forward build; do not drop retained records to make the downgrade pass. |
+| Commit result is unknown or the structure matches neither expected version | Keep writes stopped. Record the observed differences and obtain a reviewed forward repair or restore plan before changing migration metadata or rerunning anything.                                                              |
 
 Changing migration metadata requires separate authorization on an operational
 target. Once the authorized recovery completes, the database operator checks

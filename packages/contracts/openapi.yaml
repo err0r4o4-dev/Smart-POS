@@ -8380,7 +8380,8 @@ paths:
     get:
       operationId: supplyOperation1
       summary: GET /suppliers
-      description: 'Live MFA required. Permission: supplier.read. Tenant RLS and active branch
+      description:
+        'Live MFA required. Permission: supplier.read. Tenant RLS and active branch
         authorization on each call including replay; organization lock serializes
         stock mutations. UUID idempotency required on document/task writes.
         Receipt review uses approve/reject/correct; accepted quantities only enter
@@ -8490,7 +8491,8 @@ paths:
     post:
       operationId: supplyOperation2
       summary: POST /suppliers
-      description: 'Live MFA required. Permission: supplier.create. Tenant RLS and active branch
+      description:
+        'Live MFA required. Permission: supplier.create. Tenant RLS and active branch
         authorization on each call including replay; organization lock serializes
         stock mutations. UUID idempotency required on document/task writes.
         Receipt review uses approve/reject/correct; accepted quantities only enter
@@ -8562,7 +8564,8 @@ paths:
     get:
       operationId: supplyOperation3
       summary: GET /suppliers/{resourceId}
-      description: 'Live MFA required. Permission: supplier.read. Tenant RLS and active branch
+      description:
+        'Live MFA required. Permission: supplier.read. Tenant RLS and active branch
         authorization on each call including replay; organization lock serializes
         stock mutations. UUID idempotency required on document/task writes.
         Receipt review uses approve/reject/correct; accepted quantities only enter
@@ -8711,7 +8714,8 @@ paths:
     get:
       operationId: supplyOperation5
       summary: GET /suppliers/{resourceId}/products
-      description: 'Live MFA required. Permission: supplier.read. Tenant RLS and active branch
+      description:
+        'Live MFA required. Permission: supplier.read. Tenant RLS and active branch
         authorization on each call including replay; organization lock serializes
         stock mutations. UUID idempotency required on document/task writes.
         Receipt review uses approve/reject/correct; accepted quantities only enter
@@ -8784,7 +8788,8 @@ paths:
     post:
       operationId: supplyOperation6
       summary: POST /suppliers/{resourceId}/products
-      description: 'Live MFA required. Permission: supplier.update. Tenant RLS and active branch
+      description:
+        'Live MFA required. Permission: supplier.update. Tenant RLS and active branch
         authorization on each call including replay; organization lock serializes
         stock mutations. UUID idempotency required on document/task writes.
         Receipt review uses approve/reject/correct; accepted quantities only enter
@@ -8862,7 +8867,8 @@ paths:
     patch:
       operationId: supplyOperation7
       summary: PATCH /suppliers/{resourceId}/products/{productId}
-      description: 'Live MFA required. Permission: supplier.update. Tenant RLS and active branch
+      description:
+        'Live MFA required. Permission: supplier.update. Tenant RLS and active branch
         authorization on each call including replay; organization lock serializes
         stock mutations. UUID idempotency required on document/task writes.
         Receipt review uses approve/reject/correct; accepted quantities only enter
@@ -8946,7 +8952,8 @@ paths:
     get:
       operationId: supplyOperation8
       summary: GET /purchasing/orders
-      description: 'Live MFA required. Permission: purchasing.read. Tenant RLS and active branch
+      description:
+        'Live MFA required. Permission: purchasing.read. Tenant RLS and active branch
         authorization on each call including replay; organization lock serializes
         stock mutations. UUID idempotency required on document/task writes.
         Receipt review uses approve/reject/correct; accepted quantities only enter
@@ -9135,7 +9142,8 @@ paths:
     get:
       operationId: supplyOperation10
       summary: GET /purchasing/orders/{resourceId}
-      description: 'Live MFA required. Permission: purchasing.read. Tenant RLS and active branch
+      description:
+        'Live MFA required. Permission: purchasing.read. Tenant RLS and active branch
         authorization on each call including replay; organization lock serializes
         stock mutations. UUID idempotency required on document/task writes.
         Receipt review uses approve/reject/correct; accepted quantities only enter
@@ -9800,7 +9808,8 @@ paths:
     get:
       operationId: supplyOperation18
       summary: GET /purchasing/receipts
-      description: 'Live MFA required. Permission: purchasing.read. Tenant RLS and active branch
+      description:
+        'Live MFA required. Permission: purchasing.read. Tenant RLS and active branch
         authorization on each call including replay; organization lock serializes
         stock mutations. UUID idempotency required on document/task writes.
         Receipt review uses approve/reject/correct; accepted quantities only enter
@@ -9910,7 +9919,8 @@ paths:
     post:
       operationId: supplyOperation19
       summary: POST /purchasing/receipts
-      description: 'Live MFA required, including replay. Permission: purchasing.receive.create. Tenant RLS and active
+      description:
+        'Live MFA required, including replay. Permission: purchasing.receive.create. Tenant RLS and active
         branch authorization on each call including replay; organization lock
         serializes stock mutations. UUID idempotency required on document/task
         writes. Receipt review uses approve/reject/correct; accepted quantities
@@ -9988,7 +9998,8 @@ paths:
     get:
       operationId: supplyOperation20
       summary: GET /purchasing/receipts/{resourceId}
-      description: 'Live MFA required. Permission: purchasing.read. Tenant RLS and active branch
+      description:
+        'Live MFA required. Permission: purchasing.read. Tenant RLS and active branch
         authorization on each call including replay; organization lock serializes
         stock mutations. UUID idempotency required on document/task writes.
         Receipt review uses approve/reject/correct; accepted quantities only enter
@@ -10058,7 +10069,8 @@ paths:
     patch:
       operationId: supplyOperation21
       summary: PATCH /purchasing/receipts/{resourceId}
-      description: 'Live MFA required, including replay. Permission: purchasing.receive.create. Tenant RLS and active
+      description:
+        'Live MFA required, including replay. Permission: purchasing.receive.create. Tenant RLS and active
         branch authorization on each call including replay; organization lock
         serializes stock mutations. UUID idempotency required on document/task
         writes. Receipt review uses approve/reject/correct; accepted quantities
@@ -10142,7 +10154,8 @@ paths:
     post:
       operationId: supplyOperation22
       summary: POST /purchasing/receipts/{resourceId}/submit
-      description: 'Live MFA required, including replay. Permission: purchasing.receive.create. Tenant RLS and active
+      description:
+        'Live MFA required, including replay. Permission: purchasing.receive.create. Tenant RLS and active
         branch authorization on each call including replay; organization lock
         serializes stock mutations. UUID idempotency required on document/task
         writes. Receipt review uses approve/reject/correct; accepted quantities
@@ -10226,7 +10239,8 @@ paths:
     post:
       operationId: supplyOperation23
       summary: POST /purchasing/receipts/{resourceId}/approve
-      description: 'Live MFA required, including replay. Permission: purchasing.receive.review. Tenant RLS and active
+      description:
+        'Live MFA required, including replay. Permission: purchasing.receive.review. Tenant RLS and active
         branch authorization on each call including replay; organization lock
         serializes stock mutations. UUID idempotency required on document/task
         writes. Receipt review uses approve/reject/correct; accepted quantities
@@ -10310,7 +10324,8 @@ paths:
     post:
       operationId: supplyOperation24
       summary: POST /purchasing/receipts/{resourceId}/reject
-      description: 'Live MFA required, including replay. Permission: purchasing.receive.review. Tenant RLS and active
+      description:
+        'Live MFA required, including replay. Permission: purchasing.receive.review. Tenant RLS and active
         branch authorization on each call including replay; organization lock
         serializes stock mutations. UUID idempotency required on document/task
         writes. Receipt review uses approve/reject/correct; accepted quantities
@@ -10394,7 +10409,8 @@ paths:
     post:
       operationId: supplyOperation25
       summary: POST /purchasing/receipts/{resourceId}/correct
-      description: 'Live MFA required, including replay. Permission: purchasing.receive.review. Tenant RLS and active
+      description:
+        'Live MFA required, including replay. Permission: purchasing.receive.review. Tenant RLS and active
         branch authorization on each call including replay; organization lock
         serializes stock mutations. UUID idempotency required on document/task
         writes. Receipt review uses approve/reject/correct; accepted quantities
@@ -10478,7 +10494,8 @@ paths:
     post:
       operationId: supplyOperation26
       summary: POST /purchasing/receipts/{resourceId}/cancel
-      description: 'Live MFA required, including replay. Permission: purchasing.receive.create. Tenant RLS and active
+      description:
+        'Live MFA required, including replay. Permission: purchasing.receive.create. Tenant RLS and active
         branch authorization on each call including replay; organization lock
         serializes stock mutations. UUID idempotency required on document/task
         writes. Receipt review uses approve/reject/correct; accepted quantities
@@ -10650,7 +10667,8 @@ paths:
     get:
       operationId: supplyOperation28
       summary: GET /purchasing/returns
-      description: 'Live MFA required. Permission: purchasing.read. Tenant RLS and active branch
+      description:
+        'Live MFA required. Permission: purchasing.read. Tenant RLS and active branch
         authorization on each call including replay; organization lock serializes
         stock mutations. UUID idempotency required on document/task writes.
         Receipt review uses approve/reject/correct; accepted quantities only enter
@@ -10839,7 +10857,8 @@ paths:
     get:
       operationId: supplyOperation30
       summary: GET /purchasing/returns/{resourceId}
-      description: 'Live MFA required. Permission: purchasing.read. Tenant RLS and active branch
+      description:
+        'Live MFA required. Permission: purchasing.read. Tenant RLS and active branch
         authorization on each call including replay; organization lock serializes
         stock mutations. UUID idempotency required on document/task writes.
         Receipt review uses approve/reject/correct; accepted quantities only enter
@@ -11079,7 +11098,8 @@ paths:
     post:
       operationId: supplyOperation33
       summary: POST /purchasing/returns/{resourceId}/approve
-      description: 'Live MFA required, including replay. Permission: purchasing.return.approve. Tenant RLS and active
+      description:
+        'Live MFA required, including replay. Permission: purchasing.return.approve. Tenant RLS and active
         branch authorization on each call including replay; organization lock
         serializes stock mutations. UUID idempotency required on document/task
         writes. Receipt review uses approve/reject/correct; accepted quantities
@@ -11163,7 +11183,8 @@ paths:
     post:
       operationId: supplyOperation34
       summary: POST /purchasing/returns/{resourceId}/reject
-      description: 'Live MFA required, including replay. Permission: purchasing.return.approve. Tenant RLS and active
+      description:
+        'Live MFA required, including replay. Permission: purchasing.return.approve. Tenant RLS and active
         branch authorization on each call including replay; organization lock
         serializes stock mutations. UUID idempotency required on document/task
         writes. Receipt review uses approve/reject/correct; accepted quantities
@@ -11420,7 +11441,8 @@ paths:
     get:
       operationId: supplyOperation37
       summary: GET /purchasing/discrepancies
-      description: 'Live MFA required. Permission: purchasing.read. Tenant RLS and active branch
+      description:
+        'Live MFA required. Permission: purchasing.read. Tenant RLS and active branch
         authorization on each call including replay; organization lock serializes
         stock mutations. UUID idempotency required on document/task writes.
         Receipt review uses approve/reject/correct; accepted quantities only enter
@@ -11531,7 +11553,8 @@ paths:
     get:
       operationId: supplyOperation38
       summary: GET /purchasing/discrepancies/{resourceId}
-      description: 'Live MFA required. Permission: purchasing.read. Tenant RLS and active branch
+      description:
+        'Live MFA required. Permission: purchasing.read. Tenant RLS and active branch
         authorization on each call including replay; organization lock serializes
         stock mutations. UUID idempotency required on document/task writes.
         Receipt review uses approve/reject/correct; accepted quantities only enter
@@ -11904,7 +11927,8 @@ paths:
     post:
       operationId: supplyOperation42
       summary: POST /shelves
-      description: 'Live MFA required. Permission: shelf.manage. Tenant RLS and active branch
+      description:
+        'Live MFA required. Permission: shelf.manage. Tenant RLS and active branch
         authorization on each call including replay; organization lock serializes
         stock mutations. UUID idempotency required on document/task writes.
         Receipt review uses approve/reject/correct; accepted quantities only enter
@@ -12047,7 +12071,8 @@ paths:
     patch:
       operationId: supplyOperation44
       summary: PATCH /shelves/{resourceId}
-      description: 'Live MFA required. Permission: shelf.manage. Tenant RLS and active branch
+      description:
+        'Live MFA required. Permission: shelf.manage. Tenant RLS and active branch
         authorization on each call including replay; organization lock serializes
         stock mutations. UUID idempotency required on document/task writes.
         Receipt review uses approve/reject/correct; accepted quantities only enter
@@ -12199,7 +12224,8 @@ paths:
     post:
       operationId: supplyOperation46
       summary: POST /shelves/{resourceId}/slots
-      description: 'Live MFA required. Permission: shelf.manage. Tenant RLS and active branch
+      description:
+        'Live MFA required. Permission: shelf.manage. Tenant RLS and active branch
         authorization on each call including replay; organization lock serializes
         stock mutations. UUID idempotency required on document/task writes.
         Receipt review uses approve/reject/correct; accepted quantities only enter
@@ -16466,8 +16492,7 @@ paths:
       operationId: requestDiscountApproval
       security:
         - sessionCookie: []
-      description:
-        Requires a live MFA session and discount.request. Checks cart ownership, branch scope, and the current pricing revision before writing or replaying a request.
+      description: Requires a live MFA session and discount.request. Checks cart ownership, branch scope, and the current pricing revision before writing or replaying a request.
       responses:
         '200':
           description: Authoritative result
@@ -16519,8 +16544,7 @@ paths:
       operationId: approveDiscountApproval
       security:
         - sessionCookie: []
-      description:
-        Requires a live MFA session and discount.approve. Checks branch scope and the current request and cart revisions before approving.
+      description: Requires a live MFA session and discount.approve. Checks branch scope and the current request and cart revisions before approving.
       responses:
         '200':
           description: Authoritative result
@@ -16566,8 +16590,7 @@ paths:
       operationId: rejectDiscountApproval
       security:
         - sessionCookie: []
-      description:
-        Requires a live MFA session and discount.approve. Checks branch scope and the current request revision before rejecting.
+      description: Requires a live MFA session and discount.approve. Checks branch scope and the current request revision before rejecting.
       responses:
         '200':
           description: Authoritative result
@@ -19289,13 +19312,19 @@ components:
       additionalProperties: false
       required: [recovery_code]
       properties:
-        recovery_code: { type: string, pattern: '^[A-Z2-7]{25}[AEIMQUY4]$', writeOnly: true }
+        recovery_code:
+          { type: string, pattern: '^[A-Z2-7]{25}[AEIMQUY4]$', writeOnly: true }
     MFARecoveryConfirmInput:
       type: object
       additionalProperties: false
       required: [factor_id, code]
       properties:
-        factor_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
+        factor_id:
+          {
+            type: string,
+            format: uuid,
+            pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+          }
         code: { type: string, pattern: '^[0-9]{6}$', writeOnly: true }
     MFARecoveryResponse:
       type: object
@@ -19538,7 +19567,17 @@ components:
     RestaurantAvailabilitySettings:
       type: object
       additionalProperties: false
-      required: [timezone, weekly_windows, global_pause, dine_in_paused, takeaway_paused, pickup_paused, delivery_paused, revision]
+      required:
+        [
+          timezone,
+          weekly_windows,
+          global_pause,
+          dine_in_paused,
+          takeaway_paused,
+          pickup_paused,
+          delivery_paused,
+          revision,
+        ]
       properties:
         timezone:
           type: string
@@ -19554,9 +19593,20 @@ components:
             additionalProperties: false
             required: [weekday, start, end]
             properties:
-              weekday: { type: integer, minimum: 1, maximum: 7, description: ISO weekday (Monday is 1). }
-              start: { type: string, pattern: '^(?:[01][0-9]|2[0-3]):[0-5][0-9]$' }
-              end: { type: string, pattern: '^(?:(?:[01][0-9]|2[0-3]):[0-5][0-9]|24:00)$' }
+              weekday:
+                {
+                  type: integer,
+                  minimum: 1,
+                  maximum: 7,
+                  description: ISO weekday (Monday is 1).,
+                }
+              start:
+                { type: string, pattern: '^(?:[01][0-9]|2[0-3]):[0-5][0-9]$' }
+              end:
+                {
+                  type: string,
+                  pattern: '^(?:(?:[01][0-9]|2[0-3]):[0-5][0-9]|24:00)$',
+                }
         global_pause: { type: boolean }
         dine_in_paused: { type: boolean }
         takeaway_paused: { type: boolean }

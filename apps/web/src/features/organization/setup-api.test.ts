@@ -69,7 +69,9 @@ describe('organization-scoped setup client', () => {
         'tables',
         {
           zones,
-          tables: [{ code: 'T1', name: 'Renamed', zone: 'Main room', seats: 4 }],
+          tables: [
+            { code: 'T1', name: 'Renamed', zone: 'Main room', seats: 4 },
+          ],
           qr_enabled: true,
         },
         { ...context, branchID },
@@ -82,7 +84,9 @@ describe('organization-scoped setup client', () => {
           method: 'PUT',
           body: {
             zones,
-            tables: [{ code: 'T1', name: 'Renamed', zone_code: 'MAIN', seats: 4 }],
+            tables: [
+              { code: 'T1', name: 'Renamed', zone_code: 'MAIN', seats: 4 },
+            ],
             ...(branchID
               ? { branch_id: branchID, generate_qr: true }
               : { qr_enabled: true }),

@@ -252,10 +252,10 @@ it.each([true, false])(
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
       .mockImplementation(async (input) => {
-        const path = new URL(String(input), 'http://localhost').pathname.replace(
-          /^\/api\/v1/,
-          '',
-        );
+        const path = new URL(
+          String(input),
+          'http://localhost',
+        ).pathname.replace(/^\/api\/v1/, '');
         calls.push(path);
         if (!Object.hasOwn(responses, path))
           throw new Error(`Unexpected request: ${path}`);
@@ -348,7 +348,9 @@ it('sends a legacy tracking fragment in the canonical order proof request only',
   });
   const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
     new Response(
-      JSON.stringify({ error: { code: 'NOT_FOUND', message: 'Order not found' } }),
+      JSON.stringify({
+        error: { code: 'NOT_FOUND', message: 'Order not found' },
+      }),
       { status: 404 },
     ),
   );

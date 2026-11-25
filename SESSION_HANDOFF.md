@@ -112,6 +112,7 @@ effects and project-data transmission require exact authorization.
 ## 2. Completed And Verified Work
 
 ### Accepted Slices
+
 - Pickup (VLP-032), internal TOTP/crypto, MFA API/storage, audited Admin provisioning
   command (schema43), organization/storefront/catalog/customer authority slices accepted.
 - POS Cart lifecycle mutations: CreateCart/UpdateCart typed live MFA, zero-results,
@@ -124,6 +125,7 @@ effects and project-data transmission require exact authorization.
   verified GREEN, and bounded independent review passed with no remaining findings.
 
 ### Current POS Online Import / Prepaid Authority Slice
+
 - Production implementation:
   - pps/api/internal/modules/pos/online_orders.go: ImportOnlineOrder with
     AuthorizeMFA("online_orders.manage"), named zero return on error, writeCheck

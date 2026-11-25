@@ -6,7 +6,9 @@ import './mfa-required.css';
 export function MFARequiredState({ newTab = false }: { newTab?: boolean }) {
   const { t } = useLanguage();
   if (!newTab)
-    return <Navigate to={paths.security} state={{ mfaRequired: true }} replace />;
+    return (
+      <Navigate to={paths.security} state={{ mfaRequired: true }} replace />
+    );
 
   return (
     <section

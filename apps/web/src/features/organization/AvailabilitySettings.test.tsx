@@ -34,7 +34,11 @@ it('does not restore removed tenant data when an old save finishes', async () =>
   );
   const page = render(
     <QueryClientProvider client={client}>
-      <AvailabilitySettings user="old-owner" organization="restaurant" csrf="csrf" />
+      <AvailabilitySettings
+        user="old-owner"
+        organization="restaurant"
+        csrf="csrf"
+      />
     </QueryClientProvider>,
   );
   fireEvent.click(await screen.findByRole('checkbox', { name: 'ทุกช่องทาง' }));

@@ -41,7 +41,14 @@ for (const [width, english, editTable] of [
         ? {
             tables: {
               zones: [{ code: 'MAIN', name: 'Main room' }],
-              tables: [{ code: 'T1', name: 'Original table', zone: 'Main room', seats: 4 }],
+              tables: [
+                {
+                  code: 'T1',
+                  name: 'Original table',
+                  zone: 'Main room',
+                  seats: 4,
+                },
+              ],
               qr_enabled: true,
             },
           }
@@ -113,18 +120,25 @@ for (const [width, english, editTable] of [
       const bounds = await name.boundingBox();
       expect(bounds!.x).toBeGreaterThanOrEqual(0);
       expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
-      const save = page.getByRole('button', { name: 'Save and continue', exact: true });
+      const save = page.getByRole('button', {
+        name: 'Save and continue',
+        exact: true,
+      });
       await save.focus();
       await expect(save).toBeFocused();
       await page.keyboard.press('Enter');
-      await expect(page.getByRole('heading', { name: 'Payments', exact: true })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: 'Payments', exact: true }),
+      ).toBeVisible();
       expect(writes.get('tables')).toMatchObject({
         qr_enabled: true,
         tables: [{ code: 'T1', name: renamed }],
       });
       expect(writes.get('tables')).not.toHaveProperty('generate_qr');
       expect(writes.get('tables')).not.toHaveProperty('branch_id');
-      await expect(page.getByRole('heading', { name: 'Issued table QR secrets' })).toHaveCount(0);
+      await expect(
+        page.getByRole('heading', { name: 'Issued table QR secrets' }),
+      ).toHaveCount(0);
       return;
     }
     const pickup = page.getByRole('checkbox', {

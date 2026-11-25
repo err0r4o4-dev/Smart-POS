@@ -406,7 +406,9 @@ it('keeps the current account storefront link when a prior request resolves late
   mocks.userID = 'user-2';
   rerender(page());
   expect(link).toHaveAttribute('href', '/shop');
-  await waitFor(() => expect(link).toHaveAttribute('href', '/shop/current-store'));
+  await waitFor(() =>
+    expect(link).toHaveAttribute('href', '/shop/current-store'),
+  );
   expect(priorSignal.aborted).toBe(true);
 
   await act(async () => {

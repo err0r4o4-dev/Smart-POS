@@ -37,7 +37,9 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
-for (const width of [320, 360, 390, 767, 768, 1023, 1024, 1280, 1536, 1920]) {
+for (const width of [
+  320, 360, 390, 767, 768, 1023, 1024, 1280, 1536, 1672, 1920,
+]) {
   test(`home page fits the viewport at ${width}px`, async ({
     page,
   }, testInfo) => {
@@ -60,7 +62,7 @@ for (const width of [320, 360, 390, 767, 768, 1023, 1024, 1280, 1536, 1920]) {
     for (const container of await page.locator('.landing-container').all()) {
       const bounds = await container.boundingBox();
       if (!bounds) throw new Error('Landing container has no bounding box');
-      const expectedWidth = Math.min(1284, width - (width >= 768 ? 48 : 32));
+      const expectedWidth = Math.min(1344, width - (width >= 768 ? 48 : 32));
       expect(bounds.width).toBeCloseTo(expectedWidth, 0);
       expect(bounds.x).toBeCloseTo((width - expectedWidth) / 2, 0);
     }
@@ -73,7 +75,12 @@ for (const width of [320, 360, 390, 767, 768, 1023, 1024, 1280, 1536, 1920]) {
     }
     await page.locator('main img').evaluateAll(async (images) => {
       await Promise.all(
-        images.map((image) => (image as HTMLImageElement).decode()),
+        images.map(async (element) => {
+          const image = element as HTMLImageElement;
+          // Load offscreen images before capturing the full page at narrow widths.
+          image.loading = 'eager';
+          await image.decode();
+        }),
       );
     });
     await page.screenshot({

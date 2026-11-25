@@ -46,6 +46,7 @@ import { useShopDirectory } from '../storefront/useShopDirectory';
 import './landing.css';
 
 type Translate = ReturnType<typeof useLanguage>['t'];
+const referenceArt = '/images/home/reference';
 
 const popularSearches: Record<'th' | 'en', string[]> = {
   th: ['ข้าวกะเพรา', 'ก๋วยเตี๋ยว', 'ชาไข่มุก', 'ของทอด', 'ส้มตำ'],
@@ -60,40 +61,58 @@ const areas: {
   {
     title: 'landing.areaCampus',
     description: 'landing.areaCampusDescription',
-    image: '/images/home/area-campus.webp',
+    image: `${referenceArt}/area-campus.webp`,
   },
   {
     title: 'landing.areaMarket',
     description: 'landing.areaMarketDescription',
-    image: '/images/home/area-market.webp',
+    image: `${referenceArt}/area-market.webp`,
   },
   {
     title: 'landing.areaDorm',
     description: 'landing.areaDormDescription',
-    image: '/images/home/area-dorm.webp',
+    image: `${referenceArt}/area-dorm.webp`,
   },
   {
     title: 'landing.areaCommunity',
     description: 'landing.areaCommunityDescription',
-    image: '/images/home/area-community.webp',
+    image: `${referenceArt}/area-community.webp`,
   },
 ];
 
 const categories: { label: TranslationKey; image: string }[] = [
   {
     label: 'landing.categoryMadeToOrder',
-    image: '/images/home/cat-made-to-order.webp',
+    image: `${referenceArt}/category-made-to-order.webp`,
   },
-  { label: 'landing.categoryNoodles', image: '/images/home/cat-noodles.webp' },
-  { label: 'landing.categoryIsan', image: '/images/home/cat-isan.webp' },
-  { label: 'landing.categoryFried', image: '/images/home/cat-fried.webp' },
-  { label: 'landing.categoryDrinks', image: '/images/home/cat-drinks.webp' },
+  {
+    label: 'landing.categoryNoodles',
+    image: `${referenceArt}/category-noodles.webp`,
+  },
+  {
+    label: 'landing.categoryIsan',
+    image: `${referenceArt}/category-isan.webp`,
+  },
+  {
+    label: 'landing.categoryFried',
+    image: `${referenceArt}/category-fried.webp`,
+  },
+  {
+    label: 'landing.categoryDrinks',
+    image: `${referenceArt}/category-drinks.webp`,
+  },
   {
     label: 'landing.categoryDesserts',
-    image: '/images/home/cat-desserts.webp',
+    image: `${referenceArt}/category-desserts.webp`,
   },
-  { label: 'landing.categoryHealthy', image: '/images/home/cat-healthy.webp' },
-  { label: 'landing.categorySnacks', image: '/images/home/cat-snacks.webp' },
+  {
+    label: 'landing.categoryHealthy',
+    image: `${referenceArt}/category-healthy.webp`,
+  },
+  {
+    label: 'landing.categorySnacks',
+    image: `${referenceArt}/category-snacks.webp`,
+  },
 ];
 
 const steps: {
@@ -126,16 +145,19 @@ const merchantFeatures: { label: TranslationKey; icon: LucideIcon }[] = [
 ];
 
 const shopFilters = [
-  { value: 'all', label: 'landing.forYou', icon: Sparkles },
+  { value: 'all', label: 'landing.recommended', icon: Sparkles },
   { value: 'open', label: 'landing.openNow', icon: BadgeCheck },
   { value: 'favorites', label: 'landing.favoriteShops', icon: Heart },
 ] as const;
 
-function storefrontPhoto(type: string) {
-  if (type === 'CAFE' || type === 'BAR') return '/images/home/hero-tea.webp';
+function storefrontPhoto(type: string, name: string) {
+  if (type === 'CAFE' || type === 'BAR')
+    return `${referenceArt}/cover-tea.webp`;
   if (type === 'BAKERY') return '/images/home/cat-desserts.webp';
-  if (type === 'FAST_FOOD') return '/images/home/shop-grill.webp';
-  return '/images/home/cat-made-to-order.webp';
+  if (type === 'FAST_FOOD') return `${referenceArt}/cover-fast-food.webp`;
+  if (/ก๋วยเตี๋ยว|noodles?/i.test(name))
+    return `${referenceArt}/cover-noodles.webp`;
+  return `${referenceArt}/cover-restaurant.webp`;
 }
 
 function shopSearch(query: string) {
@@ -205,19 +227,11 @@ export function LandingPage() {
         <section className="landing-hero" aria-labelledby="landing-title">
           <div className="landing-hero-art" aria-hidden="true">
             <img
-              className="landing-hero-food"
-              src="/images/home/hero.webp"
+              src={`${referenceArt}/hero-meal.webp`}
               alt=""
-              width="478"
-              height="370"
+              width="807"
+              height="238"
               fetchPriority="high"
-            />
-            <img
-              className="landing-hero-tea"
-              src="/images/home/hero-tea-cutout.webp"
-              alt=""
-              width="103"
-              height="243"
             />
           </div>
           <div className="landing-container landing-hero-inner">
@@ -232,6 +246,11 @@ export function LandingPage() {
                 {t('landing.heroTitleLead')}
                 <span className="landing-title-accent">
                   {t('landing.heroTitleAccent')}
+                  <Sparkles
+                    className="landing-title-sparkle"
+                    size={26}
+                    aria-hidden="true"
+                  />
                 </span>
               </h1>
               <p className="landing-hero-description">
@@ -252,12 +271,13 @@ export function LandingPage() {
                 />
                 <button className="button" type="submit">
                   {t('landing.search')}
+                  <ArrowRight size={17} aria-hidden="true" />
                 </button>
               </form>
               <div className="landing-popular">
                 <span>
                   <Flame size={15} aria-hidden="true" />
-                  {t('landing.popular')}
+                  {t('landing.trySearching')}
                 </span>
                 <ul>
                   {popularSearches[language].map((term) => (
@@ -278,7 +298,7 @@ export function LandingPage() {
               icon={MapPin}
               title={t('landing.areasTitle')}
               description={t('landing.areasDescription')}
-              action={{ to: paths.shop, label: t('landing.areasAction') }}
+              action={{ to: paths.shop, label: t('landing.viewAllShops') }}
             />
             <ul className="landing-areas" aria-label={t('landing.areasList')}>
               {areas.map(({ title, description, image }) => (
@@ -308,10 +328,7 @@ export function LandingPage() {
               id="landing-categories"
               icon={UtensilsCrossed}
               title={t('landing.categoriesTitle')}
-              action={{
-                to: paths.shop,
-                label: t('landing.viewAllCategories'),
-              }}
+              action={{ to: paths.shop, label: t('landing.viewAllShops') }}
             />
             <ul
               className="landing-categories"
@@ -374,10 +391,10 @@ export function LandingPage() {
             <div className="landing-merchant">
               <img
                 className="landing-merchant-art"
-                src="/images/home/merchant-pos.webp"
+                src={`${referenceArt}/merchant-terminal.webp`}
                 alt=""
-                width="160"
-                height="110"
+                width="116"
+                height="83"
                 loading="lazy"
               />
               <div className="landing-merchant-copy">
@@ -430,22 +447,26 @@ function SectionHeading({
 }) {
   return (
     <div className="landing-section-heading">
-      <span className="landing-section-icon">
-        <Icon size={18} aria-hidden="true" />
-      </span>
-      <h2 id={id} tabIndex={-1}>
-        {title}
-      </h2>
-      {description && <p>{description}</p>}
-      <div className="landing-section-actions">
-        {children}
-        {action && (
-          <Link className="landing-more-link" to={action.to}>
-            {action.label}
-            <ArrowRight size={14} aria-hidden="true" />
-          </Link>
-        )}
+      <div className="landing-section-lead">
+        <h2 id={id} tabIndex={-1}>
+          <span className="landing-section-icon">
+            <Icon size={18} aria-hidden="true" />
+          </span>
+          <span>{title}</span>
+        </h2>
+        {description && <p>{description}</p>}
       </div>
+      {(children || action) && (
+        <div className="landing-section-actions">
+          {children}
+          {action && (
+            <Link className="landing-more-link" to={action.to}>
+              {action.label}
+              <ArrowRight size={14} aria-hidden="true" />
+            </Link>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -465,6 +486,7 @@ function RecommendedShops() {
           ? saved.isFavorite(shop.slug)
           : true,
     )
+    .sort((a, b) => Number(b.accepting_orders) - Number(a.accepting_orders))
     .slice(0, 4);
 
   return (
@@ -528,7 +550,7 @@ function RecommendedShops() {
                       <article className="landing-shop">
                         <div className="landing-shop-art">
                           <img
-                            src={storefrontPhoto(type)}
+                            src={storefrontPhoto(type, shop.name)}
                             alt=""
                             loading="lazy"
                           />
@@ -578,10 +600,13 @@ function RecommendedShops() {
                               <span>{businessTypeLabel(type, language)}</span>
                             )}
                           </div>
-                          <p className="landing-shop-meta">
-                            <Store size={14} aria-hidden="true" />
-                            {t('landing.onlineStorefront')}
-                          </p>
+                          <span
+                            className="landing-shop-meta"
+                            aria-hidden="true"
+                          >
+                            {t('storefront.viewStore')}
+                            <ArrowRight size={15} />
+                          </span>
                         </div>
                       </article>
                     </li>

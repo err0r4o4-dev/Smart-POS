@@ -20,6 +20,6 @@ it('offers account security outside organization access', () => {
     'Verify MFA for this session',
   );
   expect(
-    screen.getByRole('link', { name: 'Account security' }),
+    screen.getByRole('link', { name: 'Go to MFA verification' }),
   ).toHaveAttribute('href', '/security');
 });

@@ -2,7 +2,7 @@
 
 # VELOPOS migration task plan
 
-Status: LOCAL EXECUTION AUTHORIZED 2026-11-22; specification reconciled; application implementation and acceptance pending.
+Status: LOCAL EXECUTION IN PROGRESS; specification reconciled; full implementation and acceptance remain open.
 Date: 2026-11-19 (Asia/Bangkok)
 Baseline: [approved register](approved-requirements.md), VELOPOS-SCOPE-BASELINE-001.
 Read [requirements.md](requirements.md) for exact statements/evidence/B01-B16 and
@@ -2510,6 +2510,12 @@ Status: BLOCKED for the affected decisions, not for the now-complete import gate
       publishes no host port, attaches no retained volume, and checks IDs and
       labels before removing the resources. See T2.3 for dirty-state recovery
       and T5.3 for the remaining live browser target limitation.
+- [x] 2026-11-25 source checkpoint: `9b41cd7` on `feature/fix-system-`
+      contains the schema-49 source and matching Returns test cases. Go
+      readiness and the highest migration agree at 49. The local contract
+      inventory check reports 18 modules and 116 routes. The approved
+      register SHA-256 is unchanged. This is a source checkpoint; use the
+      scoped T5.2 runs and T5.4 reviews for runtime and review evidence.
 - [ ] Confirm selected slice baseline, live dependencies, explicit disposable DB
       target ownership/recovery and safe test environment for each subsequent
       slice before implementation.
@@ -3040,7 +3046,7 @@ Acceptance: Every changed route has a producer, consumer and contract test; no g
 | Boundary | Existing evidence | Required evidence still open |
 | --- | --- | --- |
 | Anonymous organization requests | Composed router: all 276 mounted method/path pairs denied without data. | This covers only requests without a session. |
-| Retained Purchasing and Returns | Schema 49 HTTP MFA and tenant denial matrices, populated reads, selected write/replay cases, and denial for all four branch-assigned legacy roles and revoked Owner sessions across 36 Returns and 57 Purchasing routes. Purchasing also covered the branch-filtered order list. T5.3 verified nine retired web bookmarks at four emulated widths without calling the retired workflows; current disposition is in the architecture route inventory. | Remaining positive and mid-request expiry outcomes. Test any active replacement journeys separately; retired bookmark coverage does not verify the retained APIs. |
+| Retained Purchasing and Returns | Schema 49 HTTP MFA and tenant denial matrices, populated reads, selected write/replay cases, and denial for all four branch-assigned legacy roles and revoked Owner sessions across 36 Returns and 57 Purchasing routes. Purchasing also covered the branch-filtered order list. Owner HTTP expiry after projection is covered for all nine Returns GET routes (see T5.2). T5.3 verified nine retired web bookmarks at four emulated widths without calling the retired workflows; current disposition is in the architecture route inventory. | Remaining positive and mid-request expiry outcomes for other routes and for branch-scoped non-Owner reads. Test any active replacement journeys separately; retired bookmark coverage does not verify the retained APIs. |
 | Retained guest order proof | Matching proof succeeds on both fixture orders; missing, wrong-order and wrong-shop proof fail, including after unpublishing. | Native private table-session rotation and atomic member claims require their own contracts and runtime checks. |
 | Native Restaurant Owner | Setup and ordering availability have scoped Owner, MFA and cross-restaurant checks. The retired membership and role routes are absent. | Transfer must revoke the former Owner's authority while preserving obligations; no inference about retained ownership from route retirement. B10/B12/B13 apply. |
 | Platform Admin | Schema 49 verifies the audited grant/revoke command lifecycle on synthetic users. | Operation-specific permissions and target checks must be verified with each implemented Admin workflow. Provisioning does not prove these checks. |
@@ -3841,6 +3847,41 @@ Acceptance: Fresh exact commands/exit codes/case counts match changed inputs. Ro
 
 ### T5.2 Run isolated database and retained-data acceptance
 
+- [x] Schema-49 Returns HTTP reads after projection: for the returns,
+      refunds, exchanges and voids lists, the return, refund, exchange and
+      void details, and the returnable-sale read, an authorized Owner GET
+      first returned the seeded records with `no-store`. The lists included
+      the seeded IDs, and exchanges and voids excluded each other's IDs.
+      The session then expired after each route's final projection query.
+      Every request returned `401 UNAUTHENTICATED`, `Cache-Control: no-store`
+      and no `data`. `check-db.mjs returns-read` exited 0 with 353 PASS
+      entries including parents, 0 FAIL/SKIP and verified cleanup
+      (`returns-read-1795550155248.log`). Only tests changed. Not covered:
+      branch-scoped non-Owner reads, filter and pagination variants, and
+      error-body fields other than `data`.
+
+- [x] Schema-49 Void reconciliation recovery: expiry after the completion
+      audit insert or saved-result lookup returned `401 UNAUTHENTICATED`,
+      `Cache-Control: no-store` and no data. Immediate readbacks preserved
+      the void, linked return, refund and settlement records, audit rows,
+      and exact replay record. A same-key retry completed the void and
+      its linked refund; authorized replay preserved the result and state.
+      First run `returns-read-1795544096847.log` stopped at the incorrect
+      fixture assertion that earlier reconciliation left no audit. The
+      corrected run `returns-read-1795544189732.log` exited 0: 343 PASS
+      including parents, 0 FAIL/SKIP, disposable cleanup verified.
+
+- [x] Schema-49 Returns HTTP exchange completion: expiration after the
+      audit insert and after saved-result lookup returned
+      `401 UNAUTHENTICATED`, `Cache-Control: no-store` and no data. Before
+      retry, the exchange, linked return, settlement events, completion
+      audit, replacement sales and exact replay record stayed unchanged.
+      A same-key retry completed the exchange; authorized replay returned
+      the same JSON values and did not alter the observed records.
+      `check-db.mjs returns-read` exited 0 with 343 PASS entries including
+      parents, 0 FAIL/SKIP and verified cleanup
+      (`returns-read-1795543942393.log`). Only tests changed.
+
 - [x] Schema-49 Returns HTTP completion: an approved menu-only return
       denied session expiry after the completion audit insert and after the
       saved-result lookup with `401 UNAUTHENTICATED`, `Cache-Control: no-store`
@@ -4227,6 +4268,35 @@ Acceptance: Record screenshots/flows, viewport and emulated versus real-device s
       denials, expiry during COMMIT and other Purchasing routes were outside
       this review.
 
+- [x] Scoped Returns HTTP read-expiry review: the authorized reviewer
+      inspected the supplied test delta, handler and read-path excerpts and
+      Main's evidence without running tools or tests. It found no P1/P2
+      issues. Its P3, that the voids reads were not bound to the seeded void,
+      was fixed: both lists now include their own seeded ID and exclude the
+      other kind's, and the void detail uses the seeded void
+      (`returns-read-1795550155248.log`, 353 PASS including parents,
+      0 FAIL/SKIP, cleanup verified). Re-review closed that finding.
+      Remaining P3 limits: the first-page-only list check can fail falsely
+      if this fixture organization gains more records; the 1-second expiry
+      window can cause false failures on slow hosts; only `data` is checked
+      for leaks; the subtest depends on earlier subtests; and branch-scoped
+      non-Owner reads and filters are untested.
+
+- [x] Scoped Returns Void recovery MFA review: the authorized reviewer found
+      no actionable findings in the test delta and matching schema-49
+      evidence (`returns-read-1795544189732.log`, 343 PASS including parents,
+      no FAIL/SKIP). The reviewer did not run tests. This covers the observed
+      reconciliation recovery records at audit insertion and replay lookup,
+      excluding physical COMMIT, other routes and effects outside the snapshot.
+
+- [x] Scoped Returns HTTP exchange completion MFA review: the reviewer found
+      no actionable findings in the test delta and matching schema-49
+      evidence (`returns-read-1795543942393.log`, 343 PASS including parents,
+      0 FAIL/SKIP). Review covered the six observed record groups for the
+      equal-value menu-only exchange at audit insertion and replay lookup.
+      The reviewer did not run tests. Expiry during physical COMMIT, other
+      exchange variants and effects outside the snapshots remain unverified.
+
 - [x] Scoped Returns HTTP completion MFA review: the authorized reviewer
       found no actionable findings in the tests and the matching isolated
       evidence (`returns-read-1795536922925.log`). The reviewer did not run
@@ -4542,8 +4612,19 @@ Historical bounded independent review resolved the late-Paid/irreversibly-releas
 
 Application/unit/integration/browser/provider/restore/load/release checks: NOT RUN; outside this documentation-only scope. No database or service startup, network/provider call, commit, push or deployment is authorized by this work. Required future implementation tests and independent review are retained, not waived.
 
-## Current stop condition
+## Current continuation boundary
 
-T0.1 is no longer blocked. The 92 decisions are reconciled; only two exclusion requirements have IMPLEMENTED static evidence. Counts: 49 PARTIAL, 35 MISSING, 6 CONFLICTING, 0 OBSOLETE. These are bounded source classifications, not test passes or release readiness. T0.2 policy/provider/design inputs and T0.3 runtime preparation remain open. All application implementation tasks remain pending.
+T0.1 reconciled all 92 approved requirements. The requirement register still
+classifies 49 as PARTIAL, 35 MISSING, 6 CONFLICTING and 2 IMPLEMENTED (the
+static exclusions). Those labels do not measure release readiness. Several
+implementation slices have since landed; T5.1-T5.4 record which checks ran,
+on which inputs, and what they verify.
 
-The settled T1.1/T2.1 design-only package is complete with static checks and bounded independent review. B04-dependent dispatch policy remains deferred, not guessed. T1.2 wire contracts, T1.3 authority/recovery and real retained-data/isolated DB acceptance remain separate downstream implementation gates, not reasons to block the completed settled planning. Full T1.1/T2.1 and runtime/schema acceptance remain open. Do not modify application code, contracts, migrations, data, permissions or deployment from this spec-only request.
+Continue T1.3 against the remaining D05 authority cases. The most recent
+Returns checkpoints verify menu-only completion and cash refund confirmation
+at the observed HTTP interruption points. B12 manual recovery and live Google
+proof delivery remain open. Follow the T1.2 Dine-in policy dependencies before
+exposing a public session route, and the B14 and B16 decisions before adding
+native saved-cart or bulk-import persistence. Start other listed tasks when
+their actual dependencies are satisfied. The local execution authorization
+above applies; no reduced release, cutover or deployment is authorized.

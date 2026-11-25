@@ -970,11 +970,7 @@ function ScopedSetupPage() {
       </main>
     );
   if (tenant.errorCode === 'MFA_REQUIRED')
-    return (
-      <div className="setup-page-wrapper">
-        <MFARequiredState />
-      </div>
-    );
+    return <MFARequiredState accountPage />;
   if (tenant.error)
     return (
       <main className="setup-page-wrapper">

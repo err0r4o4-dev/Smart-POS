@@ -14,7 +14,7 @@ export function EmailVerificationPage() {
   return (
     <LoginLayout titleId="verification-required-title" story="verify">
       <div className="auth-header-card">
-        <h2 id="verification-required-title">{t('auth.verificationTitle')}</h2>
+        <h1 id="verification-required-title">{t('auth.verificationTitle')}</h1>
         <p>{t('auth.verificationRequired')}</p>
       </div>
       {state.status === 'loading' ? (

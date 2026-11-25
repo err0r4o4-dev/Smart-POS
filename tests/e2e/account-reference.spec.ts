@@ -8,6 +8,42 @@ const accountPages = [
   { path: '/forgot-password', title: 'รีเซ็ตรหัสผ่าน' },
 ];
 
+test('account routes reuse the sign-in frame on desktop and mobile', async ({
+  page,
+}) => {
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    async function frame(path: string) {
+      await page.goto(path);
+      return page.locator('.account-shell').evaluate((shell) => {
+        const header = shell.querySelector('header')!;
+        const grid = shell.querySelector('main')!;
+        const card = shell.querySelector('.login-card')!;
+        const art = shell.querySelector<HTMLImageElement>('.login-visual-art')!;
+        return {
+          background: getComputedStyle(shell).backgroundImage,
+          headerWidth: header.getBoundingClientRect().width,
+          gap: getComputedStyle(grid).gap,
+          columns: getComputedStyle(grid).gridTemplateColumns,
+          cardWidth: card.getBoundingClientRect().width,
+          cardPadding: getComputedStyle(card).paddingInline,
+          cardBackground: getComputedStyle(card).backgroundImage,
+          artwork: art.getAttribute('src'),
+        };
+      });
+    }
+    const signIn = await frame('/login');
+    for (const path of [
+      '/register',
+      '/verify-email',
+      '/forgot-password',
+      '/reset-password',
+    ]) {
+      expect(await frame(path), `${path} at ${width}px`).toEqual(signIn);
+    }
+  }
+});
+
 test.beforeEach(async ({ page }) => {
   await page.route('**/*', (route) => {
     const url = new URL(route.request().url());
@@ -74,13 +110,25 @@ for (const width of [320, 390, 768, 1024, 1440]) {
           await page.keyboard.press('Enter');
         }
         if (width === 1440 && account.path === '/login') {
-          expect(
-            await page
-              .locator('#login-visual-title')
-              .evaluate((element) =>
-                parseFloat(getComputedStyle(element).fontSize),
-              ),
-          ).toBeGreaterThanOrEqual(50);
+          const scales = await page
+            .locator('.login-shell')
+            .evaluate((shell) => {
+              const css = getComputedStyle(shell);
+              const heading = shell.querySelector('#login-visual-title')!;
+              return {
+                contentWidth:
+                  shell.clientWidth -
+                  parseFloat(css.paddingInlineStart) -
+                  parseFloat(css.paddingInlineEnd),
+                layoutMax: parseFloat(
+                  css.getPropertyValue('--layout-content-max'),
+                ),
+                headingSize: getComputedStyle(heading).fontSize,
+                displaySize: css.getPropertyValue('--font-display').trim(),
+              };
+            });
+          expect(scales.contentWidth).toBe(scales.layoutMax);
+          expect(scales.headingSize).toBe(scales.displaySize);
         }
         await page
           .getByRole('button', { name: 'English', exact: true })
@@ -106,7 +154,7 @@ for (const width of [320, 390, 768, 1024, 1440]) {
 }
 
 for (const width of [390, 768, 900, 901, 1024, 1920]) {
-  test(`account artwork shifts left only on desktop at ${width}px`, async ({
+  test(`register artwork stays clear of the form at ${width}px`, async ({
     page,
   }, testInfo) => {
     await page.setViewportSize({ width, height: 1080 });
@@ -114,26 +162,20 @@ for (const width of [390, 768, 900, 901, 1024, 1920]) {
     await expect(page.locator('.login-card')).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
     const artwork = page.locator('.login-illustration');
-    const shifted = (await artwork.boundingBox())!;
+    const art = (await artwork.boundingBox())!;
     const heading = (await page.locator('.login-visual-copy').boundingBox())!;
     const card = (await page.locator('.login-card').boundingBox())!;
-    await artwork.evaluate((element) => {
-      (element as HTMLElement).style.transform = 'none';
-    });
-    const unshifted = (await artwork.boundingBox())!;
-    expect(shifted.x - unshifted.x).toBeCloseTo(width > 900 ? -24 : 0, 1);
-    expect(await page.locator('.login-visual-copy').boundingBox()).toEqual(
-      heading,
-    );
-    expect(await page.locator('.login-card').boundingBox()).toEqual(card);
-    await artwork.evaluate((element) => {
-      (element as HTMLElement).style.removeProperty('transform');
-    });
+    if (width >= 768) {
+      expect(art.x + art.width).toBeLessThanOrEqual(card.x);
+      expect(art.y).toBeGreaterThanOrEqual(heading.y + heading.height);
+    } else {
+      expect(art.y + art.height).toBeLessThanOrEqual(card.y);
+    }
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(width);
     await page.screenshot({
-      path: testInfo.outputPath('artwork-left.png'),
+      path: testInfo.outputPath('register-artwork.png'),
       fullPage: true,
     });
   });
@@ -149,57 +191,53 @@ for (const width of [901, 1024, 1920]) {
       await page.getByRole('button', { name: 'ไทย', exact: true }).click();
       await page.evaluate(() => document.fonts.ready);
       const edges = await page.locator('.login-visual').evaluate((element) => {
-        const visual = element.getBoundingClientRect();
-        const clipMargin =
-          parseFloat(getComputedStyle(element).overflowClipMargin) || 0;
         const artwork = element
           .querySelector('.login-visual-art')!
           .getBoundingClientRect();
-        const footer = element
-          .querySelector('.login-visual-footer')!
-          .getBoundingClientRect();
         return {
-          left: visual.left - clipMargin,
-          right: visual.right,
-          bottom: visual.bottom,
+          left: artwork.left,
+          right: artwork.right,
+          bottom: artwork.bottom,
           top: artwork.top + 20,
-          end: footer.top - 10,
+          end: artwork.bottom - 10,
         };
       });
       const screenshot = await page.screenshot({
         path: testInfo.outputPath('account-decoration.png'),
         fullPage: true,
       });
+      // Keep ribbons and other layers in both images, isolating the raster edge.
+      await page.locator('.login-visual-art').evaluate((element) => {
+        element.style.visibility = 'hidden';
+      });
+      const backdrop = await page.screenshot({ fullPage: true });
       const contrast = await page.evaluate(
-        async ({ png, edges }) => {
-          const image = new Image();
-          image.src = `data:image/png;base64,${png}`;
-          await image.decode();
-          const canvas = document.createElement('canvas');
-          canvas.width = image.width;
-          canvas.height = image.height;
-          const context = canvas.getContext('2d')!;
-          context.drawImage(image, 0, 0);
-          const pixels = context.getImageData(
-            0,
-            0,
-            canvas.width,
-            canvas.height,
-          ).data;
-          const difference = (
-            firstX: number,
-            firstY: number,
-            secondX: number,
-            secondY: number,
-          ) =>
-            Math.max(
+        async ({ png, blank, edges }) => {
+          async function decode(source: string) {
+            const image = new Image();
+            image.src = `data:image/png;base64,${source}`;
+            await image.decode();
+            const canvas = document.createElement('canvas');
+            canvas.width = image.width;
+            canvas.height = image.height;
+            const context = canvas.getContext('2d')!;
+            context.drawImage(image, 0, 0);
+            return context.getImageData(0, 0, canvas.width, canvas.height);
+          }
+          const [art, background] = await Promise.all([
+            decode(png),
+            decode(blank),
+          ]);
+          function difference(x: number, y: number) {
+            const index = (y * art.width + x) * 4;
+            return Math.max(
               ...[0, 1, 2].map((channel) =>
                 Math.abs(
-                  pixels[(firstY * canvas.width + firstX) * 4 + channel] -
-                    pixels[(secondY * canvas.width + secondX) * 4 + channel],
+                  art.data[index + channel] - background.data[index + channel],
                 ),
               ),
             );
+          }
           const contrast = { left: 0, right: 0, bottom: 0 };
           for (
             let vertical = Math.ceil(edges.top);
@@ -207,10 +245,11 @@ for (const width of [901, 1024, 1920]) {
             vertical++
           ) {
             for (const side of ['left', 'right'] as const) {
-              const horizontal = Math.round(edges[side]);
+              const horizontal =
+                Math.round(edges[side]) + (side === 'left' ? 2 : -2);
               contrast[side] = Math.max(
                 contrast[side],
-                difference(horizontal - 2, vertical, horizontal + 2, vertical),
+                difference(horizontal, vertical),
               );
             }
           }
@@ -222,12 +261,16 @@ for (const width of [901, 1024, 1920]) {
             const vertical = Math.round(edges.bottom);
             contrast.bottom = Math.max(
               contrast.bottom,
-              difference(horizontal, vertical - 2, horizontal, vertical + 2),
+              difference(horizontal, vertical - 2),
             );
           }
           return contrast;
         },
-        { png: screenshot.toString('base64'), edges },
+        {
+          png: screenshot.toString('base64'),
+          blank: backdrop.toString('base64'),
+          edges,
+        },
       );
       expect(contrast.left).toBeLessThanOrEqual(8);
       expect(contrast.right).toBeLessThanOrEqual(8);
@@ -240,12 +283,11 @@ for (const width of [320, 768, 901, 1024, 1440, 1920]) {
   test(`register artwork stays aligned when the form grows at ${width}px`, async ({
     page,
   }, testInfo) => {
-    const message =
-      'Registration is temporarily unavailable. Please keep your details and try again. '.repeat(
-        8,
-      );
     await page.route('**/api/v1/auth/register', (route) =>
-      route.fulfill({ status: 503, json: { error: { message } } }),
+      route.fulfill({
+        status: 503,
+        json: { error: { message: 'Synthetic dependency failure' } },
+      }),
     );
     await page.setViewportSize({ width, height: 768 });
     await page.goto('/register');
@@ -265,18 +307,20 @@ for (const width of [320, 768, 901, 1024, 1440, 1920]) {
     await page
       .getByRole('button', { name: 'Create account', exact: true })
       .click();
-    await expect(page.getByRole('alert')).toHaveText(message.trim());
+    await expect(page.getByRole('alert')).toHaveText(
+      /Could not confirm the result/,
+    );
+    await page.addStyleTag({
+      content: '.login-card .auth-error { font-size: 200%; }',
+    });
     await expect(page.getByLabel('Display name')).toHaveValue(longName);
     await expect(page.getByLabel('Email address', { exact: true })).toHaveValue(
       longEmail,
     );
     await page.evaluate(() => window.scrollTo(0, 0));
     const expandedCard = (await card.boundingBox())!;
-    expect(expandedCard.height).toBeGreaterThan(originalCard.height + 100);
+    expect(expandedCard.height).toBeGreaterThan(originalCard.height + 30);
     const expandedArtwork = (await artwork.boundingBox())!;
-    expect(Math.abs(expandedArtwork.y - originalArtwork.y)).toBeLessThanOrEqual(
-      1,
-    );
     expect(
       Math.abs(expandedArtwork.height - originalArtwork.height),
     ).toBeLessThanOrEqual(1);
@@ -286,9 +330,18 @@ for (const width of [320, 768, 901, 1024, 1440, 1920]) {
     const copy = (await page.locator('.login-visual-copy').boundingBox())!;
     const image = (await page.locator('.login-visual-art').boundingBox())!;
     const panel = (await page.locator('.login-panel').boundingBox())!;
-    if (width > 900) {
+    if (width >= 768) {
       expect(image.y).toBeGreaterThanOrEqual(copy.y + copy.height);
       expect(image.x + image.width).toBeLessThanOrEqual(panel.x);
+      const visual = (await page.locator('.login-visual').boundingBox())!;
+      expect(
+        Math.abs(
+          visual.y +
+            visual.height / 2 -
+            expandedCard.y -
+            expandedCard.height / 2,
+        ),
+      ).toBeLessThanOrEqual(1);
     } else {
       expect(panel.y).toBeGreaterThanOrEqual(copy.y + copy.height);
       expect(panel.y).toBeGreaterThanOrEqual(image.y + image.height);
@@ -341,7 +394,9 @@ test('pending sign-in names its action and recovers without losing input', async
   } finally {
     release();
   }
-  await expect(page.getByRole('alert')).toHaveText('Invalid email or password');
+  await expect(page.getByRole('alert')).toHaveText(
+    /Check your email and password/,
+  );
   await expect(page.getByLabel('Email address', { exact: true })).toHaveValue(
     'person@example.test',
   );
@@ -426,7 +481,7 @@ test('recovery preserves the email through an error and a successful retry', asy
   await email.fill('person@example.test');
   await page.getByRole('button', { name: 'Request reset link' }).click();
   await expect(page.getByRole('alert')).toHaveText(
-    'Recovery temporarily unavailable',
+    /Could not confirm the result/,
   );
   await expect(email).toHaveValue('person@example.test');
   await page.getByRole('button', { name: 'Request reset link' }).click();

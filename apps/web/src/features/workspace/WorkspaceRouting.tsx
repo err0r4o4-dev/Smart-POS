@@ -71,7 +71,8 @@ export function WorkspaceAreaGate() {
   ) {
     if (tenant.loading)
       return <Loading>{t('workspace.checkingManagementWorkspace')}</Loading>;
-    if (tenant.errorCode === 'MFA_REQUIRED') return <MFARequiredState />;
+    if (tenant.errorCode === 'MFA_REQUIRED')
+      return <MFARequiredState accountPage />;
     if (tenant.error)
       return (
         <ErrorState

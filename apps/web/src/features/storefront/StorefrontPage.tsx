@@ -1,7 +1,6 @@
 import { useLanguage } from '../../app/language';
 import { useId, useMemo, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowRight,
   ChevronDown,
@@ -15,31 +14,12 @@ import {
   Zap,
 } from 'lucide-react';
 import { Card, Loading, Tag } from '../../components/ui/primitives';
-import {
-  storefrontRequest,
-  type ShopDirectoryEntry,
-} from '../../lib/storefront-api';
 import { ShopCatalog } from './ShopCatalog';
 import { ShopError } from './shop-feedback';
+import { businessTypeLabel, normalizeBusinessType } from './business-type';
+import { useShopDirectory } from './useShopDirectory';
 export { ShopError, ShopPagination } from './shop-feedback';
 import './storefront.css';
-
-function normalizeBusinessType(type: string | undefined) {
-  return type?.trim().toUpperCase() ?? '';
-}
-
-function businessTypeLabel(type: string, language: string) {
-  const labels: Record<string, [string, string]> = {
-    RESTAURANT: ['ร้านอาหาร', 'Restaurant'],
-    CAFE: ['คาเฟ่', 'Cafe'],
-    BAKERY: ['เบเกอรี่', 'Bakery'],
-    FAST_FOOD: ['ฟาสต์ฟู้ด', 'Fast food'],
-    BAR: ['บาร์', 'Bar'],
-    RETAIL: ['ร้านค้าปลีก', 'Retail'],
-    '': ['ไม่ระบุประเภท', 'Unspecified'],
-  };
-  return labels[type]?.[language === 'th' ? 0 : 1] ?? type;
-}
 
 export function StorefrontPage() {
   const { slug } = useParams();
@@ -47,24 +27,19 @@ export function StorefrontPage() {
 }
 function ShopEntry() {
   const { t, language } = useLanguage();
-  const [search, setSearch] = useState('');
+  const [searchParams] = useSearchParams();
+  const showCarts = searchParams.get('view') === 'cart';
+  const [search, setSearch] = useState(() => searchParams.get('q') ?? '');
   const [view, setView] = useState<'list' | 'grid'>('list');
   const [categoriesOpen, setCategoriesOpen] = useState(false);
-  const [businessType, setBusinessType] = useState<string | null>(null);
+  const [businessType, setBusinessType] = useState<string | null>(() => {
+    const type = searchParams.get('type');
+    return type === null ? null : normalizeBusinessType(type);
+  });
   const categoryToggle = useRef<HTMLButtonElement>(null);
   const categoryPanelId = useId();
 
-  const shops = useQuery({
-    queryKey: ['storefront-directory'],
-    queryFn: async ({ signal }) => {
-      const items = await storefrontRequest<ShopDirectoryEntry[]>('', {
-        signal,
-        storeMode: () => {},
-      });
-      return items;
-    },
-    retry: false,
-  });
+  const shops = useShopDirectory();
 
   const businessTypes = useMemo(
     () =>
@@ -99,12 +74,14 @@ function ShopEntry() {
             {language === 'th' ? 'ร้านค้าออนไลน์' : 'Online stores'}
           </span>
           <h1 id="storefront-title" tabIndex={-1}>
-            {t('landing.onlineStorefront')}
+            {t(showCarts ? 'landing.cart' : 'landing.onlineStorefront')}
           </h1>
           <p>
-            {language === 'th'
-              ? 'เลือกค้นหาร้านอาหารที่คุณต้องการ และเริ่มสั่งซื้อได้ทันที'
-              : 'Choose a restaurant and start your order.'}
+            {showCarts
+              ? t('landing.chooseCartStore')
+              : language === 'th'
+                ? 'เลือกค้นหาร้านอาหารที่คุณต้องการ และเริ่มสั่งซื้อได้ทันที'
+                : 'Choose a restaurant and start your order.'}
           </p>
           <ul className="shop-directory-benefits">
             <li>
@@ -268,14 +245,24 @@ function ShopEntry() {
                           : t('storefront.notAcceptingOrders')}
                       </Tag>
                     </div>
-                    <a
-                      className="button"
-                      href={`/shop/${encodeURIComponent(shop.slug)}`}
-                      aria-disabled={!shop.accepting_orders}
-                    >
-                      {t('storefront.viewStore')}
-                      <ArrowRight size={23} aria-hidden="true" />
-                    </a>
+                    {showCarts ? (
+                      <Link
+                        className="button"
+                        to={`/shop/${encodeURIComponent(shop.slug)}/cart`}
+                      >
+                        {t('landing.viewCart')}
+                        <ArrowRight size={23} aria-hidden="true" />
+                      </Link>
+                    ) : (
+                      <a
+                        className="button"
+                        href={`/shop/${encodeURIComponent(shop.slug)}`}
+                        aria-disabled={!shop.accepting_orders}
+                      >
+                        {t('storefront.viewStore')}
+                        <ArrowRight size={23} aria-hidden="true" />
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>

@@ -72,7 +72,7 @@ async function mockUI(page: Page, role: 'OWNER' | 'CASHIER' | null = null) {
         ],
         permissions,
       };
-    else if (path === '/api/v1/storefront/shops') data = [];
+    else if (path === '/api/v1/storefronts') data = [];
     return route.fulfill({ json: { data } });
   });
   return writes;
@@ -87,12 +87,15 @@ for (const width of [320, 375, 768, 1440]) {
     page.on('pageerror', (error) => errors.push(error.message));
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/');
+    await page.locator('.landing-header').waitFor();
+    const menu = page.getByRole('button', { name: 'เมนู', exact: true });
+    if (await menu.isVisible()) await menu.click();
     const english = page.getByRole('button', { name: 'English', exact: true });
     await expect(english).toBeVisible();
     await english.click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
     await expect(page.getByRole('heading', { level: 1 })).toContainText(
-      'Simplify your store',
+      'Find restaurants in your community',
     );
     await expect(
       page.getByRole('link', { name: 'Sign in', exact: true }),

@@ -1,4 +1,4 @@
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import {
   LandingPage,
   StorefrontPage,
@@ -69,8 +69,27 @@ function PaymentSandboxRedirect() {
   return <Navigate to={`${paths.paymentSettings}${search}${hash}`} replace />;
 }
 
+function ScrollToPublicSection({ id }: { id: string }) {
+  const { hash } = useLocation();
+
+  useEffect(() => {
+    // The browser can process the fragment before the lazy page has mounted.
+    if (hash === `#${id}`) document.getElementById(id)?.scrollIntoView();
+  }, [hash, id]);
+
+  return null;
+}
+
 const routes: RouteObject[] = [
-  { path: '/', element: <LandingPage /> },
+  {
+    path: '/',
+    element: (
+      <>
+        <LandingPage />
+        <ScrollToPublicSection id="for-merchants" />
+      </>
+    ),
+  },
   {
     path: paths.shop,
     element: <StorefrontLayout />,
@@ -94,7 +113,15 @@ const routes: RouteObject[] = [
       {
         element: <RoleWorkspaceLayout />,
         children: [
-          { path: paths.help, element: <HelpPage /> },
+          {
+            path: paths.help,
+            element: (
+              <>
+                <HelpPage />
+                <ScrollToPublicSection id="help-support" />
+              </>
+            ),
+          },
           {
             element: <RequireSession />,
             children: [

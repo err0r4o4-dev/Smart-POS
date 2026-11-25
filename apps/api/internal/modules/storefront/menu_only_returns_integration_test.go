@@ -211,9 +211,8 @@ func menuOnlyReturnsAcceptance(test *testing.T, ctx context.Context, organizatio
 		test.Helper()
 		return responseData(test, serve(newRequest(test, session, path, key, payload)), path, status)
 	}
-	expiredReturnsHTTP := func(t *testing.T, path, key string, payload any, prefix string) {
+	expiredReturnsRequest := func(t *testing.T, request *http.Request, prefix string) {
 		t.Helper()
-		request := newRequest(t, session, path, key, payload)
 		catalogReadInterrupted(t, ctx, organizations.Pool, session, prefix, 1, false,
 			func(requestContext context.Context, traced *catalog.Service) (any, error) {
 				tracedRouter := chi.NewRouter()
@@ -233,6 +232,10 @@ func menuOnlyReturnsAcceptance(test *testing.T, ctx context.Context, organizatio
 				}
 				return false, identity.ErrInvalidToken
 			}, true)
+	}
+	expiredReturnsHTTP := func(t *testing.T, path, key string, payload any, prefix string) {
+		t.Helper()
+		expiredReturnsRequest(t, newRequest(t, session, path, key, payload), prefix)
 	}
 	input := returns.CreateInput{SaleID: saleID, Reason: "Menu return", Items: []returns.LineInput{{SaleItemID: originalItem, Quantity: "1.000", Disposition: "RESTOCK", Destination: &shop.LocationID}}}
 	createKey := key()
@@ -588,9 +591,57 @@ func menuOnlyReturnsAcceptance(test *testing.T, ctx context.Context, organizatio
 		test.Fatalf("rolled back exchange advanced: status=%s revision=%d sale=%t", current.Status, current.Revision, current.ReplacementSaleID != "")
 	}
 	exchangePath := "/exchanges/" + exchange.ID + "/complete"
+	readExchange := func(t *testing.T) [6]string {
+		t.Helper()
+		tx, _, err := organizations.Authorized(ctx, owner, org, "pos.checkout")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer tx.Rollback(ctx)
+		var state [6]string
+		err = tx.QueryRow(ctx, `SELECT to_jsonb(a)::text,to_jsonb(r)::text,
+			COALESCE((SELECT jsonb_agg(to_jsonb(e) ORDER BY e.id)::text FROM adjustment_settlement_events e WHERE e.organization_id=a.organization_id AND e.adjustment_id=a.id), '[]'),
+			COALESCE((SELECT jsonb_agg(to_jsonb(x) ORDER BY x.id)::text FROM organization_audit_events x WHERE x.organization_id=a.organization_id AND x.object_id=a.id AND x.event_type='adjustments.complete'), '[]'),
+			COALESCE((SELECT jsonb_agg(to_jsonb(s) ORDER BY s.id)::text FROM sales s JOIN pos_checkouts c ON c.organization_id=s.organization_id AND c.id=s.checkout_id WHERE c.organization_id=a.organization_id AND c.adjustment_id=a.id), '[]'),
+			COALESCE((SELECT to_jsonb(o)::text FROM inventory_operations o WHERE o.organization_id=a.organization_id AND o.actor_id=$3 AND o.operation='adjustment.EXCHANGE.complete' AND o.idempotency_key=$4), 'null')
+			FROM sale_adjustments a JOIN customer_returns r ON r.organization_id=a.organization_id AND r.id=a.linked_return_id
+			WHERE a.organization_id=$1 AND a.id=$2`, org, exchange.ID, owner, completeKey).
+			Scan(&state[0], &state[1], &state[2], &state[3], &state[4], &state[5])
+		if err != nil {
+			t.Fatal(err)
+		}
+		return state
+	}
+	if !test.Run("exchange completion HTTP expires after audit insert", func(t *testing.T) {
+		before := readExchange(t)
+		if before[3] != "[]" || before[4] != "[]" || before[5] != "null" {
+			t.Fatal("uncompleted exchange already has completion records")
+		}
+		expiredReturnsHTTP(t, exchangePath, completeKey, completeInput, "INSERT INTO organization_audit_events")
+		if readExchange(t) != before {
+			t.Fatal("expired HTTP exchange completion changed persisted state before retry")
+		}
+	}) {
+		return
+	}
 	completedExchange := post(test, exchangePath, completeKey, completeInput, http.StatusOK)
 	exchange = decode(completedExchange, nil)
+	completedState := readExchange(test)
+	if completedState[3] == "[]" || completedState[4] == "[]" || completedState[5] == "null" {
+		test.Fatal("completed exchange is missing completion records")
+	}
+	if !test.Run("exchange completion HTTP expires after replay lookup", func(t *testing.T) {
+		expiredReturnsHTTP(t, exchangePath, completeKey, completeInput, "SELECT id::text,fingerprint,result FROM inventory_operations")
+		if readExchange(t) != completedState {
+			t.Fatal("expired HTTP exchange replay changed persisted state before retry")
+		}
+	}) {
+		return
+	}
 	replayedExchange := post(test, exchangePath, completeKey, completeInput, http.StatusOK)
+	if readExchange(test) != completedState {
+		test.Fatal("authorized HTTP exchange replay changed persisted state")
+	}
 	decodeJSON := func(raw json.RawMessage) any {
 		test.Helper()
 		decoder := json.NewDecoder(bytes.NewReader(raw))
@@ -639,12 +690,14 @@ func menuOnlyReturnsAcceptance(test *testing.T, ctx context.Context, organizatio
 	if err != nil || linkedMovements != 0 || replacementSales != 1 || exchangeRefunds != 0 || originalReturned != "1.000" || exchangeReturned != "1.000" {
 		test.Fatalf("persisted exchange/returns: movements=%d replacements=%d refunds=%d quantities=%s,%s: %v", linkedMovements, replacementSales, exchangeRefunds, originalReturned, exchangeReturned, err)
 	}
+	var seededVoid string
 	test.Run("void posting failure preserves reconciliation and allows forward recovery", func(t *testing.T) {
 		input := returns.AdjustmentInput{CreateInput: returns.CreateInput{
 			SaleID: exchange.ReplacementSaleID, Reason: "Menu void",
 			Items: []returns.LineInput{{SaleItemID: saleItem(exchange.ReplacementSaleID), Quantity: "1.000", Disposition: "NO_STOCK_RETURN"}},
 		}}
 		doc := decode(post(t, "/sales/voids", key(), input, http.StatusCreated), nil)
+		seededVoid = doc.ID
 		voidPath := "/sales/voids/" + doc.ID
 		for _, action := range []string{"submit", "approve"} {
 			doc = decode(post(t, voidPath+"/"+action, key(), returns.SettlementInput{Revision: doc.Revision}, http.StatusOK), nil)
@@ -672,10 +725,138 @@ func menuOnlyReturnsAcceptance(test *testing.T, ctx context.Context, organizatio
 		if replay.Status != recovery.Status || replay.Revision != recovery.Revision {
 			t.Fatalf("reconciliation replay changed: state=%s revision=%d", replay.Status, replay.Revision)
 		}
-		completed := decode(post(t, voidPath+"/complete", key(), returns.SettlementInput{Revision: recovery.Revision}, http.StatusOK), nil)
+		completionKey := key()
+		completionInput := returns.SettlementInput{Revision: recovery.Revision}
+		readVoid := func() [7]string {
+			t.Helper()
+			tx, _, err := organizations.Authorized(ctx, owner, org, "pos.checkout")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer tx.Rollback(ctx)
+			var state [7]string
+			err = tx.QueryRow(ctx, `SELECT to_jsonb(a)::text, to_jsonb(r)::text,
+				COALESCE((SELECT jsonb_agg(to_jsonb(f) ORDER BY f.id)::text FROM customer_refunds f WHERE f.organization_id=r.organization_id AND f.return_id=r.id), '[]'),
+				COALESCE((SELECT jsonb_agg(to_jsonb(e) ORDER BY e.id)::text FROM refund_settlement_events e JOIN customer_refunds f ON f.organization_id=e.organization_id AND f.id=e.refund_id WHERE f.organization_id=r.organization_id AND f.return_id=r.id), '[]'),
+				COALESCE((SELECT jsonb_agg(to_jsonb(e) ORDER BY e.id)::text FROM adjustment_settlement_events e WHERE e.organization_id=a.organization_id AND e.adjustment_id=a.id), '[]'),
+				COALESCE((SELECT jsonb_agg(to_jsonb(x) ORDER BY x.id)::text FROM organization_audit_events x WHERE x.organization_id=a.organization_id AND x.object_id=a.id AND x.event_type='adjustments.complete'), '[]'),
+				COALESCE((SELECT to_jsonb(o)::text FROM inventory_operations o WHERE o.organization_id=a.organization_id AND o.actor_id=$3 AND o.operation='adjustment.REVERSAL.complete' AND o.idempotency_key=$4), 'null')
+				FROM sale_adjustments a JOIN customer_returns r ON r.organization_id=a.organization_id AND r.id=a.linked_return_id
+				WHERE a.organization_id=$1 AND a.id=$2`, org, doc.ID, owner, completionKey).
+				Scan(&state[0], &state[1], &state[2], &state[3], &state[4], &state[5], &state[6])
+			if err != nil {
+				t.Fatal(err)
+			}
+			return state
+		}
+		before := readVoid()
+		// The failed posting already recorded an adjustments.complete audit for reconciliation.
+		if before[2] != "[]" || before[3] != "[]" || before[5] == "[]" || before[6] != "null" {
+			t.Fatal("void awaiting recovery already has completion records")
+		}
+		expiredReturnsHTTP(t, voidPath+"/complete", completionKey, completionInput, "INSERT INTO organization_audit_events")
+		if readVoid() != before {
+			t.Fatal("expired HTTP void completion changed persisted state before retry")
+		}
+		completedData := post(t, voidPath+"/complete", completionKey, completionInput, http.StatusOK)
+		completed := decode(completedData, nil)
 		linked = decode(service.Get(ctx, owner, org, "returns", doc.ReturnID))
 		if completed.Status != "COMPLETED" || linked.Status != "COMPLETED" || linked.RefundID == "" {
 			t.Fatalf("void recovery did not complete: state=%s return=%s refund=%t", completed.Status, linked.Status, linked.RefundID != "")
+		}
+		committed := readVoid()
+		if committed[2] == "[]" || committed[3] == "[]" || committed[5] == before[5] || committed[6] == "null" {
+			t.Fatal("completed void is missing settlement or completion records")
+		}
+		expiredReturnsHTTP(t, voidPath+"/complete", completionKey, completionInput, "SELECT id::text,fingerprint,result FROM inventory_operations")
+		if readVoid() != committed {
+			t.Fatal("expired HTTP void replay changed persisted state before retry")
+		}
+		replayedData := post(t, voidPath+"/complete", completionKey, completionInput, http.StatusOK)
+		if !reflect.DeepEqual(decodeJSON(completedData), decodeJSON(replayedData)) || readVoid() != committed {
+			t.Fatal("authorized HTTP void replay changed the result or persisted state")
+		}
+	})
+	test.Run("Returns HTTP reads expire after projection", func(t *testing.T) {
+		newRead := func(t *testing.T, path string) *http.Request {
+			t.Helper()
+			req := httptest.NewRequest(http.MethodGet, "/organizations/"+org+path, nil)
+			req.AddCookie(&http.Cookie{Name: "smartpos_session", Value: session.Token})
+			return req.WithContext(t.Context())
+		}
+		listIDs := func(t *testing.T, path string) []string {
+			t.Helper()
+			var page struct {
+				Items []struct {
+					ID string `json:"id"`
+				} `json:"items"`
+				Total int `json:"total"`
+			}
+			if err := json.Unmarshal(responseData(t, serve(newRead(t, path)), path, http.StatusOK), &page); err != nil || len(page.Items) == 0 || page.Total < len(page.Items) {
+				t.Fatalf("seeded HTTP list %s: items=%d total=%d err=%v", path, len(page.Items), page.Total, err)
+			}
+			ids := make([]string, len(page.Items))
+			for index, item := range page.Items {
+				ids[index] = item.ID
+			}
+			return ids
+		}
+		contains := func(ids []string, id string) bool {
+			for _, candidate := range ids {
+				if candidate == id {
+					return true
+				}
+			}
+			return false
+		}
+		if seededVoid == "" {
+			t.Fatal("void fixture was not created")
+		}
+		for path, want := range map[string]struct{ include, exclude []string }{
+			"/returns":     {[]string{doc.ID, exchange.ReturnID}, nil},
+			"/refunds":     {[]string{refund.ID}, nil},
+			"/exchanges":   {[]string{exchange.ID}, []string{seededVoid}},
+			"/sales/voids": {[]string{seededVoid}, []string{exchange.ID}},
+		} {
+			ids := listIDs(t, path)
+			for _, id := range want.include {
+				if !contains(ids, id) {
+					t.Fatalf("seeded HTTP list %s is missing %s", path, id)
+				}
+			}
+			for _, id := range want.exclude {
+				if contains(ids, id) {
+					t.Fatalf("seeded HTTP list %s includes another adjustment kind %s", path, id)
+				}
+			}
+		}
+		const (
+			returnProjection     = "SELECT to_jsonb(doc)||jsonb_build_object('amount',doc.amount::text,'items'"
+			adjustmentProjection = "WITH matched AS (SELECT to_jsonb(doc)||jsonb_build_object('return_credit'"
+		)
+		for _, read := range []struct{ name, path, id, prefix string }{
+			{"returns list", "/returns", "", "WITH matched AS (SELECT to_jsonb(doc)||jsonb_build_object('amount'"},
+			{"refunds list", "/refunds", "", "WITH matched AS (SELECT to_jsonb(refund)"},
+			{"exchanges list", "/exchanges", "", adjustmentProjection},
+			{"voids list", "/sales/voids", "", adjustmentProjection},
+			{"return detail", "/returns/" + doc.ID, doc.ID, returnProjection},
+			{"refund detail", "/refunds/" + refund.ID, refund.ID, "SELECT to_jsonb(refund)||jsonb_build_object('amount'"},
+			// Adjustment details finish by projecting the linked return document.
+			{"exchange detail", "/exchanges/" + exchange.ID, exchange.ID, returnProjection},
+			{"void detail", "/sales/voids/" + seededVoid, seededVoid, returnProjection},
+			{"returnable sale", "/returns/sales/" + saleID, saleID, "SELECT jsonb_build_object('id',sale.id"},
+		} {
+			t.Run(read.name, func(t *testing.T) {
+				if read.id != "" {
+					var detail struct {
+						ID string `json:"id"`
+					}
+					if err := json.Unmarshal(responseData(t, serve(newRead(t, read.path)), read.path, http.StatusOK), &detail); err != nil || detail.ID != read.id {
+						t.Fatalf("seeded HTTP detail %s: id=%q err=%v", read.path, detail.ID, err)
+					}
+				}
+				expiredReturnsRequest(t, newRead(t, read.path), read.prefix)
+			})
 		}
 	})
 	test.Run("first cash refund confirmation commits before waiting logout", func(t *testing.T) {

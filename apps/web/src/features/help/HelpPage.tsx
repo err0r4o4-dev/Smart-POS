@@ -410,7 +410,11 @@ export function HelpPage() {
       )}
 
       {/* Support Card */}
-      <aside className="help-support-card" aria-label={t('help.supportTitle')}>
+      <aside
+        id="help-support"
+        className="help-support-card"
+        aria-label={t('help.supportTitle')}
+      >
         <div className="help-support-left">
           <div className="help-support-icon" aria-hidden="true">
             <LifeBuoy size={26} />

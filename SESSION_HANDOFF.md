@@ -1,5 +1,94 @@
 # SESSION HANDOFF BRIEF
 
+Handoff ID: HND-20261125-022537
+Timestamp: 2026-11-25T02:25:37+07:00 (Asia/Bangkok)
+Branch/Workspace: feature/fix-system- | D:\!Project\smartPOS(Web_Application)
+HEAD: 9b41cd7822e2e98363f8e6a204ace3a0f746e0bd
+
+## 1. Objective And Authorization
+
+Complete the VELOPOS migration across all 92 approved requirements. Use
+`specs/velopos-migration/tasks.md` as the tracker and read its
+`approved-requirements.md`, `requirements.md`, and `design.md` siblings.
+Goal is **paused** by user request; this handoff does not resume it. No
+reduced release or cutover is authorized. Preserve the separate Account
+redesign worktree changes and root `TODO.md`.
+
+## 2. Completed And Verified Work
+
+Prior-session evidence, recorded in the tracker under T5.2/T5.4:
+
+- Purchasing receipt posting and supplier-return dispatch: schema 49,
+  `check-db.mjs inventory-read`, `inventory-read-1795536028373.log`.
+  Exit 0, 593 PASS including parent entries, 0 FAIL/SKIP, cleanup verified.
+  At the tested audit and replay lookup points, expired authority returned
+  `401 UNAUTHENTICATED`, `Cache-Control: no-store`, and no data. Readbacks
+  verified rollback, same-key retry, and replay without duplicate effects.
+- Returns HTTP checkpoints cover menu-only return completion, cash refund
+  confirmation, equal-value exchange completion, and void completion after
+  reconciliation. State was checked immediately after denial and before
+  retry. An authorized same-key retry completed once; replay added no
+  effects. The latest isolated schema-49 `check-db.mjs returns-read` run,
+  `returns-read-1795544189732.log`, exited 0 with 343 PASS including parent
+  entries, 0 FAIL/SKIP; the task-owned container and network were removed.
+- Scoped independent review found no actionable findings on the latest Void
+  delta. Prior targeted `go test` and `go vet` for Returns and Storefront
+  passed. This handoff does not rerun application or database checks.
+
+Latest VELOPOS changes are in
+`apps/api/internal/modules/storefront/menu_only_returns_integration_test.go`
+and `specs/velopos-migration/tasks.md`. The latest change adds test coverage
+and records evidence.
+
+## 3. Pending Work
+
+T1.3 and the migration remain open. The next slice is the Returns HTTP list:
+verify the existing authority contract when the session expires after a
+projection reads seeded records. Expect `401 UNAUTHENTICATED`, `no-store`,
+and no returned data. Existing coverage tests the service at that point
+and HTTP denial at entry. Discovery only for this follow-up: no edits or tests.
+
+## 4. Verified Decisions
+
+Google plus email/password, with TOTP and single-use recovery codes for
+privileged accounts. Sensitive actions require primary authentication plus
+TOTP within five minutes. Keep B12 manual recovery disabled until loss of
+both TOTP and all recovery codes has an approved process; do not collect
+personal evidence. Live Google `auth_time`, Dine-in session policy, B14
+saved cart/quota, B16 bulk import, and PromptPay provider/policy remain open.
+Start other listed tasks only when their dependencies are satisfied.
+
+## 5. Known Failures And Limits
+
+`returns-read-1795544096847.log` stopped at a fixture assertion. Entry into
+reconciliation had already written an `adjustments.complete` audit. The
+corrected run captured it in the baseline and verified the denial did not
+change it. The recorded checks do not cover expiry during physical COMMIT,
+every route, or full release readiness.
+
+## 6. Resume Boundary
+
+Wait for the user to resume Goal. Then inspect the Returns HTTP list and
+reuse the fixture and SQL trace in `returns_read_mfa_integration_test.go`
+or `menu_only_returns_integration_test.go`. Run the focused
+`check-db.mjs returns-read` from `.local/velopos-pickup-20261122` only on
+the confirmed isolated disposable WSL `Studio-Acceptance` target through
+the supported approval path. Obtain independent review of the new slice.
+The existing reviewer authorization is limited to relevant redacted MFA
+and permission evidence, with no shell, network, direct file reads,
+writes, or delegation. Do not stage, commit, push, deploy, alter primary
+or retained databases, grant real Admin access, or use external services
+without exact authorization.
+
+---
+
+# HISTORICAL BRIEF - SUPERSEDED
+
+The previous handoff and its history follow unchanged. Their statuses and
+next actions are historical.
+
+# SESSION HANDOFF BRIEF
+
 Handoff ID: HND-20261123-214500
 Timestamp: 2026-11-23T21:45:00+07:00 (Asia/Bangkok)
 Branch/Workspace: feature/fix-system- | D:\!Project\smartPOS(Web_Application)

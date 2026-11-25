@@ -3,6 +3,7 @@ import { defineMessages } from './defineMessages';
 export const mfa = defineMessages({
   th: {
     requiredTitle: 'ต้องยืนยัน MFA',
+    goToVerification: 'ไปยืนยัน MFA',
     creationUnknown:
       'ยังไม่ทราบผลการสร้างร้าน ตรวจร้านของคุณก่อน หรือส่งซ้ำด้วยข้อมูลเดิมในแท็บนี้ ห้ามเริ่มคำขอใหม่หรือปิดแท็บนี้จนกว่าจะทราบผล',
     requiredHelp:
@@ -26,6 +27,12 @@ export const mfa = defineMessages({
     enabled: 'เปิดใช้ MFA แล้ว',
     verified: 'ยืนยัน MFA สำหรับเซสชันนี้แล้ว',
     challenge: 'ยืนยันด้วยรหัสจากแอปเพื่อใช้งานในเซสชันนี้',
+    qrHelp:
+      'สแกนคิวอาร์โค้ดนี้ด้วยแอปยืนยันตัวตน เช่น Google Authenticator หรือ Microsoft Authenticator แล้วกรอกรหัส 6 หลักที่แอปแสดง',
+    qrLabel: 'คิวอาร์โค้ดสำหรับตั้งค่าแอปยืนยันตัวตน',
+    manualKey: 'สแกนไม่ได้? ใส่คีย์เอง',
+    staleSignin:
+      'ต้องเริ่มตั้งค่าภายใน 5 นาทีหลังเข้าสู่ระบบ กรุณาเข้าสู่ระบบอีกครั้ง แล้วระบบจะพากลับมาหน้านี้เพื่อตั้งค่าต่อ',
     key: 'คีย์ตั้งค่าแอปยืนยันตัวตน',
     keyHelp:
       'ในแอปยืนยันตัวตน เลือกป้อนคีย์เอง และใช้รหัสตามเวลา 6 หลักที่เปลี่ยนทุก 30 วินาที เก็บคีย์นี้เป็นความลับ',
@@ -80,6 +87,7 @@ export const mfa = defineMessages({
   },
   en: {
     requiredTitle: 'MFA verification required',
+    goToVerification: 'Go to MFA verification',
     creationUnknown:
       'The creation outcome is unknown. Check your stores, or retry the same details in this tab. Keep this tab open and avoid starting a new request until the outcome is known.',
     requiredHelp:
@@ -103,6 +111,12 @@ export const mfa = defineMessages({
     enabled: 'MFA is enabled',
     verified: 'MFA verified for this session',
     challenge: 'Enter a code from your authenticator for this session.',
+    qrHelp:
+      'Scan this QR code with an authenticator app such as Google Authenticator or Microsoft Authenticator, then enter the six-digit code it shows.',
+    qrLabel: 'QR code for setting up your authenticator app',
+    manualKey: "Can't scan? Enter the key manually",
+    staleSignin:
+      'Setup must start within 5 minutes of signing in. Sign in again and you will return here to continue setup.',
     key: 'Authenticator setup key',
     keyHelp:
       'In your authenticator, choose manual key entry and time-based, six-digit codes changing every 30 seconds. Keep this key private.',

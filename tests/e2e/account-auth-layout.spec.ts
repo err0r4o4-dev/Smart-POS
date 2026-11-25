@@ -144,17 +144,20 @@ for (const width of [320, 700, 701, 1440]) {
       await page.getByRole('button', { name: 'ไทย', exact: true }).click();
       await page.evaluate(() => document.fonts.ready);
       const header = page.getByRole('banner');
-      await expect(header.getByRole('link', { name: /VELO/ })).toBeVisible();
-      const home = page.getByRole('link', {
-        name: 'กลับหน้าหลัก',
-        exact: true,
-      });
+      const brand = header.getByRole('link', { name: /VELO/ });
+      await expect(brand).toBeVisible();
+      const home =
+        path === '/login'
+          ? brand
+          : page.getByRole('link', { name: 'กลับหน้าหลัก', exact: true });
       await expect(home).toHaveAttribute('href', '/');
-      const headerBounds = await header.boundingBox();
-      const homeBounds = await home.boundingBox();
-      expect(homeBounds!.y).toBeGreaterThanOrEqual(
-        headerBounds!.y + headerBounds!.height,
-      );
+      if (path !== '/login') {
+        const headerBounds = await header.boundingBox();
+        const homeBounds = await home.boundingBox();
+        expect(homeBounds!.y).toBeGreaterThanOrEqual(
+          headerBounds!.y + headerBounds!.height,
+        );
+      }
       await home.focus();
       await page.keyboard.press('Shift+Tab');
       await page.keyboard.press('Tab');

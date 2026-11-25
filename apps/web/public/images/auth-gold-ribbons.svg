@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 800" preserveAspectRatio="none" fill="none">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+      <stop stop-color="#ffc64a" stop-opacity=".63"/>
+      <stop offset="1" stop-color="#ffe9b4" stop-opacity=".38"/>
+    </linearGradient>
+  </defs>
+  <path d="M0 309c125 67 47 137 167 180 120 43 113 161 270 213 64 21 125 57 160 98H0Z" fill="url(#gold)"/>
+  <path d="M0 548c63 37 41 90 156 137 88 35 71 79 206 115H0Z" fill="#ffbd3a" opacity=".2"/>
+  <path d="M1440 504c-86 82-51 202-179 229-64 13-103 38-129 67h308Z" fill="url(#gold)"/>
+  <path d="M1440 0c-85 25-116 67-141 118-15 29-40 61-90 78 117 3 178-51 231-107Z" fill="#ffe4a5" opacity=".52"/>
+</svg>

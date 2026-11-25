@@ -16,6 +16,69 @@ const recoveryCodes = Array.from(
   (_, i) => String.fromCharCode(65 + i) + 'A'.repeat(25),
 );
 
+for (const [width, path] of [
+  [390, '/setup'],
+  [1440, '/workspace'],
+] as const) {
+  test(`required MFA uses the account shell on ${path} at ${width}px`, async ({
+    page,
+  }, testInfo) => {
+    let verified = false;
+    await page.setViewportSize({ width, height: 900 });
+    await page.route('**/api/**', async (route) => {
+      const request = route.request();
+      switch (new URL(request.url()).pathname) {
+        case '/api/v1/auth/me':
+          return route.fulfill({ json: { data: session } });
+        case '/api/v1/organizations':
+          return verified
+            ? route.fulfill({ json: { data: [] } })
+            : route.fulfill({
+                status: 403,
+                json: {
+                  error: { code: 'MFA_REQUIRED', message: 'Verify MFA' },
+                },
+              });
+        case '/api/v1/auth/mfa':
+          return route.fulfill({
+            json: { data: { enabled: true, session_verified: verified } },
+          });
+        case '/api/v1/auth/mfa/challenge':
+          expect(request.postDataJSON()).toEqual({ code: '123456' });
+          verified = true;
+          return route.fulfill({ json: { data: { session_verified: true } } });
+        default:
+          return route.fulfill({ status: 503, json: {} });
+      }
+    });
+    await page.goto(path);
+    const banner = page.getByRole('banner');
+    await banner.getByRole('button', { name: 'English', exact: true }).click();
+    await expect(banner.getByRole('link')).toHaveAttribute('href', '/');
+    await expect(banner.getByRole('navigation')).toHaveCount(0);
+    await expect(page.getByRole('main')).toHaveCount(1);
+    const gate = page.getByRole('region', {
+      name: 'MFA verification required',
+    });
+    await expect(gate.getByRole('link')).toHaveCount(1);
+    const action = gate.getByRole('link', { name: 'Go to MFA verification' });
+    await expect(action).toBeVisible();
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+      .toBeLessThanOrEqual(width);
+    await page.screenshot({
+      path: testInfo.outputPath('mfa-required.png'),
+      fullPage: true,
+    });
+    await action.press('Enter');
+    await expect(page).toHaveURL(/\/security$/);
+    await page.getByRole('textbox', { name: 'Six-digit code' }).fill('123456');
+    await page.getByRole('button', { name: 'Verify code' }).click();
+    await expect(page).toHaveURL(/\/(workspace|setup)$/);
+    expect(verified).toBe(true);
+  });
+}
+
 for (const width of [360, 390, 768, 1280]) {
   test.describe(`Authenticator replacement at ${width}px`, () => {
     test.use({ viewport: { width, height: 900 }, hasTouch: width < 768 });
@@ -79,6 +142,8 @@ for (const width of [360, 390, 768, 1280]) {
           expect(request.postDataJSON()).toEqual({ code: '567890' });
           return route.fulfill({ json: { data: { session_verified: true } } });
         }
+        if (path === '/api/v1/organizations')
+          return route.fulfill({ json: { data: [] } });
         return route.fulfill({
           status: 503,
           json: { error: { message: 'Unconfigured synthetic boundary' } },
@@ -86,9 +151,15 @@ for (const width of [360, 390, 768, 1280]) {
       });
       await page.goto('/security');
       await page.getByRole('button', { name: 'English', exact: true }).click();
-      await page
-        .getByRole('button', { name: 'Use a recovery code' })
-        .press('Enter');
+      const recovery = page.getByRole('button', {
+        name: 'Use a recovery code',
+      });
+      const verify = page.getByRole('button', { name: 'Verify code' });
+      await expect(verify).toBeVisible();
+      expect((await verify.boundingBox())!.y).toBeLessThan(
+        (await recovery.boundingBox())!.y,
+      );
+      await recovery.press('Enter');
       const recoveryInput = page.getByRole('textbox', {
         name: 'Recovery code',
         exact: true,
@@ -103,9 +174,18 @@ for (const width of [360, 390, 768, 1280]) {
       expect(starts).toBe(0);
       await recoveryInput.fill(recoveryCodes[0]);
       await page.getByRole('button', { name: 'Set up replacement' }).click();
+      await expect(
+        page.getByRole('img', {
+          name: 'QR code for setting up your authenticator app',
+        }),
+      ).toBeVisible();
       const setupKey = page.getByRole('textbox', {
         name: 'Authenticator setup key',
       });
+      await expect(setupKey).toBeHidden();
+      await page
+        .getByText("Can't scan? Enter the key manually", { exact: true })
+        .click();
       await expect(setupKey).toBeVisible();
       await expect(setupKey).toHaveAccessibleDescription(
         /Keep this key private/,
@@ -156,9 +236,7 @@ for (const width of [360, 390, 768, 1280]) {
       await expect(page).toHaveURL(/\/security$/);
       await page.getByLabel('Six-digit code').fill('567890');
       await page.getByRole('button', { name: 'Verify code' }).click();
-      await expect(
-        page.getByText('MFA verified for this session'),
-      ).toBeVisible();
+      await expect(page).toHaveURL(/\/setup$/);
       expect(confirms).toBe(1);
     });
   });
@@ -182,7 +260,6 @@ async function fixture(
       return route.fulfill({ json: { data: { enabled: false } } });
     if (path === '/api/v1/auth/mfa') {
       if (failStatus) {
-        failStatus = false;
         return route.fulfill({
           status: 503,
           json: { error: { message: 'Synthetic unavailable' } },
@@ -215,13 +292,20 @@ async function fixture(
         json: { data: { recovery_codes: recoveryCodes } },
       });
     }
+    if (path === '/api/v1/organizations' && enabled)
+      return route.fulfill({ json: { data: [] } });
     // Unexpected requests never reach a live API, provider or database.
     return route.fulfill({
       status: 503,
       json: { error: { message: 'Unconfigured synthetic boundary' } },
     });
   });
-  return requests;
+  return {
+    requests,
+    restoreStatus: () => {
+      failStatus = false;
+    },
+  };
 }
 
 for (const width of [360, 1280]) {
@@ -293,7 +377,7 @@ for (const width of [360, 390, 768, 1280]) {
     test('renders bilingual setup and protects one-time codes', async ({
       page,
     }, info) => {
-      const requests = await fixture(page);
+      const { requests } = await fixture(page);
       await page.goto('/security');
       await expect(
         page.getByRole('heading', { name: 'ความปลอดภัยของบัญชี', exact: true }),
@@ -360,14 +444,12 @@ for (const width of [360, 390, 768, 1280]) {
           exact: true,
         })
         .check();
-      await page.getByRole('button', { name: 'Done', exact: true }).click();
-      await expect(page.locator('.mfa-recovery-codes')).toHaveCount(0);
-      await expect(
-        page.getByText('MFA is enabled', { exact: true }),
-      ).toBeVisible();
       expect(requests.some((path) => path.includes('/organizations'))).toBe(
         false,
       );
+      await page.getByRole('button', { name: 'Done', exact: true }).click();
+      await expect(page).toHaveURL(/\/setup$/);
+      await expect(page.locator('.mfa-recovery-codes')).toHaveCount(0);
     });
   });
 }
@@ -375,16 +457,20 @@ for (const width of [360, 390, 768, 1280]) {
 test('recovers dependency failure and a lost successful confirmation without retrying the mutation', async ({
   page,
 }, info) => {
-  const requests = await fixture(page, true, true);
+  const { requests, restoreStatus } = await fixture(page, true, true);
   await page.goto('/security');
   await page.getByRole('button', { name: 'English', exact: true }).click();
+  const retry = page.getByRole('button', {
+    name: 'Check status again',
+    exact: true,
+  });
+  await expect(retry).toBeVisible();
   await page.screenshot({
     path: info.outputPath('mfa-unavailable.png'),
     fullPage: true,
   });
-  await page
-    .getByRole('button', { name: 'Check status again', exact: true })
-    .click();
+  restoreStatus();
+  await retry.click();
   await page
     .getByRole('button', { name: 'Set up authenticator', exact: true })
     .click();

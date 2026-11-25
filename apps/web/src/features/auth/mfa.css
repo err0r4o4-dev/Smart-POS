@@ -29,6 +29,22 @@
   white-space: normal;
   height: auto;
 }
+
+.mfa-panel .mfa-secondary-action {
+  border: 1px solid var(--primary-border);
+  background: var(--primary-subtle);
+  color: var(--primary-strong);
+}
+
+.mfa-panel .mfa-secondary-action:hover:not(:disabled) {
+  background: var(--primary-soft);
+}
+
+.mfa-panel #mfa-code {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.28em;
+  font-weight: 700;
+}
 .mfa-enrollment {
   display: grid;
   gap: var(--space-3);
@@ -44,11 +60,44 @@
   resize: vertical;
   word-break: break-all;
 }
+.mfa-qr {
+  justify-self: center;
+  padding: var(--space-2);
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  max-width: 100%;
+}
+.mfa-qr svg {
+  max-width: 100%;
+  height: auto;
+}
+.mfa-manual-key {
+  display: grid;
+  gap: var(--space-2);
+}
+.mfa-manual-key summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: var(--primary-strong);
+  font-weight: 600;
+}
+.mfa-manual-key[open] {
+  display: grid;
+  gap: var(--space-2);
+}
+.mfa-stale {
+  display: grid;
+  gap: var(--space-3);
+}
 .mfa-recovery-codes {
   list-style: none;
   padding: 0;
   display: grid;
   gap: var(--space-2);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
 }
 .mfa-recovery-codes li {
   padding: var(--space-2);

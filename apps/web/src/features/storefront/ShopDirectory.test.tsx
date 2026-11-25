@@ -22,14 +22,14 @@ const shops = [
   },
 ];
 
-function view() {
+function view(entry = '/shop') {
   return render(
     <QueryClientProvider
       client={
         new QueryClient({ defaultOptions: { queries: { retry: false } } })
       }
     >
-      <MemoryRouter initialEntries={['/shop']}>
+      <MemoryRouter initialEntries={[entry]}>
         <Routes>
           <Route path="/shop" element={<StorefrontLayout />}>
             <Route index element={<StorefrontPage />} />
@@ -71,6 +71,17 @@ it('searches real shops from the results toolbar and recovers from no matches', 
   expect(screen.getByText('ไม่พบร้านที่ตรงกับคำค้น')).toBeVisible();
   fireEvent.change(search, { target: { value: '' } });
   expect(screen.getByRole('heading', { name: 'ร้านพัก' })).toBeVisible();
+});
+
+it('starts from the search and business type given in the home page link', async () => {
+  view('/shop?q=ร้าน&type=cafe');
+  expect(await screen.findByRole('heading', { name: 'ร้านพัก' })).toBeVisible();
+  expect(screen.getByRole('searchbox', { name: 'ค้นหาร้าน' })).toHaveValue(
+    'ร้าน',
+  );
+  expect(
+    screen.queryByRole('heading', { name: 'yam' }),
+  ).not.toBeInTheDocument();
 });
 
 it('switches directory views without changing shop links or availability', async () => {

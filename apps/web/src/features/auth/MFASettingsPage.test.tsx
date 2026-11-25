@@ -11,7 +11,10 @@ const mocks = vi.hoisted(() => ({
     clear: vi.fn(),
     state: {
       status: 'authenticated',
-      session: { user: { id: 'one' }, csrf_token: 'session-one' },
+      session: {
+        user: { id: 'one', email: 'owner@example.test' },
+        csrf_token: 'session-one',
+      },
     },
   },
   getMFAStatus: vi.fn(),
@@ -33,7 +36,10 @@ const enrollment = {
 
 beforeEach(() => {
   vi.resetAllMocks();
-  mocks.auth.state.session = { user: { id: 'one' }, csrf_token: 'session-one' };
+  mocks.auth.state.session = {
+    user: { id: 'one', email: 'owner@example.test' },
+    csrf_token: 'session-one',
+  };
   mocks.getMFAStatus.mockResolvedValue({
     enabled: false,
     session_verified: false,
@@ -185,9 +191,50 @@ it('uses real API boundaries and retains one-time codes until explicit acknowled
     }),
   );
   fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+  expect(
+    await screen.findByRole('heading', { name: 'Workspace' }),
+  ).toBeVisible();
+  expect(router.state.location.pathname).toBe('/workspace');
   expect(screen.queryByText(codes[0])).toBeNull();
-  expect(await screen.findByText('MFA is enabled')).toBeVisible();
   expect(localStorage.getItem('mfa')).toBeNull();
+});
+
+it('shows a scannable QR code with a manual-key fallback during enrollment', async () => {
+  page();
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'Set up authenticator' }),
+  );
+  expect(
+    await screen.findByRole('img', {
+      name: 'QR code for setting up your authenticator app',
+    }),
+  ).toBeVisible();
+  expect(screen.getByText("Can't scan? Enter the key manually")).toBeVisible();
+  expect(screen.getByLabelText('Authenticator setup key')).toHaveValue(
+    enrollment.secret,
+  );
+});
+
+it('asks for a fresh sign-in instead of repeating setup when enrollment proof is stale', async () => {
+  mocks.beginMFAEnrollment.mockRejectedValueOnce(new ApiError(400, 'stale'));
+  page();
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'Set up authenticator' }),
+  );
+  expect(
+    await screen.findByText(/Setup must start within 5 minutes of signing in/),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole('button', { name: 'Set up authenticator' }),
+  ).toBeNull();
+  const link = screen.getByRole('link', { name: 'Sign in again' });
+  expect(link).toHaveAttribute('href', '/login?returnTo=%2Fsecurity');
+  fireEvent.click(link);
+  expect(
+    await screen.findByRole('heading', { name: 'Sign-in page' }),
+  ).toBeVisible();
+  expect(mocks.auth.clear).toHaveBeenCalledTimes(1);
+  expect(mocks.beginMFAEnrollment).toHaveBeenCalledTimes(1);
 });
 
 it('keeps loading and dependency failure recoverable without automatic mutation', async () => {
@@ -225,7 +272,10 @@ it('prevents duplicate enrollment and ignores the result after a session change'
   fireEvent.click(begin);
   expect(mocks.beginMFAEnrollment).toHaveBeenCalledTimes(1);
   const signal = mocks.beginMFAEnrollment.mock.calls[0][1] as AbortSignal;
-  mocks.auth.state.session = { user: { id: 'two' }, csrf_token: 'session-two' };
+  mocks.auth.state.session = {
+    user: { id: 'two', email: 'second@example.test' },
+    csrf_token: 'session-two',
+  };
   act(view.redraw);
   expect(signal.aborted).toBe(true);
   await act(() => pending.resolve(enrollment));
@@ -285,7 +335,7 @@ it('validates literal six-digit strings and verifies an enabled factor', async (
     session_verified: false,
   });
   mocks.verifyMFA.mockResolvedValue({ session_verified: true });
-  page();
+  const { router } = page();
   const input = await screen.findByLabelText('Six-digit code');
   const form = input.closest('form')!;
   fireEvent.change(input, { target: { value: '123' } });
@@ -294,8 +344,9 @@ it('validates literal six-digit strings and verifies an enabled factor', async (
   fireEvent.change(input, { target: { value: '001234' } });
   fireEvent.submit(form);
   expect(
-    await screen.findByText('MFA verified for this session'),
+    await screen.findByRole('heading', { name: 'Workspace' }),
   ).toBeVisible();
+  expect(router.state.location.pathname).toBe('/workspace');
   expect(mocks.verifyMFA).toHaveBeenCalledWith(
     '001234',
     'session-one',
@@ -338,7 +389,10 @@ it('clears one-time codes when the authenticated session changes', async () => {
   const view = page();
   await enroll();
   await screen.findByText(codes[0]);
-  mocks.auth.state.session = { user: { id: 'one' }, csrf_token: 'session-new' };
+  mocks.auth.state.session = {
+    user: { id: 'one', email: 'owner@example.test' },
+    csrf_token: 'session-new',
+  };
   act(view.redraw);
   expect(screen.queryByText(codes[0])).toBeNull();
   expect(

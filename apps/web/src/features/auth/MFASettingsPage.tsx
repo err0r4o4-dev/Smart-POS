@@ -5,7 +5,12 @@ import {
   useState,
   type FormEvent,
 } from 'react';
-import { Link, useBeforeUnload, useBlocker } from 'react-router-dom';
+import {
+  Link,
+  useBeforeUnload,
+  useBlocker,
+  useNavigate,
+} from 'react-router-dom';
 import { ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../app/AuthProvider';
 import { useLanguage } from '../../app/language';
@@ -13,6 +18,8 @@ import { paths } from '../../app/routes';
 import { Button, Loading } from '../../components/ui/primitives';
 import { LoginLayout } from '../../layouts/LoginLayout';
 import { ApiError } from '../../lib/api';
+import { QRCodeSVG } from '../../lib/qr-code';
+import { otpauthUri } from './otpauth';
 import {
   beginMFAEnrollment,
   beginMFARecovery,
@@ -26,7 +33,7 @@ import {
 import './mfa.css';
 
 type Flow =
-  | { kind: 'loading' | 'unavailable' | 'uncertain' | 'expired' }
+  | { kind: 'loading' | 'unavailable' | 'uncertain' | 'expired' | 'stale' }
   | { kind: 'status'; value: MFAStatus }
   | { kind: 'recovery-input' }
   | { kind: 'enrollment' | 'replacement'; value: MFAEnrollment }
@@ -40,6 +47,7 @@ export function MFASettingsPage() {
     <MFAFlow
       key={`${state.session.user.id}:${state.session.csrf_token}`}
       csrf={state.session.csrf_token}
+      account={state.session.user.email}
       invalidSession={clear}
     />
   );
@@ -47,13 +55,17 @@ export function MFASettingsPage() {
 
 function MFAFlow({
   csrf,
+  account,
   invalidSession,
 }: {
   csrf: string;
+  account: string;
   invalidSession: () => void;
 }) {
   const { t, formatDateTime } = useLanguage();
+  const navigate = useNavigate();
   const [flow, setFlow] = useState<Flow>({ kind: 'loading' });
+  const [enterWorkspace, setEnterWorkspace] = useState(false);
   const [busy, setBusy] = useState(false);
   const [code, setCode] = useState('');
   const [recoveryCode, setRecoveryCode] = useState('');
@@ -109,11 +121,17 @@ function MFAFlow({
   useEffect(() => {
     if (!protectNavigation && blocker.state === 'blocked') blocker.reset();
   }, [protectNavigation, blocker]);
+  // Navigate only after the one-time-code guard has been released.
+  useEffect(() => {
+    if (enterWorkspace && !protectNavigation)
+      navigate(paths.workspace, { replace: true });
+  }, [enterWorkspace, protectNavigation, navigate]);
 
   async function perform<T>(
     work: (signal: AbortSignal) => Promise<T>,
     accept: (value: T) => void,
     mutation = false,
+    staleProof = false,
   ) {
     if (busyRef.current) return;
     busyRef.current = true;
@@ -147,6 +165,14 @@ function MFAFlow({
         setRecoveryCode('');
         setFlow({ kind: 'expired' });
         invalidate();
+      } else if (
+        staleProof &&
+        failure instanceof ApiError &&
+        failure.status === 400
+      ) {
+        // Enrollment requires a sign-in from the last five minutes; repeating
+        // the request cannot succeed and only consumes rate-limit attempts.
+        setFlow({ kind: 'stale' });
       } else if (
         failure instanceof ApiError &&
         (failure.status === 400 || failure.status === 429)
@@ -219,6 +245,7 @@ function MFAFlow({
             kind: 'status',
             value: { enabled: true, session_verified: true },
           });
+          setEnterWorkspace(true);
         },
         true,
       );
@@ -236,7 +263,7 @@ function MFAFlow({
       <div className="mfa-panel">
         <div className="auth-header-card">
           <ShieldCheck size={28} aria-hidden="true" />
-          <h2 id="mfa-title">{t('mfa.title')}</h2>
+          <h1 id="mfa-title">{t('mfa.title')}</h1>
           <p>{t('mfa.intro')}</p>
         </div>
         {flow.kind === 'loading' && <Loading>{t('mfa.checking')}</Loading>}
@@ -259,22 +286,11 @@ function MFAFlow({
                 (signal) => beginMFAEnrollment(csrf, signal),
                 (value) => setFlow({ kind: 'enrollment', value }),
                 true,
+                true,
               )
             }
           >
             {t(busy ? 'mfa.pending' : 'mfa.begin')}
-          </Button>
-        )}
-        {flow.kind === 'status' && flow.value.enabled && (
-          <Button
-            disabled={busy}
-            onClick={() => {
-              setCode('');
-              setError(null);
-              setFlow({ kind: 'recovery-input' });
-            }}
-          >
-            {t('mfa.startRecovery')}
           </Button>
         )}
         {flow.kind === 'recovery-input' && (
@@ -303,7 +319,7 @@ function MFAFlow({
                   }
                 />
               </div>
-              <Button type="submit">
+              <Button type="submit" className="auth-submit-btn">
                 {t(busy ? 'mfa.pending' : 'mfa.stageReplacement')}
               </Button>
             </fieldset>
@@ -324,17 +340,29 @@ function MFAFlow({
         )}
         {(flow.kind === 'enrollment' || flow.kind === 'replacement') && (
           <div className="mfa-enrollment">
-            <label htmlFor="mfa-key">{t('mfa.key')}</label>
-            <p id="mfa-key-help">{t('mfa.keyHelp')}</p>
-            <textarea
-              id="mfa-key"
-              readOnly
-              value={flow.value.secret}
-              rows={2}
-              spellCheck={false}
-              autoComplete="off"
-              aria-describedby="mfa-key-help"
-            />
+            <p id="mfa-qr-help">{t('mfa.qrHelp')}</p>
+            <div className="mfa-qr">
+              <QRCodeSVG
+                value={otpauthUri(flow.value.secret, account)}
+                size={208}
+                margin={4}
+                title={t('mfa.qrLabel')}
+              />
+            </div>
+            <details className="mfa-manual-key">
+              <summary>{t('mfa.manualKey')}</summary>
+              <label htmlFor="mfa-key">{t('mfa.key')}</label>
+              <p id="mfa-key-help">{t('mfa.keyHelp')}</p>
+              <textarea
+                id="mfa-key"
+                readOnly
+                value={flow.value.secret}
+                rows={2}
+                spellCheck={false}
+                autoComplete="off"
+                aria-describedby="mfa-key-help"
+              />
+            </details>
             <p>
               {t('mfa.expiry')}{' '}
               <time dateTime={flow.value.expires_at}>
@@ -364,7 +392,7 @@ function MFAFlow({
                   aria-describedby={error ? 'mfa-error' : undefined}
                 />
               </div>
-              <Button type="submit">
+              <Button type="submit" className="auth-submit-btn">
                 {t(
                   busy
                     ? 'mfa.pending'
@@ -382,6 +410,19 @@ function MFAFlow({
           <p id="mfa-error" role="alert" className="auth-error">
             {t(`mfa.${error}`)}
           </p>
+        )}
+        {flow.kind === 'status' && flow.value.enabled && (
+          <Button
+            className="mfa-secondary-action"
+            disabled={busy}
+            onClick={() => {
+              setCode('');
+              setError(null);
+              setFlow({ kind: 'recovery-input' });
+            }}
+          >
+            {t('mfa.startRecovery')}
+          </Button>
         )}
         {missingRecoveryCodes && <p>{t('mfa.missingCodes')}</p>}
         {(flow.kind === 'unavailable' || flow.kind === 'uncertain') && (
@@ -423,6 +464,7 @@ function MFAFlow({
                   kind: 'status',
                   value: { enabled: true, session_verified: true },
                 });
+                setEnterWorkspace(true);
               }}
             >
               {t('mfa.done')}
@@ -466,10 +508,24 @@ function MFAFlow({
             </Link>
           </div>
         )}
-        {flow.kind !== 'codes' && flow.kind !== 'relogin' && (
-          <p className="mfa-signin-help">{t('mfa.signinHelp')}</p>
+        {flow.kind === 'stale' && (
+          <div className="mfa-stale">
+            <p role="alert">{t('mfa.staleSignin')}</p>
+            <Link
+              className="button"
+              to={`${paths.login}?returnTo=${encodeURIComponent(paths.security)}`}
+              onClick={invalidate}
+            >
+              {t('mfa.signinAgain')}
+            </Link>
+          </div>
         )}
-        {flow.kind !== 'relogin' && (
+        {flow.kind !== 'codes' &&
+          flow.kind !== 'relogin' &&
+          flow.kind !== 'stale' && (
+            <p className="mfa-signin-help">{t('mfa.signinHelp')}</p>
+          )}
+        {flow.kind !== 'relogin' && flow.kind !== 'stale' && (
           <div className="auth-links auth-links-single">
             <Link to={paths.login}>{t('mfa.signin')}</Link>
             <Link to={paths.workspace}>{t('mfa.workspace')}</Link>

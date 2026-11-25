@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 309" fill="none">
+  <defs>
+    <linearGradient id="bezel" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#423b34"/><stop offset="1" stop-color="#18181a"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#fffdf8"/><stop offset="1" stop-color="#ffefd6"/>
+    </linearGradient>
+    <g id="dish">
+      <rect width="33" height="43" rx="3" fill="#fff" stroke="#eee4d6"/>
+      <rect x="2" y="2" width="29" height="28" rx="3" fill="#ead1a3"/>
+      <ellipse cx="16.5" cy="16" rx="12" ry="10" fill="#fff8e7"/>
+      <ellipse cx="16.5" cy="16" rx="9.5" ry="7.7" fill="currentColor"/>
+      <path d="M9 17c4-8 10-8 15-3-4 8-10 10-15 3Z" fill="#eca848"/>
+      <path d="m11 14 5 3 4-5m-3 8 5-3" stroke="#70864b" stroke-linecap="round" stroke-width="1.3"/>
+      <rect x="4" y="33" width="22" height="2" rx="1" fill="#58545a"/>
+      <rect x="4" y="38" width="12" height="2" rx="1" fill="#e1a32b"/>
+    </g>
+  </defs>
+  <g transform="matrix(.97 .074 -.305 .98 266 57)">
+    <rect x="0" y="0" width="190" height="150" rx="10" fill="url(#bezel)" stroke="#726557" stroke-width="2"/>
+    <rect x="8" y="8" width="174" height="134" rx="4" fill="url(#glass)"/>
+    <path d="M12 23h166M47 24v114" stroke="#e9dcca"/>
+    <rect x="14" y="13" width="7" height="7" rx="2" fill="#ffca38"/>
+    <rect x="24" y="15" width="29" height="3" rx="1.5" fill="#1d2430"/>
+    <rect x="13" y="30" width="29" height="10" rx="3" fill="#ffe6a4"/>
+    <path d="M18 35h17m-17 13h17m-17 12h17m-17 12h17m-17 12h17" stroke="#938675" stroke-width="2.5" stroke-linecap="round"/>
+    <rect x="53" y="31" width="46" height="5" rx="2" fill="#232935"/>
+    <rect x="106" y="31" width="25" height="5" rx="2" fill="#f4ce68"/>
+    <use href="#dish" x="53" y="42" color="#ae5129"/><use href="#dish" x="91" y="42" color="#846e31"/><use href="#dish" x="129" y="42" color="#ab6034"/>
+    <use href="#dish" x="53" y="90" color="#a76a35"/><use href="#dish" x="91" y="90" color="#8b5739"/><use href="#dish" x="129" y="90" color="#96793c"/>
+    <rect x="73" y="146" width="44" height="1.5" rx=".75" fill="#8d8175"/>
+  </g>
+</svg>

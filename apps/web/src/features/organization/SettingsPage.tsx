@@ -82,9 +82,6 @@ export function SettingsPage({
 
   // State for all settings sections
   const [name, setName] = useState(org?.name || 'VELO Cafe & Restaurant');
-  const [businessType, setBusinessType] = useState(
-    org?.business_type || 'restaurant',
-  );
   const [phone, setPhone] = useState(org?.contact_phone || '061-507-1665');
   const [email, setEmail] = useState(
     org?.contact_email || 'title.thirawat.dev@gmail.com',
@@ -198,7 +195,7 @@ export function SettingsPage({
           csrf: authState.session?.csrf_token,
           body: {
             name,
-            business_type: businessType,
+            business_type: org?.business_type,
             contact_email: email,
             contact_phone: phone,
             address,
@@ -348,48 +345,7 @@ export function SettingsPage({
                       />
                     </div>
 
-                    <div className="settings-field-group">
-                      <label className="settings-label" htmlFor="business-type">
-                        {t('organization.settingsBusinessType')}{' '}
-                        <span className="settings-required">*</span>
-                      </label>
-                      <div className="settings-select-wrapper">
-                        <span
-                          className="settings-select-icon"
-                          aria-hidden="true"
-                        >
-                          <Utensils size={16} />
-                        </span>
-                        <select
-                          id="business-type"
-                          className="settings-select"
-                          value={businessType}
-                          onChange={(e) => setBusinessType(e.target.value)}
-                        >
-                          <option value="restaurant">
-                            {t('organization.settingsRestaurant')}
-                          </option>
-                          <option value="cafe">
-                            {t('organization.settingsCafe')}
-                          </option>
-                          <option value="beverage">
-                            {t('organization.settingsBeverage')}
-                          </option>
-                          <option value="fastfood">
-                            {t('organization.settingsFastFood')}
-                          </option>
-                          <option value="other">
-                            {t('organization.settingsOtherOption')}
-                          </option>
-                        </select>
-                        <span
-                          className="settings-select-chevron"
-                          aria-hidden="true"
-                        >
-                          <ChevronDown size={15} />
-                        </span>
-                      </div>
-                    </div>
+
                   </div>
 
                   {/* Row 2: Phone & Email */}

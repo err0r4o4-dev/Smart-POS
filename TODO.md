@@ -1,3 +1,9 @@
+## Public food categories
+
+- [/] Persist shared food categories in storefront settings and expose them in discovery.
+- [/] Replace business type selection and discovery filters across web entry points.
+- [?] Verify migration and tenant isolation on an isolated PostgreSQL target; obtain independent review before release.
+
 ## Account screen redesign
 
 - [/] Adjust shared account layouts and sign-in/MFA presentation.

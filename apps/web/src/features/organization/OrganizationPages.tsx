@@ -14,7 +14,6 @@ import {
   Banknote,
   Check,
   CheckCircle2,
-  ChevronDown,
   ChevronRight,
   CircleAlert,
   Coins,
@@ -382,93 +381,6 @@ function SetupInput({
   );
 }
 
-function SetupSelect({
-  label,
-  value,
-  onChange,
-  required = false,
-  options,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  required?: boolean;
-  options: Array<{ value: string; label: string }>;
-}) {
-  const [open, setOpen] = useState(false);
-  const matchedOption = options.find((opt) => opt.value === value);
-  return (
-    <div className="tenant-field setup-field">
-      <label htmlFor="setup-business-type-input" className="setup-field-label">
-        {label}
-        {required && (
-          <span className="setup-required" aria-hidden="true">
-            {' '}
-            *
-          </span>
-        )}
-      </label>
-      <div className="setup-select-wrapper">
-        <input
-          id="setup-business-type-input"
-          aria-label={label}
-          value={value}
-          onFocus={() => setOpen(true)}
-          onBlur={() => setTimeout(() => setOpen(false), 150)}
-          onChange={(event) => onChange(event.target.value)}
-          required={required}
-          type="text"
-          list="setup-business-types"
-          className={`setup-select-element ${!open && matchedOption ? 'has-display-overlay' : ''}`}
-        />
-        {!open && matchedOption && (
-          <span className="setup-select-overlay" aria-hidden="true">
-            {matchedOption.label}
-          </span>
-        )}
-        <ChevronDown
-          size={18}
-          className="setup-chevron-icon"
-          aria-hidden="true"
-        />
-        <datalist id="setup-business-types">
-          {options.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </datalist>
-        {open && (
-          <ul
-            className="setup-select-dropdown"
-            role="listbox"
-            aria-label={label}
-          >
-            {options.map((opt) => (
-              <li
-                key={opt.value}
-                role="option"
-                aria-selected={opt.value === value}
-              >
-                <button
-                  type="button"
-                  className={`setup-select-option ${opt.value === value ? 'is-selected' : ''}`}
-                  onMouseDown={(event) => {
-                    event.preventDefault();
-                    onChange(opt.value);
-                    setOpen(false);
-                  }}
-                >
-                  {opt.label}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </div>
-  );
-}
 
 function SetupToggle({
   label,
@@ -602,20 +514,6 @@ function SetupStepFields({
           />
         </div>
         <div className="setup-form-grid">
-          <SetupSelect
-            label={t('organization.setupStoreType')}
-            value={profile.organization.business_type}
-            required
-            options={[
-              { value: 'RESTAURANT', label: t('organization.setupRestaurant') },
-            ]}
-            onChange={(business_type) =>
-              update('profile', {
-                ...profile,
-                organization: { ...profile.organization, business_type },
-              })
-            }
-          />
           <SetupInput
             label={t('organization.setupStorePhone')}
             value={profile.organization.contact_phone}

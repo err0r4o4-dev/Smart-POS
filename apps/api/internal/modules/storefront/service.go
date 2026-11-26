@@ -103,7 +103,7 @@ func (service *Service) Directory(ctx context.Context) (json.RawMessage, error) 
 		}
 		var result []byte
 		err = tx.QueryRow(ctx, `SELECT COALESCE(jsonb_agg(jsonb_build_object(
-			'slug',shop.slug,'name',shop.name,'accepting_orders',shop.accepting_orders,'business_type',org.business_type,
+			'slug',shop.slug,'name',shop.name,'accepting_orders',shop.accepting_orders,'category_codes',shop.category_codes,
 			'delivery_enabled',shop.delivery_enabled,'average_rating',reviews.average_rating,'review_count',reviews.review_count
 		)),'[]'::jsonb)
 		FROM storefronts shop JOIN organizations org ON org.id=shop.organization_id
@@ -124,7 +124,7 @@ func (service *Service) resolvedOrganizationAllowed(org *string) bool {
 }
 func settings(ctx context.Context, tx pgx.Tx, org string) (Settings, error) {
 	var result Settings
-	err := tx.QueryRow(ctx, `SELECT shop.slug,shop.name,shop.description,shop.contact_phone,shop.pickup_instructions,COALESCE(shop.terminal_id::text,''),shop.published,shop.accepting_orders,shop.revision,COALESCE(terminal.branch_id::text,''),COALESCE(terminal.stock_location_id::text,''),COALESCE(shop.online_terminal_id::text,''),shop.delivery_enabled,shop.shipping_fee::text FROM storefronts shop LEFT JOIN pos_terminals terminal ON terminal.organization_id=shop.organization_id AND terminal.id=COALESCE(shop.online_terminal_id,shop.terminal_id) WHERE shop.organization_id=$1 AND (shop.source_kind='RESTAURANT' OR terminal.id IS NOT NULL)`, org).Scan(&result.Slug, &result.Name, &result.Description, &result.ContactPhone, &result.PickupInstructions, &result.TerminalID, &result.Published, &result.AcceptingOrders, &result.Revision, &result.BranchID, &result.LocationID, &result.OnlineTerminalID, &result.DeliveryEnabled, &result.ShippingFee)
+	err := tx.QueryRow(ctx, `SELECT shop.slug,shop.name,shop.description,shop.contact_phone,shop.pickup_instructions,COALESCE(shop.terminal_id::text,''),shop.published,shop.accepting_orders,shop.revision,COALESCE(terminal.branch_id::text,''),COALESCE(terminal.stock_location_id::text,''),COALESCE(shop.online_terminal_id::text,''),shop.delivery_enabled,shop.shipping_fee::text,shop.category_codes FROM storefronts shop LEFT JOIN pos_terminals terminal ON terminal.organization_id=shop.organization_id AND terminal.id=COALESCE(shop.online_terminal_id,shop.terminal_id) WHERE shop.organization_id=$1 AND (shop.source_kind='RESTAURANT' OR terminal.id IS NOT NULL)`, org).Scan(&result.Slug, &result.Name, &result.Description, &result.ContactPhone, &result.PickupInstructions, &result.TerminalID, &result.Published, &result.AcceptingOrders, &result.Revision, &result.BranchID, &result.LocationID, &result.OnlineTerminalID, &result.DeliveryEnabled, &result.ShippingFee, &result.CategoryCodes)
 	return result, dbError(err)
 }
 func (service *Service) PublicSettings(ctx context.Context, slug string) (Settings, error) {
@@ -284,7 +284,7 @@ func (service *Service) SaveSettings(ctx context.Context, user, org string, inpu
 	if err = authorization.Recheck(ctx); err != nil {
 		return Settings{}, err
 	}
-	if _, err = tx.Exec(ctx, "UPDATE storefronts SET delivery_enabled=$2,shipping_fee=$3 WHERE organization_id=$1", org, input.DeliveryEnabled, input.ShippingFee); err != nil {
+	if _, err = tx.Exec(ctx, "UPDATE storefronts SET delivery_enabled=$2,shipping_fee=$3,category_codes=COALESCE($4::text[],category_codes) WHERE organization_id=$1", org, input.DeliveryEnabled, input.ShippingFee, input.CategoryCodes); err != nil {
 		return Settings{}, dbError(err)
 	}
 	result, err := settings(ctx, tx, org)

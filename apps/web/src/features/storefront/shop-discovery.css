@@ -1,0 +1,94 @@
+.storefront-shell.shop-discovery-shell {
+  background: var(--surface);
+}
+
+.storefront-shell.shop-discovery-shell::before {
+  content: none;
+}
+
+.storefront-shell.shop-discovery-shell .storefront-content {
+  width: 100%;
+  padding: 0;
+}
+
+.shop-discovery-page.customer-page {
+  gap: 0;
+}
+
+.shop-discovery-header nav {
+  display: flex;
+  align-items: center;
+  gap: clamp(4px, 1vw, 16px);
+}
+
+.shop-discovery-sign-in {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  padding-inline: 6px;
+  border-radius: var(--radius-small);
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.shop-discovery-hero .landing-search :is(input, .button) {
+  min-height: 44px;
+}
+
+.shop-discovery-hero .landing-search input[type='search'] {
+  margin: 0;
+  padding-inline: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  outline: 0;
+}
+
+.shop-discovery-hero .landing-popular button {
+  min-height: 44px;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.shop-discovery-hero .landing-popular li {
+  min-width: 0;
+}
+
+.shop-discovery-hero .landing-popular ul {
+  flex-basis: auto;
+}
+
+.shop-discovery-hero .landing-popular button:hover {
+  background: var(--brand-soft-gradient);
+}
+
+#storefront-results {
+  scroll-margin-top: calc(var(--header-height) + 12px);
+}
+
+@media (max-width: 479px) {
+  .shop-discovery-header .landing-header-inner {
+    gap: 4px;
+  }
+  .shop-discovery-header .brand small {
+    display: none;
+  }
+  .shop-discovery-sign-in > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

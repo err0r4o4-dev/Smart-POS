@@ -8,7 +8,7 @@ export interface ShopSummary {
   accepting_orders: boolean;
 }
 export interface ShopDirectoryEntry extends ShopSummary {
-  business_type?: string;
+  category_codes?: string[];
   delivery_enabled?: boolean;
   average_rating?: number | null;
   review_count?: number;
@@ -17,6 +17,7 @@ export interface CustomerReview {
   rating: number;
 }
 export interface ShopSettings extends ShopSummary {
+  category_codes?: string[];
   description: string;
   contact_phone: string;
   pickup_instructions: string;

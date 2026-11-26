@@ -7,7 +7,7 @@ export const assistant = defineMessages({
     storeGeneric: 'ผู้ช่วยประจำร้าน',
     merchantTitle: 'ผู้ช่วยใช้ระบบสำหรับร้าน',
     discoveryIntro:
-      'ลองถามชื่อร้าน ประเภทร้าน ร้านที่รับออเดอร์ หรือร้านที่จัดส่งได้',
+      'ลองถามชื่อร้าน หมวดอาหาร ร้านที่รับออเดอร์ หรือร้านที่จัดส่งได้',
     storeIntro: 'ถามเรื่องเมนู ราคา คิว หรือการติดตามออเดอร์ของร้านนี้ได้เลย',
     merchantIntro: 'ถามวิธีเพิ่มเมนู ตั้งค่าร้าน หรือแก้ปัญหาคิวครัวได้เลย',
     findOpen: 'ร้านไหนรับออเดอร์?',
@@ -17,6 +17,9 @@ export const assistant = defineMessages({
     addMenu: 'เพิ่มเมนูอย่างไร?',
     kitchenHelp: 'ทำไมออเดอร์ไม่ขึ้นคิวครัว?',
     reportProblem: 'ร่างรายงานปัญหา',
+    acceptOrdersIssue: 'ร้านไม่สามารถรับออเดอร์ได้',
+    reportSuggested: 'เตรียมร่างรายงานปัญหานี้เพื่อส่งให้ทีมดูแลได้',
+    prepareReport: 'เตรียมรายงาน',
     guideFallback:
       'ยังไม่พบคำตอบในคู่มือ ลองค้นในหน้าคู่มือหรือร่างรายงานปัญหา',
     readGuide: 'อ่านคู่มือ',
@@ -39,7 +42,7 @@ export const assistant = defineMessages({
       'ยังไม่ส่งรายงาน โปรดไม่ใส่รหัสผ่าน ลิงก์ส่วนตัว หรือข้อมูลการชำระเงิน',
     contactOptions: 'ดูช่องทางติดต่อ',
     reportTemplate:
-      'ร้าน: {name}\nเวลา (UTC): {time}\nปัญหาที่พบ:\nงานที่ได้รับผลกระทบ:\nสิ่งที่ลองแก้แล้ว:\nรหัสอ้างอิง (ถ้ามี):',
+      'ร้าน: {name}\nเวลา (UTC): {time}\nปัญหาที่พบ: {issue}\nงานที่ได้รับผลกระทบ:\nสิ่งที่ลองแก้แล้ว:\nรหัสอ้างอิง (ถ้ามี):',
     open: 'เปิดผู้ช่วย VELO Assistant',
     subtitle: 'สอบถามเกี่ยวกับร้านค้า เมนู หรือคำสั่งซื้อ',
     online: 'ออนไลน์',
@@ -79,7 +82,7 @@ export const assistant = defineMessages({
     storeGeneric: 'Restaurant assistant',
     merchantTitle: 'Merchant guide',
     discoveryIntro:
-      'Ask for a store by name, a type of restaurant, or stores accepting orders or offering delivery.',
+      'Ask for a store by name, food category, order status, or delivery availability.',
     storeIntro:
       'Ask about this restaurant’s menu, prices, queue, or order tracking.',
     merchantIntro:
@@ -91,6 +94,9 @@ export const assistant = defineMessages({
     addMenu: 'How do I add a menu item?',
     kitchenHelp: 'Why is an order missing from the kitchen queue?',
     reportProblem: 'Draft a problem report',
+    acceptOrdersIssue: 'Unable to accept orders',
+    reportSuggested: 'You can prepare a report for the support team.',
+    prepareReport: 'Prepare a report for this issue',
     guideFallback:
       'I couldn’t find an answer in the guide. Open the help page or draft a problem report.',
     readGuide: 'Read the guide',
@@ -114,7 +120,7 @@ export const assistant = defineMessages({
       'This report hasn’t been sent. Leave out passwords, private links, and payment information.',
     contactOptions: 'See contact options',
     reportTemplate:
-      'Store: {name}\nTime (UTC): {time}\nProblem:\nImpact:\nWhat you tried:\nReference code (if available):',
+      'Store: {name}\nTime (UTC): {time}\nProblem: {issue}\nImpact:\nWhat you tried:\nReference code (if available):',
     open: 'Open VELO Assistant chat',
     subtitle: 'Ask about stores, menus, or orders',
     online: 'Online',

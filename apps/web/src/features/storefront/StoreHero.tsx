@@ -3,7 +3,6 @@ import { Clock, Phone, Star, Store, Truck } from 'lucide-react';
 import { useLanguage } from '../../app/language';
 import { moneyText } from '../../lib/pos-api';
 import type { ShopSettings } from '../../lib/storefront-api';
-import { normalizeBusinessType } from './business-type';
 import { hasValidRating, shopCoverImage } from './shop-art';
 import { useShopDirectory } from './useShopDirectory';
 
@@ -33,7 +32,7 @@ export function StoreHero({
 }) {
   const { t, language } = useLanguage();
   const entry = useDirectoryEntry(slug);
-  const cover = shopCoverImage(normalizeBusinessType(entry?.business_type));
+  const cover = shopCoverImage(entry?.category_codes);
 
   return (
     <section

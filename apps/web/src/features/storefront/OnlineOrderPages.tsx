@@ -44,6 +44,8 @@ import {
 } from '../../lib/storefront-api';
 import { ShopError, ShopPagination } from './StorefrontPage';
 import { OrderDetails } from './OrderDetails';
+import { foodCategories } from './food-categories';
+import './storefront.css';
 
 function useScope() {
   const tenant = useOrganization();
@@ -114,6 +116,7 @@ type SettingsInput = Pick<
   | 'pickup_instructions'
   | 'delivery_enabled'
   | 'shipping_fee'
+  | 'category_codes'
   | 'published'
   | 'accepting_orders'
   | 'revision'
@@ -207,7 +210,7 @@ export function StorefrontSettingsPage({
       <p className="notice">
         {t('storefront.publishSelectedProductsForPickupAndPos')}
       </p>
-      {settings.isPending || terminals.isPending ? (
+      {settings.isPending || (scope.branch && terminals.isPending) ? (
         <Loading>{t('storefront.loadingSettings')}</Loading>
       ) : null}
       {(settings.error || terminals.error) && (
@@ -220,12 +223,12 @@ export function StorefrontSettingsPage({
         />
       )}
       {command.error && <ShopError error={command.error} />}
-      {settings.isSuccess && terminals.data && (
+      {settings.isSuccess && (!scope.branch || terminals.data) && (
         <SettingsForm
           key={`${scope.org}:${scope.branch}:${settings.data?.revision ?? 0}`}
           initial={settings.data}
           organizationName={scope.tenant.context?.organization.name ?? ''}
-          terminals={terminals.data.items}
+          terminals={terminals.data?.items ?? []}
           command={command}
           embedded={embedded}
         />
@@ -395,6 +398,7 @@ function SettingsForm({
     pickup_instructions: initial?.pickup_instructions ?? '',
     delivery_enabled: initial?.delivery_enabled ?? false,
     shipping_fee: initial?.shipping_fee ?? '0.00',
+    category_codes: initial?.category_codes ?? [],
     terminal_id: initial?.terminal_id ?? '',
     online_terminal_id: initial?.online_terminal_id ?? '',
     published: initial?.published ?? false,
@@ -402,6 +406,7 @@ function SettingsForm({
     revision: initial?.revision ?? 0,
   }));
   const [saved, setSaved] = useState(false);
+  const draft = !initial?.terminal_id && !form.terminal_id;
   const set = (key: keyof SettingsInput, value: string | boolean) =>
     setForm({ ...form, [key]: value });
   const frontTerminal = terminals.find(
@@ -426,6 +431,28 @@ function SettingsForm({
   return (
     <Card>
       <form className="online-settings-form" onSubmit={submit}>
+        <fieldset className="online-food-categories">
+          <legend>{t('storefront.customer.foodCategories')}</legend>
+          <p>{t('storefront.customer.foodCategoriesHelp')}</p>
+          {foodCategories.map(({ code, label }) => (
+            <label key={code}>
+              <input
+                type="checkbox"
+                checked={form.category_codes?.includes(code) ?? false}
+                onChange={(event) => {
+                  const selected = form.category_codes ?? [];
+                  setForm({
+                    ...form,
+                    category_codes: event.target.checked
+                      ? [...selected, code]
+                      : selected.filter((value) => value !== code),
+                  });
+                }}
+              />
+              {t(label)}
+            </label>
+          ))}
+        </fieldset>
         <label>
           {t('storefront.storeDisplayName')}
           <input
@@ -453,7 +480,7 @@ function SettingsForm({
         <label>
           {t('storefront.terminalBranchStockSource')}
           <select
-            required
+            required={!draft}
             value={form.terminal_id}
             onChange={(event) =>
               setForm({
@@ -541,6 +568,7 @@ function SettingsForm({
           <input
             type="checkbox"
             checked={form.published}
+            disabled={draft}
             onChange={(event) =>
               setForm({
                 ...form,
@@ -563,7 +591,7 @@ function SettingsForm({
         <p className="online-wide">
           {t('storefront.ifOrdersArePendingPauseNewOrders')}
         </p>
-        {!terminals.length && (
+        {!draft && !terminals.length && (
           <p role="status">
             {t('storefront.noActiveTerminalsInThisBranchConfigure')}{' '}
             {!embedded && (
@@ -583,7 +611,10 @@ function SettingsForm({
             )}
           </p>
         )}
-        <Button type="submit" disabled={command.isPending || !terminals.length}>
+        <Button
+          type="submit"
+          disabled={command.isPending || (!draft && !terminals.length)}
+        >
           {command.isPending
             ? t('catalog.saving')
             : t('storefront.saveSettings')}

@@ -78,7 +78,7 @@ it('offers an editable unsent report when the store cannot accept orders', () =>
   ask('We cannot accept orders right now');
   fireEvent.click(screen.getByRole('button', { name: 'Prepare a report for this issue' }));
   const draft = screen.getByRole('textbox', { name: 'Problem report draft' });
-  expect(draft).toHaveValue(expect.stringContaining('Corner Bistro'));
-  expect(draft).toHaveValue(expect.stringContaining('Unable to accept orders'));
+  expect((draft as HTMLTextAreaElement).value).toContain('Corner Bistro');
+  expect((draft as HTMLTextAreaElement).value).toContain('Unable to accept orders');
   expect(screen.getByText(/hasn.t been sent/)).toBeInTheDocument();
 });

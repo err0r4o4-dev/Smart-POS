@@ -615,30 +615,10 @@ it('shows setup labels and validation in English', () => {
   );
 });
 
-it('offers only the restaurant business type supported by setup', () => {
+it('does not prompt for a business type in the restaurant setup', () => {
   renderSetup(['/setup'], true);
-  fireEvent.focus(screen.getByLabelText('Store type'));
-  const choices = screen.getByRole('listbox', { name: 'Store type' });
-  expect(within(choices).getAllByRole('option')).toHaveLength(1);
-  expect(
-    within(choices).getByRole('option', { name: 'Restaurant' }),
-  ).toBeVisible();
-});
-
-it('rejects an unsupported typed business type before creating a store', () => {
-  renderSetup(['/setup'], true);
-  fireEvent.change(screen.getByLabelText('Store name'), {
-    target: { value: 'Test restaurant' },
-  });
-  fillRequiredContactAndAddress(true);
-  fireEvent.change(screen.getByLabelText('Store type'), {
-    target: { value: 'CAFE' },
-  });
-  fireEvent.click(screen.getByRole('button', { name: 'Save and continue' }));
-  expect(screen.getByRole('alert')).toHaveTextContent(
-    'Only restaurant setup is supported',
-  );
-  expect(mocks.request).not.toHaveBeenCalled();
+  expect(screen.queryByLabelText('Store type')).not.toBeInTheDocument();
+  expect(screen.getByLabelText('Store name')).toBeVisible();
 });
 
 it('shows name-only tables and setup progress in English', async () => {
@@ -711,9 +691,7 @@ it('creates and saves a profile using only visible store fields', async () => {
   fireEvent.change(screen.getByLabelText('ชื่อร้าน'), {
     target: { value: 'ร้านใหม่' },
   });
-  fireEvent.change(screen.getByLabelText('ประเภทร้าน'), {
-    target: { value: 'RESTAURANT' },
-  });
+  expect(screen.queryByLabelText('ประเภทร้าน')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('อีเมลร้าน')).not.toBeInTheDocument();
   fireEvent.change(screen.getByLabelText('โทรศัพท์ร้าน'), {
     target: { value: '0812345678' },
@@ -2093,12 +2071,7 @@ it('renders standalone form layout without backoffice sidebar or hero panel', ()
       'เช่น ร้านอาหารและคาเฟ่ อาหารไทย เครื่องดื่ม และเบเกอรี่',
     ),
   ).toBeVisible();
-  expect(document.querySelector('.setup-select-overlay')).toHaveTextContent(
-    'ร้านอาหาร',
-  );
-  expect(document.querySelector('.setup-select-overlay')).not.toHaveTextContent(
-    'Restaurant',
-  );
+  expect(document.querySelector('.setup-select-overlay')).toBeNull();
   expect(
     screen.getByText(
       /คุณสามารถแก้ไขข้อมูลเหล่านี้ได้ในภายหลัง เช่น ชื่อร้าน ที่อยู่ รูปภาพ และคำอธิบายร้าน/,

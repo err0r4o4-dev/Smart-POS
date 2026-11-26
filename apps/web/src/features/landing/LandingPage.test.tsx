@@ -12,13 +12,13 @@ const shops = [
     slug: 'krapao',
     name: 'ครัวกะเพรา',
     accepting_orders: true,
-    business_type: 'RESTAURANT',
+    category_codes: ['noodles'],
   },
   {
     slug: 'tea',
     name: 'ร้านชาริมคลอง',
     accepting_orders: false,
-    business_type: 'CAFE',
+    category_codes: ['drinks'],
   },
 ];
 vi.mock('../../app/AuthProvider', () => ({
@@ -207,14 +207,13 @@ it('sends hero searches to the shop directory', () => {
   );
 });
 
-it('keeps area links on Main and shows food categories without misleading search links', () => {
+it('keeps area links on Main and links food categories to directory filters', () => {
   renderLanding();
   const categories = within(
     screen.getByRole('list', { name: 'ประเภทอาหาร' }),
   );
   expect(categories.getAllByRole('listitem')).toHaveLength(8);
-  expect(categories.getByText('ก๋วยเตี๋ยว')).toBeVisible();
-  expect(categories.queryByRole('link')).not.toBeInTheDocument();
+  expect(categories.getByRole('link', { name: 'ก๋วยเตี๋ยว' })).toHaveAttribute('href', '/shop?category=noodles');
   const areas = within(screen.getByRole('list', { name: 'พื้นที่และชุมชน' }));
   expect(
     areas.getAllByRole('link').map((link) => link.getAttribute('href')),

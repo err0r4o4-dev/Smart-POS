@@ -29,13 +29,11 @@ describe('customer areas', () => {
 
 describe('shop cover image', () => {
   it.each([
-    ['CAFE', 'cover-cafe.webp'],
-    ['BAR', 'cover-cafe.webp'],
-    ['FAST_FOOD', 'cover-fast-food.webp'],
-    ['BAKERY', 'cover-bakery.webp'],
-    ['RESTAURANT', 'cover-restaurant.webp'],
-    ['RETAIL', 'cover-restaurant.webp'],
-    ['', 'cover-restaurant.webp'],
+    [['drinks'], 'cover-cafe.webp'],
+    [['fried'], 'cover-fast-food.webp'],
+    [['desserts'], 'cover-bakery.webp'],
+    [['noodles'], 'cover-restaurant.webp'],
+    [[], 'cover-restaurant.webp'],
   ])('maps %s to %s', (type, file) => {
     expect(shopCoverImage(type)).toBe(`/images/customer/${file}`);
   });

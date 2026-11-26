@@ -2,8 +2,15 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Heart, ShoppingCart, Star, Truck } from 'lucide-react';
 import { useLanguage } from '../../app/language';
 import type { ShopDirectoryEntry } from '../../lib/storefront-api';
-import { businessTypeLabel, normalizeBusinessType } from './business-type';
+import { foodCategories } from './food-categories';
 import { hasValidRating, shopCoverImage } from './shop-art';
+
+const directoryCovers = {
+  noodles: '/images/home/reference/cover-noodles.webp',
+  drinks: '/images/home/reference/cover-tea.webp',
+  healthy: '/images/home/reference/category-healthy.webp',
+  desserts: '/images/home/reference/category-desserts.webp',
+} satisfies Partial<Record<(typeof foodCategories)[number]['code'], string>>;
 
 export function ShopCard({
   shop,
@@ -11,15 +18,25 @@ export function ShopCard({
   onToggleFavorite,
   action = 'store',
   directorySearch,
+  directoryMode = false,
 }: {
   shop: ShopDirectoryEntry;
   favorite: boolean;
   onToggleFavorite: () => void;
   action?: 'store' | 'cart';
   directorySearch?: string;
+  directoryMode?: boolean;
 }) {
   const { t, language } = useLanguage();
-  const type = normalizeBusinessType(shop.business_type);
+  const categories = foodCategories.filter(({ code }) =>
+    shop.category_codes?.includes(code),
+  );
+  const cover =
+    (directoryMode &&
+      Object.entries(directoryCovers).find(([code]) =>
+        shop.category_codes?.includes(code),
+      )?.[1]) ||
+    shopCoverImage(shop.category_codes);
   const storePath = `/shop/${encodeURIComponent(shop.slug)}`;
   const titleId = `shop-card-${shop.slug}`;
   const rated = hasValidRating(shop);
@@ -28,7 +45,7 @@ export function ShopCard({
   return (
     <article className="customer-shop-card" aria-labelledby={titleId}>
       <div className="customer-shop-cover">
-        <img src={shopCoverImage(type)} alt="" loading="lazy" />
+        <img src={cover} alt="" loading="lazy" />
         <span
           className={
             shop.accepting_orders
@@ -66,9 +83,11 @@ export function ShopCard({
             {shop.name}
           </Link>
         </h3>
-        <p className="customer-shop-type">
-          {businessTypeLabel(type, language)}
-        </p>
+        {categories.length > 0 && (
+          <p className="customer-shop-type">
+            {categories.map(({ label }) => t(label)).join(' · ')}
+          </p>
+        )}
         <div className="customer-shop-meta">
           {rated && (
             <span className="customer-shop-rating">

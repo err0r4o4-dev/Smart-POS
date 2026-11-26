@@ -1,5 +1,5 @@
 import { fireEvent, screen, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, expect, it } from 'vitest';
 import type { ShopDirectoryEntry } from '../../lib/storefront-api';
 import { render } from '../../test/render';
@@ -10,7 +10,7 @@ const shops: ShopDirectoryEntry[] = [
     slug: 'yam',
     name: 'Yam House',
     accepting_orders: true,
-    business_type: 'RESTAURANT',
+    category_codes: ['made-to-order', 'noodles'],
     average_rating: 4.6,
     review_count: 12,
     delivery_enabled: true,
@@ -19,7 +19,7 @@ const shops: ShopDirectoryEntry[] = [
     slug: 'closed',
     name: 'ร้านพัก',
     accepting_orders: false,
-    business_type: 'cafe',
+    category_codes: ['drinks'],
     average_rating: null,
     review_count: 0,
   },
@@ -27,15 +27,18 @@ const shops: ShopDirectoryEntry[] = [
     slug: 'bad-rating',
     name: 'Apple Bakery',
     accepting_orders: true,
-    business_type: 'BAKERY',
+    category_codes: ['desserts'],
     average_rating: 7,
     review_count: 3,
   },
 ];
 
-function grid(props: Partial<Parameters<typeof ShopDirectoryGrid>[0]> = {}) {
+function grid(
+  props: Partial<Parameters<typeof ShopDirectoryGrid>[0]> = {},
+  entry = '/shop',
+) {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[entry]}>
       <ShopDirectoryGrid shops={shops} headingId="results" {...props} />
     </MemoryRouter>,
   );
@@ -58,11 +61,11 @@ it('searches store names ignoring case and surrounding spaces', () => {
   expect(screen.getByText('ไม่พบร้านที่ตรงกับคำค้น')).toBeVisible();
 });
 
-it('starts from the query and business type given in the link', () => {
-  grid({ initialQuery: 'ร้าน', initialType: 'CAFE' });
+it('starts from the query and food category given in the link', () => {
+  grid({}, '/shop?q=ร้าน&category=drinks');
   expect(screen.getByRole('searchbox')).toHaveValue('ร้าน');
   expect(headings()).toEqual(['ร้านพัก']);
-  expect(screen.getByRole('button', { name: 'คาเฟ่' })).toHaveAttribute(
+  expect(screen.getByRole('button', { name: 'เครื่องดื่ม' })).toHaveAttribute(
     'aria-pressed',
     'true',
   );
@@ -97,13 +100,23 @@ it('lists open stores first by default and sorts by name on request', () => {
   expect(headings()).toEqual(['ร้านพัก', 'Apple Bakery', 'Yam House']);
 });
 
-it('offers only the business types present and filters by them', () => {
+it('offers the shared food categories and filters stores by membership', () => {
   grid();
-  const types = within(screen.getByRole('group', { name: 'ประเภทร้าน' }));
+  const types = within(screen.getByRole('group', { name: 'หมวดอาหาร' }));
   expect(
     types.getAllByRole('button').map((button) => button.textContent),
-  ).toEqual(['ทั้งหมด', 'เบเกอรี่', 'คาเฟ่', 'ร้านอาหาร']);
-  fireEvent.click(types.getByRole('button', { name: 'เบเกอรี่' }));
+  ).toEqual([
+    'ทั้งหมด',
+    'อาหารตามสั่ง',
+    'ก๋วยเตี๋ยว',
+    'อาหารอีสาน',
+    'ของทอด',
+    'เครื่องดื่ม',
+    'ของหวาน',
+    'อาหารสุขภาพ',
+    'อาหารทานเล่น',
+  ]);
+  fireEvent.click(types.getByRole('button', { name: 'ของหวาน' }));
   expect(headings()).toEqual(['Apple Bakery']);
   fireEvent.click(types.getByRole('button', { name: 'ทั้งหมด' }));
   expect(headings()).toHaveLength(3);
@@ -164,4 +177,56 @@ it('renders a status slot instead of results while loading', () => {
   expect(screen.getByText('loading-slot')).toBeVisible();
   expect(screen.getByRole('searchbox', { name: 'ค้นหาร้าน' })).toBeVisible();
   expect(screen.queryByText('ไม่พบร้านที่ตรงกับคำค้น')).toBeNull();
+});
+
+it('combines directory filters and resets pagination when filters change', () => {
+  const many = Array.from({ length: 10 }, (_, index) => ({
+    slug: `shop-${index}`,
+    name: `Shop ${index}`,
+    accepting_orders: true,
+    delivery_enabled: index === 0,
+  }));
+  grid({ directoryMode: true, shops: many });
+  expect(headings()).toHaveLength(8);
+  fireEvent.click(screen.getByRole('button', { name: '2' }));
+  expect(headings()).toHaveLength(2);
+  const filters = within(screen.getByRole('group', { name: 'ตัวกรองร้าน' }));
+  fireEvent.click(filters.getByRole('button', { name: 'เปิดรับออเดอร์' }));
+  fireEvent.click(filters.getByRole('button', { name: 'มีจัดส่ง' }));
+  expect(headings()).toEqual(['Shop 0']);
+  expect(
+    filters.getByRole('button', { name: 'เปิดรับออเดอร์' }),
+  ).toHaveAttribute('aria-pressed', 'true');
+});
+
+it('preserves directory URL state when opening a store', () => {
+  function Store() {
+    const location = useLocation();
+    return <p>{location.state.directorySearch}</p>;
+  }
+  render(
+    <MemoryRouter
+      initialEntries={[
+        '/shop?q=yam&filter=open&filter=delivery&sort=name&page=2',
+      ]}
+    >
+      <Routes>
+        <Route
+          path="/shop"
+          element={
+            <ShopDirectoryGrid
+              shops={shops}
+              headingId="results"
+              directoryMode
+            />
+          }
+        />
+        <Route path="/shop/:slug" element={<Store />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+  fireEvent.click(screen.getByRole('link', { name: 'Yam House' }));
+  expect(
+    screen.getByText('?q=yam&filter=open&filter=delivery&sort=name&page=2'),
+  ).toBeVisible();
 });

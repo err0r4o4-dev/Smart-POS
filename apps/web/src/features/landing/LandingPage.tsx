@@ -32,10 +32,7 @@ import { useLanguage } from '../../app/language';
 import { useAuth } from '../../app/AuthProvider';
 import { paths } from '../../app/routes';
 import type { TranslationKey } from '../../i18n';
-import {
-  businessTypeLabel,
-  normalizeBusinessType,
-} from '../storefront/business-type';
+import { foodCategories } from '../storefront/food-categories';
 import { customerAreas } from '../storefront/customer-areas';
 import { ShopError } from '../storefront/shop-feedback';
 import { useShopFavorites } from '../storefront/shop-favorites';
@@ -50,41 +47,6 @@ const popularSearches: Record<'th' | 'en', string[]> = {
   th: ['ข้าวกะเพรา', 'ก๋วยเตี๋ยว', 'ชาไข่มุก', 'ของทอด', 'ส้มตำ'],
   en: ['Krapao', 'Noodles', 'Bubble tea', 'Fried food', 'Som tam'],
 };
-
-const categories: { label: TranslationKey; image: string }[] = [
-  {
-    label: 'landing.categoryMadeToOrder',
-    image: `${referenceArt}/category-made-to-order.webp`,
-  },
-  {
-    label: 'landing.categoryNoodles',
-    image: `${referenceArt}/category-noodles.webp`,
-  },
-  {
-    label: 'landing.categoryIsan',
-    image: `${referenceArt}/category-isan.webp`,
-  },
-  {
-    label: 'landing.categoryFried',
-    image: `${referenceArt}/category-fried.webp`,
-  },
-  {
-    label: 'landing.categoryDrinks',
-    image: `${referenceArt}/category-drinks.webp`,
-  },
-  {
-    label: 'landing.categoryDesserts',
-    image: `${referenceArt}/category-desserts.webp`,
-  },
-  {
-    label: 'landing.categoryHealthy',
-    image: `${referenceArt}/category-healthy.webp`,
-  },
-  {
-    label: 'landing.categorySnacks',
-    image: `${referenceArt}/category-snacks.webp`,
-  },
-];
 
 const steps: {
   title: TranslationKey;
@@ -121,11 +83,10 @@ const shopFilters = [
   { value: 'favorites', label: 'landing.favoriteShops', icon: Heart },
 ] as const;
 
-function shopCover(type: string) {
-  if (type === 'CAFE' || type === 'BAR')
-    return `${referenceArt}/cover-tea.webp`;
-  if (type === 'BAKERY') return '/images/home/cat-desserts.webp';
-  if (type === 'FAST_FOOD') return `${referenceArt}/cover-fast-food.webp`;
+function shopCover(codes: readonly string[] = []) {
+  if (codes.includes('drinks')) return `${referenceArt}/cover-tea.webp`;
+  if (codes.includes('desserts')) return '/images/home/cat-desserts.webp';
+  if (codes.includes('fried')) return `${referenceArt}/cover-fast-food.webp`;
   return `${referenceArt}/cover-restaurant.webp`;
 }
 
@@ -308,12 +269,19 @@ export function LandingPage() {
               className="landing-categories"
               aria-label={t('landing.categoriesList')}
             >
-              {categories.map(({ label, image }) => (
+              {foodCategories.map(({ code, label }) => (
                 <li key={label}>
-                  <div className="landing-category">
-                    <img src={image} alt="" loading="lazy" />
+                  <Link
+                    className="landing-category"
+                    to={`${paths.shop}?category=${code}`}
+                  >
+                    <img
+                      src={`${referenceArt}/category-${code}.webp`}
+                      alt=""
+                      loading="lazy"
+                    />
                     {t(label)}
-                  </div>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -551,7 +519,9 @@ function RecommendedShops() {
               >
                 {shops.map((shop) => {
                   const favorite = saved.isFavorite(shop.slug);
-                  const type = normalizeBusinessType(shop.business_type);
+                  const categories = foodCategories.filter(({ code }) =>
+                    shop.category_codes?.includes(code),
+                  );
                   const { average_rating: average, review_count: count } = shop;
                   const hasRating =
                     typeof average === 'number' &&
@@ -564,7 +534,11 @@ function RecommendedShops() {
                     <li key={shop.slug}>
                       <article className="landing-shop">
                         <div className="landing-shop-cover">
-                          <img src={shopCover(type)} alt="" loading="lazy" />
+                          <img
+                            src={shopCover(shop.category_codes)}
+                            alt=""
+                            loading="lazy"
+                          />
                           <div className="landing-shop-controls">
                             <span
                               className={
@@ -609,8 +583,12 @@ function RecommendedShops() {
                                 {shop.name}
                               </Link>
                             </h3>
-                            {type && (
-                              <span>{businessTypeLabel(type, language)}</span>
+                            {categories.length > 0 && (
+                              <span>
+                                {categories
+                                  .map(({ label }) => t(label))
+                                  .join(' · ')}
+                              </span>
                             )}
                           </div>
                           {(hasRating ||

@@ -7,8 +7,10 @@ import {
   useParams,
   useSearchParams,
 } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, LogIn } from 'lucide-react';
 import { paths } from '../app/routes';
+import { LanguageSwitcher } from '../components/ui/LanguageSwitcher';
+import { Brand } from '../components/ui/primitives';
 import { useShopCart } from '../features/storefront/shop-cart';
 import { CustomerHeader } from '../features/storefront/CustomerHeader';
 import { VeloAssistantChat } from '../features/storefront/VeloAssistantChat';
@@ -28,6 +30,7 @@ export function StorefrontLayout() {
     typeof directorySearch === 'string' &&
     (directorySearch === '' || directorySearch.startsWith('?'));
   const [searchParams] = useSearchParams();
+  const directory = !slug && searchParams.get('view') !== 'cart';
   const tableQuery = searchParams.has('table')
     ? `?${searchParams.toString()}`
     : '';
@@ -36,18 +39,39 @@ export function StorefrontLayout() {
     <div
       className={
         'storefront-shell shop-directory-shell' +
-        (slug ? ' shop-store-shell' : '')
+        (slug ? ' shop-store-shell' : directory ? ' shop-discovery-shell' : '')
       }
       data-workspace="customer"
     >
       <a className="skip-link" href="#main-content">
         {t('pos.skipToContent')}
       </a>
-      <CustomerHeader
-        slug={slug}
-        tableQuery={tableQuery}
-        cartCount={cart.items.length}
-      />
+      {directory ? (
+        <header className="landing-header shop-discovery-header">
+          <div className="layout-shell landing-header-inner">
+            <Link
+              className="landing-brand-link"
+              to="/"
+              aria-label={t('landing.veloPosHome')}
+            >
+              <Brand />
+            </Link>
+            <nav aria-label={t('shell.customerStorefrontNavigation')}>
+              <LanguageSwitcher />
+              <Link className="shop-discovery-sign-in" to={paths.login}>
+                <LogIn size={17} aria-hidden="true" />
+                <span>{t('auth.signIn')}</span>
+              </Link>
+            </nav>
+          </div>
+        </header>
+      ) : (
+        <CustomerHeader
+          slug={slug}
+          tableQuery={tableQuery}
+          cartCount={cart.items.length}
+        />
+      )}
       <main id="main-content" className="storefront-content" tabIndex={-1}>
         {slug && (
           <Link
@@ -94,7 +118,9 @@ export function StorefrontLayout() {
           </Link>
         </nav>
       </footer>
-      <VeloAssistantChat scope={slug ? { mode: 'store', slug } : { mode: 'discovery' }} />
+      <VeloAssistantChat
+        scope={slug ? { mode: 'store', slug } : { mode: 'discovery' }}
+      />
     </div>
   );
 }

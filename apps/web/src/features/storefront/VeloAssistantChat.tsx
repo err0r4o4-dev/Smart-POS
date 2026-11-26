@@ -11,10 +11,9 @@ import {
   type ShopCatalogPage,
   type ShopSettings,
 } from '../../lib/storefront-api';
-import { businessTypeLabel, normalizeBusinessType } from './business-type';
+import { foodCategories } from './food-categories';
 import { useShopDirectory } from './useShopDirectory';
 import './velo-assistant.css';
-
 function VeloRobotAvatar({ size = 42 }: { size?: number }) {
   const gradientId = useId();
   return (
@@ -189,15 +188,10 @@ function replyFor(scope: AssistantScope, question: string): Reply {
 }
 
 function DirectoryReply({ query }: { query: string }) {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const shops = useShopDirectory();
-  const types = ['RESTAURANT', 'CAFE', 'BAKERY', 'FAST_FOOD', 'BAR'];
-  const matchingType = types.find((type) =>
-    [businessTypeLabel(type, 'th'), businessTypeLabel(type, 'en')].some(
-      (label) =>
-        (type === 'BAR' && /บาร์|\bbar\b/.test(query)) ||
-        (type !== 'BAR' && query.includes(label.toLowerCase())),
-    ),
+  const matchingCategory = foodCategories.find(({ code, label }) =>
+    query.includes(code) || query.includes(t(label).toLowerCase()),
   );
   const open = /รับออเดอร์|เปิด|\bopen\b|accepting/.test(query);
   const delivery = /เดลิเวอรี|จัดส่ง|delivery/.test(query);
@@ -206,15 +200,13 @@ function DirectoryReply({ query }: { query: string }) {
     .trim();
   const results = (shops.data ?? [])
     .filter((shop) => {
-      const type = normalizeBusinessType(shop.business_type);
       return (
-        type !== 'RETAIL' &&
         (!open || shop.accepting_orders) &&
         (!delivery || shop.delivery_enabled) &&
-        (!matchingType || type === matchingType) &&
+        (!matchingCategory || shop.category_codes?.includes(matchingCategory.code)) &&
         (open ||
           delivery ||
-          matchingType ||
+          matchingCategory ||
           (name && shop.name.toLowerCase().normalize('NFKC').includes(name)))
       );
     })
@@ -244,11 +236,7 @@ function DirectoryReply({ query }: { query: string }) {
           <span className="velo-chat-store-info">
             <strong>{shop.name}</strong>
             <small>
-              {businessTypeLabel(
-                normalizeBusinessType(shop.business_type),
-                language,
-              )}{' '}
-              ·{' '}
+
               {t(
                 shop.accepting_orders
                   ? 'assistant.accepting'

@@ -5,25 +5,25 @@ const shops = [
     slug: 'krapao',
     name: 'กะเพราพี่ต้น',
     accepting_orders: true,
-    business_type: 'RESTAURANT',
+    category_codes: ['made-to-order', 'noodles'],
   },
   {
     slug: 'mr-tea',
     name: 'Mr.Tea',
     accepting_orders: false,
-    business_type: 'CAFE',
+    category_codes: ['drinks'],
   },
   {
     slug: 'bakery',
     name: 'ร้านขนมบ้านสวน',
     accepting_orders: false,
-    business_type: 'BAKERY',
+    category_codes: ['desserts'],
   },
   {
     slug: 'grill',
     name: 'ไก่ย่างริมทาง',
     accepting_orders: false,
-    business_type: 'FAST_FOOD',
+    category_codes: ['fried'],
   },
 ];
 
@@ -108,6 +108,24 @@ test('hero search opens the shop directory with the query applied', async ({
   ).toBeVisible();
 });
 
+test('opens the shared food category from Main and ignores legacy type links', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page
+    .getByRole('list', { name: 'ประเภทอาหาร' })
+    .getByRole('link', { name: 'ก๋วยเตี๋ยว', exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/shop\?category=noodles$/);
+  await expect(
+    page.getByRole('button', { name: 'ก๋วยเตี๋ยว' }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('link', { name: 'กะเพราพี่ต้น' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Mr.Tea' })).toHaveCount(0);
+  await page.goto('/shop?type=restaurant&q=Mr.Tea');
+  await expect(page.getByRole('link', { name: 'Mr.Tea' })).toBeVisible();
+});
+
 test('filters published stores, keeps favorites, and opens the shop cart selector', async ({
   page,
 }) => {
@@ -163,7 +181,10 @@ test('mobile navigation opens sign-in directly with the keyboard', async ({
   await page.keyboard.press('Enter');
   await expect(menu).toHaveAttribute('aria-expanded', 'true');
   const navigation = page.getByRole('navigation', { name: 'เมนูหน้าแรก' });
-  const signIn = navigation.getByRole('link', { name: 'เข้าสู่ระบบ', exact: true });
+  const signIn = navigation.getByRole('link', {
+    name: 'เข้าสู่ระบบ',
+    exact: true,
+  });
   await expect(signIn).toHaveAttribute('href', '/login');
   for (const name of [
     'หน้าหลัก',

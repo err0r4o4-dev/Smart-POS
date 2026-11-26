@@ -93,7 +93,7 @@ it('changes language without losing edited store details', () => {
   });
   fireEvent.click(screen.getByRole('button', { name: 'Thai' }));
   expect(screen.getByLabelText(/ชื่อร้านอาหาร/)).toHaveValue('My restaurant');
-  expect(screen.getByRole('option', { name: 'ร้านอาหาร' })).toBeInTheDocument();
+  expect(screen.queryByRole('option', { name: 'ร้านอาหาร' })).not.toBeInTheDocument();
   expect(
     screen.queryByRole('option', { name: 'ร้านอาหาร (Restaurant)' }),
   ).not.toBeInTheDocument();
@@ -186,7 +186,7 @@ it('renders the complete settings layout matching the mockup', () => {
   expect(screen.getByLabelText(/ชื่อร้านอาหาร/)).toHaveValue(
     'VELO Cafe & Restaurant',
   );
-  expect(screen.getByLabelText(/ประเภทธุรกิจ/)).toHaveValue('restaurant');
+  expect(screen.queryByLabelText(/ประเภทธุรกิจ/)).not.toBeInTheDocument();
   expect(screen.getByLabelText('โลโก้ร้าน')).toBeInTheDocument();
   expect(screen.getByLabelText(/เบอร์โทรศัพท์/)).toHaveValue('061-507-1665');
   expect(screen.getByLabelText(/อีเมล/)).toHaveValue(

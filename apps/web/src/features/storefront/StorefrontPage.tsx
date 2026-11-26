@@ -5,6 +5,7 @@ import { Card, Loading } from '../../components/ui/primitives';
 import { ShopCatalog } from './ShopCatalog';
 import { ShopError } from './shop-feedback';
 import { ShopDirectoryGrid } from './ShopDirectoryGrid';
+import { ShopDirectoryHero } from './ShopDirectoryHero';
 import { useShopDirectory } from './useShopDirectory';
 export { ShopError, ShopPagination } from './shop-feedback';
 import './storefront.css';
@@ -18,6 +19,13 @@ function ShopEntry() {
   const [searchParams] = useSearchParams();
   const showCarts = searchParams.get('view') === 'cart';
   const shops = useShopDirectory();
+  const suggestedNames = [
+    ...new Set(
+      shops.data
+        ?.filter((shop) => shop.accepting_orders && shop.name.length <= 24)
+        .map((shop) => shop.name),
+    ),
+  ].slice(0, 4);
 
   const status = shops.isPending ? (
     <Loading>{t('storefront.loadingStorefronts')}</Loading>
@@ -33,7 +41,9 @@ function ShopEntry() {
 
   return (
     <div
-      className={showCarts ? 'customer-page' : 'customer-page discovery-page'}
+      className={
+        showCarts ? 'customer-page' : 'customer-page shop-discovery-page'
+      }
     >
       {showCarts && (
         <header className="customer-page-heading">
@@ -43,16 +53,10 @@ function ShopEntry() {
           <p>{t('landing.chooseCartStore')}</p>
         </header>
       )}
+      {!showCarts && <ShopDirectoryHero suggestions={suggestedNames} />}
       <ShopDirectoryGrid
         shops={shops.data ?? []}
-        hero={
-          showCarts
-            ? undefined
-            : {
-                title: t('storefront.customer.exploreTitle'),
-                description: t('storefront.customer.exploreDescription'),
-              }
-        }
+        directoryMode={!showCarts}
         action={showCarts ? 'cart' : 'store'}
         headingId="storefront-results"
         status={status}

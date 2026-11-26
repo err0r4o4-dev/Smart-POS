@@ -239,6 +239,30 @@
 .online-settings-form small {
   color: var(--text-strong);
 }
+
+.online-food-categories {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  padding: var(--space-4);
+}
+
+.online-food-categories p {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.online-food-categories label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+}
 .online-listings {
   display: grid;
   gap: 12px;

@@ -20070,7 +20070,10 @@ components:
         - published
         - accepting_orders
         - revision
+        - category_codes
       properties:
+        category_codes:
+          $ref: '#/components/schemas/StorefrontFoodCategories'
         slug:
           type: string
           pattern: ^[a-z][a-z0-9-]{2,49}$
@@ -20144,6 +20147,9 @@ components:
               online_terminal_id:
                 const: ''
       properties:
+        category_codes:
+          $ref: '#/components/schemas/StorefrontFoodCategories'
+          description: Omit to retain saved categories. Send an empty array to clear them.
         slug:
           type: string
           pattern: ^[a-z][a-z0-9-]{2,49}$
@@ -20179,6 +20185,13 @@ components:
           type: string
           pattern: ^$|^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$
           description: Optional same-branch terminal at a distinct WAREHOUSE. Omit or send an empty string to share the front source. Source changes conflict while any live order remains. A dedicated terminal shift is required for pickup POS settlement.
+    StorefrontFoodCategories:
+      type: array
+      uniqueItems: true
+      maxItems: 8
+      items:
+        type: string
+        enum: [made-to-order, noodles, isan, fried, drinks, desserts, healthy, snacks]
     StorefrontDirectoryEntry:
       type: object
       additionalProperties: false
@@ -20186,7 +20199,7 @@ components:
         - slug
         - name
         - accepting_orders
-        - business_type
+        - category_codes
         - delivery_enabled
         - average_rating
         - review_count
@@ -20197,9 +20210,8 @@ components:
           type: string
         accepting_orders:
           type: boolean
-        business_type:
-          type: string
-          description: Saved organization business type for public directory filtering. Clients must tolerate legacy or unknown values. Not a product category.
+        category_codes:
+          $ref: '#/components/schemas/StorefrontFoodCategories'
         delivery_enabled:
           type: boolean
         average_rating:

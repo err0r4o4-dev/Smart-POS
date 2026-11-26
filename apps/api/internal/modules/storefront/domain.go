@@ -59,34 +59,36 @@ func autoSlug(name string) string {
 var phonePattern = regexp.MustCompile(`^[0-9+() .-]{3,30}$`)
 
 type Settings struct {
-	DeliveryEnabled    bool   `json:"delivery_enabled"`
-	ShippingFee        string `json:"shipping_fee"`
-	Slug               string `json:"slug"`
-	Name               string `json:"name"`
-	Description        string `json:"description"`
-	ContactPhone       string `json:"contact_phone"`
-	PickupInstructions string `json:"pickup_instructions"`
-	TerminalID         string `json:"terminal_id,omitempty"`
-	OnlineTerminalID   string `json:"online_terminal_id,omitempty"`
-	Published          bool   `json:"published"`
-	AcceptingOrders    bool   `json:"accepting_orders"`
-	Revision           int64  `json:"revision"`
-	BranchID           string `json:"branch_id,omitempty"`
-	LocationID         string `json:"stock_location_id,omitempty"`
+	CategoryCodes      []string `json:"category_codes"`
+	DeliveryEnabled    bool     `json:"delivery_enabled"`
+	ShippingFee        string   `json:"shipping_fee"`
+	Slug               string   `json:"slug"`
+	Name               string   `json:"name"`
+	Description        string   `json:"description"`
+	ContactPhone       string   `json:"contact_phone"`
+	PickupInstructions string   `json:"pickup_instructions"`
+	TerminalID         string   `json:"terminal_id,omitempty"`
+	OnlineTerminalID   string   `json:"online_terminal_id,omitempty"`
+	Published          bool     `json:"published"`
+	AcceptingOrders    bool     `json:"accepting_orders"`
+	Revision           int64    `json:"revision"`
+	BranchID           string   `json:"branch_id,omitempty"`
+	LocationID         string   `json:"stock_location_id,omitempty"`
 }
 type SettingsInput struct {
-	DeliveryEnabled    bool   `json:"delivery_enabled"`
-	ShippingFee        string `json:"shipping_fee"`
-	Slug               string `json:"slug"`
-	Name               string `json:"name"`
-	Description        string `json:"description"`
-	ContactPhone       string `json:"contact_phone"`
-	PickupInstructions string `json:"pickup_instructions"`
-	TerminalID         string `json:"terminal_id"`
-	OnlineTerminalID   string `json:"online_terminal_id"`
-	Published          bool   `json:"published"`
-	AcceptingOrders    bool   `json:"accepting_orders"`
-	Revision           int64  `json:"revision"`
+	CategoryCodes      []string `json:"category_codes"`
+	DeliveryEnabled    bool     `json:"delivery_enabled"`
+	ShippingFee        string   `json:"shipping_fee"`
+	Slug               string   `json:"slug"`
+	Name               string   `json:"name"`
+	Description        string   `json:"description"`
+	ContactPhone       string   `json:"contact_phone"`
+	PickupInstructions string   `json:"pickup_instructions"`
+	TerminalID         string   `json:"terminal_id"`
+	OnlineTerminalID   string   `json:"online_terminal_id"`
+	Published          bool     `json:"published"`
+	AcceptingOrders    bool     `json:"accepting_orders"`
+	Revision           int64    `json:"revision"`
 }
 type Product struct {
 	VariantID   string  `json:"variant_id"`
@@ -230,6 +232,9 @@ func normalizeItems(items []ItemInput) error {
 	return nil
 }
 func (input *SettingsInput) validate() error {
+	if err := validateFoodCategories(input.CategoryCodes); err != nil {
+		return err
+	}
 	if input.ShippingFee == "" {
 		input.ShippingFee = "0.00"
 	}

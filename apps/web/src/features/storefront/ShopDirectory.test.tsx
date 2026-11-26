@@ -12,13 +12,13 @@ const shops = [
     slug: 'yam',
     name: 'yam',
     accepting_orders: true,
-    business_type: 'RESTAURANT',
+    category_codes: ['made-to-order', 'noodles'],
   },
   {
     slug: 'closed',
     name: 'ร้านพัก',
     accepting_orders: false,
-    business_type: 'cafe',
+    category_codes: ['drinks'],
   },
 ];
 
@@ -41,7 +41,7 @@ function view(entry = '/shop') {
 }
 
 function typeGroup() {
-  return within(screen.getByRole('group', { name: 'ประเภทร้าน' }));
+  return within(screen.getByRole('group', { name: 'หมวดอาหาร' }));
 }
 
 beforeEach(() => {
@@ -58,7 +58,10 @@ afterEach(() => vi.unstubAllGlobals());
 it('shows the discovery page and searches real shops outside the header', async () => {
   view();
   expect(
-    screen.getByRole('heading', { level: 1, name: 'สำรวจร้านอาหาร' }),
+    screen.getByRole('heading', {
+      level: 1,
+      name: 'ค้นหาร้านอาหารในชุมชนของคุณ',
+    }),
   ).toBeVisible();
   expect(await screen.findByRole('heading', { name: 'yam' })).toBeVisible();
   const search = screen.getByRole('searchbox', { name: 'ค้นหาร้าน' });
@@ -73,8 +76,8 @@ it('shows the discovery page and searches real shops outside the header', async 
   expect(screen.getByRole('heading', { name: 'ร้านพัก' })).toBeVisible();
 });
 
-it('starts from the search and business type given in the home page link', async () => {
-  view('/shop?q=ร้าน&type=cafe');
+it('starts from the search and food category given in the home page link', async () => {
+  view('/shop?q=ร้าน&category=drinks');
   expect(await screen.findByRole('heading', { name: 'ร้านพัก' })).toBeVisible();
   expect(screen.getByRole('searchbox', { name: 'ค้นหาร้าน' })).toHaveValue(
     'ร้าน',
@@ -105,7 +108,9 @@ it('restores filters from the URL and clears them when no shop matches', async (
   ).toHaveAttribute('aria-pressed', 'true');
   fireEvent.click(screen.getByRole('button', { name: 'ล้างตัวกรอง' }));
   expect(screen.getByRole('heading', { name: 'ร้านพัก' })).toBeVisible();
-  expect(screen.getByRole('searchbox', { name: 'ค้นหาร้าน' })).toHaveValue('');
+  expect(screen.getByRole('searchbox', { name: 'ค้นหาร้าน' })).toHaveValue(
+    'ร้าน',
+  );
 });
 
 it('lists stores with a cart action when opened from the cart link', async () => {
@@ -124,14 +129,19 @@ it('switches directory controls and reference copy to English', async () => {
   await screen.findByRole('heading', { name: 'yam' });
   fireEvent.click(screen.getAllByRole('button', { name: 'English' })[0]);
   expect(
-    screen.getByRole('heading', { level: 1, name: 'Explore restaurants' }),
+    screen.getByRole('heading', {
+      level: 1,
+      name: 'Find restaurants in your community',
+    }),
   ).toBeVisible();
   expect(
     screen.getByRole('searchbox', { name: 'Search stores' }),
   ).toBeVisible();
-  expect(screen.getByRole('group', { name: 'Store types' })).toBeVisible();
+  expect(screen.getByRole('group', { name: 'Food categories' })).toBeVisible();
   expect(
-    screen.getByText('Find a restaurant and start your order.'),
+    screen.getByText(
+      'Find a restaurant, browse the menu and choose from its pickup or delivery options.',
+    ),
   ).toBeVisible();
 });
 
@@ -170,10 +180,10 @@ it('recovers from directory failures without losing the search', async () => {
   ).not.toBeInTheDocument();
 });
 
-it('filters by saved business type alongside search without treating closed stores as a category', async () => {
+it('filters by saved food category alongside search without treating closed stores as a category', async () => {
   view();
   await screen.findByRole('heading', { name: 'yam' });
-  const cafe = typeGroup().getByRole('button', { name: 'คาเฟ่' });
+  const cafe = typeGroup().getByRole('button', { name: 'เครื่องดื่ม' });
   fireEvent.click(cafe);
   expect(cafe).toHaveAttribute('aria-pressed', 'true');
   expect(
@@ -191,45 +201,26 @@ it('filters by saved business type alongside search without treating closed stor
   ).not.toContain('ปิดรับออเดอร์ชั่วคราว');
 });
 
-it('preserves unknown and missing types without inventing a restaurant classification', async () => {
+it('keeps uncategorized stores in All and ignores old type links', async () => {
   fetchMock.mockResolvedValueOnce({
     ok: true,
     json: async () => ({
       data: [
         ...shops,
-        {
-          slug: 'unknown',
-          name: 'Unknown type',
-          accepting_orders: true,
-          business_type: 'OTHER_TYPE',
-        },
-        { slug: 'missing', name: 'Missing type', accepting_orders: true },
-        {
-          slug: 'cafe-two',
-          name: 'Cafe two',
-          accepting_orders: true,
-          business_type: ' CAFE ',
-        },
+        { slug: 'unassigned', name: 'yam unassigned', accepting_orders: true },
       ],
     }),
   });
-  view();
-  await screen.findByRole('heading', { name: 'Unknown type' });
-  fireEvent.click(typeGroup().getByRole('button', { name: 'OTHER_TYPE' }));
-  expect(screen.getByRole('heading', { name: 'Unknown type' })).toBeVisible();
+  view('/shop?q=yam&type=cafe');
   expect(
-    screen.queryByRole('heading', { name: 'yam' }),
+    await screen.findByRole('heading', { name: 'yam unassigned' }),
+  ).toBeVisible();
+  expect(screen.getByRole('searchbox')).toHaveValue('yam');
+  fireEvent.click(typeGroup().getByRole('button', { name: 'ก๋วยเตี๋ยว' }));
+  expect(
+    screen.getByRole('heading', { name: /^yam$/ }),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole('heading', { name: 'yam unassigned' }),
   ).not.toBeInTheDocument();
-  fireEvent.click(typeGroup().getByRole('button', { name: 'ไม่ระบุประเภท' }));
-  expect(screen.getByRole('heading', { name: 'Missing type' })).toBeVisible();
-  fireEvent.click(typeGroup().getByRole('button', { name: 'คาเฟ่' }));
-  expect(screen.getByRole('heading', { name: 'ร้านพัก' })).toBeVisible();
-  expect(screen.getByRole('heading', { name: 'Cafe two' })).toBeVisible();
-  fireEvent.click(screen.getAllByRole('button', { name: 'English' })[0]);
-  expect(
-    within(screen.getByRole('group', { name: 'Store types' })).getByRole(
-      'button',
-      { name: 'Cafe' },
-    ),
-  ).toHaveAttribute('aria-pressed', 'true');
 });

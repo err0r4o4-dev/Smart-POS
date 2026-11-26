@@ -195,7 +195,10 @@ it.each([
 it('keeps the customer area independent of auth and organization providers', async () => {
   view('/shop');
   expect(
-    screen.getByRole('heading', { level: 1, name: 'สำรวจร้านอาหาร' }),
+    screen.getByRole('heading', {
+      level: 1,
+      name: /ค้นหาร้านอาหาร\s*ในชุมชนของคุณ/,
+    }),
   ).toBeVisible();
   expect(screen.queryByText('สำหรับลูกค้า')).not.toBeInTheDocument();
   expect(
@@ -205,11 +208,9 @@ it('keeps the customer area independent of auth and organization providers', asy
     screen.queryByRole('navigation', { name: 'Main navigation' }),
   ).not.toBeInTheDocument();
   // The only combobox is the store sort; no staff or account form appears.
-  expect(
-    screen
-      .getAllByRole('combobox')
-      .map((box) => box.getAttribute('aria-label')),
-  ).toEqual(['เรียงตาม']);
+  expect(screen.getAllByRole('combobox')).toEqual([
+    screen.getByRole('combobox', { name: 'เรียงตาม' }),
+  ]);
   expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   for (const path of [
     '/pos',
@@ -689,7 +690,7 @@ describe('storefront reference layout', () => {
     });
   });
 
-  it('shows a store hero with a cover chosen from the directory type and a real rating', async () => {
+  it('shows a store hero with a cover chosen from the food category and a real rating', async () => {
     fetchMock.mockImplementation(async (url: string) => {
       if (url === '/api/v1/storefronts')
         return response([
@@ -697,7 +698,7 @@ describe('storefront reference layout', () => {
             slug: settings.slug,
             name: settings.name,
             accepting_orders: true,
-            business_type: 'CAFE',
+            category_codes: ['drinks'],
             average_rating: 4.8,
             review_count: 326,
           },

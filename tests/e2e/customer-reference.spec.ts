@@ -139,10 +139,7 @@ test('directory restores its filters and scroll, and carries filters between are
   await fixture(page, baseURL!, [...moreStores, ...directory]);
   await page.setViewportSize({ width: 1280, height: 540 });
   await page.goto('/');
-  await page
-    .getByRole('navigation', { name: 'เมนูหน้าแรก' })
-    .getByRole('link', { name: 'สำรวจร้าน' })
-    .click();
+  await page.getByRole('button', { name: 'ค้นหา', exact: true }).click();
   await expect(page).toHaveURL(/\/shop$/);
   await expect(
     page.getByRole('heading', { name: 'สำรวจร้านอาหาร', level: 1 }),
@@ -268,25 +265,45 @@ for (const width of [320, 390, 768, 1440]) {
   });
 }
 
-test('public headers keep category and area shortcuts out of the main navigation', async ({
+test('customers can browse all stores and return home without merchant actions', async ({
   page,
   baseURL,
 }) => {
   await fixture(page, baseURL!);
   await page.setViewportSize({ width: 1440, height: 400 });
-  await page.goto('/shop');
+  await page.goto('/');
+  await page
+    .getByRole('region', { name: 'ค้นหาร้านอาหารในชุมชนของคุณ' })
+    .getByRole('link', { name: 'ดูร้านทั้งหมด' })
+    .click();
+  await expect(page).toHaveURL(/\/shop$/);
+  await expect(
+    page.getByRole('heading', { name: 'สำรวจร้านอาหาร', level: 1 }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('searchbox', { name: 'ค้นหาร้าน' }),
+  ).toBeVisible();
   const nav = page.getByRole('navigation', { name: 'เมนูหน้าร้านลูกค้า' });
-  await expect(nav.getByRole('link', { name: 'สำรวจร้าน' })).toHaveAttribute(
-    'aria-current',
-    'page',
-  );
-  for (const name of ['พื้นที่และชุมชน', 'หมวดหมู่อาหาร'])
+  for (const name of [
+    'สำรวจร้าน',
+    'พื้นที่และชุมชน',
+    'หมวดหมู่อาหาร',
+    'สำหรับร้านค้า',
+    'เข้าสู่ระบบร้านค้า',
+  ])
     await expect(nav.getByRole('link', { name })).toHaveCount(0);
-  await nav.getByRole('link', { name: 'หน้าหลัก' }).click();
+  await nav.getByRole('link', { name: 'กลับหน้าแรก' }).click();
+  await expect(page).toHaveURL(/\/$/);
   const mainNav = page.getByRole('navigation', { name: 'เมนูหน้าแรก' });
-  await expect(mainNav.getByRole('link', { name: 'สำรวจร้าน' })).toBeVisible();
-  for (const name of ['พื้นที่และชุมชน', 'หมวดหมู่อาหาร'])
-    await expect(mainNav.getByRole('link', { name })).toHaveCount(0);
+  for (const name of [
+    'หน้าหลัก',
+    'สำรวจร้าน',
+    'พื้นที่และชุมชน',
+    'หมวดหมู่อาหาร',
+  ])
+    await expect(mainNav.getByRole('link', { name, exact: true })).toHaveCount(
+      0,
+    );
   await expect(
     page.getByRole('link', { name: 'ดูทุกพื้นที่' }),
   ).toHaveAttribute('href', '/areas');

@@ -75,21 +75,13 @@
 .landing-navigation {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  justify-content: flex-end;
   font-size: 14px;
   font-weight: 600;
 }
-.landing-nav-links,
 .landing-nav-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
-}
-.landing-nav-links {
-  margin-inline: auto;
-}
-.landing-nav-actions {
   gap: 12px;
 }
 .landing-nav-link {
@@ -105,20 +97,11 @@
 .landing-nav-link:hover {
   background: var(--primary-subtle);
 }
-.landing-nav-link.is-active {
-  background: var(--primary-soft);
-}
 .landing-nav-link:focus-visible,
 .landing-page a:focus-visible,
 .landing-page button:focus-visible {
   outline: 2px solid var(--primary-strong);
   outline-offset: 2px;
-}
-.landing-header .button {
-  min-height: 44px;
-  padding: 8px 22px;
-  border-radius: var(--radius-pill);
-  white-space: nowrap;
 }
 
 /* Hero */
@@ -272,6 +255,11 @@
 }
 .landing-popular a:hover {
   background: rgb(255 255 255 / 70%);
+}
+.landing-browse-link {
+  margin-top: 10px;
+  min-height: 44px;
+  border-radius: var(--radius-pill);
 }
 
 /* Sections */
@@ -757,13 +745,20 @@
   font-weight: 700;
   text-align: center;
 }
-.landing-merchant-action {
+.landing-merchant-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-block: 10px;
+}
+.landing-merchant-actions .button {
   min-height: 44px;
-  padding-inline: 26px;
   border-radius: var(--radius-pill);
+  text-align: center;
+}
+.landing-merchant-action {
   background: var(--landing-gold);
   box-shadow: 0 3px 8px rgb(198 115 7 / 19%);
-  white-space: nowrap;
 }
 
 /* Footer */
@@ -883,11 +878,9 @@
     border-radius: var(--radius-card);
     box-shadow: var(--shadow-floating);
   }
-  .landing-mobile-menu .landing-nav-links,
   .landing-mobile-menu .landing-nav-actions {
     flex-direction: column;
     align-items: stretch;
-    margin: 0;
   }
   .landing-mobile-menu .landing-nav-link {
     border-radius: var(--radius-small);
@@ -1079,8 +1072,7 @@
   .landing-search .button {
     padding-inline: 12px;
   }
-  .landing-merchant-action {
+  .landing-merchant-actions {
     width: 100%;
-    white-space: normal;
   }
 }

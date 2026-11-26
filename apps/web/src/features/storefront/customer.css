@@ -37,22 +37,10 @@
 .customer-navigation {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: var(--space-4);
   font-size: 14px;
   font-weight: 600;
-}
-.customer-nav-links,
-.customer-nav-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-.customer-nav-links {
-  margin-inline: auto;
-}
-.customer-nav-actions {
-  gap: var(--space-3);
 }
 .customer-nav-link {
   display: inline-flex;
@@ -67,15 +55,6 @@
 }
 .customer-nav-link:hover {
   background: var(--primary-subtle);
-}
-.customer-nav-link.is-active {
-  background: var(--primary-soft);
-}
-.customer-header .button {
-  min-height: 44px;
-  padding: 8px 22px;
-  border-radius: var(--radius-pill);
-  white-space: nowrap;
 }
 .customer-cart-link {
   position: relative;
@@ -1271,12 +1250,6 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-card);
     box-shadow: var(--shadow-floating);
-  }
-  .customer-mobile-menu .customer-nav-links,
-  .customer-mobile-menu .customer-nav-actions {
-    flex-direction: column;
-    align-items: stretch;
-    margin: 0;
   }
   .customer-mobile-menu .customer-nav-link {
     border-radius: var(--radius-small);

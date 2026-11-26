@@ -1,36 +1,10 @@
 import { useState, type MouseEvent } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import {
-  House,
-  Menu,
-  Search,
-  ShoppingCart,
-  Store,
-  type LucideIcon,
-} from 'lucide-react';
-import { useOptionalAuth } from '../../app/AuthProvider';
+import { Link } from 'react-router-dom';
+import { ArrowLeft, Menu, ShoppingCart } from 'lucide-react';
 import { useLanguage } from '../../app/language';
 import { paths } from '../../app/routes';
 import { LanguageSwitcher } from '../../components/ui/LanguageSwitcher';
 import { Brand } from '../../components/ui/primitives';
-import type { TranslationKey } from '../../i18n';
-
-type Section = {
-  to: string;
-  label: TranslationKey;
-  icon: LucideIcon;
-  active?: (pathname: string) => boolean;
-};
-
-const sections: Section[] = [
-  { to: '/', label: 'landing.navHome', icon: House },
-  {
-    to: paths.shop,
-    label: 'landing.navExplore',
-    icon: Search,
-    active: (pathname) => pathname.startsWith(paths.shop),
-  },
-];
 
 export function CustomerHeader({
   slug,
@@ -92,8 +66,6 @@ export function CustomerHeader({
 
 function CustomerNavigation() {
   const { t } = useLanguage();
-  const { pathname } = useLocation();
-  const status = useOptionalAuth()?.state.status ?? 'anonymous';
   const close = (event: MouseEvent<HTMLElement>) =>
     event.currentTarget.closest('details')?.removeAttribute('open');
 
@@ -102,50 +74,11 @@ function CustomerNavigation() {
       className="customer-navigation"
       aria-label={t('shell.customerStorefrontNavigation')}
     >
-      <div className="customer-nav-links">
-        {sections.map(({ to, label, icon: Icon, active }) => {
-          const current = active?.(pathname) ?? false;
-          return (
-            <Link
-              key={to}
-              className={
-                current ? 'customer-nav-link is-active' : 'customer-nav-link'
-              }
-              to={to}
-              aria-current={current ? 'page' : undefined}
-              onClick={close}
-            >
-              <Icon size={17} aria-hidden="true" />
-              {t(label)}
-            </Link>
-          );
-        })}
-      </div>
-      <div className="customer-nav-actions">
-        <LanguageSwitcher />
-        <Link
-          className="customer-nav-link"
-          to="/#for-merchants"
-          onClick={close}
-        >
-          <Store size={17} aria-hidden="true" />
-          {t('landing.forMerchants')}
-        </Link>
-        {status === 'loading' ? (
-          <button className="button" type="button" disabled>
-            {t('landing.checking')}
-          </button>
-        ) : (
-          <Link
-            className="button"
-            to={status === 'authenticated' ? paths.workspace : paths.login}
-          >
-            {status === 'authenticated'
-              ? t('landing.goToWorkspace')
-              : t('auth.signIn')}
-          </Link>
-        )}
-      </div>
+      <Link className="customer-nav-link" to="/" onClick={close}>
+        <ArrowLeft size={17} aria-hidden="true" />
+        {t('landing.backToHome')}
+      </Link>
+      <LanguageSwitcher />
     </nav>
   );
 }

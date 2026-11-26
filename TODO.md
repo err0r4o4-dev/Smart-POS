@@ -29,3 +29,15 @@
 - [x] Keep Explore as the main navigation entry and keep area browsing on Main.
 - [x] Remove misleading food category shortcuts and verify desktop and mobile navigation.
 - [?] Recheck the web workspace typecheck after the VELO Assistant translation errors are resolved.
+
+## Market pilot data
+
+- [/] Prepare and validate 12 store profiles, 180 menu items and four operational scenarios.
+- [ ] Produce and inspect food photos and store covers.
+- [ ] Populate a task-owned loopback database and verify storefront and operational scenarios.
+- [ ] Obtain scoped independent review for data integrity, payment and isolation before acceptance.
+
+## Separate customer discovery and merchant sign-in
+
+- [/] Add a direct directory entry from home and group merchant account actions.
+- [ ] Verify customer, merchant and responsive navigation with isolated browser fixtures.

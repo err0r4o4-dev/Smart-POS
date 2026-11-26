@@ -122,7 +122,7 @@ export function LoginPage() {
         <div className="login-card-brand" aria-hidden="true">
           <Brand />
         </div>
-        <h1 id="login-title">{t('auth.signIn')}</h1>
+        <h1 id="login-title">{t('auth.merchantSignIn')}</h1>
         <p>{t('auth.signInForStoreOwnersManagersAnd')}</p>
       </div>
       {params.has('registered') && (

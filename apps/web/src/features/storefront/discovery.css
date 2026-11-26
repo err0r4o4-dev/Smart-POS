@@ -29,6 +29,22 @@
   padding: clamp(20px, 3.2vw, 46px);
   overflow-wrap: anywhere;
 }
+.discovery-hero-compact {
+  display: block;
+  background: linear-gradient(
+    110deg,
+    var(--surface) 48%,
+    var(--discovery-cream)
+  );
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
+.discovery-hero-compact .discovery-hero-copy {
+  padding: clamp(16px, 2vw, 28px);
+}
+.discovery-hero-compact .customer-search {
+  max-width: 42rem;
+}
 
 .discovery-hero h1 {
   margin: 0;

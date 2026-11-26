@@ -27,7 +27,7 @@ it('switches the actual auth page without losing form state, then retains langua
     target: { value: 'draft-password' },
   });
   fireEvent.click(screen.getByRole('button', { name: 'English' }));
-  expect(screen.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+  expect(screen.getByRole('heading', { name: 'Merchant sign-in' })).toBeVisible();
   expect(screen.getByLabelText('Email address')).toHaveValue(
     'synthetic@example.test',
   );

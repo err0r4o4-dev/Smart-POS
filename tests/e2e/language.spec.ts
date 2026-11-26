@@ -97,12 +97,11 @@ for (const width of [320, 375, 768, 1440]) {
     await expect(page.getByRole('heading', { level: 1 })).toContainText(
       'Find restaurants in your community',
     );
-    await expect(
-      page.getByRole('link', { name: 'Sign in', exact: true }),
-    ).toBeVisible();
-    const signInBounds = await page
-      .getByRole('link', { name: 'Sign in', exact: true })
-      .boundingBox();
+    const signIn = page
+      .getByRole('banner')
+      .getByRole('link', { name: 'Sign in', exact: true });
+    await expect(signIn).toBeVisible();
+    const signInBounds = await signIn.boundingBox();
     expect(signInBounds?.width).toBeGreaterThan(50);
     expect(signInBounds?.height).toBeLessThan(60);
     await expect
@@ -111,7 +110,7 @@ for (const width of [320, 375, 768, 1440]) {
     await page.screenshot({
       path: testInfo.outputPath(`landing-en-${width}.png`),
     });
-    await page.getByRole('link', { name: 'Sign in', exact: true }).click();
+    await signIn.click();
     await page
       .getByLabel('Email address', { exact: true })
       .fill('draft@example.test');
@@ -138,7 +137,7 @@ for (const width of [320, 375, 768, 1440]) {
     });
     await page.reload();
     await expect(
-      page.getByRole('heading', { name: 'Sign in', exact: true }),
+      page.getByRole('heading', { name: 'Merchant sign-in', exact: true }),
     ).toBeVisible();
     await page.goto('/shop');
     await expect(

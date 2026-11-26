@@ -139,14 +139,11 @@ test('filters published stores, keeps favorites, and opens the shop cart selecto
   await page.getByRole('link', { name: /สมัครร้านค้าฟรี/ }).click();
   await expect(page).toHaveURL(/\/register$/);
   await page.goto('/');
-  await page
-    .getByRole('banner')
-    .getByRole('link', { name: 'เข้าสู่ระบบ' })
-    .click();
+  await page.getByRole('link', { name: 'เข้าสู่ระบบร้านค้า' }).click();
   await expect(page).toHaveURL(/\/login$/);
 });
 
-test('mobile navigation keeps Explore accessible with the keyboard', async ({
+test('mobile navigation opens sign-in directly with the keyboard', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 320, height: 900 });
@@ -166,17 +163,24 @@ test('mobile navigation keeps Explore accessible with the keyboard', async ({
   await page.keyboard.press('Enter');
   await expect(menu).toHaveAttribute('aria-expanded', 'true');
   const navigation = page.getByRole('navigation', { name: 'เมนูหน้าแรก' });
-  for (const name of ['หน้าหลัก', 'สำรวจร้าน', 'สำหรับร้านค้า', 'เข้าสู่ระบบ'])
-    await expect(navigation.getByRole('link', { name })).toBeVisible();
-  for (const name of ['พื้นที่และชุมชน', 'หมวดหมู่อาหาร'])
-    await expect(navigation.getByRole('link', { name })).toHaveCount(0);
-  await navigation
-    .getByRole('link', { name: 'สำรวจร้าน', exact: true })
-    .focus();
+  const signIn = navigation.getByRole('link', { name: 'เข้าสู่ระบบ', exact: true });
+  await expect(signIn).toHaveAttribute('href', '/login');
+  for (const name of [
+    'หน้าหลัก',
+    'สำรวจร้าน',
+    'พื้นที่และชุมชน',
+    'หมวดหมู่อาหาร',
+    'สำหรับร้านค้า',
+  ])
+    await expect(
+      navigation.getByRole('link', { name, exact: true }),
+    ).toHaveCount(0);
+  for (let i = 0; i < 3; i++) await page.keyboard.press('Tab');
+  await expect(signIn).toBeFocused();
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/\/shop$/);
+  await expect(page).toHaveURL(/\/login$/);
   await expect(
-    page.getByRole('heading', { name: 'สำรวจร้านอาหาร' }),
+    page.getByRole('heading', { name: 'เข้าสู่ระบบร้านค้า' }),
   ).toBeVisible();
 });
 

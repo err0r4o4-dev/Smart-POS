@@ -29,67 +29,29 @@ beforeEach(() => {
   mocks.status = 'anonymous';
 });
 
-it('keeps Explore as the only discovery link in the shared header', () => {
+it('offers a route back home without duplicating discovery or merchant actions', () => {
   header();
   const nav = within(desktopNavigation());
-  expect(nav.getByRole('link', { name: 'หน้าหลัก' })).toHaveAttribute(
+  expect(nav.getByRole('link', { name: 'กลับหน้าแรก' })).toHaveAttribute(
     'href',
     '/',
   );
-  expect(nav.getByRole('link', { name: 'สำรวจร้าน' })).toHaveAttribute(
-    'href',
-    '/shop',
-  );
-  expect(nav.queryByRole('link', { name: 'พื้นที่และชุมชน' })).toBeNull();
-  expect(nav.queryByRole('link', { name: 'หมวดหมู่อาหาร' })).toBeNull();
-  expect(nav.getByRole('link', { name: 'สำหรับร้านค้า' })).toHaveAttribute(
-    'href',
-    '/#for-merchants',
-  );
+  expect(nav.getByRole('button', { name: 'English' })).toBeVisible();
+  expect(nav.getAllByRole('link')).toHaveLength(1);
 });
 
-it('marks the current section for assistive technology', () => {
-  const { unmount } = header();
-  const nav = within(desktopNavigation());
-  expect(nav.getByRole('link', { name: 'สำรวจร้าน' })).toHaveAttribute(
-    'aria-current',
-    'page',
-  );
-  unmount();
-  header({}, '/areas/campus');
-  expect(
-    within(desktopNavigation()).getByRole('link', { name: 'สำรวจร้าน' }),
-  ).not.toHaveAttribute('aria-current');
-});
-
-it('offers sign-in, workspace or a pending state based on the session', () => {
-  const { unmount } = header();
-  expect(
-    within(desktopNavigation()).getByRole('link', { name: 'เข้าสู่ระบบ' }),
-  ).toHaveAttribute('href', '/login');
-  unmount();
-
-  mocks.status = 'authenticated';
-  const second = header();
-  expect(
-    within(desktopNavigation()).getByRole('link', { name: 'เข้าพื้นที่ทำงาน' }),
-  ).toHaveAttribute('href', '/workspace');
-  second.unmount();
-
-  mocks.status = 'loading';
-  const third = header();
-  expect(
-    within(desktopNavigation()).getByRole('button', { name: 'กำลังตรวจสอบ…' }),
-  ).toBeDisabled();
-  third.unmount();
-
-  // Public customer pages render without an auth provider.
-  mocks.status = 'none';
-  header();
-  expect(
-    within(desktopNavigation()).getByRole('link', { name: 'เข้าสู่ระบบ' }),
-  ).toHaveAttribute('href', '/login');
-});
+it.each(['anonymous', 'authenticated', 'loading', 'none'])(
+  'omits merchant account actions in the %s session state',
+  (status) => {
+    mocks.status = status;
+    header();
+    const nav = within(desktopNavigation());
+    expect(
+      nav.queryByRole('link', { name: /เข้าสู่ระบบ|เข้าพื้นที่ทำงาน/ }),
+    ).toBeNull();
+    expect(nav.queryByRole('button', { name: 'กำลังตรวจสอบ…' })).toBeNull();
+  },
+);
 
 it('shows a cart only inside a store and keeps the dine-in table link', () => {
   const { unmount } = header();

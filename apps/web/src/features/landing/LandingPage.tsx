@@ -13,7 +13,7 @@ import {
   ClipboardList,
   Flame,
   Heart,
-  House,
+  LogIn,
   MapPin,
   Menu,
   Monitor,
@@ -163,11 +163,7 @@ export function LandingPage() {
             <Brand />
           </Link>
           <div className="landing-desktop-navigation">
-            <LandingNavigation
-              t={t}
-              loading={loading}
-              authenticated={authenticated}
-            />
+            <LandingNavigation t={t} authenticated={authenticated} />
           </div>
           <div className="landing-mobile-language">
             <LanguageSwitcher />
@@ -185,7 +181,6 @@ export function LandingPage() {
             </summary>
             <LandingNavigation
               t={t}
-              loading={loading}
               authenticated={authenticated}
               compactLanguage
             />
@@ -251,6 +246,13 @@ export function LandingPage() {
                   ))}
                 </ul>
               </div>
+              <Link
+                className="button button-secondary landing-browse-link"
+                to={paths.shop}
+              >
+                {t('landing.viewAllShops')}
+                <ArrowRight size={17} aria-hidden="true" />
+              </Link>
             </div>
           </div>
         </section>
@@ -358,6 +360,7 @@ export function LandingPage() {
           id="for-merchants"
           className="landing-section landing-merchant-section"
           aria-labelledby="landing-merchant"
+          tabIndex={-1}
         >
           <div className="landing-container">
             <div className="landing-merchant">
@@ -384,15 +387,41 @@ export function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <Link
-                className="button landing-merchant-action"
-                to={authenticated ? paths.workspace : paths.register}
-              >
-                {authenticated
-                  ? t('landing.goToWorkspace')
-                  : t('landing.merchantSignUp')}
-                <ArrowRight size={18} aria-hidden="true" />
-              </Link>
+              <div className="landing-merchant-actions">
+                {loading ? (
+                  <button
+                    className="button landing-merchant-action"
+                    type="button"
+                    disabled
+                  >
+                    {t('landing.checking')}
+                  </button>
+                ) : authenticated ? (
+                  <Link
+                    className="button landing-merchant-action"
+                    to={paths.workspace}
+                  >
+                    {t('landing.goToWorkspace')}
+                    <ArrowRight size={18} aria-hidden="true" />
+                  </Link>
+                ) : (
+                  <>
+                    <Link
+                      className="button landing-merchant-action"
+                      to={paths.login}
+                    >
+                      {t('auth.merchantSignIn')}
+                      <ArrowRight size={18} aria-hidden="true" />
+                    </Link>
+                    <Link
+                      className="button button-secondary"
+                      to={paths.register}
+                    >
+                      {t('landing.merchantSignUp')}
+                    </Link>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </section>
@@ -632,12 +661,10 @@ function RecommendedShops() {
 
 function LandingNavigation({
   t,
-  loading,
   authenticated,
   compactLanguage = false,
 }: {
   t: Translate;
-  loading: boolean;
   authenticated: boolean;
   compactLanguage?: boolean;
 }) {
@@ -648,16 +675,6 @@ function LandingNavigation({
       className="landing-navigation"
       aria-label={t('landing.homeNavigation')}
     >
-      <div className="landing-nav-links">
-        <Link className="landing-nav-link is-active" to="/" aria-current="page">
-          <House size={17} aria-hidden="true" />
-          {t('landing.navHome')}
-        </Link>
-        <Link className="landing-nav-link" to={paths.shop}>
-          <Search size={17} aria-hidden="true" />
-          {t('landing.navExplore')}
-        </Link>
-      </div>
       <div className="landing-nav-actions">
         {compactLanguage ? (
           <div className="landing-menu-language">
@@ -666,22 +683,18 @@ function LandingNavigation({
         ) : (
           <LanguageSwitcher />
         )}
-        <a className="landing-nav-link" href="#for-merchants" onClick={close}>
-          <Store size={17} aria-hidden="true" />
-          {t('landing.forMerchants')}
-        </a>
-        {loading ? (
-          <button className="button" type="button" disabled>
-            {t('landing.checking')}
-          </button>
-        ) : (
-          <Link
-            className="button"
-            to={authenticated ? paths.workspace : paths.login}
-          >
-            {authenticated ? t('landing.goToWorkspace') : t('auth.signIn')}
-          </Link>
-        )}
+        <Link
+          className="landing-nav-link"
+          to={authenticated ? paths.workspace : paths.login}
+          onClick={close}
+        >
+          {authenticated ? (
+            <Store size={17} aria-hidden="true" />
+          ) : (
+            <LogIn size={17} aria-hidden="true" />
+          )}
+          {t(authenticated ? 'landing.goToWorkspace' : 'auth.signIn')}
+        </Link>
       </div>
     </nav>
   );

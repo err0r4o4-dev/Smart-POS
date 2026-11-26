@@ -87,7 +87,7 @@ it('shows a directory rating, distinguishes zero reviews, and omits unavailable 
   expect(within(cards[2]).queryByText(/รีวิว|\/ 5/)).not.toBeInTheDocument();
 });
 
-it('presents the mockup sections with the unchanged header destinations', () => {
+it('links directly to sign-in from the header and discovery from the hero', () => {
   renderLanding();
   expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
     'ค้นหาร้านอาหารในชุมชนของคุณ',
@@ -97,17 +97,25 @@ it('presents the mockup sections with the unchanged header destinations', () => 
       .getByRole('banner')
       .querySelector('.landing-desktop-navigation') as HTMLElement,
   );
-  expect(nav.getByRole('link', { name: 'หน้าหลัก' })).toHaveAttribute(
-    'href',
-    '/',
-  );
-  expect(nav.getByRole('link', { name: 'สำรวจร้าน' })).toHaveAttribute(
-    'href',
-    '/shop',
-  );
+  for (const name of ['หน้าหลัก', 'สำรวจร้าน'])
+    expect(nav.queryByRole('link', { name })).not.toBeInTheDocument();
   expect(nav.getByRole('link', { name: 'เข้าสู่ระบบ' })).toHaveAttribute(
     'href',
     '/login',
+  );
+  expect(nav.queryByRole('link', { name: 'สำหรับร้านค้า' })).toBeNull();
+  const merchant = within(
+    screen.getByRole('region', { name: 'มีร้านอาหารเป็นของตัวเอง?' }),
+  );
+  expect(
+    merchant.getByRole('link', { name: 'เข้าสู่ระบบร้านค้า' }),
+  ).toHaveAttribute('href', '/login');
+  const hero = within(
+    screen.getByRole('region', { name: 'ค้นหาร้านอาหารในชุมชนของคุณ' }),
+  );
+  expect(hero.getByRole('link', { name: 'ดูร้านทั้งหมด' })).toHaveAttribute(
+    'href',
+    '/shop',
   );
   expect(nav.getByRole('button', { name: 'English' })).toBeVisible();
   expect(
@@ -246,7 +254,7 @@ it('offers the workspace to signed-in users instead of sign-in', () => {
   for (const link of screen.getAllByRole('link', { name: 'เข้าพื้นที่ทำงาน' }))
     expect(link).toHaveAttribute('href', '/workspace');
   expect(
-    screen.queryByRole('link', { name: 'เข้าสู่ระบบ' }),
+    screen.queryByRole('link', { name: /เข้าสู่ระบบ/ }),
   ).not.toBeInTheDocument();
 });
 

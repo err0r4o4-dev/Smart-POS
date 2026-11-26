@@ -11,17 +11,19 @@ export function DiscoveryHero({
   description,
   image = '/images/home/reference/hero-meal.webp',
   area = false,
+  compact = false,
   children,
 }: {
   title: string;
   description: string;
   image?: string;
   area?: boolean;
+  compact?: boolean;
   children?: ReactNode;
 }) {
   return (
     <section
-      className={`discovery-hero${area ? ' discovery-hero-area' : ''}`}
+      className={`discovery-hero${area ? ' discovery-hero-area' : ''}${compact ? ' discovery-hero-compact' : ''}`}
       aria-labelledby="discovery-title"
     >
       <div className="discovery-hero-copy">
@@ -31,7 +33,7 @@ export function DiscoveryHero({
         <p>{description}</p>
         {children}
       </div>
-      <img className="discovery-hero-art" src={image} alt="" />
+      {!compact && <img className="discovery-hero-art" src={image} alt="" />}
     </section>
   );
 }

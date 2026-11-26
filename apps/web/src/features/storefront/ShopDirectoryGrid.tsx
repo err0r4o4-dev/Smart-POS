@@ -125,7 +125,7 @@ export function ShopDirectoryGrid({
 
   return (
     <div className="customer-directory">
-      {hero && <DiscoveryHero {...hero}>{searchField}</DiscoveryHero>}
+      {hero && <DiscoveryHero {...hero} compact>{searchField}</DiscoveryHero>}
       <div className="customer-directory-toolbar">
         {hero ? <DiscoveryAreaSelect search={directorySearch} /> : searchField}
         <label className="customer-sort">

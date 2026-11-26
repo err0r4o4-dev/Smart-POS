@@ -131,7 +131,7 @@ for (const mode of ['QR', 'PICKUP']) {
       );
       expect(order.payment_status).toBe('UNPAID');
       await expect(
-        page.getByRole('heading', { name: 'ติดตามออเดอร์' }),
+        page.getByRole('heading', { name: 'คำสั่งซื้อของฉัน' }),
       ).toBeVisible();
       const current = await request.get(
         `${origin.origin}${orgPath}/online-orders/${order.id}`,
@@ -229,7 +229,7 @@ for (const mode of ['QR', 'PICKUP']) {
         })
         .toBe(true);
       await expect(
-        page.getByRole('heading', { name: 'ติดตามออเดอร์' }),
+        page.getByRole('heading', { name: 'คำสั่งซื้อของฉัน' }),
       ).toBeVisible();
       await expect(
         page.getByRole('button', { name: 'ตรวจสอบสถานะชำระเงิน' }),

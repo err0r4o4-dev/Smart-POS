@@ -3406,6 +3406,39 @@ Acceptance: Tests reject selling before approval, unsafe account changes and cro
   `git diff --check` passed for the changed planning files and nothing was
   staged. Prettier reports an existing style issue elsewhere in `design.md`
   that also appears in the committed HEAD version.
+  Ruling (2026-11-26, user delegated the choice): implement the guest draft
+  first and defer the member draft. No customer/member account exists in the
+  API yet (T6.4 customer login is open), so a member draft would have no
+  authenticated owner to scope against. The guest draft needs no schema or
+  database. Cost if wrong: member cross-device sync arrives later than guest.
+- [/] 2026-11-26 guest draft store (`apps/web/src/features/storefront/guest-draft.ts`):
+  stores only item IDs, exact 3-decimal quantities and modifier group/option
+  IDs per restaurant slug (key `guest-draft:v1:<slug>`), never prices, quotes,
+  proofs or payment state. Create expects no live draft; edit requires the
+  live identity and revision; both re-read and write inside an exclusive Web
+  Lock per restaurant. Expiry is 24 hours from the accepted edit and the exact
+  boundary is expired; reads never write or extend. Without Web Locks or
+  storage, writes return `unavailable` instead of an unserialized write.
+  Malformed or mismatched stored data is ignored. No UI, route, schema or
+  retained `useShopCart` behavior changed; nothing calls the store yet.
+  - Evidence: the new test file first failed to import the missing module.
+    It now passes 21 cases, covering expiry boundary, read-without-extension,
+    revision/expiry advance, stale and concurrent edits, concurrent creates,
+    expired and replaced identities, per-restaurant isolation, distinct
+    same-item choices, invalid input and unavailable locks/storage. Mutation
+    checks: an unlocked writer still passed the original 20 cases, so a test
+    that holds the lock while another tab commits was added; it failed with
+    the lock bypassed and passed when restored. Workspace storefront Vitest
+    (11 files/146 tests), `tsc -b`, focused ESLint and Prettier passed.
+  - Ruling: key the draft by the public slug because public storefront data
+    exposes no stable restaurant ID, and the draft stores the slug inside the
+    record so a copied value under another key is ignored. Cost if wrong: a
+    renamed slug leaves the old guest draft unreachable until it expires.
+  - Open: wire the store into the native menu/cart UI with explicit
+    conflict/expiry review, clear-on-checkout behavior, browser acceptance at
+    360/390/1280px, and a decision for browsers without Web Locks (currently
+    no saving). Account-switch separation is inherent (guest store only); it
+    must be retested when member drafts arrive.
 - [ ] Persist scoped checkout intent/key/fingerprint and immutable order snapshots. Revalidate current menu/options/prices/modes and separate cart save from payment reservations. Guest device carts and member sync integrate with T6.4.
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.
@@ -3604,9 +3637,30 @@ Acceptance: Race/denial tests prevent dual owners, unverified receiving-account 
     passed; `go vet` for those two packages exited 0. With `SMARTPOS_*`
     variables removed, `go test ./... -count=1` passed all test packages.
     `gofmt -l` for the three changed Go files and `git diff --check` for the
-    B16/tracker paths returned no files. The index had no staged paths. Full
-    `go vet ./...` and `go build ./...` did not start because the classifier
-    timed out repeatedly; no database or browser check was run.
+    B16/tracker paths returned no files. The index had no staged paths. A
+    later offline `go vet ./...` and `go build ./...` both exited 0. No
+    database or browser check was run. The user authorized scoped independent
+    review on 2026-11-26; a read-only reviewer received only the three Go
+    paths, the plan and the D03 sections, and used no shell, network, writes
+    or delegation. It found no P1: no misbound field, accepted malformed input
+    or changed catalog caller (`catalog/imports.go` still calls `parseFile`).
+  - Review P2 fixes, test-first: ten new row cases (embedded newline and
+    U+200B in `ref`, tab in `parent_ref`, whitespace-only and multi-line
+    `name`, and each remaining `not_applicable` kind/field pair) plus a tenth
+    header column. The focused run failed on the five ref/name cases (rows
+    returned, no issues) before the fix; the applicability and extra-header
+    cases already passed against existing guards. After the fix, the focused
+    run, Catalog/Restaurant package tests with `-count=1`, package `go vet`,
+    `gofmt -l`, full offline `go test ./... -count=1` and `go vet ./...`
+    passed; `git diff --check` was clean and nothing was staged.
+  - Ruling: `ref`/`parent_ref` reject whitespace, control (Cc) and format
+    (Cf) characters, max 100 runes; `name` must be visible single-line text,
+    max 200 runes (matching catalog product names). Thai combining marks are
+    unaffected. Cost if wrong: an Owner needing longer refs gets a diagnostic.
+  - Deferred minors (P3, not fixed): XLSX test cells use `85.00` where Excel
+    stores `85`; percent-formatted cells import their stored value; lines are
+    logical CSV rows; only the second duplicate is reported; blank comma-only
+    rows fail the file. Revisit in the preview/UI slice.
   - Ruling: run inline on non-overlapping paths in the current checkout, with
     no staging/commits or reviewer dispatch as required by the current request.
     The dirty checkout is not a clean acceptance baseline; verify the scoped

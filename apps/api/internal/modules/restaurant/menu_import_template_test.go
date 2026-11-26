@@ -66,6 +66,7 @@ func TestMenuImportTemplateRejectsInvalidFile(t *testing.T) {
 		{"missing-header", strings.TrimSuffix(menuImportTestHeader, ",max_choices\n") + "\n" + strings.TrimSuffix(row, ",\n") + "\n"},
 		{"duplicate-header", strings.Replace(menuImportTestHeader, "max_choices", "min_choices", 1) + row},
 		{"unknown-header", strings.Replace(menuImportTestHeader, "max_choices", "quota", 1) + row},
+		{"extra-header", strings.TrimSuffix(menuImportTestHeader, "\n") + ",quota\n" + strings.TrimSuffix(row, "\n") + ",\n"},
 		{"wrong-header-case", strings.Replace(menuImportTestHeader, "ref", "Ref", 1) + row},
 		{"missing-cell", menuImportTestHeader + strings.TrimSuffix(row, ",\n") + "\n"},
 		{"too-large", menuImportTestHeader + strings.Repeat("x", 5<<20)},
@@ -112,6 +113,16 @@ func TestMenuImportTemplateRowDiagnostics(t *testing.T) {
 		{"fractional-choice", "1,GROUP,protein,basil,,,,,1.5", "max_choices", "invalid"},
 		{"choice-overflow", "1,GROUP,protein,basil,,,,,2147483648", "max_choices", "invalid"},
 		{"inverted-choice-range", "1,GROUP,protein,basil,,,,2,1", "max_choices", "less_than_min"},
+		{"ref-embedded-newline", "1,ITEM,\"noo\ndles\",rice,,,,,", "ref", "invalid"},
+		{"ref-zero-width", "1,ITEM,basil​,rice,,,,,", "ref", "invalid"},
+		{"parent-ref-tab", "1,ITEM,noodles,ri\tce,,,,,", "parent_ref", "invalid"},
+		{"whitespace-only-name", "1,ITEM,noodles,rice,   ,,,,", "name", "invalid"},
+		{"name-embedded-newline", "1,ITEM,noodles,rice,\"ข้าว\nผัด\",,,,", "name", "invalid"},
+		{"group-price", "1,GROUP,protein,basil,,1.00,,,", "price", "not_applicable"},
+		{"group-status", "1,GROUP,protein,basil,,,ACTIVE,,", "sale_status", "not_applicable"},
+		{"category-status", "1,CATEGORY,noodles,,,,INACTIVE,,", "sale_status", "not_applicable"},
+		{"item-min-choices", "1,ITEM,noodles,rice,,,,1,", "min_choices", "not_applicable"},
+		{"option-max-choices", "1,OPTION,chicken,protein,,,,,1", "max_choices", "not_applicable"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			rows, issues, err := parseMenuImportTemplate("menu.csv", []byte(menuImportTestHeader+goodRow+tc.row+"\n"))

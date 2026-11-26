@@ -28,6 +28,16 @@ export const StorefrontPage = lazy(() =>
     default: module.StorefrontPage,
   })),
 );
+export const AreasPage = lazy(() =>
+  import('../features/storefront/AreasPage').then((module) => ({
+    default: module.AreasPage,
+  })),
+);
+export const AreaDetailPage = lazy(() =>
+  import('../features/storefront/AreasPage').then((module) => ({
+    default: module.AreaDetailPage,
+  })),
+);
 export const ShopCartPage = lazy(() =>
   import('../features/storefront/ShopCartPage').then((module) => ({
     default: module.ShopCartPage,

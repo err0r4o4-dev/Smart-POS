@@ -1,16 +1,14 @@
 import { useLanguage } from '../../app/language';
 import { Link, useSearchParams } from 'react-router-dom';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  ChevronDown,
   Grid2X2,
   Heart,
+  Info,
   LayoutGrid,
   List,
   Minus,
-  Menu,
-  Package,
   PackageOpen,
   Plus,
   Search,
@@ -18,16 +16,18 @@ import {
   ShoppingCart,
   UtensilsCrossed,
   SlidersHorizontal,
-  Store,
-  X,
 } from 'lucide-react';
-import { Button, Card, Loading, Tag } from '../../components/ui/primitives';
+import { MenuItemDialog } from './MenuItemDialog';
 import {
-  exactDecimal,
-  isKnownStockPolicy,
-  MAX_LINE_QUANTITY,
-  moneyText,
-} from '../../lib/pos-api';
+  StoreHero,
+  StoreInfoPanel,
+  StoreReviewsPanel,
+  StoreTabs,
+  type StoreTab,
+} from './StoreHero';
+import { Button, Card, Loading, Tag } from '../../components/ui/primitives';
+import { exactDecimal, moneyText } from '../../lib/pos-api';
+import { quantityText, useProductQuantity } from './use-product-quantity';
 import {
   centsText,
   estimatedLine,
@@ -79,13 +79,6 @@ const initialFilters = {
   category: '',
   sort: 'name',
 };
-function quantityText(value: bigint) {
-  const remainder = (value % 1000n)
-    .toString()
-    .padStart(3, '0')
-    .replace(/0+$/, '');
-  return `${value / 1000n}${remainder ? `.${remainder}` : ''}`;
-}
 
 export function ShopCatalog({ slug }: { slug: string }) {
   const { t, language } = useLanguage();
@@ -97,8 +90,9 @@ export function ShopCatalog({ slug }: { slug: string }) {
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState(initialFilters);
   const [view, setView] = useState<'grid' | 'list'>('grid');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const [tab, setTab] = useState<StoreTab>('menu');
+  const [selected, setSelected] = useState<ShopProduct | null>(null);
+  const detailOpener = useRef<HTMLButtonElement | null>(null);
   const [addResult, setAddResult] = useState<{
     productName: string;
     succeeded: boolean;
@@ -125,10 +119,18 @@ export function ShopCatalog({ slug }: { slug: string }) {
     tableQuery.size ? `?${tableQuery.toString()}` : ''
   }`;
 
-  useEffect(() => {
-    const onToggle = () => setSidebarCollapsed((v) => !v);
-    window.addEventListener('toggle-catalog-sidebar', onToggle);
-    return () => window.removeEventListener('toggle-catalog-sidebar', onToggle);
+  const addProduct = (product: ShopProduct, quantity: string) => {
+    const succeeded = cart.add(product, quantity);
+    setAddResult((previous) => ({
+      productName: product.product_name,
+      succeeded,
+      sequence: (previous?.sequence ?? 0) + 1,
+    }));
+  };
+  const closeDetails = useCallback(() => {
+    setSelected(null);
+    // Return focus to the card button that opened the dialog.
+    detailOpener.current?.focus();
   }, []);
 
   const shop = useQuery({
@@ -201,81 +203,45 @@ export function ShopCatalog({ slug }: { slug: string }) {
           </span>
         )}
       </div>
-      <header className="shop-page-heading shop-store-heading">
-        <div className="shop-store-identity">
-          <span className="shop-store-symbol">
-            <Store size={28} strokeWidth={1.6} aria-hidden="true" />
-          </span>
-          <div>
-            <h1>{store.name}</h1>
-            {store.description && <p>{store.description}</p>}
-          </div>
-        </div>
-        <Tag tone={store.accepting_orders ? 'success' : 'neutral'}>
-          <span className="shop-directory-status-dot" aria-hidden="true" />
-          {store.accepting_orders
-            ? t('storefront.acceptingOrders')
-            : t('storefront.notAcceptingOrders')}
-        </Tag>
-      </header>
+      <StoreHero store={store} slug={slug} />
+      <StoreTabs active={tab} onChange={setTab} />
+      {tab === 'info' && <StoreInfoPanel store={store} />}
+      {tab === 'reviews' && <StoreReviewsPanel slug={slug} />}
       <div
-        className={`catalog-layout ${sidebarCollapsed ? 'catalog-layout-sidebar-collapsed' : ''}`}
+        className="catalog-layout customer-catalog-layout"
+        id="store-panel-menu"
+        role="tabpanel"
+        aria-labelledby="store-tab-menu"
+        hidden={tab !== 'menu'}
       >
-        <aside
-          className={`catalog-sidebar ${sidebarCollapsed ? 'catalog-sidebar-collapsed' : ''}`}
-          id="catalog-sidebar"
-          aria-label={t('catalog.productCategory')}
+        <div
+          className="customer-category-chips"
+          role="group"
+          aria-label={t('storefront.customer.menuCategories')}
         >
-          <div className="catalog-sidebar-header">
-            <h2>
-              {language === 'th'
-                ? 'หมวดหมู่เมนู'
-                : t('catalog.productCategory')}
-            </h2>
-          </div>
-          <Button
-            className="button-secondary catalog-category-toggle"
-            aria-expanded={categoriesOpen}
-            aria-controls="catalog-category-list"
-            onClick={() => setCategoriesOpen(!categoriesOpen)}
+          <button
+            type="button"
+            aria-label={t('storefront.allValue0', { value0: allCount })}
+            aria-pressed={!filters.category}
+            onClick={() => changeFilters({ category: '' })}
           >
-            <SlidersHorizontal size={18} aria-hidden="true" />{' '}
-            {t('catalog.categories')}{' '}
-            <ChevronDown size={16} aria-hidden="true" />
-          </Button>
-          <div
-            id="catalog-category-list"
-            className="catalog-category-list"
-            data-expanded={categoriesOpen}
-          >
-            <Button
-              className="catalog-category"
-              aria-label={t('storefront.allValue0', { value0: allCount })}
-              aria-pressed={!filters.category}
-              onClick={() => changeFilters({ category: '' })}
+            <LayoutGrid size={16} aria-hidden="true" />
+            <span>{t('common.all')}</span>
+            <span className="catalog-category-count">{allCount}</span>
+          </button>
+          {categories.map((category) => (
+            <button
+              type="button"
+              key={category.id}
+              aria-label={`${translateCategory(category.name, language)} ${category.count}`}
+              aria-pressed={filters.category === category.id}
+              onClick={() => changeFilters({ category: category.id })}
             >
-              <LayoutGrid size={18} aria-hidden="true" />
-              <span>{t('common.all')}</span>
-              <span className="catalog-category-count">{allCount}</span>
-            </Button>
-            {categories.map((category) => (
-              <Button
-                key={category.id}
-                className="catalog-category"
-                aria-label={`${translateCategory(category.name, language)} ${category.count}`}
-                aria-pressed={filters.category === category.id}
-                onClick={() => {
-                  changeFilters({ category: category.id });
-                  setCategoriesOpen(false);
-                }}
-              >
-                <Package size={18} aria-hidden="true" />
-                <span>{translateCategory(category.name, language)}</span>
-                <span className="catalog-category-count">{category.count}</span>
-              </Button>
-            ))}
-          </div>
-        </aside>
+              <span>{translateCategory(category.name, language)}</span>
+              <span className="catalog-category-count">{category.count}</span>
+            </button>
+          ))}
+        </div>
         <section
           className="catalog-main"
           aria-label={t('landing.yourProducts')}
@@ -326,28 +292,6 @@ export function ShopCatalog({ slug }: { slug: string }) {
               setPage(1);
             }}
           >
-            <button
-              type="button"
-              className="storefront-menu-btn"
-              aria-label={
-                sidebarCollapsed
-                  ? language === 'th'
-                    ? 'เปิดเมนูหมวดหมู่'
-                    : 'Open category menu'
-                  : language === 'th'
-                    ? 'ปิดเมนูหมวดหมู่'
-                    : 'Close category menu'
-              }
-              aria-expanded={!sidebarCollapsed}
-              aria-controls="catalog-sidebar"
-              onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
-            >
-              {sidebarCollapsed ? (
-                <Menu size={20} aria-hidden="true" />
-              ) : (
-                <X size={20} aria-hidden="true" />
-              )}
-            </button>
             <label htmlFor="shop-search" className="catalog-search-field">
               <Search size={19} aria-hidden="true" />
               <span className="catalog-visually-hidden">
@@ -480,17 +424,33 @@ export function ShopCatalog({ slug }: { slug: string }) {
                       (item) => item.variant_id === product.variant_id,
                     ))
                 }
-                add={(quantity) => {
-                  const succeeded = cart.add(product, quantity);
-                  setAddResult((previous) => ({
-                    productName: product.product_name,
-                    succeeded,
-                    sequence: (previous?.sequence ?? 0) + 1,
-                  }));
+                add={(quantity) => addProduct(product, quantity)}
+                onShowDetails={(opener) => {
+                  detailOpener.current = opener;
+                  setSelected(product);
                 }}
               />
             ))}
           </div>
+          <MenuItemDialog
+            product={selected}
+            cartQuantity={
+              cart.items.find(
+                (item) => item.variant_id === selected?.variant_id,
+              )?.quantity ?? '0.000'
+            }
+            disabled={
+              !store.accepting_orders ||
+              (cart.items.length >= 100 &&
+                !cart.items.some(
+                  (item) => item.variant_id === selected?.variant_id,
+                ))
+            }
+            onAdd={(quantity) => {
+              if (selected) addProduct(selected, quantity);
+            }}
+            onClose={closeDetails}
+          />
           {cart.items.length > 0 && (
             <aside
               className="catalog-floating-cart-bar"
@@ -546,6 +506,7 @@ function CatalogProductCard({
   onToggleFavorite,
   disabled,
   add,
+  onShowDetails,
 }: {
   product: ShopProduct;
   cartQuantity: string;
@@ -553,36 +514,23 @@ function CatalogProductCard({
   onToggleFavorite?: () => void;
   disabled: boolean;
   add: (quantity: string) => void;
+  onShowDetails: (opener: HTMLButtonElement) => void;
 }) {
   const { t, language } = useLanguage();
 
-  const stock = exactDecimal(product.available ?? '', 3) ?? 0n;
-  const menuOnly = product.stock_policy === 'MENU_ONLY';
-  const cartUnits = exactDecimal(cartQuantity, 3) ?? 0n;
-  const remaining =
-    (menuOnly
-      ? MAX_LINE_QUANTITY
-      : stock < MAX_LINE_QUANTITY
-        ? stock
-        : MAX_LINE_QUANTITY) - cartUnits;
-  const whole = ['COUNT', 'PACKAGING'].includes(product.unit_type);
-  const step = whole ? 1000n : 1n;
-  const [quantity, setQuantity] = useState(() =>
-    !whole && remaining > 0n && remaining < 1000n
-      ? quantityText(remaining)
-      : '1',
-  );
+  const {
+    quantity,
+    setQuantity,
+    units,
+    step,
+    whole,
+    remaining,
+    valid,
+    ready,
+    menuOnly,
+    stock,
+  } = useProductQuantity(product, cartQuantity);
   const [imageFailed, setImageFailed] = useState(false);
-  const units = exactDecimal(quantity, 3);
-  const valid =
-    units !== null &&
-    units > 0n &&
-    units <= remaining &&
-    (!whole || units % 1000n === 0n);
-  const ready =
-    product.saleable &&
-    isKnownStockPolicy(product.stock_policy) &&
-    (menuOnly || stock >= step);
   const inputID = `quantity-${product.variant_id}`;
   const errorID = `${inputID}-error`;
   return (
@@ -653,6 +601,19 @@ function CatalogProductCard({
             {translateProduct(product.product_name, language)}
           </h2>
           <p className="catalog-variant">{product.variant_name}</p>
+          <button
+            type="button"
+            className="customer-menu-details-link"
+            aria-label={t('storefront.customer.menuDetails', {
+              name: translateProduct(product.product_name, language),
+            })}
+            onClick={(event) => onShowDetails(event.currentTarget)}
+          >
+            <Info size={15} aria-hidden="true" />
+            <span aria-hidden="true">
+              {t('storefront.customer.menuDetails', { name: '' }).trim()}
+            </span>
+          </button>
           {product.is_sold_out && (
             <Tag tone="amber">{t('storefront.soldOut')}</Tag>
           )}

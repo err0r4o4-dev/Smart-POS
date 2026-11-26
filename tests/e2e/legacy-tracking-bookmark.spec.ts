@@ -80,7 +80,7 @@ for (const width of [360, 390, 1280]) {
             `${origin}${shop}/orders/${order}${suffix}`,
           );
           await expect(
-            page.getByRole('heading', { name: 'Track order' }),
+            page.getByRole('heading', { name: 'My order' }),
           ).toBeVisible();
           const orderRequests = () =>
             requests.filter(({ path }) => path !== session);

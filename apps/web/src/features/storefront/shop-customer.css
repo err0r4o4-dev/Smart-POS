@@ -175,7 +175,6 @@
   color: var(--primary-strong);
 }
 
-.shop-store-shell .catalog-sidebar,
 .shop-store-shell .catalog-products .catalog-product {
   border: 1px solid var(--border);
   border-radius: var(--radius-card);

@@ -19,10 +19,16 @@ async function expectHeaderControlBounds(page: Page, width: number) {
   const gutter = width < 768 ? 16 : 24;
   const shellInset = (gutter + Math.max(gutter, (width - 1232) / 2)) / 2;
   await page.evaluate(() => document.fonts.ready);
-  const left = (await page.locator('.storefront-header-left').boundingBox())!;
-  const right = (await page.locator('.storefront-header nav').boundingBox())!;
+  // Shared customer header: brand on the left, last visible control on the right.
+  const left = (await page.locator('.customer-brand-link').boundingBox())!;
+  const lastControl = (await page
+    .locator(
+      '.customer-header-inner > :is(a, details) :is(a, summary):visible, .customer-header-inner > a:visible, .customer-desktop-navigation .button:visible',
+    )
+    .last()
+    .boundingBox())!;
   expect(left.x).toBeCloseTo(shellInset, 0);
-  expect(right.x + right.width).toBeCloseTo(width - shellInset, 0);
+  expect(lastControl.x + lastControl.width).toBeCloseTo(width - shellInset, 0);
   const footer = page.locator('.storefront-footer-container');
   if (await footer.count()) {
     const bounds = (await footer.boundingBox())!;
@@ -33,7 +39,9 @@ async function expectHeaderControlBounds(page: Page, width: number) {
   expect(content.width).toBeCloseTo(Math.min(1232, width - 2 * gutter), 0);
   expect(content.x).toBeCloseTo((width - content.width) / 2, 0);
   for (const control of await page
-    .locator('.storefront-header button, .storefront-header a')
+    .locator(
+      '.storefront-header button:visible, .storefront-header a:visible, .storefront-header summary:visible',
+    )
     .all()) {
     const bounds = (await control.boundingBox())!;
     expect(bounds.x).toBeGreaterThanOrEqual(gutter);
@@ -165,7 +173,7 @@ test('catalog fits at public layout breakpoints', async ({
     const header = await page.locator('.storefront-header').boundingBox();
     expect(header!.height).toBeCloseTo(66, 0);
     await expectHeaderControlBounds(page, width);
-    await expect(page.locator('.catalog-layout')).toHaveCSS('gap', '24px');
+    await expect(page.locator('.catalog-layout')).toHaveCSS('gap', '16px');
     await expect(page.locator('.catalog-products-list')).toHaveCSS(
       'gap',
       '24px',
@@ -194,9 +202,11 @@ test('catalog fits at public layout breakpoints', async ({
         animations: 'disabled',
       });
     }
-    await page.getByRole('button', { name: 'English', exact: true }).click();
+    await page.evaluate(() => localStorage.setItem('smartpos.language', 'en'));
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'กาแฟ' })).toBeVisible();
     await expectHeaderControlBounds(page, width);
-    await page.getByRole('button', { name: 'ไทย', exact: true }).click();
+    await page.evaluate(() => localStorage.setItem('smartpos.language', 'th'));
   }
 });
 
@@ -281,30 +291,28 @@ for (const width of [
             getComputedStyle(document.querySelector(selector)!).fontSize,
           );
         return {
-          title: fontSize('.shop-directory-hero h1'),
-          store: fontSize('.shop-directory-store-copy h3'),
-          search: fontSize('.shop-directory-search input'),
+          title: fontSize('.customer-page-heading h1'),
+          description: fontSize('.customer-page-heading p'),
+          search: fontSize('.customer-search input'),
           header: document
             .querySelector('.storefront-header')!
             .getBoundingClientRect().height,
           targets: Array.from(
             document.querySelectorAll(
-              '.shop-directory-view button, .language-switcher button, .shop-directory-type-toggle, .shop-directory-card > .button',
+              '.customer-chips button, .customer-type-list button, .customer-sort select, .customer-shop-favorite, .storefront-header a, .storefront-header button, .storefront-header summary',
             ),
-          ).map((element) => element.getBoundingClientRect().height),
+          )
+            .map((element) => element.getBoundingClientRect())
+            .filter((rect) => rect.width > 0)
+            .map((rect) => rect.height),
         };
       });
       expect(sizes.title).toBeLessThanOrEqual(36);
-      expect(sizes.store).toBe(16);
       expect(sizes.search).toBe(16);
-      await expect(page.locator('.storefront-header-left > .tag')).toHaveCount(
-        0,
-      );
+      expect(sizes.description).toBe(16);
+      expect(sizes.targets.every((height) => height >= 44)).toBe(true);
+      expect(sizes.header).toBeCloseTo(66, 0);
       const detailSizes = await page.evaluate(() => ({
-        description: Number.parseFloat(
-          getComputedStyle(document.querySelector('.shop-directory-hero p')!)
-            .fontSize,
-        ),
         footer: Number.parseFloat(
           getComputedStyle(
             document.querySelector('.shop-directory-footer > small')!,
@@ -314,7 +322,6 @@ for (const width of [
           .querySelector('.shop-directory-footer')!
           .getBoundingClientRect().height,
       }));
-      expect(detailSizes.description).toBe(14);
       expect(detailSizes.footer).toBe(13);
       const footer = page.locator('.shop-directory-footer');
       await expect(footer.getByRole('navigation')).toBeVisible();
@@ -322,25 +329,12 @@ for (const width of [
         footer.getByRole('navigation').getByRole('link'),
       ).toHaveCount(2);
       await expect(footer).toContainText('VELOPOS · Smart POS Platform');
-      await expect(
-        footer.getByRole('link', { name: 'เงื่อนไขการให้บริการ' }),
-      ).toBeVisible();
-      await expect(
-        footer.getByRole('link', { name: 'นโยบายความเป็นส่วนตัว' }),
-      ).toBeVisible();
       const surfaces = await page.evaluate(() => {
         const shell = document.querySelector('.shop-directory-shell')!;
         const footer = document.querySelector('.shop-directory-footer')!;
         return {
           background: getComputedStyle(shell).backgroundImage,
           footerBackground: getComputedStyle(footer).backgroundColor,
-          footerImage: getComputedStyle(footer).backgroundImage,
-          headerImage: getComputedStyle(
-            document.querySelector('.storefront-header')!,
-          ).backgroundImage,
-          headerBackground: getComputedStyle(
-            document.querySelector('.storefront-header')!,
-          ).backgroundColor,
           shellBottom: shell.getBoundingClientRect().bottom + window.scrollY,
           footerBottom: footer.getBoundingClientRect().bottom + window.scrollY,
           pageHeight: document.documentElement.scrollHeight,
@@ -350,14 +344,6 @@ for (const width of [
         '/images/shop-directory-background.svg',
       );
       expect(surfaces.footerBackground).toBe('rgb(255, 255, 255)');
-      expect(surfaces.headerImage).toBe('none');
-      expect(surfaces.footerImage).toBe('none');
-      const background = await page.request.get(
-        '/images/shop-directory-background.svg',
-      );
-      expect(background.ok()).toBe(true);
-      expect(background.headers()['content-type']).toContain('image/svg+xml');
-      expect(surfaces.footerBackground).toBe(surfaces.headerBackground);
       expect(
         Math.abs(surfaces.shellBottom - surfaces.footerBottom),
       ).toBeLessThanOrEqual(1);
@@ -366,121 +352,59 @@ for (const width of [
       ).toBeLessThanOrEqual(1);
       if (width >= 768)
         expect(detailSizes.footerHeight).toBeLessThanOrEqual(64);
-      expect(sizes.targets.every((height) => height >= 44)).toBe(true);
-      expect(sizes.header).toBeCloseTo(66, 0);
-      const toolbar = page.locator('.shop-directory-toolbar');
-      const checkToolbarLayout = async () => {
-        const [heading, search, filter, view] = await toolbar
-          .locator(':scope > *')
-          .evaluateAll((elements) =>
-            elements.map((element) => {
-              const { x, y, width, height, bottom, right } =
-                element.getBoundingClientRect();
-              return {
-                x,
-                y,
-                width,
-                height,
-                bottom,
-                right,
-                center: y + height / 2,
-              };
-            }),
-          );
-        expect(heading.bottom).toBeLessThanOrEqual(search.y);
-        if (width >= 768) {
-          expect(Math.abs(search.center - filter.center)).toBeLessThanOrEqual(
-            1,
-          );
-          expect(Math.abs(search.center - view.center)).toBeLessThanOrEqual(1);
-          expect(search.right).toBeLessThanOrEqual(filter.x);
-          expect(filter.right).toBeLessThanOrEqual(view.x);
-          expect(search.width).toBeGreaterThan(filter.width);
-        } else {
-          expect(Math.abs(heading.center - view.center)).toBeLessThanOrEqual(1);
-          expect(heading.right).toBeLessThanOrEqual(view.x);
-          expect(view.bottom).toBeLessThanOrEqual(search.y);
-          expect(search.bottom).toBeLessThanOrEqual(filter.y);
-          expect(search.width).toBeGreaterThanOrEqual(
-            (await toolbar.boundingBox())!.width - 1,
-          );
-        }
-        expect(
-          await page.evaluate(() => document.documentElement.scrollWidth),
-        ).toBeLessThanOrEqual(width);
-      };
-      await checkToolbarLayout();
-      const categoryToggle = page.getByRole('button', {
+      // Cards use generated cover photos that actually load.
+      const covers = page.locator('.customer-shop-cover img');
+      await expect(covers).toHaveCount(2);
+      for (const cover of await covers.all()) {
+        await cover.scrollIntoViewIfNeeded();
+        await expect
+          .poll(() =>
+            cover.evaluate(
+              (image: HTMLImageElement) =>
+                image.complete && image.naturalWidth > 0,
+            ),
+          )
+          .toBe(true);
+      }
+      const types = page.getByRole('group', {
         name: 'ประเภทร้าน',
         exact: true,
       });
-      await expect(categoryToggle).toHaveText('ประเภทร้าน');
-      await categoryToggle.click();
-      await page.getByRole('button', { name: 'คาเฟ่', exact: true }).click();
+      await types.getByRole('button', { name: 'คาเฟ่', exact: true }).click();
       await expect(
         page.getByRole('heading', { name: 'yam', exact: true }),
       ).toHaveCount(0);
       await expect(
         page.getByRole('heading', { name: shops[1].name }),
       ).toBeVisible();
-      await page.getByRole('button', { name: 'ทั้งหมด', exact: true }).click();
-      await categoryToggle.click();
+      await types.getByRole('button', { name: 'ทั้งหมด', exact: true }).click();
       await expect(
-        page.getByRole('group', { name: 'ประเภทร้าน', exact: true }),
-      ).toBeHidden();
-      await categoryToggle.focus();
-      await page.keyboard.press('Enter');
-      await page.getByRole('button', { name: 'คาเฟ่', exact: true }).focus();
-      await page.keyboard.press('Escape');
-      await expect(categoryToggle).toBeFocused();
-      await expect(categoryToggle).toHaveAttribute('aria-expanded', 'false');
-      await expect(
-        page.getByRole('searchbox', { name: 'ค้นหาร้าน' }),
+        page.getByRole('heading', { name: 'yam', exact: true }),
       ).toBeVisible();
-      await expect(
-        page.getByRole('button', { name: 'มุมมองตาราง' }),
-      ).toBeVisible();
-      await expect(page.getByRole('button', { name: 'English' })).toBeVisible();
-      expect(
-        await page.evaluate(() => document.documentElement.scrollWidth),
-      ).toBeLessThanOrEqual(width);
-      const main = await page.locator('main').boundingBox();
-      const expectedWidth = Math.min(1232, width - (width >= 768 ? 48 : 32));
-      expect(main!.width).toBeCloseTo(expectedWidth, 0);
-      expect(main!.x).toBeCloseTo((width - expectedWidth) / 2, 0);
-      const art = page.locator('.shop-directory-art');
-      expect(
-        await art.evaluate(
-          (image: HTMLImageElement) => image.complete && image.naturalWidth > 0,
-        ),
-      ).toBe(true);
-      for (const selector of [
-        '.shop-directory-store-copy',
-        '.shop-directory-hero-copy',
-      ]) {
-        for (const element of await page.locator(selector).all()) {
+      for (const selector of ['.customer-shop-body', '.customer-page-heading'])
+        for (const element of await page.locator(selector).all())
           expect(
             await element.evaluate(
               (node) => node.scrollWidth <= node.clientWidth + 1,
             ),
           ).toBe(true);
-        }
-      }
-      await page.getByRole('button', { name: 'มุมมองตาราง' }).click();
+      const main = await page.locator('main').boundingBox();
+      const expectedWidth = Math.min(1232, width - (width >= 768 ? 48 : 32));
+      expect(main!.width).toBeCloseTo(expectedWidth, 0);
+      expect(main!.x).toBeCloseTo((width - expectedWidth) / 2, 0);
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth),
+      ).toBeLessThanOrEqual(width);
+      await page.evaluate(() =>
+        localStorage.setItem('smartpos.language', 'en'),
+      );
+      await page.reload();
       await expect(
-        page.getByRole('list', { name: 'ร้านที่เผยแพร่' }),
-      ).toHaveAttribute('data-view', 'grid');
-      await expect(
-        page.getByRole('heading', { name: shops[1].name }),
+        page.getByRole('group', { name: 'Store types', exact: true }),
       ).toBeVisible();
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth),
       ).toBeLessThanOrEqual(width);
-      await page.getByRole('button', { name: 'English' }).click();
-      await expect(
-        page.getByRole('button', { name: 'Shop type', exact: true }),
-      ).toHaveText('Shop type');
-      await checkToolbarLayout();
       if ([320, 768, 1672].includes(width)) {
         await page.screenshot({
           path: testInfo.outputPath(`search-first-${width}.png`),
@@ -539,7 +463,7 @@ for (const width of [320, 768, 1440]) {
   });
 }
 
-test('search, view controls, language and menu work with keyboard', async ({
+test('search, filters, types and language work with keyboard', async ({
   page,
 }) => {
   await page.goto('/shop');
@@ -555,42 +479,39 @@ test('search, view controls, language and menu work with keyboard', async ({
   await expect(page.getByText('ไม่พบร้านที่ตรงกับคำค้น')).toBeVisible();
   await search.fill('');
   await expect(
-    page.getByRole('link', { name: 'ดูหน้าร้าน' }).first(),
+    page.getByRole('link', { name: 'yam', exact: true }),
   ).toHaveAttribute('href', '/shop/yam');
-  const grid = page.getByRole('button', { name: 'มุมมองตาราง' });
-  await grid.focus();
+  const open = page
+    .getByRole('group', { name: 'ตัวกรองร้าน' })
+    .getByRole('button', { name: 'เปิดรับออเดอร์' });
+  await open.focus();
   await page.keyboard.press('Enter');
-  await expect(grid).toHaveAttribute('aria-pressed', 'true');
-  await page.getByRole('button', { name: 'English' }).click();
+  await expect(open).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('heading', { name: shops[1].name })).toHaveCount(
+    0,
+  );
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Enter');
   await expect(
-    page.getByRole('searchbox', { name: 'Search stores' }),
+    page.getByRole('heading', { name: shops[1].name }),
   ).toBeVisible();
-  await expect(
-    page.getByText('Choose a restaurant and start your order.'),
-  ).toBeVisible();
-  const menu = page.getByRole('button', { name: 'Shop type', exact: true });
-  await menu.focus();
-  await page.keyboard.press('Enter');
-  await expect(menu).toHaveAttribute('aria-expanded', 'true');
-  await page.keyboard.press('Tab');
-  await expect(page.getByRole('button', { name: 'Grid view' })).toBeFocused();
-  await page.keyboard.press('Tab');
-  await expect(page.getByRole('button', { name: 'List view' })).toBeFocused();
-  await page.keyboard.press('Tab');
-  await expect(
-    page.getByRole('button', { name: 'All', exact: true }),
-  ).toBeFocused();
-  await page.keyboard.press('Tab');
-  const cafe = page.getByRole('button', { name: 'Cafe', exact: true });
-  await expect(cafe).toBeFocused();
-  await page.keyboard.press('Enter');
+  const cafe = page
+    .getByRole('group', { name: 'ประเภทร้าน', exact: true })
+    .getByRole('button', { name: 'คาเฟ่', exact: true });
+  await cafe.focus();
+  await page.keyboard.press('Space');
   await expect(cafe).toHaveAttribute('aria-pressed', 'true');
   await expect(
     page.getByRole('heading', { name: 'yam', exact: true }),
   ).toHaveCount(0);
-  await page.keyboard.press('Escape');
-  await expect(menu).toHaveAttribute('aria-expanded', 'false');
-  await expect(menu).toBeFocused();
+  await page.evaluate(() => localStorage.setItem('smartpos.language', 'en'));
+  await page.reload();
+  await expect(
+    page.getByRole('searchbox', { name: 'Search stores' }),
+  ).toBeVisible();
+  await expect(
+    page.getByText('Find a restaurant and start your order.'),
+  ).toBeVisible();
 });
 
 test('velo assistant chat opens, renders reference layout and can be closed', async ({

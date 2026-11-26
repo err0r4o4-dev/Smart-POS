@@ -49,7 +49,8 @@ async function fixture(page) {
       return;
     }
     let data;
-    if (path === '/api/v1/storefronts/restaurant-fixture') data = shop;
+    if (path === '/api/v1/storefronts') data = [shop];
+    else if (path === '/api/v1/storefronts/restaurant-fixture') data = shop;
     else if (path === '/api/v1/storefronts/restaurant-fixture/products')
       data = { items: [product], total: 1, page: 1, page_size: 24 };
     else if (path.endsWith('/quote')) {
@@ -122,7 +123,7 @@ test('table QR survives browser quote and order submission (API fixtures)', asyn
     .getByRole('button', { name: 'ส่งออเดอร์ · ยังไม่ชำระเงิน' })
     .click();
   await expect(
-    page.getByRole('heading', { name: 'ติดตามออเดอร์' }),
+    page.getByRole('heading', { name: 'คำสั่งซื้อของฉัน' }),
   ).toBeVisible();
   await expect(page.getByText('โต๊ะ T01')).toBeVisible();
   expect(calls.map(({ endpoint }) => endpoint)).toEqual(['quote', 'orders']);
@@ -151,7 +152,7 @@ test('pickup quote and order retain quantity and order identity (API fixtures)',
     .getByRole('button', { name: 'ส่งออเดอร์ · ยังไม่ชำระเงิน' })
     .click();
   await expect(
-    page.getByRole('heading', { name: 'ติดตามออเดอร์' }),
+    page.getByRole('heading', { name: 'คำสั่งซื้อของฉัน' }),
   ).toBeVisible();
   expect(calls.map(({ endpoint }) => endpoint)).toEqual(['quote', 'orders']);
   const [review, order] = calls;
@@ -190,7 +191,7 @@ test('delivery requires an address and displays the quoted shipping fee (API fix
   await page.getByLabel('ที่อยู่จัดส่ง').fill('  Synthetic delivery address  ');
   await submit.click();
   await expect(
-    page.getByRole('heading', { name: 'ติดตามออเดอร์' }),
+    page.getByRole('heading', { name: 'คำสั่งซื้อของฉัน' }),
   ).toBeVisible();
   expect(calls.map(({ endpoint }) => endpoint)).toEqual(['quote', 'orders']);
   expect(calls[0].body).toMatchObject({

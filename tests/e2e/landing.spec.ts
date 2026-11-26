@@ -131,7 +131,9 @@ test('filters published stores, keeps favorites, and opens the shop cart selecto
   await expect(list.getByRole('link', { name: 'กะเพราพี่ต้น' })).toBeVisible();
   await page.goto('/shop?view=cart');
   await expect(
-    page.getByRole('link', { name: 'เปิดตะกร้า' }).first(),
+    page
+      .getByRole('article', { name: 'กะเพราพี่ต้น' })
+      .getByRole('link', { name: 'เปิดตะกร้า' }),
   ).toHaveAttribute('href', '/shop/krapao/cart');
   await page.goto('/');
   await page

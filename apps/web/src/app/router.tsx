@@ -2,6 +2,8 @@ import { Suspense, useEffect } from 'react';
 import {
   LandingPage,
   StorefrontPage,
+  AreasPage,
+  AreaDetailPage,
   ShopCartPage,
   ShopTrackingPage,
   PaymentSandboxPage,
@@ -87,19 +89,26 @@ const routes: RouteObject[] = [
       <>
         <LandingPage />
         <ScrollToPublicSection id="for-merchants" />
+        <ScrollToPublicSection id="landing-categories" />
       </>
     ),
   },
   {
-    path: paths.shop,
     element: <StorefrontLayout />,
     children: [
-      { index: true, element: <StorefrontPage /> },
-      { path: ':slug', element: <StorefrontPage /> },
-      { path: ':slug/cart', element: <ShopCartPage /> },
-      { path: ':slug/checkout', element: <ShopCartPage /> },
-      { path: ':slug/orders/:orderId', element: <ShopTrackingPage /> },
-      { path: ':slug/track/:orderId', element: <CustomerOrderRedirect /> },
+      {
+        path: paths.shop,
+        children: [
+          { index: true, element: <StorefrontPage /> },
+          { path: ':slug', element: <StorefrontPage /> },
+          { path: ':slug/cart', element: <ShopCartPage /> },
+          { path: ':slug/checkout', element: <ShopCartPage /> },
+          { path: ':slug/orders/:orderId', element: <ShopTrackingPage /> },
+          { path: ':slug/track/:orderId', element: <CustomerOrderRedirect /> },
+        ],
+      },
+      { path: paths.areas, element: <AreasPage /> },
+      { path: `${paths.areas}/:areaId`, element: <AreaDetailPage /> },
     ],
   },
   { path: '/sales/voids', element: <SystemPage /> },

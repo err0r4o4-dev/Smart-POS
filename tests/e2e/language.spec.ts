@@ -142,11 +142,16 @@ for (const width of [320, 375, 768, 1440]) {
     ).toBeVisible();
     await page.goto('/shop');
     await expect(
-      page.getByRole('button', { name: 'English', exact: true }),
-    ).toHaveAttribute('aria-pressed', 'true');
-    await expect(
-      page.getByRole('heading', { name: 'Online storefront', exact: true }),
+      page.getByRole('heading', { name: 'Explore restaurants', exact: true }),
     ).toBeVisible();
+    // Below 1180px the shared customer header keeps the switcher in its menu.
+    if (width < 1180)
+      await page.getByRole('button', { name: 'Menu', exact: true }).click();
+    await expect(
+      page
+        .getByRole('button', { name: 'English', exact: true })
+        .filter({ visible: true }),
+    ).toHaveAttribute('aria-pressed', 'true');
     await page.screenshot({
       path: testInfo.outputPath(`shop-en-${width}.png`),
     });

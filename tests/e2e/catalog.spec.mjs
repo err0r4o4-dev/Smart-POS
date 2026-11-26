@@ -160,23 +160,13 @@ test('yellow catalog supports desktop tablet mobile and a shared exact-quantity 
       fullPage: true,
     });
   }
-  const closeMenu = page.getByRole('button', { name: 'ปิดเมนูหมวดหมู่' });
-  await expect(closeMenu).toHaveAttribute('aria-expanded', 'true');
-  await closeMenu.click();
-  await expect(page.locator('#catalog-sidebar')).toBeHidden();
-  const openMenu = page.getByRole('button', { name: 'เปิดเมนูหมวดหมู่' });
-  await expect(openMenu).toHaveAttribute('aria-expanded', 'false');
-  await openMenu.click();
-  await expect(page.locator('#catalog-sidebar')).toBeVisible();
-
-  await page.getByRole('button', { name: 'หมวดหมู่', exact: true }).click();
+  // Categories are an always-visible chip row (reference screen 5).
+  const chips = page.getByRole('group', { name: 'หมวดหมู่เมนู' });
+  await expect(chips).toBeVisible();
+  await chips.getByRole('button', { name: 'เครื่องดื่ม 2' }).click();
   await expect(
-    page.getByRole('button', { name: 'เครื่องดื่ม 2' }),
-  ).toBeVisible();
-  await page.getByRole('button', { name: 'เครื่องดื่ม 2' }).click();
-  await expect(
-    page.getByRole('button', { name: 'หมวดหมู่', exact: true }),
-  ).toHaveAttribute('aria-expanded', 'false');
+    chips.getByRole('button', { name: 'เครื่องดื่ม 2' }),
+  ).toHaveAttribute('aria-pressed', 'true');
   const card = page.getByRole('article', { name: 'นม UHT 250 มล. (ตัวอย่าง)' });
   await card.getByRole('spinbutton').fill('2');
   await card.getByRole('button', { name: 'เพิ่มลงตะกร้า' }).click();
@@ -202,7 +192,7 @@ test('yellow catalog supports desktop tablet mobile and a shared exact-quantity 
   });
   await page.getByRole('link', { name: 'ตะกร้า (1)', exact: true }).click();
   await expect(
-    page.getByRole('heading', { name: 'ตะกร้าสินค้า', exact: true }),
+    page.getByRole('heading', { name: 'ตะกร้าของคุณ', exact: true }),
   ).toBeVisible();
   const quantityInput = page
     .getByRole('spinbutton', { name: 'จำนวน นม UHT 250 มล. (ตัวอย่าง)' })

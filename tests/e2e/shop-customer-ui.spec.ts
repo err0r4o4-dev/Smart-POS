@@ -340,7 +340,9 @@ async function assertPage(
   const header = (await page.locator('.storefront-header').boundingBox())!;
   expect(header.height).toBeCloseTo(66, 0);
   for (const control of await page
-    .locator('.storefront-header a, .storefront-header button')
+    .locator(
+      '.storefront-header a:visible, .storefront-header button:visible, .storefront-header summary:visible',
+    )
     .all()) {
     const bounds = (await control.boundingBox())!;
     expect(bounds.x).toBeGreaterThanOrEqual(gutter);
@@ -365,7 +367,7 @@ for (const width of [320, 375, 768, 1024, 1440]) {
     await page.goto('/shop');
     await expect(page.getByRole('heading', { name: store.name })).toBeVisible();
     await assertPage(page, width, 'directory', testInfo);
-    await page.getByRole('link', { name: 'ดูหน้าร้าน', exact: true }).click();
+    await page.getByRole('link', { name: store.name, exact: true }).click();
     await expect(
       page.getByRole('heading', { level: 1, name: store.name }),
     ).toBeVisible();
@@ -377,15 +379,16 @@ for (const width of [320, 375, 768, 1024, 1440]) {
     await page
       .getByRole('button', { name: 'เพิ่มลงตะกร้า', exact: true })
       .click();
-    await page.locator('.storefront-cart-link').click();
+    await page.locator('.customer-cart-link').click();
     await expect(
       page.getByRole('heading', { name: product.product_name }),
     ).toBeVisible();
     await expect(page.locator('[aria-current="step"]')).toHaveText(
       /ตะกร้าสินค้า/,
     );
+    // No catalog category menu on the cart; the shared header menu is separate.
     await expect(
-      page.getByRole('button', { name: 'เมนู', exact: true }),
+      page.locator('main').getByRole('button', { name: 'เมนู', exact: true }),
     ).toHaveCount(0);
     await assertPage(page, width, 'cart', testInfo);
     await page.getByRole('button', { name: 'ตรวจรายการและยอดล่าสุด' }).click();

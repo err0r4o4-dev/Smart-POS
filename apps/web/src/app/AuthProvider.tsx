@@ -156,3 +156,8 @@ export function useAuth() {
   if (!context) throw new Error('AuthProvider is required');
   return context;
 }
+
+/** Read-only session status for public pages that must render without auth. */
+export function useOptionalAuth() {
+  return useContext(AuthContext);
+}

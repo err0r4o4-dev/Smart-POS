@@ -1,14 +1,14 @@
-import { LanguageSwitcher } from '../components/ui/LanguageSwitcher';
 import { useLanguage } from '../app/language';
 import { Link, Outlet, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ShoppingCart } from 'lucide-react';
-import { Brand } from '../components/ui/primitives';
+import { ArrowLeft } from 'lucide-react';
 import { paths } from '../app/routes';
 import { useShopCart } from '../features/storefront/shop-cart';
+import { CustomerHeader } from '../features/storefront/CustomerHeader';
 import { VeloAssistantChat } from '../features/storefront/VeloAssistantChat';
 import '../features/storefront/catalog.css';
 import '../features/storefront/shop-directory.css';
 import '../features/storefront/shop-customer.css';
+import '../features/storefront/customer.css';
 
 export function StorefrontLayout() {
   const { t, language } = useLanguage();
@@ -18,8 +18,6 @@ export function StorefrontLayout() {
   const tableQuery = searchParams.has('table')
     ? `?${searchParams.toString()}`
     : '';
-  const home = slug ? `/shop/${slug}` : paths.shop;
-  const cartPath = slug ? `${home}/cart${tableQuery}` : paths.shop;
   const cart = useShopCart(slug);
   return (
     <div
@@ -32,37 +30,11 @@ export function StorefrontLayout() {
       <a className="skip-link" href="#main-content">
         {t('pos.skipToContent')}
       </a>
-      <header className="storefront-header">
-        <div className="storefront-header-inner layout-shell">
-          <div className="storefront-header-left">
-            <Link
-              to={`${home}${tableQuery}`}
-              aria-label={t('landing.onlineStorefront')}
-            >
-              <Brand />
-            </Link>
-          </div>
-          <nav aria-label={t('shell.customerStorefrontNavigation')}>
-            <LanguageSwitcher />
-            {slug && (
-              <Link
-                className="storefront-icon-link storefront-cart-link"
-                to={cartPath}
-                aria-label={t('shell.cartValue0', {
-                  value0: cart.items.length,
-                })}
-              >
-                <ShoppingCart size={20} aria-hidden="true" />
-                {cart.items.length > 0 && (
-                  <span className="storefront-cart-count" aria-hidden="true">
-                    {cart.items.length}
-                  </span>
-                )}
-              </Link>
-            )}
-          </nav>
-        </div>
-      </header>
+      <CustomerHeader
+        slug={slug}
+        tableQuery={tableQuery}
+        cartCount={cart.items.length}
+      />
       <main id="main-content" className="storefront-content" tabIndex={-1}>
         {slug && (
           <Link className="shop-back-link" to={paths.shop}>

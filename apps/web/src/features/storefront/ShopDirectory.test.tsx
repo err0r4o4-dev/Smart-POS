@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
@@ -40,6 +40,10 @@ function view(entry = '/shop') {
   );
 }
 
+function typeGroup() {
+  return within(screen.getByRole('group', { name: 'ประเภทร้าน' }));
+}
+
 beforeEach(() => {
   localStorage.clear();
   fetchMock.mockReset();
@@ -51,18 +55,14 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-it('searches real shops from the results toolbar and recovers from no matches', async () => {
+it('shows the discovery page and searches real shops outside the header', async () => {
   view();
+  expect(
+    screen.getByRole('heading', { level: 1, name: 'สำรวจร้านอาหาร' }),
+  ).toBeVisible();
   expect(await screen.findByRole('heading', { name: 'yam' })).toBeVisible();
   const search = screen.getByRole('searchbox', { name: 'ค้นหาร้าน' });
   expect(search.closest('header')).toBeNull();
-  const toolbar = screen.getByRole('group', { name: 'ค้นหาร้าน' });
-  expect(Array.from(toolbar.children)).toEqual([
-    screen.getByRole('heading', { name: 'ค้นหาร้าน' }),
-    search.closest('label'),
-    screen.getByRole('button', { name: 'ประเภทร้าน' }),
-    screen.getByRole('group', { name: 'รูปแบบการแสดงร้าน' }),
-  ]);
   fireEvent.change(search, { target: { value: ' YAM ' } });
   expect(
     screen.queryByRole('heading', { name: 'ร้านพัก' }),
@@ -84,44 +84,43 @@ it('starts from the search and business type given in the home page link', async
   ).not.toBeInTheDocument();
 });
 
-it('switches directory views without changing shop links or availability', async () => {
+it('links every store, including closed ones, to its storefront', async () => {
   view();
+  expect(await screen.findByRole('link', { name: 'yam' })).toHaveAttribute(
+    'href',
+    '/shop/yam',
+  );
+  expect(screen.getByRole('link', { name: 'ร้านพัก' })).toHaveAttribute(
+    'href',
+    '/shop/closed',
+  );
+  expect(screen.getByText('ปิดรับออเดอร์ชั่วคราว')).toBeVisible();
+});
+
+it('lists stores with a cart action when opened from the cart link', async () => {
+  view('/shop?view=cart');
+  expect(
+    screen.getByRole('heading', { level: 1, name: 'ตะกร้าสินค้า' }),
+  ).toBeVisible();
   await screen.findByRole('heading', { name: 'yam' });
-  const list = screen.getByRole('button', { name: 'มุมมองรายการ' });
-  const grid = screen.getByRole('button', { name: 'มุมมองตาราง' });
-  expect(list).toHaveAttribute('aria-pressed', 'true');
-  fireEvent.click(grid);
-  expect(grid).toHaveAttribute('aria-pressed', 'true');
-  expect(screen.getByRole('list', { name: 'ร้านที่เผยแพร่' })).toHaveAttribute(
-    'data-view',
-    'grid',
-  );
   expect(
-    screen.getAllByRole('link', { name: 'ดูหน้าร้าน' })[0],
-  ).toHaveAttribute('href', '/shop/yam');
-  expect(
-    screen.getAllByRole('link', { name: 'ดูหน้าร้าน' })[1],
-  ).toHaveAttribute('aria-disabled', 'true');
-  fireEvent.click(list);
-  expect(screen.getByRole('list', { name: 'ร้านที่เผยแพร่' })).toHaveAttribute(
-    'data-view',
-    'list',
-  );
+    screen.getAllByRole('link', { name: 'เปิดตะกร้า' })[0],
+  ).toHaveAttribute('href', '/shop/yam/cart');
 });
 
 it('switches directory controls and reference copy to English', async () => {
   view();
   await screen.findByRole('heading', { name: 'yam' });
-  fireEvent.click(screen.getByRole('button', { name: 'English' }));
+  fireEvent.click(screen.getAllByRole('button', { name: 'English' })[0]);
+  expect(
+    screen.getByRole('heading', { level: 1, name: 'Explore restaurants' }),
+  ).toBeVisible();
   expect(
     screen.getByRole('searchbox', { name: 'Search stores' }),
   ).toBeVisible();
-  expect(screen.getByRole('button', { name: 'List view' })).toBeVisible();
-  expect(screen.getByRole('button', { name: 'Shop type' })).toHaveTextContent(
-    'Shop type',
-  );
+  expect(screen.getByRole('group', { name: 'Store types' })).toBeVisible();
   expect(
-    screen.getByText('Choose a restaurant and start your order.'),
+    screen.getByText('Find a restaurant and start your order.'),
   ).toBeVisible();
 });
 
@@ -140,9 +139,7 @@ it('keeps the search available while loading and shows an honest empty state', a
   expect(
     await screen.findByRole('heading', { name: 'ยังไม่มีร้านที่เปิดเผยแพร่' }),
   ).toBeVisible();
-  expect(
-    screen.queryByRole('link', { name: 'ดูหน้าร้าน' }),
-  ).not.toBeInTheDocument();
+  expect(screen.queryByRole('article')).not.toBeInTheDocument();
 });
 
 it('recovers from directory failures without losing the search', async () => {
@@ -165,12 +162,7 @@ it('recovers from directory failures without losing the search', async () => {
 it('filters by saved business type alongside search without treating closed stores as a category', async () => {
   view();
   await screen.findByRole('heading', { name: 'yam' });
-  const toggle = screen.getByRole('button', { name: 'ประเภทร้าน' });
-  expect(toggle).toHaveTextContent('ประเภทร้าน');
-  expect(toggle).toHaveAttribute('aria-expanded', 'false');
-  fireEvent.click(toggle);
-  expect(toggle).toHaveAttribute('aria-expanded', 'true');
-  const cafe = screen.getByRole('button', { name: 'คาเฟ่' });
+  const cafe = typeGroup().getByRole('button', { name: 'คาเฟ่' });
   fireEvent.click(cafe);
   expect(cafe).toHaveAttribute('aria-pressed', 'true');
   expect(
@@ -179,13 +171,13 @@ it('filters by saved business type alongside search without treating closed stor
   expect(screen.getByRole('heading', { name: 'ร้านพัก' })).toBeVisible();
   fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'yam' } });
   expect(screen.getByText('ไม่พบร้านที่ตรงกับคำค้น')).toBeVisible();
-  fireEvent.click(screen.getByRole('button', { name: 'ทั้งหมด' }));
+  fireEvent.click(typeGroup().getByRole('button', { name: 'ทั้งหมด' }));
   expect(screen.getByRole('heading', { name: 'yam' })).toBeVisible();
-  fireEvent.keyDown(cafe, { key: 'Escape' });
-  expect(toggle).toHaveAttribute('aria-expanded', 'false');
-  expect(toggle).toHaveFocus();
-  expect(cafe).not.toBeVisible();
-  expect(screen.getByRole('searchbox')).toHaveValue('yam');
+  expect(
+    typeGroup()
+      .getAllByRole('button')
+      .map((button) => button.textContent),
+  ).not.toContain('ปิดรับออเดอร์ชั่วคราว');
 });
 
 it('preserves unknown and missing types without inventing a restaurant classification', async () => {
@@ -212,24 +204,21 @@ it('preserves unknown and missing types without inventing a restaurant classific
   });
   view();
   await screen.findByRole('heading', { name: 'Unknown type' });
-  fireEvent.click(screen.getByRole('button', { name: 'ประเภทร้าน' }));
-  fireEvent.click(screen.getByRole('button', { name: 'OTHER_TYPE' }));
+  fireEvent.click(typeGroup().getByRole('button', { name: 'OTHER_TYPE' }));
   expect(screen.getByRole('heading', { name: 'Unknown type' })).toBeVisible();
   expect(
     screen.queryByRole('heading', { name: 'yam' }),
   ).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'ไม่ระบุประเภท' }));
+  fireEvent.click(typeGroup().getByRole('button', { name: 'ไม่ระบุประเภท' }));
   expect(screen.getByRole('heading', { name: 'Missing type' })).toBeVisible();
-  fireEvent.click(screen.getByRole('button', { name: 'คาเฟ่' }));
+  fireEvent.click(typeGroup().getByRole('button', { name: 'คาเฟ่' }));
   expect(screen.getByRole('heading', { name: 'ร้านพัก' })).toBeVisible();
   expect(screen.getByRole('heading', { name: 'Cafe two' })).toBeVisible();
-  fireEvent.click(screen.getByRole('button', { name: 'English' }));
-  expect(screen.getByRole('button', { name: 'Cafe' })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  );
-  expect(screen.getByRole('button', { name: 'Shop type' })).toHaveAttribute(
-    'aria-expanded',
-    'true',
-  );
+  fireEvent.click(screen.getAllByRole('button', { name: 'English' })[0]);
+  expect(
+    within(screen.getByRole('group', { name: 'Store types' })).getByRole(
+      'button',
+      { name: 'Cafe' },
+    ),
+  ).toHaveAttribute('aria-pressed', 'true');
 });

@@ -3,6 +3,8 @@ package restaurant
 import (
 	"strconv"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"smartpos/api/internal/modules/catalog"
 	"smartpos/api/internal/modules/pricing"
@@ -24,6 +26,40 @@ type menuImportIssue struct {
 	Line  int
 	Field string
 	Code  string
+}
+
+const (
+	maxMenuImportRefRunes  = 100
+	maxMenuImportNameRunes = 200
+)
+
+// menuImportRefValid accepts an opaque, case-sensitive reference with no
+// whitespace, control or invisible format characters, so stored references
+// cannot differ only by characters a user cannot see.
+func menuImportRefValid(value string) bool {
+	if utf8.RuneCountInString(value) > maxMenuImportRefRunes {
+		return false
+	}
+	for _, r := range value {
+		if unicode.IsSpace(r) || unicode.In(r, unicode.Cc, unicode.Cf) {
+			return false
+		}
+	}
+	return true
+}
+
+// menuImportNameValid accepts a single-line visible label. Thai combining
+// marks are ordinary letters' marks, not format characters.
+func menuImportNameValid(value string) bool {
+	if strings.TrimSpace(value) == "" || utf8.RuneCountInString(value) > maxMenuImportNameRunes {
+		return false
+	}
+	for _, r := range value {
+		if unicode.In(r, unicode.Cc, unicode.Cf) {
+			return false
+		}
+	}
+	return true
 }
 
 // parseMenuImportTemplate validates the v1 file only. Parent resolution and
@@ -74,7 +110,7 @@ func parseMenuImportTemplate(filename string, data []byte) ([]menuImportRow, []m
 		switch {
 		case strings.TrimSpace(row.Ref) == "":
 			issue("ref", "required")
-		case strings.TrimSpace(row.Ref) != row.Ref:
+		case !menuImportRefValid(row.Ref):
 			issue("ref", "invalid")
 		case knownKind:
 			key := identity{row.Kind, row.Ref}
@@ -89,9 +125,12 @@ func parseMenuImportTemplate(filename string, data []byte) ([]menuImportRow, []m
 		if row.ParentRef != "" {
 			if category {
 				issue("parent_ref", "not_applicable")
-			} else if strings.TrimSpace(row.ParentRef) != row.ParentRef {
+			} else if !menuImportRefValid(row.ParentRef) {
 				issue("parent_ref", "invalid")
 			}
+		}
+		if row.Name != "" && !menuImportNameValid(row.Name) {
+			issue("name", "invalid")
 		}
 		if price := cell("price"); price != "" {
 			if !priced {

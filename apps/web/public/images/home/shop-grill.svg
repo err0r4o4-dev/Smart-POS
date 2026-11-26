@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 70" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="ch" cx=".4" cy=".35" r=".7">
+      <stop offset="0" stop-color="#f4a33e"/>
+      <stop offset="1" stop-color="#a8460f"/>
+    </radialGradient>
+  </defs>
+  <rect width="300" height="70" fill="#4a2a14"/>
+  <ellipse cx="150" cy="72" rx="160" ry="62" fill="#2b2b2b"/>
+  <ellipse cx="150" cy="70" rx="148" ry="54" fill="#f3efe6"/>
+  <g fill="url(#ch)">
+    <path d="M40 54 C36 30 74 20 92 34 C108 46 96 70 72 72 C54 74 42 66 40 54 Z"/>
+    <path d="M96 44 C96 20 136 12 152 28 C166 42 152 66 128 66 C108 66 96 58 96 44 Z"/>
+    <path d="M150 48 C148 26 190 18 204 34 C218 48 202 70 178 70 C160 70 150 62 150 48 Z"/>
+    <path d="M204 52 C204 32 240 24 254 38 C266 52 252 72 230 72 C214 72 204 64 204 52 Z"/>
+  </g>
+  <g fill="#ffd27a" opacity=".55">
+    <circle cx="60" cy="40" r="3"/><circle cx="118" cy="30" r="3"/><circle cx="176" cy="34" r="3"/><circle cx="230" cy="40" r="3"/>
+    <circle cx="80" cy="56" r="2"/><circle cx="138" cy="50" r="2"/><circle cx="190" cy="54" r="2"/><circle cx="240" cy="58" r="2"/>
+  </g>
+  <g fill="#6a2a08" opacity=".5">
+    <rect x="54" y="48" width="20" height="3" rx="1.5" transform="rotate(-20 64 50)"/><rect x="112" y="42" width="22" height="3" rx="1.5" transform="rotate(-20 123 44)"/>
+    <rect x="168" y="46" width="22" height="3" rx="1.5" transform="rotate(-20 179 48)"/><rect x="220" y="50" width="20" height="3" rx="1.5" transform="rotate(-20 230 52)"/>
+  </g>
+  <g fill="#4f9a34"><ellipse cx="270" cy="60" rx="12" ry="5" transform="rotate(-20 270 60)"/><ellipse cx="28" cy="62" rx="10" ry="4" transform="rotate(20 28 62)"/></g>
+  <g fill="#e2381f"><circle cx="262" cy="50" r="4"/><circle cx="34" cy="52" r="3.5"/></g>
+</svg>

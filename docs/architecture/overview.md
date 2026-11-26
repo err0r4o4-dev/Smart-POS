@@ -1,0 +1,43 @@
+# Architecture
+
+Online-flow status (2026-10-12): **PARTIAL / PAUSED by the user**. Reservations/source selection and internal payment/reconciliation/delivery snapshots/pre-shipment refunds are implemented through schema23, but customer payment/refund HTTP/runtime/UI, atomic shipment/return posting and channel reports are unfinished. See [current cumulative status and confirmed policy](payment-sandbox.md#current-online-flow-status-2026-10-12) and [recorded evidence](../development/verification.md). This documentation update does not resume features or upgrade the primary database.
+
+Current delivery: Phase0–4 and Phase5.1–5.7 COMPLETED (Local); Phase5 overall COMPLETED (Local); Phase6–7 NOT STARTED; Phase6 NOT READY; Production Ready NO. POS owns atomic settlement/Sales, Inventory owns existing stock posting and Quality projections, Pricing owns authoritative quotes/promotions, Customers owns records/groups/history, Loyalty owns programs/accounts/immutable points. Six Loyalty/Quality routes are operational; current Go readiness exact clean schema23 (not a primary rollout claim). See [Loyalty](loyalty.md), [Quality](quality.md) and [final acceptance](../development/phase57-verification.md).
+
+Exchange completion atomically consumes historical return allocation, posts inspected return stock, creates the replacement through the existing POS settlement path and commits net-difference accounting/audit/idempotency. The original Sale is never rewritten. An acknowledged nonzero settlement with a local posting conflict retains funds evidence in RECONCILIATION_REQUIRED while a savepoint rolls back all business effects; recovery retries posting, not payment. Organization-level serialization remains the correctness boundary, not a production throughput guarantee.
+
+React -> same-origin Caddy -> Go `/api/v1` -> PostgreSQL. Phase 1A adds an identity module for registration, server-managed sessions, account recovery and audit events. Future Go client -> internal FastAPI. AI has no DB credentials or authority to mutate stock/payments. AI outage cannot block checkout. No public AI gateway routes.
+
+Phase 1B adds the organization module for tenant onboarding, branches, employee memberships/invitations, fixed roles and successful-change audit. Global account/session identity remains separate from tenant membership; every tenant request rechecks authorization. See [organization design](organization.md) for transaction boundaries, the API/UI map, Owner/Manager policies, caching and security limitations.
+
+Phase 1C adds the catalog module through the same authenticated tenant route group and organization authorization transactions. Products own descriptive data; variants own permanent SKUs, exact NUMERIC prices, units and barcode identities. Catalog is shared by an organization, not duplicated per branch. Seven catalog tables use FORCE RLS and composite tenant FKs; catalog introduced migration 4; current Go readiness requires clean version23. CSV/XLSX confirmation is a bounded atomic transaction, not a background worker. See [catalog design](catalog.md). Inventory is implemented in Phase 2 and sales in Phase 3; pricing overrides resolve through shared quotes; no operational permission is implied by a role name.
+
+Phase 3 adds the POS application module without another database or microservice. Catalog supplies authoritative active variants/prices/units; Inventory owns SALE posting and balance projections. Terminals bind one eligible branch-local stock source. Carts and shifts persist in PostgreSQL. Payment preparation and explicit operator funds acknowledgement commit before atomic sale/ledger/receipt/cash/audit settlement; a failed settlement retains durable reconciliation evidence. The shared organization lock serializes catalog, Inventory and POS commands. Idempotency and immutable snapshots support response-loss retries and receipt reprinting. See [POS design](pos.md), [checkout flow](../business-flows/pos-checkout.md) and [database invariants](../database/sales-transactions.md).
+
+Caddy and Go share a dedicated proxy network with separate fixed addresses: Caddy defaults to `172.30.42.2`, Go to `172.30.42.3`. Fixing both prevents Docker allocating Caddy's trusted address to the API during startup. Only these two services join that network. Go trusts a single configured proxy peer, never an entire Docker/private subnet. Other services and test clients are untrusted. Caddy's existing forwarding defaults are retained without additional forwarding-header overrides.
+
+Password-reset HTTP requests validate and enqueue normalized addresses into a bounded, process-local queue before any account lookup or SMTP work. A single worker issues hashed, expiring tokens and sends mail with bounded deadlines. This is best-effort delivery, not a durable queue or distributed worker system.
+
+Future `apps/api/internal/modules/<domain>/{domain,application,infrastructure,transport}` folders appear with real use cases, not empty packages. Domain owns entities/rules/repository interfaces; application owns authorization/transactions; infrastructure implements adapters; transport maps DTOs/errors. Dependencies point inward; no business rules in handlers.
+
+Frontend `features/<module>` owns UI; layouts own shells; components/ui owns primitives; app owns router/providers/config. Planned route inventory is separate from active routes. Presentations use `/preview/*`, not fake working `/pos` or `/login`.
+
+Database is transactional truth. Future outbox persists with business changes. Reporting consumes published read models, not another module's repository. Catalog money uses exact NUMERIC(18,2) with organization currency and decimal strings across Go/JSON/TypeScript, never binary floating-point arithmetic. Future transaction totals may use explicitly validated minor-unit conversion; inventory quantities use exact NUMERIC(18,3) and decimal strings; discrete units cannot be fractional. Unit conversion metadata uses NUMERIC(18,6).
+
+## Decisions
+
+- One Go deployment reduces operations for five developers. Explicit domain ownership avoids coupling. Independent Python service isolates model dependencies/failures without premature microservices.
+- TanStack Query handles actual server status. Forms/charts/Zustand/ML/sqlc/Redis/MinIO are deferred until needed.
+- Foundation organizations/branches and global identity tables remain separate. Phase 1B extends existing tenant tables, adds explicit memberships/composite FKs, sets a non-owner `smartpos_runtime` role and transaction-local tenant/user context. Organization/branch RLS is defense in depth; membership/invitation tables rely on explicitly scoped application queries, not full RLS.
+- CSS is the canonical token source mapped into Tailwind. Local variable fonts avoid external requests. Glass is selective with solid fallback.
+- Liveness is process-only; readiness requires DB ping and clean schema version23. AI is not a readiness dependency.
+
+Planned domains: identity, organization, employees, catalog, inventory, shelves, sales, payments, registers, purchasing, suppliers, pricing, promotions, customers, loyalty, quality, reporting, intelligence, notifications, approvals, audit, settings. Sixteen UI modules aggregate these boundaries. Workers/storage/jobs/events appear only when used.
+
+## Phase 2 inventory
+
+The inventory module extends the existing authenticated organization route group and authorization transaction, not a second tenant/RBAC engine. Stock identity is organization + stock location + existing Variant. Seven additive migration-5 tables implement physical locations, shared typed documents/items, idempotent operations, append-only movements, atomic balance projections and reorder thresholds. No duplicate Product, Organization, Branch or User entities.
+
+Organization locking serializes tenant commands; balance row locks and a narrow definer trigger atomically maintain quantity/version and reject negative stock. Counts and absolute CORRECTION reject stale snapshot versions. Transfers conserve each Variant using paired movements; inter-branch transit belongs to a dedicated source-branch system location until full destination receipt. Parent locations are navigation only, never duplicated rollup stock. Quantities aggregate by unit and location type, not money or unlike units.
+
+Ten inventory routes are implemented with role-aware mutations, branch-scoped queries, paginated lists/selectors, exact physical variance and real overview/history. /inventory/valuation stays unregistered. [Inventory architecture](inventory.md) and [ledger policy](../database/inventory-ledger.md) define future POS/purchasing boundaries without implementing those phases.

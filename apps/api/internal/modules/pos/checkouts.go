@@ -1,0 +1,362 @@
+package pos
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"github.com/jackc/pgx/v5"
+	"smartpos/api/internal/modules/customers"
+	"smartpos/api/internal/modules/loyalty"
+	"smartpos/api/internal/modules/organization"
+	"smartpos/api/internal/modules/pricing"
+)
+
+func checkout(ctx context.Context, tx pgx.Tx, actor organization.Member, user, org, id string) (Checkout, error) {
+	item := Checkout{Items: []CartItem{}}
+	if !uuidPattern.MatchString(id) {
+		return item, ErrInput
+	}
+	var items []byte
+	err := tx.QueryRow(ctx, `SELECT id::text,branch_id::text,terminal_id::text,shift_id::text,cart_id::text,cashier_id::text,status,method,total::text,received::text,change::text,reference,failure_code,COALESCE((SELECT id::text FROM sales WHERE organization_id=checkout.organization_id AND checkout_id=checkout.id),''),items FROM pos_checkouts checkout WHERE organization_id=$1 AND id=$2 FOR UPDATE`, org, id).Scan(&item.ID, &item.BranchID, &item.TerminalID, &item.ShiftID, &item.CartID, &item.CashierID, &item.Status, &item.Method, &item.Total, &item.Received, &item.Change, &item.Reference, &item.FailureCode, &item.SaleID, &items)
+	if err != nil {
+		return item, dbError(err)
+	}
+	if err = tx.QueryRow(ctx, "SELECT customer_id::text,customer_code_snapshot FROM pos_checkouts WHERE organization_id=$1 AND id=$2", org, id).Scan(&item.CustomerID, &item.CustomerCode); err != nil {
+		return item, err
+	}
+	if item.CustomerID != nil && !allowed(actor.Permissions, "customers.select") {
+		return item, organization.ErrDenied
+	}
+	if actor.Role != "OWNER" && item.CashierID != user {
+		return item, organization.ErrDenied
+	}
+	if err = scope(ctx, tx, actor, org, item.BranchID, false); err != nil {
+		return item, err
+	}
+	err = json.Unmarshal(items, &item.Items)
+	if err == nil {
+		var policy string
+		err = tx.QueryRow(ctx, `SELECT COALESCE((SELECT doc.stock_policy FROM online_orders doc WHERE doc.organization_id=cart.organization_id AND doc.cart_id=cart.id),cart.stock_policy) FROM pos_carts cart WHERE cart.organization_id=$1 AND cart.id=$2`, org, item.CartID).Scan(&policy)
+		if err != nil {
+			return item, dbError(err)
+		}
+		if policy != "TRACKED" && policy != "MENU_ONLY" {
+			return item, ErrConflict
+		}
+		for index := range item.Items {
+			item.Items[index].StockPolicy = policy
+			if policy == "MENU_ONLY" {
+				item.Items[index].Available = nil
+			}
+		}
+		var data []byte
+		err = tx.QueryRow(ctx, "SELECT pricing_snapshot FROM pos_checkouts WHERE organization_id=$1 AND id=$2", org, id).Scan(&data)
+		if err == nil {
+			err = json.Unmarshal(data, &item.Pricing)
+			if err == nil && item.Pricing.Loyalty != nil && !allowed(actor.Permissions, "loyalty.redeem") {
+				return item, organization.ErrDenied
+			}
+		}
+	}
+	return item, err
+}
+func (service *Service) Checkout(ctx context.Context, user, org, id string) (Checkout, error) {
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "pos.checkout")
+	if err != nil {
+		return Checkout{}, dbError(err)
+	}
+	tx, actor := authorization.Tx, authorization.Actor
+	defer tx.Rollback(ctx)
+	item, err := checkout(ctx, tx, actor, user, org, id)
+	return privateReadResult(ctx, authorization, item, err)
+}
+func paymentPermission(method string) string {
+	if method == "NONE" {
+		return "pos.checkout"
+	}
+	if method == "CASH" {
+		return "pos.payment.cash"
+	}
+	return "pos.payment.manual_confirm"
+}
+
+func (service *Service) PrepareCheckout(ctx context.Context, user, org, key string, input CheckoutInput) (result Checkout, err error) {
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "pos.checkout")
+	if err != nil {
+		return Checkout{}, dbError(err)
+	}
+	tx, actor := authorization.Tx, authorization.Actor
+	defer tx.Rollback(ctx)
+	defer func() {
+		if err != nil {
+			result = Checkout{}
+		}
+	}()
+	if !uuidPattern.MatchString(key) || !uuidPattern.MatchString(input.CartID) || !allowed(actor.Permissions, paymentPermission(input.Method)) {
+		return Checkout{}, ErrInput
+	}
+	hash := fingerprint(input)
+	var id, previous string
+	err = tx.QueryRow(ctx, "SELECT id::text,fingerprint FROM pos_checkouts WHERE organization_id=$1 AND cashier_id=$2 AND idempotency_key=$3", org, user, key).Scan(&id, &previous)
+	if err == nil {
+		if err = writeCheck(ctx, authorization, nil); err != nil {
+			return Checkout{}, err
+		}
+		if hash != previous {
+			return Checkout{}, ErrConflict
+		}
+		result, problem := checkout(ctx, tx, actor, user, org, id)
+		if err = writeCheck(ctx, authorization, problem); err != nil {
+			return result, err
+		}
+		if result.Status != "COMPLETED" {
+			if problem = writeCheck(ctx, authorization, pricing.CurrentApprover(ctx, tx, org, result.Pricing.ApprovalID)); problem != nil {
+				return result, problem
+			}
+		}
+		if result.Status == "AWAITING_PAYMENT" {
+			problem = writeCheck(ctx, authorization, revalidate(ctx, tx, org, result))
+			if problem == nil {
+				problem = writeCheck(ctx, authorization, validateReward(ctx, tx, actor, org, result))
+			}
+		}
+		return privateReadResult(ctx, authorization, result, problem)
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return Checkout{}, writeCheck(ctx, authorization, err)
+	}
+	if err = writeCheck(ctx, authorization, nil); err != nil {
+		return Checkout{}, err
+	}
+	cart, err := readCart(ctx, tx, actor, user, org, input.CartID)
+	if err = writeCheck(ctx, authorization, err); err != nil {
+		return Checkout{}, err
+	}
+	if cart.Status != "ACTIVE" || cart.Revision != input.Revision || len(cart.Items) == 0 {
+		return Checkout{}, ErrConflict
+	}
+	customerCode := ""
+	if cart.CustomerID != nil {
+		selected, problem := customers.ValidateSelection(ctx, tx, actor, org, *cart.CustomerID)
+		if err = writeCheck(ctx, authorization, nil); err != nil {
+			return Checkout{}, err
+		}
+		if problem != nil {
+			if problem == customers.ErrConflict {
+				return Checkout{}, ErrCustomer
+			}
+			return Checkout{}, dbError(problem)
+		}
+		customerCode = selected.Code
+	}
+	value, err := terminal(ctx, tx, actor, org, cart.TerminalID, true)
+	if err = writeCheck(ctx, authorization, err); err != nil {
+		return Checkout{}, err
+	}
+	shift, err := ownShift(ctx, tx, org, value.ID, user)
+	if err = writeCheck(ctx, authorization, err); err != nil {
+		return Checkout{}, err
+	}
+	if err = writeCheck(ctx, authorization, cartUnlocked(ctx, tx, org, cart.ID)); err != nil {
+		return Checkout{}, err
+	}
+	if cart.ReviewRequired {
+		return Checkout{}, ErrPrice
+	}
+	if err = writeCheck(ctx, authorization, priceCart(ctx, tx, org, &cart, input.ApprovalID)); err != nil {
+		return Checkout{}, err
+	}
+	quote, problem := loyalty.Quote(ctx, tx, actor, org, cart.CustomerID, cart.Pricing, input.LoyaltyPoints)
+	if err = writeCheck(ctx, authorization, problem); err != nil {
+		return Checkout{}, err
+	}
+	cart.Pricing = quote
+	cart.Total = quote.Total
+	for index := range cart.Items {
+		for _, line := range quote.Lines {
+			if cart.Items[index].VariantID == line.VariantID {
+				cart.Items[index].LineTotal, cart.Items[index].DiscountTotal = line.Net, line.Discount
+			}
+		}
+	}
+	if input.PricingRevision != "" && input.PricingRevision != cart.Pricing.Revision {
+		return Checkout{}, ErrPrice
+	}
+	if input.ExpectedTotal != cart.Total {
+		return Checkout{}, ErrPrice
+	}
+	for _, item := range cart.Items {
+		if item.PriceChanged {
+			return Checkout{}, ErrPrice
+		}
+		if !item.Saleable {
+			return Checkout{}, ErrConflict
+		}
+		requested, _ := scaled(item.Quantity, 3)
+		if item.Available != nil {
+			available, _ := scaled(*item.Available, 3)
+			if available < requested {
+				return Checkout{}, ErrStock
+			}
+		}
+	}
+	change, err := payment(input.Method, cart.Total, input.Received)
+	if err != nil {
+		return Checkout{}, err
+	}
+	items, err := json.Marshal(cart.Items)
+	if err != nil {
+		return Checkout{}, err
+	}
+	quoteData, _ := json.Marshal(cart.Pricing)
+	err = tx.QueryRow(ctx, `INSERT INTO pos_checkouts(organization_id,branch_id,terminal_id,shift_id,cart_id,cashier_id,cart_revision,idempotency_key,fingerprint,status,method,currency,total,received,change,items,pricing_snapshot,customer_id,customer_code_snapshot) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'AWAITING_PAYMENT',$10,'THB',$11,$12,$13,$14,$15,$16,$17) RETURNING id::text`, org, cart.BranchID, cart.TerminalID, shift, cart.ID, user, cart.Revision, key, hash, input.Method, cart.Total, input.Received, change, items, quoteData, cart.CustomerID, customerCode).Scan(&id)
+	if err = writeCheck(ctx, authorization, err); err != nil {
+		return Checkout{}, err
+	}
+	if input.Method == "NONE" {
+		_, err = tx.Exec(ctx, "UPDATE pos_checkouts SET status='CONFIRMED',confirmation_key=$3,confirmed_by=$4,confirmed_at=now() WHERE organization_id=$1 AND id=$2", org, id, key, user)
+		if err = writeCheck(ctx, authorization, err); err != nil {
+			return Checkout{}, err
+		}
+	}
+	result, err = checkout(ctx, tx, actor, user, org, id)
+	if err = writeCheck(ctx, authorization, err); err != nil {
+		return result, err
+	}
+	return result, finishAuthorized(ctx, authorization, org, user, "pos.checkout.prepared", id)
+}
+
+func (service *Service) ConfirmPayment(ctx context.Context, user, org, id, key string, input ConfirmationInput) (result Checkout, err error) {
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "pos.checkout")
+	if err != nil {
+		return Checkout{}, dbError(err)
+	}
+	tx, actor := authorization.Tx, authorization.Actor
+	defer tx.Rollback(ctx)
+	defer func() {
+		if err != nil {
+			result = Checkout{}
+		}
+	}()
+	if !uuidPattern.MatchString(key) || !input.Acknowledged || !text(input.Reference, 200, false) {
+		return Checkout{}, ErrInput
+	}
+	item, err := checkout(ctx, tx, actor, user, org, id)
+	if err = writeCheck(ctx, authorization, err); err != nil {
+		return item, err
+	}
+	if item.CashierID != user || !allowed(actor.Permissions, paymentPermission(item.Method)) {
+		return item, organization.ErrDenied
+	}
+	if item.Method != "CASH" && item.Method != "NONE" && !text(input.Reference, 200, true) {
+		return item, ErrInput
+	}
+	if item.Status == "AWAITING_PAYMENT" {
+		if err = writeCheck(ctx, authorization, validateReward(ctx, tx, actor, org, item)); err != nil {
+			return item, err
+		}
+	}
+	if item.Status != "AWAITING_PAYMENT" {
+		if item.Status != "COMPLETED" {
+			if err = writeCheck(ctx, authorization, pricing.CurrentApprover(ctx, tx, org, item.Pricing.ApprovalID)); err != nil {
+				return item, err
+			}
+		}
+		var previous string
+		err = tx.QueryRow(ctx, "SELECT COALESCE(confirmation_key::text,'') FROM pos_checkouts WHERE organization_id=$1 AND id=$2", org, id).Scan(&previous)
+		if err = writeCheck(ctx, authorization, err); err != nil {
+			return item, err
+		}
+		if previous != key || item.Reference != input.Reference || allowed([]string{"CANCELLED", "RESOLVED"}, item.Status) {
+			return item, ErrConflict
+		}
+		return privateReadResult(ctx, authorization, item, nil)
+	}
+	_, err = terminal(ctx, tx, actor, org, item.TerminalID, true)
+	if err = writeCheck(ctx, authorization, err); err != nil {
+		return item, err
+	}
+	shift, problem := ownShift(ctx, tx, org, item.TerminalID, user)
+	if err = writeCheck(ctx, authorization, nil); err != nil {
+		return item, err
+	}
+	if problem != nil || shift != item.ShiftID {
+		return item, ErrConflict
+	}
+	_, err = tx.Exec(ctx, "UPDATE pos_checkouts SET status='CONFIRMED',confirmation_key=$3,confirmed_by=$4,confirmed_at=now(),reference=$5 WHERE organization_id=$1 AND id=$2", org, id, key, user, input.Reference)
+	if err = writeCheck(ctx, authorization, err); err != nil {
+		return item, err
+	}
+	problem = revalidate(ctx, tx, org, item)
+	if err = writeCheck(ctx, authorization, nil); err != nil {
+		return item, err
+	}
+	if problem != nil {
+		code := "PRICING_CHANGED"
+		if errors.Is(problem, ErrCustomer) {
+			code = "CUSTOMER_UNAVAILABLE"
+		}
+		_, err = tx.Exec(ctx, "UPDATE pos_checkouts SET status='RECONCILIATION_REQUIRED',failure_code=$3 WHERE organization_id=$1 AND id=$2", org, id, code)
+		if err = writeCheck(ctx, authorization, err); err != nil {
+			return item, err
+		}
+	}
+	result, err = checkout(ctx, tx, actor, user, org, id)
+	if err = writeCheck(ctx, authorization, err); err != nil {
+		return result, err
+	}
+	return result, finishAuthorized(ctx, authorization, org, user, "pos.payment.confirmed", id)
+}
+
+func (service *Service) EndCheckout(ctx context.Context, user, org, id, action string, input ConfirmationInput) (result Checkout, err error) {
+	permission := "pos.checkout"
+	if action == "resolve" {
+		permission = "pos.payment.reconcile"
+	}
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, permission)
+	if err != nil {
+		return Checkout{}, dbError(err)
+	}
+	tx, actor := authorization.Tx, authorization.Actor
+	defer tx.Rollback(ctx)
+	defer func() {
+		if err != nil {
+			result = Checkout{}
+		}
+	}()
+	item, err := checkout(ctx, tx, actor, user, org, id)
+	if err = writeCheck(ctx, authorization, err); err != nil {
+		return item, err
+	}
+	if action == "cancel" {
+		if item.CashierID != user {
+			return item, organization.ErrDenied
+		}
+		if item.Status == "CANCELLED" {
+			return privateReadResult(ctx, authorization, item, nil)
+		}
+		if item.Status != "AWAITING_PAYMENT" {
+			return item, ErrPending
+		}
+		_, err = tx.Exec(ctx, "UPDATE pos_checkouts SET status='CANCELLED' WHERE organization_id=$1 AND id=$2", org, id)
+	} else {
+		if !input.Acknowledged || !text(input.Note, 2000, true) {
+			return item, ErrInput
+		}
+		if item.Status == "RESOLVED" {
+			return privateReadResult(ctx, authorization, item, nil)
+		}
+		if !allowed([]string{"CONFIRMED", "RECONCILIATION_REQUIRED"}, item.Status) {
+			return item, ErrConflict
+		}
+		_, err = tx.Exec(ctx, "UPDATE pos_checkouts SET status='RESOLVED',resolution_note=$3,resolved_by=$4,resolved_at=now() WHERE organization_id=$1 AND id=$2", org, id, input.Note, user)
+	}
+	if err = writeCheck(ctx, authorization, err); err != nil {
+		return item, err
+	}
+	result, err = checkout(ctx, tx, actor, user, org, id)
+	if err = writeCheck(ctx, authorization, err); err != nil {
+		return result, err
+	}
+	return result, finishAuthorized(ctx, authorization, org, user, "pos.checkout."+action, id)
+}

@@ -1,0 +1,255 @@
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { beforeEach, expect, it, vi } from 'vitest';
+import { OrganizationProvider, useOrganization } from './OrganizationProvider';
+import type { OrganizationContext } from '../lib/organization-api';
+import { ApiError } from '../lib/api';
+const mocks = vi.hoisted(() => ({
+  request: vi.fn(),
+  auth: { status: 'authenticated', session: { user: { id: 'user' } } } as {
+    status: string;
+    session: { user: { id: string } } | null;
+  },
+}));
+vi.mock('./AuthProvider', () => ({ useAuth: () => ({ state: mocks.auth }) }));
+vi.mock('../lib/organization-api', () => ({
+  organizationRequest: mocks.request,
+}));
+const organizations = [
+  { id: 'a', name: 'Organization A' },
+  { id: 'b', name: 'Organization B' },
+];
+const context = (id: string): OrganizationContext => ({
+  organization: {
+    id,
+    name: `Organization ${id}`,
+    code: id,
+    business_type: 'RETAIL',
+    contact_email: '',
+    contact_phone: '',
+    address: '',
+    currency: 'THB',
+    status: 'ACTIVE',
+  },
+  membership: {
+    id: `${id}-member`,
+    user_id: 'user',
+    email: '',
+    display_name: '',
+    role: (id === 'a'
+      ? 'OWNER'
+      : 'CASHIER') as OrganizationContext['membership']['role'],
+    status: 'ACTIVE',
+    branch_ids: [`${id}-main`],
+    permissions: [],
+  },
+  branches: [
+    {
+      id: `${id}-main`,
+      organization_id: id,
+      name: 'Main',
+      code: 'MAIN',
+      address: '',
+      phone: '',
+      email: '',
+      status: 'ACTIVE',
+      is_main: true,
+    },
+    {
+      id: `${id}-other`,
+      organization_id: id,
+      name: 'Other',
+      code: 'OTHER',
+      address: '',
+      phone: '',
+      email: '',
+      status: 'ACTIVE',
+      is_main: false,
+    },
+  ],
+  permissions: id === 'a' ? ['employee.read'] : ['branch.read'],
+});
+function Probe() {
+  const tenant = useOrganization();
+  return (
+    <>
+      <output>{tenant.context?.organization.id ?? 'none'}</output>
+      <span>{tenant.storeMode ?? 'mode-pending'}</span>
+      {tenant.error && <p role="alert">{tenant.error}</p>}
+      {tenant.errorCode === 'MFA_REQUIRED' && <span>MFA needed</span>}
+      <span>{tenant.branchID}</span>
+      <span>
+        {tenant.can('employee.read') ? 'employees-visible' : 'employees-denied'}
+      </span>
+      <button onClick={() => tenant.select('b')}>Switch B</button>
+      <button onClick={() => tenant.select('a', 'a-other')}>
+        Other branch
+      </button>
+      <button onClick={() => tenant.select('not-a-member')}>
+        Unauthorized
+      </button>
+    </>
+  );
+}
+function mount() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+  const tree = () => (
+    <QueryClientProvider client={client}>
+      <OrganizationProvider>
+        <Probe />
+      </OrganizationProvider>
+    </QueryClientProvider>
+  );
+  return { ...render(tree()), tree, client };
+}
+beforeEach(() => {
+  mocks.request.mockReset();
+  mocks.auth = { status: 'authenticated', session: { user: { id: 'user' } } };
+  sessionStorage.clear();
+  window.history.replaceState(null, '', '/');
+  mocks.request.mockImplementation((path: string) =>
+    Promise.resolve(
+      path === '/organizations'
+        ? organizations
+        : context(path.includes('/b/') ? 'b' : 'a'),
+    ),
+  );
+});
+it.each(['/organizations', '/context'])(
+  'preserves MFA_REQUIRED and clears cached context when %s denies assurance',
+  async (deniedPath) => {
+    const view = mount();
+    expect(await screen.findByText('employees-visible')).toBeVisible();
+    mocks.request.mockImplementation((path: string) =>
+      (deniedPath === '/organizations' && path === '/organizations') ||
+      (deniedPath === '/context' && path !== '/organizations')
+        ? Promise.reject(
+            new ApiError(403, 'Verify MFA', undefined, 'MFA_REQUIRED'),
+          )
+        : Promise.resolve(
+            path === '/organizations' ? organizations : context('a'),
+          ),
+    );
+    await act(async () => {
+      await view.client.invalidateQueries({ queryKey: ['tenant'] });
+    });
+    expect(await screen.findByText('MFA needed')).toBeVisible();
+    expect(screen.getByText('none')).toBeVisible();
+    expect(screen.getByText('employees-denied')).toBeVisible();
+  },
+);
+it('switches organizations and permissions without rendering old tenant data', async () => {
+  mount();
+  expect(await screen.findByText('employees-visible')).toBeVisible();
+  fireEvent.click(screen.getByText('Switch B'));
+  expect(screen.getByText('none')).toBeVisible();
+  expect(await screen.findByText('b')).toBeVisible();
+  expect(screen.getByText('employees-denied')).toBeVisible();
+});
+it('ignores a remembered foreign organization in single-store mode', async () => {
+  sessionStorage.setItem(
+    'smartpos-context:user',
+    JSON.stringify({ orgID: 'b', branchID: 'b-main' }),
+  );
+  mocks.request.mockImplementation(
+    (path: string, options: { storeMode?: (mode: 'single') => void }) => {
+      if (path === '/organizations') {
+        options.storeMode?.('single');
+        return Promise.resolve([organizations[0]]);
+      }
+      return Promise.resolve(context('a'));
+    },
+  );
+  mount();
+  expect(await screen.findByText('single')).toBeVisible();
+  expect(await screen.findByText('a')).toBeVisible();
+  fireEvent.click(screen.getByText('Switch B'));
+  expect(screen.getByText('a')).toBeVisible();
+  expect(mocks.request.mock.calls.some(([path]) => path.includes('/b/'))).toBe(
+    false,
+  );
+});
+it('fails closed when single-store metadata is returned with multiple organizations', async () => {
+  mocks.request.mockImplementation(
+    (path: string, options: { storeMode?: (mode: 'single') => void }) => {
+      if (path === '/organizations') {
+        options.storeMode?.('single');
+        return Promise.resolve(organizations);
+      }
+      return Promise.resolve(context('a'));
+    },
+  );
+  mount();
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'ข้อมูลร้านเดียวไม่ถูกต้อง',
+  );
+  expect(screen.getByText('none')).toBeVisible();
+  expect(
+    mocks.request.mock.calls.every(([path]) => path === '/organizations'),
+  ).toBe(true);
+});
+it('validates branches and restores only authorized preferences', async () => {
+  sessionStorage.setItem(
+    'smartpos-context:user',
+    JSON.stringify({ orgID: 'a', branchID: 'a-other' }),
+  );
+  mount();
+  expect(await screen.findByText('a-other')).toBeVisible();
+  fireEvent.click(screen.getByText('Unauthorized'));
+  expect(screen.getByText('a')).toBeVisible();
+});
+it('ignores an old in-flight context after organization switch', async () => {
+  let complete!: (value: OrganizationContext) => void;
+  mocks.request.mockImplementation((path: string) =>
+    path === '/organizations'
+      ? Promise.resolve(organizations)
+      : path.includes('/a/')
+        ? new Promise<OrganizationContext>((resolve) => {
+            complete = resolve;
+          })
+        : Promise.resolve(context('b')),
+  );
+  mount();
+  await waitFor(() =>
+    expect(mocks.request).toHaveBeenCalledWith(
+      '/organizations/a/context',
+      expect.anything(),
+    ),
+  );
+  fireEvent.click(screen.getByText('Switch B'));
+  expect(await screen.findByText('b')).toBeVisible();
+  await act(async () => complete(context('a')));
+  expect(screen.getByText('b')).toBeVisible();
+  expect(screen.queryByText('employees-visible')).not.toBeInTheDocument();
+});
+it('clears tenant caches on logout and strips invitation tokens from URL', async () => {
+  window.history.replaceState(null, '', '/setup#invitation=secret-invite');
+  const view = mount();
+  expect(window.location.hash).toBe('');
+  expect(await screen.findByText('a')).toBeVisible();
+  expect(
+    mocks.request.mock.calls.some(([path]) => path.includes('invitation')),
+  ).toBe(false);
+  mocks.auth = { status: 'anonymous', session: null };
+  view.rerender(view.tree());
+  await waitFor(() =>
+    expect(
+      view.client.getQueryCache().findAll({ queryKey: ['tenant', 'user'] }),
+    ).toHaveLength(0),
+  );
+  expect(
+    view.client
+      .getQueryCache()
+      .findAll({ queryKey: ['tenant'] })
+      .every((query) => query.state.data === undefined),
+  ).toBe(true);
+  expect(screen.getByText('none')).toBeVisible();
+});

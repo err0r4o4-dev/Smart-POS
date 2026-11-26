@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 350" preserveAspectRatio="none" fill="none">
+  <defs><linearGradient id="wave" x1="0" y1="0" x2="0" y2="350" gradientUnits="userSpaceOnUse"><stop stop-color="#fff0cf"/><stop offset="1" stop-color="#fff7e8"/></linearGradient></defs>
+  <path d="M0 30C115 5 168 174 298 239c87 43 149 63 227 111H0V30Z" fill="url(#wave)"/>
+  <path d="M0 176c110 28 175 108 270 174H0V176Z" fill="#ffe7b1" fill-opacity=".52"/>
+  <path d="M1175 350c102-25 154-74 216-144 69-80 120-131 209-125v269h-425Z" fill="url(#wave)"/>
+</svg>

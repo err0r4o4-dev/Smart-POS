@@ -1,0 +1,135 @@
+.mfa-panel {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.mfa-panel p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+.mfa-panel .auth-error {
+  color: var(--error-strong);
+}
+.mfa-panel h3 {
+  font-size: var(--font-card);
+  margin-block: var(--space-3);
+}
+.mfa-panel .auth-form-body {
+  margin: 0;
+}
+.mfa-panel fieldset {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.mfa-panel .button {
+  min-height: 48px;
+  white-space: normal;
+  height: auto;
+}
+
+.mfa-panel .mfa-secondary-action {
+  border: 1px solid var(--primary-border);
+  background: var(--primary-subtle);
+  color: var(--primary-strong);
+}
+
+.mfa-panel .mfa-secondary-action:hover:not(:disabled) {
+  background: var(--primary-soft);
+}
+
+.mfa-panel #mfa-code {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.28em;
+  font-weight: 700;
+}
+.mfa-enrollment {
+  display: grid;
+  gap: var(--space-3);
+}
+.mfa-enrollment textarea {
+  width: 100%;
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  background: var(--surface);
+  font-family: monospace;
+  resize: vertical;
+  word-break: break-all;
+}
+.mfa-qr {
+  justify-self: center;
+  padding: var(--space-2);
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  max-width: 100%;
+}
+.mfa-qr svg {
+  max-width: 100%;
+  height: auto;
+}
+.mfa-manual-key {
+  display: grid;
+  gap: var(--space-2);
+}
+.mfa-manual-key summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: var(--primary-strong);
+  font-weight: 600;
+}
+.mfa-manual-key[open] {
+  display: grid;
+  gap: var(--space-2);
+}
+.mfa-stale {
+  display: grid;
+  gap: var(--space-3);
+}
+.mfa-recovery-codes {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+}
+.mfa-recovery-codes li {
+  padding: var(--space-2);
+  background: var(--secondary);
+  border-radius: var(--radius-small);
+}
+.mfa-recovery-codes code {
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}
+.mfa-acknowledge {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-height: 48px;
+  padding-block: var(--space-3);
+  cursor: pointer;
+}
+.mfa-acknowledge input {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  margin-top: 2px;
+  accent-color: var(--primary-strong);
+}
+.mfa-navigation-warning {
+  display: grid;
+  gap: var(--space-3);
+  border-inline-start: 3px solid var(--warning-strong);
+  padding-inline-start: var(--space-3);
+}
+.mfa-panel .auth-links {
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}

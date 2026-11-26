@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <rect width="200" height="200" rx="28" fill="#fef3c7"/>
+  <circle cx="100" cy="108" r="70" fill="#ffffff" stroke="#e5e7eb" stroke-width="3"/>
+  <circle cx="100" cy="108" r="54" fill="#fef9c3"/>
+  <path d="M70 100 Q85 85 110 92 Q130 96 135 115 Q125 132 100 130 Q75 125 70 100 Z" fill="#92400e"/>
+  <circle cx="85" cy="105" r="5" fill="#15803d"/>
+  <circle cx="115" cy="112" r="4" fill="#15803d"/>
+  <circle cx="102" cy="122" r="3" fill="#dc2626"/>
+  <circle cx="120" cy="98" r="2.5" fill="#dc2626"/>
+  <circle cx="95" cy="100" r="16" fill="#f8fafc" stroke="#f1f5f9" stroke-width="2"/>
+  <circle cx="97" cy="102" r="8" fill="#f59e0b"/>
+  <circle cx="99" cy="100" r="3" fill="#fbbf24"/>
+  <text x="100" y="32" font-family="system-ui, sans-serif" font-size="13" font-weight="800" fill="#b45309" text-anchor="middle">ข้าวกะเพรา</text>
+</svg>

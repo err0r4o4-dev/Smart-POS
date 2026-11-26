@@ -1,0 +1,44 @@
+.swal2-popup.smartpos-feedback {
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  background: var(--surface);
+  border-radius: var(--radius-overlay);
+  box-shadow: var(--shadow-floating);
+  max-width: calc(100vw - 2rem);
+  overflow-wrap: anywhere;
+}
+
+.smartpos-feedback .swal2-title {
+  font-size: 1.125rem;
+  line-height: 1.6;
+}
+
+.smartpos-feedback .swal2-confirm {
+  background: var(--primary);
+  color: var(--text-primary);
+}
+
+.smartpos-feedback .swal2-cancel {
+  background: var(--surface);
+  color: var(--text-primary);
+  border: 1px solid var(--text-primary);
+}
+
+.smartpos-feedback button:focus-visible {
+  outline: 3px solid var(--primary-strong);
+  outline-offset: 3px;
+}
+
+.smartpos-feedback .swal2-close {
+  color: var(--text-primary);
+  min-width: 44px;
+  min-height: 44px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .smartpos-feedback,
+  .smartpos-feedback * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

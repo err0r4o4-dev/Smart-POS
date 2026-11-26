@@ -1,0 +1,116 @@
+.returns-page {
+  min-width: 0;
+}
+.adjustment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 1rem;
+}
+.returns-page article p {
+  overflow-wrap: anywhere;
+}
+.returns-page .card,
+.returns-line {
+  min-width: 0;
+}
+.returns-page form {
+  display: grid;
+  gap: 1rem;
+}
+.returns-page select {
+  max-width: 100%;
+}
+.returns-page .tenant-field {
+  min-width: 0;
+}
+.returns-line {
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 1rem;
+}
+.returns-reference,
+.returns-page li {
+  overflow-wrap: anywhere;
+}
+.returns-page .returns-amount {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.returns-history .catalog-table th:last-child {
+  text-align: right;
+}
+.returns-history > .catalog-actions {
+  align-items: center;
+  margin-block: 24px 0;
+}
+.returns-page .tag {
+  white-space: normal;
+  text-align: start;
+}
+.refund-references {
+  margin-block: 16px;
+}
+.refund-references > summary {
+  cursor: pointer;
+  color: var(--primary-strong);
+}
+.returns-ack {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+.returns-ack input {
+  width: auto;
+  flex: 0 0 auto;
+  margin-top: 0.25rem;
+}
+@media (max-width: 640px) {
+  .returns-page .page-heading {
+    display: grid;
+    gap: 1rem;
+  }
+  .returns-line {
+    padding: 0.75rem;
+  }
+}
+@media print {
+  body:has(.returns-print-document)
+    *:not(:has(.returns-print-document)):not(.returns-print-document):not(
+      .returns-print-document *
+    ) {
+    display: none;
+  }
+  body:has(.returns-print-document) *:has(.returns-print-document) {
+    display: block;
+    margin: 0;
+    padding: 0;
+    min-height: 0;
+  }
+  .returns-print-document {
+    position: static;
+    width: auto;
+    padding: 1rem;
+    color: #000;
+    background: #fff;
+    box-shadow: none;
+    border: 0;
+    border-radius: 0;
+    font-size: 12px;
+  }
+  .returns-print-document form,
+  .returns-print-document button,
+  .returns-print-document a {
+    display: none;
+  }
+  .returns-print-document .catalog-table-wrap {
+    overflow: visible;
+  }
+  .returns-print-document table {
+    min-width: 0;
+    width: 100%;
+    table-layout: fixed;
+    overflow-wrap: anywhere;
+  }
+}

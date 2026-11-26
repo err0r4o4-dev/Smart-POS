@@ -1,0 +1,309 @@
+package storefront
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"smartpos/api/internal/modules/inventory"
+	"smartpos/api/internal/modules/organization"
+	"smartpos/api/internal/platform/stripe"
+	"strings"
+	"time"
+)
+
+type CustomerPaymentGateway interface {
+	Enabled() bool
+	CustomerRequestFingerprint(stripe.CustomerCharge) (string, error)
+	CreateCustomerCheckout(context.Context, stripe.CustomerCharge) (stripe.CustomerSession, error)
+	RetrieveCustomerCheckout(context.Context, stripe.CustomerCharge, string) (stripe.CustomerSession, error)
+	VerifyCustomerEvent([]byte, string, time.Time) (stripe.CustomerEvent, error)
+}
+
+type Service struct {
+	Organization     *organization.Service
+	CustomerPayments CustomerPaymentGateway
+}
+
+func dbError(err error) error {
+	if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, organization.ErrNotFound) {
+		return ErrNotFound
+	}
+	if errors.Is(err, organization.ErrInput) || errors.Is(err, inventory.ErrInput) {
+		return ErrInput
+	}
+	if errors.Is(err, organization.ErrConflict) || errors.Is(err, inventory.ErrConflict) {
+		return ErrConflict
+	}
+	var problem *pgconn.PgError
+	if errors.As(err, &problem) {
+		switch problem.Code {
+		case "23505", "23514", "40001", "40P01", "22003":
+			return ErrConflict
+		case "23503", "22P02":
+			return ErrInput
+		case "42501":
+			return organization.ErrDenied
+		}
+	}
+	return err
+}
+func branchAllowed(actor organization.Member, branch string) bool {
+	if actor.Role == "OWNER" {
+		return true
+	}
+	for _, id := range actor.BranchIDs {
+		if id == branch {
+			return true
+		}
+	}
+	return false
+}
+func (service *Service) public(ctx context.Context, slug string, lock bool) (pgx.Tx, string, error) {
+	if !slugPattern.MatchString(slug) {
+		return nil, "", ErrNotFound
+	}
+	tx, err := service.Organization.Pool.Begin(ctx)
+	if err != nil {
+		return nil, "", err
+	}
+	fail := func(problem error) (pgx.Tx, string, error) { tx.Rollback(ctx); return nil, "", dbError(problem) }
+	var org *string
+	if err = tx.QueryRow(ctx, "SELECT storefront_resolve($1)::text", slug).Scan(&org); err != nil {
+		return fail(err)
+	}
+	if !service.resolvedOrganizationAllowed(org) {
+		return fail(ErrNotFound)
+	}
+	if _, err = tx.Exec(ctx, "SELECT set_config('app.organization_id',$1,true),set_config('app.user_id','',true)", *org); err != nil {
+		return fail(err)
+	}
+	query := "SELECT id::text FROM organizations WHERE id=$1 AND status='ACTIVE'"
+	if lock {
+		query += " FOR UPDATE"
+	}
+	var id string
+	if err = tx.QueryRow(ctx, query, *org).Scan(&id); err != nil {
+		return fail(err)
+	}
+	return tx, *org, nil
+}
+func (service *Service) Directory(ctx context.Context) (json.RawMessage, error) {
+	if service.Organization.SingleStoreOrganizationID != "" {
+		tx, err := service.Organization.Pool.Begin(ctx)
+		if err != nil {
+			return nil, err
+		}
+		defer tx.Rollback(ctx)
+		org := service.Organization.SingleStoreOrganizationID
+		if _, err = tx.Exec(ctx, "SELECT set_config('app.organization_id',$1,true),set_config('app.user_id','',true)", org); err != nil {
+			return nil, err
+		}
+		var result []byte
+		err = tx.QueryRow(ctx, `SELECT COALESCE(jsonb_agg(jsonb_build_object('slug',shop.slug,'name',shop.name,'accepting_orders',shop.accepting_orders,'business_type',org.business_type)),'[]'::jsonb) FROM storefronts shop JOIN organizations org ON org.id=shop.organization_id WHERE shop.organization_id=$1 AND shop.published AND org.status='ACTIVE'`, org).Scan(&result)
+		return json.RawMessage(result), dbError(err)
+	}
+	var result []byte
+	err := service.Organization.Pool.QueryRow(ctx, "SELECT storefront_directory()").Scan(&result)
+	return json.RawMessage(result), dbError(err)
+}
+
+func (service *Service) resolvedOrganizationAllowed(org *string) bool {
+	return org != nil && uuidPattern.MatchString(*org) && service.Organization.AllowsOrganization(*org)
+}
+func settings(ctx context.Context, tx pgx.Tx, org string) (Settings, error) {
+	var result Settings
+	err := tx.QueryRow(ctx, `SELECT shop.slug,shop.name,shop.description,shop.contact_phone,shop.pickup_instructions,COALESCE(shop.terminal_id::text,''),shop.published,shop.accepting_orders,shop.revision,COALESCE(terminal.branch_id::text,''),COALESCE(terminal.stock_location_id::text,''),COALESCE(shop.online_terminal_id::text,''),shop.delivery_enabled,shop.shipping_fee::text FROM storefronts shop LEFT JOIN pos_terminals terminal ON terminal.organization_id=shop.organization_id AND terminal.id=COALESCE(shop.online_terminal_id,shop.terminal_id) WHERE shop.organization_id=$1 AND (shop.source_kind='RESTAURANT' OR terminal.id IS NOT NULL)`, org).Scan(&result.Slug, &result.Name, &result.Description, &result.ContactPhone, &result.PickupInstructions, &result.TerminalID, &result.Published, &result.AcceptingOrders, &result.Revision, &result.BranchID, &result.LocationID, &result.OnlineTerminalID, &result.DeliveryEnabled, &result.ShippingFee)
+	return result, dbError(err)
+}
+func (service *Service) PublicSettings(ctx context.Context, slug string) (Settings, error) {
+	tx, org, err := service.public(ctx, slug, false)
+	if err != nil {
+		return Settings{}, err
+	}
+	defer tx.Rollback(ctx)
+	result, err := settings(ctx, tx, org)
+	if err != nil || !result.Published {
+		return Settings{}, ErrNotFound
+	}
+	result.TerminalID = ""
+	result.OnlineTerminalID = ""
+	result.BranchID = ""
+	result.LocationID = ""
+	return result, nil
+}
+func (service *Service) Settings(ctx context.Context, user, org string) (*Settings, error) {
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "storefront.manage")
+	if err != nil {
+		return nil, dbError(err)
+	}
+	tx := authorization.Tx
+	defer tx.Rollback(ctx)
+	result, err := settings(ctx, tx, org)
+	if errors.Is(err, ErrNotFound) {
+		return nil, authorization.Recheck(ctx)
+	}
+	if err != nil {
+		return nil, err
+	}
+	if !branchAllowed(authorization.Actor, result.BranchID) {
+		return nil, organization.ErrDenied
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+func uniqueAutoSlug(ctx context.Context, tx pgx.Tx, base string) (string, error) {
+	for suffix := 0; suffix < 10000; suffix++ {
+		candidate := base
+		if suffix > 0 {
+			tag := fmt.Sprintf("-%d", suffix+1)
+			limit := 50 - len(tag)
+			if limit < 1 {
+				return "", ErrConflict
+			}
+			candidate = strings.TrimRight(base[:min(len(base), limit)], "-") + tag
+		}
+		var exists bool
+		if err := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM storefronts WHERE slug=$1)", candidate).Scan(&exists); err != nil {
+			return "", err
+		}
+		if !exists {
+			return candidate, nil
+		}
+	}
+	return "", ErrConflict
+}
+func (service *Service) SaveSettings(ctx context.Context, user, org string, input SettingsInput) (Settings, error) {
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "storefront.manage")
+	if err != nil {
+		return Settings{}, dbError(err)
+	}
+	tx, actor := authorization.Tx, authorization.Actor
+	defer tx.Rollback(ctx)
+	if err = input.validate(); err != nil {
+		return Settings{}, err
+	}
+	if input.TerminalID == "" {
+		result, err := saveOrganizationSettings(ctx, authorization, user, org, input)
+		if err != nil {
+			return Settings{}, err
+		}
+		if err = authorization.Recheck(ctx); err != nil {
+			return Settings{}, err
+		}
+		if err = tx.Commit(ctx); err != nil {
+			return Settings{}, dbError(err)
+		}
+		return result, nil
+	}
+	var branch, location string
+	err = tx.QueryRow(ctx, `SELECT terminal.branch_id::text,terminal.stock_location_id::text FROM pos_terminals terminal JOIN branches branch ON branch.organization_id=terminal.organization_id AND branch.id=terminal.branch_id WHERE terminal.organization_id=$1 AND terminal.id=$2 AND terminal.status='ACTIVE' AND branch.status='ACTIVE' FOR UPDATE OF terminal`, org, input.TerminalID).Scan(&branch, &location)
+	if err != nil {
+		return Settings{}, dbError(err)
+	}
+	if !branchAllowed(actor, branch) {
+		return Settings{}, organization.ErrDenied
+	}
+	if err = inventory.SaleLocation(ctx, tx, actor, org, branch, location); err != nil {
+		return Settings{}, dbError(err)
+	}
+	if input.OnlineTerminalID != "" {
+		var onlineBranch, onlineLocation, locationType string
+		err = tx.QueryRow(ctx, `SELECT terminal.branch_id::text,terminal.stock_location_id::text,location.type FROM pos_terminals terminal JOIN stock_locations location ON location.organization_id=terminal.organization_id AND location.id=terminal.stock_location_id WHERE terminal.organization_id=$1 AND terminal.id=$2 AND terminal.status='ACTIVE' AND location.status='ACTIVE' FOR UPDATE OF terminal`, org, input.OnlineTerminalID).Scan(&onlineBranch, &onlineLocation, &locationType)
+		if err != nil {
+			return Settings{}, dbError(err)
+		}
+		if !branchAllowed(actor, onlineBranch) {
+			return Settings{}, organization.ErrDenied
+		}
+		if onlineBranch != branch || onlineLocation == location || locationType != "WAREHOUSE" {
+			return Settings{}, ErrConflict
+		}
+		if err = inventory.SaleLocation(ctx, tx, actor, org, branch, onlineLocation); err != nil {
+			return Settings{}, dbError(err)
+		}
+	}
+	current, err := settings(ctx, tx, org)
+	if err != nil && !errors.Is(err, ErrNotFound) {
+		return Settings{}, err
+	}
+	if input.Slug == "" {
+		if err == nil {
+			input.Slug = current.Slug
+		} else {
+			input.Slug, err = uniqueAutoSlug(ctx, tx, autoSlug(input.Name))
+			if err != nil {
+				return Settings{}, dbError(err)
+			}
+		}
+	}
+	if err == nil && (!branchAllowed(actor, current.BranchID) || current.Revision != input.Revision) {
+		return Settings{}, ErrConflict
+	}
+	if errors.Is(err, ErrNotFound) && input.Revision != 0 {
+		return Settings{}, ErrConflict
+	}
+	if err == nil && current.Slug != input.Slug {
+		var ordered bool
+		if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM online_orders WHERE organization_id=$1)`, org).Scan(&ordered); err != nil {
+			return Settings{}, err
+		}
+		if ordered {
+			return Settings{}, ErrConflict
+		}
+	}
+	if err == nil && (current.TerminalID != input.TerminalID || current.OnlineTerminalID != input.OnlineTerminalID || current.Slug != input.Slug || !input.Published) {
+		var live bool
+		if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM online_orders WHERE organization_id=$1 AND storefront_order_live(organization_id,id))`, org).Scan(&live); err != nil {
+			return Settings{}, err
+		}
+		if live {
+			return Settings{}, ErrConflict
+		}
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Settings{}, err
+	}
+	_, err = tx.Exec(ctx, `INSERT INTO storefronts(organization_id,slug,name,description,contact_phone,pickup_instructions,terminal_id,published,accepting_orders,online_terminal_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,nullif($10,'')::uuid) ON CONFLICT(organization_id) DO UPDATE SET slug=excluded.slug,name=excluded.name,description=excluded.description,contact_phone=excluded.contact_phone,pickup_instructions=excluded.pickup_instructions,terminal_id=excluded.terminal_id,published=excluded.published,accepting_orders=excluded.accepting_orders,online_terminal_id=excluded.online_terminal_id,revision=storefronts.revision+1,updated_at=now()`, org, input.Slug, input.Name, input.Description, input.ContactPhone, input.PickupInstructions, input.TerminalID, input.Published, input.AcceptingOrders, input.OnlineTerminalID)
+	if err != nil {
+		return Settings{}, dbError(err)
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Settings{}, err
+	}
+	if _, err = tx.Exec(ctx, "UPDATE storefronts SET delivery_enabled=$2,shipping_fee=$3 WHERE organization_id=$1", org, input.DeliveryEnabled, input.ShippingFee); err != nil {
+		return Settings{}, dbError(err)
+	}
+	result, err := settings(ctx, tx, org)
+	if err != nil {
+		return Settings{}, err
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Settings{}, err
+	}
+	if err = organization.RecordAudit(ctx, tx, org, user, "storefront.updated", org); err != nil {
+		return Settings{}, err
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Settings{}, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return Settings{}, dbError(err)
+	}
+	return result, nil
+}
+func saleSource(ctx context.Context, tx pgx.Tx, org string, shop Settings) error {
+	var active bool
+	err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pos_terminals terminal JOIN branches branch ON branch.organization_id=terminal.organization_id AND branch.id=terminal.branch_id JOIN stock_locations location ON location.organization_id=terminal.organization_id AND location.id=terminal.stock_location_id WHERE terminal.organization_id=$1 AND terminal.id=$2 AND terminal.branch_id=$3 AND terminal.stock_location_id=$4 AND terminal.status='ACTIVE' AND branch.status='ACTIVE' AND location.status='ACTIVE' AND location.type IN ('WAREHOUSE','SALES_FLOOR','SHELF') AND ($5='' OR location.type='WAREHOUSE'))`, org, shop.orderTerminalID(), shop.BranchID, shop.LocationID, shop.OnlineTerminalID).Scan(&active)
+	if err != nil {
+		return err
+	}
+	if !active {
+		return ErrClosed
+	}
+	return nil
+}

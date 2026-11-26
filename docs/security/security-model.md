@@ -1,0 +1,156 @@
+# Security model
+
+## Owner-only transition (2026-11-05)
+
+The approved policy restricts backoffice access to active OWNER memberships.
+MANAGER, CASHIER, INVENTORY_STAFF and PURCHASING_STAFF memberships and their
+history remain stored, but are to be denied backoffice access. Invitation, member
+and role administration UI and API are being retired. Account/login and `/shop`
+ordering remain in scope; no migration is planned. Server-side authorization and
+tenant isolation remain required. Final independent security delta review found
+no new confirmed defect; required database integration is blocked and overall
+acceptance remains open. See `TODO.md` for current evidence. Dated role-specific
+reviews below describe historical behavior and do not establish current grants.
+
+For new discount work, the current approver check requires an active OWNER
+membership, active account and active branch. New shelf assignments require an
+active OWNER membership and active account. Completed `PrepareCheckout`,
+`ConfirmPayment` and `CompleteCheckout` replay preserves immutable results
+without rechecking the historical approver; caller authorization and applicable
+payment and request checks remain. Independent security review found no new
+confirmed defect. Database runtime verification of these changes remains pending.
+
+Current Phase5 local acceptance includes Quality tenant-safe references, FORCE RLS/runtime grants, current-RBAC-before-replay, posting-time expiry/recall checks, same-lot return guards and Sale/WriteOff/Recall races. [Final scoped security review and evidence](../development/phase57-verification.md) documents actual findings and production boundaries; no production security certification is claimed.
+
+## Phase5.4 customer protections (2026-10-10)
+
+- Reuse server sessions/CSRF/Origin and active organization/branch authorization. Customer/group read/manage/select/history permissions are explicit; Cashier receives masked phone/email and cannot read notes/history or mutate records.
+- All three Customer tables FORCE RLS with composite tenant FKs and least-privilege grants. Customer/group hard deletion is denied. Revision/immutable settlement triggers protect customer identity, historical Sales and code snapshots; archived records cannot be newly selected.
+- Authorization is evaluated before create replay. UI search uses POST rather than contact PII in URLs; customer handlers return no-store; audits contain actor/object/events only. Duplicate/validation errors are generic. Marketing is explicit opt-in, not inferred from record creation.
+- User/org/branch/permission cache keys, permission-aware workspace remounts and existing query cancellation/removal prevent old-context draft/PII reuse. Real gateway tests cover branch/org switching, foreign detail lookup, role masking and logout; the same-user manage-permission downgrade has a focused cache regression test.
+- Archival retains transactions, memberships, code snapshots and create fingerprints. It is not legally certified erasure. Retention/deletion policy, production role/TLS/secrets/backup, load/hardware and accessibility remain separate gates. This is implementation-scoped protection verification, not a repository-wide security audit. See [design](../architecture/customers.md) and [executed evidence](../development/phase54-verification.md).
+
+## Phase5.3 implementation-scoped verification (2026-10-10)
+
+Evidence: [local acceptance](../development/phase53-verification.md). These are targeted implementation tests, not a penetration test, independent security audit or production certification.
+
+- Existing sessions, active membership, fixed pricing/promotions/discount permissions, branch scope and own-cart/own-request checks remain authoritative. Owner controls organization-wide definitions; Manager writes only assigned branches; Cashier cannot approve. Current approver authority is checked again when applying a discount and before sensitive checkout/approval replay.
+- Manual approval binds organization, branch, requester, cart revision and pricing revision; expiry is15 minutes. Foreign, forged, stale, expired and permission-revoked approvals are denied. Request keys reject changed payloads; consumed approvals cannot be reused for another Sale.
+- Server validates bounded typed rules and variant/category references; no executable user expressions or trusted client totals. Mutations retain strict JSON/body limits, Origin/CSRF, optimistic revisions and successful-change audit. Definition transitions use revisions rather than replay caches.
+- Migration10 adds four ENABLE/FORCE RLS tables and tenant-safe references. Runtime cannot delete definitions/approvals/redemptions or update redemption history. Tests exercise smartpos_runtime directly without tenant context and with foreign context; bootstrap-superuser results are not claimed as RLS evidence.
+- Exact cents and deterministic remainder allocations prevent over-discounting. Sale pricing snapshots, consumed approvals and redemptions are immutable; deferred guards reconcile Sale discounts and committed usage. Organization serialization/row locks protect final redemption, rollback and duplicate completion.
+- Changed pricing after acknowledgement never changes paid consideration silently: posting rolls back and durable reconciliation evidence remains. Zero-payable uses a zero-valued internal NONE settlement and no financial payment/funds-confirmation event. Every BOGO physical unit remains stock-accounted. Historical refunds/credits use net-paid snapshots, not current prices.
+- Limits: approval queues return at most200 entries; definition lists are unpaginated. Dedicated runtime LOGIN, TLS/secrets, approved backups/restores/primary migration, production concurrency/load and hardware/legal certification are separate gates.
+
+## Phase5.2 scoped Exchanges/Voids review (2026-10-10)
+
+Evidence: [local acceptance](../development/phase52-verification.md); implementation-scoped tests, not penetration/load/production certification.
+
+- Session, active membership, permission, own-document visibility and authorized branch are checked on every read/mutation/replay before operation-cache results. Organization serialization remains enabled. Cashier cannot approve, refund a negative difference or complete a reversal; positive own-shift exchange completion still needs approved snapshots.
+- Negative-difference completion additionally requires current Owner/Manager authority **before cached replay**: Cashier cannot finalize a manager-acknowledged manual refund or replay its own completion after demotion. This conditional gap was reproduced and fixed; authorized promotion/completion and denied demotion/replay are retained in86 boundary assertions.
+- Migration9 adds two ENABLE/FORCE RLS tables, composite tenant/branch references, constrained state/evidence pairs, immutable history/events and deferred linked-document/payment/item consistency. Runtime has no delete on adjustments/events and no direct Stock Balance writes. Missing/foreign tenant context yields no rows; bootstrap-superuser success is not RLS evidence.
+- Existing CSRF/Origin, strict JSON/body bounds, UUID Idempotency-Key and revision checks remain enabled. Tests cover tenant404, branch/RBAC403, role revocation before replay, changed payload, stale approval/settlement and unwanted financial fields on non-settlement actions.
+- Acknowledgement is operator evidence, not bank validation. After nonzero local posting failure the savepoint rolls back business effects and keeps RECONCILIATION_REQUIRED evidence; recovery cannot accept or refund money a second time. Unresolved acknowledged CASH/CASH_REFUND blocks shift close. Own-shift checks and reserved outgoing refunds prevent duplicate cash consumption.
+- Completed Sales/items/payments/receipts and closed shifts are not rewritten. Prior returns/reversals block double compensation; exchange-vs-return/POS races retain cumulative quantities and stock conservation. Managed-shelf capacity/assignments and no-negative-stock stay enforced.
+- Frontend query keys include user/org/branch; selected Sale/details are hidden immediately if branch context mismatches. Browser org/branch switching and permission-denied workflows use the actual gateway/backend, not mocked adjustment APIs.
+
+## Phase 5.1 scoped Returns/Refunds review (2026-10-10)
+
+Evidence: [Phase 5 report](../development/phase5-verification.md); overall Phase5 remains PARTIAL. Implementation-scoped local review, not a penetration test or production certification.
+
+- Every command/read/replay rechecks session, active membership, permission and branch/document access before cached results. Cashier own-document visibility; Owner/Manager scoped approval/settlement. Demotion before approval replay denies403; suspension denies404 under existing concealment policy.
+- Five new FORCE RLS tables and tenant-composite references; runtime non-superuser/non-BYPASSRLS. Missing/mismatched context yields0. Completed history/events/disbursements cannot be rewritten/deleted through runtime; no direct balance-write grant.
+- Strict JSON, bounded payload/pagination/timeouts and existing CSRF/Origin checks. Tests cover missing CSRF/foreign Origin/cross-tenant/branch/changed-payload/stale-revision and immutable source sales.
+- Exact historical allocation, organization locking, unique movement/refund/disbursement identities and deferred checks prevent duplicate effects. All-item failed posting rolls back stock/version/refund/key; same-key recovery tested. Managed shelf status/assignment/capacity revalidated before posting.
+- No automatic external payment. Manual confirmation is reviewed evidence, not bank settlement verification. Uncertain payout retains reconciliation notes; no second-transfer retry instruction. Cash uses current actor-owned open shift, unresolved close gate and immutable old shifts.
+- UI cache/workspace keys scope tenant/user/branch/resource; context changes abort stale mutations; ambiguous retries preserve operation identity. Print is not legal/bank certification. Raw traces may contain sessions and remain uncommitted.
+- Limits: unavailable shift-owner reassignment absent; no draft reservation; no batch expiry/recall guard. Customer privacy/loyalty double-spend/recall races are not implemented/tested. Dedicated runtimeLOGIN/TLS/retention/load operations remain production gates.
+
+## Phase 3 scoped POS review (2026-10-10)
+
+This is an implementation-scoped local review, not a penetration test or production certification. Evidence: [Phase 3 report](../development/phase3-verification.md), real API/SQL suites and browser regression.
+
+| Boundary              | Implemented control and local evidence                                                                                                                      | Assurance limit                                                                |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Tenant                | Existing session and active membership checks on every command/retry; tenant-composite FKs; nine new FORCE RLS tables; cross-tenant HTTP/runtime SQL denial | Organization RLS does not provide branch/cashier isolation by itself           |
+| Branch/cashier        | Assigned active branch checks, scoped terminal/source, own cart/payment/sale/shift policy; suspended membership and revoked session tests                   | Branch and cashier scope is enforced by application, not branch DB RLS         |
+| RBAC/register         | Fixed permissions; Owner/Manager-only terminal management and external funds resolution; one open terminal/cashier shift; pending funds block closing       | Frontend permission indicators are advisory; no cash hardware integration      |
+| Replay                | UUID keys and payload fingerprints; one sale per cart/checkout; durable confirm/complete retries; response-loss/concurrent retry tests                      | Manual references are audit evidence, not bank-verified identifiers            |
+| Amount tampering      | Authoritative live catalog, frozen quote, active unit checks, integer money, exact tender, explicit acknowledged flag; changed-price tests                  | THB only; no gateway, split, discount, separate tax or automatic refund        |
+| Overselling/atomicity | Shared organization lock and existing balance locks/ledger guards; oversell/transfer/count/close races; injected post-ledger failure rollback               | Per-tenant serialization is not a production throughput benchmark              |
+| History               | Immutable sale/item/payment/receipt snapshots, append guards and deferred consistency; runtime SQL tampering denied                                         | Backup/restore and privileged administrator access remain operational concerns |
+| Browser/input         | Existing Origin/CSRF; bounded JSON, strict unknown fields, tenant query keys/cancellation, React text rendering; branch switch/print failure tests          | No claim of full WCAG audit, hardware verification or production XSS pentest   |
+
+Manual QR/transfer confirmation records actor/time/reference only after explicit cashier acknowledgement; no invented payment-provider callback exists. Completion failure preserves confirmed money as RECONCILIATION_REQUIRED while sale/stock/cash writes roll back. An authorized manager may record documented external funds resolution, not invoke an automatic refund. Audit remains transactional; generic client errors and internal SQLSTATE/constraint/table diagnostics do not log payment references or credentials. Define audit/payment-reference access and retention before production.
+
+The local bootstrap DB identity is privileged even though application transactions SET ROLE smartpos_runtime. Deploying that identity would defeat least-privilege assurances: provision a distinct runtime LOGIN and migration identity, approved backups/restore, TLS/secrets and monitoring first. Existing security sections below retain their earlier scope.
+
+Phase 1A implements global identity endpoints and a protected account page. Phase 1B introduced organization-scoped onboarding and branch/member/invitation APIs; member and invitation administration is being retired. Phase 1C adds organization-shared catalog/taxonomy/Variant/barcode/import APIs through the same identity and authorization services. The Phase 0 auth preview remains presentation-only. Frontend guard defaults deny; backend independently validates the session and active tenant membership/permissions for each applicable API access.
+
+Phase 1A uses Argon2id with random salts and bounded input, hashed random session tokens in PostgreSQL, a 24-hour default absolute expiry (configurable 1-720 hours), revocation, HttpOnly/SameSite=Lax cookies and Secure `__Host-` cookies in production HTTPS. Authenticated writes check the allowed Origin and a per-session CSRF header. Public auth writes check Origin and JSON input; PostgreSQL counters limit login to five attempts per account/IP in ten minutes and other auth requests by scope. One-time hashed reset tokens expire in 15 minutes; reset atomically changes the password and revokes sessions. Neither session nor reset tokens are stored in browser storage or application logs. No session rotation endpoint is implemented or required for the fixed-expiry design.
+
+Password reset returns the same HTTP 202 envelope for eligible and unknown accounts, including an SMTP outage. The public path performs validation and a non-blocking enqueue only; account lookup, token issuance and SMTP delivery run in a separate worker. There are no artificial response sleeps. The queue holds 64 normalized addresses; saturation logs a generic failure and still returns the generic response. Delivery uses a 12-second worker context and a maximum 10-second SMTP connection deadline, respecting earlier context deadlines/cancellation. Queue entries are not durable, retries are not automatic, and saturation/process restart can lose pending deliveries. Operators must monitor generic queue/processing failures. Local Mailpit is development-only; production requires authenticated STARTTLS SMTP.
+
+## Trusted proxy policy
+
+- `AUTH_TRUSTED_PROXY_IP` accepts one exact, non-loopback IPv4/IPv6 address. Production requires it; host development can omit it and ignore all forwarded client addresses.
+- Compose puts only Caddy and Go on `proxy`, with fixed `CADDY_PROXY_IP` and `API_PROXY_IP` values inside `PROXY_SUBNET`. Do not attach arbitrary containers to that network. A Docker administrator can change networking and is outside the HTTP attacker boundary.
+- Go canonicalizes the socket peer and trusts `X-Forwarded-For` only when that peer equals the configured Caddy address. Exactly one header containing one valid, non-unspecified/non-multicast address without an IPv6 zone is accepted. Duplicate headers, lists, malformed or missing values fall back to the socket peer. IPv4-mapped addresses are canonicalized. `X-Real-IP` is never used.
+- Caddy's standard reverse-proxy forwarding behavior is unchanged. Incoming forged headers cannot select a new bucket through Caddy; direct/untrusted peers cannot impersonate forwarded clients. No broad private-network CIDR is trusted.
+- Login remains five attempts per IP/account in ten minutes; the account bucket also limits attacks spread across independent clients. `Retry-After` is a conservative full-window value, not the exact remaining time. Clients behind the same NAT naturally share a public-IP bucket; a trusted proxy cannot distinguish identities that the network does not provide.
+- Direct API ports remain loopback-only in the development Compose topology. Direct requests are attributed to their real peer even if they supply Caddy-like headers. Vite/localhost forwarding is not silently promoted to a trusted proxy.
+
+The 2026-10-09 scoped authentication review and integration checks found the original shared-proxy bucket and synchronous-delivery timing issue resolved. Tests cover fixed IP/account limits, independent real clients, spoofing, CSRF/Origin, token expiry/replay, revocation, cookie policy and sanitized application logs. This is not a production security certification or a statistical side-channel analysis.
+
+## Historical Phase 1B tenant and membership policy
+
+- Fixed roles: OWNER, MANAGER, CASHIER, INVENTORY_STAFF and PURCHASING_STAFF. Permissions are server-defined; global sessions do not carry trusted tenant/role grants. Unknown roles/default permission requests deny. In Phase 1B operational staff read organization context/assigned active branches only, with organization contacts redacted; Phase 1C extends their access with the explicit catalog grants below. No POS/inventory/purchasing business APIs are implemented.
+- Owner manages the organization/all branches/members. Manager may update assigned active branches but cannot create/deactivate them or edit organization settings. Manager may manage only subordinate operational staff whose entire old and new branch sets are within the Manager's active assignments; cannot modify self/Owner/Manager or grant those roles. No active branches means no employee/role/audit management permissions.
+- Every tenant operation uses transaction-local `app.organization_id`/`app.user_id`, active membership checks and explicit organization predicates. Object IDs from another tenant return no data. Composite FKs reject cross-tenant branch assignments. A locked organization row serializes owner/status/assignment changes, invitations and tenant reads; stale client permissions cannot authorize a later API operation.
+- Last active Owner cannot be removed, suspended or demoted. Application checks plus deferred constraint triggers protect new organizations/member updates; the runtime lacks membership/organization hard-delete permissions. Bootstrap legacy organizations are not assigned guessed owners by migration.
+- Invitation tokens are random, stored only as SHA-256 hashes, expire after 48 hours, bind normalized email, require recipient authentication and accept once under a lock. Acceptance rechecks inviter status/role/current grants and active branches. Revoked/expired/replayed tokens deny; invites cannot directly grant OWNER. No token appears in API responses, browser storage or sanitized application logs. Email link fragments are stripped on mount and kept in memory only.
+- All authenticated writes retain Phase 1A Origin/CSRF checks. Successful organization/branch/member/invitation changes audit actor/action/object/branch scope/request ID in the same transaction. Runtime audit privileges are SELECT/INSERT only. This is not a comprehensive denied-request audit, retention policy or external immutable log service.
+- `smartpos_runtime` is non-superuser/non-owner/NOBYPASSRLS and is selected by each API connection. Organizations/branches use RLS; membership, invitation and related new tables are application-scoped and do not provide blanket DB tenant isolation. The transaction context itself is application-controlled. SQL injection/compromised privileged bootstrap credentials remain outside the assurance provided by these HTTP isolation tests.
+- Tenant query keys include user/organization/branch/resource. Switch/logout cancels/removes old tenant caches; sessionStorage contains only user-scoped selection IDs. Focus/30-second revalidation updates UI rights; stale UI can remain briefly but backend writes recheck immediately.
+
+Invitation SMTP is bounded and synchronous inside its transaction; outage returns 503 and rolls back the invitation. It is not a durable outbox: SMTP acceptance followed by a failed database commit can send an unusable link. Production SMTP/TLS, delivery retries, abuse controls and retention require separate gates. See [organization architecture](../architecture/organization.md) and the dated verification report for tested boundaries.
+
+## Historical Phase 1C catalog and import policy
+
+- Catalog reuses Phase 1B transaction authorization, active organization/membership checks, request IDs and audit service; no second RBAC engine is introduced. Owner/Manager have ten catalog permissions, subject to the existing Manager no-active-branch restriction. INVENTORY_STAFF has explicit read/create/update/import/barcode/label permissions, but no archive or taxonomy administration. CASHIER/PURCHASING_STAFF have catalog.read only. Active branch assignment is not an additional catalog gate for every operational role because records are organization-wide.
+- Every catalog query filters organization identity; composite tenant FKs protect related taxonomy/Product/Variant/unit references. All seven migration-4 catalog tables enable FORCE RLS. Runtime grants allow SELECT/INSERT/UPDATE and DELETE only for barcode mappings; Products, Variants and taxonomy use archive/status changes. Bootstrap credentials remain privileged; production must provision separate least-privileged LOGIN/migration identities.
+- Origin/per-session CSRF checks cover catalog writes, including multipart preview, confirmation and barcode deletion. Frontend permissions are advisory. Suspended/removed membership or stale client role grants cannot authorize a later backend request. Import jobs additionally require matching creator and tenant, even for another authorized Owner.
+- Prices are exact NUMERIC/decimal strings; SKU and barcode uniqueness include archived records. Status/revision validation, category-cycle and unit-relation checks reject inconsistent writes. Random internal CODE128 identifiers are not claimed as GS1/EAN allocations.
+- Catalog cache keys contain user/organization/resource, deliberately not branch for shared catalog. Existing tenant switch/logout cancellation/removal prevents cross-tenant reuse; catalog mutation controllers abort on user/organization change. Browser preferences do not grant authority. UI text uses React text rendering, not trusted HTML from imports.
+- CSV/XLSX uploads are limited to 5 MiB, 2,000 rows and 40 columns; mapping is capped at 16 KiB. XLSX ZIPs are limited to 100 entries/20 MiB expanded data, one sheet, and bounded reads. Malformed files, unsafe paths and formulas reject. XML parsing does not evaluate formulas or fetch external resources. XLSX text cells preserve barcode leading zeros; spreadsheet-lost digits cannot be reconstructed.
+- Preview creation is capped at 30 jobs per user/organization/hour; unconfirmed jobs expire after one hour. Confirmation revalidates tenant references/permissions/revisions, rejects stale or invalid rows, and commits all rows plus audit atomically. Repeated same-mode completion returns the saved result; changing the mode conflicts. Failed confirmation cannot leave partial catalog writes.
+- Successful catalog changes/import lifecycle events are audited in the transaction without file/token/credential payloads. Failed/denied requests are not comprehensively persisted. Stored previews have no automated cleanup or production retention policy; expiry alone does not remove data. Per-tenant serialization and resource bounds are not a production load/abuse assessment.
+
+Local SQL/API/browser tests cover RLS/grants, tenant/role denial, Origin/CSRF, SKU/barcode conflicts, malicious/invalid import samples, rollback, expiry/staleness and confirmation concurrency. They are scoped acceptance evidence, not a penetration test or compliance/security certification. No image upload/storage or scanner/printer hardware integration exists. See [catalog design](../architecture/catalog.md) and the dated verification entry.
+
+Queries scope tenant/branch where appropriate; composite FKs/non-owner RLS add defense. Audit implemented successful actor/action/object/request ID changes without secrets. Define personal-data retention/access before production collection.
+
+Phase 0: loopback ports, internal AI without DB credentials, bounded timeouts, generated IDs, generic errors, safe panic recovery, security headers/CSP, non-root app containers, named PostgreSQL volume.
+
+Local bootstrap DB user is privileged and not production-safe. No compliance/hardening claim. Production needs secret management, least privilege, TLS/cookies, threat review, scanning, abuse controls, retention and verified backups. Never expose local Compose publicly.
+
+## Phase 5.5 scoped Loyalty acceptance (2026-10-11)
+
+See [Phase5.5 verification](../development/phase55-verification.md). This implementation-scoped local review does not replace the pending Phase5.7 full security review, penetration testing or production certification.
+
+- Current tenant/branch permissions are checked before sensitive idempotent replay. Real tests deny adjustment replay after demotion and checkout replay after POS permission revocation. Customer contact PII is not copied to points history or audit payloads.
+- Programs/accounts/ledger use tenant-safe references, FORCE RLS and scoped runtime grants. Actual tests deny cross-tenant reads/FKs and ledger UPDATE/DELETE/TRUNCATE. The privileged local bootstrap identity is not a production runtime LOGIN.
+- Exact ledger points, durable checkout reservations, organization serialization and atomic Sale/points posting prevent double redemption and failed-checkout earning/consumption. Reward remains a discount, not a synthetic payment; no unintended promotion/manual-discount stacking is allowed.
+- Frozen historical rules and cumulative compensating postings cover partial/full Returns, Exchanges and Voids. Spent earned points may create signed ledger debt; available points remain nonnegative and future earning offsets debt. The immutable Sale is not rewritten.
+- Continuation: Batch/Quality and final Phase5.7 scoped security/lifecycle checks passed; see [final review](../development/phase57-verification.md). Physical lot verification, production TLS/secrets/runtime LOGIN, retention, backups, production load and full penetration/compliance assessment remain separate gates.
+
+## Phase 2 inventory acceptance review
+
+- Reuses existing sessions, Origin/CSRF, active memberships and fixed-role grants. Every write rechecks tenant, permission and appropriate active branch before changing stock or returning a cached idempotent result. Cashier is read-only and cannot query audit movements; inventory staff request/count/move only within explicit assigned branches, never approve/post/opening. Manager cannot widen branch assignments for stock authority.
+- Composite tenant/branch/location/Variant/document FKs and FORCE RLS protect all seven inventory tables. Missing tenant context yields no rows. RLS is tenant defense, not a substitute for application branch checks; privileged local bootstrap/DBA identities bypass RLS and are not production runtime credentials.
+- Runtime has no balance writes or ledger UPDATE/DELETE; immutable trigger rejects rewrites. Definer posting trigger fixes search_path, revokes PUBLIC execution and checks transaction-local organization/user plus unfinished owned operation. It only maintains a locked balance for a ledger insert, not a public arbitrary privileged mutation API.
+- Strict JSON, 64 KiB command bounds, 1–100 unique Variants, exact decimal strings, unit precision, reference validation, typed state transitions and stale revision/snapshot checks bound input. Query values are parameters, not SQL concatenation. React renders untrusted text, not HTML.
+- Tenant transaction serialization, balance row locks, atomic multi-item movement pairs and scoped idempotency prevent negative stock/lost updates/duplicate receipts. Count save never posts stock; stale count/correction cannot overwrite a concurrent transfer. Transit and destination on-hand are separate and conserved.
+- Actual SQL/API/browser checks include cross-tenant/branch denial, Manager restrictions, Cashier/staff permission denial, suspended membership, CSRF, forged branches, runtime grants, negative stock, race/idempotency, immutable-ledger reconciliation and inactive-branch availability. This scoped implementation review is not a penetration test, compliance certificate or production concurrency/load assessment.
+
+Limits: Owner/Manager self-approval is explicitly permitted and audited; mandatory four-eyes separation is not claimed. Audit covers successful transactional operations, not exhaustive denied requests. Full receipt only; production retention, backups, least-privilege LOGIN, TLS and operational hardening remain separate gates.

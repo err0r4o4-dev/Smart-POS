@@ -1,0 +1,1228 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import YAML from 'yaml';
+
+const modules = JSON.parse(
+  readFileSync('packages/contracts/routes.json', 'utf8'),
+);
+const retiredEmployeeRoutes = ['/employees', '/employees/:id', '/roles'];
+assert.ok(
+  modules.every((module) =>
+    module.routes.every((route) => !retiredEmployeeRoutes.includes(route)),
+  ),
+  'Employee and role management must not be part of the active route inventory',
+);
+const expected = [8, 4, 9, 6, 9, 11, 7, 8, 5, 5, 4, 6, 7, 2, 10, 4, 8, 3];
+assert.equal(modules.length, 18);
+assert.deepEqual(
+  modules.map((item) => item.routes.length),
+  expected,
+);
+const routes = modules.flatMap((item) => item.routes);
+assert.equal(routes.length, 116);
+assert.equal(new Set(routes).size, 116);
+for (const route of [
+  '/restaurant/recipes',
+  '/restaurant/quick-stock',
+  '/restaurant/forecast',
+])
+  assert.ok(
+    !routes.includes(route),
+    `Retired ingredient route remains: ${route}`,
+  );
+const routeDocs = readFileSync('docs/architecture/routes.md', 'utf8');
+const moduleDocs = readFileSync('docs/architecture/modules.md', 'utf8');
+for (const item of modules) {
+  assert.ok(
+    moduleDocs.includes(`## ${item.name} (`),
+    `Missing module ${item.name}`,
+  );
+  for (const route of item.routes)
+    assert.ok(routeDocs.includes('`' + route + '`'), `Missing route ${route}`);
+}
+const api = YAML.parse(readFileSync('packages/contracts/openapi.yaml', 'utf8'));
+for (const [path, method, response] of [
+  ['', 'get', 'MFAStatusResponse'],
+  ['/enrollment', 'post', 'MFAEnrollmentResponse'],
+  ['/enrollment/confirm', 'post', 'MFARecoveryResponse'],
+  ['/challenge', 'post', 'MFAVerifiedResponse'],
+  ['/recovery', 'post', 'MFAEnrollmentResponse'],
+  ['/recovery/confirm', 'post', 'MFARecoveryResponse'],
+]) {
+  const operation = api.paths['/api/v1/auth/mfa' + path]?.[method];
+  assert.deepEqual(operation?.security, [{ sessionCookie: [] }]);
+  assert.equal(
+    operation.responses['200'].content['application/json'].schema.$ref,
+    '#/components/schemas/' + response,
+  );
+  if (method === 'post')
+    assert.ok(
+      operation.parameters.some(
+        (parameter) => parameter.name === 'X-CSRF-Token' && parameter.required,
+      ),
+    );
+}
+const recoveryCodePattern = '^[A-Z2-7]{25}[AEIMQUY4]$';
+for (const [path, name, fields] of [
+  ['/recovery', 'MFARecoveryStartInput', ['recovery_code']],
+  ['/recovery/confirm', 'MFARecoveryConfirmInput', ['factor_id', 'code']],
+]) {
+  const operation = api.paths['/api/v1/auth/mfa' + path].post;
+  assert.equal(operation.requestBody.required, true);
+  assert.equal(
+    operation.requestBody.content['application/json'].schema.$ref,
+    '#/components/schemas/' + name,
+  );
+  const input = api.components.schemas[name];
+  assert.equal(input.additionalProperties, false);
+  assert.deepEqual(input.required, fields);
+  for (const status of ['400', '401', '403', '415', '429', '503'])
+    assert.equal(
+      operation.responses[status].$ref,
+      '#/components/responses/AuthError',
+    );
+}
+const recoveryStart = api.components.schemas.MFARecoveryStartInput.properties;
+assert.equal(recoveryStart.recovery_code.pattern, recoveryCodePattern);
+assert.equal(recoveryStart.recovery_code.writeOnly, true);
+const recoveryConfirm =
+  api.components.schemas.MFARecoveryConfirmInput.properties;
+assert.equal(recoveryConfirm.factor_id.format, 'uuid');
+assert.equal(recoveryConfirm.code.pattern, '^[0-9]{6}$');
+assert.equal(recoveryConfirm.code.writeOnly, true);
+const recoveryCodes =
+  api.components.schemas.MFARecoveryResponse.properties.data.properties
+    .recovery_codes;
+assert.deepEqual(
+  [
+    recoveryCodes.minItems,
+    recoveryCodes.maxItems,
+    recoveryCodes.uniqueItems,
+    recoveryCodes.items.pattern,
+  ],
+  [10, 10, true, recoveryCodePattern],
+);
+assert.equal(api.components.schemas.MFAProofInput.additionalProperties, false);
+assert.equal(
+  api.components.schemas.MFAProofInput.properties.code.pattern,
+  '^[0-9]{6}$',
+);
+assert.equal(
+  api.paths['/api/v1/auth/register'].post.responses['201'].content[
+    'application/json'
+  ].schema.$ref,
+  '#/components/schemas/RegistrationResponse',
+);
+const registration =
+  api.components.schemas.RegistrationResponse.properties.data;
+assert.ok(registration.required.includes('verification_email_sent'));
+assert.equal(registration.properties.verification_email_sent.type, 'boolean');
+assert.equal(registration.properties.email_verified.const, false);
+const retiredIngredientPaths = [
+  '/recipes',
+  '/recipes/{recipeId}',
+  '/quick-stock',
+  '/forecast',
+].map((suffix) => '/api/v1/organizations/{id}/restaurant' + suffix);
+for (const path of retiredIngredientPaths)
+  assert.ok(!api.paths[path], `Retired ingredient API remains: ${path}`);
+for (const schema of [
+  'RestaurantRecipeIngredientInput',
+  'RestaurantRecipeIngredient',
+  'RestaurantRecipeInput',
+  'RestaurantRecipe',
+  'RestaurantForecastStatus',
+  'RestaurantQuickStockInput',
+  'RestaurantQuickStockResult',
+])
+  assert.ok(
+    !api.components.schemas[schema],
+    `Retired ingredient schema remains: ${schema}`,
+  );
+assert.deepEqual(api.components.schemas.Role.enum, ['OWNER']);
+assert.deepEqual(api.components.schemas.StockPolicy?.enum, [
+  'TRACKED',
+  'MENU_ONLY',
+]);
+for (const name of [
+  'POSItem',
+  'POSCart',
+  'StorefrontProduct',
+  'StorefrontCatalogProduct',
+  'OnlineOrder',
+  'POSSale',
+  'ReturnableSale',
+]) {
+  const schema = api.components.schemas[name];
+  assert.ok(
+    schema.required.includes('stock_policy'),
+    `${name} must expose its stock policy`,
+  );
+  assert.equal(
+    schema.properties.stock_policy.$ref,
+    '#/components/schemas/StockPolicy',
+  );
+}
+for (const name of ['POSItem', 'StorefrontProduct', 'StorefrontCatalogProduct'])
+  assert.ok(
+    api.components.schemas[name].properties.available.anyOf.some(
+      (item) => item.type === 'null',
+    ),
+    `${name} must allow a null menu-only balance`,
+  );
+for (const name of ['POSCartInput', 'StorefrontOrderInput'])
+  assert.equal(
+    api.components.schemas[name].properties.stock_policy,
+    undefined,
+    `${name} must not accept client stock policy`,
+  );
+const retiredEmployeePaths = [
+  '/api/v1/invitations/accept',
+  ...[
+    '/members',
+    '/members/{memberId}',
+    '/roles',
+    '/invitations',
+    '/invitations/{invitationId}',
+  ].map((suffix) => '/api/v1/organizations/{id}' + suffix),
+];
+for (const path of retiredEmployeePaths)
+  assert.equal(
+    api.paths[path],
+    undefined,
+    `Retired employee API remains: ${path}`,
+  );
+for (const schema of ['MemberInput', 'InviteInput', 'Invitation'])
+  assert.equal(
+    api.components.schemas[schema],
+    undefined,
+    `Retired employee input remains: ${schema}`,
+  );
+const sandboxPaths = [
+  '',
+  '/checkouts',
+  '/checkouts/{sessionId}',
+  '/checkouts/{sessionId}/refund',
+].map(
+  (suffix) => '/api/v1/organizations/{id}/storefront/payment-sandbox' + suffix,
+);
+const restaurantPaths = [
+  '/availability',
+  '/settings',
+  '/tables',
+  '/tables/{tableId}',
+  '/queue',
+  '/setup',
+  '/setup/profile',
+  '/setup/services',
+  '/setup/tables',
+  '/setup/menu',
+  '/setup/payments',
+  '/setup/orders',
+  '/setup/complete',
+].map((path) => '/api/v1/organizations/{id}/restaurant' + path);
+
+const storefrontPaths = [
+  '/api/v1/storefronts',
+  '/api/v1/storefronts/discovery/nearby',
+  ...[
+    '',
+    '/products',
+    '/quote',
+    '/orders',
+    '/track',
+    '/payment/checkout',
+    '/payment/recover',
+    '/payment/status',
+  ].map((suffix) => '/api/v1/storefronts/{slug}' + suffix),
+  '/api/v1/storefront-payments/stripe/webhook',
+  ...[
+    '/storefront',
+    '/storefront/products',
+    '/storefront/products/{variantId}',
+    '/online-orders',
+    '/online-orders/{orderId}',
+    '/online-orders/{orderId}/status',
+    '/online-orders/{orderId}/pos-cart',
+    '/online-orders/{orderId}/settle-prepaid',
+  ].map((suffix) => '/api/v1/organizations/{id}' + suffix),
+];
+const catalogPaths = [
+  '/products',
+  '/products/{productId}',
+  '/products/{productId}/variants',
+  '/products/{productId}/variants/{variantId}',
+  '/products/{productId}/variants/{variantId}/barcodes',
+  '/products/{productId}/variants/{variantId}/barcodes/generate',
+  '/products/{productId}/variants/{variantId}/barcodes/{barcodeId}',
+  '/products/{productId}/labels',
+  '/barcodes/lookup',
+  '/products/import/preview',
+  '/products/import/{jobId}/confirm',
+  '/products/import/{jobId}',
+  '/categories',
+  '/categories/{resourceId}',
+  '/brands',
+  '/brands/{resourceId}',
+  '/units',
+  '/units/{resourceId}',
+].map((path) => '/api/v1/organizations/{id}' + path);
+assert.equal(api.openapi, '3.1.0');
+const inventoryPaths = [
+  '/overview',
+  '/locations',
+  '/locations/{resourceId}',
+  '/balances',
+  '/balances/{resourceId}',
+  '/movements',
+  '/movements/{resourceId}',
+  '/opening-balances',
+  '/reorder-points',
+  '/counts/{resourceId}/items',
+  ...['adjustments', 'counts', 'transfers'].flatMap((resource) => [
+    '/' + resource,
+    '/' + resource + '/{resourceId}',
+    ...(resource === 'adjustments'
+      ? ['submit', 'approve', 'post', 'reject', 'cancel']
+      : resource === 'counts'
+        ? ['submit', 'approve', 'post', 'cancel']
+        : ['submit', 'approve', 'dispatch', 'receive', 'cancel']
+    ).map((action) => '/' + resource + '/{resourceId}/' + action),
+  ]),
+].map((path) => '/api/v1/organizations/{id}/inventory' + path);
+const supplyPaths = [
+  '/suppliers',
+  '/suppliers/{resourceId}',
+  '/suppliers/{resourceId}/products',
+  '/suppliers/{resourceId}/products/{productId}',
+  ...[
+    ['orders', ['submit', 'approve', 'reject', 'issue', 'cancel', 'close']],
+    ['receipts', ['submit', 'approve', 'reject', 'correct', 'cancel', 'post']],
+    ['returns', ['submit', 'approve', 'reject', 'cancel', 'dispatch']],
+  ].flatMap(([resource, actions]) => [
+    '/purchasing/' + resource,
+    '/purchasing/' + resource + '/{resourceId}',
+    ...actions.map(
+      (action) => '/purchasing/' + resource + '/{resourceId}/' + action,
+    ),
+  ]),
+  '/purchasing/discrepancies',
+  '/purchasing/discrepancies/{resourceId}',
+  '/purchasing/suggestions',
+  '/purchasing/suggestions/create-draft',
+  '/shelves',
+  '/shelves/{resourceId}',
+  '/shelves/{resourceId}/slots',
+  '/shelves/{resourceId}/assignments',
+  '/shelves/{resourceId}/assignments/{assignmentId}',
+  '/shelves/replenishments',
+  '/shelves/replenishments/{resourceId}',
+  '/shelves/replenishments/suggestions',
+  ...['assign', 'start', 'complete', 'cancel'].map(
+    (action) => '/shelves/replenishments/{resourceId}/' + action,
+  ),
+].map((path) => '/api/v1/organizations/{id}' + path);
+const posPaths = [
+  '/pos/terminals',
+  '/pos/terminals/{resourceId}',
+  '/pos/products',
+  '/pos/barcodes/{code}',
+  '/pos/payment-methods',
+  '/pos/shifts',
+  '/pos/shifts/open',
+  '/pos/shifts/{resourceId}',
+  '/pos/shifts/{resourceId}/close',
+  '/pos/carts',
+  '/pos/carts/{resourceId}',
+  ...['hold', 'resume', 'cancel'].map(
+    (action) => '/pos/carts/{resourceId}/' + action,
+  ),
+  '/pos/checkout',
+  '/pos/checkouts',
+  '/pos/checkouts/{resourceId}',
+  ...['complete', 'cancel', 'resolve'].map(
+    (action) => '/pos/checkouts/{resourceId}/' + action,
+  ),
+  '/pos/payments/{resourceId}/confirm',
+  '/sales',
+  '/sales/{resourceId}',
+  '/receipts',
+  '/receipts/{resourceId}',
+].map((path) => '/api/v1/organizations/{id}' + path);
+const returnPaths = [
+  '/returns',
+  '/returns/{resourceId}',
+  '/returns/sales/{saleId}',
+  ...['submit', 'approve', 'reject', 'cancel', 'complete'].map(
+    (action) => '/returns/{resourceId}/' + action,
+  ),
+  '/refunds',
+  '/refunds/{resourceId}',
+  ...['report-settlement', 'confirm-settlement', 'reconcile'].map(
+    (action) => '/refunds/{resourceId}/' + action,
+  ),
+].map((path) => '/api/v1/organizations/{id}' + path);
+const pricingPaths = [
+  ...['/pricing/lists', '/promotions'].flatMap((root) => [
+    root,
+    root + '/{resourceId}',
+    ...['submit', 'approve', 'activate', 'pause'].map(
+      (action) => root + '/{resourceId}/' + action,
+    ),
+  ]),
+  '/discount-approvals',
+  '/discount-approvals/{resourceId}/approve',
+  '/discount-approvals/{resourceId}/reject',
+  '/pos/carts/{resourceId}/quote',
+].map((path) => '/api/v1/organizations/{id}' + path);
+const expectedCustomerPaths = [
+  '/customers',
+  '/customers/search',
+  '/customers/{customerId}',
+  '/customers/{customerId}/archive',
+  '/customers/{customerId}/history',
+  '/customers/{customerId}/audit',
+  '/customers/groups',
+  '/customers/groups/{groupId}',
+  '/customers/groups/{groupId}/archive',
+  '/customers/{customerId}/groups/{groupId}',
+  '/pos/carts/{resourceId}/customer',
+].map((path) => '/api/v1/organizations/{id}' + path);
+const loyaltyPaths = [
+  '/loyalty/programs',
+  '/loyalty/programs/{loyaltyId}',
+  '/loyalty/accounts',
+  '/loyalty/accounts/{loyaltyId}',
+  '/loyalty/accounts/{loyaltyId}/adjust',
+  '/loyalty/history',
+].map((path) => '/api/v1/organizations/{id}' + path);
+const qualityPaths = [
+  '/lots',
+  '/batches',
+  '/batches/{resourceId}',
+  '/expiry',
+  '/recalls',
+  '/write-offs',
+  ...['approve', 'reject', 'post'].map(
+    (action) => '/write-offs/{resourceId}/' + action,
+  ),
+].map((path) => '/api/v1/organizations/{id}/quality' + path);
+assert.deepEqual(
+  Object.keys(api.paths).sort(),
+  [
+    ...['/exchanges', '/sales/voids']
+      .flatMap((root) => [
+        root,
+        root + '/quote',
+        root + '/{resourceId}',
+        ...[
+          'submit',
+          'approve',
+          'reject',
+          'cancel',
+          'confirm-settlement',
+          'complete',
+        ].map((action) => root + '/{resourceId}/' + action),
+      ])
+      .map((path) => '/api/v1/organizations/{id}' + path),
+    ...posPaths,
+    ...catalogPaths,
+    ...inventoryPaths,
+    ...supplyPaths,
+    ...returnPaths,
+    ...pricingPaths,
+    ...expectedCustomerPaths,
+    ...loyaltyPaths,
+    ...qualityPaths,
+    ...storefrontPaths,
+    ...restaurantPaths,
+    ...sandboxPaths,
+    '/api/v1/auth/forgot-password',
+    '/api/v1/auth/google/callback',
+    '/api/v1/auth/google/config',
+    '/api/v1/auth/google/link',
+    '/api/v1/auth/google/start',
+    '/api/v1/auth/login',
+    '/api/v1/auth/logout',
+    '/api/v1/auth/me',
+    '/api/v1/auth/mfa',
+    '/api/v1/auth/mfa/enrollment',
+    '/api/v1/auth/mfa/enrollment/confirm',
+    '/api/v1/auth/mfa/challenge',
+    '/api/v1/auth/mfa/recovery',
+    '/api/v1/auth/mfa/recovery/confirm',
+    '/api/v1/auth/register',
+    '/api/v1/auth/reset-password',
+    '/api/v1/auth/email/verify',
+    '/api/v1/auth/email/resend',
+    '/api/v1/organizations',
+    '/api/v1/organizations/{id}',
+    '/api/v1/organizations/{id}/audit',
+    '/api/v1/organizations/{id}/branches',
+    '/api/v1/organizations/{id}/branches/{branchId}',
+    '/api/v1/organizations/{id}/context',
+    '/api/v1/organizations/{id}/permissions',
+    '/api/v1/system',
+    '/health/live',
+    '/health/ready',
+  ].sort(),
+);
+assert.equal(api.components.schemas.Readiness.properties.status.const, 'ready');
+assert.equal(api.components.schemas.Liveness.properties.status.const, 'ok');
+assert.ok(api.paths['/health/ready'].get.responses['503']);
+const memberSchema = api.components.schemas.Member;
+assert.equal(memberSchema.type, 'object');
+assert.equal(memberSchema.additionalProperties, false);
+assert.equal(memberSchema.allOf, undefined);
+assert.deepEqual(Object.keys(memberSchema.properties).sort(), [
+  'branch_ids',
+  'display_name',
+  'email',
+  'id',
+  'permissions',
+  'role',
+  'status',
+  'user_id',
+]);
+assert.deepEqual(
+  [...memberSchema.required].sort(),
+  Object.keys(memberSchema.properties).sort(),
+);
+for (const [path, item] of Object.entries(api.paths)) {
+  if (!path.includes('/organizations')) continue;
+  for (const method of ['get', 'post', 'put', 'patch', 'delete']) {
+    if (!item[method]) continue;
+    assert.deepEqual(item[method].security, [{ sessionCookie: [] }]);
+    if (method !== 'get')
+      assert.ok(
+        item[method].parameters.some(
+          (parameter) => parameter.$ref === '#/components/parameters/CSRF',
+        ),
+      );
+  }
+}
+const compose = YAML.parse(readFileSync('docker-compose.yml', 'utf8'));
+for (const path of sandboxPaths) {
+  for (const method of ['get', 'post']) {
+    const operation = api.paths[path][method];
+    if (!operation) continue;
+    assert.deepEqual(operation.security, [{ sessionCookie: [] }]);
+    for (const status of ['400', '401', '403', '404', '409', '503'])
+      assert.ok(operation.responses[status]);
+    if (method === 'post') {
+      assert.ok(
+        operation.parameters.some(
+          (parameter) => parameter.$ref === '#/components/parameters/CSRF',
+        ),
+      );
+      assert.equal(
+        operation.requestBody.content['application/json'].schema
+          .additionalProperties,
+        false,
+      );
+    }
+  }
+}
+assert.equal(
+  api.components.schemas.PaymentSandboxStatus.properties
+    .customer_checkout_enabled.const,
+  false,
+);
+assert.equal(
+  api.components.schemas.PaymentSandboxCheckout.properties.amount_minor.const,
+  2000,
+);
+assert.ok(
+  api.paths[sandboxPaths[1]].post.parameters.some(
+    (parameter) => parameter.name === 'Idempotency-Key' && parameter.required,
+  ),
+);
+assert.equal(
+  compose.services.api.environment.STRIPE_TEST_SECRET_KEY,
+  '${STRIPE_TEST_SECRET_KEY:-}',
+);
+assert.equal(
+  compose.services.api.environment.SINGLE_STORE_ORGANIZATION_ID,
+  '${SINGLE_STORE_ORGANIZATION_ID:-}',
+);
+assert.deepEqual(api.components.headers.StoreMode.schema.enum, [
+  'single',
+  'multi',
+]);
+for (const path of ['/api/v1/organizations', '/api/v1/storefronts']) {
+  assert.equal(
+    api.paths[path].get.responses['200'].headers['X-SmartPOS-Store-Mode'].$ref,
+    '#/components/headers/StoreMode',
+  );
+}
+assert.ok(
+  api.paths['/api/v1/organizations'].post.description.includes('single-store'),
+);
+for (const path of [...storefrontPaths, ...restaurantPaths]) {
+  for (const method of ['get', 'post', 'put', 'patch']) {
+    const operation = api.paths[path][method];
+    if (!operation) continue;
+    if (path.startsWith('/api/v1/storefronts')) {
+      assert.deepEqual(operation.security, []);
+      if (method === 'post') assert.ok(operation.responses['429']);
+    }
+    if (path !== '/api/v1/storefronts/discovery/nearby')
+      assert.ok(operation.responses['409']);
+    assert.ok(operation.responses['503']);
+  }
+}
+const guestCreate = api.paths['/api/v1/storefronts/{slug}/orders'].post;
+const prepaidSettlement =
+  api.paths['/api/v1/organizations/{id}/online-orders/{orderId}/settle-prepaid']
+    .post;
+assert.deepEqual(prepaidSettlement.security, [{ sessionCookie: [] }]);
+assert.ok(
+  prepaidSettlement.parameters.some(
+    (parameter) => parameter.$ref === '#/components/parameters/CSRF',
+  ),
+);
+assert.equal(
+  prepaidSettlement.requestBody.content['application/json'].schema.$ref,
+  '#/components/schemas/OnlineOrderImportInput',
+);
+assert.equal(
+  prepaidSettlement.responses['200'].content['application/json'].schema
+    .properties.data.$ref,
+  '#/components/schemas/POSCheckout',
+);
+assert.deepEqual(prepaidSettlement.responses['409'], {
+  description: 'Revision, payment, shift, stock, price or fulfillment conflict',
+  content: {
+    'application/json': {
+      schema: { $ref: '#/components/schemas/StorefrontError' },
+    },
+  },
+});
+assert.ok(
+  api.components.schemas.POSCheckout.properties.method.enum.includes(
+    'ONLINE_STRIPE',
+  ),
+);
+assert.ok(
+  !api.components.schemas.POSCheckout.required.includes('credit_amount'),
+);
+const guestTracking = api.paths['/api/v1/storefronts/{slug}/track'].post;
+assert.deepEqual(guestTracking.security, []);
+assert.deepEqual(guestTracking.parameters, []);
+assert.equal(guestTracking.requestBody.required, true);
+assert.equal(
+  guestTracking.requestBody.content['application/json'].schema.$ref,
+  '#/components/schemas/StorefrontTrackingInput',
+);
+const trackingInput = api.components.schemas.StorefrontTrackingInput;
+assert.deepEqual(trackingInput.required, ['order_id', 'access_token']);
+assert.equal(trackingInput.additionalProperties, false);
+assert.deepEqual(trackingInput.properties.access_token, {
+  type: 'string',
+  pattern: '^[a-f0-9]{64}$',
+  writeOnly: true,
+});
+assert.equal(
+  guestTracking.responses['200'].content['application/json'].schema.properties
+    .data.$ref,
+  '#/components/schemas/PublicOnlineOrder',
+);
+assert.equal(
+  guestTracking.responses['404'].content['application/json'].schema.$ref,
+  '#/components/schemas/StorefrontError',
+);
+for (const status of ['200', '404']) {
+  assert.deepEqual(
+    guestTracking.responses[status].headers['Cache-Control'].schema.enum,
+    ['no-store'],
+  );
+}
+for (const suffix of ['checkout', 'recover', 'status']) {
+  const operation =
+    api.paths[`/api/v1/storefronts/{slug}/payment/${suffix}`].post;
+  assert.equal(
+    operation.requestBody.content['application/json'].schema.$ref,
+    '#/components/schemas/StorefrontTrackingInput',
+  );
+  assert.equal(
+    operation.responses['200'].content['application/json'].schema.$ref,
+    suffix === 'status'
+      ? '#/components/schemas/PublicPaymentAttemptEnvelope'
+      : '#/components/schemas/PublicCustomerCheckoutEnvelope',
+  );
+}
+const paymentWebhook =
+  api.paths['/api/v1/storefront-payments/stripe/webhook'].post;
+assert.deepEqual(paymentWebhook.security, []);
+assert.ok(
+  paymentWebhook.parameters.some(
+    (parameter) => parameter.name === 'Stripe-Signature' && parameter.required,
+  ),
+);
+assert.deepEqual(
+  Object.keys(api.components.schemas.PublicPaymentAttempt.properties).sort(),
+  ['amount_minor', 'currency', 'state'],
+);
+assert.deepEqual(
+  Object.keys(
+    api.components.schemas.PublicCustomerCheckoutEnvelope.properties.data
+      .properties,
+  ).sort(),
+  ['attempt', 'url'],
+);
+assert.ok(
+  guestCreate.parameters.some(
+    (parameter) => parameter.name === 'Idempotency-Key' && parameter.required,
+  ),
+);
+assert.equal(
+  api.components.schemas.StorefrontOrderInput.properties.access_token.writeOnly,
+  true,
+);
+assert.equal(
+  api.components.schemas.StorefrontOrderInput.properties.access_token.pattern,
+  '^[a-f0-9]{64}$',
+);
+for (const name of ['StorefrontQuoteInput', 'StorefrontOrderInput']) {
+  const schema = api.components.schemas[name];
+  assert.equal(schema.properties.table_token?.writeOnly, true);
+  assert.equal(schema.properties.table_token?.pattern, '^[a-f0-9]{64}$');
+  assert.deepEqual(schema.properties.fulfillment?.enum, ['PICKUP', 'DELIVERY']);
+  assert.ok(
+    schema.allOf.some(
+      (rule) =>
+        rule.if?.required?.includes('table_token') &&
+        rule.then?.properties?.fulfillment?.const === 'PICKUP',
+    ),
+  );
+}
+for (const name of [
+  'StorefrontQuote',
+  'PublicOnlineOrder',
+  'OnlineOrder',
+  'RestaurantQueueItem',
+]) {
+  assert.equal(
+    api.components.schemas[name].properties.table_code?.type,
+    'string',
+  );
+  assert.equal(api.components.schemas[name].properties.table_token, undefined);
+}
+assert.equal(
+  api.components.schemas.RestaurantTable.properties.qr_token?.readOnly,
+  true,
+);
+assert.equal(
+  api.components.schemas.RestaurantTable.properties.qr_token?.pattern,
+  '^[a-f0-9]{64}$',
+);
+assert.ok(
+  api.components.schemas.RestaurantQueueItem.properties.channel.enum.includes(
+    'DINE_IN',
+  ),
+);
+const restaurantQueue =
+  api.paths['/api/v1/organizations/{id}/restaurant/queue'].get;
+const availability =
+  api.paths['/api/v1/organizations/{id}/restaurant/availability'];
+for (const operation of [availability.get, availability.put]) {
+  assert.deepEqual(operation.security, [{ sessionCookie: [] }]);
+  assert.equal(
+    operation.responses['200'].content['application/json'].schema.$ref,
+    '#/components/schemas/RestaurantAvailabilityResponse',
+  );
+}
+assert.deepEqual(availability.put.parameters, [
+  { $ref: '#/components/parameters/CSRF' },
+]);
+assert.equal(
+  availability.put.requestBody.content['application/json'].schema.$ref,
+  '#/components/schemas/RestaurantAvailabilitySettings',
+);
+const availabilitySettings =
+  api.components.schemas.RestaurantAvailabilitySettings;
+assert.deepEqual(
+  availabilitySettings.required,
+  Object.keys(availabilitySettings.properties),
+);
+assert.deepEqual(restaurantQueue.security, [{ sessionCookie: [] }]);
+assert.match(restaurantQueue.description, /durable queue numbers/i);
+assert.doesNotMatch(restaurantQueue.description, /no daily queue allocation/i);
+const restaurantQueueNumber =
+  api.components.schemas.RestaurantQueueItem.properties.queue_number;
+assert.equal(restaurantQueueNumber.type, 'string');
+for (const pattern of [
+  /durable/i,
+  /closing time/i,
+  /midnight alone/i,
+  /gaps/i,
+  /WEB-/,
+])
+  assert.match(restaurantQueueNumber.description, pattern);
+assert.doesNotMatch(
+  restaurantQueueNumber.description,
+  /current position|not a durable|can change when orders leave/i,
+);
+for (const field of [
+  'customer_name',
+  'contact_phone',
+  'customer_note',
+  'branch_id',
+  'terminal_id',
+  'cart_id',
+  'sale_id',
+  'access_hash',
+  'delivery_address',
+  'table_token',
+  'qr_token',
+])
+  assert.equal(
+    api.components.schemas.PublicOnlineOrder.properties[field],
+    undefined,
+  );
+assert.ok(
+  !api.components.schemas.OnlineOrderTransitionInput.properties.status.enum.includes(
+    'COMPLETED',
+  ),
+);
+assert.equal(
+  api.components.schemas.StorefrontLine.properties.quantity.$ref,
+  '#/components/schemas/InventoryQuantity',
+);
+assert.equal(
+  api.components.schemas.StorefrontLine.properties.unit_price.$ref,
+  '#/components/schemas/POSMoney',
+);
+assert.equal(
+  api.components.schemas.POSCart.properties.online_order.$ref,
+  '#/components/schemas/OnlineOrderLink',
+);
+const operationIDs = new Set();
+for (const path of pricingPaths) {
+  for (const method of ['get', 'post', 'put']) {
+    const operation = api.paths[path][method];
+    if (!operation) continue;
+    assert.ok(
+      !operationIDs.has(operation.operationId),
+      'Duplicate pricing operationId',
+    );
+    operationIDs.add(operation.operationId);
+    for (const status of ['400', '401', '403', '404', '409', '503'])
+      assert.ok(operation.responses[status]);
+  }
+}
+assert.equal(pricingPaths.length, 16);
+for (const schema of ['POSCheckoutInput', 'POSCheckout', 'POSSalePayment'])
+  assert.ok(
+    api.components.schemas[schema].properties.method.enum.includes('NONE'),
+  );
+assert.equal(
+  api.components.schemas.POSCheckoutInput.properties.pricing_revision.pattern,
+  '^[a-f0-9]{64}$',
+);
+assert.equal(
+  api.components.schemas.POSCart.properties.pricing.$ref,
+  '#/components/schemas/PricingQuote',
+);
+assert.equal(
+  api.components.schemas.POSSaleItem.properties.discount_total.$ref,
+  '#/components/schemas/POSMoney',
+);
+assert.deepEqual(api.components.schemas.PricingRule.properties.type.enum, [
+  'PERCENTAGE',
+  'FIXED',
+  'BOGO',
+  'MINIMUM_SPEND',
+]);
+assert.deepEqual(api.components.schemas.PricingRule.properties.policy.enum, [
+  'EXCLUSIVE',
+  'STACKABLE',
+  'BEST_DISCOUNT_ONLY',
+]);
+for (const path of supplyPaths) {
+  for (const method of ['get', 'post', 'patch']) {
+    const operation = api.paths[path][method];
+    if (!operation) continue;
+    assert.ok(
+      !operationIDs.has(operation.operationId),
+      'Duplicate Phase 4 operationId',
+    );
+    operationIDs.add(operation.operationId);
+    assert.match(
+      operation.description,
+      /Permission: (supplier|purchasing|shelf)\./,
+    );
+    for (const status of ['400', '401', '403', '404', '409', '503'])
+      assert.ok(operation.responses[status]);
+    if (
+      method !== 'get' &&
+      (path.includes('/purchasing/') || path.includes('/replenishments'))
+    )
+      assert.ok(
+        operation.parameters.some(
+          (parameter) =>
+            parameter.name === 'Idempotency-Key' &&
+            parameter.required &&
+            parameter.schema.format === 'uuid',
+        ),
+      );
+    if (
+      method === 'get' &&
+      !path.includes('{resourceId}') &&
+      !path.endsWith('/products')
+    )
+      assert.ok(
+        operation.parameters.some(
+          (parameter) =>
+            parameter.name === 'page_size' && parameter.schema.maximum === 100,
+        ),
+      );
+  }
+}
+for (const [schema, valid, invalid] of [
+  ['SupplyMoney', '9999999999999999.99', '1.001'],
+  ['SupplyQuantity', '999999999999999.999', '1e3'],
+  ['SupplyFactor', '24.000000', '0.0000001'],
+]) {
+  const pattern = new RegExp(api.components.schemas[schema].pattern);
+  assert.ok(pattern.test(valid));
+  assert.ok(!pattern.test(invalid));
+  assert.equal(api.components.schemas[schema].type, 'string');
+}
+assert.equal(
+  api.components.schemas.PurchaseDocumentInput.properties.items.maxItems,
+  100,
+);
+assert.equal(api.components.schemas.Shelf.properties.assignments.maxItems, 100);
+assert.equal(
+  api.components.schemas.PurchaseLine.properties.conversion_factor.$ref,
+  '#/components/schemas/SupplyFactor',
+);
+for (const movement of ['PURCHASE_RECEIVE', 'SUPPLIER_RETURN'])
+  assert.ok(
+    api.components.schemas.InventoryMovement.properties.movement_type.enum.includes(
+      movement,
+    ),
+  );
+for (const path of inventoryPaths) {
+  for (const method of ['get', 'post', 'put', 'patch']) {
+    const operation = api.paths[path][method];
+    if (!operation) continue;
+    assert.ok(!operationIDs.has(operation.operationId));
+    operationIDs.add(operation.operationId);
+    assert.ok(operation.description.includes('inventory.'));
+    for (const status of ['400', '401', '403', '404', '409', '503'])
+      assert.ok(operation.responses[status]);
+    if (method !== 'get' && !path.includes('/locations')) {
+      assert.ok(
+        operation.parameters.some(
+          (parameter) =>
+            parameter.name === 'Idempotency-Key' && parameter.required,
+        ),
+      );
+    }
+  }
+}
+const inventoryQuantity = new RegExp(
+  api.components.schemas.InventoryQuantity.pattern,
+);
+assert.ok(inventoryQuantity.test('999999999999999.999'));
+assert.ok(!inventoryQuantity.test('1.0001'));
+assert.ok(
+  api.components.schemas.InventoryMovement.properties.movement_type.enum.includes(
+    'COUNT_CORRECTION',
+  ),
+);
+assert.equal(
+  api.components.schemas.InventoryBalance.properties.quantity.$ref,
+  '#/components/schemas/InventoryQuantity',
+);
+assert.equal(
+  api.components.schemas.InventoryLocationPage.properties.page_size.maximum,
+  100,
+);
+assert.equal(
+  api.components.schemas.InventoryOpeningInput.properties.items.maxItems,
+  100,
+);
+for (const path of catalogPaths) {
+  for (const method of ['get', 'post', 'patch', 'delete']) {
+    const operation = api.paths[path][method];
+    if (!operation) continue;
+    assert.ok(
+      !operationIDs.has(operation.operationId),
+      'Duplicate operationId',
+    );
+    operationIDs.add(operation.operationId);
+    assert.ok(
+      operation.description.includes('catalog.'),
+      'Missing catalog permission',
+    );
+    assert.ok(operation.responses['401']);
+    assert.ok(operation.responses['403']);
+    assert.ok(operation.responses['404']);
+  }
+}
+function checkReferences(value) {
+  if (!value || typeof value !== 'object') return;
+  if (value.$ref) {
+    assert.ok(
+      value.$ref.startsWith('#/'),
+      'Unexpected external contract reference',
+    );
+    const target = value.$ref
+      .slice(2)
+      .split('/')
+      .reduce((current, key) => current?.[key], api);
+    assert.ok(target, 'Missing reference ' + value.$ref);
+  }
+  for (const child of Object.values(value)) checkReferences(child);
+}
+for (const path of posPaths) {
+  for (const method of ['get', 'post', 'patch']) {
+    const operation = api.paths[path][method];
+    if (!operation) continue;
+    assert.ok(
+      !operationIDs.has(operation.operationId),
+      'Duplicate POS operation',
+    );
+    operationIDs.add(operation.operationId);
+    assert.ok(/pos\.|sales\.|receipts\./.test(operation.description));
+    for (const status of ['400', '401', '403', '404', '409', '503'])
+      assert.ok(operation.responses[status]);
+  }
+}
+assert.equal(api.components.schemas.POSMoney.type, 'string');
+assert.ok(new RegExp(api.components.schemas.POSMoney.pattern).test('2.25'));
+assert.ok(!new RegExp(api.components.schemas.POSMoney.pattern).test('2.251'));
+assert.equal(
+  api.components.schemas.POSProductPage.properties.page_size.maximum,
+  100,
+);
+assert.equal(
+  api.components.schemas.POSCartInput.properties.items.maxItems,
+  100,
+);
+assert.equal(
+  api.components.schemas.POSSaleItem.properties.quantity.$ref,
+  '#/components/schemas/InventoryQuantity',
+);
+assert.equal(
+  api.components.schemas.POSSale.properties.grand_total.$ref,
+  '#/components/schemas/POSMoney',
+);
+checkReferences(api);
+const customerPaths = Object.keys(api.paths).filter(
+  (path) => path.includes('/customers') || path.endsWith('/customer'),
+);
+assert.equal(customerPaths.length, 11);
+const customerOperations = [];
+for (const path of customerPaths) {
+  for (const method of ['get', 'post', 'put', 'patch']) {
+    const operation = api.paths[path][method];
+    if (!operation) continue;
+    customerOperations.push(operation.operationId);
+    assert.deepEqual(operation.security, [{ sessionCookie: [] }]);
+    for (const status of ['200', '400', '401', '403', '404', '409', '503'])
+      assert.ok(operation.responses[status]);
+    if (method !== 'get')
+      assert.ok(
+        operation.parameters.some(
+          (parameter) => parameter.$ref === '#/components/parameters/CSRF',
+        ),
+      );
+  }
+}
+assert.equal(customerOperations.length, 14);
+assert.equal(new Set(customerOperations).size, 14);
+assert.equal(
+  api.components.schemas.CustomerPage.properties.page_size.maximum,
+  100,
+);
+assert.equal(
+  api.components.schemas.CustomerInput.properties.marketing_consent.default,
+  false,
+);
+assert.deepEqual(
+  api.components.schemas.POSCustomerInput.properties.customer_id.type,
+  ['string', 'null'],
+);
+assert.ok(
+  !api.components.schemas.POSCheckoutInput.properties.customer_id,
+  'customer references are selected on carts, never trusted on checkout',
+);
+for (const name of ['POSCart', 'POSCheckout', 'POSSale'])
+  assert.deepEqual(api.components.schemas[name].properties.customer_id.type, [
+    'string',
+    'null',
+  ]);
+const loyaltyOperations = [];
+for (const path of loyaltyPaths) {
+  for (const method of ['get', 'post', 'put']) {
+    const operation = api.paths[path][method];
+    if (!operation) continue;
+    loyaltyOperations.push(operation.operationId);
+    assert.deepEqual(operation.security, [{ sessionCookie: [] }]);
+    for (const status of ['200', '400', '401', '403', '404', '409', '503'])
+      assert.ok(operation.responses[status]);
+    if (method !== 'get') {
+      assert.ok(
+        operation.parameters.some(
+          (parameter) => parameter.$ref === '#/components/parameters/CSRF',
+        ),
+      );
+      assert.ok(
+        operation.parameters.some(
+          (parameter) =>
+            parameter.name === 'Idempotency-Key' && parameter.required,
+        ),
+      );
+    }
+  }
+}
+assert.equal(loyaltyOperations.length, 8);
+assert.equal(new Set(loyaltyOperations).size, 8);
+assert.equal(
+  api.components.schemas.POSCheckoutInput.properties.loyalty_points.maximum,
+  1000000000000,
+);
+assert.equal(
+  api.components.schemas.LoyaltyAdjustmentInput.additionalProperties,
+  false,
+);
+assert.deepEqual(
+  api.paths[
+    '/api/v1/organizations/{id}/pos/carts/{resourceId}/quote'
+  ].get.parameters.find((parameter) => parameter.name === 'loyalty_points')
+    .schema,
+  { type: 'integer', minimum: 0, maximum: 1000000000000, default: 0 },
+);
+assert.equal(api.components.schemas.LoyaltyProgram.additionalProperties, false);
+for (const path of returnPaths) {
+  for (const method of ['get', 'post']) {
+    const operation = api.paths[path][method];
+    if (!operation) continue;
+    assert.ok(
+      !operationIDs.has(operation.operationId),
+      'Duplicate return operation',
+    );
+    operationIDs.add(operation.operationId);
+    for (const status of ['400', '401', '403', '404', '409', '503'])
+      assert.ok(operation.responses[status]);
+    if (method === 'post')
+      assert.ok(
+        operation.parameters.some(
+          (parameter) =>
+            parameter.name === 'Idempotency-Key' && parameter.required === true,
+        ),
+      );
+  }
+}
+assert.equal(
+  api.components.schemas.POSShift.properties.cash_refunds.$ref,
+  '#/components/schemas/POSMoney',
+);
+const adjustmentPaths = Object.keys(api.paths).filter((path) =>
+  /\/(exchanges|sales\/voids)(\/|$)/.test(path),
+);
+assert.equal(adjustmentPaths.length, 18);
+for (const path of adjustmentPaths) {
+  for (const method of ['get', 'post', 'patch']) {
+    const operation = api.paths[path][method];
+    if (!operation) continue;
+    assert.ok(
+      !operationIDs.has(operation.operationId),
+      'Duplicate adjustment operation',
+    );
+    operationIDs.add(operation.operationId);
+    assert.deepEqual(operation.security, [{ sessionCookie: [] }]);
+    for (const status of ['400', '401', '403', '404', '409', '503'])
+      assert.ok(operation.responses[status]);
+    if (method !== 'get') {
+      assert.ok(
+        operation.parameters.some(
+          (parameter) => parameter.$ref === '#/components/parameters/CSRF',
+        ),
+      );
+      if (!path.endsWith('/quote'))
+        assert.ok(
+          operation.parameters.some(
+            (parameter) =>
+              parameter.name === 'Idempotency-Key' && parameter.required,
+          ),
+        );
+    }
+  }
+}
+assert.ok(
+  !api.components.schemas.POSCheckoutInput.properties.method.enum.includes(
+    'EXCHANGE_CREDIT',
+  ),
+);
+assert.equal(
+  api.components.schemas.POSSalePayment.properties.credit_amount.$ref,
+  '#/components/schemas/POSMoney',
+);
+assert.ok(
+  api.components.schemas.POSSalePayment.properties.method.enum.includes(
+    'EXCHANGE_CREDIT',
+  ),
+);
+assert.equal(
+  api.components.schemas.SaleAdjustmentPage.properties.items.items.properties
+    .return_credit.$ref,
+  '#/components/schemas/ReturnMoney',
+);
+assert.equal(
+  api.components.schemas.CatalogVariantInput.properties.cost_price.type,
+  'string',
+);
+assert.equal(
+  api.components.schemas.CatalogBarcodeInput.properties.code.type,
+  'string',
+);
+assert.equal(
+  api.components.schemas.CatalogProductPage.properties.page_size.maximum,
+  100,
+);
+assert.equal(
+  api.components.schemas.CatalogProductCreate.properties.variants.minItems,
+  1,
+);
+for (const service of ['web', 'api', 'ai', 'postgres', 'caddy'])
+  assert.ok(compose.services[service].healthcheck);
+assert.ok(
+  !compose.services.ai.ports,
+  'Internal AI must not publish a host port',
+);
+const restaurantMenu = api.components.schemas.RestaurantSetupMenuInput;
+const storefrontSettings = api.components.schemas.StorefrontSettingsInput;
+assert.ok(!storefrontSettings.required.includes('terminal_id'));
+assert.match(storefrontSettings.description, /unpublished/);
+assert.equal(
+  storefrontSettings.allOf[0].then.properties.published.const,
+  false,
+);
+assert.equal(
+  storefrontSettings.allOf[0].then.properties.accepting_orders.const,
+  false,
+);
+assert.equal(
+  storefrontSettings.allOf[0].then.properties.online_terminal_id.const,
+  '',
+);
+const restaurantMenuItem = api.components.schemas.RestaurantSetupMenuItemInput;
+assert.ok(!restaurantMenu.required.includes('branch_id'));
+assert.deepEqual(restaurantMenuItem.dependentRequired, {
+  product_id: ['variant_id'],
+});
+assert.match(
+  restaurantMenuItem.properties.category_id.description,
+  /selected category/,
+);
+for (const name of ['product_id', 'variant_id', 'category_id']) {
+  assert.equal(restaurantMenuItem.properties[name].format, 'uuid');
+}
+console.log(
+  'PASS: 18 modules, 116 unique documented routes, owner-only access, Stripe sandbox/storefront/POS contracts and service health wiring',
+);

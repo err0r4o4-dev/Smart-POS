@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <rect width="200" height="200" rx="28" fill="#fef9c3"/>
+  <circle cx="100" cy="108" r="70" fill="#ffffff" stroke="#e5e7eb" stroke-width="3"/>
+  <path d="M60 110 Q80 80 120 85 Q145 95 140 125 Q130 145 95 142 Q65 135 60 110 Z" fill="#fde047"/>
+  <path d="M75 105 Q100 90 125 100 Q130 118 110 130 Q85 130 75 105 Z" fill="#facc15"/>
+  <!-- shrimp toppings -->
+  <path d="M88 108 Q95 98 108 102" stroke="#ea580c" stroke-width="6" stroke-linecap="round" fill="none"/>
+  <path d="M105 120 Q115 112 125 118" stroke="#ea580c" stroke-width="6" stroke-linecap="round" fill="none"/>
+  <circle cx="118" cy="102" r="2.5" fill="#15803d"/>
+  <circle cx="92" cy="125" r="2.5" fill="#15803d"/>
+  <text x="100" y="32" font-family="system-ui, sans-serif" font-size="13" font-weight="800" fill="#ca8a04" text-anchor="middle">ข้าวไข่ข้น</text>
+</svg>

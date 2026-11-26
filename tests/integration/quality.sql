@@ -1,0 +1,44 @@
+BEGIN;
+INSERT INTO users(id,email,email_normalized,password_hash,display_name) VALUES('30000000-0000-4000-8000-000000000001','inventory-sql@example.test','inventory-sql@example.test','$argon2id$fixture','Inventory SQL');
+INSERT INTO organizations(id,name,code) VALUES('30000000-0000-4000-8000-000000000010','Inventory A','INV-SQL-A'),('30000000-0000-4000-8000-000000000020','Inventory B','INV-SQL-B');
+INSERT INTO organization_memberships(organization_id,user_id,role) VALUES('30000000-0000-4000-8000-000000000010','30000000-0000-4000-8000-000000000001','OWNER'),('30000000-0000-4000-8000-000000000020','30000000-0000-4000-8000-000000000001','OWNER');
+INSERT INTO branches(id,organization_id,name,code) VALUES('30000000-0000-4000-8000-000000000011','30000000-0000-4000-8000-000000000010','Branch A','A'),('30000000-0000-4000-8000-000000000021','30000000-0000-4000-8000-000000000020','Branch B','B');
+SET CONSTRAINTS ALL IMMEDIATE;
+SET LOCAL ROLE smartpos_runtime;
+SELECT set_config('app.organization_id','30000000-0000-4000-8000-000000000010',true),set_config('app.user_id','30000000-0000-4000-8000-000000000001',true);
+INSERT INTO units(id,organization_id,code,name,unit_type) VALUES('30000000-0000-4000-8000-000000000012','30000000-0000-4000-8000-000000000010','PCS','Pieces','COUNT');
+INSERT INTO products(id,organization_id,name,created_by,updated_by) VALUES('30000000-0000-4000-8000-000000000013','30000000-0000-4000-8000-000000000010','Inventory item','30000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000001');
+INSERT INTO product_variants(id,organization_id,product_id,sku,name,unit_id,cost_price,selling_price,currency) VALUES('30000000-0000-4000-8000-000000000014','30000000-0000-4000-8000-000000000010','30000000-0000-4000-8000-000000000013','INV-SQL','Default','30000000-0000-4000-8000-000000000012',1,2,'THB');
+INSERT INTO stock_locations(id,organization_id,branch_id,code,name,type,created_by,updated_by) VALUES('30000000-0000-4000-8000-000000000015','30000000-0000-4000-8000-000000000010','30000000-0000-4000-8000-000000000011','WH','Warehouse','WAREHOUSE','30000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000001');
+INSERT INTO inventory_operations(id,organization_id,actor_id,operation,idempotency_key,fingerprint) VALUES('30000000-0000-4000-8000-000000000016','30000000-0000-4000-8000-000000000010','30000000-0000-4000-8000-000000000001','SQL','30000000-0000-4000-8000-000000000016',repeat('a',64));
+INSERT INTO stock_movements(organization_id,branch_id,location_id,variant_id,movement_type,quantity_delta,operation_id,reason_code,performed_by) VALUES('30000000-0000-4000-8000-000000000010','30000000-0000-4000-8000-000000000011','30000000-0000-4000-8000-000000000015','30000000-0000-4000-8000-000000000014','OPENING_BALANCE',10,'30000000-0000-4000-8000-000000000016','INITIAL','30000000-0000-4000-8000-000000000001');
+
+INSERT INTO product_batches(id,organization_id,variant_id,lot_number,expires_on,reason,created_by,updated_by) VALUES('30000000-0000-4000-8000-000000000030','30000000-0000-4000-8000-000000000010','30000000-0000-4000-8000-000000000014','OBSERVED-LOT',current_date+30,'Actual fixture label','30000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000001');
+INSERT INTO inventory_operations(id,organization_id,actor_id,operation,idempotency_key,fingerprint) VALUES('30000000-0000-4000-8000-000000000031','30000000-0000-4000-8000-000000000010','30000000-0000-4000-8000-000000000001','QUALITY_SQL','30000000-0000-4000-8000-000000000031',repeat('b',64));
+INSERT INTO inventory_operations(id,organization_id,actor_id,operation,idempotency_key,fingerprint) VALUES('30000000-0000-4000-8000-000000000032','30000000-0000-4000-8000-000000000010','30000000-0000-4000-8000-000000000001','QUALITY_SQL','30000000-0000-4000-8000-000000000032',repeat('b',64));
+INSERT INTO inventory_operations(id,organization_id,actor_id,operation,idempotency_key,fingerprint) VALUES('30000000-0000-4000-8000-000000000033','30000000-0000-4000-8000-000000000010','30000000-0000-4000-8000-000000000001','QUALITY_SQL','30000000-0000-4000-8000-000000000033',repeat('b',64));
+INSERT INTO inventory_operations(id,organization_id,actor_id,operation,idempotency_key,fingerprint) VALUES('30000000-0000-4000-8000-000000000034','30000000-0000-4000-8000-000000000010','30000000-0000-4000-8000-000000000001','QUALITY_SQL','30000000-0000-4000-8000-000000000034',repeat('b',64));
+INSERT INTO stock_movements(organization_id,branch_id,location_id,variant_id,batch_id,movement_type,quantity_delta,operation_id,reason_code,performed_by) VALUES('30000000-0000-4000-8000-000000000010','30000000-0000-4000-8000-000000000011','30000000-0000-4000-8000-000000000015','30000000-0000-4000-8000-000000000014','30000000-0000-4000-8000-000000000030','ADJUSTMENT_IN',5,'30000000-0000-4000-8000-000000000031','OBSERVED','30000000-0000-4000-8000-000000000001');
+DO $$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM quality_stock_balances WHERE batch_id IS NULL AND quantity=10) OR NOT EXISTS(SELECT 1 FROM quality_stock_balances WHERE batch_id IS NOT NULL AND quantity=5) OR NOT EXISTS(SELECT 1 FROM stock_balances WHERE quantity=15) THEN RAISE EXCEPTION 'tracked/untracked conservation failed'; END IF;
+ BEGIN UPDATE quality_stock_balances SET quantity=99; RAISE EXCEPTION 'quality projection writable'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN DELETE FROM product_batches; RAISE EXCEPTION 'batch deletable'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN TRUNCATE quality_stock_balances; RAISE EXCEPTION 'projection truncatable'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE product_batches SET expires_on=current_date+900,revision=revision+1; RAISE EXCEPTION 'expiry mutable'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN UPDATE product_batches SET status='QUARANTINED'; RAISE EXCEPTION 'stale batch revision allowed'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN INSERT INTO stock_movements(organization_id,branch_id,location_id,variant_id,batch_id,movement_type,quantity_delta,operation_id,reason_code,performed_by) VALUES('30000000-0000-4000-8000-000000000010','30000000-0000-4000-8000-000000000011','30000000-0000-4000-8000-000000000015','30000000-0000-4000-8000-000000000014','30000000-0000-4000-8000-000000000030','ADJUSTMENT_OUT',-6,'30000000-0000-4000-8000-000000000032','INVALID','30000000-0000-4000-8000-000000000001'); RAISE EXCEPTION 'batch overdraft allowed'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN INSERT INTO stock_movements(organization_id,branch_id,location_id,variant_id,movement_type,quantity_delta,operation_id,reason_code,performed_by) VALUES('30000000-0000-4000-8000-000000000010','30000000-0000-4000-8000-000000000011','30000000-0000-4000-8000-000000000015','30000000-0000-4000-8000-000000000014','ADJUSTMENT_OUT',-11,'30000000-0000-4000-8000-000000000033','INVALID','30000000-0000-4000-8000-000000000001'); RAISE EXCEPTION 'untracked overdraft allowed'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN INSERT INTO stock_movements(organization_id,branch_id,location_id,variant_id,movement_type,quantity_delta,operation_id,reason_code,performed_by) VALUES('30000000-0000-4000-8000-000000000010','30000000-0000-4000-8000-000000000011','30000000-0000-4000-8000-000000000015','30000000-0000-4000-8000-000000000014','COUNT_CORRECTION',1,'30000000-0000-4000-8000-000000000034','INVALID','30000000-0000-4000-8000-000000000001'); RAISE EXCEPTION 'aggregate count overwrote tracked stock'; EXCEPTION WHEN check_violation THEN NULL; END;
+ IF NOT EXISTS(SELECT 1 FROM stock_balances WHERE quantity=15) THEN RAISE EXCEPTION 'failed quality posting changed aggregate'; END IF;
+END $$;
+INSERT INTO quality_recalls(organization_id,variant_id,batch_id,reason,created_by) VALUES('30000000-0000-4000-8000-000000000010','30000000-0000-4000-8000-000000000014','30000000-0000-4000-8000-000000000030','Observed quality issue','30000000-0000-4000-8000-000000000001');
+DO $$ BEGIN
+ BEGIN UPDATE quality_recalls SET reason='Rewrite'; RAISE EXCEPTION 'recall mutable'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN DELETE FROM quality_recalls; RAISE EXCEPTION 'recall deletable'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ IF EXISTS(SELECT 1 FROM stock_balances balance WHERE balance.quantity<>(SELECT sum(quantity) FROM quality_stock_balances split WHERE split.organization_id=balance.organization_id AND split.location_id=balance.location_id AND split.variant_id=balance.variant_id)) THEN RAISE EXCEPTION 'aggregate mismatch'; END IF;
+END $$;
+SELECT set_config('app.organization_id','30000000-0000-4000-8000-000000000020',true);
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM product_batches) OR EXISTS(SELECT 1 FROM quality_stock_balances) OR EXISTS(SELECT 1 FROM quality_recalls) THEN RAISE EXCEPTION 'cross tenant leak'; END IF;
+END $$;
+ROLLBACK;

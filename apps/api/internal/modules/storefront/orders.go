@@ -1,0 +1,383 @@
+package storefront
+
+import (
+	"context"
+	"crypto/subtle"
+	"errors"
+	"github.com/jackc/pgx/v5"
+	"smartpos/api/internal/modules/organization"
+	"smartpos/api/internal/modules/restaurant"
+)
+
+func dineInTable(ctx context.Context, tx pgx.Tx, org, branch, token string) (string, string, error) {
+	if token == "" {
+		return "", "", nil
+	}
+	if !tokenPattern.MatchString(token) {
+		return "", "", ErrInput
+	}
+	var id, code string
+	err := tx.QueryRow(ctx, `SELECT id::text,code FROM restaurant_tables WHERE organization_id=$1 AND branch_id=$2 AND status='ACTIVE' AND qr_token_hash=$3 FOR SHARE`, org, branch, accessHash(token)).Scan(&id, &code)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", "", ErrInput
+	}
+	if err != nil {
+		return "", "", dbError(err)
+	}
+	return id, code, nil
+}
+
+func readOrder(ctx context.Context, tx pgx.Tx, org, id string, public bool) (Order, error) {
+	result := Order{Items: []Line{}, Events: []Event{}, PaymentStatus: "UNPAID"}
+	err := tx.QueryRow(ctx, `SELECT doc.id::text,doc.number,CASE WHEN doc.status IN ('PENDING','PREPARING','READY') AND NOT storefront_order_live(doc.organization_id,doc.id) THEN 'EXPIRED' ELSE doc.status END,doc.customer_name,doc.contact_phone,doc.customer_note,doc.store_name,doc.store_phone,doc.pickup_instructions,doc.estimated_total::text,doc.branch_id::text,doc.terminal_id::text,doc.cart_id::text,doc.sale_id::text,doc.revision,doc.created_at,doc.expires_at,sale.grand_total::text,receipt.receipt_number FROM online_orders doc LEFT JOIN sales sale ON sale.organization_id=doc.organization_id AND sale.id=doc.sale_id LEFT JOIN receipts receipt ON receipt.organization_id=doc.organization_id AND receipt.sale_id=doc.sale_id WHERE doc.organization_id=$1 AND doc.id=$2`, org, id).Scan(&result.ID, &result.Number, &result.Status, &result.CustomerName, &result.ContactPhone, &result.CustomerNote, &result.StoreName, &result.StorePhone, &result.PickupInstructions, &result.EstimatedTotal, &result.BranchID, &result.TerminalID, &result.CartID, &result.SaleID, &result.Revision, &result.CreatedAt, &result.ExpiresAt, &result.FinalTotal, &result.ReceiptNumber)
+	if err != nil {
+		return result, dbError(err)
+	}
+	if err = tx.QueryRow(ctx, `SELECT doc.fulfillment,doc.shipping_fee::text,(doc.estimated_total-doc.shipping_fee)::text,doc.delivery_address,COALESCE(table_map.table_code,''),doc.stock_policy FROM online_orders doc LEFT JOIN restaurant_order_tables table_map ON table_map.organization_id=doc.organization_id AND table_map.order_id=doc.id WHERE doc.organization_id=$1 AND doc.id=$2`, org, id).Scan(&result.Fulfillment, &result.ShippingFee, &result.Subtotal, &result.DeliveryAddress, &result.TableCode, &result.StockPolicy); err != nil {
+		return result, dbError(err)
+	}
+	var paymentState string
+	err = tx.QueryRow(ctx, "SELECT state FROM online_payment_attempts WHERE organization_id=$1 AND order_id=$2", org, id).Scan(&paymentState)
+	if err == nil && paymentState == "PAID" {
+		result.PaymentStatus = "PAID_AT_STORE"
+	} else if result.Status == "COMPLETED" {
+		result.PaymentStatus = "PAID_AT_STORE"
+	}
+	rows, err := tx.Query(ctx, `SELECT variant_id::text,product_name,variant_name,sku,unit,quantity::text,unit_price::text,line_total::text FROM online_order_items WHERE organization_id=$1 AND order_id=$2 ORDER BY variant_id`, org, id)
+	if err != nil {
+		return result, err
+	}
+	for rows.Next() {
+		var line Line
+		if err = rows.Scan(&line.VariantID, &line.ProductName, &line.VariantName, &line.SKU, &line.Unit, &line.Quantity, &line.UnitPrice, &line.LineTotal); err != nil {
+			rows.Close()
+			return result, err
+		}
+		result.Items = append(result.Items, line)
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return result, err
+	}
+	rows, err = tx.Query(ctx, `SELECT status,message,created_at FROM online_order_events WHERE organization_id=$1 AND order_id=$2 ORDER BY id`, org, id)
+	if err != nil {
+		return result, err
+	}
+	for rows.Next() {
+		var event Event
+		if err = rows.Scan(&event.Status, &event.Message, &event.CreatedAt); err != nil {
+			rows.Close()
+			return result, err
+		}
+		result.Events = append(result.Events, event)
+	}
+	err = rows.Err()
+	rows.Close()
+	if public {
+		result.DeliveryAddress = ""
+		result.CustomerName = ""
+		result.ContactPhone = ""
+		result.CustomerNote = ""
+		result.BranchID = ""
+		result.TerminalID = ""
+		result.CartID = nil
+		result.SaleID = nil
+	}
+	return result, err
+}
+func (service *Service) CreateOrder(ctx context.Context, slug, key string, input OrderInput) (Order, error) {
+	if !uuidPattern.MatchString(key) || input.validate() != nil {
+		return Order{}, ErrInput
+	}
+	tx, org, err := service.public(ctx, slug, true)
+	if err != nil {
+		return Order{}, err
+	}
+	defer tx.Rollback(ctx)
+	fingerprint := digest(input)
+	var previous, hash string
+	err = tx.QueryRow(ctx, "SELECT request_fingerprint,access_hash FROM online_orders WHERE organization_id=$1 AND id=$2", org, key).Scan(&previous, &hash)
+	if err == nil {
+		if subtle.ConstantTimeCompare([]byte(hash), []byte(accessHash(input.AccessToken))) != 1 {
+			return Order{}, ErrNotFound
+		}
+		if previous != fingerprint {
+			return Order{}, ErrConflict
+		}
+		return readOrder(ctx, tx, org, key, true)
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return Order{}, err
+	}
+	shop, err := settings(ctx, tx, org)
+	if err != nil {
+		return Order{}, err
+	}
+	quote, tableID, err := quoteForTable(ctx, tx, org, shop, QuoteInput{Items: input.Items, Fulfillment: input.Fulfillment, TableToken: input.TableToken})
+	if err != nil {
+		return Order{}, err
+	}
+	if quote.ID != input.QuoteID {
+		return Order{}, ErrQuote
+	}
+	_, err = tx.Exec(ctx, `INSERT INTO online_orders(id,organization_id,branch_id,terminal_id,stock_location_id,customer_name,contact_phone,customer_note,pickup_instructions,store_name,store_phone,estimated_total,access_hash,request_fingerprint,fulfillment,shipping_fee,delivery_address,stock_policy) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,'MENU_ONLY')`, key, org, shop.BranchID, shop.orderTerminalID(), shop.LocationID, input.CustomerName, input.ContactPhone, input.CustomerNote, shop.PickupInstructions, shop.Name, shop.ContactPhone, quote.Total, accessHash(input.AccessToken), fingerprint, input.Fulfillment, quote.ShippingFee, input.DeliveryAddress)
+	if err != nil {
+		return Order{}, dbError(err)
+	}
+	if tableID != "" {
+		if _, err = tx.Exec(ctx, "INSERT INTO restaurant_order_tables(organization_id,order_id,table_id,table_code) VALUES($1,$2,$3,$4)", org, key, tableID, quote.TableCode); err != nil {
+			return Order{}, dbError(err)
+		}
+	}
+	for _, line := range quote.Items {
+		_, err = tx.Exec(ctx, `INSERT INTO online_order_items(organization_id,order_id,variant_id,product_name,variant_name,sku,unit,quantity,unit_price,line_total) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, org, key, line.VariantID, line.ProductName, line.VariantName, line.SKU, line.Unit, line.Quantity, line.UnitPrice, line.LineTotal)
+		if err != nil {
+			return Order{}, dbError(err)
+		}
+	}
+	if _, err = restaurant.AssignQueueNumber(ctx, tx, org, shop.BranchID, key); err != nil {
+		switch {
+		case errors.Is(err, restaurant.ErrInput):
+			return Order{}, ErrInput
+		case errors.Is(err, restaurant.ErrConflict):
+			return Order{}, ErrConflict
+		case errors.Is(err, restaurant.ErrNotFound):
+			return Order{}, ErrNotFound
+		default:
+			return Order{}, dbError(err)
+		}
+	}
+	if _, err = tx.Exec(ctx, "INSERT INTO online_order_events(organization_id,order_id,status) VALUES($1,$2,'PENDING')", org, key); err != nil {
+		return Order{}, err
+	}
+	result, err := readOrder(ctx, tx, org, key, true)
+	if err != nil {
+		return result, err
+	}
+	return result, dbError(tx.Commit(ctx))
+}
+func (service *Service) Track(ctx context.Context, slug string, input TrackingInput) (Order, error) {
+	if !slugPattern.MatchString(slug) || !uuidPattern.MatchString(input.OrderID) || !tokenPattern.MatchString(input.AccessToken) {
+		return Order{}, ErrNotFound
+	}
+	tx, err := service.Organization.Pool.Begin(ctx)
+	if err != nil {
+		return Order{}, err
+	}
+	defer tx.Rollback(ctx)
+	var org *string
+	if err = tx.QueryRow(ctx, "SELECT storefront_tracking_resolve($1,$2,$3)::text", slug, input.OrderID, accessHash(input.AccessToken)).Scan(&org); err != nil {
+		return Order{}, dbError(err)
+	}
+	if !service.resolvedOrganizationAllowed(org) {
+		return Order{}, ErrNotFound
+	}
+	if _, err = tx.Exec(ctx, "SELECT set_config('app.organization_id',$1,true),set_config('app.user_id','',true)", *org); err != nil {
+		return Order{}, err
+	}
+	return readOrder(ctx, tx, *org, input.OrderID, true)
+}
+func (service *Service) Order(ctx context.Context, user, org, id string) (Order, error) {
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "online_orders.read")
+	if err != nil {
+		return Order{}, dbError(err)
+	}
+	tx := authorization.Tx
+	defer tx.Rollback(ctx)
+	if !uuidPattern.MatchString(id) {
+		return Order{}, ErrNotFound
+	}
+	result, err := readOrder(ctx, tx, org, id, false)
+	if err != nil {
+		return Order{}, err
+	}
+	if !branchAllowed(authorization.Actor, result.BranchID) {
+		return Order{}, organization.ErrDenied
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Order{}, err
+	}
+	return result, nil
+}
+func (service *Service) Orders(ctx context.Context, user, org, branch, status string, page int) (Page[Order], error) {
+	result := Page[Order]{Items: []Order{}, Page: page, PageSize: 20}
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "online_orders.read")
+	if err != nil {
+		return Page[Order]{}, dbError(err)
+	}
+	tx := authorization.Tx
+	defer tx.Rollback(ctx)
+	if !uuidPattern.MatchString(branch) || page < 1 || page > 10000 {
+		return Page[Order]{}, ErrInput
+	}
+	if !branchAllowed(authorization.Actor, branch) {
+		return Page[Order]{}, organization.ErrDenied
+	}
+	if status != "" && status != "PENDING" && status != "PREPARING" && status != "READY" && status != "COMPLETED" && status != "REJECTED" && status != "CANCELLED" && status != "EXPIRED" {
+		return Page[Order]{}, ErrInput
+	}
+	where := ` FROM online_orders WHERE organization_id=$1 AND branch_id=$2 AND ($3='' OR CASE WHEN status IN ('PENDING','PREPARING','READY') AND NOT storefront_order_live(organization_id,id) THEN 'EXPIRED' ELSE status END=$3)`
+	if err = tx.QueryRow(ctx, "SELECT count(*)"+where, org, branch, status).Scan(&result.Total); err != nil {
+		return Page[Order]{}, err
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Page[Order]{}, err
+	}
+	rows, err := tx.Query(ctx, "SELECT id::text"+where+" ORDER BY created_at DESC,id DESC LIMIT 20 OFFSET $4", org, branch, status, (page-1)*20)
+	if err != nil {
+		return Page[Order]{}, err
+	}
+	ids := []string{}
+	for rows.Next() {
+		var id string
+		if err = rows.Scan(&id); err != nil {
+			rows.Close()
+			return Page[Order]{}, err
+		}
+		ids = append(ids, id)
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return Page[Order]{}, err
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Page[Order]{}, err
+	}
+	for _, id := range ids {
+		value, err := readOrder(ctx, tx, org, id, false)
+		if err != nil {
+			return Page[Order]{}, err
+		}
+		if err = authorization.Recheck(ctx); err != nil {
+			return Page[Order]{}, err
+		}
+		result.Items = append(result.Items, value)
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Page[Order]{}, err
+	}
+	return result, nil
+}
+func (service *Service) Transition(ctx context.Context, user, org, id string, input TransitionInput) (Order, error) {
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "online_orders.manage")
+	if err != nil {
+		return Order{}, dbError(err)
+	}
+	tx, actor := authorization.Tx, authorization.Actor
+	defer tx.Rollback(ctx)
+	recheck := func() error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		return authorization.Recheck(ctx)
+	}
+	if !uuidPattern.MatchString(id) || !text(input.Message, 1000, false) {
+		return Order{}, ErrInput
+	}
+	current, err := readOrder(ctx, tx, org, id, false)
+	if failure := recheck(); failure != nil {
+		return Order{}, failure
+	}
+	if err != nil {
+		return Order{}, err
+	}
+	if !branchAllowed(actor, current.BranchID) {
+		return Order{}, organization.ErrDenied
+	}
+	if current.Revision != input.Revision || current.CartID != nil || !canTransition(current.Status, input.Status) {
+		return Order{}, ErrConflict
+	}
+	if (input.Status == "REJECTED" || input.Status == "CANCELLED") && !text(input.Message, 1000, true) {
+		return Order{}, ErrInput
+	}
+	if input.Status == "PREPARING" || input.Status == "READY" {
+		var paymentState string
+		var holdReleased bool
+		err = tx.QueryRow(ctx, "SELECT state, stock_hold_released FROM online_payment_attempts WHERE organization_id=$1 AND order_id=$2", org, id).Scan(&paymentState, &holdReleased)
+		if failure := recheck(); failure != nil {
+			return Order{}, failure
+		}
+		if errors.Is(err, pgx.ErrNoRows) {
+			return Order{}, ErrConflict
+		} else if err != nil {
+			return Order{}, dbError(err)
+		}
+		if paymentState != "PAID" || holdReleased {
+			return Order{}, ErrConflict
+		}
+		var blocked bool
+		err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM online_refund_intents WHERE organization_id=$1 AND order_id=$2 AND state IN ('REQUESTED','PENDING','REQUIRES_ACTION','SUCCEEDED')) OR EXISTS(SELECT 1 FROM online_payment_reconciliations WHERE organization_id=$1 AND order_id=$2 AND action='FULFILLMENT_REVIEW')", org, id).Scan(&blocked)
+		if failure := recheck(); failure != nil {
+			return Order{}, failure
+		}
+		if err != nil {
+			return Order{}, dbError(err)
+		}
+		if blocked {
+			return Order{}, ErrConflict
+		}
+		shop := Settings{TerminalID: current.TerminalID, BranchID: current.BranchID}
+		shop, err = orderSaleSource(ctx, tx, org, id, shop)
+		if failure := recheck(); failure != nil {
+			return Order{}, failure
+		}
+		if err != nil {
+			return Order{}, err
+		}
+		for _, line := range current.Items {
+			value, err := productForOrder(ctx, tx, org, shop, line.VariantID, id)
+			if failure := recheck(); failure != nil {
+				return Order{}, failure
+			}
+			if err != nil {
+				return Order{}, err
+			}
+			enough := true
+			if value.Available != nil {
+				if err = tx.QueryRow(ctx, "SELECT $1::numeric>=$2::numeric", *value.Available, line.Quantity).Scan(&enough); err != nil {
+					return Order{}, err
+				}
+			}
+			if err = recheck(); err != nil {
+				return Order{}, err
+			}
+			if !value.Saleable || !enough {
+				return Order{}, ErrStock
+			}
+		}
+	}
+	if err = recheck(); err != nil {
+		return Order{}, err
+	}
+	if _, err = tx.Exec(ctx, "UPDATE online_orders SET status=$3,revision=revision+1,updated_at=now() WHERE organization_id=$1 AND id=$2", org, id, input.Status); err != nil {
+		return Order{}, dbError(err)
+	}
+	if err = recheck(); err != nil {
+		return Order{}, err
+	}
+	if _, err = tx.Exec(ctx, "INSERT INTO online_order_events(organization_id,order_id,status,message,actor_id) VALUES($1,$2,$3,$4,$5)", org, id, input.Status, input.Message, user); err != nil {
+		return Order{}, err
+	}
+	if err = recheck(); err != nil {
+		return Order{}, err
+	}
+	if err = organization.RecordAudit(ctx, tx, org, user, "online_order."+input.Status, id); err != nil {
+		return Order{}, err
+	}
+	if err = recheck(); err != nil {
+		return Order{}, err
+	}
+	result, err := readOrder(ctx, tx, org, id, false)
+	if failure := recheck(); failure != nil {
+		return Order{}, failure
+	}
+	if err != nil {
+		return Order{}, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return Order{}, dbError(err)
+	}
+	return result, nil
+}

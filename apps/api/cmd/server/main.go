@@ -1,0 +1,73 @@
+package main
+
+import (
+	"context"
+	"errors"
+	"log/slog"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"smartpos/api/internal/modules/identity"
+	"smartpos/api/internal/platform/config"
+	"smartpos/api/internal/platform/database"
+	"smartpos/api/internal/transport"
+)
+
+func main() {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil)).With("service", "api")
+	if err := run(logger); err != nil {
+		logger.Error("server stopped", "reason", err.Error())
+		os.Exit(1)
+	}
+}
+
+func run(logger *slog.Logger) error {
+	settings, err := config.Load()
+	if err != nil {
+		return err
+	}
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	pool, err := database.Open(ctx, settings.DatabaseURL)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+	mailer := identity.SMTPMailer{Address: settings.SMTPAddr, Username: settings.SMTPUser, Password: settings.SMTPPassword, From: settings.MailFrom, Origin: settings.PublicOrigin, Production: settings.Environment == "production"}
+	authentication, err := identity.NewService(ctx, pool, mailer, logger, settings.SessionTTL)
+	if err != nil {
+		return err
+	}
+	google := identity.NewGoogleAuth(authentication, settings.GoogleClientID, settings.GoogleClientSecret, settings.GoogleRedirectURI)
+	var mfa *identity.MFAService
+	if settings.MFAEncryptionKeyID != "" {
+		mfa, err = identity.NewMFAService(pool, settings.MFAEncryptionKeyID, settings.MFAEncryptionKey)
+		if err != nil {
+			return errors.New("MFA initialization failed")
+		}
+		clear(settings.MFAEncryptionKey)
+	}
+	server := &http.Server{Addr: settings.Address, Handler: transport.RouterWithOptions(database.Checker{Pool: pool}, logger, transport.Options{PaymentSandbox: settings.PaymentSandbox, CustomerPayments: settings.CustomerPayments, SingleStoreOrganizationID: settings.SingleStoreOrganizationID}, identity.Handler{Service: authentication, Google: google, MFA: mfa, Origins: settings.AllowedOrigins, Production: settings.Environment == "production", TrustedProxyIP: settings.TrustedProxyIP}), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 1 << 20}
+	failures := make(chan error, 1)
+	go func() { failures <- server.ListenAndServe() }()
+	logger.Info("server starting", "event", "server_starting", "address", settings.Address)
+	select {
+	case err := <-failures:
+		if errors.Is(err, http.ErrServerClosed) {
+			return nil
+		}
+		return errors.New("HTTP listener failed")
+	case <-ctx.Done():
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			_ = server.Close()
+			return errors.New("graceful shutdown timed out")
+		}
+		logger.Info("server stopped gracefully", "event", "server_stopped")
+		return nil
+	}
+}

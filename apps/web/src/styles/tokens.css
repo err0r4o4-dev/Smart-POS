@@ -1,0 +1,126 @@
+:root {
+  --primary: #ffc52f;
+  --primary-hover: #f2b51d;
+  --primary-active: #dfa20c;
+  --primary-soft: #fff1cc;
+  --primary-subtle: #fffbf2;
+  --primary-strong: #80500c;
+  --primary-border: #f1d596;
+  --canvas: #fffbf5;
+  --surface: #ffffff;
+  --secondary: #f5f5f8;
+  --text-primary: #141b2d;
+  --text-secondary: #596579;
+  --text-strong: #4d596c;
+  --text-tertiary: #697386;
+  --success: #22c55e;
+  --success-strong: #166534;
+  --warning: #f59e0b;
+  --warning-strong: #92400e;
+  --error: #ef4444;
+  --error-strong: #b91c1c;
+  --info: #3b82f6;
+  --info-strong: #1d4ed8;
+  --border: #e5e7ee;
+  --radius-small: 12px;
+  --radius-control: 14px;
+  --radius-card: 22px;
+  --radius-feature: 24px;
+  --radius-overlay: 28px;
+  --radius-pill: 9999px;
+  --shadow-card: 0 8px 28px rgba(65, 47, 17, 0.045);
+  --shadow-floating: 0 14px 40px rgba(43, 34, 20, 0.1);
+  --shadow-control: 0 2px 5px rgba(32, 38, 53, 0.035);
+  --focus-ring: 0 0 0 4px rgba(255, 197, 47, 0.22);
+  --brand-gradient: linear-gradient(180deg, #ffda71, #ffc52f);
+  --brand-soft-gradient: linear-gradient(135deg, #fff8e5, #ffe6a0);
+  --canvas-art: url('/images/warm-gold-waves.svg');
+  --canvas-background:
+    radial-gradient(ellipse 75% 420px at 100% 0%, #fff0cd 0%, transparent 74%),
+    radial-gradient(ellipse 75% 300px at 0% 100%, #fff1d1 0%, transparent 72%),
+    linear-gradient(180deg, #fffcf7, var(--canvas));
+  --font-body:
+    'Inter Variable', 'Noto Sans Thai Variable', system-ui, sans-serif;
+  --font-display: 48px;
+  --font-page: 36px;
+  --font-page-mobile: 28px;
+  --font-section: 24px;
+  --font-card: 18px;
+  --font-text: 16px;
+  --font-caption: 14px;
+  --font-label: 12px;
+  --space-0: 0px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+  --layout-content-max: 1232px;
+  --layout-gutter: var(--space-6);
+  --layout-shell-start: max(
+    var(--layout-gutter),
+    env(safe-area-inset-left, 0px)
+  );
+  --layout-shell-end: max(
+    var(--layout-gutter),
+    env(safe-area-inset-right, 0px)
+  );
+  --layout-public-inset: max(
+    var(--layout-gutter),
+    calc((100% - var(--layout-content-max) + var(--layout-gutter) * 2) / 4)
+  );
+  --layout-public-start: max(
+    var(--layout-public-inset),
+    env(safe-area-inset-left, 0px)
+  );
+  --layout-public-end: max(
+    var(--layout-public-inset),
+    env(safe-area-inset-right, 0px)
+  );
+  --layout-container-max: calc(
+    var(--layout-content-max) + var(--layout-gutter) * 2
+  );
+  --section-spacing: var(--space-20);
+  --card-gap: var(--space-6);
+  --card-padding: var(--space-6);
+  --group-gap: var(--space-6);
+  --field-gap: var(--space-4);
+  --label-gap: var(--space-2);
+  --heading-gap: var(--space-3);
+  --header-height: 66px;
+  --header-padding-block: var(--space-2);
+  --header-padding-inline: var(--layout-gutter);
+  --header-gap: var(--space-6);
+  --header-actions-gap: var(--space-3);
+  --brand-size: 36px;
+  --brand-icon-size: 24px;
+  --brand-font-size: 22px;
+}
+
+@media (max-width: 767px) {
+  :root {
+    --layout-gutter: var(--space-4);
+    --header-gap: var(--space-3);
+    --header-actions-gap: var(--space-2);
+    --brand-size: 32px;
+    --brand-icon-size: 22px;
+    --brand-font-size: 20px;
+  }
+}
+
+@theme inline {
+  --color-primary: var(--primary);
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-content: var(--text-primary);
+  --color-muted: var(--text-strong);
+  --font-sans: var(--font-body);
+  --radius-panel: var(--radius-card);
+}

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <rect width="200" height="200" rx="28" fill="#f1f5f9"/>
+  <circle cx="100" cy="108" r="70" fill="#ffffff" stroke="#e5e7eb" stroke-width="3"/>
+  <ellipse cx="100" cy="110" rx="52" ry="42" fill="#78350f"/>
+  <!-- wide noodles -->
+  <path d="M75 105 C90 90, 110 90, 125 102" stroke="#b45309" stroke-width="8" stroke-linecap="round" fill="none"/>
+  <path d="M80 120 C95 130, 115 125, 128 115" stroke="#d97706" stroke-width="7" stroke-linecap="round" fill="none"/>
+  <!-- kale / veggies -->
+  <path d="M88 96 Q100 88 108 94" stroke="#16a34a" stroke-width="6" stroke-linecap="round" fill="none"/>
+  <circle cx="118" cy="122" r="4" fill="#15803d"/>
+  <text x="100" y="32" font-family="system-ui, sans-serif" font-size="13" font-weight="800" fill="#334155" text-anchor="middle">ผัดซีอิ๊ว</text>
+</svg>

@@ -1,0 +1,775 @@
+import { useLanguage } from '../../app/language';
+import { Link, useSearchParams } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import {
+  ChevronDown,
+  Grid2X2,
+  Heart,
+  LayoutGrid,
+  List,
+  Minus,
+  Menu,
+  Package,
+  PackageOpen,
+  Plus,
+  Search,
+  ArrowRight,
+  ShoppingCart,
+  UtensilsCrossed,
+  SlidersHorizontal,
+  Store,
+  X,
+} from 'lucide-react';
+import { Button, Card, Loading, Tag } from '../../components/ui/primitives';
+import {
+  exactDecimal,
+  isKnownStockPolicy,
+  MAX_LINE_QUANTITY,
+  moneyText,
+} from '../../lib/pos-api';
+import {
+  centsText,
+  estimatedLine,
+  readTableToken,
+  storefrontRequest,
+  type ShopCatalogPage,
+  type ShopProduct,
+  type ShopSettings,
+} from '../../lib/storefront-api';
+import { useShopCart } from './shop-cart';
+import { useShopFavorites } from './shop-favorites';
+import { ShopError, ShopPagination } from './shop-feedback';
+import './catalog.css';
+
+const CATEGORY_TRANSLATIONS: Record<string, string> = {
+  ขนมขบเคี้ยว: 'Snacks',
+  ผลิตภัณฑ์นมและเนย: 'Dairy & Butter',
+  อาหารกึ่งสำเร็จรูป: 'Instant Food',
+  เครื่องดื่ม: 'Beverages',
+};
+
+const PRODUCT_TRANSLATIONS: Record<string, string> = {
+  'โค้ก ออริจินัล': 'Coca-Cola Original',
+  'มันฝรั่งแท้ทอดกรอบ เลย์ รสคลาสสิค': "Lay's Classic Potato Chips",
+  'บะหมี่กึ่งสำเร็จรูป มาม่า รสต้มยำกุ้ง': 'Mama Instant Noodles Tom Yum Kung',
+  'ชาเขียวพร้อมดื่ม อิชิตัน กรีนที รสต้นตำรับ': 'Ichitan Green Tea Original',
+  'นมเปรี้ยว ดัชมิลล์ 4อิน1 รสผลไม้รวม':
+    'Dutch Mill 4-in-1 Mixed Fruit Drinking Yogurt',
+  'เนสกาแฟ เบลนด์ แอนด์ บรู ริช อโรมา': 'Nescafe Blend & Brew Rich Aroma',
+  'โออิชิ กรีนที รสข้าวญี่ปุ่น เก็นไมฉะ': 'Oishi Green Tea Genmaicha',
+  'เป๊ปซี่ กลิ่นไลม์ มะนาว ลิมิเต็ด (เลิกจำหน่าย)':
+    'Pepsi Lime Limited Edition',
+  'เลย์ แม็กซ์ แผ่นหยัก กลิ่นพริกปีศาจ เอกซ์ตรีม (เลิกจำหน่าย)':
+    "Lay's Max Ghost Pepper Extreme",
+};
+
+function translateCategory(name: string | undefined, lang: string): string {
+  if (!name) return '';
+  if (lang !== 'en') return name;
+  return CATEGORY_TRANSLATIONS[name.trim()] ?? name;
+}
+
+function translateProduct(name: string | undefined, lang: string): string {
+  if (!name) return '';
+  if (lang !== 'en') return name;
+  return PRODUCT_TRANSLATIONS[name.trim()] ?? name;
+}
+const initialFilters = {
+  category: '',
+  sort: 'name',
+};
+function quantityText(value: bigint) {
+  const remainder = (value % 1000n)
+    .toString()
+    .padStart(3, '0')
+    .replace(/0+$/, '');
+  return `${value / 1000n}${remainder ? `.${remainder}` : ''}`;
+}
+
+export function ShopCatalog({ slug }: { slug: string }) {
+  const { t, language } = useLanguage();
+
+  const cart = useShopCart(slug);
+  const favorites = useShopFavorites(slug);
+  const [search, setSearch] = useState('');
+  const [submitted, setSubmitted] = useState('');
+  const [page, setPage] = useState(1);
+  const [filters, setFilters] = useState(initialFilters);
+  const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const [addResult, setAddResult] = useState<{
+    productName: string;
+    succeeded: boolean;
+    sequence: number;
+  } | null>(null);
+
+  const [searchParams] = useSearchParams();
+  const tableToken = readTableToken(searchParams.toString());
+
+  const cartTotal = cart.items.reduce(
+    (total, item) =>
+      total + (estimatedLine(item.unit_price, item.quantity) ?? 0n),
+    0n,
+  );
+  const cartItemCount = cart.items.reduce((total, item) => {
+    const qty = exactDecimal(item.quantity, 3) ?? 0n;
+    return total + Number(qty / 1000n || 1n);
+  }, 0);
+  const tableQuery = new URLSearchParams();
+  for (const token of searchParams.getAll('table')) {
+    tableQuery.append('table', token);
+  }
+  const cartPath = `/shop/${encodeURIComponent(slug)}/cart${
+    tableQuery.size ? `?${tableQuery.toString()}` : ''
+  }`;
+
+  useEffect(() => {
+    const onToggle = () => setSidebarCollapsed((v) => !v);
+    window.addEventListener('toggle-catalog-sidebar', onToggle);
+    return () => window.removeEventListener('toggle-catalog-sidebar', onToggle);
+  }, []);
+
+  const shop = useQuery({
+    queryKey: ['storefront', slug, 'settings'],
+    queryFn: ({ signal }) =>
+      storefrontRequest<ShopSettings>(`/${slug}`, { signal }),
+    retry: false,
+  });
+  const parameters = new URLSearchParams({
+    search: submitted,
+    page: String(page),
+  });
+  if (filters.category) parameters.set('category_id', filters.category);
+  if (filters.sort !== 'name' && filters.sort !== 'favorites')
+    parameters.set('sort', filters.sort);
+  const query = parameters.toString();
+  const products = useQuery({
+    queryKey: ['storefront', slug, 'products', query],
+    queryFn: ({ signal }) =>
+      storefrontRequest<ShopCatalogPage>(`/${slug}/products?${query}`, {
+        signal,
+      }),
+    enabled: !!shop.data,
+    retry: false,
+  });
+  const changeFilters = (change: Partial<typeof initialFilters>) => {
+    setFilters((previous) => ({ ...previous, ...change }));
+    setPage(1);
+  };
+  const clear = () => {
+    setFilters(initialFilters);
+    setSearch('');
+    setSubmitted('');
+    setPage(1);
+  };
+  const rawItems = products.data?.items ?? [];
+  const items = useMemo(() => {
+    if (filters.sort !== 'favorites') return rawItems;
+    return [...rawItems].sort((a, b) => {
+      const aFav = favorites.isFavorite(a.variant_id) ? 1 : 0;
+      const bFav = favorites.isFavorite(b.variant_id) ? 1 : 0;
+      return bFav - aFav;
+    });
+  }, [rawItems, filters.sort, favorites]);
+  if (shop.isPending) return <Loading>{t('storefront.loadingStore')}</Loading>;
+  if (shop.error || !shop.data)
+    return <ShopError error={shop.error} retry={() => void shop.refetch()} />;
+  const store = shop.data;
+  const categories = products.data?.categories ?? [];
+  const supportsFilters = products.data?.categories !== undefined;
+  const allCount = supportsFilters
+    ? categories.reduce((total, category) => total + category.count, 0)
+    : (products.data?.total ?? 0);
+  const filtered = !!(submitted || filters.category || filters.sort !== 'name');
+  return (
+    <div className="shop-catalog">
+      <div
+        role="status"
+        aria-label={t('storefront.addProductResult')}
+        aria-atomic="true"
+        className="catalog-visually-hidden"
+      >
+        {addResult && (
+          <span key={addResult.sequence}>
+            {addResult.succeeded
+              ? t('storefront.addedValue0ToCart', {
+                  value0: translateProduct(addResult.productName, language),
+                })
+              : t('storefront.unableToAddProductCheckQuantityAnd')}
+          </span>
+        )}
+      </div>
+      <header className="shop-page-heading shop-store-heading">
+        <div className="shop-store-identity">
+          <span className="shop-store-symbol">
+            <Store size={28} strokeWidth={1.6} aria-hidden="true" />
+          </span>
+          <div>
+            <h1>{store.name}</h1>
+            {store.description && <p>{store.description}</p>}
+          </div>
+        </div>
+        <Tag tone={store.accepting_orders ? 'success' : 'neutral'}>
+          <span className="shop-directory-status-dot" aria-hidden="true" />
+          {store.accepting_orders
+            ? t('storefront.acceptingOrders')
+            : t('storefront.notAcceptingOrders')}
+        </Tag>
+      </header>
+      <div
+        className={`catalog-layout ${sidebarCollapsed ? 'catalog-layout-sidebar-collapsed' : ''}`}
+      >
+        <aside
+          className={`catalog-sidebar ${sidebarCollapsed ? 'catalog-sidebar-collapsed' : ''}`}
+          id="catalog-sidebar"
+          aria-label={t('catalog.productCategory')}
+        >
+          <div className="catalog-sidebar-header">
+            <h2>
+              {language === 'th'
+                ? 'หมวดหมู่เมนู'
+                : t('catalog.productCategory')}
+            </h2>
+          </div>
+          <Button
+            className="button-secondary catalog-category-toggle"
+            aria-expanded={categoriesOpen}
+            aria-controls="catalog-category-list"
+            onClick={() => setCategoriesOpen(!categoriesOpen)}
+          >
+            <SlidersHorizontal size={18} aria-hidden="true" />{' '}
+            {t('catalog.categories')}{' '}
+            <ChevronDown size={16} aria-hidden="true" />
+          </Button>
+          <div
+            id="catalog-category-list"
+            className="catalog-category-list"
+            data-expanded={categoriesOpen}
+          >
+            <Button
+              className="catalog-category"
+              aria-label={t('storefront.allValue0', { value0: allCount })}
+              aria-pressed={!filters.category}
+              onClick={() => changeFilters({ category: '' })}
+            >
+              <LayoutGrid size={18} aria-hidden="true" />
+              <span>{t('common.all')}</span>
+              <span className="catalog-category-count">{allCount}</span>
+            </Button>
+            {categories.map((category) => (
+              <Button
+                key={category.id}
+                className="catalog-category"
+                aria-label={`${translateCategory(category.name, language)} ${category.count}`}
+                aria-pressed={filters.category === category.id}
+                onClick={() => {
+                  changeFilters({ category: category.id });
+                  setCategoriesOpen(false);
+                }}
+              >
+                <Package size={18} aria-hidden="true" />
+                <span>{translateCategory(category.name, language)}</span>
+                <span className="catalog-category-count">{category.count}</span>
+              </Button>
+            ))}
+          </div>
+        </aside>
+        <section
+          className="catalog-main"
+          aria-label={t('landing.yourProducts')}
+        >
+          {tableToken && (
+            <section
+              className="catalog-dinein-hero"
+              aria-label="สั่งอาหารที่โต๊ะ"
+            >
+              <div className="catalog-dinein-hero-card">
+                <div className="catalog-dinein-badge">
+                  <UtensilsCrossed size={16} aria-hidden="true" />
+                  <span>
+                    {language === 'th'
+                      ? 'สั่งอาหารที่โต๊ะ (Dine-in)'
+                      : 'Dine-in Order'}
+                  </span>
+                </div>
+                <h2 className="catalog-dinein-title">
+                  {language === 'th'
+                    ? 'ยินดีต้อนรับ สั่งอาหารภายในร้าน'
+                    : 'Welcome to Dine-in Ordering'}
+                </h2>
+                <p className="catalog-dinein-subtitle">
+                  {language === 'th'
+                    ? 'เลือกเมนูอาหาร ชำระเงินผ่าน QR Code และติดตามสถานะคิวรับอาหารที่โต๊ะ'
+                    : 'Select menu items, pay with QR code, and track your kitchen queue in real-time.'}
+                </p>
+                <div className="catalog-dinein-table-pill">
+                  <span>
+                    🛒{' '}
+                    {language === 'th' ? 'สั่งสำหรับโต๊ะอาหาร' : 'Dining Table'}
+                  </span>
+                </div>
+                <a href="#menu-catalog" className="catalog-dinein-cta">
+                  {language === 'th' ? 'ดูเมนูอาหาร ➔' : 'View Food Menu ➔'}
+                </a>
+              </div>
+            </section>
+          )}
+
+          <form
+            id="menu-catalog"
+            className="catalog-search"
+            onSubmit={(event) => {
+              event.preventDefault();
+              setSubmitted(search.trim());
+              setPage(1);
+            }}
+          >
+            <button
+              type="button"
+              className="storefront-menu-btn"
+              aria-label={
+                sidebarCollapsed
+                  ? language === 'th'
+                    ? 'เปิดเมนูหมวดหมู่'
+                    : 'Open category menu'
+                  : language === 'th'
+                    ? 'ปิดเมนูหมวดหมู่'
+                    : 'Close category menu'
+              }
+              aria-expanded={!sidebarCollapsed}
+              aria-controls="catalog-sidebar"
+              onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+            >
+              {sidebarCollapsed ? (
+                <Menu size={20} aria-hidden="true" />
+              ) : (
+                <X size={20} aria-hidden="true" />
+              )}
+            </button>
+            <label htmlFor="shop-search" className="catalog-search-field">
+              <Search size={19} aria-hidden="true" />
+              <span className="catalog-visually-hidden">
+                {t('common.searchProducts')}
+              </span>
+              <input
+                id="shop-search"
+                type="search"
+                value={search}
+                maxLength={100}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={
+                  language === 'th'
+                    ? 'ค้นหาเมนูอาหาร เช่น ผัดกะเพรา ราดหน้า ผัดซีอิ๊ว'
+                    : t('storefront.productNameVariantOrSku')
+                }
+              />
+            </label>
+            <Button type="submit" className="catalog-search-submit">
+              {t('customers.search')}
+            </Button>
+          </form>
+          <div
+            className="catalog-toolbar"
+            role="group"
+            aria-label={t('storefront.productFiltersAndDisplay')}
+          >
+            <div className="catalog-sort-wrapper">
+              <SlidersHorizontal size={15} aria-hidden="true" />
+              <select
+                aria-label={t('storefront.sortProducts')}
+                value={filters.sort}
+                disabled={!supportsFilters}
+                onChange={(event) =>
+                  changeFilters({ sort: event.target.value })
+                }
+              >
+                <option value="name">
+                  {language === 'th' ? 'เรียงตาม: ยอดนิยม' : 'Sort: Popular'}
+                </option>
+                <option value="favorites">
+                  {language === 'th'
+                    ? 'เรียงตาม: รายการโปรด'
+                    : 'Sort: Favorites'}
+                </option>
+                <option value="price_asc">
+                  {language === 'th'
+                    ? 'เรียงตาม: ราคา ต่ำ-สูง'
+                    : t('storefront.priceLowToHigh')}
+                </option>
+                <option value="price_desc">
+                  {language === 'th'
+                    ? 'เรียงตาม: ราคา สูง-ต่ำ'
+                    : t('storefront.priceHighToLow')}
+                </option>
+              </select>
+            </div>
+            {filtered && (
+              <Button className="catalog-clear" onClick={clear}>
+                {t('storefront.clearFilters')}
+              </Button>
+            )}
+            <div className="catalog-view-controls">
+              <div
+                className="catalog-view-toggle"
+                role="group"
+                aria-label={t('storefront.productDisplayMode')}
+              >
+                <Button
+                  aria-label={t('storefront.gridView')}
+                  aria-pressed={view === 'grid'}
+                  onClick={() => setView('grid')}
+                >
+                  <Grid2X2 size={18} aria-hidden="true" />
+                </Button>
+                <Button
+                  aria-label={t('storefront.listView')}
+                  aria-pressed={view === 'list'}
+                  onClick={() => setView('list')}
+                >
+                  <List size={19} aria-hidden="true" />
+                </Button>
+              </div>
+            </div>
+          </div>
+          {products.data && !supportsFilters && (
+            <p className="catalog-compatibility">
+              {t('storefront.categoryPriceAndSortingFiltersRequireA')}
+            </p>
+          )}
+          {products.isPending && (
+            <Loading>{t('storefront.loadingProducts')}</Loading>
+          )}
+          {products.error && (
+            <ShopError
+              error={products.error}
+              retry={() => void products.refetch()}
+            />
+          )}
+          {products.data?.total === 0 && (
+            <Card className="catalog-empty">
+              <PackageOpen size={40} aria-hidden="true" />
+              <h2>{t('pos.noProductsFound')}</h2>
+              <p>{t('storefront.tryAnotherSearchOrWaitForThe')}</p>
+              {filtered && (
+                <Button className="button-secondary" onClick={clear}>
+                  {t('storefront.showAllProducts')}
+                </Button>
+              )}
+            </Card>
+          )}
+          <div className={`catalog-products catalog-products-${view}`}>
+            {items.map((product) => (
+              <CatalogProductCard
+                key={`${product.variant_id}:${product.image_url ?? ''}`}
+                product={product}
+                cartQuantity={
+                  cart.items.find(
+                    (item) => item.variant_id === product.variant_id,
+                  )?.quantity ?? '0.000'
+                }
+                isFavorite={favorites.isFavorite(product.variant_id)}
+                onToggleFavorite={() => {
+                  favorites.toggle(product.variant_id);
+                }}
+                disabled={
+                  !store.accepting_orders ||
+                  (cart.items.length >= 100 &&
+                    !cart.items.some(
+                      (item) => item.variant_id === product.variant_id,
+                    ))
+                }
+                add={(quantity) => {
+                  const succeeded = cart.add(product, quantity);
+                  setAddResult((previous) => ({
+                    productName: product.product_name,
+                    succeeded,
+                    sequence: (previous?.sequence ?? 0) + 1,
+                  }));
+                }}
+              />
+            ))}
+          </div>
+          {cart.items.length > 0 && (
+            <aside
+              className="catalog-floating-cart-bar"
+              aria-label="สรุปตะกร้าสินค้า"
+            >
+              <div className="catalog-floating-cart-info">
+                <div className="catalog-floating-cart-icon-wrap">
+                  <ShoppingCart size={20} aria-hidden="true" />
+                  <span className="catalog-floating-cart-badge">
+                    {cartItemCount}
+                  </span>
+                </div>
+                <div className="catalog-floating-cart-text">
+                  <span className="catalog-floating-cart-label">
+                    {language === 'th' ? 'ยอดรวม' : 'Total'}
+                  </span>
+                  <strong className="catalog-floating-cart-price">
+                    ฿{moneyText(centsText(cartTotal))}
+                  </strong>
+                </div>
+              </div>
+              <Link to={cartPath} className="catalog-floating-cart-btn">
+                <span>
+                  {language === 'th'
+                    ? 'ดูรายการที่เลือก (' + cartItemCount + ')'
+                    : 'View Order (' + cartItemCount + ')'}
+                </span>
+                <ArrowRight size={18} aria-hidden="true" />
+              </Link>
+            </aside>
+          )}
+
+          {products.data && (
+            <ShopPagination
+              page={page}
+              pageSize={products.data.page_size}
+              total={products.data.total}
+              change={(next) => {
+                setPage(next);
+              }}
+            />
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function CatalogProductCard({
+  product,
+  cartQuantity,
+  isFavorite = false,
+  onToggleFavorite,
+  disabled,
+  add,
+}: {
+  product: ShopProduct;
+  cartQuantity: string;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
+  disabled: boolean;
+  add: (quantity: string) => void;
+}) {
+  const { t, language } = useLanguage();
+
+  const stock = exactDecimal(product.available ?? '', 3) ?? 0n;
+  const menuOnly = product.stock_policy === 'MENU_ONLY';
+  const cartUnits = exactDecimal(cartQuantity, 3) ?? 0n;
+  const remaining =
+    (menuOnly
+      ? MAX_LINE_QUANTITY
+      : stock < MAX_LINE_QUANTITY
+        ? stock
+        : MAX_LINE_QUANTITY) - cartUnits;
+  const whole = ['COUNT', 'PACKAGING'].includes(product.unit_type);
+  const step = whole ? 1000n : 1n;
+  const [quantity, setQuantity] = useState(() =>
+    !whole && remaining > 0n && remaining < 1000n
+      ? quantityText(remaining)
+      : '1',
+  );
+  const [imageFailed, setImageFailed] = useState(false);
+  const units = exactDecimal(quantity, 3);
+  const valid =
+    units !== null &&
+    units > 0n &&
+    units <= remaining &&
+    (!whole || units % 1000n === 0n);
+  const ready =
+    product.saleable &&
+    isKnownStockPolicy(product.stock_policy) &&
+    (menuOnly || stock >= step);
+  const inputID = `quantity-${product.variant_id}`;
+  const errorID = `${inputID}-error`;
+  return (
+    <article
+      className="catalog-product"
+      aria-labelledby={`product-${product.variant_id}`}
+    >
+      <div className="catalog-product-media">
+        {product.image_url && !imageFailed ? (
+          <img
+            src={product.image_url}
+            alt={product.product_name}
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            onError={() => setImageFailed(true)}
+          />
+        ) : (
+          <div className="catalog-product-placeholder">
+            <PackageOpen size={48} strokeWidth={1.2} aria-hidden="true" />
+            <span>{t('catalog.noProductImageYet')}</span>
+          </div>
+        )}
+        <button
+          type="button"
+          className={`catalog-product-favorite ${isFavorite ? 'catalog-product-favorite-active' : ''}`}
+          aria-pressed={isFavorite}
+          aria-label={
+            isFavorite
+              ? language === 'th'
+                ? 'นำออกจากรายการโปรด'
+                : 'Remove from favorites'
+              : language === 'th'
+                ? 'บันทึกในรายการโปรด'
+                : 'Add to favorites'
+          }
+          title={
+            isFavorite
+              ? language === 'th'
+                ? 'นำออกจากรายการโปรด'
+                : 'Remove from favorites'
+              : language === 'th'
+                ? 'บันทึกในรายการโปรด'
+                : 'Add to favorites'
+          }
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onToggleFavorite?.();
+          }}
+        >
+          <Heart
+            size={16}
+            strokeWidth={1.8}
+            stroke={isFavorite ? '#ef4444' : 'currentColor'}
+            fill={isFavorite ? '#ef4444' : 'none'}
+            className={isFavorite ? 'heart-filled' : ''}
+            aria-hidden="true"
+          />
+        </button>
+      </div>
+      <div className="catalog-product-body">
+        <div className="catalog-product-info">
+          <span className="catalog-product-category">
+            {translateCategory(product.category_name, language) ||
+              t('common.products')}
+          </span>
+          <h2 id={`product-${product.variant_id}`}>
+            {translateProduct(product.product_name, language)}
+          </h2>
+          <p className="catalog-variant">{product.variant_name}</p>
+          {product.is_sold_out && (
+            <Tag tone="amber">{t('storefront.soldOut')}</Tag>
+          )}
+          {(exactDecimal(cartQuantity, 3) ?? 0n) > 0n && (
+            <span className="catalog-product-in-cart-tag">
+              {language === 'th'
+                ? 'ในตะกร้า ' +
+                  quantityText(exactDecimal(cartQuantity, 3) ?? 0n) +
+                  ' ' +
+                  product.unit
+                : 'In cart: ' +
+                  quantityText(exactDecimal(cartQuantity, 3) ?? 0n)}
+            </span>
+          )}
+        </div>
+        <div className="catalog-product-meta-actions">
+          <div className="catalog-product-price-stock">
+            <strong className="catalog-product-price">
+              ฿{moneyText(product.unit_price)}
+            </strong>
+            <p className="catalog-product-stock" data-ready={ready}>
+              <span className="catalog-stock-dot" aria-hidden="true" />
+              <span className="catalog-stock-text">
+                {product.is_sold_out
+                  ? t('storefront.soldOut')
+                  : ready
+                    ? language === 'th'
+                      ? 'พร้อมจำหน่าย'
+                      : menuOnly
+                        ? 'Available'
+                        : 'In stock'
+                    : t('storefront.productUnavailableForSale')}
+              </span>
+              <span className="catalog-visually-hidden">
+                {ready && !menuOnly
+                  ? t('storefront.availableValue0Value1', {
+                      value0: quantityText(stock),
+                      value1: product.unit,
+                    })
+                  : !ready
+                    ? t('storefront.productUnavailableForSale')
+                    : null}
+              </span>
+            </p>
+          </div>
+          <div className="catalog-product-actions">
+            <div className="catalog-quantity">
+              <Button
+                aria-label={t('storefront.decreaseQuantityForValue0', {
+                  value0: product.product_name,
+                })}
+                disabled={disabled || !ready || units === null || units <= step}
+                onClick={() => {
+                  if (units !== null) setQuantity(quantityText(units - step));
+                }}
+              >
+                <Minus size={15} aria-hidden="true" />
+              </Button>
+              <label className="catalog-visually-hidden" htmlFor={inputID}>
+                {t('pos.quantity')} {product.product_name}
+              </label>
+              <input
+                id={inputID}
+                type="number"
+                inputMode={whole ? 'numeric' : 'decimal'}
+                min={quantityText(step)}
+                max={quantityText(remaining > 0n ? remaining : 0n)}
+                step={quantityText(step)}
+                value={quantity}
+                disabled={disabled || !ready || remaining < step}
+                aria-invalid={!valid && ready && remaining >= step}
+                aria-describedby={
+                  !valid && ready && remaining >= step ? errorID : undefined
+                }
+                onChange={(event) => setQuantity(event.target.value)}
+              />
+              <Button
+                aria-label={t('storefront.increaseQuantityForValue02', {
+                  value0: product.product_name,
+                })}
+                disabled={
+                  disabled ||
+                  !ready ||
+                  units === null ||
+                  units + step > remaining
+                }
+                onClick={() => {
+                  if (units !== null) setQuantity(quantityText(units + step));
+                }}
+              >
+                <Plus size={15} aria-hidden="true" />
+              </Button>
+            </div>
+            <Button
+              className="catalog-add"
+              disabled={disabled || !ready || !valid}
+              onClick={() => add(quantity)}
+            >
+              <ShoppingCart size={16} aria-hidden="true" />
+              {t('storefront.addToCart')}
+            </Button>
+          </div>
+        </div>
+        {!valid && ready && remaining >= step && (
+          <small id={errorID} className="catalog-quantity-error">
+            {t('storefront.enterQuantity')}
+            {whole ? t('storefront.whole') : ''}
+            {t('storefront.greaterThan0AndNoMoreThan')}{' '}
+            {quantityText(remaining)} {product.unit}
+          </small>
+        )}
+        {ready && remaining < step && !menuOnly && (
+          <small className="catalog-cart-limit">
+            {t('storefront.allAvailableQuantityIsAlreadyInYour')}
+          </small>
+        )}
+      </div>
+    </article>
+  );
+}

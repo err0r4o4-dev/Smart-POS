@@ -1,0 +1,99 @@
+.topbar:has(.help-dropdown-panel) {
+  position: relative;
+  z-index: 60;
+}
+
+.help-dropdown {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.topbar-right .help-dropdown .topbar-help {
+  display: inline-flex;
+}
+
+.help-dropdown .topbar-help[aria-expanded='true'] {
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+}
+
+.help-dropdown-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 60;
+  width: min(360px, calc(100vw - 32px));
+  max-height: min(480px, calc(100dvh - var(--header-height) - 32px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  box-shadow: var(--shadow-floating);
+  color: var(--text-primary);
+  text-align: start;
+}
+
+.help-dropdown-panel h2 {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-text);
+}
+
+.help-dropdown-topic + .help-dropdown-topic {
+  border-top: 1px solid var(--border);
+}
+
+.help-dropdown-topic-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-small);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: var(--font-caption);
+  font-weight: 600;
+  text-align: start;
+  cursor: pointer;
+}
+
+.help-dropdown-topic-trigger svg {
+  flex-shrink: 0;
+}
+
+.help-dropdown-topic-trigger[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+
+.help-dropdown-topic-trigger:hover {
+  background: var(--primary-subtle);
+}
+
+.help-dropdown button:focus-visible {
+  outline: 2px solid var(--primary-strong);
+  outline-offset: 2px;
+}
+
+.help-dropdown-topic p {
+  margin: 0;
+  padding: var(--space-2) var(--space-2) var(--space-4);
+  color: var(--text-secondary);
+  font-size: var(--font-caption);
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .help-dropdown-panel {
+    position: fixed;
+    top: calc(var(--header-height) + 8px);
+    right: 16px;
+  }
+}

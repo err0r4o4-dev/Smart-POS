@@ -1,0 +1,252 @@
+import { defineMessages } from './defineMessages';
+export const auth = defineMessages({
+  th: {
+    securityStoryTitle: 'ปกป้องบัญชีของคุณ',
+    securityStorySummary:
+      'เพิ่มการยืนยันตัวตน และเก็บรหัสกู้คืนไว้ในที่ปลอดภัย',
+    verificationTitle: 'ยืนยันอีเมล',
+    verificationRequired:
+      'เปิดอีเมลที่ได้รับ แล้วกดลิงก์เพื่อยืนยันอีเมลก่อนตั้งค่าหรือจัดการร้าน ลิงก์มีอายุ 24 ชั่วโมง',
+    verificationSuccess:
+      'ยืนยันอีเมลแล้ว กรุณาเข้าสู่ระบบหากยังไม่ได้เข้าสู่ระบบ',
+    verificationContinue: 'ดำเนินการต่อ',
+    verificationCheck: 'ยืนยันอีเมลแล้ว ตรวจสอบอีกครั้ง',
+    verificationRecovery: 'สมัครแล้วแต่ยังไม่ได้ยืนยันอีเมล? ส่งอีเมลอีกครั้ง',
+    verificationDeliveryFailed:
+      'สร้างบัญชีแล้ว แต่ส่งอีเมลยืนยันไม่สำเร็จ กรุณากดส่งอีเมลอีกครั้ง ไม่ต้องสมัครใหม่',
+    registerStoryTitle: 'เริ่มต้นร้านของคุณ',
+    registerStorySummary:
+      'สร้างบัญชี ยืนยันอีเมล แล้วค่อยตั้งค่าร้านในขั้นตอนถัดไป',
+    verifyStoryTitle: 'อีกขั้นเดียวก่อนเริ่มต้น',
+    verifyStorySummary:
+      'ยืนยันอีเมลเพื่อให้บัญชีของคุณพร้อมสำหรับการตั้งค่าร้าน',
+    recoverStoryTitle: 'กลับมาดูแลร้านได้อีกครั้ง',
+    recoverStorySummary:
+      'ขอลิงก์ทางอีเมลเพื่อตั้งรหัสผ่านใหม่ แล้วกลับมาใช้งานบัญชีของคุณ',
+    resetStoryTitle: 'เริ่มใหม่ด้วยบัญชีเดิม',
+    resetStorySummary:
+      'ตั้งรหัสผ่านใหม่เพื่อกลับเข้าใช้งาน ข้อมูลร้านและสิทธิ์ของคุณยังอยู่เหมือนเดิม',
+    or: 'หรือ',
+    googleSignIn: 'เข้าสู่ระบบด้วย Google',
+    googleSignUp: 'สมัครด้วย Google',
+    googleChecking: 'กำลังตรวจสอบ Google Login…',
+    googleUnavailable:
+      'Google Login ยังไม่พร้อมใช้งาน กรุณาใช้อีเมลและรหัสผ่าน',
+    googleCheckFailed: 'ตรวจสอบ Google Login ไม่สำเร็จ',
+    googleRetry: 'ลองตรวจสอบอีกครั้ง',
+    googleCancelled: 'ยกเลิกการเข้าสู่ระบบด้วย Google แล้ว คุณสามารถลองใหม่ได้',
+    googleFailed:
+      'เข้าสู่ระบบด้วย Google ไม่สำเร็จ กรุณาลองใหม่หรือใช้อีเมลและรหัสผ่าน',
+    googleLinkRequired:
+      'ยืนยันอีเมลและรหัสผ่านของบัญชีเดิมเพื่อเชื่อมกับ Google ที่คุณเพิ่งเลือก',
+    googleLinkAction: 'ยืนยันบัญชีและเชื่อม Google',
+    checkInbox: 'ตรวจสอบกล่องจดหมายและโฟลเดอร์สแปม แล้วเปิดลิงก์ยืนยันอีเมล',
+    requestAnotherReset: 'ขอลิงก์ตั้งรหัสผ่านใหม่',
+    storeSimplified: 'จัดการร้าน',
+    storeSimplifiedAccent: 'ให้ง่ายขึ้น',
+    restaurantPos: 'แพลตฟอร์มจัดการร้านอาหารครบวงจร',
+    navHome: 'หน้าแรก',
+    navFeatures: 'ฟีเจอร์',
+    navStores: 'สำหรับร้านค้า',
+    navGuide: 'คู่มือการใช้งาน',
+    navContact: 'ติดต่อเรา',
+    featureMenu: 'จัดการเมนู',
+    featureOrders: 'จัดการคำสั่งซื้อ',
+    featureKitchen: 'จัดการคิวในครัว',
+    featureReports: 'รายงานยอดขาย',
+    featureBranches: 'จัดการหลายสาขา',
+    noAccountYet: 'ยังไม่มีบัญชีร้านค้า?',
+    storeSummary:
+      'ระบบ POS สำหรับร้านอาหาร และแพลตฟอร์มรวมร้านในชุมชน สั่งง่าย จัดการง่าย เติบโตได้มากกว่า',
+    storeIllustration:
+      'เครื่องขายหน้าร้าน เครื่องพิมพ์ใบเสร็จ และต้นไม้บนเคาน์เตอร์ร้านค้า',
+    password: 'รหัสผ่าน',
+    hidePassword: 'ซ่อนรหัสผ่าน',
+    showPassword: 'แสดงรหัสผ่าน',
+    hide: 'ซ่อน',
+    show: 'แสดง',
+    signInUnavailable: 'ไม่สามารถเข้าสู่ระบบได้',
+    ownerOnlyAccess:
+      'พื้นที่จัดการร้านสำหรับเจ้าของร้านเท่านั้น หากต้องการความช่วยเหลือ โปรดติดต่อผู้ดูแลระบบ',
+    noOwnedStore: 'คุณยังไม่มีร้านที่เป็นเจ้าของ สามารถตั้งค่าร้านใหม่ได้',
+    signInForStoreOwnersManagersAnd: 'เข้าสู่ระบบสำหรับเจ้าของร้าน',
+    accountCreatedSignInToContinue:
+      'สร้างบัญชีแล้ว เข้าสู่ระบบเพื่อดำเนินการต่อ',
+    emailAddress: 'ที่อยู่อีเมล',
+    signingIn: 'กำลังเข้าสู่ระบบ…',
+    signIn: 'เข้าสู่ระบบ',
+    forgotPassword: 'ลืมรหัสผ่าน?',
+    createAccount: 'สร้างบัญชี',
+    passwordsDoNotMatch: 'รหัสผ่านไม่ตรงกัน',
+    registrationUnavailable: 'ไม่สามารถสมัครบัญชีได้',
+    registerInstructions:
+      'กรอกข้อมูลเพื่อสร้างบัญชี แล้วจึงยืนยันอีเมลเพื่อตั้งค่าร้าน',
+    organizationSetupFollowsInAFuturePhase:
+      'การตั้งค่าองค์กรจะตามมาในเฟสถัดไป ยังไม่ได้รับสิทธิ์เข้าร้าน',
+    displayName: 'ชื่อที่แสดง',
+    useAtLeast12CharactersMaximum128:
+      'ใช้อย่างน้อย 12 ตัวอักษร สูงสุด 128 ไบต์',
+    confirmPassword: 'ยืนยันรหัสผ่าน',
+    creatingAccount: 'กำลังสร้างบัญชี…',
+    alreadyHaveAnAccountSignIn: 'มีบัญชีแล้ว? เข้าสู่ระบบ',
+    resetRequestUnavailable: 'ขอลิงก์ตั้งรหัสผ่านใหม่ไม่สำเร็จ โปรดลองอีกครั้ง',
+    forgotPasswordTitle: 'ลืมรหัสผ่าน',
+    forgotPasswordInstructions:
+      'กรอกอีเมลที่ใช้สมัครบัญชีเพื่อขอลิงก์ตั้งรหัสผ่านใหม่',
+    sending: 'กำลังส่ง…',
+    requestResetLink: 'ขอลิงก์ตั้งรหัสผ่านใหม่',
+    backToSignIn: 'กลับไปเข้าสู่ระบบ',
+    passwordResetUnavailable: 'ตั้งรหัสผ่านใหม่ไม่สำเร็จ',
+    chooseANewPassword: 'ตั้งรหัสผ่านใหม่',
+    resetPasswordInstructions: 'กรอกรหัสผ่านใหม่ แล้วกรอกอีกครั้งเพื่อยืนยัน',
+    passwordChangedExistingSessionsWereRevoked:
+      'ตั้งรหัสผ่านใหม่แล้ว ระบบออกจากบัญชีบนอุปกรณ์ที่เข้าสู่ระบบไว้',
+    signInAgain: 'เข้าสู่ระบบอีกครั้ง',
+    thisResetLinkIsMissingAToken: 'ลิงก์นี้ใช้ไม่ได้ โปรดขอลิงก์ใหม่',
+    resetting: 'กำลังบันทึกรหัสผ่านใหม่…',
+    changePassword: 'บันทึกรหัสผ่านใหม่',
+    logoutUnavailable: 'ไม่สามารถออกจากระบบได้',
+    yourAccount: 'บัญชีของคุณ',
+    profile: 'โปรไฟล์',
+    settings: 'การตั้งค่า',
+    email: 'อีเมล',
+    status: 'สถานะ',
+    openYourRoleBasedWorkspace: 'เข้าสู่พื้นที่จัดการร้าน',
+    selectOrganizationSetUpStoreAcceptInvitation:
+      'เลือกองค์กร / ตั้งค่าร้าน / รับคำเชิญ',
+    manageOrganizationAndBranches: 'จัดการองค์กรและสาขา',
+    signingOut: 'กำลังออกจากระบบ…',
+    signOut: 'ออกจากระบบ',
+    accountAccess: 'บัญชีทีมร้าน',
+    createAccount2: 'สร้างบัญชี',
+    accountRecovery: 'กู้คืนบัญชี',
+    secureReset: 'ตั้งรหัสผ่านอย่างปลอดภัย',
+    account: 'บัญชี',
+  },
+  en: {
+    securityStoryTitle: 'Protect your account',
+    securityStorySummary:
+      'Add a second sign-in step and keep recovery codes somewhere safe.',
+    verificationTitle: 'Verify your email',
+    verificationRequired:
+      'Verify your email before setting up or managing your store. The link expires in 24 hours.',
+    verificationSuccess:
+      'Email verified. Sign in if you are not already signed in.',
+    verificationContinue: 'Continue',
+    verificationCheck: "I've verified my email. Check again",
+    verificationRecovery: 'Already registered? Resend verification email',
+    verificationDeliveryFailed:
+      'Your account was created, but we could not send the verification email. Request another email; do not register again.',
+    registerStoryTitle: 'A fresh start for your store.',
+    registerStorySummary:
+      'Create your account, verify your email, then set up your store when you are ready.',
+    verifyStoryTitle: 'One step closer to your store.',
+    verifyStorySummary:
+      'Verify your email to get your account ready for store setup.',
+    recoverStoryTitle: 'Find your way back.',
+    recoverStorySummary:
+      'Request an email link, choose a new password, and return to your account.',
+    resetStoryTitle: 'A fresh password. Your same store.',
+    resetStorySummary:
+      'Choose a new password to return. Your store data and permissions stay unchanged.',
+    or: 'or',
+    googleSignIn: 'Sign in with Google',
+    googleSignUp: 'Sign up with Google',
+    googleChecking: 'Checking Google sign-in…',
+    googleUnavailable:
+      'Google sign-in is not available. Use your email and password.',
+    googleCheckFailed: 'Could not check Google sign-in availability.',
+    googleRetry: 'Check again',
+    googleCancelled: 'Google sign-in was cancelled. You can try again.',
+    googleFailed:
+      'Google sign-in failed. Try again or use your email and password.',
+    googleLinkRequired:
+      'Confirm your existing account email and password to link the Google account you just selected.',
+    googleLinkAction: 'Confirm account and link Google',
+    checkInbox:
+      'Check your inbox and spam folder, then open the email verification link.',
+    requestAnotherReset: 'Request a new reset link',
+    storeSimplified: 'Run your store,',
+    storeSimplifiedAccent: ' simply.',
+    restaurantPos: 'All-in-one restaurant platform',
+    navHome: 'Home',
+    navFeatures: 'Features',
+    navStores: 'For stores',
+    navGuide: 'User guide',
+    navContact: 'Contact',
+    featureMenu: 'Menu management',
+    featureOrders: 'Order management',
+    featureKitchen: 'Kitchen queue',
+    featureReports: 'Sales reports',
+    featureBranches: 'Branch management',
+    noAccountYet: 'New to VELOPOS?',
+    storeSummary:
+      'Everything for your store, from products and inventory to sales and reporting.',
+    storeIllustration:
+      'Point-of-sale terminal, receipt printer and plant on a shop counter',
+    password: 'Password',
+    hidePassword: 'Hide password',
+    showPassword: 'Show password',
+    hide: 'Hide',
+    show: 'Show',
+    signInUnavailable: 'Sign in unavailable',
+    ownerOnlyAccess:
+      'Store management is available to owners only. Contact your administrator for help.',
+    noOwnedStore: 'You do not have an owned store. You can set up a new store.',
+    signInForStoreOwnersManagersAnd: 'Sign in for store owners.',
+    accountCreatedSignInToContinue: 'Account created. Sign in to continue.',
+    emailAddress: 'Email address',
+    signingIn: 'Signing in…',
+    signIn: 'Sign in',
+    forgotPassword: 'Forgot password?',
+    createAccount: 'Create account',
+    passwordsDoNotMatch: 'Passwords do not match',
+    registrationUnavailable: 'Registration unavailable',
+    registerInstructions:
+      'Enter your details to create an account, then verify your email to set up your store.',
+    organizationSetupFollowsInAFuturePhase:
+      'Organization setup follows in a future phase. No store access is granted yet.',
+    displayName: 'Display name',
+    useAtLeast12CharactersMaximum128:
+      'Use at least 12 characters; maximum 128 bytes.',
+    confirmPassword: 'Confirm password',
+    creatingAccount: 'Creating account…',
+    alreadyHaveAnAccountSignIn: 'Already have an account? Sign in',
+    resetRequestUnavailable:
+      'We couldn’t request a reset link. Please try again.',
+    forgotPasswordTitle: 'Forgot password',
+    forgotPasswordInstructions:
+      'Enter the email address you used to create your account.',
+    sending: 'Sending…',
+    requestResetLink: 'Request reset link',
+    backToSignIn: 'Back to sign in',
+    passwordResetUnavailable: 'Password reset unavailable',
+    chooseANewPassword: 'Choose a new password.',
+    resetPasswordInstructions:
+      'Enter your new password, then enter it again to confirm.',
+    passwordChangedExistingSessionsWereRevoked:
+      'Password changed. Existing sessions were revoked.',
+    signInAgain: 'Sign in again',
+    thisResetLinkIsMissingAToken:
+      'This link cannot be used. Request a new reset link.',
+    resetting: 'Saving your new password…',
+    changePassword: 'Save new password',
+    logoutUnavailable: 'Logout unavailable',
+    yourAccount: 'Your account',
+    profile: 'Profile',
+    settings: 'Settings',
+    email: 'Email',
+    status: 'Status',
+    openYourRoleBasedWorkspace: 'Open store management',
+    selectOrganizationSetUpStoreAcceptInvitation:
+      'Select organization / Set up store / Accept invitation',
+    manageOrganizationAndBranches: 'Manage organization and branches',
+    signingOut: 'Signing out…',
+    signOut: 'Sign out',
+    accountAccess: 'ACCOUNT ACCESS',
+    createAccount2: 'CREATE ACCOUNT',
+    accountRecovery: 'ACCOUNT RECOVERY',
+    secureReset: 'SECURE RESET',
+    account: 'ACCOUNT',
+  },
+});

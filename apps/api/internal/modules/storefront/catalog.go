@@ -1,0 +1,322 @@
+package storefront
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"github.com/jackc/pgx/v5"
+	"smartpos/api/internal/modules/catalog"
+	"smartpos/api/internal/modules/organization"
+	"smartpos/api/internal/modules/pos"
+	"smartpos/api/internal/modules/pricing"
+	"strings"
+)
+
+func product(ctx context.Context, tx pgx.Tx, org string, shop Settings, id string) (Product, error) {
+	return productForOrder(ctx, tx, org, shop, id, "")
+}
+func productForOrder(ctx context.Context, tx pgx.Tx, org string, shop Settings, id, order string) (Product, error) {
+	value, err := catalog.ReadSaleVariant(ctx, tx, org, id)
+	if err != nil {
+		if errors.Is(err, catalog.ErrNotFound) {
+			return Product{}, ErrNotFound
+		}
+		return Product{}, err
+	}
+	result := Product{VariantID: id, ProductName: value.ProductName, VariantName: value.VariantName, SKU: value.SKU, Unit: value.Unit, UnitType: value.UnitType, StockPolicy: "MENU_ONLY"}
+	if order != "" {
+		if err = tx.QueryRow(ctx, "SELECT stock_policy FROM online_orders WHERE organization_id=$1 AND id=$2", org, order).Scan(&result.StockPolicy); err != nil {
+			return result, dbError(err)
+		}
+	}
+	result.UnitPrice, _, _, err = pricing.EffectivePrice(ctx, tx, org, shop.BranchID, id, value.UnitPrice)
+	if err != nil {
+		return result, err
+	}
+	_, priceError := pos.EstimateOnlineLine(result.UnitPrice, "1.000", result.UnitType)
+	result.Saleable = value.ProductStatus == "ACTIVE" && value.VariantStatus == "ACTIVE" && value.UnitStatus == "ACTIVE" && value.Currency == "THB" && priceError == nil
+	var recalled bool
+	if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM quality_recalls WHERE organization_id=$1 AND variant_id=$2 AND batch_id IS NULL)", org, id).Scan(&recalled); err != nil {
+		return result, dbError(err)
+	}
+	result.Saleable = result.Saleable && !recalled
+	err = tx.QueryRow(ctx, `SELECT COALESCE((SELECT published FROM storefront_products WHERE organization_id=$1 AND variant_id=$2),false), COALESCE((SELECT is_sold_out FROM storefront_products WHERE organization_id=$1 AND variant_id=$2),false)`, org, id).Scan(&result.Published, &result.IsSoldOut)
+	if err != nil {
+		return result, dbError(err)
+	}
+	result.Saleable = result.Saleable && !result.IsSoldOut
+	if result.StockPolicy == "MENU_ONLY" {
+		return result, nil
+	}
+	if result.StockPolicy != "TRACKED" {
+		return result, ErrConflict
+	}
+	available := "0.000"
+	result.Available = &available
+	if err = tx.QueryRow(ctx, `SELECT greatest(0.000,storefront_sellable_quantity($1,$3,$2)-storefront_reserved_quantity_for_order($1,$3,$2,nullif($4,'')::uuid))::text`, org, id, shop.LocationID, order).Scan(result.Available); err != nil {
+		return result, dbError(err)
+	}
+	if recipeAvailable, hasRecipe, recipeSaleable, problem := pos.RecipeAvailabilityForOrder(ctx, tx, org, shop.BranchID, shop.LocationID, order, id, "1.000"); problem != nil {
+		return result, problem
+	} else if hasRecipe {
+		*result.Available = recipeAvailable
+		result.Saleable = result.Saleable && recipeSaleable
+	}
+	return result, nil
+}
+func products(ctx context.Context, tx pgx.Tx, org string, shop Settings, search string, page int, public bool) (Page[Product], error) {
+	result := Page[Product]{Items: []Product{}, Page: page, PageSize: 24}
+	if !text(search, 100, false) || page < 1 || page > 10000 {
+		return result, ErrInput
+	}
+	where := ` FROM product_variants variant JOIN products product ON product.organization_id=variant.organization_id AND product.id=variant.product_id WHERE variant.organization_id=$1 AND ($2='' OR product.name ILIKE '%'||$2||'%' OR variant.name ILIKE '%'||$2||'%' OR variant.sku ILIKE '%'||$2||'%')`
+	if public {
+		where += ` AND product.status='ACTIVE' AND variant.status='ACTIVE' AND EXISTS(SELECT 1 FROM storefront_products listing WHERE listing.organization_id=variant.organization_id AND listing.variant_id=variant.id AND listing.published)`
+	}
+	if err := tx.QueryRow(ctx, "SELECT count(*)"+where, org, search).Scan(&result.Total); err != nil {
+		return result, err
+	}
+	rows, err := tx.Query(ctx, "SELECT variant.id::text"+where+" ORDER BY product.name,variant.sku,variant.id LIMIT 24 OFFSET $3", org, search, (page-1)*24)
+	if err != nil {
+		return result, err
+	}
+	ids := []string{}
+	for rows.Next() {
+		var id string
+		if err = rows.Scan(&id); err != nil {
+			rows.Close()
+			return result, err
+		}
+		ids = append(ids, id)
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return result, err
+	}
+	for _, id := range ids {
+		value, err := product(ctx, tx, org, shop, id)
+		if err != nil {
+			return result, err
+		}
+		result.Items = append(result.Items, value)
+	}
+	return result, nil
+}
+func (service *Service) Products(ctx context.Context, user, org, slug, search string, page int) (Page[Product], error) {
+	var tx pgx.Tx
+	var authorization *organization.Authorization
+	var err error
+	public := slug != ""
+	if public {
+		tx, org, err = service.public(ctx, slug, false)
+	} else {
+		authorization, err = service.Organization.AuthorizeMFA(ctx, user, org, "storefront.manage")
+		if err == nil {
+			tx = authorization.Tx
+		}
+	}
+	if err != nil {
+		return Page[Product]{}, dbError(err)
+	}
+	defer tx.Rollback(ctx)
+	shop, err := settings(ctx, tx, org)
+	if err != nil {
+		return Page[Product]{}, err
+	}
+	if public && !shop.Published {
+		return Page[Product]{}, ErrNotFound
+	}
+	if !public {
+		if err = authorization.Recheck(ctx); err != nil {
+			return Page[Product]{}, err
+		}
+	}
+	var result Page[Product]
+	if shop.TerminalID == "" {
+		if public {
+			return Page[Product]{}, ErrNotFound
+		}
+		var source string
+		if err = tx.QueryRow(ctx, "SELECT source_kind FROM storefronts WHERE organization_id=$1", org).Scan(&source); err != nil {
+			return Page[Product]{}, dbError(err)
+		}
+		if source != "RESTAURANT" {
+			return Page[Product]{}, ErrConflict
+		}
+		if err = authorization.Recheck(ctx); err != nil {
+			return Page[Product]{}, err
+		}
+		result, err = organizationProducts(ctx, tx, org, strings.TrimSpace(search), page)
+	} else {
+		if !public && !branchAllowed(authorization.Actor, shop.BranchID) {
+			return Page[Product]{}, organization.ErrDenied
+		}
+		result, err = products(ctx, tx, org, shop, strings.TrimSpace(search), page, public)
+	}
+	if public {
+		return result, err
+	}
+	if err != nil {
+		return Page[Product]{}, err
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Page[Product]{}, err
+	}
+	return result, nil
+}
+func (service *Service) Publish(ctx context.Context, user, org, id string, input PublishInput) (Product, error) {
+	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "storefront.manage")
+	if err != nil {
+		return Product{}, dbError(err)
+	}
+	tx, actor := authorization.Tx, authorization.Actor
+	defer tx.Rollback(ctx)
+	if !uuidPattern.MatchString(id) {
+		return Product{}, ErrInput
+	}
+	shop, err := settings(ctx, tx, org)
+	if err != nil {
+		return Product{}, err
+	}
+	if !branchAllowed(actor, shop.BranchID) {
+		return Product{}, organization.ErrDenied
+	}
+	if shop.TerminalID == "" {
+		return Product{}, ErrConflict
+	}
+	if shop.Revision != input.Revision {
+		return Product{}, ErrConflict
+	}
+	value, err := product(ctx, tx, org, shop, id)
+	if err != nil {
+		return Product{}, err
+	}
+	if input.Published && !value.Saleable {
+		return Product{}, ErrConflict
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Product{}, err
+	}
+	if _, err = tx.Exec(ctx, `INSERT INTO storefront_products(organization_id,variant_id,published,is_sold_out) VALUES($1,$2,$3,$4) ON CONFLICT(organization_id,variant_id) DO UPDATE SET published=excluded.published,is_sold_out=excluded.is_sold_out`, org, id, input.Published, input.IsSoldOut); err != nil {
+		return Product{}, dbError(err)
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Product{}, err
+	}
+	if _, err = tx.Exec(ctx, "UPDATE storefronts SET revision=revision+1,updated_at=now() WHERE organization_id=$1", org); err != nil {
+		return Product{}, err
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Product{}, err
+	}
+	if err = organization.RecordAudit(ctx, tx, org, user, "storefront.product.updated", id); err != nil {
+		return Product{}, err
+	}
+	if err = authorization.Recheck(ctx); err != nil {
+		return Product{}, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return Product{}, dbError(err)
+	}
+	value.Published = input.Published
+	value.IsSoldOut = input.IsSoldOut
+	return value, nil
+}
+func quote(ctx context.Context, tx pgx.Tx, org string, shop Settings, items []ItemInput, modes ...string) (Quote, error) {
+	mode := "PICKUP"
+	if len(modes) > 0 {
+		mode = fulfillmentMode(modes[0])
+	}
+	result := Quote{Items: []Line{}, Currency: "THB", Fulfillment: mode, ShippingFee: "0.00"}
+	if mode != "PICKUP" && mode != "DELIVERY" {
+		return result, ErrInput
+	}
+	if mode == "DELIVERY" && !shop.DeliveryEnabled {
+		return result, ErrClosed
+	}
+	if !shop.Published || !shop.AcceptingOrders {
+		return result, ErrClosed
+	}
+	if shop.TerminalID == "" {
+		return organizationQuote(ctx, tx, org, shop, items, mode)
+	}
+	if err := menuSaleSource(ctx, tx, org, shop); err != nil {
+		return result, err
+	}
+	if err := normalizeItems(items); err != nil {
+		return result, err
+	}
+	var total int64
+	for _, input := range items {
+		value, err := product(ctx, tx, org, shop, input.VariantID)
+		if err != nil {
+			return result, err
+		}
+		if !value.Published || !value.Saleable {
+			return result, ErrStock
+		}
+		amount, err := pos.EstimateOnlineLine(value.UnitPrice, input.Quantity, value.UnitType)
+		if err != nil {
+			return result, ErrInput
+		}
+		if total > 999999999999999999-amount {
+			return result, ErrInput
+		}
+		total += amount
+		result.Items = append(result.Items, Line{VariantID: input.VariantID, ProductName: value.ProductName, VariantName: value.VariantName, SKU: value.SKU, Unit: value.Unit, Quantity: input.Quantity, UnitPrice: value.UnitPrice, LineTotal: money(amount)})
+	}
+	if total <= 0 {
+		return result, ErrInput
+	}
+	result.Subtotal = money(total)
+	if mode == "DELIVERY" {
+		fee, problem := pricing.Decimal(shop.ShippingFee, 2)
+		if problem != nil || total > 99999999-fee {
+			return result, ErrInput
+		}
+		result.ShippingFee = money(fee)
+		total += fee
+	}
+	result.Total = money(total)
+	result.ID = digest(struct {
+		Revision int64
+		Quote    Quote
+	}{shop.Revision, result})
+	return result, nil
+}
+func (service *Service) Quote(ctx context.Context, slug string, input QuoteInput) (Quote, error) {
+	if input.validateTableContext() != nil {
+		return Quote{}, ErrInput
+	}
+	tx, org, err := service.public(ctx, slug, false)
+	if err != nil {
+		return Quote{}, err
+	}
+	defer tx.Rollback(ctx)
+	shop, err := settings(ctx, tx, org)
+	if err != nil {
+		return Quote{}, err
+	}
+	result, _, err := quoteForTable(ctx, tx, org, shop, input)
+	if err != nil {
+		return result, fmt.Errorf("quote: %w", err)
+	}
+	return result, nil
+}
+
+func quoteForTable(ctx context.Context, tx pgx.Tx, org string, shop Settings, input QuoteInput) (Quote, string, error) {
+	tableID, tableCode, err := dineInTable(ctx, tx, org, shop.BranchID, input.TableToken)
+	if err != nil {
+		return Quote{}, "", err
+	}
+	result, err := quote(ctx, tx, org, shop, input.Items, input.Fulfillment)
+	if err != nil {
+		return result, "", err
+	}
+	if tableID != "" {
+		result.TableCode = tableCode
+		result.ID = digest(struct{ QuoteID, TableID, TableCode string }{result.ID, tableID, tableCode})
+	}
+	return result, tableID, nil
+}

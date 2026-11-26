@@ -87,7 +87,7 @@ it('shows a directory rating, distinguishes zero reviews, and omits unavailable 
   expect(within(cards[2]).queryByText(/รีวิว|\/ 5/)).not.toBeInTheDocument();
 });
 
-it('links directly to sign-in from the header and discovery from the hero', () => {
+it('links directly to sign-in and keeps the full directory link outside the hero', () => {
   renderLanding();
   expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
     'ค้นหาร้านอาหารในชุมชนของคุณ',
@@ -113,7 +113,9 @@ it('links directly to sign-in from the header and discovery from the hero', () =
   const hero = within(
     screen.getByRole('region', { name: 'ค้นหาร้านอาหารในชุมชนของคุณ' }),
   );
-  expect(hero.getByRole('link', { name: 'ดูร้านทั้งหมด' })).toHaveAttribute(
+  expect(hero.queryByRole('link', { name: 'ดูร้านทั้งหมด' })).toBeNull();
+  const categories = within(screen.getByRole('region', { name: 'ประเภทอาหาร' }));
+  expect(categories.getByRole('link', { name: 'ดูร้านทั้งหมด' })).toHaveAttribute(
     'href',
     '/shop',
   );

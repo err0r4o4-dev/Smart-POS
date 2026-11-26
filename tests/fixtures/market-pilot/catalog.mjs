@@ -126,10 +126,12 @@ export function buildSetupBodies(catalog) {
 const escape = value => String(value).replace(/[&<>"']/g, c =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
-export function renderPreview(catalog) {
+export function renderPreview(catalog, covers = new Map()) {
   const e = escape;
   const zones = [...new Set(catalog.shops.map(shop => shop.zone))];
   const nav = zones.map((zone, i) => '<a href="#zone-' + i + '">' + e(zone) + '</a>').join('');
+  const categoryNav = catalog.shops.map(shop => '<a href="#' + e(shop.slug) + '">' +
+    e(shop.category) + '</a>').join('');
   const shops = zones.map((zone, i) => '<section class="zone" id="zone-' + i + '"><h2>' + e(zone) +
     '</h2>' + catalog.shops.filter(shop => shop.zone === zone).map(shop => {
       const groups = [...new Set(shop.items.map(item => item.category))];
@@ -141,7 +143,9 @@ export function renderPreview(catalog) {
             '</span><p>' + e(item.description) + '</p>' + choices + (item.status === 'sold-out' ? '<small class="sold">ขายหมดในชุดข้อมูล</small>' : '') +
             '</div><b>฿' + money(item.priceMinor) + '<small> / ' + e(item.unit) + '</small></b></li>';
         }).join('') + '</ul></section>').join('');
-      return '<article id="' + e(shop.slug) + '"><h3>' + e(shop.name) + '</h3><p>' + e(shop.category) +
+      const cover = covers.get(shop.slug);
+      const image = cover ? '<img class="shop-cover" src="' + e(cover) + '" loading="lazy" decoding="async" alt="ภาพจำลองหน้าร้าน ' + e(shop.name) + '">' : '';
+      return '<article id="' + e(shop.slug) + '">' + image + '<h3>' + e(shop.name) + '</h3><p><strong>หมวดร้าน: ' + e(shop.category) + '</strong>' +
         ' · ' + e(shop.opens) + '–' + e(shop.closes) + ' · หยุดวัน' + e(shop.closedDay) + '</p><p>' +
         e(shop.description) + ' ' + e(shop.pickup) + '</p><details><summary>ดู ' + shop.items.length + ' เมนู</summary>' +
         menu + '</details></article>';
@@ -152,13 +156,16 @@ export function renderPreview(catalog) {
 
   return [
     '<!doctype html><html lang="th"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
-    '<meta http-equiv="Content-Security-Policy" content="default-src \u0027none\u0027; style-src \u0027unsafe-inline\u0027">',
+    '<meta http-equiv="Content-Security-Policy" content="default-src \u0027none\u0027; style-src \u0027unsafe-inline\u0027; img-src data:">',
     '<title>ตลาดสี่ซอย — หน้าตรวจข้อมูล</title>',
     '<style>body{margin:0;background:#faf7f0;color:#262016;font:1rem/1.55 "Leelawadee UI",Tahoma,sans-serif}main{max-width:54rem;margin:auto;padding:clamp(.9rem,4vw,2.5rem)}header{border-bottom:3px solid #e9aa23;padding-bottom:1rem}h1{font-size:clamp(2rem,6vw,4rem);margin:.25em 0}h2{margin:1.5em 0 .5em}h3{margin:0}p{margin:.3em 0}a{color:#573500}nav{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.75rem}nav a,summary{padding:.65rem .85rem;background:#ffefc0;border-radius:.45rem}article{background:#fff;border:1px solid #e6dccd;border-radius:.55rem;padding:1rem;margin:.8rem 0;overflow-wrap:anywhere}details{margin-top:.85rem}summary{cursor:pointer}summary:focus-visible,a:focus-visible{outline:3px solid #6a4100;outline-offset:2px}.menu-group ul{padding:0;list-style:none}.menu-group li{display:flex;justify-content:space-between;gap:.65rem;padding:.75rem 0;border-bottom:1px solid #eee3d5}.menu-group li b{white-space:nowrap}small{display:block;color:#5b5146}.sku{font:inherit;color:#665748;font-size:.8rem}.sold{color:#8a2622}@media(max-width:30rem){.menu-group li{display:block}.menu-group li b{display:block;margin-top:.2rem}.menu-group li b small{display:inline}}</style>',
+    '<style>.shop-cover{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:.4rem;margin-bottom:.8rem}</style>',
     '<main><header><p>หน้าตรวจข้อมูลแบบออฟไลน์ · ร้านสมมติ</p><h1>ตลาดสี่ซอย</h1><p>' +
       catalog.shops.length + ' ร้าน · ' + catalog.shops.flatMap(s => s.items).length +
-      ' เมนู · ' + catalog.scenarios.length + ' ฉากทดสอบ</p><p>หน้านี้ใช้ตรวจชื่อ ราคา และรายละเอียดเมนู ยังไม่มีรูป ซีเควนซ์ชำระเงิน หรือข้อมูลจากฐาน SmartPOS</p>' +
+      ' เมนู · ' + catalog.scenarios.length + ' ฉากทดสอบ</p><p>หน้านี้ใช้ตรวจชื่อ ราคา และรายละเอียดเมนู มีภาพจำลองหน้าร้าน ' +
+      covers.size + ' ภาพ ยังไม่เชื่อมการชำระเงินหรือฐาน SmartPOS</p>' +
       '<nav aria-label="ย่านตลาด">' + nav + '<a href="#scenarios">ฉากทดสอบ</a></nav></header>',
+    '<section><h2>เลือกร้านตามหมวด</h2><nav aria-label="หมวดร้าน">' + categoryNav + '</nav></section>',
     shops, '<section id="scenarios"><h2>ฉากทดสอบที่เตรียมไว้</h2>' + cases + '</section></main></html>\n',
   ].join('\n');
 }

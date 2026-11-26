@@ -1,0 +1,54 @@
+{
+  "slug": "market-je-nit-tam-sang",
+  "code": "NIT",
+  "name": "เจ๊นิด กระทะหน้าแผง",
+  "category": "อาหารตามสั่ง",
+  "zone": "ซอยกระทะ",
+  "opens": "09:30",
+  "closes": "19:30",
+  "closedDay": "พุธ",
+  "pickup": "รับอาหารที่เคาน์เตอร์ด้านหน้าข้างตู้วัตถุดิบ แจ้งเลขออเดอร์กับคนรับรายการ",
+  "description": "ร้านตามสั่งหนึ่งคูหา ทำทีละจาน เห็นเตาผัดจากทางเดินตลาด มีทั้งจานข้าว เส้น กับข้าว และน้ำชง",
+  "imageBrief": "Photorealistic documentary photograph of the complete front of a fictional one-bay Thai made-to-order restaurant at a covered neighborhood market, seen at eye level from the opposite side of the market aisle at late morning. Show the full width of the open storefront, green canvas awning, cream ceramic tiled frontage, stainless-steel ordering counter with a glass ingredient case, two working wok burners and a worn extractor hood clearly visible behind the counter. A few orange plastic stools and a standing fan near one side. A cook may be visible from behind, no identifiable faces. Feel like an ordinary operating neighborhood stall, not a studio or an upscale cafe. The storefront takes up the middle of the landscape frame and remains intact through a 16:9 center crop. No text, logos, watermarks, or invented lettering.",
+  "menuGroups": [
+    {
+      "name": "จานข้าว",
+      "unit": "จาน",
+      "items": [
+        { "name": "ข้าวกะเพราเนื้อสับไข่ดาว", "baht": 85, "description": "เนื้อสับผัดใบกะเพรา พริกแดง และกระเทียม เสิร์ฟข้างข้าวหอมมะลิกับไข่ดาวขอบกรอบ" },
+        { "name": "ข้าวหมูทอดกระเทียม", "baht": 65, "description": "หมูทอดชิ้นพอดีคำ โรยกระเทียมเจียว ข้างข้าวสวยและแตงกวาหั่นแว่น" },
+        { "name": "ข้าวคะน้าหมูกรอบ", "baht": 75, "description": "คะน้าก้านเขียวผัดซอสกับหมูกรอบหั่นชิ้นให้เห็นชั้นหนัง เสิร์ฟข้างข้าวสวย" },
+        { "name": "ข้าวผัดปู", "baht": 89, "description": "ข้าวผัดไข่เม็ดร่วนกับเนื้อปู ต้นหอมซอย แตงกวา และมะนาวซีก" },
+        { "name": "ข้าวไข่ข้นแฮม", "baht": 69, "description": "ไข่ข้นเนื้อนุ่มสีเหลืองพับคลุมข้าวสวย มีแฮมหั่นเต๋ากับต้นหอมซอย" },
+        { "name": "ข้าวไก่ผัดพริกแกงถั่วฝักยาว", "baht": 65, "description": "ไก่ชิ้นผัดพริกแกงแดงกับถั่วฝักยาวและใบมะกรูดซอย เสิร์ฟข้างข้าวสวย" }
+      ]
+    },
+    {
+      "name": "เมนูเส้น",
+      "unit": "จาน",
+      "items": [
+        { "name": "ผัดซีอิ๊วหมู", "baht": 65, "description": "เส้นใหญ่ผัดซีอิ๊วดำเกรียมเล็กน้อย ใส่คะน้า ไข่ และหมูหมัก ไม่มีน้ำซุป" },
+        { "name": "สุกี้แห้งทะเล", "baht": 85, "description": "วุ้นเส้นผัดแห้งกับกุ้ง ปลาหมึก ไข่ ผักบุ้ง และผักกาดขาว มีน้ำจิ้มสุกี้ถ้วยเล็ก" },
+        { "name": "ราดหน้าหมูหมัก", "baht": 65, "description": "เส้นใหญ่ทอดเกรียมราดน้ำข้นสีน้ำตาลอ่อน ใส่หมูหมักและคะน้า เสิร์ฟจานลึก" }
+      ]
+    },
+    {
+      "name": "กับข้าว",
+      "unit": "จาน",
+      "items": [
+        { "name": "ผัดพริกเผาหอยลาย", "baht": 109, "description": "หอยลายทั้งเปลือกผัดน้ำพริกเผาเคลือบเงากับโหระพา เสิร์ฟเป็นกับข้าวแยกจาน" },
+        { "name": "ไข่เจียวหมูสับ", "baht": 55, "description": "ไข่เจียวไทยฟูขอบกรอบ มีหมูสับกระจายในเนื้อไข่ เสิร์ฟกับซอสพริกถ้วยเล็ก ไม่มีข้าว" },
+        { "name": "ต้มจืดเต้าหู้หมูสับ", "baht": 75, "unit": "ชาม", "description": "น้ำซุปใสในชามลึก ใส่เต้าหู้ไข่หั่นแว่น หมูสับปั้นก้อน ผักกาดขาว และต้นหอม" },
+        { "name": "เห็ดผัดน้ำมันหอย", "baht": 69, "description": "เห็ดออรินจิหั่นและเห็ดหอมผัดซอสสีน้ำตาลกับกระเทียมและต้นหอม เสิร์ฟเป็นกับข้าว" }
+      ]
+    },
+    {
+      "name": "เครื่องดื่ม",
+      "unit": "แก้ว",
+      "items": [
+        { "name": "ชามะนาวเย็น", "baht": 35, "description": "ชาสีอำพันใสในแก้วมีน้ำแข็ง พร้อมมะนาวฝานหนึ่งชิ้น ไม่มีนมหรือฟอง" },
+        { "name": "โอเลี้ยงยกล้อ", "baht": 35, "description": "กาแฟดำเย็นสีเข้มในแก้วใส ราดนมข้นจืดเป็นชั้นสีครีมด้านบน มีน้ำแข็งก้อน" }
+      ]
+    }
+  ]
+}

@@ -23,6 +23,7 @@ import { useLanguage } from '../../app/language';
 import type { ShopDirectoryEntry } from '../../lib/storefront-api';
 import { foodCategories, foodCategory } from './food-categories';
 import { ShopCard } from './ShopCard';
+import { LandingShopCard } from '../landing/LandingShopCard';
 import { useShopFavorites } from './shop-favorites';
 import { DiscoveryAreaSelect, DiscoveryHero } from './DiscoveryHero';
 
@@ -184,7 +185,7 @@ export function ShopDirectoryGrid({
     }
 
     return (
-      <div className="customer-directory shop-discover-directory">
+      <div className="landing-page customer-directory shop-discover-directory">
         <div className="shop-discover-toolbar">
           <div
             className="shop-discover-types"
@@ -277,17 +278,20 @@ export function ShopDirectoryGrid({
             (visible.length ? (
               <>
                 <ul
-                  className="customer-shop-grid"
+                  className="landing-shops"
                   aria-label={t('storefront.publishedStores')}
                   aria-live="polite"
                 >
                   {visible.slice((page - 1) * 8, page * 8).map((shop) => (
                     <li key={shop.slug}>
-                      <ShopCard
+                      <LandingShopCard
                         shop={shop}
-                        action={action}
                         directorySearch={directorySearch}
-                        directoryMode
+                        statusLabel={t(
+                          shop.accepting_orders
+                            ? 'storefront.acceptingOrders'
+                            : 'storefront.notAcceptingOrders',
+                        )}
                         favorite={saved.isFavorite(shop.slug)}
                         onToggleFavorite={() => saved.toggle(shop.slug)}
                       />

@@ -1,9 +1,4 @@
-import {
-  useState,
-  type FormEvent,
-  type MouseEvent,
-  type ReactNode,
-} from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
@@ -13,21 +8,17 @@ import {
   ClipboardList,
   Flame,
   Heart,
-  LogIn,
   MapPin,
-  Menu,
   Monitor,
   QrCode,
   Search,
   ShoppingBag,
   Sparkles,
   Star,
-  Store,
   UtensilsCrossed,
   type LucideIcon,
 } from 'lucide-react';
-import { LanguageSwitcher } from '../../components/ui/LanguageSwitcher';
-import { Brand, Loading } from '../../components/ui/primitives';
+import { Loading } from '../../components/ui/primitives';
 import { useLanguage } from '../../app/language';
 import { useAuth } from '../../app/AuthProvider';
 import { paths } from '../../app/routes';
@@ -38,6 +29,8 @@ import { ShopError } from '../storefront/shop-feedback';
 import { useShopFavorites } from '../storefront/shop-favorites';
 import { useShopDirectory } from '../storefront/useShopDirectory';
 import { VeloAssistantChat } from '../storefront/VeloAssistantChat';
+import { LandingHeader } from './LandingHeader';
+import { LandingShopCard } from './LandingShopCard';
 import './landing.css';
 
 type Translate = ReturnType<typeof useLanguage>['t'];
@@ -83,13 +76,6 @@ const shopFilters = [
   { value: 'favorites', label: 'landing.favoriteShops', icon: Heart },
 ] as const;
 
-function shopCover(codes: readonly string[] = []) {
-  if (codes.includes('drinks')) return `${referenceArt}/cover-tea.webp`;
-  if (codes.includes('desserts')) return '/images/home/cat-desserts.webp';
-  if (codes.includes('fried')) return `${referenceArt}/cover-fast-food.webp`;
-  return `${referenceArt}/cover-restaurant.webp`;
-}
-
 function shopSearch(query: string) {
   return `${paths.shop}?q=${encodeURIComponent(query)}`;
 }
@@ -97,7 +83,6 @@ function shopSearch(query: string) {
 export function LandingPage() {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [query, setQuery] = useState('');
   const { state } = useAuth();
   const authenticated = state.status === 'authenticated';
@@ -114,40 +99,7 @@ export function LandingPage() {
       <a className="skip-link" href="#landing-main">
         {t('landing.skipToContent')}
       </a>
-      <header className="landing-header">
-        <div className="layout-shell landing-header-inner">
-          <Link
-            className="landing-brand-link"
-            to="/"
-            aria-label={t('landing.veloPosHome')}
-          >
-            <Brand />
-          </Link>
-          <div className="landing-desktop-navigation">
-            <LandingNavigation t={t} authenticated={authenticated} />
-          </div>
-          <div className="landing-mobile-language">
-            <LanguageSwitcher />
-          </div>
-          <details
-            className="landing-mobile-menu"
-            onToggle={(event) => setMobileMenuOpen(event.currentTarget.open)}
-          >
-            <summary
-              role="button"
-              aria-label={t('landing.menu')}
-              aria-expanded={mobileMenuOpen}
-            >
-              <Menu size={22} aria-hidden="true" />
-            </summary>
-            <LandingNavigation
-              t={t}
-              authenticated={authenticated}
-              compactLanguage
-            />
-          </details>
-        </div>
-      </header>
+      <LandingHeader authenticated={authenticated} />
       <main id="landing-main" tabIndex={-1}>
         <section className="landing-hero" aria-labelledby="landing-title">
           <div className="landing-hero-art" aria-hidden="true">
@@ -207,13 +159,6 @@ export function LandingPage() {
                   ))}
                 </ul>
               </div>
-              <Link
-                className="button button-secondary landing-browse-link"
-                to={paths.shop}
-              >
-                {t('landing.viewAllShops')}
-                <ArrowRight size={17} aria-hidden="true" />
-              </Link>
             </div>
           </div>
         </section>
@@ -444,7 +389,7 @@ function SectionHeading({
 }
 
 function RecommendedShops() {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const [filter, setFilter] =
     useState<(typeof shopFilters)[number]['value']>('all');
   const directory = useShopDirectory();
@@ -517,164 +462,21 @@ function RecommendedShops() {
                 className="landing-shops"
                 aria-label={t('landing.recommendedTitle')}
               >
-                {shops.map((shop) => {
-                  const favorite = saved.isFavorite(shop.slug);
-                  const categories = foodCategories.filter(({ code }) =>
-                    shop.category_codes?.includes(code),
-                  );
-                  const { average_rating: average, review_count: count } = shop;
-                  const hasRating =
-                    typeof average === 'number' &&
-                    average >= 1 &&
-                    average <= 5 &&
-                    typeof count === 'number' &&
-                    Number.isSafeInteger(count) &&
-                    count > 0;
-                  return (
-                    <li key={shop.slug}>
-                      <article className="landing-shop">
-                        <div className="landing-shop-cover">
-                          <img
-                            src={shopCover(shop.category_codes)}
-                            alt=""
-                            loading="lazy"
-                          />
-                          <div className="landing-shop-controls">
-                            <span
-                              className={
-                                shop.accepting_orders
-                                  ? 'landing-shop-badge is-open'
-                                  : 'landing-shop-badge'
-                              }
-                            >
-                              {t(
-                                shop.accepting_orders
-                                  ? 'landing.openNow'
-                                  : 'landing.closedNow',
-                              )}
-                            </span>
-                            <button
-                              type="button"
-                              className="landing-shop-favorite"
-                              aria-label={t('landing.favorite', {
-                                name: shop.name,
-                              })}
-                              aria-pressed={favorite}
-                              onClick={() => saved.toggle(shop.slug)}
-                            >
-                              <Heart
-                                size={18}
-                                aria-hidden="true"
-                                fill={favorite ? 'currentColor' : 'none'}
-                              />
-                            </button>
-                          </div>
-                        </div>
-                        <div className="landing-shop-body">
-                          <div className="landing-shop-title">
-                            <h3>
-                              <Link
-                                to={
-                                  paths.shop +
-                                  '/' +
-                                  encodeURIComponent(shop.slug)
-                                }
-                              >
-                                {shop.name}
-                              </Link>
-                            </h3>
-                            {categories.length > 0 && (
-                              <span>
-                                {categories
-                                  .map(({ label }) => t(label))
-                                  .join(' · ')}
-                              </span>
-                            )}
-                          </div>
-                          {(hasRating ||
-                            (count === 0 && average === null) ||
-                            shop.delivery_enabled === true) && (
-                            <div className="landing-shop-details">
-                              {hasRating && (
-                                <div className="landing-shop-review">
-                                  <strong>
-                                    <Star size={15} aria-hidden="true" />
-                                    {average.toFixed(1)} / 5
-                                  </strong>
-                                  <span>
-                                    {t('landing.reviewCount', {
-                                      count: count.toLocaleString(language),
-                                    })}
-                                  </span>
-                                </div>
-                              )}
-                              {count === 0 && average === null && (
-                                <span>{t('landing.noReviews')}</span>
-                              )}
-                              {shop.delivery_enabled === true && (
-                                <span>{t('landing.deliveryAvailable')}</span>
-                              )}
-                            </div>
-                          )}
-                          <span
-                            className="landing-shop-meta"
-                            aria-hidden="true"
-                          >
-                            {t('storefront.viewStore')}
-                            <ArrowRight size={15} />
-                          </span>
-                        </div>
-                      </article>
-                    </li>
-                  );
-                })}
+                {shops.map((shop) => (
+                  <li key={shop.slug}>
+                    <LandingShopCard
+                      shop={shop}
+                      favorite={saved.isFavorite(shop.slug)}
+                      onToggleFavorite={() => saved.toggle(shop.slug)}
+                    />
+                  </li>
+                ))}
               </ul>
             )}
           </div>
         )}
       </div>
     </section>
-  );
-}
-
-function LandingNavigation({
-  t,
-  authenticated,
-  compactLanguage = false,
-}: {
-  t: Translate;
-  authenticated: boolean;
-  compactLanguage?: boolean;
-}) {
-  const close = (event: MouseEvent<HTMLElement>) =>
-    event.currentTarget.closest('details')?.removeAttribute('open');
-  return (
-    <nav
-      className="landing-navigation"
-      aria-label={t('landing.homeNavigation')}
-    >
-      <div className="landing-nav-actions">
-        {compactLanguage ? (
-          <div className="landing-menu-language">
-            <LanguageSwitcher />
-          </div>
-        ) : (
-          <LanguageSwitcher />
-        )}
-        <Link
-          className="landing-nav-link"
-          to={authenticated ? paths.workspace : paths.login}
-          onClick={close}
-        >
-          {authenticated ? (
-            <Store size={17} aria-hidden="true" />
-          ) : (
-            <LogIn size={17} aria-hidden="true" />
-          )}
-          {t(authenticated ? 'landing.goToWorkspace' : 'auth.signIn')}
-        </Link>
-      </div>
-    </nav>
   );
 }
 
@@ -720,13 +522,13 @@ function LandingFooter({ t }: { t: Translate }) {
   return (
     <footer className="landing-footer">
       <nav
-        className="landing-footer-grid"
+        className="landing-container landing-footer-grid"
         aria-label={t('landing.footerLinks')}
       >
         <div className="landing-footer-about">
           <h2>{t('landing.footerAbout')}</h2>
           <p>{t('landing.footerAboutDescription')}</p>
-          <small>© 2025 VELOPOS. All rights reserved.</small>
+          <small>© 2026 VELOPOS. All rights reserved.</small>
         </div>
         {columns.map(({ title, links }) => (
           <div key={title}>
@@ -774,18 +576,6 @@ function LandingFooter({ t }: { t: Translate }) {
                 strokeWidth="2.5"
               />
               <circle cx="17.6" cy="6.4" r="1.4" fill="currentColor" />
-            </svg>
-            <svg viewBox="0 0 24 24" role="img" aria-label="YouTube">
-              <circle cx="12" cy="12" r="12" fill="currentColor" />
-              <rect
-                x="5.5"
-                y="7.5"
-                width="13"
-                height="9"
-                rx="2"
-                fill="var(--canvas)"
-              />
-              <path d="m10.5 9.5 4 2.5-4 2.5z" fill="currentColor" />
             </svg>
             <svg viewBox="0 0 24 24" role="img" aria-label="LINE">
               <circle cx="12" cy="12" r="12" fill="currentColor" />

@@ -1,5 +1,4 @@
 .landing-page {
-  --landing-width: 1344px;
   --landing-section-gap: 13px;
   --landing-grid-gap: clamp(13px, 1.15vw, 20px);
   --landing-gold: linear-gradient(
@@ -12,7 +11,7 @@
   overflow-wrap: anywhere;
 }
 .landing-container {
-  width: min(var(--landing-width), calc(100% - var(--layout-gutter, 24px) * 2));
+  width: min(var(--layout-discovery-max), calc(100% - var(--layout-gutter) * 2));
   margin-inline: auto;
   min-width: 0;
 }
@@ -106,6 +105,7 @@
 
 /* Hero */
 .landing-hero {
+  --landing-hero-height: 238px;
   position: relative;
   isolation: isolate;
   overflow: hidden;
@@ -131,6 +131,8 @@
   inset: 0 0 0 auto;
   z-index: -1;
   width: 48.3%;
+  height: var(--landing-hero-height);
+  margin-block: auto;
   pointer-events: none;
 }
 .landing-hero-art img {
@@ -144,7 +146,7 @@
 .landing-hero-inner {
   display: flex;
   align-items: center;
-  min-height: 238px;
+  min-height: var(--landing-hero-height);
   padding: 16px 0 17px clamp(0px, 2vw, 33px);
 }
 .landing-hero-copy {
@@ -242,7 +244,7 @@
   flex-wrap: wrap;
   gap: 6px;
 }
-.landing-popular a {
+.landing-popular :is(a, button) {
   display: inline-flex;
   align-items: center;
   min-height: 26px;
@@ -251,15 +253,14 @@
   color: var(--text-primary);
   background: rgb(255 255 255 / 75%);
   box-shadow: var(--shadow-control);
+  border: 0;
+  font: inherit;
   font-weight: 600;
+  overflow-wrap: anywhere;
+  cursor: pointer;
 }
-.landing-popular a:hover {
+.landing-popular :is(a, button):hover {
   background: rgb(255 255 255 / 70%);
-}
-.landing-browse-link {
-  margin-top: 10px;
-  min-height: 44px;
-  border-radius: var(--radius-pill);
 }
 
 /* Sections */
@@ -506,7 +507,7 @@
 }
 .landing-shop-cover {
   position: relative;
-  min-block-size: clamp(8.625rem, 11vw, 12rem);
+  min-block-size: var(--discovery-shop-cover-height);
   border-radius: var(--radius-control) var(--radius-control) 0 0;
   background: var(--primary-subtle);
 }
@@ -769,8 +770,6 @@
 .landing-footer-grid {
   display: grid;
   grid-template-columns: minmax(0, 2.15fr) repeat(5, minmax(0, 1.25fr));
-  width: min(1680px, calc(100% - var(--layout-gutter, 24px) * 2));
-  margin-inline: auto;
   column-gap: clamp(20px, 2.5vw, 48px);
   row-gap: 24px;
 }
@@ -965,6 +964,7 @@
     display: block;
     width: 100%;
     height: clamp(146px, 44vw, 218px);
+    margin-block: 0;
     overflow: hidden;
   }
   .landing-hero-art img {
@@ -1039,7 +1039,7 @@
   .landing-shop-filter button,
   .landing-shop-favorite,
   .landing-more-link,
-  .landing-popular a,
+  .landing-popular :is(a, button),
   .landing-footer ul a {
     min-height: 44px;
   }
@@ -1050,9 +1050,6 @@
 @media (max-width: 479px) {
   .landing-shops {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .landing-shop-cover {
-    min-block-size: clamp(8.625rem, 42vw, 11rem);
   }
   .landing-area {
     padding: 46px 12px 12px;

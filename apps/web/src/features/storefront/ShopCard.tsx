@@ -5,38 +5,24 @@ import type { ShopDirectoryEntry } from '../../lib/storefront-api';
 import { foodCategories } from './food-categories';
 import { hasValidRating, shopCoverImage } from './shop-art';
 
-const directoryCovers = {
-  noodles: '/images/home/reference/cover-noodles.webp',
-  drinks: '/images/home/reference/cover-tea.webp',
-  healthy: '/images/home/reference/category-healthy.webp',
-  desserts: '/images/home/reference/category-desserts.webp',
-} satisfies Partial<Record<(typeof foodCategories)[number]['code'], string>>;
-
 export function ShopCard({
   shop,
   favorite,
   onToggleFavorite,
   action = 'store',
   directorySearch,
-  directoryMode = false,
 }: {
   shop: ShopDirectoryEntry;
   favorite: boolean;
   onToggleFavorite: () => void;
   action?: 'store' | 'cart';
   directorySearch?: string;
-  directoryMode?: boolean;
 }) {
   const { t, language } = useLanguage();
   const categories = foodCategories.filter(({ code }) =>
     shop.category_codes?.includes(code),
   );
-  const cover =
-    (directoryMode &&
-      Object.entries(directoryCovers).find(([code]) =>
-        shop.category_codes?.includes(code),
-      )?.[1]) ||
-    shopCoverImage(shop.category_codes);
+  const cover = shopCoverImage(shop.category_codes);
   const storePath = `/shop/${encodeURIComponent(shop.slug)}`;
   const titleId = `shop-card-${shop.slug}`;
   const rated = hasValidRating(shop);

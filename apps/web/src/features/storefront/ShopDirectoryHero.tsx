@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowRight, Flame, MapPin, Search } from 'lucide-react';
+import { ArrowRight, Flame, MapPin, Search } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../../app/language';
 import { paths } from '../../app/routes';
@@ -14,17 +14,12 @@ export function ShopDirectoryHero({
   const [params, setParams] = useSearchParams();
   const query = params.get('q') ?? '';
 
-  function search(value: string, resetFilters = false) {
+  function search(value: string) {
     const next = new URLSearchParams(params);
     next.delete('type');
     if (value) next.set('q', value);
     else next.delete('q');
     next.delete('page');
-    if (resetFilters) {
-      next.delete('filter');
-      next.delete('category');
-      next.delete('sort');
-    }
     if (next.toString() !== params.toString()) {
       setParams(next, { replace: true, preventScrollReset: true });
     }
@@ -108,17 +103,6 @@ export function ShopDirectoryHero({
                 </ul>
               </div>
             )}
-            <button
-              type="button"
-              className="button button-secondary landing-browse-link"
-              onClick={() => {
-                if (query || params.size) search('', true);
-                showResults();
-              }}
-            >
-              {t('landing.viewAllShops')}
-              <ArrowDown size={17} aria-hidden="true" />
-            </button>
           </div>
         </div>
       </section>

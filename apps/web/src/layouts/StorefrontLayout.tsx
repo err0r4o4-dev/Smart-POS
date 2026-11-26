@@ -7,10 +7,9 @@ import {
   useParams,
   useSearchParams,
 } from 'react-router-dom';
-import { ArrowLeft, LogIn } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { paths } from '../app/routes';
-import { LanguageSwitcher } from '../components/ui/LanguageSwitcher';
-import { Brand } from '../components/ui/primitives';
+import { LandingHeader } from '../features/landing/LandingHeader';
 import { useShopCart } from '../features/storefront/shop-cart';
 import { CustomerHeader } from '../features/storefront/CustomerHeader';
 import { VeloAssistantChat } from '../features/storefront/VeloAssistantChat';
@@ -47,24 +46,7 @@ export function StorefrontLayout() {
         {t('pos.skipToContent')}
       </a>
       {directory ? (
-        <header className="landing-header shop-discovery-header">
-          <div className="layout-shell landing-header-inner">
-            <Link
-              className="landing-brand-link"
-              to="/"
-              aria-label={t('landing.veloPosHome')}
-            >
-              <Brand />
-            </Link>
-            <nav aria-label={t('shell.customerStorefrontNavigation')}>
-              <LanguageSwitcher />
-              <Link className="shop-discovery-sign-in" to={paths.login}>
-                <LogIn size={17} aria-hidden="true" />
-                <span>{t('auth.signIn')}</span>
-              </Link>
-            </nav>
-          </div>
-        </header>
+        <LandingHeader navigationLabel={t('shell.customerStorefrontNavigation')} />
       ) : (
         <CustomerHeader
           slug={slug}

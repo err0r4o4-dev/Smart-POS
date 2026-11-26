@@ -63,6 +63,8 @@
   --space-20: 80px;
   --space-24: 96px;
   --layout-content-max: 1232px;
+  --layout-discovery-max: 1344px;
+  --discovery-shop-cover-height: clamp(8.625rem, 11vw, 12rem);
   --layout-gutter: var(--space-6);
   --layout-shell-start: max(
     var(--layout-gutter),
@@ -112,6 +114,12 @@
     --brand-size: 32px;
     --brand-icon-size: 22px;
     --brand-font-size: 20px;
+  }
+}
+
+@media (max-width: 479px) {
+  :root {
+    --discovery-shop-cover-height: clamp(8.625rem, 42vw, 11rem);
   }
 }
 

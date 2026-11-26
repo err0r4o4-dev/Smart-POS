@@ -4,7 +4,7 @@
 }
 
 .storefront-shell:has(.discovery-page) .storefront-content {
-  --layout-content-max: 1344px;
+  --layout-content-max: var(--layout-discovery-max);
 }
 
 .discovery-hero {

@@ -236,7 +236,7 @@ export const organization = defineMessages({
     settingsAllServices: 'ทานที่ร้าน / สั่งกลับบ้าน / เดลิเวอรี',
     settingsDineTakeaway: 'ทานที่ร้าน / สั่งกลับบ้าน',
     settingsDineIn: 'ทานที่ร้านเท่านั้น',
-      : 'สั่งกลับบ้าน / เดลิเวอรี',
+    settingsTakeawayDelivery: 'สั่งกลับบ้าน / เดลิเวอรี',
     settingsHours: 'เวลาทำการ',
     settingsHoursDescription: 'กำหนดวันและเวลาที่เปิดให้บริการ',
     settingsCycleAria: 'เวลาปิดร้านและรอบวัน',

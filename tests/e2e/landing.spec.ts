@@ -154,10 +154,10 @@ test('filters published stores, keeps favorites, and opens the shop cart selecto
       .getByRole('link', { name: 'เปิดตะกร้า' }),
   ).toHaveAttribute('href', '/shop/krapao/cart');
   await page.goto('/');
-  await page.getByRole('link', { name: /สมัครร้านค้าฟรี/ }).click();
-  await expect(page).toHaveURL(/\/register$/);
+  await page.getByRole('link', { name: 'เริ่มร้านค้า' }).click();
+  await expect(page).toHaveURL('/register?returnTo=%2Fsetup');
   await page.goto('/');
-  await page.getByRole('link', { name: 'เข้าสู่ระบบร้านค้า' }).click();
+  await page.getByRole('link', { name: 'เข้าสู่ระบบ', exact: true }).click();
   await expect(page).toHaveURL(/\/login$/);
 });
 
@@ -178,30 +178,17 @@ test('mobile navigation opens sign-in directly with the keyboard', async ({
   ).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(menu).toBeFocused();
-  await page.keyboard.press('Enter');
-  await expect(menu).toHaveAttribute('aria-expanded', 'true');
-  const navigation = page.getByRole('navigation', { name: 'เมนูหน้าแรก' });
-  const signIn = navigation.getByRole('link', {
+  const signIn = page.getByRole('banner').getByRole('link', {
     name: 'เข้าสู่ระบบ',
     exact: true,
   });
   await expect(signIn).toHaveAttribute('href', '/login');
-  for (const name of [
-    'หน้าหลัก',
-    'สำรวจร้าน',
-    'พื้นที่และชุมชน',
-    'หมวดหมู่อาหาร',
-    'สำหรับร้านค้า',
-  ])
-    await expect(
-      navigation.getByRole('link', { name, exact: true }),
-    ).toHaveCount(0);
-  for (let i = 0; i < 3; i++) await page.keyboard.press('Tab');
+  await page.keyboard.press('Tab');
   await expect(signIn).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/login$/);
   await expect(
-    page.getByRole('heading', { name: 'เข้าสู่ระบบร้านค้า' }),
+    page.getByRole('heading', { name: 'เข้าสู่ระบบ', exact: true }),
   ).toBeVisible();
 });
 

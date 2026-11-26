@@ -20,6 +20,7 @@ export const paths = {
   forgotPassword: '/forgot-password',
   resetPassword: '/reset-password',
   security: '/security',
+  account: '/account',
   setup: '/setup',
   settings: '/settings',
   storefrontSettings: '/settings/storefront',

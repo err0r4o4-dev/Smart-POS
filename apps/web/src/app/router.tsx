@@ -35,11 +35,12 @@ import {
   MFASettingsPage,
 } from './route-pages';
 import { OrganizationGate } from '../features/organization/OrganizationGate';
+import { GoogleReturn } from '../features/auth/GoogleReturn';
+import { PublicAccountPage } from '../features/auth/PublicAccountPage';
 import { PageError, RouteLoading } from '../components/feedback/PageError';
 import {
   createBrowserRouter,
   Navigate,
-  Outlet,
   ScrollRestoration,
   useLocation,
   useParams,
@@ -292,7 +293,10 @@ const routes: RouteObject[] = [
   { path: paths.login, element: <LoginPage /> },
   {
     element: <RequireSession />,
-    children: [{ path: paths.security, element: <MFASettingsPage /> }],
+    children: [
+      { path: paths.account, element: <PublicAccountPage /> },
+      { path: paths.security, element: <MFASettingsPage /> },
+    ],
   },
   { path: paths.register, element: <RegisterPage /> },
   { path: paths.verifyEmail, element: <EmailVerificationPage /> },
@@ -307,7 +311,7 @@ export const router = createBrowserRouter([
   {
     element: (
       <Suspense fallback={<RouteLoading />}>
-        <Outlet />
+        <GoogleReturn />
       </Suspense>
     ),
     errorElement: <PageError />,

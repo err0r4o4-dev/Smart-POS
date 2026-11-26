@@ -78,7 +78,6 @@ const retiredPaths = [
   '/settings/store',
   '/settings/branches',
   '/settings/storefront/payments',
-  '/account',
   '/help/system',
 ];
 

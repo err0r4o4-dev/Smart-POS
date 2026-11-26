@@ -11,7 +11,8 @@ test('main rollout fixture exposes 195 exact menu prices and closed shops withou
   assert.ok(release.shops.every(shop => !shop.settings.accepting_orders && !shop.settings.published && !('reviews' in shop)));
   const nit = release.shops.find(shop => shop.settings.slug === 'market-je-nit-tam-sang');
   assert.deepEqual(nit.settings.category_codes, ['made-to-order']);
-  assert.equal(nit.cover_image_url, null);
+  assert.deepEqual(release.shops.map(shop => shop.cover_image_url),
+    release.shops.map(shop => `/images/market-sip-soi/v2/covers/${shop.settings.slug}.webp`));
   const seafood = release.shops.find(shop => shop.settings.slug === 'market-talay-yang');
   assert.deepEqual(seafood.settings.category_codes, []);
   assert.ok(seafood.original_category);

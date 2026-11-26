@@ -30,6 +30,7 @@ import { useShopFavorites } from '../storefront/shop-favorites';
 import { useShopDirectory } from '../storefront/useShopDirectory';
 import { VeloAssistantChat } from '../storefront/VeloAssistantChat';
 import { LandingHeader } from './LandingHeader';
+import { authLink } from '../auth/auth-destination';
 import { LandingShopCard } from './LandingShopCard';
 import './landing.css';
 
@@ -99,7 +100,7 @@ export function LandingPage() {
       <a className="skip-link" href="#landing-main">
         {t('landing.skipToContent')}
       </a>
-      <LandingHeader authenticated={authenticated} />
+      <LandingHeader />
       <main id="landing-main" tabIndex={-1}>
         <section className="landing-hero" aria-labelledby="landing-title">
           <div className="landing-hero-art" aria-hidden="true">
@@ -309,30 +310,11 @@ export function LandingPage() {
                   >
                     {t('landing.checking')}
                   </button>
-                ) : authenticated ? (
-                  <Link
-                    className="button landing-merchant-action"
-                    to={paths.workspace}
-                  >
-                    {t('landing.goToWorkspace')}
+                ) : (
+                  <Link className="button landing-merchant-action" to={authenticated ? paths.setup : authLink(paths.register, paths.setup)}>
+                    {t('landing.merchantSignUp')}
                     <ArrowRight size={18} aria-hidden="true" />
                   </Link>
-                ) : (
-                  <>
-                    <Link
-                      className="button landing-merchant-action"
-                      to={paths.login}
-                    >
-                      {t('auth.merchantSignIn')}
-                      <ArrowRight size={18} aria-hidden="true" />
-                    </Link>
-                    <Link
-                      className="button button-secondary"
-                      to={paths.register}
-                    >
-                      {t('landing.merchantSignUp')}
-                    </Link>
-                  </>
                 )}
               </div>
             </div>
@@ -497,7 +479,7 @@ function LandingFooter({ t }: { t: Translate }) {
     {
       title: 'landing.footerMerchants',
       links: [
-        ['landing.footerRegister', paths.register],
+        ['landing.footerRegister', '/#for-merchants'],
         ['landing.footerMerchantGuide', paths.help],
         ['landing.footerPricing', paths.help],
       ],

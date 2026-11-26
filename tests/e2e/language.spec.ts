@@ -137,11 +137,14 @@ for (const width of [320, 375, 768, 1440]) {
     });
     await page.reload();
     await expect(
-      page.getByRole('heading', { name: 'Merchant sign-in', exact: true }),
+      page.getByRole('heading', { name: 'Sign in', exact: true }),
     ).toBeVisible();
     await page.goto('/shop');
     await expect(
-      page.getByRole('heading', { name: 'Explore restaurants', exact: true }),
+      page.getByRole('heading', {
+        name: 'Find restaurants in your community',
+        exact: true,
+      }),
     ).toBeVisible();
     // Below 1180px the shared customer header keeps the switcher in its menu.
     if (width < 1180)

@@ -113,7 +113,7 @@ export const landing = defineMessages({
     merchantOrders: 'จัดการออเดอร์แบบเรียลไทม์',
     merchantQr: 'สร้าง QR โต๊ะได้ทันที',
     merchantReports: 'ดูยอดขายและรายงาน',
-    merchantSignUp: 'สมัครร้านค้าฟรี',
+    merchantSignUp: 'เริ่มร้านค้า',
     footerLinks: 'ลิงก์ท้ายหน้า',
     footerAbout: 'เกี่ยวกับ VELOPOS',
     footerAboutDescription:
@@ -240,7 +240,7 @@ export const landing = defineMessages({
     merchantOrders: 'Real-time order management',
     merchantQr: 'Instant table QR codes',
     merchantReports: 'Sales and reports',
-    merchantSignUp: 'Register your store free',
+    merchantSignUp: 'Start a store',
     footerLinks: 'Footer links',
     footerAbout: 'About VELOPOS',
     footerAboutDescription:

@@ -47,7 +47,7 @@ export async function prepareMainCatalog() {
         accepting_orders: false, published: false, delivery_enabled: false, category_codes: categoryCodes[code] },
       original_category: shop.category, zone: shop.zone,
       hours: { opens: shop.opens, closes: shop.closes, closed_day: shop.closedDay, timezone: base.timezone },
-      cover_image_url: shop === extra ? null : `${assetRoot}covers/${slug}.webp`, items,
+      cover_image_url: `${assetRoot}covers/${slug}.webp`, items,
     };
   });
   assert.equal(shops.length, 13);
@@ -89,7 +89,7 @@ async function run() {
     assets.set(url, { bytes, sha256 });
   }
   for (const shop of release.shops) {
-    if (shop.cover_image_url) await add(shop.cover_image_url, `web-ready/${shop.settings.slug}.webp`);
+    await add(shop.cover_image_url, `web-ready/${shop.settings.slug}.webp`);
     for (const item of shop.items) await add(item.image_url, `menu-gallery/menu-photos/${item.sku}.webp`);
   }
 

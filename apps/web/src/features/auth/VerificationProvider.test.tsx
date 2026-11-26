@@ -1,8 +1,9 @@
 import { StrictMode } from 'react';
-import { fireEvent, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import { renderInEnglish as render } from '../../test/render';
 import { AuthProvider } from '../../app/AuthProvider';
+import { rememberVerificationReturn } from './auth-destination';
 
 const requests = vi.hoisted(() => ({
   getSession: vi.fn(),
@@ -21,6 +22,7 @@ vi.mock('./VerificationFlow', async (importOriginal) => ({
 }));
 
 it('holds setup until a single verification and a refreshed matching session', async () => {
+  rememberVerificationReturn('verified-user', '/setup');
   let finish!: (value: unknown) => void;
   requests.verifyEmail.mockReturnValue(
     new Promise((resolve) => {
@@ -45,7 +47,6 @@ it('holds setup until a single verification and a refreshed matching session', a
     expect(screen.getByRole('status')).toHaveTextContent(/email verified/i),
   );
   expect(screen.queryByText('Setup content')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: /continue/i }));
-  expect(await screen.findByText('Setup content')).toBeVisible();
+  expect(screen.getByRole('link', { name: /continue/i })).toHaveAttribute('href', '/setup');
   expect(requests.getSession).toHaveBeenCalledTimes(1);
 });

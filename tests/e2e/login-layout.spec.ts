@@ -27,13 +27,13 @@ for (const width of [320, 360, 390, 767, 768, 900, 1024, 1280, 1440, 1672]) {
     await page.goto('/login');
     await page.getByRole('button', { name: 'ไทย', exact: true }).click();
     await expect(
-      page.getByRole('heading', { name: 'เข้าสู่ระบบร้านค้า', exact: true }),
+      page.getByRole('heading', { name: 'เข้าสู่ระบบ', exact: true }),
     ).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
 
     const visual = page.locator('.login-visual');
     const panel = page.getByRole('region', {
-      name: 'เข้าสู่ระบบร้านค้า',
+      name: 'เข้าสู่ระบบ',
       exact: true,
     });
     await expect(panel.getByRole('button', { name: /Google/ })).toBeEnabled();

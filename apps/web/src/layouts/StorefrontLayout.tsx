@@ -46,7 +46,7 @@ export function StorefrontLayout() {
         {t('pos.skipToContent')}
       </a>
       {directory ? (
-        <LandingHeader navigationLabel={t('shell.customerStorefrontNavigation')} />
+        <LandingHeader variant="directory" />
       ) : (
         <CustomerHeader
           slug={slug}

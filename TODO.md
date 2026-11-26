@@ -47,3 +47,6 @@
 
 - [/] Add a direct directory entry from home and group merchant account actions.
 - [ ] Verify customer, merchant and responsive navigation with isolated browser fixtures.
+- [/] Reuse one sign-in for customers and owners, return to the public page, and keep store enrollment separate.
+- [ ] Verify shared login, email verification, account dropdown, role visibility, and responsive behavior.
+- [?] Obtain scoped independent review before closing the changed authentication flow; reviewer dispatch is not yet authorized.

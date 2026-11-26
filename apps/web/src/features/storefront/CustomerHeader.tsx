@@ -5,6 +5,7 @@ import { useLanguage } from '../../app/language';
 import { paths } from '../../app/routes';
 import { LanguageSwitcher } from '../../components/ui/LanguageSwitcher';
 import { Brand } from '../../components/ui/primitives';
+import { PublicAccountMenu } from '../auth/PublicAccountMenu';
 
 export function CustomerHeader({
   slug,
@@ -59,6 +60,7 @@ export function CustomerHeader({
           </summary>
           <CustomerNavigation />
         </details>
+        <PublicAccountMenu />
       </div>
     </header>
   );

@@ -42,6 +42,8 @@ function journey(path = '/login') {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/" element={<h1>Public home</h1>} />
+          <Route path="/shop/:slug/cart" element={<h1>Original cart</h1>} />
           <Route
             path="/verify-email"
             element={<h1>Awaiting verification</h1>}
@@ -80,12 +82,20 @@ it('keeps an existing unverified session out of a direct private route', async (
   expect(screen.queryByText('Private workspace')).not.toBeInTheDocument();
 });
 
-it('preserves workspace routing for verified logins', async () => {
+it.each([
+  ['/login', 'Public home'],
+  [
+    '/login?returnTo=%2Fshop%2Fbistro%2Fcart%3Ffulfillment%3DPICKUP',
+    'Original cart',
+  ],
+  ['/login?returnTo=%2Fworkspace', 'Private workspace'],
+  ['/login?returnTo=%2F%2Fexample.test', 'Public home'],
+])('routes a verified login from %s to %s', async (path, heading) => {
   requests.login.mockResolvedValue({
     ...session,
     user: { ...session.user, email_verified: true },
   });
-  journey();
+  journey(path);
   fireEvent.change(screen.getByLabelText('Email address'), {
     target: { value: session.user.email },
   });
@@ -93,7 +103,5 @@ it('preserves workspace routing for verified logins', async () => {
     target: { value: 'a-valid-long-password' },
   });
   fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
-  expect(
-    await screen.findByRole('heading', { name: 'Private workspace' }),
-  ).toBeVisible();
+  expect(await screen.findByRole('heading', { name: heading })).toBeVisible();
 });

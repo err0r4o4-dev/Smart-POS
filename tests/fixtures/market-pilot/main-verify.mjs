@@ -10,7 +10,7 @@ const slugPattern = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const assetPattern = /^\/images\/market-sip-soi\/v2\/(?:covers\/market-[a-z0-9-]+|menu\/MKT-[A-Z]+-[0-9]{2})\.webp$/;
 const sizeLimit = 5 * 1024 * 1024;
 
-function assetIndex(release, index) {
+export function validateReleaseAssets(release, index) {
   const assets = new Map();
   for (const entry of index) {
     assert.match(entry.url, assetPattern, 'Invalid asset path');
@@ -50,7 +50,7 @@ export async function verifyImage(url, entry, get) {
 }
 
 export async function verifyPublicRelease(release, index, retainedSlugs, fetcher = fetch) {
-  const assets = assetIndex(release, index);
+  const assets = validateReleaseAssets(release, index);
   const expectedSlugs = release.shops.map(shop => shop.settings.slug);
   const allSlugs = [...expectedSlugs, ...retainedSlugs];
   assert.ok(retainedSlugs.length && allSlugs.every(slug => slugPattern.test(slug)), 'Invalid or missing directory baseline');

@@ -855,7 +855,7 @@ function ScopedSetupPage() {
           <Link className="button" to="/login?returnTo=%2Fsetup">
             {t('auth.signIn')}
           </Link>
-          <Link className="button button-secondary" to="/register">
+          <Link className="button button-secondary" to="/register?returnTo=%2Fsetup">
             {t('organization.registerAccount')}
           </Link>
         </Card>

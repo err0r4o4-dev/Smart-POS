@@ -20,6 +20,13 @@ import { paths } from '../../app/routes';
 import { ResendVerification } from './VerificationFlow';
 import { GoogleAuth } from './GoogleAuth';
 import {
+  authLink,
+  clearGoogleReturn,
+  pendingGoogleReturn,
+  rememberVerificationReturn,
+  safeReturnTo,
+} from './auth-destination';
+import {
   accountFailure,
   dismissSuccessFeedback,
   successFeedback,
@@ -79,12 +86,6 @@ function PasswordField({
   );
 }
 
-export function safeReturnTo(value: string | null) {
-  return value === paths.setup || value === paths.security
-    ? value
-    : paths.workspace;
-}
-
 export function LoginPage() {
   const { t, localize, language } = useLanguage();
 
@@ -96,6 +97,14 @@ export function LoginPage() {
   const navigate = useNavigate();
   const { signIn, signInWithGoogleLink } = useAuth();
   const linkingGoogle = params.get('google') === 'link_required';
+  const destination = safeReturnTo(
+    (linkingGoogle && params.get('returnTo') === paths.workspace
+      ? pendingGoogleReturn()
+      : null) ?? params.get('returnTo'),
+  );
+  useEffect(() => {
+    if (params.has('google') && !linkingGoogle) clearGoogleReturn();
+  }, [params, linkingGoogle]);
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (pending) return;
@@ -103,13 +112,21 @@ export function LoginPage() {
     setError('');
     setPending(true);
     try {
-      if (linkingGoogle) await signInWithGoogleLink(email, password);
-      else await signIn(email, password);
+      const session = linkingGoogle
+        ? await signInWithGoogleLink(email, password)
+        : await signIn(email, password);
+      if (!session) return;
+      clearGoogleReturn();
+      if (session.user.email_verified === false) {
+        rememberVerificationReturn(session.user.id, destination);
+        navigate(authLink(paths.verifyEmail, destination), { replace: true });
+        return;
+      }
       successFeedback(
         language === 'en' ? 'Signed in' : 'เข้าสู่ระบบแล้ว',
         language === 'en' ? 'Close notification' : 'ปิดการแจ้งเตือน',
       );
-      navigate(safeReturnTo(params.get('returnTo')), { replace: true });
+      navigate(destination, { replace: true });
     } catch (failure) {
       setError(accountFailure(failure, language === 'en'));
     } finally {
@@ -122,8 +139,8 @@ export function LoginPage() {
         <div className="login-card-brand" aria-hidden="true">
           <Brand />
         </div>
-        <h1 id="login-title">{t('auth.merchantSignIn')}</h1>
-        <p>{t('auth.signInForStoreOwnersManagersAnd')}</p>
+        <h1 id="login-title">{t('auth.signIn')}</h1>
+        <p>{t('auth.sharedSignInDescription')}</p>
       </div>
       {params.has('registered') && (
         <p role="status" className="auth-status-banner">
@@ -189,15 +206,12 @@ export function LoginPage() {
         </fieldset>
       </form>
       {!linkingGoogle && (
-        <GoogleAuth
-          disabled={pending}
-          returnTo={safeReturnTo(params.get('returnTo'))}
-        />
+        <GoogleAuth disabled={pending} returnTo={destination} />
       )}
       <div className="auth-links">
         <div className="auth-link-register-prompt">
           <span>{t('auth.noAccountYet')}</span>
-          <Link to="/register">
+          <Link to={authLink(paths.register, destination)}>
             {t('auth.createAccount')}
             <ChevronRight size={18} aria-hidden="true" />
           </Link>
@@ -209,6 +223,8 @@ export function LoginPage() {
 
 export function RegisterPage() {
   const { t, localize, language } = useLanguage();
+  const [params] = useSearchParams();
+  const destination = safeReturnTo(params.get('returnTo'));
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -230,6 +246,7 @@ export function RegisterPage() {
     setPending(true);
     try {
       const result = await register(email, password, name);
+      rememberVerificationReturn(result.id, destination);
       setVerificationEmailSent(result.verification_email_sent !== false);
       setRegistered(true);
       successFeedback(
@@ -250,11 +267,7 @@ export function RegisterPage() {
           <h1 id="verify-title">
             {language === 'en' ? 'Verify your email' : 'ยืนยันอีเมล'}
           </h1>
-          <p>
-            {language === 'en'
-              ? 'Your account was created. Verify your email before setting up your store.'
-              : 'สร้างบัญชีแล้ว กรุณายืนยันอีเมลก่อนตั้งค่าร้าน'}
-          </p>
+          <p>{t('auth.verifyAccountToContinue')}</p>
         </div>
         <div className="auth-form-body">
           {!verificationEmailSent && (
@@ -266,7 +279,9 @@ export function RegisterPage() {
           <ResendVerification initialEmail={email} />
         </div>
         <div className="auth-links auth-links-single">
-          <Link to="/login">{t('auth.alreadyHaveAnAccountSignIn')}</Link>
+          <Link to={authLink(paths.login, destination)}>
+            {t('auth.alreadyHaveAnAccountSignIn')}
+          </Link>
         </div>
       </LoginLayout>
     );
@@ -353,10 +368,14 @@ export function RegisterPage() {
           </Button>
         </fieldset>
       </form>
-      <GoogleAuth mode="register" disabled={pending} returnTo="/setup" />
+      <GoogleAuth mode="register" disabled={pending} returnTo={destination} />
       <div className="auth-links auth-links-single">
-        <Link to="/login">{t('auth.alreadyHaveAnAccountSignIn')}</Link>
-        <Link to={paths.verifyEmail}>{t('auth.verificationRecovery')}</Link>
+        <Link to={authLink(paths.login, destination)}>
+          {t('auth.alreadyHaveAnAccountSignIn')}
+        </Link>
+        <Link to={authLink(paths.verifyEmail, destination)}>
+          {t('auth.verificationRecovery')}
+        </Link>
       </div>
     </LoginLayout>
   );

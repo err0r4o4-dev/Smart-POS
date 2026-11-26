@@ -7,6 +7,7 @@ import { LandingPage } from './LandingPage';
 
 const mocks = vi.hoisted(() => ({ status: 'anonymous' }));
 const fetchMock = vi.fn();
+const mockSession = { user: { id: 'test-customer', display_name: 'Test Customer', email_verified: true } };
 const shops = [
   {
     slug: 'krapao',
@@ -23,6 +24,7 @@ const shops = [
 ];
 vi.mock('../../app/AuthProvider', () => ({
   useAuth: () => ({ state: { status: mocks.status } }),
+  useOptionalAuth: () => ({ state: { status: mocks.status, session: mocks.status === 'authenticated' ? mockSession : null }, signOut: vi.fn() }),
 }));
 
 function LocationProbe() {
@@ -99,7 +101,7 @@ it('links directly to sign-in and keeps the full directory link outside the hero
   );
   for (const name of ['หน้าหลัก', 'สำรวจร้าน'])
     expect(nav.queryByRole('link', { name })).not.toBeInTheDocument();
-  expect(nav.getByRole('link', { name: 'เข้าสู่ระบบ' })).toHaveAttribute(
+  expect(within(screen.getByRole('banner')).getByRole('link', { name: 'เข้าสู่ระบบ' })).toHaveAttribute(
     'href',
     '/login',
   );
@@ -108,8 +110,8 @@ it('links directly to sign-in and keeps the full directory link outside the hero
     screen.getByRole('region', { name: 'มีร้านอาหารเป็นของตัวเอง?' }),
   );
   expect(
-    merchant.getByRole('link', { name: 'เข้าสู่ระบบร้านค้า' }),
-  ).toHaveAttribute('href', '/login');
+    merchant.getByRole('link', { name: 'เริ่มร้านค้า' }),
+  ).toHaveAttribute('href', '/register?returnTo=%2Fsetup');
   const hero = within(
     screen.getByRole('region', { name: 'ค้นหาร้านอาหารในชุมชนของคุณ' }),
   );
@@ -131,10 +133,6 @@ it('links directly to sign-in and keeps the full directory link outside the hero
     'มีร้านอาหารเป็นของตัวเอง?',
   ])
     expect(screen.getByRole('heading', { name })).toBeVisible();
-  expect(screen.getByRole('link', { name: /สมัครร้านค้าฟรี/ })).toHaveAttribute(
-    'href',
-    '/register',
-  );
   expect(document.querySelector('#landing-main')).toHaveAttribute(
     'tabindex',
     '-1',
@@ -241,7 +239,7 @@ it('provides the reference footer without a duplicate language selector', () => 
     expect(footer.getByRole('heading', { name })).toBeVisible();
   expect(footer.getByRole('link', { name: 'สมัครร้านค้า' })).toHaveAttribute(
     'href',
-    '/register',
+    '/#for-merchants',
   );
   expect(footer.getByRole('link', { name: 'หมวดหมู่อาหาร' })).toHaveAttribute(
     'href',
@@ -249,11 +247,11 @@ it('provides the reference footer without a duplicate language selector', () => 
   );
 });
 
-it('offers the workspace to signed-in users instead of sign-in', () => {
+it('displays the signed-in account and keeps store setup an explicit choice', () => {
   mocks.status = 'authenticated';
   renderLanding();
-  for (const link of screen.getAllByRole('link', { name: 'เข้าพื้นที่ทำงาน' }))
-    expect(link).toHaveAttribute('href', '/workspace');
+  expect(screen.getByRole('button', { name: 'Test Customer' })).toBeVisible();
+  expect(screen.getByRole('link', { name: 'เริ่มร้านค้า' })).toHaveAttribute('href', '/setup');
   expect(
     screen.queryByRole('link', { name: /เข้าสู่ระบบ/ }),
   ).not.toBeInTheDocument();

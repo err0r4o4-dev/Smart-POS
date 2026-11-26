@@ -1,0 +1,81 @@
+.public-account {
+  position: relative;
+  min-width: 0;
+}
+.public-account-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding-inline: 10px;
+  border-radius: var(--radius-pill);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  list-style: none;
+}
+.public-account-trigger::-webkit-details-marker {
+  display: none;
+}
+.public-account-trigger > span {
+  max-width: min(24vw, 14rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.public-account-trigger > svg {
+  flex: none;
+}
+.public-account-panel {
+  position: absolute;
+  z-index: 25;
+  inset-inline-end: 0;
+  inset-block-start: calc(100% + 6px);
+  display: grid;
+  width: min(13rem, calc(100vw - 32px));
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  box-shadow: var(--shadow-floating);
+  font-size: 1rem;
+  line-height: 1.4;
+}
+.public-account-panel > * {
+  padding: 8px;
+  overflow-wrap: anywhere;
+}
+.public-account-panel > a,
+.public-account-panel > button {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-small);
+  text-align: start;
+}
+.public-account-panel > a:hover,
+.public-account-panel > button:hover,
+.public-account-trigger:hover {
+  background: var(--primary-subtle);
+}
+.public-account-trigger:focus-visible,
+.public-account-panel :focus-visible {
+  outline: 2px solid var(--primary-strong);
+  outline-offset: 2px;
+}
+.public-account-panel > [role='alert'] {
+  color: var(--error-strong);
+}
+.public-profile-details dd {
+  margin: 0 0 10px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 479px) {
+  .public-account-trigger {
+    padding-inline: 5px;
+  }
+  .public-account-trigger > svg.lucide-log-in {
+    display: none;
+  }
+}

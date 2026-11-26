@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from '../../app/language';
 import { getGoogleConfig } from '../../lib/api';
+import { clearGoogleReturn, saveGoogleReturn } from './auth-destination';
 
 export function GoogleAuth({
   mode = 'login',
   disabled = false,
-  returnTo = '/workspace',
+  returnTo = '/',
 }: {
   mode?: 'login' | 'register';
   disabled?: boolean;
@@ -35,6 +36,9 @@ export function GoogleAuth({
     if (disabled || redirecting || availability !== 'enabled') return;
     setRedirecting(true);
     const destination = returnTo === '/setup' ? '/setup' : '/workspace';
+    if (destination === '/workspace' && returnTo !== '/workspace')
+      saveGoogleReturn(returnTo);
+    else clearGoogleReturn();
     window.location.assign(
       `/api/v1/auth/google/start?returnTo=${encodeURIComponent(destination)}`,
     );

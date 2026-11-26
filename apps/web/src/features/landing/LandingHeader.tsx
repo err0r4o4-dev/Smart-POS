@@ -1,24 +1,24 @@
 import { useState, type MouseEvent } from 'react';
-import { LogIn, Menu, Store } from 'lucide-react';
+import { ArrowLeft, Menu } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../app/language';
-import { paths } from '../../app/routes';
 import { LanguageSwitcher } from '../../components/ui/LanguageSwitcher';
 import { Brand } from '../../components/ui/primitives';
+import { PublicAccountMenu } from '../auth/PublicAccountMenu';
 import './landing.css';
 
-type Translate = ReturnType<typeof useLanguage>['t'];
-
 export function LandingHeader({
-  authenticated = false,
-  navigationLabel,
+  variant = 'home',
 }: {
-  authenticated?: boolean;
-  navigationLabel?: string;
+  variant?: 'home' | 'directory';
 }) {
   const { t } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const label = navigationLabel ?? t('landing.homeNavigation');
+  const directory = variant === 'directory';
+  const label = t(
+    directory ? 'shell.customerStorefrontNavigation' : 'landing.homeNavigation',
+  );
+  const backHome = directory ? t('landing.backToHome') : undefined;
 
   return (
     <header className="landing-header">
@@ -31,7 +31,7 @@ export function LandingHeader({
           <Brand />
         </Link>
         <div className="landing-desktop-navigation">
-          <LandingNavigation t={t} authenticated={authenticated} label={label} />
+          <LandingNavigation backHome={backHome} label={label} />
         </div>
         <div className="landing-mobile-language">
           <LanguageSwitcher />
@@ -47,36 +47,27 @@ export function LandingHeader({
           >
             <Menu size={22} aria-hidden="true" />
           </summary>
-          <LandingNavigation
-            t={t}
-            authenticated={authenticated}
-            label={label}
-            compactLanguage
-          />
+          <LandingNavigation backHome={backHome} label={label} compactLanguage />
         </details>
+        <PublicAccountMenu />
       </div>
     </header>
   );
 }
 
 function LandingNavigation({
-  t,
-  authenticated,
+  backHome,
   label,
   compactLanguage = false,
 }: {
-  t: Translate;
-  authenticated: boolean;
+  backHome?: string;
   label: string;
   compactLanguage?: boolean;
 }) {
   const close = (event: MouseEvent<HTMLElement>) =>
     event.currentTarget.closest('details')?.removeAttribute('open');
   return (
-    <nav
-      className="landing-navigation"
-      aria-label={label}
-    >
+    <nav className="landing-navigation" aria-label={label}>
       <div className="landing-nav-actions">
         {compactLanguage ? (
           <div className="landing-menu-language">
@@ -85,18 +76,11 @@ function LandingNavigation({
         ) : (
           <LanguageSwitcher />
         )}
-        <Link
-          className="landing-nav-link"
-          to={authenticated ? paths.workspace : paths.login}
-          onClick={close}
-        >
-          {authenticated ? (
-            <Store size={17} aria-hidden="true" />
-          ) : (
-            <LogIn size={17} aria-hidden="true" />
-          )}
-          {t(authenticated ? 'landing.goToWorkspace' : 'auth.signIn')}
-        </Link>
+        {backHome && (
+          <Link className="landing-nav-link" to="/" onClick={close}>
+            <ArrowLeft size={17} aria-hidden="true" /> {backHome}
+          </Link>
+        )}
       </div>
     </nav>
   );

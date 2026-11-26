@@ -285,7 +285,7 @@ it('requires MFA before reserving or sending a store creation', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Save and continue' }));
   expect(
     await screen.findByRole('link', {
-      name: 'Open account security (new tab)',
+      name: 'Open two-step verification (new tab)',
     }),
   ).toHaveAttribute('href', '/security');
   expect(mocks.request).not.toHaveBeenCalled();
@@ -307,7 +307,9 @@ it('keeps the same creation key across MFA errors and remounts, and blocks chang
   };
   const first = renderSetup(['/setup'], true);
   fill();
-  await screen.findByRole('link', { name: 'Open account security (new tab)' });
+  await screen.findByRole('link', {
+    name: 'Open two-step verification (new tab)',
+  });
   const firstKey = mocks.request.mock.calls[0][1].key;
   expect(
     JSON.parse(sessionStorage.getItem('smartpos-creation:user')!).key,
@@ -1836,7 +1838,7 @@ it('does not activate with contradictory server readiness', async () => {
 });
 
 it.each([
-  [403, 'MFA_REQUIRED', 'Open account security (new tab)'],
+  [403, 'MFA_REQUIRED', 'Open two-step verification (new tab)'],
   [401, 'UNAUTHENTICATED', 'Sign in again'],
 ])(
   'recovers completion denial %s without changing its operation key',

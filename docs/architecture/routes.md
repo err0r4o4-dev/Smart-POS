@@ -40,6 +40,8 @@ Canonical source: packages/contracts/routes.json. Earlier phase counts below are
 
 Identity and organization routes originated in Phases 1A and 1B. The approved transition requires an authenticated active OWNER membership for backoffice routes, with server-side tenant and permission checks. Invitation acceptance is being retired. See [organization architecture](organization.md).
 
+`GET /api/v1/organizations/store-status` supplies the signed-in merchant navigation hint before MFA. It returns only two booleans for the verified account and configured store scope. Private organization lists, context, and creation still require MFA.
+
 The nine Products routes are Phase 1C inventory entries. Catalog records are organization-scoped and shared across branches. Mutation-specific permissions are enforced separately from read access; the owner-only transition supersedes historical staff grants. See [catalog architecture](catalog.md).
 
 Phase5.1 registers two Returns routes;5.2 two Exchange/Void;5.3 five Pricing;5.4 three Customer;5.5 two Loyalty;5.6 four Quality routes. Phase0–4 and Phase5.1–5.7 COMPLETED (Local); Phase5 overall COMPLETED (Local); Phase6–7 NOT STARTED; Phase6 NOT READY; Production Ready NO. The historical Phase5 checkpoint counted16 modules/106 routes; storefront and its management-only Stripe sandbox diagnostic bring the current inventory to17 modules/114 routes. Sandbox diagnostics do not implement customer online payment or fulfillment. See [Quality](quality.md), [sandbox](payment-sandbox.md) and [final acceptance](../development/phase57-verification.md).

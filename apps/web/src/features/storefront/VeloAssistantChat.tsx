@@ -6,10 +6,12 @@ import { useLanguage } from '../../app/language';
 import { paths } from '../../app/routes';
 import type { TranslationKey, UiMessage } from '../../i18n';
 import { findMerchantGuide } from '../help/help-content';
+import { exactDecimal } from '../../lib/pos-api';
 import {
   storefrontRequest,
   type ShopCatalogPage,
   type ShopSettings,
+  type StoreAssistantAnswer,
 } from '../../lib/storefront-api';
 import { foodCategories } from './food-categories';
 import { useShopDirectory } from './useShopDirectory';
@@ -118,6 +120,8 @@ type Reply =
     }
   | { kind: 'directory'; query: string }
   | { kind: 'catalog'; slug: string; query: string }
+  | { kind: 'assistant'; slug: string; answer: StoreAssistantAnswer }
+  | { kind: 'pending' }
   | { kind: 'report'; issue: TranslationKey }
   | { kind: 'guide'; guide: NonNullable<ReturnType<typeof findMerchantGuide>> };
 
@@ -300,6 +304,27 @@ function CatalogReply({ slug, query }: { slug: string; query: string }) {
 
 function Answer({ reply, openReport }: { reply: Reply; openReport: (issue: TranslationKey) => void }) {
   const { t, messageText } = useLanguage();
+  if (reply.kind === 'pending') return <p>{t('assistant.loading')}</p>;
+  if (reply.kind === 'assistant') {
+    if (reply.answer.intent === 'clarify') return <p>{t('assistant.menuClarify')}</p>;
+    if (!reply.answer.items.length) return <p>{t('assistant.noMenu')}</p>;
+    return (
+      <>
+        <p>{t('assistant.availableMenu')}</p>
+        <ul className="velo-chat-menu-list">
+          {reply.answer.items.map((item, index) => (
+            <li key={index}>
+              {item.product_name}
+              {item.variant_name && item.variant_name !== item.product_name
+                ? ` · ${item.variant_name}` : ''}{' '}
+              · ฿{item.unit_price}
+            </li>
+          ))}
+        </ul>
+        <Link to={`${paths.shop}/${encodeURIComponent(reply.slug)}`}>{t('assistant.viewMenu')}</Link>
+      </>
+    );
+  }
   if (reply.kind === 'directory') return <DirectoryReply query={reply.query} />;
   if (reply.kind === 'catalog')
     return <CatalogReply slug={reply.slug} query={reply.query} />;
@@ -363,6 +388,10 @@ function AssistantSession({
   const textbox = useRef<HTMLInputElement>(null);
   const reportField = useRef<HTMLTextAreaElement>(null);
   const end = useRef<HTMLDivElement>(null);
+  const assistantContext = useRef<string[]>([]);
+  const assistantPrice = useRef<string | undefined>(undefined);
+  const assistantRequest = useRef<AbortController | null>(null);
+  const [isAnswering, setAnswering] = useState(false);
   const slug = scope.mode === 'store' ? scope.slug : '';
   const shop = useQuery({
     queryKey: ['storefront', slug, 'settings'],
@@ -387,18 +416,60 @@ function AssistantSession({
   }, [isOpen]);
   useEffect(() => {
     if (turns.length) end.current?.scrollIntoView?.({ block: 'nearest' });
-  }, [turns.length]);
+  }, [turns.length, isAnswering]);
+  useEffect(() => () => assistantRequest.current?.abort(), []);
   const close = () => {
     setOpen(false);
     launcher.current?.focus();
   };
   const submit = (text: string, question: UiMessage = text) => {
-    if (!text.trim()) return;
-    setTurns((previous) => [
-      ...previous,
-      { question, reply: replyFor(scope, text.trim()) },
-    ]);
+    const value = text.trim();
+    if (!value || assistantRequest.current) return;
     setInput('');
+    const fallback = replyFor(scope, value);
+    const localOnly = fallback.kind === 'text' && typeof fallback.message !== 'string' &&
+      ['assistant.privateTracking', 'assistant.noPublicQueue', 'assistant.statusAtTop'].includes(fallback.message.key);
+    if (scope.mode !== 'store' || !shop.data?.assistant_enabled || localOnly) {
+      setTurns((previous) => [...previous, { question, reply: fallback }]);
+      return;
+    }
+    const controller = new AbortController();
+    assistantRequest.current = controller;
+    setAnswering(true);
+    setTurns((previous) => [...previous, { question, reply: { kind: 'pending' } }]);
+    const questions = [...assistantContext.current, value].slice(-4);
+    const path = `/${encodeURIComponent(scope.slug)}/assistant`;
+    void storefrontRequest<StoreAssistantAnswer>(path, {
+      body: { questions, previous_price: assistantPrice.current }, signal: controller.signal,
+    }).then((answer) => {
+      if (controller.signal.aborted) return;
+      const knownAnswer = answer && Array.isArray(answer.items) &&
+        (answer.intent === 'menu' || answer.intent === 'clarify');
+      const reply: Reply = knownAnswer
+        ? { kind: 'assistant', slug: scope.slug, answer }
+        : fallback;
+      if (knownAnswer) assistantContext.current = questions;
+      if (knownAnswer && answer.intent === 'menu') {
+        let cheapest: bigint | null = null;
+        for (const item of answer.items) {
+          const amount = exactDecimal(item.unit_price);
+          if (amount !== null && (cheapest === null || amount < cheapest)) {
+            cheapest = amount;
+            assistantPrice.current = item.unit_price;
+          }
+        }
+      }
+      setTurns((previous) => [...previous.slice(0, -1), { question, reply }]);
+    }).catch(() => {
+      if (!controller.signal.aborted) {
+        setTurns((previous) => [...previous.slice(0, -1), { question, reply: fallback }]);
+      }
+    }).finally(() => {
+      if (!controller.signal.aborted) {
+        assistantRequest.current = null;
+        setAnswering(false);
+      }
+    });
   };
 
   function openReport(issue?: TranslationKey) {
@@ -475,6 +546,7 @@ function AssistantSession({
             <div className="velo-chat-msg-row velo-chat-msg-bot">
               <div className="velo-chat-bubble">
                 <p>{t(greetings[scope.mode])}</p>
+                {shop.data?.assistant_enabled && <p>{t('assistant.menuPrivacy')}</p>}
               </div>
             </div>
             {turns.map((turn, index) => (
@@ -521,6 +593,7 @@ function AssistantSession({
                 type="button"
                 className="velo-chat-chip"
                 key={key}
+                disabled={isAnswering}
                 onClick={() => {
                   if (key === 'assistant.reportProblem') openReport();
                   else submit(t(key), { key });
@@ -551,7 +624,7 @@ function AssistantSession({
               <button
                 type="submit"
                 className="velo-chat-send-btn"
-                disabled={!input.trim()}
+                disabled={!input.trim() || isAnswering}
                 aria-label={t('assistant.send')}
               >
                 <SendHorizontal size={16} aria-hidden="true" />

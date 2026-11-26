@@ -48,6 +48,14 @@ async function mockAccount(
       case '/api/v1/auth/logout':
         signedIn = false;
         return route.fulfill({ json: { data: { revoked: true } } });
+      case '/api/v1/organizations/store-status':
+        expect(signedIn).toBe(true);
+        return route.fulfill({
+          json: { data: {
+            has_store: access !== 'customer',
+            can_create_store: access === 'customer',
+          } },
+        });
       case '/api/v1/organizations':
         return access === 'mfa'
           ? route.fulfill({
@@ -87,6 +95,10 @@ for (const { width, access, enlarged } of [
     await page.setViewportSize({ width, height: 900 });
     const directory = '/shop?q=noodles&filter=open&filter=delivery';
     await page.goto(directory);
+    const storeAccess = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === '/api/v1/organizations/store-status',
+    );
     await page
       .getByRole('banner')
       .getByRole('link', { name: 'เข้าสู่ระบบ', exact: true })
@@ -99,23 +111,19 @@ for (const { width, access, enlarged } of [
       .getByRole('button', { name: 'เข้าสู่ระบบ', exact: true })
       .click();
     await expect(page).toHaveURL(directory);
+    await storeAccess;
     const account = page.getByRole('button', {
       name: displayName,
       exact: true,
     });
     if (enlarged)
       await page.addStyleTag({ content: 'html { font-size: 200%; }' });
-    const storeAccess = page.waitForResponse(
-      (response) =>
-        new URL(response.url()).pathname === '/api/v1/organizations',
-    );
     await account.click();
-    await storeAccess;
     await expect(
       page.getByRole('link', { name: 'บัญชีของฉัน' }),
     ).toHaveAttribute('href', '/account');
     const manage = page.getByRole('link', { name: 'จัดการร้าน', exact: true });
-    if (access === 'owner')
+    if (access !== 'customer')
       await expect(manage).toHaveAttribute('href', '/workspace');
     else await expect(manage).toHaveCount(0);
     const panel = page.locator('.public-account-panel');
@@ -161,9 +169,14 @@ test('store enrollment keeps the setup destination for an existing account', asy
   await mockAccount(page, baseURL!, 'customer');
   await page.goto('/');
   await page.getByRole('link', { name: 'เริ่มร้านค้า', exact: true }).click();
-  await expect(page).toHaveURL('/register?returnTo=%2Fsetup');
-  await page.getByRole('link', { name: /มีบัญชีแล้ว/ }).click();
+  await expect(page).toHaveURL('/setup');
+  await expect(page.getByRole('link', { name: 'สมัครบัญชี', exact: true })).toHaveAttribute('href', '/register?returnTo=%2Fsetup');
+  await page.getByRole('link', { name: 'เข้าสู่ระบบ', exact: true }).click();
   await expect(page).toHaveURL('/login?returnTo=%2Fsetup');
+  await page.getByLabel('ที่อยู่อีเมล', { exact: true }).fill('person@example.test');
+  await page.getByLabel('รหัสผ่าน', { exact: true }).fill('fixture-password');
+  await page.getByRole('button', { name: 'เข้าสู่ระบบ', exact: true }).click();
+  await expect(page).toHaveURL('/setup');
 });
 
 test('home sign-in opens the account page from the account menu', async ({

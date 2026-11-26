@@ -114,6 +114,8 @@ export const landing = defineMessages({
     merchantQr: 'สร้าง QR โต๊ะได้ทันที',
     merchantReports: 'ดูยอดขายและรายงาน',
     merchantSignUp: 'เริ่มร้านค้า',
+    merchantCheckFailed: 'ตรวจสอบสถานะร้านไม่สำเร็จ',
+    merchantCreationDisabled: 'ระบบนี้ไม่เปิดให้สร้างร้านเพิ่ม',
     footerLinks: 'ลิงก์ท้ายหน้า',
     footerAbout: 'เกี่ยวกับ VELOPOS',
     footerAboutDescription:
@@ -241,6 +243,8 @@ export const landing = defineMessages({
     merchantQr: 'Instant table QR codes',
     merchantReports: 'Sales and reports',
     merchantSignUp: 'Start a store',
+    merchantCheckFailed: 'Could not check store status',
+    merchantCreationDisabled: 'This system does not allow new stores',
     footerLinks: 'Footer links',
     footerAbout: 'About VELOPOS',
     footerAboutDescription:

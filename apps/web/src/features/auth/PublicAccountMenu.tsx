@@ -1,14 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { ChevronDown, LogIn } from 'lucide-react';
+import { ChevronDown, LogIn, LogOut, Store, UserRound } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useOptionalAuth } from '../../app/AuthProvider';
 import { useLanguage } from '../../app/language';
 import { paths } from '../../app/routes';
-import {
-  organizationRequest,
-  type Organization,
-} from '../../lib/organization-api';
+import { useStoreStatus } from '../../app/useStoreStatus';
 import { authLink, clearGoogleReturn } from './auth-destination';
 import './public-account.css';
 
@@ -21,7 +17,7 @@ export function PublicAccountMenu() {
   if (!session)
     return (
       <Link
-        className="public-account-trigger"
+        className="public-account-trigger public-account-sign-in"
         to={authLink(paths.login, location.pathname + location.search)}
       >
         <LogIn size={17} aria-hidden="true" /> {t('auth.signIn')}
@@ -54,15 +50,7 @@ function AccountDisclosure({
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState(false);
-  const stores = useQuery({
-    queryKey: ['public-account', userId, 'managed-stores'],
-    queryFn: ({ signal }) =>
-      organizationRequest<Organization[]>('/organizations', { signal }),
-    enabled: open && verified,
-    staleTime: 0,
-    gcTime: 0,
-    retry: false,
-  });
+  const stores = useStoreStatus(verified ? userId : undefined);
   useEffect(() => {
     if (!open) return;
     const outside = (event: PointerEvent) => {
@@ -102,28 +90,55 @@ function AccountDisclosure({
         className="public-account-trigger"
         aria-expanded={open}
       >
-        <span>{name || t('auth.myAccount')}</span>
+        <span className="public-account-avatar" aria-hidden="true">
+          <UserRound size={16} />
+        </span>
+        <span className="public-account-name">
+          {name || t('auth.myAccount')}
+        </span>
         <ChevronDown size={16} aria-hidden="true" />
       </summary>
       <div className="public-account-panel">
-        <strong>{name}</strong>
-        <Link to={paths.account}>{t('auth.myAccount')}</Link>
-        {open &&
-          verified &&
-          stores.isSuccess &&
-          !stores.isFetching &&
-          Array.isArray(stores.data) &&
-          stores.data.some((store) => store.status === 'ACTIVE') && (
-            <Link to={paths.workspace} onClick={clearGoogleReturn}>
-              {t('auth.manageStore')}
+        <strong className="account-menu-header">
+          {name || t('auth.myAccount')}
+        </strong>
+        <Link to={paths.account} className="account-menu-item">
+          <span className="account-menu-item-icon" aria-hidden="true">
+            <UserRound size={16} />
+          </span>
+          <span>{t('auth.myAccount')}</span>
+        </Link>
+        {verified && stores.data?.hasStore && !stores.isError && (
+            <Link
+              to={paths.workspace}
+              className="account-menu-item"
+              onClick={clearGoogleReturn}
+            >
+              <span className="account-menu-item-icon" aria-hidden="true">
+                <Store size={16} />
+              </span>
+              <span>{t('auth.manageStore')}</span>
             </Link>
           )}
+        {verified && stores.isError && (
+          <button
+            type="button"
+            className="account-menu-item"
+            onClick={() => void stores.refetch()}
+          >
+            {t('landing.merchantCheckFailed')} {t('common.retry')}
+          </button>
+        )}
         <button
           type="button"
+          className="account-menu-item account-menu-item-danger"
           disabled={pending}
           onClick={() => void handleSignOut()}
         >
-          {t('auth.signOut')}
+          <span className="account-menu-item-icon" aria-hidden="true">
+            <LogOut size={16} />
+          </span>
+          <span>{t('auth.signOut')}</span>
         </button>
         {failed && <p role="alert">{t('auth.signOutFailed')}</p>}
       </div>

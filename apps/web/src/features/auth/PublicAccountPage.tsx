@@ -21,7 +21,7 @@ export function PublicAccountPage() {
         <dd>{user.email}</dd>
       </dl>
       <div className="auth-links auth-links-single">
-        <Link to={paths.security}>{t('auth.accountSecurity')}</Link>
+        <Link to={paths.security}>{t('mfa.title')}</Link>
         <Link to="/">{t('landing.backToHome')}</Link>
       </div>
     </LoginLayout>

@@ -22,6 +22,7 @@ import { Loading } from '../../components/ui/primitives';
 import { useLanguage } from '../../app/language';
 import { useAuth } from '../../app/AuthProvider';
 import { paths } from '../../app/routes';
+import { useStoreStatus } from '../../app/useStoreStatus';
 import type { TranslationKey } from '../../i18n';
 import { foodCategories } from '../storefront/food-categories';
 import { customerAreas } from '../storefront/customer-areas';
@@ -30,7 +31,7 @@ import { useShopFavorites } from '../storefront/shop-favorites';
 import { useShopDirectory } from '../storefront/useShopDirectory';
 import { VeloAssistantChat } from '../storefront/VeloAssistantChat';
 import { LandingHeader } from './LandingHeader';
-import { authLink } from '../auth/auth-destination';
+import { authLink, clearGoogleReturn } from '../auth/auth-destination';
 import { LandingShopCard } from './LandingShopCard';
 import './landing.css';
 
@@ -85,9 +86,6 @@ export function LandingPage() {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
-  const { state } = useAuth();
-  const authenticated = state.status === 'authenticated';
-  const loading = state.status === 'loading';
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -301,28 +299,65 @@ export function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <div className="landing-merchant-actions">
-                {loading ? (
-                  <button
-                    className="button landing-merchant-action"
-                    type="button"
-                    disabled
-                  >
-                    {t('landing.checking')}
-                  </button>
-                ) : (
-                  <Link className="button landing-merchant-action" to={authenticated ? paths.setup : authLink(paths.register, paths.setup)}>
-                    {t('landing.merchantSignUp')}
-                    <ArrowRight size={18} aria-hidden="true" />
-                  </Link>
-                )}
-              </div>
+              <MerchantActions />
             </div>
           </div>
         </section>
       </main>
       <LandingFooter t={t} />
       <VeloAssistantChat />
+    </div>
+  );
+}
+
+function MerchantActions() {
+  const { t } = useLanguage();
+  const { state, refresh } = useAuth();
+  const user = state.session?.user;
+  const stores = useStoreStatus(user?.email_verified ? user.id : undefined);
+  const checking = state.status === 'loading' ||
+    (user?.email_verified && stores.isPending);
+  const target = state.status === 'anonymous'
+    ? paths.setup
+    : user?.email_verified === false
+      ? authLink(paths.verifyEmail, paths.setup)
+      : stores.data?.hasStore
+        ? paths.workspace
+        : stores.data?.canCreate ? paths.setup : null;
+
+  return (
+    <div className="landing-merchant-actions">
+      {checking ? (
+        <button className="button landing-merchant-action" type="button" disabled>
+          {t('landing.checking')}
+        </button>
+      ) : state.status === 'error' || stores.isError ? (
+        <>
+          <span role="alert">{t('landing.merchantCheckFailed')}</span>
+          <button
+            className="button button-secondary"
+            type="button"
+            disabled={stores.isFetching}
+            onClick={() => void (state.status === 'error' ? refresh() : stores.refetch())}
+          >
+            {t('common.retry')}
+          </button>
+        </>
+      ) : target ? (
+        <>
+          <Link className="button landing-merchant-action" to={target} onClick={clearGoogleReturn}>
+            {t(target === paths.workspace ? 'auth.manageStore' : 'landing.merchantSignUp')}
+            <ArrowRight size={18} aria-hidden="true" />
+          </Link>
+          {state.status === 'anonymous' && (
+            <Link className="button button-secondary" to={paths.login}>
+              {t('auth.signIn')}
+            </Link>
+          )}
+        </>
+      ) : (
+        <span>{t('landing.merchantCreationDisabled')}</span>
+      )}
     </div>
   );
 }

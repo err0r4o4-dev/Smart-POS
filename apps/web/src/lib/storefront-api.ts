@@ -18,6 +18,7 @@ export interface CustomerReview {
   rating: number;
 }
 export interface ShopSettings extends ShopSummary {
+  assistant_enabled?: boolean;
   category_codes?: string[];
   description: string;
   contact_phone: string;
@@ -30,6 +31,10 @@ export interface ShopSettings extends ShopSummary {
   stock_location_id?: string;
   published: boolean;
   revision: number;
+}
+export interface StoreAssistantAnswer {
+  intent: 'menu' | 'clarify';
+  items: Pick<ShopProduct, 'product_name' | 'variant_name' | 'unit_price'>[];
 }
 export interface ShopProduct {
   variant_id: string;

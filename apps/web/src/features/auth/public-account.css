@@ -5,10 +5,12 @@
 .public-account-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2);
   min-height: 44px;
-  padding-inline: 10px;
+  padding-inline: 8px;
+  border: 1px solid var(--border);
   border-radius: var(--radius-pill);
+  background: var(--surface);
   color: var(--text-primary);
   font-size: 0.875rem;
   font-weight: 600;
@@ -16,10 +18,41 @@
   white-space: nowrap;
   list-style: none;
 }
+.public-account-trigger.public-account-sign-in {
+  flex: 0 0 auto;
+  padding-inline: var(--space-3);
+  border-color: var(--primary-border);
+  background: var(--brand-gradient);
+  box-shadow: var(--shadow-control);
+  color: var(--text-primary);
+}
+.public-account-trigger.public-account-sign-in:hover {
+  background: var(--primary-hover);
+}
+.public-account-trigger.public-account-sign-in:active {
+  background: var(--primary-active);
+}
+.public-account > .public-account-trigger:hover,
+.public-account[open] > .public-account-trigger {
+  background: var(--primary-subtle);
+  border-color: var(--primary-border);
+}
 .public-account-trigger::-webkit-details-marker {
   display: none;
 }
-.public-account-trigger > span {
+.public-account-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 28px;
+  block-size: 28px;
+  border: 1px solid var(--primary-border);
+  border-radius: 50%;
+  background: var(--brand-soft-gradient);
+  color: var(--primary-strong);
+}
+.public-account-name {
+  min-width: 0;
   max-width: min(24vw, 14rem);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -31,10 +64,11 @@
   position: absolute;
   z-index: 25;
   inset-inline-end: 0;
-  inset-block-start: calc(100% + 6px);
+  inset-block-start: calc(100% + var(--space-2));
   display: grid;
-  width: min(13rem, calc(100vw - 32px));
-  padding: 8px;
+  gap: var(--space-1);
+  width: min(15rem, calc(100vw - 32px));
+  padding: var(--space-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
   background: var(--surface);
@@ -43,21 +77,16 @@
   line-height: 1.4;
 }
 .public-account-panel > * {
-  padding: 8px;
+  min-width: 0;
   overflow-wrap: anywhere;
 }
-.public-account-panel > a,
-.public-account-panel > button {
+.public-account-panel > .account-menu-item {
   min-height: 44px;
-  display: flex;
-  align-items: center;
-  border-radius: var(--radius-small);
+  font-size: 0.875em;
   text-align: start;
 }
-.public-account-panel > a:hover,
-.public-account-panel > button:hover,
-.public-account-trigger:hover {
-  background: var(--primary-subtle);
+.public-account-panel .account-menu-item-danger .account-menu-item-icon {
+  color: var(--error-strong);
 }
 .public-account-trigger:focus-visible,
 .public-account-panel :focus-visible {
@@ -65,6 +94,7 @@
   outline-offset: 2px;
 }
 .public-account-panel > [role='alert'] {
+  padding: var(--space-2);
   color: var(--error-strong);
 }
 .public-profile-details dd {
@@ -73,9 +103,16 @@
 }
 @media (max-width: 479px) {
   .public-account-trigger {
+    gap: 6px;
     padding-inline: 5px;
   }
-  .public-account-trigger > svg.lucide-log-in {
+  .public-account > .public-account-trigger {
+    max-width: 100%;
+  }
+  .public-account-trigger.public-account-sign-in {
+    padding-inline: 8px;
+  }
+  .public-account-sign-in > svg {
     display: none;
   }
 }

@@ -35,6 +35,8 @@ export const assistant = defineMessages({
     statusAtTop:
       'ดูสถานะรับออเดอร์ของร้านได้ที่หัวแชท สถานะนี้เป็นของการสั่งออนไลน์',
     noMenu: 'ไม่พบเมนูที่สั่งได้ตามเงื่อนไข',
+    menuClarify: 'ลองบอกชื่อเมนูที่อยากได้ หรืองบต่อจานอีกนิดนะครับ',
+    menuPrivacy: 'ถามเรื่องเมนูได้เลย ไม่ต้องใส่ชื่อ เบอร์โทร หรือลิงก์ออเดอร์',
     availableMenu: 'เมนูที่สั่งได้:',
     viewMenu: 'ดูเมนูทั้งหมด',
     reportDraft: 'ร่างรายงานปัญหา',
@@ -77,6 +79,8 @@ export const assistant = defineMessages({
     send: 'ส่งข้อความ',
   },
   en: {
+    menuClarify: 'Tell me which dish you are looking for or your budget per dish.',
+    menuPrivacy: 'Ask about the menu without sharing names, phone numbers, or order links.',
     discoveryTitle: 'Restaurant guide',
     storeTitle: '{name} assistant',
     storeGeneric: 'Restaurant assistant',

@@ -79,7 +79,6 @@ export const auth = defineMessages({
     sharedSignInDescription: 'ใช้บัญชีเดียวเพื่อสั่งอาหารและจัดการร้านของคุณ',
     verifyAccountToContinue: 'สร้างบัญชีแล้ว กรุณายืนยันอีเมลเพื่อใช้งานต่อ',
     myAccount: 'บัญชีของฉัน',
-    accountSecurity: 'ความปลอดภัยของบัญชี',
     manageStore: 'จัดการร้าน',
     signOutFailed: 'ออกจากระบบไม่สำเร็จ กรุณาลองอีกครั้ง',
     forgotPassword: 'ลืมรหัสผ่าน?',
@@ -206,10 +205,11 @@ export const auth = defineMessages({
     signingIn: 'Signing in…',
     signIn: 'Sign in',
     merchantSignIn: 'Merchant sign-in',
-    sharedSignInDescription: 'Use one account to order food and manage your store.',
-    verifyAccountToContinue: 'Your account was created. Verify your email to continue.',
+    sharedSignInDescription:
+      'Use one account to order food and manage your store.',
+    verifyAccountToContinue:
+      'Your account was created. Verify your email to continue.',
     myAccount: 'My account',
-    accountSecurity: 'Account security',
     manageStore: 'Manage store',
     signOutFailed: 'Could not sign out. Try again.',
     forgotPassword: 'Forgot password?',

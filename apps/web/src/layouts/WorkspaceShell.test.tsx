@@ -249,7 +249,7 @@ it('supports ArrowDown/ArrowUp keyboard navigation in the profile dropdown and r
 
   const menu = screen.getByRole('menu', { name: 'Your account' });
   const securityItem = within(menu).getByRole('menuitem', {
-    name: 'Account security',
+    name: 'Two-step verification',
   });
   const settingsItem = within(menu).getByRole('menuitem', { name: 'Settings' });
   const signOutItem = within(menu).getByRole('menuitem', { name: 'Sign out' });

@@ -2,9 +2,42 @@ package config
 
 import (
 	"encoding/base64"
+	"net/url"
 	"strings"
 	"testing"
 )
+
+func TestStoreAssistantConfigurationIsDevelopmentOnly(t *testing.T) {
+	values := map[string]string{
+		"STORE_ASSISTANT_ENABLED": "true", "STORE_ASSISTANT_AI_URL": "http://ai:8001",
+		"AI_STORE_ASSISTANT_TOKEN": strings.Repeat("x", 40),
+	}
+	get := func(name string) string { return values[name] }
+	loopback, _ := url.Parse("http://localhost:8088")
+	remote, _ := url.Parse("https://store.example.test")
+	if _, _, err := storeAssistantConfig("production", loopback, get); err == nil {
+		t.Fatal("production was allowed")
+	}
+	if _, _, err := storeAssistantConfig("development", remote, get); err == nil {
+		t.Fatal("remote origin was allowed")
+	}
+	if endpoint, _, err := storeAssistantConfig("development", loopback, get); err != nil || endpoint != "http://ai:8001" {
+		t.Fatalf("loopback development not enabled: %v", err)
+	}
+	values["STORE_ASSISTANT_AI_URL"] = "http://127.0.0.1:8001"
+	values["API_ADDR"] = "0.0.0.0:8080"
+	if _, _, err := storeAssistantConfig("development", loopback, get); err == nil {
+		t.Fatal("native assistant accepted a non-loopback API listener")
+	}
+	values["API_ADDR"] = "127.0.0.1:8080"
+	if _, _, err := storeAssistantConfig("development", loopback, get); err != nil {
+		t.Fatalf("native loopback listener rejected: %v", err)
+	}
+	values["AI_STORE_ASSISTANT_TOKEN"] = ""
+	if _, _, err := storeAssistantConfig("development", loopback, get); err == nil {
+		t.Fatal("internal service authentication was not required")
+	}
+}
 
 func TestMFAConfiguration(t *testing.T) {
 	key := base64.StdEncoding.EncodeToString([]byte(strings.Repeat("B", 32)))

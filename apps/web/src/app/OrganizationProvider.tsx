@@ -7,6 +7,7 @@ import {
 } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './AuthProvider';
+import { useStoreStatus } from './useStoreStatus';
 import { ApiError } from '../lib/api';
 import type { StoreMode } from '../lib/store-mode';
 import {
@@ -46,7 +47,13 @@ function readSelection(userID: string): Selection {
     return { userID, orgID: '', branchID: '' };
   }
 }
-export function OrganizationProvider({ children }: { children: ReactNode }) {
+export function OrganizationProvider({
+  children,
+  allowNewStoreWithoutMFA = false,
+}: {
+  children: ReactNode;
+  allowNewStoreWithoutMFA?: boolean;
+}) {
   const { state } = useAuth();
   const queryClient = useQueryClient();
   const userID = state.session?.user.id ?? '';
@@ -79,6 +86,9 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   }, [state.status, queryClient]);
   const chosen =
     selection.userID === userID ? selection : readSelection(userID);
+  const keepSetupDraft = (error: unknown) =>
+    allowNewStoreWithoutMFA && error instanceof ApiError &&
+    error.code === 'MFA_REQUIRED';
   const organizationsQuery = useQuery({
     queryKey: ['tenant', userID, 'organizations'],
     queryFn: async ({ signal }) => {
@@ -100,16 +110,24 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
       return { items, storeMode: metadata.storeMode };
     },
     enabled: !!userID,
-    refetchOnWindowFocus: true,
-    refetchInterval: 30_000,
+    // Returning from MFA must not replace an in-progress setup form.
+    refetchOnWindowFocus: (query) => !keepSetupDraft(query.state.error),
+    refetchInterval: (query) => keepSetupDraft(query.state.error) ? false : 30_000,
     retry: false,
   });
+  // Allow only the blank setup form when the protected list is unavailable.
+  const checkNewStore = keepSetupDraft(organizationsQuery.error) &&
+    state.session?.user.email_verified === true &&
+    Boolean(userID);
+  const storeStatus = useStoreStatus(checkNewStore ? userID : undefined, false);
+  const newStoreOnly = checkNewStore && storeStatus.isSuccess && !storeStatus.data.hasStore;
   const organizations =
     userID && !organizationsQuery.isError
       ? (organizationsQuery.data?.items ?? [])
       : [];
-  const storeMode =
-    userID && !organizationsQuery.isError
+  const storeMode = newStoreOnly
+    ? (storeStatus.data?.canCreate ? 'multi' : 'single')
+    : userID && !organizationsQuery.isError
       ? (organizationsQuery.data?.storeMode ?? null)
       : null;
   const orgID =
@@ -163,8 +181,12 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   };
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['tenant'] });
+    if (checkNewStore && storeStatus.isError)
+      await storeStatus.refetch();
   };
-  const failure = organizationsQuery.error ?? contextQuery.error;
+  const failure = newStoreOnly ? null :
+    (checkNewStore ? storeStatus.error : null) ??
+    organizationsQuery.error ?? contextQuery.error;
   return (
     <OrganizationStateContext.Provider
       value={{
@@ -176,7 +198,8 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
         refresh,
         loading:
           !!userID &&
-          (organizationsQuery.isPending || (!!orgID && contextQuery.isPending)),
+          (organizationsQuery.isPending || (!!orgID && contextQuery.isPending) ||
+            (checkNewStore && storeStatus.isPending)),
         error: failure instanceof Error ? failure.message : '',
         errorCode: failure instanceof ApiError ? failure.code : undefined,
         can: (permission) => context?.permissions.includes(permission) ?? false,

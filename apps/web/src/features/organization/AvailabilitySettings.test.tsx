@@ -90,7 +90,7 @@ it('links to MFA in a new tab and keeps edits for an explicit retry', async () =
   const save = screen.getByRole('button', { name: 'บันทึกเวลาและการพัก' });
   fireEvent.click(save);
   const security = await screen.findByRole('link', {
-    name: /ไปที่ความปลอดภัยของบัญชี/,
+    name: /ไปที่การยืนยันตัวตน 2 ขั้นตอน/,
   });
   expect(security).toHaveAttribute('href', '/security');
   expect(security).toHaveAttribute('target', '_blank');

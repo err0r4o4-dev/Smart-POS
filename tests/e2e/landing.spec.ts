@@ -155,9 +155,9 @@ test('filters published stores, keeps favorites, and opens the shop cart selecto
   ).toHaveAttribute('href', '/shop/krapao/cart');
   await page.goto('/');
   await page.getByRole('link', { name: 'เริ่มร้านค้า' }).click();
-  await expect(page).toHaveURL('/register?returnTo=%2Fsetup');
+  await expect(page).toHaveURL('/setup');
   await page.goto('/');
-  await page.getByRole('link', { name: 'เข้าสู่ระบบ', exact: true }).click();
+  await page.getByRole('banner').getByRole('link', { name: 'เข้าสู่ระบบ', exact: true }).click();
   await expect(page).toHaveURL(/\/login$/);
 });
 

@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
   request: vi.fn(),
   auth: { status: 'authenticated', session: { user: { id: 'user' } } } as {
     status: string;
-    session: { user: { id: string } } | null;
+    session: { user: { id: string; email_verified?: boolean } } | null;
   },
 }));
 vi.mock('./AuthProvider', () => ({ useAuth: () => ({ state: mocks.auth }) }));
@@ -97,13 +97,13 @@ function Probe() {
     </>
   );
 }
-function mount() {
+function mount(allowNewStoreWithoutMFA = false) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
   const tree = () => (
     <QueryClientProvider client={client}>
-      <OrganizationProvider>
+      <OrganizationProvider allowNewStoreWithoutMFA={allowNewStoreWithoutMFA}>
         <Probe />
       </OrganizationProvider>
     </QueryClientProvider>
@@ -123,6 +123,27 @@ beforeEach(() => {
     ),
   );
 });
+
+it.each([
+  [false, true, 'multi', false],
+  [false, false, 'single', false],
+  [true, false, 'mode-pending', true],
+] as const)(
+  'limits setup before MFA (has store %s, can create %s)',
+  async (has_store, can_create_store, mode, requiresMFA) => {
+    mocks.auth.session!.user.email_verified = true;
+    mocks.request.mockImplementation(async (path: string) => {
+      if (path === '/organizations/store-status') return { has_store, can_create_store };
+      throw new ApiError(403, 'Verify MFA', undefined, 'MFA_REQUIRED');
+    });
+    mount(true);
+    if (requiresMFA) await screen.findByText('MFA needed');
+    expect(await screen.findByText(mode)).toBeVisible();
+    expect(screen.getByText('none')).toBeVisible();
+    expect(screen.getByText('employees-denied')).toBeVisible();
+    expect(Boolean(screen.queryByText('MFA needed'))).toBe(requiresMFA);
+  },
+);
 it.each(['/organizations', '/context'])(
   'preserves MFA_REQUIRED and clears cached context when %s denies assurance',
   async (deniedPath) => {

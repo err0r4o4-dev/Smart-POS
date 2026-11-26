@@ -7,7 +7,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"io"
 	"mime"
+	"net"
 	"net/http"
+	"net/netip"
 	"smartpos/api/internal/modules/identity"
 	"smartpos/api/internal/modules/organization"
 	"smartpos/api/internal/platform/httpx"
@@ -20,6 +22,7 @@ type Handler struct {
 	Service        *Service
 	Authentication identity.Handler
 	Sandbox        *stripe.Client
+	Assistant      AssistantPlanner
 }
 type operation func(context.Context, string, string, *http.Request) (any, error)
 
@@ -97,8 +100,25 @@ func (handler Handler) PublicRoutes(router chi.Router) {
 	})
 	router.Route("/storefronts/{slug}", func(public chi.Router) {
 		public.Get("/", endpoint(200, func(ctx context.Context, _, _ string, request *http.Request) (any, error) {
-			return service.PublicSettings(ctx, chi.URLParam(request, "slug"))
+			settings, err := service.PublicSettings(ctx, chi.URLParam(request, "slug"))
+			return struct {
+				Settings
+				AssistantEnabled bool `json:"assistant_enabled,omitempty"`
+			}{settings, handler.Assistant != nil}, err
 		}))
+		if handler.Assistant != nil {
+			type assistantInput struct {
+				Questions     []string `json:"questions"`
+				PreviousPrice string   `json:"previous_price"`
+			}
+			public.With(handler.requireAssistantPeer, handler.Authentication.RequirePublicWrite("storefront.assistant", 8, time.Minute)).Post("/assistant", writeEndpoint(200, func(ctx context.Context, _, _ string, request *http.Request, input assistantInput) (any, error) {
+				slug := chi.URLParam(request, "slug")
+				if _, err := service.PublicSettings(ctx, slug); err != nil {
+					return nil, err
+				}
+				return answerAssistant(ctx, handler.Assistant, service.BrowseProducts, slug, input.Questions, input.PreviousPrice)
+			}))
+		}
 		public.Get("/products", endpoint(200, func(ctx context.Context, _, _ string, request *http.Request) (any, error) {
 			query, err := catalogQuery(request)
 			if err != nil {
@@ -118,6 +138,19 @@ func (handler Handler) PublicRoutes(router chi.Router) {
 		public.With(handler.Authentication.RequirePublicWrite("storefront.review", 30, time.Minute)).Post("/review", writeEndpoint(200, func(ctx context.Context, _, _ string, request *http.Request, input ReviewInput) (any, error) {
 			return service.ReviewOrder(ctx, chi.URLParam(request, "slug"), input)
 		}))
+	})
+}
+
+func (handler Handler) requireAssistantPeer(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		host, _, err := net.SplitHostPort(request.RemoteAddr)
+		peer, parseErr := netip.ParseAddr(host)
+		peer = peer.Unmap()
+		if err != nil || parseErr != nil || (!peer.IsLoopback() && peer != handler.Authentication.TrustedProxyIP) {
+			httpx.Error(writer, request, http.StatusForbidden, "FORBIDDEN", "Assistant requires local development access")
+			return
+		}
+		next.ServeHTTP(writer, request)
 	})
 }
 func (handler Handler) TenantRoutes(router chi.Router) {

@@ -303,6 +303,7 @@ export const organization = defineMessages({
     signInWithTheRecipientSEmail:
       'เข้าสู่ระบบด้วยบัญชีเจ้าของร้านเพื่อจัดการร้าน',
     registerAccount: 'สมัครบัญชี',
+    signInToSetUpStore: 'เข้าสู่ระบบหรือสมัครบัญชีเพื่อเริ่มตั้งค่าร้าน',
     checkingStoreModeAndAccess: 'กำลังตรวจสอบโหมดร้านและสิทธิ์เข้าใช้งาน…',
     refreshPermissions: 'ตรวจสิทธิ์ใหม่',
     unableToAcceptInvitation: 'รับคำเชิญไม่สำเร็จ',
@@ -693,6 +694,7 @@ export const organization = defineMessages({
     signInWithTheRecipientSEmail:
       'Sign in with your owner account to manage your store.',
     registerAccount: 'Register account',
+    signInToSetUpStore: 'Sign in or register an account to start setting up your store.',
     checkingStoreModeAndAccess: 'Checking store mode and access…',
     refreshPermissions: 'Refresh permissions',
     unableToAcceptInvitation: 'Unable to accept invitation',

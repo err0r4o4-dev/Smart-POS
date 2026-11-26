@@ -32,6 +32,7 @@ import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavig
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
+import { storeStatusKey } from '../../app/useStoreStatus';
 import { paths } from '../../app/routes';
 import {
   Brand,
@@ -77,6 +78,7 @@ import {
 import { validateStoreProfile, type ProfileErrors } from './setup-validation';
 import { ApiError } from '../../lib/api';
 import { getMFAStatus } from '../auth/mfa-api';
+import { authLink } from '../auth/auth-destination';
 import { MFARequiredState } from './MFARequiredState';
 import {
   CreationRecoveryError,
@@ -851,7 +853,7 @@ function ScopedSetupPage() {
       <main className="setup-page-wrapper">
         <Card className="tenant-page">
           <h1>{t('organization.setUpStore')}</h1>
-          <p>{t('organization.signInWithTheRecipientSEmail')}</p>
+          <p>{t('organization.signInToSetUpStore')}</p>
           <Link className="button" to="/login?returnTo=%2Fsetup">
             {t('auth.signIn')}
           </Link>
@@ -861,6 +863,8 @@ function ScopedSetupPage() {
         </Card>
       </main>
     );
+  if (state.session.user.email_verified === false)
+    return <Navigate to={authLink(paths.verifyEmail, paths.setup)} replace />;
   if (tenant.loading)
     return (
       <main className="setup-page-wrapper">
@@ -1127,6 +1131,10 @@ function ScopedSetupPage() {
           )
             throw new ApiError(502, t('mfa.creationUnknown'));
           finishCreation(state.session.user.id, key);
+          void queryClient.invalidateQueries({
+            queryKey: storeStatusKey(state.session.user.id),
+            refetchType: 'none',
+          });
           creating = false;
           nextContext = {
             organizationID: result.organization.id,

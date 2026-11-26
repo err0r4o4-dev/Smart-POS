@@ -3,10 +3,10 @@ name = "smartpos-ai"
 version = "0.0.0"
 description = "Internal SmartPOS AI foundation; no prediction models in Phase 0"
 requires-python = ">=3.13,<3.14"
-dependencies = ["fastapi>=0.115,<1", "uvicorn>=0.34,<1", "pydantic-settings>=2.8,<3"]
+dependencies = ["fastapi>=0.115,<1", "uvicorn>=0.34,<1", "pydantic-settings>=2.8,<3", "httpx>=0.28,<1"]
 
 [dependency-groups]
-dev = ["pytest>=8,<10", "httpx>=0.28,<1", "ruff>=0.11,<1"]
+dev = ["pytest>=8,<10", "ruff>=0.11,<1"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

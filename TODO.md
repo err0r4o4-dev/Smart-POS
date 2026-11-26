@@ -1,18 +1,13 @@
+## Store menu after sign-in
+
+- [/] Show the owner action after sign-in and let new merchants start setup before MFA; keep MFA for protected reads and writes.
+- [?] Verify the contract, frontend states, access boundaries and responsive behavior; obtain independent review before release.
+
 ## Public food categories
 
 - [/] Persist shared food categories in storefront settings and expose them in discovery.
 - [/] Replace business type selection and discovery filters across web entry points.
 - [?] Verify migration and tenant isolation on an isolated PostgreSQL target; obtain independent review before release.
-
-## Account screen redesign
-
-- [/] Adjust shared account layouts and sign-in/MFA presentation.
-- [ ] Verify responsive layouts and existing account flows.
-
-## Account flow: shared MFA entry screen
-
-- [/] Match the account header and make the required MFA action explicit.
-- [ ] Verify account and MFA transitions at desktop and mobile widths.
 
 ## Verified storefront ratings
 
@@ -42,11 +37,3 @@
 - [ ] Produce and inspect food photos and store covers.
 - [ ] Populate a task-owned loopback database and verify storefront and operational scenarios.
 - [ ] Obtain scoped independent review for data integrity, payment and isolation before acceptance.
-
-## Separate customer discovery and merchant sign-in
-
-- [/] Add a direct directory entry from home and group merchant account actions.
-- [ ] Verify customer, merchant and responsive navigation with isolated browser fixtures.
-- [/] Reuse one sign-in for customers and owners, return to the public page, and keep store enrollment separate.
-- [ ] Verify shared login, email verification, account dropdown, role visibility, and responsive behavior.
-- [?] Obtain scoped independent review before closing the changed authentication flow; reviewer dispatch is not yet authorized.

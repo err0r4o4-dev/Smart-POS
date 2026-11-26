@@ -15,6 +15,7 @@ import { ErrorState, Loading } from '../../components/ui/primitives';
 import { useQuery } from '@tanstack/react-query';
 import { getSetup } from '../organization/setup-api';
 import { MFARequiredState } from '../organization/MFARequiredState';
+import { authLink } from '../auth/auth-destination';
 
 function SetupCompletionGate({
   allowOrganizationSetup,
@@ -64,7 +65,7 @@ export function WorkspaceAreaGate() {
   const tenant = useOrganization();
   const { pathname } = useLocation();
   if (state.session?.user.email_verified === false && pathname !== paths.help)
-    return <Navigate to={paths.verifyEmail} replace />;
+    return <Navigate to={authLink(paths.verifyEmail, pathname)} replace />;
   if (
     (businessArea(pathname) === 'management' || pathname === paths.workspace) &&
     state.status === 'authenticated'

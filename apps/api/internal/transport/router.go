@@ -29,6 +29,7 @@ type Options struct {
 	PaymentSandbox            *stripe.Client
 	CustomerPayments          storefront.CustomerPaymentGateway
 	SingleStoreOrganizationID string
+	StoreAssistant            storefront.AssistantPlanner
 }
 
 func Router(checker Readiness, logger *slog.Logger, authentication ...identity.Handler) http.Handler {
@@ -67,7 +68,7 @@ func RouterWithOptions(checker Readiness, logger *slog.Logger, options Options, 
 			pricingHandler := pricing.Handler{Service: &pricing.Service{Organization: organizations}}
 			customerHandler := customers.Handler{Service: &customers.Service{Organization: organizations}}
 			loyaltyHandler := loyalty.Handler{Service: &loyalty.Service{Organization: organizations}}
-			storefrontHandler := storefront.Handler{Service: &storefront.Service{Organization: organizations, CustomerPayments: options.CustomerPayments}, Authentication: authentication[0], Sandbox: options.PaymentSandbox}
+			storefrontHandler := storefront.Handler{Service: &storefront.Service{Organization: organizations, CustomerPayments: options.CustomerPayments}, Authentication: authentication[0], Sandbox: options.PaymentSandbox, Assistant: options.StoreAssistant}
 			restaurantHandler := restaurant.Handler{Service: &restaurant.Service{Organization: organizations}}
 			storefrontHandler.PublicRoutes(version)
 			organization.Handler{Service: organizations, Authentication: authentication[0]}.Routes(version, catalogHandler.TenantRoutes, inventoryHandler.TenantRoutes, posHandler.TenantRoutes, purchasingHandler.TenantRoutes, returnsHandler.TenantRoutes, pricingHandler.TenantRoutes, customerHandler.TenantRoutes, loyaltyHandler.TenantRoutes, storefrontHandler.TenantRoutes, restaurantHandler.TenantRoutes)

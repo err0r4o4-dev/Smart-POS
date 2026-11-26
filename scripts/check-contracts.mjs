@@ -227,6 +227,7 @@ const storefrontPaths = [
   ...[
     '',
     '/products',
+    '/assistant',
     '/quote',
     '/orders',
     '/track',
@@ -456,6 +457,7 @@ assert.deepEqual(
     '/api/v1/auth/email/verify',
     '/api/v1/auth/email/resend',
     '/api/v1/organizations',
+    '/api/v1/organizations/store-status',
     '/api/v1/organizations/{id}',
     '/api/v1/organizations/{id}/audit',
     '/api/v1/organizations/{id}/branches',
@@ -566,10 +568,15 @@ for (const path of [...storefrontPaths, ...restaurantPaths]) {
       assert.deepEqual(operation.security, []);
       if (method === 'post') assert.ok(operation.responses['429']);
     }
-    assert.ok(operation.responses['409']);
+    if (!path.endsWith('/assistant')) assert.ok(operation.responses['409']);
     assert.ok(operation.responses['503']);
   }
 }
+const storefrontAssistant = api.paths['/api/v1/storefronts/{slug}/assistant'].post;
+const assistantQuestions = storefrontAssistant.requestBody.content['application/json'].schema.properties.questions;
+assert.equal(assistantQuestions.maxItems, 4);
+assert.equal(assistantQuestions.items.maxLength, 240);
+assert.equal(api.components.schemas.StorefrontSettings.properties.assistant_enabled.type, 'boolean');
 const guestCreate = api.paths['/api/v1/storefronts/{slug}/orders'].post;
 const prepaidSettlement =
   api.paths['/api/v1/organizations/{id}/online-orders/{orderId}/settle-prepaid']

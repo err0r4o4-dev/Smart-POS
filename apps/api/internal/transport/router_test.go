@@ -8,18 +8,58 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
 	"smartpos/api/internal/modules/identity"
+	"smartpos/api/internal/modules/storefront"
 	"smartpos/api/internal/platform/httpx"
 )
 
 type readinessStub struct {
 	err        error
 	panicValue bool
+}
+
+func TestStoreAssistantRouteRequiresOptInAndAllowedOrigin(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
+	const localOrigin = "http://localhost:8088"
+	const otherOrigin = "https://other.example.test"
+	auth := identity.Handler{
+		Service:        &identity.Service{},
+		Origins:        []string{localOrigin},
+		TrustedProxyIP: netip.MustParseAddr("172.30.42.2"),
+	}
+	enabled := Options{StoreAssistant: storefront.NewAssistantClient("http://ai:8001", "unused-in-test")}
+	for _, tc := range []struct {
+		name    string
+		options Options
+		peer    string
+		origin  string
+		status  int
+		code    string
+	}{
+		{"disabled", Options{}, "127.0.0.1:1234", localOrigin, http.StatusNotFound, "NOT_FOUND"},
+		{"untrusted peer", enabled, "192.0.2.2:1234", localOrigin, http.StatusForbidden, "FORBIDDEN"},
+		{"loopback checks origin", enabled, "127.0.0.1:1234", otherOrigin, http.StatusForbidden, "INVALID_ORIGIN"},
+		{"compose proxy checks origin", enabled, "172.30.42.2:1234", otherOrigin, http.StatusForbidden, "INVALID_ORIGIN"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			router := RouterWithOptions(readinessStub{}, logger, tc.options, auth)
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/storefronts/bistro/assistant", strings.NewReader(`{"questions":["Any soup?"]}`))
+			req.RemoteAddr = tc.peer
+			req.Header.Set("Origin", tc.origin)
+			req.Header.Set("X-Forwarded-For", "127.0.0.1")
+			response := httptest.NewRecorder()
+			router.ServeHTTP(response, req)
+			if response.Code != tc.status || !strings.Contains(response.Body.String(), `"code":"`+tc.code+`"`) {
+				t.Errorf("assistant HTTP response = %d %s, want %d %s", response.Code, response.Body, tc.status, tc.code)
+			}
+		})
+	}
 }
 
 func TestTenantRouterDoesNotExposeRetiredAuthorityRoutes(t *testing.T) {

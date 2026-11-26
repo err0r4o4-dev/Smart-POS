@@ -285,7 +285,7 @@ for (const {
       await save.click();
       if (mfa) {
         const security = panel.getByRole('link', {
-          name: /เปิดความปลอดภัยของบัญชี/,
+          name: /ไปที่การยืนยันตัวตน 2 ขั้นตอน/,
         });
         await expect(security).toHaveAttribute('target', '_blank');
         await expect(security).toHaveAttribute('href', '/security');
@@ -295,7 +295,7 @@ for (const {
         ]);
         await expect(securityTab).toHaveURL(/\/security$/);
         await expect(
-          securityTab.getByRole('heading', { name: 'ความปลอดภัยของบัญชี' }),
+          securityTab.getByRole('heading', { name: 'ยืนยันตัวตนเพิ่มเติม' }),
         ).toBeVisible();
         await securityTab
           .getByLabel('รหัส 6 หลัก', { exact: true })

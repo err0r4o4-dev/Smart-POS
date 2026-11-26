@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { publishMarketShop } from './main-publish.mjs';
+import { publishMarketShop, restoreMarketDraft } from './main-publish.mjs';
 
 const org = 'f0000000-0000-4000-8000-000000000001';
 const branchId = 'f0000000-0000-4000-8000-000000000002';
@@ -44,7 +44,7 @@ function fixture() {
         assert.fail('Unexpected route');
     }
   };
-  return { request, writes, settings: () => settings, open: () => { settings.accepting_orders = true; } };
+  return { request, writes, settings: () => settings, open: () => { settings.accepting_orders = true; }, bump: () => { settings = { ...settings, revision: settings.revision + 1 }; } };
 }
 
 test('stores the draft, lists all menu items, then publishes closed and is write-free on rerun', async () => {
@@ -61,4 +61,29 @@ test('stores the draft, lists all menu items, then publishes closed and is write
   state.open();
   await assert.rejects(publishMarketShop(state.request, shop, staged, true), /accepting_orders/);
   assert.equal(state.writes.length, count);
+});
+
+test('restores the confirmed publication to its draft without deleting listed menu items', async () => {
+  const state = fixture();
+  const draft = await publishMarketShop(state.request, shop, staged, false);
+  await publishMarketShop(state.request, shop, staged, true, draft.revision);
+  await restoreMarketDraft(state.request, shop, staged, draft, true);
+  assert.deepEqual(state.settings(), { ...draft, revision: draft.revision + 2 });
+  assert.deepEqual(await publishMarketShop(state.request, shop, staged, false), state.settings());
+});
+
+test('refuses to publish or restore after a concurrent revision change', async () => {
+  const state = fixture();
+  const draft = await publishMarketShop(state.request, shop, staged, false);
+  state.bump();
+  const writes = state.writes.length;
+  await assert.rejects(publishMarketShop(state.request, shop, staged, true, draft.revision), /revision/);
+  assert.equal(state.writes.length, writes);
+  const newer = await publishMarketShop(state.request, shop, staged, false);
+  await publishMarketShop(state.request, shop, staged, true, newer.revision);
+  state.bump();
+  const laterWrites = state.writes.length;
+  await assert.rejects(restoreMarketDraft(state.request, shop, staged, newer, true), /revision/);
+  assert.equal(state.writes.length, laterWrites);
+  assert.equal(state.settings().published, true);
 });

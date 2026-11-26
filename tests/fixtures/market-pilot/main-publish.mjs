@@ -18,7 +18,21 @@ function nextRevision(data, previous) {
   return data.revision;
 }
 
-export async function publishMarketShop(request, shop, staged, show) {
+function closedSettings(shop) {
+  return {
+    slug: shop.settings.slug, name: shop.settings.name, description: shop.settings.description,
+    pickup_instructions: shop.settings.pickup_instructions, category_codes: shop.settings.category_codes,
+    accepting_orders: false, delivery_enabled: false, shipping_fee: '0.00', contact_phone: '',
+    ...(shop.cover_image_url ? { cover_image_url: shop.cover_image_url } : {}),
+  };
+}
+
+function validDraftRevision(revision) {
+  assert.ok(Number.isSafeInteger(revision) && revision > 0 && revision <= Number.MAX_SAFE_INTEGER - 2,
+    'Invalid draft revision');
+}
+
+export async function publishMarketShop(request, shop, staged, show, draftRevision) {
   const { org, branchId, variants } = staged;
   assert.equal(staged.slug, shop.settings.slug);
   assert.match(org, uuid);
@@ -30,15 +44,14 @@ export async function publishMarketShop(request, shop, staged, show) {
   const call = (method, path, body) => request({ method, path: `/api/v1/organizations/${org}${path}`, body });
 
   let settings = await call('GET', '/storefront');
-  const fixed = {
-    slug: shop.settings.slug, name: shop.settings.name, description: shop.settings.description,
-    pickup_instructions: shop.settings.pickup_instructions, category_codes: shop.settings.category_codes,
-    accepting_orders: false, delivery_enabled: false, shipping_fee: '0.00', contact_phone: '',
-  };
-  const cover = shop.cover_image_url ? { cover_image_url: shop.cover_image_url } : {};
+  const fixed = closedSettings(shop);
+  if (draftRevision !== undefined) {
+    validDraftRevision(draftRevision);
+    assert.equal(show, true);
+    match(settings, { published: false, revision: draftRevision });
+  }
   if (settings !== null) {
     match(settings, fixed);
-    match(settings, cover);
     assert.equal(settings.branch_id, branchId);
     assert.ok(!settings.online_terminal_id, 'Unexpected online terminal');
   }
@@ -60,7 +73,7 @@ export async function publishMarketShop(request, shop, staged, show) {
   const terminal = await ensure('/pos/terminals', {
     branch_id: branchId, stock_location_id: location, code: 'MARKET-POS', name: 'Market POS', status: 'ACTIVE',
   });
-  const input = { ...fixed, ...cover, terminal_id: terminal };
+  const input = { ...fixed, terminal_id: terminal };
   const expectedSettings = { ...input, branch_id: branchId, stock_location_id: location };
   if (settings === null) {
     settings = await call('PUT', '/storefront', { ...input, published: false, revision: 0 });
@@ -79,6 +92,7 @@ export async function publishMarketShop(request, shop, staged, show) {
     const row = bySKU.get(item.sku);
     match(row, { variant_id: variantId, product_name: item.name, unit: item.unit, unit_price: item.price });
     if (row.published === true && row.is_sold_out === item.is_sold_out) continue;
+    assert.equal(draftRevision, undefined, 'Draft menu changed before publication');
     assert.equal(settings.published, false, 'Refusing to modify a visible menu');
     assert.equal(row.published, false, 'Refusing to change an existing listing');
     const listed = await call('PUT', `/storefront/products/${variantId}`, {
@@ -94,4 +108,34 @@ export async function publishMarketShop(request, shop, staged, show) {
   match(visible, { ...expectedSettings, published: true });
   nextRevision(visible, revision);
   return visible;
+}
+
+export async function restoreMarketDraft(request, shop, { org, slug, branchId }, draft, confirmed) {
+  assert.match(org, uuid);
+  assert.match(branchId, uuid);
+  assert.equal(slug, shop.settings.slug);
+  assert.equal(typeof confirmed, 'boolean');
+  validDraftRevision(draft.revision);
+  assert.match(draft.terminal_id, uuid);
+  assert.match(draft.stock_location_id, uuid);
+  assert.ok(!draft.online_terminal_id);
+  const input = { ...closedSettings(shop), terminal_id: draft.terminal_id };
+  const expected = { ...input, branch_id: branchId, stock_location_id: draft.stock_location_id };
+  match(draft, { ...expected, published: false });
+
+  const path = `/api/v1/organizations/${org}/storefront`;
+  const current = await request({ method: 'GET', path });
+  match(current, expected);
+  assert.ok(!current.online_terminal_id);
+  if (!confirmed) {
+    // With a lost response, a visible draft may belong to another writer.
+    assert.ok(current.published === false && current.revision === draft.revision,
+      'Publication could not be attributed; inspect storefront before applying recovery');
+    return;
+  }
+  const revision = draft.revision + 1;
+  match(current, { published: true, revision });
+  const restored = await request({ method: 'PUT', path, body: { ...input, published: false, revision } });
+  match(restored, { ...expected, published: false });
+  nextRevision(restored, revision);
 }

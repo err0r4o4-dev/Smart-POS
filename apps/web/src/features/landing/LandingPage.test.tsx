@@ -23,7 +23,7 @@ const shops = [
   },
 ];
 vi.mock('../../app/AuthProvider', () => ({
-  useAuth: () => ({ state: { status: mocks.status } }),
+  useAuth: () => ({ state: { status: mocks.status, session: mocks.status === 'authenticated' ? mockSession : null }, refresh: vi.fn() }),
   useOptionalAuth: () => ({ state: { status: mocks.status, session: mocks.status === 'authenticated' ? mockSession : null }, signOut: vi.fn() }),
 }));
 
@@ -111,7 +111,7 @@ it('links directly to sign-in and keeps the full directory link outside the hero
   );
   expect(
     merchant.getByRole('link', { name: 'เริ่มร้านค้า' }),
-  ).toHaveAttribute('href', '/register?returnTo=%2Fsetup');
+  ).toHaveAttribute('href', '/setup');
   const hero = within(
     screen.getByRole('region', { name: 'ค้นหาร้านอาหารในชุมชนของคุณ' }),
   );
@@ -247,14 +247,44 @@ it('provides the reference footer without a duplicate language selector', () => 
   );
 });
 
-it('displays the signed-in account and keeps store setup an explicit choice', () => {
+function mockStoreStatus(hasStore: boolean, canCreateStore: boolean) {
+  fetchMock.mockImplementation(async (path) => ({
+    ok: true,
+    json: async () => ({
+      data: path === '/api/v1/organizations/store-status'
+        ? { has_store: hasStore, can_create_store: canCreateStore }
+        : shops,
+    }),
+  }));
+}
+
+it('displays the signed-in account and keeps store setup an explicit choice', async () => {
   mocks.status = 'authenticated';
+  mockStoreStatus(false, true);
   renderLanding();
   expect(screen.getByRole('button', { name: 'Test Customer' })).toBeVisible();
-  expect(screen.getByRole('link', { name: 'เริ่มร้านค้า' })).toHaveAttribute('href', '/setup');
+  expect(await screen.findByRole('link', { name: 'เริ่มร้านค้า' })).toHaveAttribute('href', '/setup');
   expect(
     screen.queryByRole('link', { name: /เข้าสู่ระบบ/ }),
   ).not.toBeInTheDocument();
+});
+
+it('shows the owner action before the account menu is opened', async () => {
+  mocks.status = 'authenticated';
+  mockStoreStatus(true, false);
+  renderLanding();
+  const merchant = within(screen.getByRole('region', { name: 'มีร้านอาหารเป็นของตัวเอง?' }));
+  expect(await merchant.findByRole('link', { name: 'จัดการร้าน' })).toHaveAttribute('href', '/workspace');
+  expect(merchant.queryByRole('link', { name: 'เริ่มร้านค้า' })).not.toBeInTheDocument();
+  expect(fetchMock.mock.calls.some(([path]) => path === '/api/v1/organizations')).toBe(false);
+});
+
+it('does not offer setup when creation is disabled', async () => {
+  mocks.status = 'authenticated';
+  mockStoreStatus(false, false);
+  renderLanding();
+  expect(await screen.findByText('ระบบนี้ไม่เปิดให้สร้างร้านเพิ่ม')).toBeVisible();
+  expect(screen.queryByRole('link', { name: 'เริ่มร้านค้า' })).not.toBeInTheDocument();
 });
 
 it('keeps session actions disabled while checking authentication', () => {

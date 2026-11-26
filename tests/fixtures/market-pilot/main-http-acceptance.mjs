@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { text } from 'node:stream/consumers';
 import { prepareMainCatalog } from './main-package.mjs';
 import { stageMarketCatalogs } from './main-import.mjs';
-import { publishMarketShop } from './main-publish.mjs';
+import { publishMarketShop, restoreMarketDraft } from './main-publish.mjs';
 import { verifyImage } from './main-verify.mjs';
 
 const { origin, writeOrigin, owner, guest, primary } = JSON.parse(await text(process.stdin));
@@ -55,6 +55,20 @@ for (const [index, shop] of release.shops.entries()) {
   await publishMarketShop(own, shop, staged[index], false);
 }
 assert.deepEqual(await directory(), []);
+
+const sample = release.shops[0];
+const sampleStage = staged[0];
+const sampleDraft = await publishMarketShop(own, sample, sampleStage, false);
+const samplePublished = await publishMarketShop(own, sample, sampleStage, true, sampleDraft.revision);
+assert.deepEqual((await directory()).map(shop => shop.slug), [sampleStage.slug]);
+await restoreMarketDraft(own, sample, sampleStage, sampleDraft, true);
+assert.deepEqual(await directory(), []);
+assert.equal(await request({ path: `${shops}/${sampleStage.slug}` }, null, 404), 'NOT_FOUND');
+const sampleRestored = await publishMarketShop(own, sample, sampleStage, false);
+assert.equal(sampleRestored.revision, samplePublished.revision + 1);
+assert.deepEqual(sampleRestored, { ...sampleDraft, revision: sampleRestored.revision });
+await assert.rejects(restoreMarketDraft(own, sample, sampleStage, sampleDraft, true), /published/);
+assert.deepEqual(await own({ path: retainedPath }), retainedBefore);
 
 let menus = 0;
 let covers = 0;
@@ -133,7 +147,7 @@ assert.equal(await request({
   },
 }, null, 409), 'STORE_CLOSED');
 assert.equal(menus, 195);
-console.log(`Real owner HTTP and PostgreSQL: 13 closed storefronts, 195 exact menus and ${covers} associated covers. Verified directory/detail, cover preservation and clearing, zero reviews, retry, tenant denial, MFA and rejected quote/order.`);
+console.log(`Real owner HTTP and PostgreSQL: 13 closed storefronts, 195 exact menus and ${covers} associated covers. Verified publication recovery, directory/detail, cover preservation and clearing, zero reviews, retry, tenant denial, MFA and rejected quote/order.`);
 
 if (process.env.SMARTPOS_MARKET_RELEASE_BROWSER) {
   const { checkMarketBrowser } = await import('./main-browser-acceptance.mjs');

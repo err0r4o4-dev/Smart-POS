@@ -3452,6 +3452,15 @@ Acceptance: Tests cover mixed-restaurant rejection, changed-payload key conflict
 
 ### T3.3 Implement merchant-direct PromptPay and safe recovery
 
+- [/] 2026-11-26 B03 timing rules (`storefront/payment_policy.go`): QR expires
+  15 minutes after creation; provider queries every minute for the first 30
+  minutes (the last minutely step lands exactly on the boundary), then every
+  15 minutes; a payment verified more than 24 hours after expiry is "late"
+  and routes to manual refund review. Expiry never releases a hold by itself.
+  Pure and unused: the retained Stripe test checkout and its windows are
+  unchanged. Tests failed to compile first, then passed; full offline Go
+  test and vet passed. Blocked: provider adapter, callback authentication
+  and evidence persistence still need the B02 provider decision.
 - [ ] Replace test-only assumptions for the selected new flow with verified merchant-direct PromptPay. Persist callback/query evidence and real paid time, global timeout, periodic reconciliation, same-order safe retry and degraded-mode recovery. Separate platform billing.
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.
@@ -3465,6 +3474,22 @@ Acceptance: Tests cover forged/mismatched callbacks, duplicate callback/query, c
 
 ### T3.4 Implement paid-time FIFO, ETA, delay and correction
 
+- [/] 2026-11-26 B04 ordering rule (`restaurant/paid_queue_order.go`), from the
+  [decisions approved that day](requirements.md#61-policy-decisions-recorded-2026-11-26).
+  `OrderPaidQueue` keeps started orders first in their existing order, then
+  sorts unstarted orders by verified paid time, then confirmation time, then
+  order ID. A late callback for an earlier payment moves ahead of unstarted
+  work only. `QueueWaitEstimate` returns orders ahead × average and reports
+  unknown for zero/negative averages, negative counts or overflow. Both are
+  pure and unused: `queueQuery` still orders by ticket issue time, and no
+  paid-time column feeds it yet. `pickup_policy.go` adds the B15 ETA-delay
+  rule (notify only when more than 10 minutes later).
+  - Evidence: the new tests failed to compile without the functions, then
+    passed; the input slice is verified unchanged. Offline `go test ./...`
+    (18 packages), `go vet ./...`, `go build ./...` and `gofmt -l` passed.
+  - Open: persist verified paid time and confirmation time per attempt (B02
+    provider evidence), switch the kitchen query, measure average preparation
+    time and its no-history fallback, plus isolated DB concurrency acceptance.
 - [ ] Use one restaurant queue across four modes ordered by verified paid time. Maintain paid/hold/refund/reconciliation eligibility, whole-order kitchen state, dynamic ETA, owner delay reports and audited allowed status corrections.
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.
@@ -3478,6 +3503,14 @@ Acceptance: Tests include out-of-order callbacks, equal paid times, period rollo
 
 ### T3.5 Implement handover, self-delivery, No-Show and receipts
 
+- [/] 2026-11-26 B15 pickup rules (`restaurant/pickup_policy.go`): reminder due
+  at Ready and again at Ready+10 minutes, never a third; No-Show eligible only
+  at Ready+30 minutes after two sent reminders. Eligibility only permits an
+  explicit Owner action; it never refunds, completes or cancels. Boundary
+  instants are covered (one second early is not due/eligible). Tests failed
+  to compile before the code and now pass; full offline Go test/vet/build
+  passed. Unused so far: no reminder sender, delivery channel, No-Show
+  command, evidence record or audit exists yet.
 - [ ] Verify channel-specific handover and independent completion. Add restaurant-radius/flat-fee prepayment validation, owner delivery status/ETA, Pickup/Takeaway No-Show evidence and numbered paid receipts/kitchen-ticket print data.
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.
@@ -3491,6 +3524,18 @@ Acceptance: Tests deny wrong/replayed handover codes, out-of-area checkout and c
 
 ### T3.6 Implement customer cancellation, amendment and manual food refunds
 
+- [/] 2026-11-26 B09 allocation (`restaurant/refund_allocation.go`):
+  `AllocateOrderDiscount` splits an order-level discount by each line's
+  pre-discount value, floors to satang and gives the remainder to the last
+  line. If the last line cannot absorb it, the rest moves to earlier lines so
+  no line exceeds its own value. It rejects negative input, discount above
+  total, totals over `pricing.Maximum` and a discount on all-zero lines, and
+  leaves the input unchanged. This differs from the existing largest-remainder
+  `pricing.allocate` (1,000 over 10/20/30 gives 166/333/501, not 167/333/500);
+  the retained POS pricing is unchanged. Tests failed to compile first, then
+  passed. Mutation check: putting the whole remainder on the last line failed
+  `remainder-exceeds-last-line`. Full offline Go test/vet/build passed. No
+  refund command, persistence or benefit reversal uses it yet.
 - [ ] Separate pre-Preparing customer request/merchant approval from merchant inability-to-serve exceptions. Require customer-approved non-increasing amendments, manual full/partial/difference food refunds, deadlines/reminders/escalation and evidence disputes.
 - [ ] Add/run the focused positive, negative, replay/concurrency and failure-path
       tests applicable to this scope; preserve current safety/compatibility checks.
@@ -3657,6 +3702,75 @@ Acceptance: Race/denial tests prevent dual owners, unverified receiving-account 
     (Cf) characters, max 100 runes; `name` must be visible single-line text,
     max 200 runes (matching catalog product names). Thai combining marks are
     unaffected. Cost if wrong: an Owner needing longer refs gets a diagnostic.
+  - 2026-11-26 durable reference storage: migration 52
+    (`000052_restaurant_menu_import_refs`) adds `restaurant_menu_import_refs`,
+    keyed by restaurant, row kind and `ref`. Only the target column matching
+    the kind may be set; composite foreign keys tie each ref to a native
+    category, item, group or option in the same organization. Partial unique
+    indexes allow one ref per entity per kind. A CHECK matches the validator's
+    ref rules (1-100 runes; no whitespace, control or listed invisible format
+    characters). FORCE RLS; runtime has SELECT only (no INSERT/UPDATE/DELETE),
+    because binding and apply commands are a later reviewed slice. The down
+    migration refuses while rows exist. `RequiredVersion` is now 52; the user
+    chose number 52 after their migration 51, which they have since committed.
+    - RED/GREEN: the readiness guard failed with "requires schema 51 but
+      latest migration is 52", then passed after the version bump.
+    - Isolated DB: `.local/velopos-b16-20261126/check-import-refs.mjs` on a
+      task-owned PostgreSQL 17.6 tmpfs container in a labelled internal
+      network (no host port, no volume) applied migrations 1-52 and passed
+      12/12 (`import-refs-1795684414360.log`): empty down/reapply, FORCE RLS
+      and SELECT-only grant, all four kinds with the same spelling across
+      kinds, duplicate (kind, ref) and duplicate entity refusals, independent
+      ref in a second restaurant, cross-restaurant foreign-key refusal,
+      kind/column mismatch, ref text rules (leading space, newline, tab,
+      U+200B, U+FEFF, empty, 101 runes refused; 100 Thai runes accepted),
+      runtime RLS reads (4 / 1 / 0 with no organization) and write denial, and
+      populated downgrade refusal with an unchanged row digest. The first
+      three runs failed on fixture and harness defects (missing
+      `updated_by`, empty organization code, a psql command-tag echo, a test
+      that rebound an already-bound item); each cleaned up correctly.
+      Container/network absence was confirmed by label afterwards.
+    - Offline `go test ./...`, `go vet ./...`, `node scripts/check-contracts.mjs`
+      (18 modules/116 routes) and `git diff --check` passed; nothing staged.
+    - Independent review (user-authorized, read-only; no shell, network,
+      writes or delegation) of migration 52 and B09 found no P1. Verified:
+      every FK carries `organization_id`, group/option FKs carry the parent
+      keys, the shape CHECK forces one shape, RLS matches migration 47, REVOKE
+      covers TRUNCATE, the down migration fails closed. It found no existing
+      DELETE on the four menu tables that migration 52 newly blocks.
+    - Review P2 fixes, test-first. The harness was strengthened so each claim
+      can fail. Fixture now has two items per restaurant, each with a group
+      and option. The duplicate test rebinds the same ref to a _different_
+      item, so only the primary key can reject it. Cross-restaurant and
+      cross-item FK refusals now cover GROUP and OPTION. Shape tests target
+      `restaurant_menu_import_refs_check` with six wrong shapes. The populated
+      downgrade also runs as a real NOSUPERUSER NOBYPASSRLS table owner.
+      - Charset: a Go test (`menu_import_ref_charset_test.go`) exports every
+        code point `menuImportRefValid` rejects (25 ranges); the harness asks
+        PostgreSQL which of all 1,114,111 non-surrogate code points its CHECK
+        rejects and requires an exact match. RED: the original CHECK accepted
+        U+00A0, U+0600-0605, U+06DD, U+1680, U+2007, U+202F, U+FFF9-FFFB,
+        U+110BD and more. Fix: explicit code point ranges replace the
+        locale-dependent POSIX classes. GREEN: exact match.
+      - P3 FK scans: two non-partial indexes now serve parent-delete FK checks.
+        The plan check requires the FK column as an index condition. Mutation:
+        without the indexes the plan seeks only the primary-key prefix and
+        filters, and the check fails; restored file hash matched.
+      - Isolated result: 13/13 PASS (`import-refs-1795685840407.log`); label
+        query afterwards found no leftover container or network. Offline Go
+        test/vet, gofmt and contracts (18/116) passed; nothing staged.
+    - Review P2-1 resolved by the user on 2026-11-26: refunds use the stored
+      sale-time per-line discount; B09 applies only without one. Spill-back
+      approved. Recorded in requirements.md §6.1. Original finding: sale-time discounts use
+      largest-remainder over Net (`pricing.allocate`/`Manual`), B09 uses
+      floor-plus-last-line over gross. 10.00 over 10/20/30 gives 1.67/3.33/5.00
+      at sale but 1.66/3.33/5.01 by B09, so recomputing at refund drifts by a
+      satang per line. `AllocateOrderDiscount` is not called. Recommendation:
+      refunds use the per-line discount stored at sale; B09 applies only where
+      no stored per-line value exists. The spill-back rule (remainder moves to
+      earlier lines if the last line is too small) is Main's extension of B09.
+    - Open: initial-binding export, bind/apply commands with audit, revision,
+      30-minute preview retention and replay/stale checks.
   - Deferred minors (P3, not fixed): XLSX test cells use `85.00` where Excel
     stores `85`; percent-formatted cells import their stored value; lines are
     logical CSV rows; only the second duplicate is reported; blank comma-only

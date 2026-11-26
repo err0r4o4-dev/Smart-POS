@@ -194,9 +194,9 @@ for (const width of [320, 375, 768, 1440]) {
     await page
       .getByRole('button', { name: 'Open VELO Assistant chat', exact: true })
       .click();
-    const chat = page.getByRole('dialog', { name: 'VELO Assistant' });
+    const chat = page.getByRole('dialog', { name: /Restaurant guide|ไกด์หาร้านอาหาร/ });
     await expect(
-      chat.getByText('Ask about stores, menus, or orders'),
+      chat.getByText(/Ask for a store by name/),
     ).toBeVisible();
     await chat
       .getByRole('textbox', { name: 'Type your message' })
@@ -206,7 +206,7 @@ for (const width of [320, 375, 768, 1440]) {
       chat.getByRole('textbox', { name: 'พิมพ์ข้อความ' }),
     ).toHaveValue('ข้อความของฉัน My message');
     await expect(
-      chat.getByText('สอบถามเกี่ยวกับร้านค้า เมนู หรือคำสั่งซื้อ'),
+      chat.getByText(/ลองถามชื่อร้าน ประเภทร้าน/),
     ).toBeVisible();
     await chat.getByRole('textbox', { name: 'พิมพ์ข้อความ' }).focus();
     await page.keyboard.press('Escape');

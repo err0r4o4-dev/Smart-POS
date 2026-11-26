@@ -2,12 +2,10 @@ import { useState, type MouseEvent } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   House,
-  MapPin,
   Menu,
   Search,
   ShoppingCart,
   Store,
-  UtensilsCrossed,
   type LucideIcon,
 } from 'lucide-react';
 import { useOptionalAuth } from '../../app/AuthProvider';
@@ -31,17 +29,6 @@ const sections: Section[] = [
     label: 'landing.navExplore',
     icon: Search,
     active: (pathname) => pathname.startsWith(paths.shop),
-  },
-  {
-    to: paths.areas,
-    label: 'landing.navAreas',
-    icon: MapPin,
-    active: (pathname) => pathname.startsWith(paths.areas),
-  },
-  {
-    to: '/#landing-categories',
-    label: 'landing.navCategories',
-    icon: UtensilsCrossed,
   },
 ];
 

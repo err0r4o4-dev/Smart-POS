@@ -97,6 +97,17 @@ it('links every store, including closed ones, to its storefront', async () => {
   expect(screen.getByText('ปิดรับออเดอร์ชั่วคราว')).toBeVisible();
 });
 
+it('restores filters from the URL and clears them when no shop matches', async () => {
+  view('/shop?filter=open&q=ร้าน');
+  expect(await screen.findByText('ไม่พบร้านที่ตรงกับคำค้น')).toBeVisible();
+  expect(
+    screen.getByRole('button', { name: 'เปิดรับออเดอร์' }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.click(screen.getByRole('button', { name: 'ล้างตัวกรอง' }));
+  expect(screen.getByRole('heading', { name: 'ร้านพัก' })).toBeVisible();
+  expect(screen.getByRole('searchbox', { name: 'ค้นหาร้าน' })).toHaveValue('');
+});
+
 it('lists stores with a cart action when opened from the cart link', async () => {
   view('/shop?view=cart');
   expect(

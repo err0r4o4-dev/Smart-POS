@@ -40,6 +40,7 @@ import {
   createBrowserRouter,
   Navigate,
   Outlet,
+  ScrollRestoration,
   useLocation,
   useParams,
   type RouteObject,
@@ -94,7 +95,12 @@ const routes: RouteObject[] = [
     ),
   },
   {
-    element: <StorefrontLayout />,
+    element: (
+      <>
+        <StorefrontLayout />
+        <ScrollRestoration />
+      </>
+    ),
     children: [
       {
         path: paths.shop,

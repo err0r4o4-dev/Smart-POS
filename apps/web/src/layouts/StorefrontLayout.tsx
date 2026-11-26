@@ -1,5 +1,12 @@
 import { useLanguage } from '../app/language';
-import { Link, Outlet, useParams, useSearchParams } from 'react-router-dom';
+import {
+  Link,
+  Outlet,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { paths } from '../app/routes';
 import { useShopCart } from '../features/storefront/shop-cart';
@@ -14,6 +21,12 @@ export function StorefrontLayout() {
   const { t, language } = useLanguage();
 
   const { slug } = useParams();
+  const { state } = useLocation();
+  const navigate = useNavigate();
+  const directorySearch: unknown = state?.directorySearch;
+  const returnToDirectory =
+    typeof directorySearch === 'string' &&
+    (directorySearch === '' || directorySearch.startsWith('?'));
   const [searchParams] = useSearchParams();
   const tableQuery = searchParams.has('table')
     ? `?${searchParams.toString()}`
@@ -37,9 +50,32 @@ export function StorefrontLayout() {
       />
       <main id="main-content" className="storefront-content" tabIndex={-1}>
         {slug && (
-          <Link className="shop-back-link" to={paths.shop}>
+          <Link
+            className="shop-back-link"
+            to={{
+              pathname: paths.shop,
+              search: returnToDirectory ? directorySearch : '',
+            }}
+            onClick={(event) => {
+              if (
+                !returnToDirectory ||
+                event.button !== 0 ||
+                event.metaKey ||
+                event.ctrlKey ||
+                event.altKey ||
+                event.shiftKey
+              )
+                return;
+              event.preventDefault();
+              void navigate(-1);
+            }}
+          >
             <ArrowLeft size={16} aria-hidden="true" />
-            {language === 'th' ? 'ร้านค้าทั้งหมด' : 'All stores'}
+            {returnToDirectory
+              ? t('storefront.customer.backToResults')
+              : language === 'th'
+                ? 'ร้านค้าทั้งหมด'
+                : 'All stores'}
           </Link>
         )}
         <Outlet />
@@ -58,7 +94,7 @@ export function StorefrontLayout() {
           </Link>
         </nav>
       </footer>
-      <VeloAssistantChat />
+      <VeloAssistantChat scope={slug ? { mode: 'store', slug } : { mode: 'discovery' }} />
     </div>
   );
 }

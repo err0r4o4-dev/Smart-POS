@@ -31,6 +31,7 @@ import { Brand, Tag } from '../components/ui/primitives';
 import { useAuth } from '../app/AuthProvider';
 import { useOrganization } from '../app/OrganizationProvider';
 import { NavigationMenu } from './NavigationMenu';
+import { VeloAssistantChat } from '../features/storefront/VeloAssistantChat';
 
 export function ManagementLayout() {
   return <WorkspaceShell area="management" />;
@@ -255,6 +256,12 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
         <main id="main-content" className="content">
           <Outlet />
         </main>
+        {area === 'management' && role && tenant.context && state.status === 'authenticated' && (
+          <VeloAssistantChat
+            key={JSON.stringify([state.session.user.id, tenant.context.organization.id, tenant.branchID])}
+            scope={{ mode: 'merchant', organizationName: tenant.context.organization.name }}
+          />
+        )}
         {area === 'management' && (
           <footer className="footer">
             SmartPOS · {areaTitle}

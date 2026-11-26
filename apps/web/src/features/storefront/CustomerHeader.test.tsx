@@ -29,7 +29,7 @@ beforeEach(() => {
   mocks.status = 'anonymous';
 });
 
-it('links every customer section from the shared navigation', () => {
+it('keeps Explore as the only discovery link in the shared header', () => {
   header();
   const nav = within(desktopNavigation());
   expect(nav.getByRole('link', { name: 'หน้าหลัก' })).toHaveAttribute(
@@ -40,14 +40,8 @@ it('links every customer section from the shared navigation', () => {
     'href',
     '/shop',
   );
-  expect(nav.getByRole('link', { name: 'พื้นที่และชุมชน' })).toHaveAttribute(
-    'href',
-    '/areas',
-  );
-  expect(nav.getByRole('link', { name: 'หมวดหมู่อาหาร' })).toHaveAttribute(
-    'href',
-    '/#landing-categories',
-  );
+  expect(nav.queryByRole('link', { name: 'พื้นที่และชุมชน' })).toBeNull();
+  expect(nav.queryByRole('link', { name: 'หมวดหมู่อาหาร' })).toBeNull();
   expect(nav.getByRole('link', { name: 'สำหรับร้านค้า' })).toHaveAttribute(
     'href',
     '/#for-merchants',
@@ -55,15 +49,17 @@ it('links every customer section from the shared navigation', () => {
 });
 
 it('marks the current section for assistive technology', () => {
-  header({}, '/areas/campus');
+  const { unmount } = header();
   const nav = within(desktopNavigation());
-  expect(nav.getByRole('link', { name: 'พื้นที่และชุมชน' })).toHaveAttribute(
+  expect(nav.getByRole('link', { name: 'สำรวจร้าน' })).toHaveAttribute(
     'aria-current',
     'page',
   );
-  expect(nav.getByRole('link', { name: 'สำรวจร้าน' })).not.toHaveAttribute(
-    'aria-current',
-  );
+  unmount();
+  header({}, '/areas/campus');
+  expect(
+    within(desktopNavigation()).getByRole('link', { name: 'สำรวจร้าน' }),
+  ).not.toHaveAttribute('aria-current');
 });
 
 it('offers sign-in, workspace or a pending state based on the session', () => {

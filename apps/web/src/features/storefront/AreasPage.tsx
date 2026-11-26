@@ -1,16 +1,19 @@
 import { useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Info, MapPin, Search } from 'lucide-react';
+import { Link, useLocation, useParams } from 'react-router-dom';
+import { ArrowLeft, ArrowRight, MapPin, Search } from 'lucide-react';
 import { useLanguage } from '../../app/language';
 import { paths } from '../../app/routes';
-import { Card, Loading } from '../../components/ui/primitives';
-import { customerAreas, findCustomerArea } from './customer-areas';
-import { ShopDirectoryGrid } from './ShopDirectoryGrid';
-import { ShopError } from './shop-feedback';
-import { useShopDirectory } from './useShopDirectory';
+import { Card } from '../../components/ui/primitives';
+import {
+  customerAreas,
+  findCustomerArea,
+  type CustomerArea,
+} from './customer-areas';
+import { DiscoveryAreaSelect, DiscoveryHero } from './DiscoveryHero';
 
 export function AreasPage() {
   const { t } = useLanguage();
+  const { search } = useLocation();
   const [query, setQuery] = useState('');
   const visible = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase();
@@ -23,11 +26,11 @@ export function AreasPage() {
   }, [query, t]);
 
   return (
-    <div className="customer-page">
-      <header className="customer-page-heading">
-        <h1 tabIndex={-1}>{t('storefront.customer.areasTitle')}</h1>
-        <p>{t('storefront.customer.areasDescription')}</p>
-      </header>
+    <div className="customer-page discovery-page">
+      <DiscoveryHero
+        title={t('storefront.customer.areasTitle')}
+        description={t('storefront.customer.areasDescription')}
+      />
       <label className="customer-search customer-area-search">
         <Search size={20} aria-hidden="true" />
         <input
@@ -47,7 +50,7 @@ export function AreasPage() {
             <li key={area.id}>
               <Link
                 className="customer-area-card"
-                to={`${paths.areas}/${area.id}`}
+                to={{ pathname: `${paths.areas}/${area.id}`, search }}
               >
                 <img src={area.image} alt="" loading="lazy" />
                 <span className="customer-area-copy">
@@ -73,13 +76,14 @@ export function AreasPage() {
 export function AreaDetailPage() {
   const { areaId } = useParams();
   const area = findCustomerArea(areaId);
-  return area ? <AreaDetail areaId={area.id} /> : <AreaNotFound />;
+  return area ? <AreaDetail area={area} /> : <AreaNotFound />;
 }
 
 function AreaBackLink() {
   const { t } = useLanguage();
+  const { search } = useLocation();
   return (
-    <Link className="customer-back-link" to={paths.areas}>
+    <Link className="customer-back-link" to={{ pathname: paths.areas, search }}>
       <ArrowLeft size={16} aria-hidden="true" />
       {t('storefront.customer.areaBack')}
     </Link>
@@ -100,52 +104,35 @@ function AreaNotFound() {
   );
 }
 
-function AreaDetail({ areaId }: { areaId: string }) {
+function AreaDetail({ area }: { area: CustomerArea }) {
   const { t } = useLanguage();
-  const area = findCustomerArea(areaId)!;
-  const shops = useShopDirectory();
-  const count = shops.data?.length ?? 0;
-
-  const status = shops.isPending ? (
-    <Loading>{t('storefront.loadingStorefronts')}</Loading>
-  ) : shops.error ? (
-    <ShopError error={shops.error} retry={() => void shops.refetch()} />
-  ) : count === 0 ? (
-    <p className="customer-empty" role="status">
-      {t('storefront.noPublishedStoresYet')}
-    </p>
-  ) : undefined;
+  const { search } = useLocation();
 
   return (
-    <div className="customer-page">
+    <div className="customer-page discovery-page">
+      <DiscoveryHero
+        title={t('storefront.customer.areaTitle', { name: t(area.title) })}
+        description={t(area.description)}
+        image={area.image}
+        area
+      >
+        <DiscoveryAreaSelect areaId={area.id} search={search} />
+      </DiscoveryHero>
       <AreaBackLink />
       <section
-        className="customer-area-hero"
-        aria-labelledby="customer-area-title"
+        className="discovery-unavailable"
+        aria-labelledby="area-unavailable-title"
       >
-        <img src={area.image} alt="" />
-        <div className="customer-area-hero-copy">
-          <h1 id="customer-area-title" tabIndex={-1}>
-            <MapPin size={26} aria-hidden="true" />
-            {t(area.title)}
-          </h1>
-          <p>{t(area.description)}</p>
-        </div>
-        {shops.isSuccess && count > 0 && (
-          <p className="customer-area-count">
-            {t('storefront.customer.areaListed', { count })}
-          </p>
-        )}
+        <MapPin size={26} aria-hidden="true" />
+        <h2 id="area-unavailable-title">
+          {t('storefront.customer.areaUnmatchedNote')}
+        </h2>
+        <p>{t('storefront.customer.areaTryAll')}</p>
+        <Link className="button primary" to={{ pathname: paths.shop, search }}>
+          {t('landing.viewAllShops')}
+          <ArrowRight size={17} aria-hidden="true" />
+        </Link>
       </section>
-      <p className="customer-note">
-        <Info size={18} aria-hidden="true" />
-        {t('storefront.customer.areaUnmatchedNote')}
-      </p>
-      <ShopDirectoryGrid
-        shops={shops.data ?? []}
-        headingId="customer-area-results"
-        status={status}
-      />
     </div>
   );
 }

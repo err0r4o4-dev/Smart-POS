@@ -71,7 +71,7 @@ const order = {
 };
 const token = 'a'.repeat(64);
 
-async function fixture(page: Page, baseURL: string) {
+async function fixture(page: Page, baseURL: string, directoryRows = directory) {
   const origin = new URL(baseURL).origin;
   await page.route('**/*', async (route) => {
     const url = new URL(route.request().url());
@@ -84,7 +84,7 @@ async function fixture(page: Page, baseURL: string) {
       });
     const path = url.pathname;
     let data: unknown;
-    if (path === '/api/v1/storefronts') data = directory;
+    if (path === '/api/v1/storefronts') data = directoryRows;
     else if (path.endsWith('/products'))
       data = {
         items: [product],
@@ -102,10 +102,116 @@ async function fixture(page: Page, baseURL: string) {
   });
 }
 
+test('Main opens the area picker and individual areas without showing unassigned shops', async ({
+  page,
+  baseURL,
+}) => {
+  await fixture(page, baseURL!);
+  await page.setViewportSize({ width: 1440, height: 760 });
+  await page.goto('/');
+  await page.getByRole('link', { name: 'ดูทุกพื้นที่' }).click();
+  await expect(page).toHaveURL(/\/areas$/);
+  await page.getByRole('link', { name: /ตลาดมหาวิทยาลัย/ }).click();
+  await expect(page).toHaveURL(/\/areas\/market$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+    'ร้านอาหารรอบ ตลาดมหาวิทยาลัย',
+  );
+  await expect(
+    page.getByText('ยังไม่มีข้อมูลร้านสำหรับพื้นที่นี้'),
+  ).toBeVisible();
+  await expect(page.getByRole('article')).toHaveCount(0);
+
+  await page.goto('/');
+  const areas = page.getByRole('list', { name: 'พื้นที่และชุมชน' });
+  await areas.getByRole('link', { name: /มศว องครักษ์/ }).click();
+  await expect(page).toHaveURL(/\/areas\/campus$/);
+});
+
+test('directory restores its filters and scroll, and carries filters between areas', async ({
+  page,
+  baseURL,
+}) => {
+  const moreStores = Array.from({ length: 16 }, (_, index) => ({
+    ...directory[0],
+    slug: `fixture-${index}`,
+    name: `${store.name} ${index + 1}`,
+  }));
+  await fixture(page, baseURL!, [...moreStores, ...directory]);
+  await page.setViewportSize({ width: 1280, height: 540 });
+  await page.goto('/');
+  await page
+    .getByRole('navigation', { name: 'เมนูหน้าแรก' })
+    .getByRole('link', { name: 'สำรวจร้าน' })
+    .click();
+  await expect(page).toHaveURL(/\/shop$/);
+  await expect(
+    page.getByRole('heading', { name: 'สำรวจร้านอาหาร', level: 1 }),
+  ).toBeVisible();
+  const search = page.getByRole('searchbox', {
+    name: 'ค้นหาร้าน',
+    exact: true,
+  });
+  const openFilter = page.getByRole('button', { name: 'เปิดรับออเดอร์' });
+  const shopLink = page.getByRole('link', { name: store.name, exact: true });
+  await search.fill('ร้านทดสอบ');
+  await expect(page).toHaveURL(/[?&]q=/);
+  await openFilter.click();
+  await expect(page.getByText('แสดง 17 ร้าน')).toBeVisible();
+  await shopLink.scrollIntoViewIfNeeded();
+  const previousScroll = await page.evaluate(() => window.scrollY);
+  expect(previousScroll).toBeGreaterThan(300);
+  await shopLink.click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(store.name);
+  await page.getByRole('link', { name: 'กลับไปยังผลการค้นหา' }).click();
+  await expect(search).toHaveValue('ร้านทดสอบ');
+  await expect(openFilter).toHaveAttribute('aria-pressed', 'true');
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBe(previousScroll);
+
+  await page
+    .getByRole('combobox', { name: /เลือกพื้นที่/ })
+    .selectOption('campus');
+  await expect(page).toHaveURL(/\/areas\/campus\?.*filter=open/);
+  await page
+    .getByRole('combobox', { name: /เปลี่ยนพื้นที่/ })
+    .selectOption('market');
+  await expect(page).toHaveURL(/\/areas\/market\?.*filter=open/);
+  await page.getByRole('link', { name: 'ดูร้านทั้งหมด' }).click();
+  await expect(search).toHaveValue('ร้านทดสอบ');
+  await expect(openFilter).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('mobile directory keeps the quick filters and reveals store types on demand', async ({
+  page,
+  baseURL,
+}) => {
+  await fixture(page, baseURL!);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/shop');
+  const type = page.getByRole('combobox', { name: 'ประเภทร้าน' });
+  await expect(type).toBeHidden();
+  await expect(
+    page.getByRole('button', { name: 'เปิดรับออเดอร์' }),
+  ).toBeVisible();
+  const filters = page.locator('summary').getByText('ตัวกรอง');
+  await filters.focus();
+  await page.keyboard.press('Enter');
+  await type.selectOption('CAFE');
+  await expect(page.getByRole('heading', { name: 'ชานมทดสอบ' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: store.name })).toHaveCount(0);
+  await page.addStyleTag({ content: 'html { font-size: 200%; }' });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+});
+
 const pages = [
   ['/shop', 'สำรวจร้านอาหาร'],
   ['/areas', 'พื้นที่และชุมชน'],
-  ['/areas/campus', 'มศว องครักษ์'],
+  ['/areas/campus', 'ร้านอาหารรอบ มศว องครักษ์'],
   ['/shop/ui-test', store.name],
   ['/shop/ui-test/cart', 'ตะกร้าของคุณ'],
   [`/shop/ui-test/orders/o1#access=${token}`, 'คำสั่งซื้อของฉัน'],
@@ -162,26 +268,31 @@ for (const width of [320, 390, 768, 1440]) {
   });
 }
 
-test('header food categories link scrolls the home page to the categories', async ({
+test('public headers keep category and area shortcuts out of the main navigation', async ({
   page,
   baseURL,
 }) => {
   await fixture(page, baseURL!);
-  // Short viewport so the categories section starts below the fold.
   await page.setViewportSize({ width: 1440, height: 400 });
   await page.goto('/shop');
-  await page
-    .getByRole('navigation', { name: 'เมนูหน้าร้านลูกค้า' })
-    .first()
-    .getByRole('link', { name: 'หมวดหมู่อาหาร' })
-    .click();
-  await expect(page).toHaveURL(/\/#landing-categories$/);
-  const heading = page.locator('#landing-categories');
-  await heading.waitFor();
-  await expect
-    .poll(() => page.evaluate(() => window.scrollY))
-    .toBeGreaterThan(100);
-  await expect(heading).toBeInViewport();
+  const nav = page.getByRole('navigation', { name: 'เมนูหน้าร้านลูกค้า' });
+  await expect(nav.getByRole('link', { name: 'สำรวจร้าน' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  for (const name of ['พื้นที่และชุมชน', 'หมวดหมู่อาหาร'])
+    await expect(nav.getByRole('link', { name })).toHaveCount(0);
+  await nav.getByRole('link', { name: 'หน้าหลัก' }).click();
+  const mainNav = page.getByRole('navigation', { name: 'เมนูหน้าแรก' });
+  await expect(mainNav.getByRole('link', { name: 'สำรวจร้าน' })).toBeVisible();
+  for (const name of ['พื้นที่และชุมชน', 'หมวดหมู่อาหาร'])
+    await expect(mainNav.getByRole('link', { name })).toHaveCount(0);
+  await expect(
+    page.getByRole('link', { name: 'ดูทุกพื้นที่' }),
+  ).toHaveAttribute('href', '/areas');
+  const categories = page.getByRole('list', { name: 'ประเภทอาหาร' });
+  await expect(categories.getByText('ก๋วยเตี๋ยว')).toBeVisible();
+  await expect(categories.getByRole('link')).toHaveCount(0);
 });
 
 test('tracking keeps Start payment reachable at 320px', async ({

@@ -10,11 +10,13 @@ export function ShopCard({
   favorite,
   onToggleFavorite,
   action = 'store',
+  directorySearch,
 }: {
   shop: ShopDirectoryEntry;
   favorite: boolean;
   onToggleFavorite: () => void;
   action?: 'store' | 'cart';
+  directorySearch?: string;
 }) {
   const { t, language } = useLanguage();
   const type = normalizeBusinessType(shop.business_type);
@@ -55,7 +57,14 @@ export function ShopCard({
       </div>
       <div className="customer-shop-body">
         <h3 id={titleId}>
-          <Link to={storePath}>{shop.name}</Link>
+          <Link
+            to={storePath}
+            state={
+              directorySearch === undefined ? undefined : { directorySearch }
+            }
+          >
+            {shop.name}
+          </Link>
         </h3>
         <p className="customer-shop-type">
           {businessTypeLabel(type, language)}

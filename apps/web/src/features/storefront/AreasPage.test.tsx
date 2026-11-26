@@ -75,25 +75,24 @@ it('filters areas locally by name or description', () => {
   expect(screen.getByText('ไม่พบพื้นที่ที่ตรงกับคำค้น')).toBeVisible();
 });
 
-it('shows an area hero, an honest matching note and all published stores', async () => {
-  view('/areas/campus');
+it('shows the area and preserves the directory filter without presenting unassigned stores as local', () => {
+  view('/areas/campus?filter=open');
   expect(
-    screen.getByRole('heading', { level: 1, name: 'มศว องครักษ์' }),
+    screen.getByRole('heading', {
+      level: 1,
+      name: 'ร้านอาหารรอบ มศว องครักษ์',
+    }),
   ).toBeVisible();
   expect(
     screen.getByRole('link', { name: 'กลับไปหน้าพื้นที่' }),
-  ).toHaveAttribute('href', '/areas');
-  expect(
-    screen.getByText(
-      'ยังไม่สามารถจับคู่ร้านกับพื้นที่ได้ จึงแสดงร้านที่เปิดเผยแพร่ทั้งหมด',
-    ),
-  ).toBeVisible();
-  expect(
-    await screen.findByRole('heading', { name: 'Yam House' }),
-  ).toBeVisible();
-  expect(screen.getByRole('heading', { name: 'ร้านชา' })).toBeVisible();
-  expect(screen.getByText('แสดง 2 ร้าน')).toBeVisible();
-  expect(screen.queryByText(/ร้านในพื้นที่/)).toBeNull();
+  ).toHaveAttribute('href', '/areas?filter=open');
+  expect(screen.getByText('ยังไม่มีข้อมูลร้านสำหรับพื้นที่นี้')).toBeVisible();
+  expect(screen.getByRole('link', { name: 'ดูร้านทั้งหมด' })).toHaveAttribute(
+    'href',
+    '/shop?filter=open',
+  );
+  expect(screen.queryByRole('heading', { name: 'Yam House' })).toBeNull();
+  expect(fetchMock).not.toHaveBeenCalled();
 });
 
 it.each(['/areas/unknown', '/areas/%3Cscript%3Ealert(1)%3C%2Fscript%3E'])(

@@ -4,7 +4,6 @@ import { PackageOpen } from 'lucide-react';
 import { Card, Loading } from '../../components/ui/primitives';
 import { ShopCatalog } from './ShopCatalog';
 import { ShopError } from './shop-feedback';
-import { normalizeBusinessType } from './business-type';
 import { ShopDirectoryGrid } from './ShopDirectoryGrid';
 import { useShopDirectory } from './useShopDirectory';
 export { ShopError, ShopPagination } from './shop-feedback';
@@ -18,7 +17,6 @@ function ShopEntry() {
   const { t } = useLanguage();
   const [searchParams] = useSearchParams();
   const showCarts = searchParams.get('view') === 'cart';
-  const initialType = searchParams.get('type');
   const shops = useShopDirectory();
 
   const status = shops.isPending ? (
@@ -34,24 +32,26 @@ function ShopEntry() {
   ) : undefined;
 
   return (
-    <div className="customer-page">
-      <header className="customer-page-heading">
-        <h1 id="storefront-title" tabIndex={-1}>
-          {showCarts
-            ? t('landing.cart')
-            : t('storefront.customer.exploreTitle')}
-        </h1>
-        <p>
-          {showCarts
-            ? t('landing.chooseCartStore')
-            : t('storefront.customer.exploreDescription')}
-        </p>
-      </header>
+    <div
+      className={showCarts ? 'customer-page' : 'customer-page discovery-page'}
+    >
+      {showCarts && (
+        <header className="customer-page-heading">
+          <h1 id="storefront-title" tabIndex={-1}>
+            {t('landing.cart')}
+          </h1>
+          <p>{t('landing.chooseCartStore')}</p>
+        </header>
+      )}
       <ShopDirectoryGrid
         shops={shops.data ?? []}
-        initialQuery={searchParams.get('q') ?? ''}
-        initialType={
-          initialType === null ? null : normalizeBusinessType(initialType)
+        hero={
+          showCarts
+            ? undefined
+            : {
+                title: t('storefront.customer.exploreTitle'),
+                description: t('storefront.customer.exploreDescription'),
+              }
         }
         action={showCarts ? 'cart' : 'store'}
         headingId="storefront-results"

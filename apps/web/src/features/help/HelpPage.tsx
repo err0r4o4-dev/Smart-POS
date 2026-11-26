@@ -1,5 +1,6 @@
 ﻿import { useState, useMemo } from 'react';
 import { useLanguage } from '../../app/language';
+import { useLocation } from 'react-router-dom';
 import type { TranslationKey } from '../../i18n';
 import {
   ArrowRight,
@@ -18,6 +19,7 @@ import {
   X,
 } from 'lucide-react';
 import { StandardPageHeader } from '../../components/ui/StandardPage';
+import { merchantGuide } from './help-content';
 import './help.css';
 
 type CategoryKey =
@@ -42,6 +44,7 @@ interface FaqItem {
 
 export function HelpPage() {
   const { t } = useLanguage();
+  const { hash } = useLocation();
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<CategoryKey>('all');
   const [openFaqs, setOpenFaqs] = useState<Record<string, boolean>>({});
@@ -49,7 +52,7 @@ export function HelpPage() {
   const toggleFaq = (id: string) => {
     setOpenFaqs((prev) => ({
       ...prev,
-      [id]: !prev[id],
+      [id]: !(prev[id] ?? hash === `#${id}`),
     }));
   };
 
@@ -72,7 +75,7 @@ export function HelpPage() {
         category: 'getting-started',
         icon: Store,
         titleKey: 'help.setupTitle',
-        bodyKey: 'help.setupBody',
+        bodyKey: merchantGuide.setup.body,
         steps: ['help.setupStep1', 'help.setupStep2'],
       },
       {
@@ -80,9 +83,9 @@ export function HelpPage() {
         category: 'kitchen',
         icon: CookingPot,
         titleKey: 'help.ordersTitle',
-        bodyKey: 'help.ordersBody',
+        bodyKey: merchantGuide.orders.body,
         secondaryBodyKey: 'help.statusBody',
-        steps: ['help.kitchenStep1', 'help.kitchenStep2'],
+        steps: merchantGuide.orders.steps,
       },
       {
         id: 'pos',
@@ -97,15 +100,15 @@ export function HelpPage() {
         category: 'menu',
         icon: Utensils,
         titleKey: 'help.menuTitle',
-        bodyKey: 'help.menuBody',
-        steps: ['help.menuStep1', 'help.menuStep2'],
+        bodyKey: merchantGuide.menu.body,
+        steps: merchantGuide.menu.steps,
       },
       {
         id: 'tracking',
         category: 'faq',
         icon: BookOpen,
         titleKey: 'help.trackingTitle',
-        bodyKey: 'help.trackingBody',
+        bodyKey: merchantGuide.tracking.body,
         secondaryBodyKey: 'help.recoveryBody',
       },
     ],
@@ -118,7 +121,7 @@ export function HelpPage() {
         id: 'faq-kitchen',
         category: 'kitchen',
         questionKey: 'help.faqKitchenQueueQ',
-        answerKey: 'help.faqKitchenQueueA',
+        answerKey: merchantGuide.kitchen.body,
       },
       {
         id: 'faq-permission',
@@ -136,7 +139,7 @@ export function HelpPage() {
         id: 'faq-offline',
         category: 'faq',
         questionKey: 'help.faqOfflineQ',
-        answerKey: 'help.faqOfflineA',
+        answerKey: merchantGuide.offline.body,
       },
       {
         id: 'faq-online-order',
@@ -323,7 +326,7 @@ export function HelpPage() {
           {filteredGuides.map((guide) => {
             const Icon = guide.icon;
             return (
-              <article key={guide.id} className="help-guide-card card">
+              <article id={guide.id} key={guide.id} className="help-guide-card card">
                 <div className="help-guide-card-icon" aria-hidden="true">
                   <Icon size={24} className="help-icon" />
                 </div>
@@ -360,9 +363,10 @@ export function HelpPage() {
           </h2>
           <div className="help-faq-list">
             {filteredFaqs.map((faq) => {
-              const isOpen = !!openFaqs[faq.id];
+              const isOpen = openFaqs[faq.id] ?? hash === `#${faq.id}`;
               return (
                 <div
+                  id={faq.id}
                   key={faq.id}
                   className={`help-faq-item ${isOpen ? 'open' : ''}`}
                 >
@@ -424,6 +428,11 @@ export function HelpPage() {
             <p>{t('help.supportDescription')}</p>
             <p style={{ marginTop: 4, color: 'var(--text-tertiary)' }}>
               {t('help.supportContact')}
+            </p>
+            <p>
+              <a className="underline" href="/images/home/photo-credits.html">
+                {t('landing.photoCredits')}
+              </a>
             </p>
           </div>
         </div>

@@ -1,26 +1,21 @@
-import { useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import {
-  ChevronRight,
-  Clock,
-  Flame,
-  Minus,
-  Package,
-  Paperclip,
-  SendHorizonal,
-  Store,
-  X,
-} from 'lucide-react';
+import { MessageCircle, SendHorizontal, Store, X } from 'lucide-react';
 import { useLanguage } from '../../app/language';
-import type { UiMessage } from '../../i18n';
+import { paths } from '../../app/routes';
+import type { TranslationKey, UiMessage } from '../../i18n';
+import { findMerchantGuide } from '../help/help-content';
 import {
   storefrontRequest,
-  type ShopDirectoryEntry,
+  type ShopCatalogPage,
+  type ShopSettings,
 } from '../../lib/storefront-api';
+import { businessTypeLabel, normalizeBusinessType } from './business-type';
+import { useShopDirectory } from './useShopDirectory';
 import './velo-assistant.css';
 
-export function VeloRobotAvatar({ size = 42 }: { size?: number }) {
+function VeloRobotAvatar({ size = 42 }: { size?: number }) {
   const gradientId = useId();
   return (
     <div
@@ -111,463 +106,457 @@ export function VeloRobotAvatar({ size = 42 }: { size?: number }) {
   );
 }
 
-interface ChatStoreCard {
-  slug: string;
-  name: string;
-  accepting_orders: boolean;
+export type AssistantScope =
+  | { mode: 'discovery' }
+  | { mode: 'store'; slug: string }
+  | { mode: 'merchant'; organizationName: string };
+
+type Reply =
+  | {
+      kind: 'text';
+      message: UiMessage;
+      link?: { to: string; text: TranslationKey };
+    }
+  | { kind: 'directory'; query: string }
+  | { kind: 'catalog'; slug: string; query: string }
+  | { kind: 'report'; issue: TranslationKey }
+  | { kind: 'guide'; guide: NonNullable<ReturnType<typeof findMerchantGuide>> };
+
+const discovery = { mode: 'discovery' } as const;
+const prompts = {
+  discovery: ['assistant.findOpen', 'assistant.findDelivery'],
+  store: ['assistant.showMenu', 'assistant.askQueue', 'assistant.trackOrder'],
+  merchant: [
+    'assistant.addMenu',
+    'assistant.kitchenHelp',
+    'assistant.reportProblem',
+  ],
+} as const;
+const greetings = {
+  discovery: 'assistant.discoveryIntro',
+  store: 'assistant.storeIntro',
+  merchant: 'assistant.merchantIntro',
+} as const;
+
+function replyFor(scope: AssistantScope, question: string): Reply {
+  const q = question.toLowerCase().normalize('NFKC');
+  if (scope.mode === 'discovery') {
+    if (/ใกล้|แถว|ย่าน|near|neighbou?rhood/.test(q)) {
+      return {
+        kind: 'text',
+        message: { key: 'assistant.noArea' },
+        link: { to: paths.shop, text: 'assistant.browseStores' },
+      };
+    }
+    return { kind: 'directory', query: q };
+  }
+  if (scope.mode === 'merchant') {
+    if (/เปิดรับออเดอร์ไม่ได้|รับออเดอร์ไม่ได้|(?:cannot|can.t|unable to) accept orders/.test(q)) {
+      return { kind: 'report', issue: 'assistant.acceptOrdersIssue' };
+    }
+    const guide = findMerchantGuide(q);
+    return guide
+      ? { kind: 'guide', guide }
+      : {
+          kind: 'text',
+          message: { key: 'assistant.guideFallback' },
+          link: { to: paths.help, text: 'assistant.readGuide' },
+        };
+  }
+  if (/ติดตาม|track|ของฉัน|my order/.test(q)) {
+    return {
+      kind: 'text',
+      message: { key: 'assistant.privateTracking' },
+    };
+  }
+  if (/คิว|รอนาน|queue|wait time/.test(q)) {
+    return { kind: 'text', message: { key: 'assistant.noPublicQueue' } };
+  }
+  if (/เปิด|รับออเดอร์|accepting|open/.test(q)) {
+    return { kind: 'text', message: { key: 'assistant.statusAtTop' } };
+  }
+  const budget = q.match(
+    /(?:ไม่เกิน|ต่ำกว่า|under|up to|budget)\s*(\d{1,7}(?:\.\d{1,2})?)/,
+  )?.[1];
+  const search = q.match(/^(?:ค้นหาเมนู\s*|find dish\s+)(.+)$/)?.[1]?.trim();
+  if (budget || search || /เมนู|ราคา|อาหาร|dish|menu/.test(q)) {
+    const params = new URLSearchParams({ availability: 'available' });
+    if (budget) params.set('max_price', budget);
+    if (search) params.set('search', search);
+    return { kind: 'catalog', slug: scope.slug, query: params.toString() };
+  }
+  return { kind: 'text', message: { key: 'assistant.storeIntro' } };
 }
 
-interface ChatMessage {
-  id: string;
-  sender: 'bot' | 'user';
-  text: UiMessage;
-  time: string;
-  stores?: ChatStoreCard[];
-  trackingLink?: boolean;
+function DirectoryReply({ query }: { query: string }) {
+  const { t, language } = useLanguage();
+  const shops = useShopDirectory();
+  const types = ['RESTAURANT', 'CAFE', 'BAKERY', 'FAST_FOOD', 'BAR'];
+  const matchingType = types.find((type) =>
+    [businessTypeLabel(type, 'th'), businessTypeLabel(type, 'en')].some(
+      (label) =>
+        (type === 'BAR' && /บาร์|\bbar\b/.test(query)) ||
+        (type !== 'BAR' && query.includes(label.toLowerCase())),
+    ),
+  );
+  const open = /รับออเดอร์|เปิด|\bopen\b|accepting/.test(query);
+  const delivery = /เดลิเวอรี|จัดส่ง|delivery/.test(query);
+  const name = query
+    .replace(/^(?:หาร้าน|find (?:a )?store|find)\s*/i, '')
+    .trim();
+  const results = (shops.data ?? [])
+    .filter((shop) => {
+      const type = normalizeBusinessType(shop.business_type);
+      return (
+        type !== 'RETAIL' &&
+        (!open || shop.accepting_orders) &&
+        (!delivery || shop.delivery_enabled) &&
+        (!matchingType || type === matchingType) &&
+        (open ||
+          delivery ||
+          matchingType ||
+          (name && shop.name.toLowerCase().normalize('NFKC').includes(name)))
+      );
+    })
+    .slice(0, 3);
+
+  if (shops.isPending) return <p>{t('assistant.loading')}</p>;
+  if (shops.isError)
+    return (
+      <button
+        className="velo-chat-chip"
+        type="button"
+        onClick={() => void shops.refetch()}
+      >
+        {t('assistant.retryData')}
+      </button>
+    );
+  if (!results.length) return <p>{t('assistant.noStores')}</p>;
+  return (
+    <div className="velo-chat-stores-list">
+      {results.map((shop) => (
+        <Link
+          key={shop.slug}
+          className="velo-chat-store-card"
+          to={`${paths.shop}/${encodeURIComponent(shop.slug)}`}
+        >
+          <Store size={17} aria-hidden="true" />
+          <span className="velo-chat-store-info">
+            <strong>{shop.name}</strong>
+            <small>
+              {businessTypeLabel(
+                normalizeBusinessType(shop.business_type),
+                language,
+              )}{' '}
+              ·{' '}
+              {t(
+                shop.accepting_orders
+                  ? 'assistant.accepting'
+                  : 'assistant.notAccepting',
+              )}
+            </small>
+          </span>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+function CatalogReply({ slug, query }: { slug: string; query: string }) {
+  const { t } = useLanguage();
+  const catalog = useQuery({
+    queryKey: ['storefront', slug, 'products', query],
+    queryFn: ({ signal }) =>
+      storefrontRequest<ShopCatalogPage>(
+        `/${encodeURIComponent(slug)}/products?${query}`,
+        { signal },
+      ),
+    retry: false,
+  });
+  if (catalog.isPending) return <p>{t('assistant.loading')}</p>;
+  if (catalog.isError)
+    return (
+      <button
+        className="velo-chat-chip"
+        type="button"
+        onClick={() => void catalog.refetch()}
+      >
+        {t('assistant.retryData')}
+      </button>
+    );
+  const items =
+    catalog.data?.items
+      .filter((item) => item.saleable && !item.is_sold_out)
+      .slice(0, 4) ?? [];
+  if (!items.length) return <p>{t('assistant.noMenu')}</p>;
+  return (
+    <>
+      <p>{t('assistant.availableMenu')}</p>
+      <ul className="velo-chat-menu-list">
+        {items.map((item) => (
+          <li key={item.variant_id}>
+            {item.product_name}
+            {item.variant_name && item.variant_name !== item.product_name
+              ? ` · ${item.variant_name}`
+              : ''}{' '}
+            · ฿{item.unit_price}
+          </li>
+        ))}
+      </ul>
+      <Link to={`${paths.shop}/${encodeURIComponent(slug)}`}>
+        {t('assistant.viewMenu')}
+      </Link>
+    </>
+  );
+}
+
+function Answer({ reply, openReport }: { reply: Reply; openReport: (issue: TranslationKey) => void }) {
+  const { t, messageText } = useLanguage();
+  if (reply.kind === 'directory') return <DirectoryReply query={reply.query} />;
+  if (reply.kind === 'catalog')
+    return <CatalogReply slug={reply.slug} query={reply.query} />;
+  if (reply.kind === 'report') {
+    return <><p>{t('assistant.reportSuggested')}</p><button className="velo-chat-chip" type="button" onClick={() => openReport(reply.issue)}>{t('assistant.prepareReport')}</button></>;
+  }
+  if (reply.kind === 'guide') {
+    return (
+      <>
+        <p>{t(reply.guide.body)}</p>
+        {reply.guide.steps?.length ? (
+          <ol className="velo-chat-menu-list">
+            {reply.guide.steps.map((key) => (
+              <li key={key}>{t(key)}</li>
+            ))}
+          </ol>
+        ) : null}
+        <Link to={`${paths.help}#${reply.guide.id}`}>
+          {t('assistant.readGuide')}
+        </Link>
+      </>
+    );
+  }
+  return (
+    <>
+      <p>{messageText(reply.message)}</p>
+      {reply.link && <Link to={reply.link.to}>{t(reply.link.text)}</Link>}
+    </>
+  );
 }
 
 export function VeloAssistantChat({
   defaultOpen = false,
-}: { defaultOpen?: boolean } = {}) {
-  const { t, messageText } = useLanguage();
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-  const [input, setInput] = useState('');
-  const launcherRef = useRef<HTMLButtonElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const shops = useQuery({
-    queryKey: ['storefront-directory'],
-    queryFn: async ({ signal }) => {
-      const items = await storefrontRequest<ShopDirectoryEntry[]>('', {
-        signal,
-        storeMode: () => {},
-      });
-      return items ?? [];
-    },
-    enabled: isOpen,
-    staleTime: 60_000,
-  });
-
-  const openStores = useMemo(
-    () =>
-      Array.isArray(shops.data)
-        ? shops.data.filter((s) => s?.accepting_orders)
-        : [],
-    [shops.data],
+  scope = discovery,
+}: { defaultOpen?: boolean; scope?: AssistantScope } = {}) {
+  return (
+    <AssistantSession
+      key={scope.mode === 'store' ? `store:${scope.slug}` : scope.mode}
+      defaultOpen={defaultOpen}
+      scope={scope}
+    />
   );
+}
 
-  const primaryStore: ChatStoreCard = useMemo(() => {
-    if (openStores.length > 0) {
-      return {
-        slug: openStores[0].slug,
-        name: openStores[0].name,
-        accepting_orders: openStores[0].accepting_orders,
-      };
-    }
-    return {
-      slug: 'yam',
-      name: 'yam',
-      accepting_orders: true,
-    };
-  }, [openStores]);
+function AssistantSession({
+  defaultOpen,
+  scope,
+}: {
+  defaultOpen: boolean;
+  scope: AssistantScope;
+}) {
+  const { t, messageText } = useLanguage();
+  const [isOpen, setOpen] = useState(defaultOpen);
+  const [input, setInput] = useState('');
+  const [turns, setTurns] = useState<{ question: UiMessage; reply: Reply }[]>(
+    [],
+  );
+  const [report, setReport] = useState<string | null>(null);
+  const panelId = useId();
+  const launcher = useRef<HTMLButtonElement>(null);
+  const textbox = useRef<HTMLInputElement>(null);
+  const reportField = useRef<HTMLTextAreaElement>(null);
+  const end = useRef<HTMLDivElement>(null);
+  const slug = scope.mode === 'store' ? scope.slug : '';
+  const shop = useQuery({
+    queryKey: ['storefront', slug, 'settings'],
+    queryFn: ({ signal }) =>
+      storefrontRequest<ShopSettings>(`/${encodeURIComponent(slug)}`, {
+        signal,
+      }),
+    enabled: isOpen && Boolean(slug),
+    retry: false,
+  });
+  const heading =
+    scope.mode === 'merchant'
+      ? t('assistant.merchantTitle')
+      : scope.mode === 'store' && shop.data
+        ? t('assistant.storeTitle', { name: shop.data.name })
+        : scope.mode === 'store'
+          ? t('assistant.storeGeneric')
+          : t('assistant.discoveryTitle');
 
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'init-1',
-      sender: 'bot',
-      text: { key: 'assistant.greeting' },
-      time: '10:24 AM',
-    },
-    {
-      id: 'init-2',
-      sender: 'bot',
-      text: { key: 'assistant.examples' },
-      time: '10:24 AM',
-    },
-    {
-      id: 'init-3',
-      sender: 'user',
-      text: { key: 'assistant.promptOpen' },
-      time: '10:25 AM',
-    },
-    {
-      id: 'init-4',
-      sender: 'bot',
-      text: { key: 'assistant.openResults' },
-      time: '10:25 AM',
-    },
-  ]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView?.({ behavior: 'smooth' });
+  useEffect(() => {
+    if (isOpen) textbox.current?.focus({ preventScroll: true });
+  }, [isOpen]);
+  useEffect(() => {
+    if (turns.length) end.current?.scrollIntoView?.({ block: 'nearest' });
+  }, [turns.length]);
+  const close = () => {
+    setOpen(false);
+    launcher.current?.focus();
   };
-
-  const getTimeString = () => {
-    const now = new Date();
-    return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const handleSendPrompt = (
-    promptText: string,
-    displayText: UiMessage = promptText,
-  ) => {
-    if (!promptText.trim()) return;
-
-    const time = getTimeString();
-    const userMsg: ChatMessage = {
-      id: 'user-' + Date.now(),
-      sender: 'user',
-      text: displayText,
-      time,
-    };
-
-    let botResponse: ChatMessage;
-    const lower = promptText.toLowerCase();
-
-    if (
-      lower.includes('open') ||
-      lower.includes('เปิด') ||
-      lower.includes('stores that are open')
-    ) {
-      const active = openStores.length > 0 ? openStores : [primaryStore];
-      botResponse = {
-        id: 'bot-' + (Date.now() + 1),
-        sender: 'bot',
-        text: { key: 'assistant.openResults' },
-        time,
-        stores: active.slice(0, 3).map((s) => ({
-          slug: s.slug,
-          name: s.name,
-          accepting_orders: s.accepting_orders,
-        })),
-      };
-    } else if (
-      lower.includes('dish') ||
-      lower.includes('menu') ||
-      lower.includes('noodle') ||
-      lower.includes('เมนู') ||
-      lower.includes('อาหาร')
-    ) {
-      botResponse = {
-        id: 'bot-' + (Date.now() + 1),
-        sender: 'bot',
-        text: { key: 'assistant.recommendations' },
-        time,
-        stores: openStores.length > 0 ? [primaryStore] : undefined,
-      };
-    } else if (
-      lower.includes('track') ||
-      lower.includes('order') ||
-      lower.includes('ติดตาม') ||
-      lower.includes('ออเดอร์')
-    ) {
-      botResponse = {
-        id: 'bot-' + (Date.now() + 1),
-        sender: 'bot',
-        text: { key: 'assistant.trackingReply' },
-        time,
-        trackingLink: true,
-      };
-    } else {
-      const match = Array.isArray(shops.data)
-        ? shops.data.find(
-            (s) => s?.name && s.name.toLowerCase().includes(lower),
-          )
-        : undefined;
-      if (match) {
-        botResponse = {
-          id: 'bot-' + (Date.now() + 1),
-          sender: 'bot',
-          text: { key: 'assistant.foundStore', params: { name: match.name } },
-          time,
-          stores: [
-            {
-              slug: match.slug,
-              name: match.name,
-              accepting_orders: match.accepting_orders,
-            },
-          ],
-        };
-      } else {
-        botResponse = {
-          id: 'bot-' + (Date.now() + 1),
-          sender: 'bot',
-          text: { key: 'assistant.fallback' },
-          time,
-        };
-      }
-    }
-
-    setMessages((prev) => [...prev, userMsg, botResponse]);
-    setTimeout(scrollToBottom, 50);
-  };
-
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-    const text = input;
+  const submit = (text: string, question: UiMessage = text) => {
+    if (!text.trim()) return;
+    setTurns((previous) => [
+      ...previous,
+      { question, reply: replyFor(scope, text.trim()) },
+    ]);
     setInput('');
-    handleSendPrompt(text);
   };
+
+  function openReport(issue?: TranslationKey) {
+    if (scope.mode !== 'merchant') return;
+    setReport(
+      (current) =>
+        current ??
+        t('assistant.reportTemplate', {
+          name: scope.organizationName,
+          time: new Date().toISOString(),
+          issue: issue ? t(issue) : '',
+        }),
+    );
+    requestAnimationFrame(() => reportField.current?.focus());
+  }
 
   return (
     <aside className="velo-assistant-root" aria-label="VELO Assistant">
-      {/* Floating Launcher Button */}
       <button
-        ref={launcherRef}
+        ref={launcher}
         type="button"
         className="velo-chat-launcher"
         aria-label={t('assistant.open')}
+        aria-controls={isOpen ? panelId : undefined}
         aria-expanded={isOpen}
-        onClick={() => setIsOpen((prev) => !prev)}
+        onClick={() => {
+          if (isOpen) close();
+          else setOpen(true);
+        }}
       >
-        <span className="velo-chat-launcher-icon" aria-hidden="true">
-          <svg
-            width="28"
-            height="28"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#1f1d1a"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
-            <circle cx="8.5" cy="12" r="1.1" fill="#1f1d1a" stroke="none" />
-            <circle cx="12" cy="12" r="1.1" fill="#1f1d1a" stroke="none" />
-            <circle cx="15.5" cy="12" r="1.1" fill="#1f1d1a" stroke="none" />
-          </svg>
-        </span>
-        <span className="velo-chat-launcher-sparks" aria-hidden="true">
-          <svg
-            width="22"
-            height="22"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#eab308"
-            strokeWidth="2.8"
-            strokeLinecap="round"
-          >
-            <line x1="14" y1="4" x2="20" y2="4" />
-            <line x1="18" y1="10" x2="22" y2="14" />
-            <line x1="10" y1="2" x2="14" y2="8" />
-          </svg>
-        </span>
+        <MessageCircle size={28} aria-hidden="true" />
       </button>
-
-      {/* Floating Chat Modal / Card */}
       {isOpen && (
         <section
+          id={panelId}
           className="velo-chat-window"
           role="dialog"
-          aria-label="VELO Assistant"
-          aria-modal="false"
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') {
-              e.stopPropagation();
-              setIsOpen(false);
-              launcherRef.current?.focus();
+          aria-labelledby={`${panelId}-title`}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              event.stopPropagation();
+              close();
             }
           }}
         >
-          {/* Header */}
           <div className="velo-chat-header">
             <div className="velo-chat-header-info">
-              <VeloRobotAvatar size={42} />
+              <VeloRobotAvatar />
               <div className="velo-chat-header-titles">
-                <h2 className="velo-chat-title">VELO Assistant</h2>
-                <p className="velo-chat-subtitle">{t('assistant.subtitle')}</p>
+                <h2 id={`${panelId}-title`} className="velo-chat-title">
+                  {heading}
+                </h2>
+                <p className="velo-chat-subtitle">
+                  {scope.mode === 'store' && shop.data
+                    ? t(
+                        shop.data.accepting_orders
+                          ? 'assistant.accepting'
+                          : 'assistant.notAccepting',
+                      )
+                    : 'VELO Assistant'}
+                </p>
               </div>
             </div>
-            <div className="velo-chat-header-actions">
-              <span className="velo-chat-status">
-                <span className="velo-chat-status-dot" aria-hidden="true" />
-                {t('assistant.online')}
-              </span>
-              <button
-                type="button"
-                className="velo-chat-icon-btn"
-                aria-label={t('assistant.minimize')}
-                onClick={() => setIsOpen(false)}
-              >
-                <Minus size={18} aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                className="velo-chat-icon-btn"
-                aria-label={t('assistant.close')}
-                onClick={() => setIsOpen(false)}
-              >
-                <X size={18} aria-hidden="true" />
-              </button>
-            </div>
+            <button
+              className="velo-chat-icon-btn"
+              type="button"
+              aria-label={t('assistant.close')}
+              onClick={close}
+            >
+              <X size={20} aria-hidden="true" />
+            </button>
           </div>
-
-          {/* Messages Area */}
-          <div className="velo-chat-body" tabIndex={0}>
-            <div className="velo-chat-date-pill">{t('assistant.today')}</div>
-
-            {messages.map((msg) => {
-              const storesToRender =
-                msg.id === 'init-4' ? [primaryStore] : msg.stores;
-              return (
-                <div
-                  key={msg.id}
-                  className={'velo-chat-msg-row velo-chat-msg-' + msg.sender}
-                >
-                  {msg.sender === 'bot' && <VeloRobotAvatar size={28} />}
-                  <div className="velo-chat-msg-content">
-                    <div className="velo-chat-bubble">
-                      <p>
-                        {typeof msg.text === 'string'
-                          ? msg.text
-                          : messageText(msg.text)}
-                      </p>
-                      {storesToRender && storesToRender.length > 0 && (
-                        <div className="velo-chat-stores-list">
-                          {storesToRender.map((store) => (
-                            <Link
-                              key={store.slug}
-                              to={'/shop/' + encodeURIComponent(store.slug)}
-                              className="velo-chat-store-card"
-                            >
-                              <div className="velo-chat-store-icon">
-                                <Store
-                                  size={22}
-                                  strokeWidth={2}
-                                  aria-hidden="true"
-                                />
-                              </div>
-                              <div className="velo-chat-store-info">
-                                <span className="velo-chat-store-name">
-                                  {store.name}
-                                </span>
-                                <span className="velo-chat-store-status">
-                                  <span
-                                    className="velo-chat-store-dot"
-                                    aria-hidden="true"
-                                  />
-                                  {store.accepting_orders
-                                    ? t('assistant.accepting')
-                                    : t('assistant.notAccepting')}
-                                </span>
-                              </div>
-                              <ChevronRight
-                                size={18}
-                                className="velo-chat-store-arrow"
-                                aria-hidden="true"
-                              />
-                            </Link>
-                          ))}
-                        </div>
-                      )}
-                      {msg.trackingLink && (
-                        <Link
-                          to="/shop/tracking"
-                          className="velo-chat-store-card velo-chat-tracking-card"
-                        >
-                          <div className="velo-chat-store-icon velo-chat-track-icon">
-                            <Package
-                              size={22}
-                              strokeWidth={2}
-                              aria-hidden="true"
-                            />
-                          </div>
-                          <div className="velo-chat-store-info">
-                            <span className="velo-chat-store-name">
-                              {t('assistant.trackingPage')}
-                            </span>
-                            <span className="velo-chat-store-status">
-                              {t('assistant.trackingHint')}
-                            </span>
-                          </div>
-                          <ChevronRight
-                            size={18}
-                            className="velo-chat-store-arrow"
-                            aria-hidden="true"
-                          />
-                        </Link>
-                      )}
-                    </div>
-                    <div className="velo-chat-timestamp">
-                      <span>{msg.time}</span>
-                      {msg.sender === 'user' && (
-                        <span
-                          className="velo-chat-checks"
-                          aria-label={t('assistant.sentRead')}
-                        >
-                          ✓✓
-                        </span>
-                      )}
-                    </div>
+          <div className="velo-chat-body" role="log" aria-label={heading}>
+            <div className="velo-chat-msg-row velo-chat-msg-bot">
+              <div className="velo-chat-bubble">
+                <p>{t(greetings[scope.mode])}</p>
+              </div>
+            </div>
+            {turns.map((turn, index) => (
+              <div key={index} className="velo-chat-turn">
+                <div className="velo-chat-msg-row velo-chat-msg-user">
+                  <div className="velo-chat-bubble">
+                    <p>{messageText(turn.question)}</p>
                   </div>
                 </div>
-              );
-            })}
-            <div ref={messagesEndRef} />
+                <div className="velo-chat-msg-row velo-chat-msg-bot">
+                  <div className="velo-chat-bubble">
+                    <Answer reply={turn.reply} openReport={openReport} />
+                  </div>
+                </div>
+              </div>
+            ))}
+            {report !== null && (
+              <div className="velo-chat-report">
+                <label htmlFor={`${panelId}-report`}>
+                  {t('assistant.reportDraft')}
+                </label>
+                <p>{t('assistant.reportUnsent')}</p>
+                <textarea
+                  ref={reportField}
+                  id={`${panelId}-report`}
+                  rows={6}
+                  value={report}
+                  onChange={(event) => setReport(event.target.value)}
+                />
+                <Link to={`${paths.help}#help-support`}>
+                  {t('assistant.contactOptions')}
+                </Link>
+              </div>
+            )}
+            <div ref={end} />
           </div>
-
-          {/* Quick suggestions chips */}
           <div
             className="velo-chat-suggestions"
             role="group"
             aria-label={t('assistant.suggestions')}
           >
-            <button
-              type="button"
-              className="velo-chat-chip"
-              onClick={() =>
-                handleSendPrompt('Show me stores that are open now.', {
-                  key: 'assistant.promptOpen',
-                })
-              }
-            >
-              <Clock size={15} aria-hidden="true" />
-              <span>{t('assistant.openNow')}</span>
-            </button>
-            <button
-              type="button"
-              className="velo-chat-chip"
-              onClick={() =>
-                handleSendPrompt('Show me popular dishes.', {
-                  key: 'assistant.promptPopular',
-                })
-              }
-            >
-              <Flame size={15} aria-hidden="true" />
-              <span>{t('assistant.popularDishes')}</span>
-            </button>
-            <button
-              type="button"
-              className="velo-chat-chip"
-              onClick={() =>
-                handleSendPrompt('How can I track my order?', {
-                  key: 'assistant.promptTrack',
-                })
-              }
-            >
-              <Package size={15} aria-hidden="true" />
-              <span>{t('assistant.trackOrder')}</span>
-            </button>
-          </div>
-
-          {/* Footer Input Bar */}
-          <form className="velo-chat-footer" onSubmit={handleFormSubmit}>
-            <div className="velo-chat-input-wrapper">
+            {prompts[scope.mode].map((key) => (
               <button
                 type="button"
-                className="velo-chat-attach-btn"
-                aria-label={t('assistant.attach')}
-                title={t('assistant.attach')}
-                onClick={() => {}}
+                className="velo-chat-chip"
+                key={key}
+                onClick={() => {
+                  if (key === 'assistant.reportProblem') openReport();
+                  else submit(t(key), { key });
+                }}
               >
-                <Paperclip size={18} aria-hidden="true" />
+                {t(key)}
               </button>
+            ))}
+          </div>
+          <form
+            className="velo-chat-footer"
+            onSubmit={(event) => {
+              event.preventDefault();
+              submit(input);
+            }}
+          >
+            <div className="velo-chat-input-wrapper">
               <input
+                ref={textbox}
                 type="text"
+                maxLength={240}
                 className="velo-chat-input"
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(event) => setInput(event.target.value)}
                 placeholder={t('assistant.placeholder')}
                 aria-label={t('assistant.inputLabel')}
               />
@@ -577,7 +566,7 @@ export function VeloAssistantChat({
                 disabled={!input.trim()}
                 aria-label={t('assistant.send')}
               >
-                <SendHorizonal size={16} aria-hidden="true" />
+                <SendHorizontal size={16} aria-hidden="true" />
               </button>
             </div>
           </form>

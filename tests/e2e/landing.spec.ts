@@ -136,12 +136,6 @@ test('filters published stores, keeps favorites, and opens the shop cart selecto
       .getByRole('link', { name: 'เปิดตะกร้า' }),
   ).toHaveAttribute('href', '/shop/krapao/cart');
   await page.goto('/');
-  await page
-    .getByRole('list', { name: 'ประเภทอาหาร' })
-    .getByRole('link', { name: 'ก๋วยเตี๋ยว' })
-    .click();
-  await expect(page).toHaveURL(/\/shop\?q=/);
-  await page.goto('/');
   await page.getByRole('link', { name: /สมัครร้านค้าฟรี/ }).click();
   await expect(page).toHaveURL(/\/register$/);
   await page.goto('/');
@@ -152,7 +146,7 @@ test('filters published stores, keeps favorites, and opens the shop cart selecto
   await expect(page).toHaveURL(/\/login$/);
 });
 
-test('mobile navigation exposes all destinations with the keyboard', async ({
+test('mobile navigation keeps Explore accessible with the keyboard', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 320, height: 900 });
@@ -174,10 +168,16 @@ test('mobile navigation exposes all destinations with the keyboard', async ({
   const navigation = page.getByRole('navigation', { name: 'เมนูหน้าแรก' });
   for (const name of ['หน้าหลัก', 'สำรวจร้าน', 'สำหรับร้านค้า', 'เข้าสู่ระบบ'])
     await expect(navigation.getByRole('link', { name })).toBeVisible();
-  await navigation.getByRole('link', { name: 'หมวดหมู่อาหาร' }).click();
+  for (const name of ['พื้นที่และชุมชน', 'หมวดหมู่อาหาร'])
+    await expect(navigation.getByRole('link', { name })).toHaveCount(0);
+  await navigation
+    .getByRole('link', { name: 'สำรวจร้าน', exact: true })
+    .focus();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/shop$/);
   await expect(
-    page.getByRole('heading', { name: 'เลือกตามประเภทอาหาร' }),
-  ).toBeInViewport();
+    page.getByRole('heading', { name: 'สำรวจร้านอาหาร' }),
+  ).toBeVisible();
 });
 
 test('home supports keyboard access to the main content', async ({ page }) => {
@@ -207,16 +207,18 @@ test('the header logo keeps visible keyboard focus and its home destination', as
   await expect(page).toHaveURL(/\/$/);
 });
 
-test('the footer language selector switches the page to English', async ({
-  page,
-}) => {
+test('the header switches the home page to English', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/');
   await page
-    .getByRole('contentinfo')
-    .getByRole('combobox', { name: 'ภาษา' })
-    .selectOption('en');
+    .getByRole('banner')
+    .getByRole('button', { name: 'English', exact: true })
+    .click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(
     'Find restaurants in your community',
   );
+  await expect(
+    page.getByRole('contentinfo').getByRole('heading', { name: 'Follow us' }),
+  ).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 });

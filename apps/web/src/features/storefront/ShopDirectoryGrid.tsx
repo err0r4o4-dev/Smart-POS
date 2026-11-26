@@ -1,10 +1,19 @@
-import { useMemo, useState, type ReactNode } from 'react';
-import { BadgeCheck, Heart, LayoutGrid, Search, Sparkles } from 'lucide-react';
+import { useMemo, type ReactNode } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import {
+  BadgeCheck,
+  Heart,
+  LayoutGrid,
+  Search,
+  SlidersHorizontal,
+  Sparkles,
+} from 'lucide-react';
 import { useLanguage } from '../../app/language';
 import type { ShopDirectoryEntry } from '../../lib/storefront-api';
 import { businessTypeLabel, normalizeBusinessType } from './business-type';
 import { ShopCard } from './ShopCard';
 import { useShopFavorites } from './shop-favorites';
+import { DiscoveryAreaSelect, DiscoveryHero } from './DiscoveryHero';
 
 const chips = [
   { value: 'all', label: 'landing.recommended', icon: Sparkles },
@@ -12,7 +21,6 @@ const chips = [
   { value: 'favorites', label: 'landing.favoriteShops', icon: Heart },
 ] as const;
 type Chip = (typeof chips)[number]['value'];
-type Sort = 'recommended' | 'open' | 'name';
 
 export function ShopDirectoryGrid({
   shops,
@@ -21,6 +29,7 @@ export function ShopDirectoryGrid({
   action = 'store',
   headingId,
   status,
+  hero,
 }: {
   shops: ShopDirectoryEntry[];
   initialQuery?: string;
@@ -29,12 +38,37 @@ export function ShopDirectoryGrid({
   headingId: string;
   /** Loading/error/empty slot rendered instead of results while present. */
   status?: ReactNode;
+  hero?: { title: string; description: string };
 }) {
   const { t, language } = useLanguage();
-  const [query, setQuery] = useState(initialQuery);
-  const [chip, setChip] = useState<Chip>('all');
-  const [sort, setSort] = useState<Sort>('recommended');
-  const [type, setType] = useState<string | null>(initialType);
+  const [params, setParams] = useSearchParams();
+  const query = params.get('q') ?? initialQuery;
+  const filter = params.get('filter');
+  const chip: Chip =
+    filter === 'open' || filter === 'favorites' ? filter : 'all';
+  const sort = params.get('sort') === 'name' ? 'name' : 'recommended';
+  const rawType = params.get('type') ?? initialType;
+  const type = rawType ? normalizeBusinessType(rawType) : null;
+  const search = params.toString();
+  const directorySearch = search ? `?${search}` : '';
+
+  function updateFilters(updates: Record<string, string | null>) {
+    const next = new URLSearchParams(params);
+    for (const [key, value] of Object.entries(updates)) {
+      if (value === null) next.delete(key);
+      else next.set(key, value);
+    }
+    setParams(next, { replace: true, preventScrollReset: true });
+  }
+
+  function clearFilters() {
+    updateFilters({
+      q: initialQuery ? '' : null,
+      filter: null,
+      sort: null,
+      type: initialType ? '' : null,
+    });
+  }
   // Directory favorites have a separate key from the product favorites of any shop.
   const saved = useShopFavorites(':directory');
 
@@ -74,30 +108,40 @@ export function ShopDirectoryGrid({
         ? t('landing.noOpenShops')
         : t('storefront.noMatchingStores');
 
+  const searchField = (
+    <label className="customer-search">
+      <Search size={20} aria-hidden="true" />
+      <input
+        type="search"
+        aria-label={t('storefront.searchStores')}
+        placeholder={t('storefront.customer.searchByName')}
+        value={query}
+        onChange={(event) =>
+          updateFilters({ q: event.target.value || (initialQuery ? '' : null) })
+        }
+      />
+    </label>
+  );
+
   return (
     <div className="customer-directory">
+      {hero && <DiscoveryHero {...hero}>{searchField}</DiscoveryHero>}
       <div className="customer-directory-toolbar">
-        <label className="customer-search">
-          <Search size={20} aria-hidden="true" />
-          <input
-            type="search"
-            aria-label={t('storefront.searchStores')}
-            placeholder={t('storefront.searchStores')}
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </label>
+        {hero ? <DiscoveryAreaSelect search={directorySearch} /> : searchField}
         <label className="customer-sort">
           <span>{t('storefront.customer.sortLabel')}</span>
           <select
             aria-label={t('storefront.customer.sortLabel')}
             value={sort}
-            onChange={(event) => setSort(event.target.value as Sort)}
+            onChange={(event) =>
+              updateFilters({
+                sort: event.target.value === 'name' ? 'name' : null,
+              })
+            }
           >
             <option value="recommended">
               {t('storefront.customer.sortRecommended')}
             </option>
-            <option value="open">{t('storefront.customer.sortOpen')}</option>
             <option value="name">{t('storefront.customer.sortName')}</option>
           </select>
         </label>
@@ -112,7 +156,9 @@ export function ShopDirectoryGrid({
             key={value}
             type="button"
             aria-pressed={chip === value}
-            onClick={() => setChip(value)}
+            onClick={() =>
+              updateFilters({ filter: value === 'all' ? null : value })
+            }
           >
             <Icon size={15} aria-hidden="true" />
             {t(label)}
@@ -121,6 +167,33 @@ export function ShopDirectoryGrid({
       </div>
       <div className="customer-directory-layout">
         <aside className="customer-type-panel">
+          {hero && (
+            <details className="discovery-mobile-filter">
+              <summary>
+                <SlidersHorizontal size={17} aria-hidden="true" />{' '}
+                {t('storefront.customer.filterLabel')}
+                {type && ` · ${businessTypeLabel(type, language)}`}
+              </summary>
+              <label className="customer-sort">
+                <span>{t('storefront.customer.shopTypes')}</span>
+                <select
+                  value={type ?? ''}
+                  onChange={(event) =>
+                    updateFilters({
+                      type: event.target.value || (initialType ? '' : null),
+                    })
+                  }
+                >
+                  <option value="">{t('storefront.customer.allTypes')}</option>
+                  {types.map((value) => (
+                    <option key={value} value={value}>
+                      {businessTypeLabel(value, language)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </details>
+          )}
           <h2 className="customer-type-heading">
             {t('storefront.customer.shopTypes')}
           </h2>
@@ -132,7 +205,7 @@ export function ShopDirectoryGrid({
             <button
               type="button"
               aria-pressed={type === null}
-              onClick={() => setType(null)}
+              onClick={() => updateFilters({ type: initialType ? '' : null })}
             >
               <LayoutGrid size={16} aria-hidden="true" />
               {t('storefront.customer.allTypes')}
@@ -142,7 +215,7 @@ export function ShopDirectoryGrid({
                 key={value}
                 type="button"
                 aria-pressed={type === value}
-                onClick={() => setType(value)}
+                onClick={() => updateFilters({ type: value })}
               >
                 {businessTypeLabel(value, language)}
               </button>
@@ -153,9 +226,19 @@ export function ShopDirectoryGrid({
           className="customer-directory-results"
           aria-labelledby={headingId}
         >
-          <h2 id={headingId} className="sr-only">
+          <h2
+            id={headingId}
+            className={hero ? 'discovery-results-heading' : 'sr-only'}
+          >
             {t('storefront.publishedStores')}
           </h2>
+          {hero && !status && (
+            <p className="discovery-result-count" role="status">
+              {t('storefront.customer.areaListed', {
+                count: visible.length.toLocaleString(language),
+              })}
+            </p>
+          )}
           {status ??
             (visible.length > 0 ? (
               <ul
@@ -168,6 +251,7 @@ export function ShopDirectoryGrid({
                     <ShopCard
                       shop={shop}
                       action={action}
+                      directorySearch={hero ? directorySearch : undefined}
                       favorite={saved.isFavorite(shop.slug)}
                       onToggleFavorite={() => saved.toggle(shop.slug)}
                     />
@@ -175,9 +259,21 @@ export function ShopDirectoryGrid({
                 ))}
               </ul>
             ) : (
-              <p className="customer-empty" role="status">
-                {empty}
-              </p>
+              <div className="customer-empty">
+                <p role="status">{empty}</p>
+                {(query ||
+                  type ||
+                  chip !== 'all' ||
+                  sort !== 'recommended') && (
+                  <button
+                    type="button"
+                    className="button"
+                    onClick={clearFilters}
+                  >
+                    {t('storefront.customer.clearFilters')}
+                  </button>
+                )}
+              </div>
             ))}
         </section>
       </div>

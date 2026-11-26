@@ -115,7 +115,7 @@ it('presents the mockup sections with the unchanged header destinations', () => 
   ).not.toBeInTheDocument();
   for (const name of [
     'สำรวจร้านตามพื้นที่',
-    'เลือกตามประเภทอาหาร',
+    'ประเภทอาหาร',
     'ร้านแนะนำ',
     'สั่งอาหารง่าย ๆ ใน 3 ขั้นตอน',
     'มีร้านอาหารเป็นของตัวเอง?',
@@ -199,43 +199,44 @@ it('sends hero searches to the shop directory', () => {
   );
 });
 
-it('links category and area shortcuts to directory searches', () => {
+it('keeps area links on Main and shows food categories without misleading search links', () => {
   renderLanding();
   const categories = within(
     screen.getByRole('list', { name: 'ประเภทอาหาร' }),
-  ).getAllByRole('link');
-  expect(categories).toHaveLength(8);
-  expect(categories[1]).toHaveAttribute(
-    'href',
-    `/shop?q=${encodeURIComponent('ก๋วยเตี๋ยว')}`,
   );
+  expect(categories.getAllByRole('listitem')).toHaveLength(8);
+  expect(categories.getByText('ก๋วยเตี๋ยว')).toBeVisible();
+  expect(categories.queryByRole('link')).not.toBeInTheDocument();
+  const areas = within(screen.getByRole('list', { name: 'พื้นที่และชุมชน' }));
   expect(
-    within(screen.getByRole('list', { name: 'พื้นที่และชุมชน' })).getAllByRole(
-      'link',
-    ),
-  ).toHaveLength(4);
+    areas.getAllByRole('link').map((link) => link.getAttribute('href')),
+  ).toEqual(['/areas/campus', '/areas/market', '/areas/dorm', '/areas/community']);
+  expect(screen.getByRole('link', { name: 'ดูทุกพื้นที่' })).toHaveAttribute(
+    'href',
+    '/areas',
+  );
 });
 
-it('provides the mockup footer columns and a language selector', () => {
+it('provides the reference footer without a duplicate language selector', () => {
   renderLanding();
   const footer = within(screen.getByRole('contentinfo'));
+  expect(footer.queryByRole('combobox', { name: 'ภาษา' })).not.toBeInTheDocument();
   for (const name of [
     'เกี่ยวกับ VELOPOS',
     'เมนูหลัก',
     'สำหรับร้านค้า',
     'ช่วยเหลือ',
     'ข้อกำหนด',
-    'ติดต่อเรา',
+    'ติดตามเรา',
   ])
     expect(footer.getByRole('heading', { name })).toBeVisible();
   expect(footer.getByRole('link', { name: 'สมัครร้านค้า' })).toHaveAttribute(
     'href',
     '/register',
   );
-  const language = footer.getByRole('combobox', { name: 'ภาษา' });
-  fireEvent.change(language, { target: { value: 'en' } });
-  expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
-    'Find restaurants in your community',
+  expect(footer.getByRole('link', { name: 'หมวดหมู่อาหาร' })).toHaveAttribute(
+    'href',
+    '#landing-categories',
   );
 });
 

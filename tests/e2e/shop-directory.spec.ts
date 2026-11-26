@@ -100,7 +100,7 @@ test('assistant remains reachable in a short mobile viewport', async ({
   await page
     .getByRole('button', { name: 'เปิดผู้ช่วย VELO Assistant' })
     .click();
-  const dialog = page.getByRole('dialog', { name: 'VELO Assistant' });
+  const dialog = page.getByRole('dialog', { name: 'ไกด์หาร้านอาหาร' });
   const bounds = await dialog.boundingBox();
   expect(bounds).not.toBeNull();
   expect(bounds!.y).toBeGreaterThanOrEqual(0);
@@ -514,76 +514,23 @@ test('search, filters, types and language work with keyboard', async ({
   ).toBeVisible();
 });
 
-test('velo assistant chat opens, renders reference layout and can be closed', async ({
+test('discovery chat shows stores only after a request and restores focus', async ({
   page,
 }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
+  await page.route('**/api/v1/storefronts', (route) =>
+    route.fulfill({ json: { data: shops } }),
+  );
   await page.goto('/shop');
-  await expect(
-    page.getByRole('heading', { name: 'yam', exact: true }),
-  ).toBeVisible();
   await page.getByRole('button', { name: 'English', exact: true }).click();
-
-  // Launcher button is visible
-  const launcher = page.getByRole('button', { name: /VELO Assistant/i });
-  await expect(launcher).toBeVisible();
-
-  // Open the chat
+  const launcher = page.getByRole('button', { name: 'Open VELO Assistant chat' });
   await launcher.click();
-
-  const chatDialog = page.getByRole('dialog', { name: 'VELO Assistant' });
-  await expect(chatDialog).toBeVisible();
-  await expect(
-    chatDialog.getByRole('heading', { name: 'VELO Assistant' }),
-  ).toBeVisible();
-  await expect(
-    chatDialog.getByText('Ask about stores, menus, or orders'),
-  ).toBeVisible();
-  await expect(chatDialog.getByText('Online')).toBeVisible();
-
-  // Check initial messages
-  await expect(
-    chatDialog.getByText(
-      'Hi! I can help you find a restaurant or recommend dishes.',
-    ),
-  ).toBeVisible();
-  await expect(
-    chatDialog.getByText('Show me stores that are open now.'),
-  ).toBeVisible();
-  await expect(
-    chatDialog.getByText('Here are stores that are open now:'),
-  ).toBeVisible();
-
-  // Open store card
-  const yamCard = chatDialog.getByRole('link', { name: /yam/i });
-  await expect(yamCard).toBeVisible();
-  await expect(yamCard).toHaveAttribute('href', '/shop/yam');
-
-  // Quick suggestions
-  await expect(
-    chatDialog.getByRole('button', { name: 'Open now' }),
-  ).toBeVisible();
-  await expect(
-    chatDialog.getByRole('button', { name: 'Popular dishes' }),
-  ).toBeVisible();
-  await expect(
-    chatDialog.getByRole('button', { name: 'Track order' }),
-  ).toBeVisible();
-
-  // Input area
-  await expect(
-    chatDialog.getByPlaceholder('Type your message...'),
-  ).toBeVisible();
-
-  // Save screenshot of open chat window for visual comparison
-  await page.screenshot({
-    path: testInfo.outputPath('assistant-chat-1440.png'),
-    fullPage: false,
-  });
-
-  // Close with minimize or close button
-  await chatDialog
-    .getByRole('button', { name: /Minimize chat|ย่อหน้าต่าง/i })
-    .click();
-  await expect(chatDialog).toHaveCount(0);
+  const chat = page.getByRole('dialog', { name: 'Restaurant guide' });
+  await expect(chat.getByRole('link', { name: /yam/i })).toHaveCount(0);
+  await chat.getByRole('button', { name: 'Which stores are accepting orders?' }).click();
+  await expect(chat.getByRole('link', { name: /yam/i })).toHaveAttribute('href', '/shop/yam');
+  await page.screenshot({ path: testInfo.outputPath('assistant-chat-1440.png') });
+  await chat.getByRole('button', { name: 'Close chat' }).click();
+  await expect(chat).toHaveCount(0);
+  await expect(launcher).toBeFocused();
 });

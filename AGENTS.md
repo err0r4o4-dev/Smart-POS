@@ -1,5 +1,8 @@
 # SmartPOS Agent Guide
 
+This guide adds SmartPOS-specific rules. Follow the global `AGENTS.md` for
+authorization, delegation, required review, and other shared workflows.
+
 ## Architecture
 
 Browser/React -> public Go API -> PostgreSQL. An internal FastAPI AI service is a
@@ -61,5 +64,12 @@ are in `apps/web/src/styles/tokens.css`.
 
 ## Task lifecycle & TODO.md
 
-- Track active scope, execution steps and verification items in `TODO.md` during work.
-- **Task closure**: When a task is completed and verified, close the task by deleting that task's section from `TODO.md`. Do not leave completed task sections lingering in `TODO.md`.
+- Use the existing `TODO.md` when work needs tracking for meaningful sequencing,
+  dependencies, interruptions, or acceptance. Skip the tracker for small,
+  bounded changes.
+- **Task closure**: When authorized to update the tracker, mark a verified item
+  `[x]` after implementation, required checks, review, and acceptance are complete.
+  Preserve its text, order, and unrelated entries. Routine cleanup may remove
+  only completed, task-scoped temporary entries created by the agent. Preserve
+  user-authored entries and entries of unknown ownership unless the user
+  explicitly authorizes removal of the exact content.

@@ -4,6 +4,7 @@ import { useLanguage } from '../../app/language';
 import { paths } from '../../app/routes';
 import type { ShopDirectoryEntry } from '../../lib/storefront-api';
 import { foodCategories } from '../storefront/food-categories';
+import { ShopCoverImage } from '../storefront/ShopCoverImage';
 import { hasValidRating } from '../storefront/shop-art';
 import './landing.css';
 
@@ -40,7 +41,7 @@ export function LandingShopCard({
   return (
     <article className="landing-shop" aria-labelledby={titleId}>
       <div className="landing-shop-cover">
-        <img src={shopCover(shop.category_codes)} alt="" loading="lazy" />
+        <ShopCoverImage cover={shop.cover_image_url} fallback={shopCover(shop.category_codes)} loading="lazy" />
         <div className="landing-shop-controls">
           <span
             className={

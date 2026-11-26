@@ -3,6 +3,7 @@ import { ArrowRight, Heart, ShoppingCart, Star, Truck } from 'lucide-react';
 import { useLanguage } from '../../app/language';
 import type { ShopDirectoryEntry } from '../../lib/storefront-api';
 import { foodCategories } from './food-categories';
+import { ShopCoverImage } from './ShopCoverImage';
 import { hasValidRating, shopCoverImage } from './shop-art';
 
 export function ShopCard({
@@ -31,7 +32,7 @@ export function ShopCard({
   return (
     <article className="customer-shop-card" aria-labelledby={titleId}>
       <div className="customer-shop-cover">
-        <img src={cover} alt="" loading="lazy" />
+        <ShopCoverImage cover={shop.cover_image_url} fallback={cover} loading="lazy" />
         <span
           className={
             shop.accepting_orders

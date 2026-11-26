@@ -3,6 +3,7 @@ import { Clock, Phone, Star, Store, Truck } from 'lucide-react';
 import { useLanguage } from '../../app/language';
 import { moneyText } from '../../lib/pos-api';
 import type { ShopSettings } from '../../lib/storefront-api';
+import { ShopCoverImage } from './ShopCoverImage';
 import { hasValidRating, shopCoverImage } from './shop-art';
 import { useShopDirectory } from './useShopDirectory';
 
@@ -32,7 +33,7 @@ export function StoreHero({
 }) {
   const { t, language } = useLanguage();
   const entry = useDirectoryEntry(slug);
-  const cover = shopCoverImage(entry?.category_codes);
+  const cover = shopCoverImage(store.category_codes ?? entry?.category_codes);
 
   return (
     <section
@@ -40,7 +41,7 @@ export function StoreHero({
       aria-labelledby="customer-store-name"
     >
       <div className="customer-store-cover">
-        <img src={cover} alt="" />
+        <ShopCoverImage cover={store.cover_image_url ?? entry?.cover_image_url} fallback={cover} />
       </div>
       <div className="customer-store-identity">
         <span className="customer-store-logo" aria-hidden="true">

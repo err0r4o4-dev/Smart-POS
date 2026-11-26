@@ -57,8 +57,10 @@ func autoSlug(name string) string {
 }
 
 var phonePattern = regexp.MustCompile(`^[0-9+() .-]{3,30}$`)
+var coverImagePattern = regexp.MustCompile(`^/images/[A-Za-z0-9_-]+(/[A-Za-z0-9_-]+)*[.](webp|jpg|jpeg|png|avif)$`)
 
 type Settings struct {
+	CoverImageURL      string   `json:"cover_image_url,omitempty"`
 	CategoryCodes      []string `json:"category_codes"`
 	DeliveryEnabled    bool     `json:"delivery_enabled"`
 	ShippingFee        string   `json:"shipping_fee"`
@@ -76,6 +78,7 @@ type Settings struct {
 	LocationID         string   `json:"stock_location_id,omitempty"`
 }
 type SettingsInput struct {
+	CoverImageURL      *string  `json:"cover_image_url,omitempty"`
 	CategoryCodes      []string `json:"category_codes"`
 	DeliveryEnabled    bool     `json:"delivery_enabled"`
 	ShippingFee        string   `json:"shipping_fee"`
@@ -232,6 +235,9 @@ func normalizeItems(items []ItemInput) error {
 	return nil
 }
 func (input *SettingsInput) validate() error {
+	if path := input.CoverImageURL; path != nil && *path != "" && (len(*path) > 300 || !coverImagePattern.MatchString(*path)) {
+		return ErrInput
+	}
 	if err := validateFoodCategories(input.CategoryCodes); err != nil {
 		return err
 	}

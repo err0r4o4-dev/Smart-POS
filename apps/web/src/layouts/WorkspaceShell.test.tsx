@@ -1,4 +1,5 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, expect, it, vi } from 'vitest';
 import type { WorkspaceArea } from '../app/access';
@@ -10,6 +11,8 @@ import { WorkspaceShell } from './ManagementLayout';
 
 const mocks = vi.hoisted(() => ({
   signOut: vi.fn(),
+  select: vi.fn(),
+  multiStore: false,
   authState: { status: 'anonymous', session: null } as
     | { status: 'anonymous'; session: null }
     | {
@@ -30,15 +33,57 @@ vi.mock('../app/AuthProvider', () => ({
   useAuth: () => ({ state: mocks.authState, signOut: mocks.signOut }),
 }));
 vi.mock('../app/OrganizationProvider', () => ({
-  useOrganization: () => ({ context: null, loading: false, error: null }),
+  useOrganization: () => ({
+    context: mocks.multiStore
+      ? {
+          organization: { id: 'org-1', name: 'Test restaurant' },
+          membership: { role: 'OWNER' },
+          permissions: [],
+          branches: [
+            { id: 'main', name: 'Main branch' },
+            { id: 'second', name: 'Second branch' },
+          ],
+        }
+      : null,
+    organizations: mocks.multiStore
+      ? [{ id: 'org-1', name: 'Test restaurant' }]
+      : [],
+    storeMode: 'multi',
+    branchID: 'main',
+    select: mocks.select,
+    loading: false,
+    error: null,
+  }),
 }));
 
 beforeEach(() => {
   localStorage.clear();
   vi.clearAllMocks();
   mocks.authState = { status: 'anonymous', session: null };
+  mocks.multiStore = false;
   mocks.signOut.mockResolvedValue(undefined);
   HTMLDialogElement.prototype.close = vi.fn();
+});
+
+it('lets the owner change the active branch from the management shell', () => {
+  mocks.multiStore = true;
+  mocks.authState = {
+    status: 'authenticated',
+    session: {
+      user: {
+        id: 'owner',
+        display_name: 'Owner',
+        email: 'owner@example.test',
+        status: 'ACTIVE',
+      },
+      csrf_token: 'csrf',
+    },
+  };
+  renderShell('management', ['/dashboard']);
+  fireEvent.change(screen.getByRole('combobox', { name: 'Active branch' }), {
+    target: { value: 'second' },
+  });
+  expect(mocks.select).toHaveBeenCalledWith('org-1', 'second');
 });
 
 function renderShell(
@@ -48,16 +93,18 @@ function renderShell(
 ) {
   const renderFn = useThai ? renderInThai : render;
   return renderFn(
-    <MemoryRouter initialEntries={initialEntries}>
-      <Routes>
-        <Route path="/login" element={<h1>Login page</h1>} />
-        <Route element={<WorkspaceShell area={area} />}>
-          <Route index element={<h1>Workspace content</h1>} />
-          <Route path="/settings" element={<h1>Settings page</h1>} />
-          <Route path="/dashboard" element={<h1>Dashboard page</h1>} />
-        </Route>
-      </Routes>
-    </MemoryRouter>,
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter initialEntries={initialEntries}>
+        <Routes>
+          <Route path="/login" element={<h1>Login page</h1>} />
+          <Route element={<WorkspaceShell area={area} />}>
+            <Route index element={<h1>Workspace content</h1>} />
+            <Route path="/settings" element={<h1>Settings page</h1>} />
+            <Route path="/dashboard" element={<h1>Dashboard page</h1>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 

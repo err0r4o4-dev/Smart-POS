@@ -6,6 +6,7 @@ export interface ShopSummary {
   slug: string;
   name: string;
   accepting_orders: boolean;
+  cover_image_url?: string;
 }
 export interface ShopDirectoryEntry extends ShopSummary {
   category_codes?: string[];

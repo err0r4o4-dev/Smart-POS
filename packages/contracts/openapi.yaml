@@ -20072,6 +20072,8 @@ components:
         - revision
         - category_codes
       properties:
+        cover_image_url:
+          $ref: '#/components/schemas/StorefrontCoverImage'
         category_codes:
           $ref: '#/components/schemas/StorefrontFoodCategories'
         slug:
@@ -20147,6 +20149,11 @@ components:
               online_terminal_id:
                 const: ''
       properties:
+        cover_image_url:
+          anyOf:
+            - $ref: '#/components/schemas/StorefrontCoverImage'
+            - const: ''
+          description: Omit to keep the saved cover. Send an empty string to clear it.
         category_codes:
           $ref: '#/components/schemas/StorefrontFoodCategories'
           description: Omit to retain saved categories. Send an empty array to clear them.
@@ -20185,6 +20192,11 @@ components:
           type: string
           pattern: ^$|^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$
           description: Optional same-branch terminal at a distinct WAREHOUSE. Omit or send an empty string to share the front source. Source changes conflict while any live order remains. A dedicated terminal shift is required for pickup POS settlement.
+    StorefrontCoverImage:
+      type: string
+      maxLength: 300
+      pattern: '^/images/[A-Za-z0-9_-]+(/[A-Za-z0-9_-]+)*[.](webp|jpg|jpeg|png|avif)$'
+      description: Same-origin raster image path.
     StorefrontFoodCategories:
       type: array
       uniqueItems: true
@@ -20204,6 +20216,8 @@ components:
         - average_rating
         - review_count
       properties:
+        cover_image_url:
+          $ref: '#/components/schemas/StorefrontCoverImage'
         slug:
           type: string
         name:

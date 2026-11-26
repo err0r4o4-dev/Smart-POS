@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-const RequiredVersion = 53
+const RequiredVersion = 54
 
 func Open(ctx context.Context, url string) (*pgxpool.Pool, error) {
 	config, err := pgxpool.ParseConfig(url)

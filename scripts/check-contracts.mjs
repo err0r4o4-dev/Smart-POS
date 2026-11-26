@@ -224,6 +224,7 @@ const restaurantPaths = [
 
 const storefrontPaths = [
   '/api/v1/storefronts',
+  '/api/v1/storefronts/discovery/nearby',
   ...[
     '',
     '/products',
@@ -565,7 +566,8 @@ for (const path of [...storefrontPaths, ...restaurantPaths]) {
       assert.deepEqual(operation.security, []);
       if (method === 'post') assert.ok(operation.responses['429']);
     }
-    assert.ok(operation.responses['409']);
+    if (path !== '/api/v1/storefronts/discovery/nearby')
+      assert.ok(operation.responses['409']);
     assert.ok(operation.responses['503']);
   }
 }

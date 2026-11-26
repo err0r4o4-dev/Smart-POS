@@ -18,12 +18,19 @@ import { ShopCatalog } from './ShopCatalog';
 import { ShopError } from './shop-feedback';
 import { businessTypeLabel, normalizeBusinessType } from './business-type';
 import { useShopDirectory } from './useShopDirectory';
+import { AreaShopEntry } from './AreaShopEntry';
 export { ShopError, ShopPagination } from './shop-feedback';
 import './storefront.css';
 
 export function StorefrontPage() {
   const { slug } = useParams();
-  return slug ? <ShopCatalog key={slug} slug={slug} /> : <ShopEntry />;
+  const [searchParams] = useSearchParams();
+  if (slug) return <ShopCatalog key={slug} slug={slug} />;
+  return searchParams.get('view') === 'area' ? (
+    <AreaShopEntry />
+  ) : (
+    <ShopEntry />
+  );
 }
 function ShopEntry() {
   const { t, language } = useLanguage();

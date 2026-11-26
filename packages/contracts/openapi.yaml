@@ -1463,6 +1463,62 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/StorefrontError'
+  /api/v1/storefronts/discovery/nearby:
+    post:
+      operationId: listNearbyStorefronts
+      security: []
+      description: Returns published active storefronts with confirmed locations within 10 km, nearest first. Single-store mode restricts results to the configured organization. Coordinates are read from the request body and are omitted from the response.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [latitude, longitude]
+              properties:
+                latitude: { type: number, minimum: -90, maximum: 90 }
+                longitude: { type: number, minimum: -180, maximum: 180 }
+      responses:
+        '200':
+          description: Nearby storefronts, or an empty array
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StorefrontDirectoryEntry'
+        '400':
+          description: Invalid coordinates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '403':
+          description: Origin denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
+        '503':
+          description: Dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorefrontError'
   /api/v1/storefronts:
     parameters: []
     get:

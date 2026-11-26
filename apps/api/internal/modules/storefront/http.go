@@ -93,6 +93,8 @@ func (handler Handler) PublicRoutes(router chi.Router) {
 		writer.Header().Set("X-SmartPOS-Store-Mode", service.Organization.StoreMode())
 		endpoint(200, func(ctx context.Context, _, _ string, _ *http.Request) (any, error) { return service.Directory(ctx) })(writer, request)
 	})
+	router.With(handler.Authentication.RequirePublicWrite("storefront.nearby", 120, time.Minute)).
+		Post("/storefronts/discovery/nearby", nearbyEndpoint(service))
 	router.Route("/storefronts/{slug}", func(public chi.Router) {
 		public.Get("/", endpoint(200, func(ctx context.Context, _, _ string, request *http.Request) (any, error) {
 			return service.PublicSettings(ctx, chi.URLParam(request, "slug"))

@@ -47,6 +47,7 @@ import './landing.css';
 
 type Translate = ReturnType<typeof useLanguage>['t'];
 const referenceArt = '/images/home/reference';
+const areaShopPath = `${paths.shop}?view=area`;
 
 const popularSearches: Record<'th' | 'en', string[]> = {
   th: ['ข้าวกะเพรา', 'ก๋วยเตี๋ยว', 'ชาไข่มุก', 'ของทอด', 'ส้มตำ'],
@@ -298,7 +299,7 @@ export function LandingPage() {
               icon={MapPin}
               title={t('landing.areasTitle')}
               description={t('landing.areasDescription')}
-              action={{ to: paths.shop, label: t('landing.viewAllShops') }}
+              action={{ to: areaShopPath, label: t('landing.viewAllShops') }}
             />
             <ul className="landing-areas" aria-label={t('landing.areasList')}>
               {areas.map(({ title, description, image }) => (
@@ -644,7 +645,7 @@ function LandingNavigation({
           <House size={17} aria-hidden="true" />
           {t('landing.navHome')}
         </Link>
-        <Link className="landing-nav-link" to={paths.shop}>
+        <Link className="landing-nav-link" to={areaShopPath}>
           <Search size={17} aria-hidden="true" />
           {t('landing.navExplore')}
         </Link>

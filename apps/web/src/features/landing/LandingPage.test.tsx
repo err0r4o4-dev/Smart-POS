@@ -60,7 +60,7 @@ beforeEach(() => {
 
 afterEach(() => vi.unstubAllGlobals());
 
-it('presents the mockup sections with the unchanged header destinations', () => {
+it('presents the landing sections with the header destinations', () => {
   renderLanding();
   expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
     'ค้นหาร้านอาหารในชุมชนของคุณ',
@@ -76,7 +76,7 @@ it('presents the mockup sections with the unchanged header destinations', () => 
   );
   expect(nav.getByRole('link', { name: 'สำรวจร้าน' })).toHaveAttribute(
     'href',
-    '/shop',
+    '/shop?view=area',
   );
   expect(nav.getByRole('link', { name: 'เข้าสู่ระบบ' })).toHaveAttribute(
     'href',
@@ -170,6 +170,13 @@ it('sends hero searches to the shop directory', () => {
   expect(screen.getByTestId('location')).toHaveTextContent(
     `/shop?q=${encodeURIComponent('ข้าวมันไก่')}`,
   );
+});
+
+it('opens the area directory from the landing section action', () => {
+  renderLanding();
+  const areas = screen.getByRole('region', { name: 'สำรวจร้านตามพื้นที่' });
+  fireEvent.click(within(areas).getByRole('link', { name: 'ดูร้านทั้งหมด' }));
+  expect(screen.getByTestId('location')).toHaveTextContent('/shop?view=area');
 });
 
 it('links category and area shortcuts to directory searches', () => {

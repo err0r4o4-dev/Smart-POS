@@ -33,8 +33,7 @@ export function StorefrontLayout() {
   const [searchParams] = useSearchParams();
   const directory = !slug && searchParams.get('view') !== 'cart';
   const shopIndex = useMatch({ path: paths.shop, end: true });
-  const areasIndex = useMatch({ path: paths.areas, end: true });
-  const discoveryHeader = (shopIndex && directory) || areasIndex;
+  const discoveryHeader = shopIndex && directory;
   const tableQuery = searchParams.has('table')
     ? `?${searchParams.toString()}`
     : '';

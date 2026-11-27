@@ -1,31 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { customerAreas, findCustomerArea } from './customer-areas';
 import { hasValidRating, shopCoverImage } from './shop-art';
-
-describe('customer areas', () => {
-  it('lists the four approved areas in display order', () => {
-    expect(customerAreas.map((area) => area.id)).toEqual([
-      'campus',
-      'market',
-      'dorm',
-      'community',
-    ]);
-  });
-
-  it('finds an area by id and its generated banner', () => {
-    expect(findCustomerArea('campus')?.image).toBe(
-      '/images/customer/area-campus.webp',
-    );
-    expect(findCustomerArea('campus')?.title).toBe('landing.areaCampus');
-  });
-
-  it.each([undefined, '', 'nope', '__proto__', 'constructor', '<script>'])(
-    'returns nothing for the unknown area id %s',
-    (id) => {
-      expect(findCustomerArea(id)).toBeUndefined();
-    },
-  );
-});
 
 describe('shop cover image', () => {
   it.each([

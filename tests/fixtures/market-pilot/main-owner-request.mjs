@@ -72,13 +72,18 @@ export async function createMarketOwnerRequest(page, { origin = defaultOrigin, d
     const url = new URL(path, origin);
     if (url.origin !== origin || url.hash || url.pathname + url.search !== path) deny();
     let shop;
+    let listed = false;
     if (path === organizations) {
-      shop = approved.get(body?.code);
-      if (method !== 'POST' || !shop || !uuid.test(idempotencyKey) ||
-        !isDeepStrictEqual(body, {
-          ...shop.organization, address: shop.zone,
-          branch: { code: 'MAIN', name: shop.zone, status: 'ACTIVE' },
-        })) deny();
+      if (method === 'GET' && body === undefined && idempotencyKey === undefined) {
+        listed = true;
+      } else {
+        shop = approved.get(body?.code);
+        if (method !== 'POST' || !shop || !uuid.test(idempotencyKey) ||
+          !isDeepStrictEqual(body, {
+            ...shop.organization, address: shop.zone,
+            branch: { code: 'MAIN', name: shop.zone, status: 'ACTIVE' },
+          })) deny();
+      }
     } else {
       const [id, ...segments] = url.pathname.slice(organizations.length + 1).split('/');
       const shopScope = scope.get(id);
@@ -99,6 +104,19 @@ export async function createMarketOwnerRequest(page, { origin = defaultOrigin, d
     if (!reply.ok) {
       if (reply.session) throw new Error('Market owner session or MFA assurance changed');
       throw new Error(`Market owner API returned HTTP ${reply.status}`);
+    }
+    if (listed) {
+      if (!Array.isArray(reply.data)) throw new Error('Could not confirm owner organization listing');
+      for (const organization of reply.data) {
+        const matched = approved.get(organization?.code);
+        if (!matched) continue;
+        if (!uuid.test(organization?.id) || organization.name !== matched.organization.name ||
+          organization.status !== 'ACTIVE' || organization.business_type !== 'RESTAURANT' ||
+          (scope.has(organization.id) && scope.get(organization.id) !== matched)) {
+          throw new Error('Could not confirm owner access to the approved market organization');
+        }
+        scope.set(organization.id, matched);
+      }
     }
     if (shop) {
       const { organization, membership } = reply.data ?? {};

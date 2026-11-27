@@ -10,6 +10,8 @@ import {
   ChevronRight,
   CookingPot,
   CupSoda,
+  Egg,
+  Fish,
   Heart,
   LayoutGrid,
   Salad,
@@ -25,7 +27,7 @@ import { foodCategories, foodCategory } from './food-categories';
 import { ShopCard } from './ShopCard';
 import { LandingShopCard } from '../landing/LandingShopCard';
 import { useShopFavorites } from './shop-favorites';
-import { DiscoveryAreaSelect, DiscoveryHero } from './DiscoveryHero';
+import { DiscoveryHero } from './DiscoveryHero';
 
 const chips = [
   { value: 'all', label: 'landing.recommended', icon: Sparkles },
@@ -43,6 +45,11 @@ const categoryIcons = {
   desserts: CakeSlice,
   healthy: Salad,
   snacks: CookingPot,
+  'southern-thai': CookingPot,
+  'northern-thai': Soup,
+  seafood: Fish,
+  breakfast: Egg,
+  asian: Utensils,
 } satisfies Record<(typeof foodCategories)[number]['code'], typeof Utensils>;
 
 export function ShopDirectoryGrid({
@@ -369,7 +376,7 @@ export function ShopDirectoryGrid({
         </DiscoveryHero>
       )}
       <div className="customer-directory-toolbar">
-        {hero ? <DiscoveryAreaSelect search={directorySearch} /> : searchField}
+        {!hero && searchField}
         <label className="customer-sort">
           <span>{t('storefront.customer.sortLabel')}</span>
           <select

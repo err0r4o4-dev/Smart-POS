@@ -7,7 +7,8 @@ func validateFoodCategories(codes []string) error {
 	seen := make(map[string]bool, len(codes))
 	for _, code := range codes {
 		switch code {
-		case "made-to-order", "noodles", "isan", "fried", "drinks", "desserts", "healthy", "snacks":
+		case "made-to-order", "noodles", "isan", "fried", "drinks", "desserts", "healthy", "snacks",
+			"southern-thai", "northern-thai", "seafood", "breakfast", "asian":
 		default:
 			return ErrInput
 		}

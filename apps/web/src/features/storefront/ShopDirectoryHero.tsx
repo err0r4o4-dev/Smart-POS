@@ -1,8 +1,6 @@
-import { ArrowRight, Flame, MapPin, Search } from 'lucide-react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { ArrowRight, Flame, Search } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../../app/language';
-import { paths } from '../../app/routes';
-import { shopDirectorySearch } from './shop-directory-search';
 import '../landing/landing.css';
 import './shop-discovery.css';
 
@@ -99,7 +97,6 @@ export function ShopDirectoryHero({
                   </ul>
                 </div>
               )}
-
             </div>
           </div>
         </div>

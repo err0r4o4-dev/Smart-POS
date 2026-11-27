@@ -23,12 +23,6 @@ export function ShopDiscoveryHeader() {
           <Brand />
         </Link>
         <nav aria-label={t('shell.customerStorefrontNavigation')}>
-          <NavLink to={{ pathname: paths.shop, search }} end>
-            {t('storefront.customer.discoveryShops')}
-          </NavLink>
-          <NavLink to={{ pathname: paths.areas, search }} end>
-            {t('storefront.customer.discoveryAreas')}
-          </NavLink>
         </nav>
         <div className="shop-discovery-header-actions">
           <LanguageSwitcher />

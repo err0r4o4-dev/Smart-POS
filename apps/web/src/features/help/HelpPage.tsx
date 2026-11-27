@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { StandardPageHeader } from '../../components/ui/StandardPage';
 import { merchantGuide } from './help-content';
+import { ChevronDown, CircleHelp } from 'lucide-react';
 import { FaqList } from './FaqList';
 import { faqs, type CategoryKey } from './faq-content';
 import './help.css';

@@ -4,7 +4,6 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { render } from '../../test/render';
 import { StorefrontLayout } from '../../layouts/StorefrontLayout';
-import { AreasPage } from './AreasPage';
 import { StorefrontPage } from './StorefrontPage';
 
 const fetchMock = vi.fn();
@@ -34,7 +33,6 @@ function view(entry = '/shop') {
         <Routes>
           <Route element={<StorefrontLayout />}>
             <Route path="/shop" element={<StorefrontPage />} />
-            <Route path="/areas" element={<AreasPage />} />
           </Route>
         </Routes>
       </MemoryRouter>
@@ -57,7 +55,7 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-it('opens areas from the shop and returns to the same search and filters', () => {
+it('keeps the current directory search in navigation without offering area browsing', () => {
   view(
     '/shop?q=yam&filter=open&filter=delivery&category=noodles&sort=name&source=test',
   );
@@ -67,18 +65,12 @@ it('opens areas from the shop and returns to the same search and filters', () =>
     'page',
   );
   const query = '?q=yam&filter=open&filter=delivery&category=noodles&sort=name';
-  expect(header.getByRole('link', { name: 'พื้นที่' })).toHaveAttribute(
+  expect(header.getByRole('link', { name: 'ร้านอาหาร' })).toHaveAttribute(
     'href',
-    `/areas${query}`,
+    `/shop${query}`,
   );
-  fireEvent.click(screen.getByRole('link', { name: 'สำรวจพื้นที่' }));
-  expect(header.getByRole('link', { name: 'พื้นที่' })).toHaveAttribute(
-    'aria-current',
-    'page',
-  );
-  const returnLink = screen.getByRole('link', { name: 'ดูร้านทั้งหมด' });
-  expect(returnLink).toHaveAttribute('href', `/shop${query}`);
-  fireEvent.click(returnLink);
+  expect(header.queryByRole('link', { name: 'พื้นที่' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('combobox', { name: 'เลือกพื้นที่' })).not.toBeInTheDocument();
   expect(screen.getByRole('searchbox', { name: 'ค้นหาร้าน' })).toHaveValue(
     'yam',
   );

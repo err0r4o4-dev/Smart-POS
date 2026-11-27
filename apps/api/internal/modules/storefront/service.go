@@ -124,7 +124,7 @@ func (service *Service) resolvedOrganizationAllowed(org *string) bool {
 }
 func settings(ctx context.Context, tx pgx.Tx, org string) (Settings, error) {
 	var result Settings
-	err := tx.QueryRow(ctx, `SELECT shop.slug,shop.name,shop.description,shop.contact_phone,shop.pickup_instructions,COALESCE(shop.terminal_id::text,''),shop.published,shop.accepting_orders,shop.revision,COALESCE(terminal.branch_id::text,''),COALESCE(terminal.stock_location_id::text,''),COALESCE(shop.online_terminal_id::text,''),shop.delivery_enabled,shop.shipping_fee::text,shop.category_codes,shop.cover_image_url FROM storefronts shop LEFT JOIN pos_terminals terminal ON terminal.organization_id=shop.organization_id AND terminal.id=COALESCE(shop.online_terminal_id,shop.terminal_id) WHERE shop.organization_id=$1 AND (shop.source_kind='RESTAURANT' OR terminal.id IS NOT NULL)`, org).Scan(&result.Slug, &result.Name, &result.Description, &result.ContactPhone, &result.PickupInstructions, &result.TerminalID, &result.Published, &result.AcceptingOrders, &result.Revision, &result.BranchID, &result.LocationID, &result.OnlineTerminalID, &result.DeliveryEnabled, &result.ShippingFee, &result.CategoryCodes, &result.CoverImageURL)
+	err := tx.QueryRow(ctx, `SELECT shop.slug,shop.name,shop.description,shop.contact_phone,shop.pickup_instructions,COALESCE(shop.terminal_id::text,''),shop.published,shop.accepting_orders,shop.revision,COALESCE(terminal.branch_id::text,''),COALESCE(terminal.stock_location_id::text,''),COALESCE(shop.online_terminal_id::text,''),shop.delivery_enabled,shop.shipping_fee::text,shop.category_codes,shop.cover_image_url,shop.opening_hours FROM storefronts shop LEFT JOIN pos_terminals terminal ON terminal.organization_id=shop.organization_id AND terminal.id=COALESCE(shop.online_terminal_id,shop.terminal_id) WHERE shop.organization_id=$1 AND (shop.source_kind='RESTAURANT' OR terminal.id IS NOT NULL)`, org).Scan(&result.Slug, &result.Name, &result.Description, &result.ContactPhone, &result.PickupInstructions, &result.TerminalID, &result.Published, &result.AcceptingOrders, &result.Revision, &result.BranchID, &result.LocationID, &result.OnlineTerminalID, &result.DeliveryEnabled, &result.ShippingFee, &result.CategoryCodes, &result.CoverImageURL, &result.OpeningHours)
 	return result, dbError(err)
 }
 func (service *Service) PublicSettings(ctx context.Context, slug string) (Settings, error) {
@@ -284,7 +284,7 @@ func (service *Service) SaveSettings(ctx context.Context, user, org string, inpu
 	if err = authorization.Recheck(ctx); err != nil {
 		return Settings{}, err
 	}
-	if _, err = tx.Exec(ctx, "UPDATE storefronts SET delivery_enabled=$2,shipping_fee=$3,category_codes=COALESCE($4::text[],category_codes),cover_image_url=COALESCE($5::text,cover_image_url) WHERE organization_id=$1", org, input.DeliveryEnabled, input.ShippingFee, input.CategoryCodes, input.CoverImageURL); err != nil {
+	if _, err = tx.Exec(ctx, "UPDATE storefronts SET delivery_enabled=$2,shipping_fee=$3,category_codes=COALESCE($4::text[],category_codes),cover_image_url=COALESCE($5::text,cover_image_url),opening_hours=COALESCE($6::jsonb,opening_hours) WHERE organization_id=$1", org, input.DeliveryEnabled, input.ShippingFee, input.CategoryCodes, input.CoverImageURL, input.OpeningHours); err != nil {
 		return Settings{}, dbError(err)
 	}
 	result, err := settings(ctx, tx, org)

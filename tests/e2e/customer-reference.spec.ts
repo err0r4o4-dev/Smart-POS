@@ -102,32 +102,45 @@ async function fixture(page: Page, baseURL: string, directoryRows = directory) {
   });
 }
 
-test('Main opens the area picker and individual areas without showing unassigned shops', async ({
+for (const width of [360, 390, 1280]) {
+  test(`restaurant discovery works without area browsing at ${width}px`, async ({
+    page,
+    baseURL,
+  }) => {
+    await fixture(page, baseURL!);
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: 'สำรวจร้านตามพื้นที่' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'พื้นที่', exact: true })).toHaveCount(0);
+    const search = page.getByRole('button', { name: 'ค้นหา', exact: true });
+    await search.focus();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/\/shop$/);
+    await expect(page.getByRole('link', { name: 'พื้นที่', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('combobox', { name: 'เลือกพื้นที่' })).toHaveCount(0);
+    const shop = page.getByRole('link', { name: store.name, exact: true });
+    await expect(shop).toBeVisible();
+    await page.addStyleTag({ content: 'html { font-size: 200%; }' });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    await shop.click();
+    await expect(page.getByRole('heading', { level: 1, name: store.name })).toBeVisible();
+  });
+}
+
+test('legacy area links redirect to the directory and keep supported filters', async ({
   page,
   baseURL,
 }) => {
   await fixture(page, baseURL!);
-  await page.setViewportSize({ width: 1440, height: 760 });
-  await page.goto('/');
-  await page.getByRole('link', { name: 'ดูทุกพื้นที่' }).click();
-  await expect(page).toHaveURL(/\/areas$/);
-  await page.getByRole('link', { name: /ตลาดมหาวิทยาลัย/ }).click();
-  await expect(page).toHaveURL(/\/areas\/market$/);
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-    'ร้านอาหารรอบ ตลาดมหาวิทยาลัย',
-  );
-  await expect(
-    page.getByText('ยังไม่มีข้อมูลร้านสำหรับพื้นที่นี้'),
-  ).toBeVisible();
-  await expect(page.getByRole('article')).toHaveCount(0);
-
-  await page.goto('/');
-  const areas = page.getByRole('list', { name: 'พื้นที่และชุมชน' });
-  await areas.getByRole('link', { name: /มศว องครักษ์/ }).click();
-  await expect(page).toHaveURL(/\/areas\/campus$/);
+  await page.goto('/areas');
+  await expect(page).toHaveURL(/\/shop$/);
+  await page.goto('/areas/campus?q=fixture&filter=open&sort=name&view=cart');
+  await expect(page).toHaveURL(/\/shop\?q=fixture&filter=open&sort=name$/);
+  await expect(page.getByRole('searchbox', { name: 'ค้นหาร้าน' })).toHaveValue('fixture');
+  await expect(page.getByRole('button', { name: 'เปิดรับออเดอร์' })).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('directory restores its filters and scroll, and carries filters between areas', async ({
+test('directory restores its filters and scroll after visiting a store', async ({
   page,
   baseURL,
 }) => {
@@ -142,7 +155,7 @@ test('directory restores its filters and scroll, and carries filters between are
   await page.getByRole('button', { name: 'ค้นหา', exact: true }).click();
   await expect(page).toHaveURL(/\/shop$/);
   await expect(
-    page.getByRole('heading', { name: 'สำรวจร้านอาหาร', level: 1 }),
+    page.getByRole('heading', { name: 'ค้นหาร้านอาหารในชุมชนของคุณ', level: 1 }),
   ).toBeVisible();
   const search = page.getByRole('searchbox', {
     name: 'ค้นหาร้าน',
@@ -166,17 +179,6 @@ test('directory restores its filters and scroll, and carries filters between are
     .poll(() => page.evaluate(() => window.scrollY))
     .toBe(previousScroll);
 
-  await page
-    .getByRole('combobox', { name: /เลือกพื้นที่/ })
-    .selectOption('campus');
-  await expect(page).toHaveURL(/\/areas\/campus\?.*filter=open/);
-  await page
-    .getByRole('combobox', { name: /เปลี่ยนพื้นที่/ })
-    .selectOption('market');
-  await expect(page).toHaveURL(/\/areas\/market\?.*filter=open/);
-  await page.getByRole('link', { name: 'ดูร้านทั้งหมด' }).click();
-  await expect(search).toHaveValue('ร้านทดสอบ');
-  await expect(openFilter).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('mobile directory keeps the quick filters and reveals store types on demand', async ({
@@ -206,9 +208,7 @@ test('mobile directory keeps the quick filters and reveals store types on demand
 });
 
 const pages = [
-  ['/shop', 'สำรวจร้านอาหาร'],
-  ['/areas', 'พื้นที่และชุมชน'],
-  ['/areas/campus', 'ร้านอาหารรอบ มศว องครักษ์'],
+  ['/shop', 'ค้นหาร้านอาหารในชุมชนของคุณ'],
   ['/shop/ui-test', store.name],
   ['/shop/ui-test/cart', 'ตะกร้าของคุณ'],
   [`/shop/ui-test/orders/o1#access=${token}`, 'คำสั่งซื้อของฉัน'],

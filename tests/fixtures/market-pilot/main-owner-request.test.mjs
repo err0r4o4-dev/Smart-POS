@@ -118,6 +118,30 @@ test('binds an isolated owner request to its principal, MFA, and session before 
   assert.equal(writes, 1);
 });
 
+test('enrolls only approved active market organizations returned by GET /api/v1/organizations', async () => {
+  const page = {
+    url: () => origin,
+    evaluate: async (_, operation) => {
+      if (!operation.method) return { ok: true };
+      if (operation.path === organizations && operation.method === 'GET') {
+        return {
+          ok: true,
+          data: [
+            { ...shop.organization, id: org, status: 'ACTIVE' },
+            { code: 'OTHER-SHOP', name: 'Other', business_type: 'RESTAURANT', id: foreign, status: 'ACTIVE' },
+          ],
+        };
+      }
+      return { ok: true, data: { slug: shop.settings.slug } };
+    },
+  };
+  const request = await createMarketOwnerRequest(page);
+  const rows = await request({ path: organizations });
+  assert.equal(rows.length, 2);
+  assert.deepEqual(await request({ path: `${organizations}/${org}/storefront` }), { slug: shop.settings.slug });
+  await assert.rejects(request({ path: `${organizations}/${foreign}/storefront` }), /scope/);
+});
+
 test('does not trust tenant IDs from denied or non-owner responses', async () => {
   for (const page of [pageFor({ status: 403 }), pageFor({ verifiedOwner: false })]) {
     const request = await createMarketOwnerRequest(page);

@@ -3,7 +3,6 @@ import { managementRoles, type Role } from './access';
 export const paths = {
   workspace: '/workspace',
   shop: '/shop',
-  areas: '/areas',
   dashboard: '/dashboard',
   pos: '/pos',
   orders: '/orders',

@@ -6,7 +6,6 @@ import {
   ArrowRight,
   BookOpen,
   CheckCircle2,
-  ChevronDown,
   Clock,
   CookingPot,
   HelpCircle,
@@ -20,10 +19,9 @@ import {
 } from 'lucide-react';
 import { StandardPageHeader } from '../../components/ui/StandardPage';
 import { merchantGuide } from './help-content';
+import { FaqList } from './FaqList';
+import { faqs, type CategoryKey } from './faq-content';
 import './help.css';
-
-type CategoryKey =
-  'all' | 'getting-started' | 'pos' | 'kitchen' | 'menu' | 'faq';
 
 interface GuideItem {
   id: string;
@@ -33,13 +31,6 @@ interface GuideItem {
   bodyKey: TranslationKey;
   secondaryBodyKey?: TranslationKey;
   steps?: TranslationKey[];
-}
-
-interface FaqItem {
-  id: string;
-  category: CategoryKey;
-  questionKey: TranslationKey;
-  answerKey: TranslationKey;
 }
 
 export function HelpPage() {
@@ -192,7 +183,7 @@ export function HelpPage() {
         question.includes(normalizedQuery) || answer.includes(normalizedQuery)
       );
     });
-  }, [faqs, activeCategory, normalizedQuery, t]);
+  }, [activeCategory, normalizedQuery, t]);
 
   const totalResultsCount = filteredGuides.length + filteredFaqs.length;
 

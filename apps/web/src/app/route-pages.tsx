@@ -68,6 +68,11 @@ export const DashboardPage = lazy(() =>
     default: module.DashboardPage,
   })),
 );
+export const FaqPage = lazy(() =>
+  import('../features/help/FaqPage').then((module) => ({
+    default: module.FaqPage,
+  })),
+);
 export const HelpPage = lazy(() =>
   import('../features/help/HelpPage').then((module) => ({
     default: module.HelpPage,

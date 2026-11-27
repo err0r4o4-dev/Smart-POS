@@ -273,6 +273,11 @@
 }
 
 /* FAQs Section */
+.public-faq-page {
+  width: min(100% - 2 * var(--layout-gutter, 24px), 760px);
+  padding-top: 32px;
+}
+
 .help-faq-section {
   display: flex;
   flex-direction: column;

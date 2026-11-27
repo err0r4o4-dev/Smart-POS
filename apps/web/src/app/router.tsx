@@ -11,6 +11,7 @@ import {
   OnlineOrderPage,
   RestaurantPage,
   HelpPage,
+  FaqPage,
   SystemPage,
   ProductsPage,
   ProductDetailsPage,
@@ -95,6 +96,7 @@ const routes: RouteObject[] = [
       </>
     ),
   },
+  { path: paths.faq, element: <FaqPage /> },
   {
     element: (
       <>

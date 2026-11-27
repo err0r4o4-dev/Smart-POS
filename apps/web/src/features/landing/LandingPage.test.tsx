@@ -228,6 +228,9 @@ it('provides the reference footer without a duplicate language selector', () => 
   renderLanding();
   const footer = within(screen.getByRole('contentinfo'));
   expect(footer.queryByRole('combobox', { name: 'ภาษา' })).not.toBeInTheDocument();
+  expect(
+    footer.getByRole('link', { name: 'คำถามที่พบบ่อย (FAQ)' }),
+  ).toHaveAttribute('href', '/faq');
   for (const name of [
     'เกี่ยวกับ VELOPOS',
     'เมนูหลัก',

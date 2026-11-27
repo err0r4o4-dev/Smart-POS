@@ -112,12 +112,6 @@ export function LandingPage() {
           </div>
           <div className="landing-container landing-hero-inner">
             <div className="landing-hero-copy">
-              <a className="landing-hero-badge" href="#landing-areas">
-                <MapPin size={15} aria-hidden="true" />
-                {t('landing.heroBadge')}
-                <ArrowRight size={13} aria-hidden="true" />
-                <span className="sr-only">{t('landing.changeArea')}</span>
-              </a>
               <h1 id="landing-title">
                 {t('landing.heroTitleLead')}
                 <span className="landing-title-accent">

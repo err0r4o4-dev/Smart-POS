@@ -51,6 +51,7 @@ export async function publishMarketShop(request, shop, staged, show, draftRevisi
     match(settings, { published: false, revision: draftRevision });
   }
   if (settings !== null) {
+    if (!show) match(settings, { published: false });
     match(settings, fixed);
     assert.equal(settings.branch_id, branchId);
     assert.ok(!settings.online_terminal_id, 'Unexpected online terminal');
@@ -78,6 +79,7 @@ export async function publishMarketShop(request, shop, staged, show, draftRevisi
   if (settings === null) {
     settings = await call('PUT', '/storefront', { ...input, published: false, revision: 0 });
     nextRevision(settings, 0);
+    match(settings, { published: false });
   }
   match(settings, expectedSettings);
   assert.ok(Number.isSafeInteger(settings.revision) && settings.revision > 0);

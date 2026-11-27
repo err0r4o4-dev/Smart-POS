@@ -1,5 +1,4 @@
 import { useLanguage } from '../../app/language';
-import { lazy, Suspense } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { PackageOpen } from 'lucide-react';
 import { Card, Loading } from '../../components/ui/primitives';
@@ -10,11 +9,6 @@ import { ShopDirectoryHero } from './ShopDirectoryHero';
 import { useShopDirectory } from './useShopDirectory';
 export { ShopError, ShopPagination } from './shop-feedback';
 import './storefront.css';
-
-const MarketDemo =
-  import.meta.env.DEV || import.meta.env.VITE_LOCAL_MARKET_DEMO === '1'
-    ? lazy(() => import('./MarketDemo'))
-    : null;
 
 export function StorefrontPage() {
   const { slug } = useParams();
@@ -60,13 +54,6 @@ function ShopEntry() {
         </header>
       )}
       {!showCarts && <ShopDirectoryHero suggestions={suggestedNames} />}
-      {!showCarts &&
-        MarketDemo &&
-        ['127.0.0.1', 'localhost', '[::1]'].includes(location.hostname) && (
-          <Suspense fallback={null}>
-            <MarketDemo />
-          </Suspense>
-        )}
       <ShopDirectoryGrid
         shops={shops.data ?? []}
         directoryMode={!showCarts}

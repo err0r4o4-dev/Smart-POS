@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { render } from '../../test/render';
 import { StorefrontLayout } from '../../layouts/StorefrontLayout';
+import { AreasPage } from './AreasPage';
 import { StorefrontPage } from './StorefrontPage';
 
 const fetchMock = vi.fn();
@@ -31,8 +32,9 @@ function view(entry = '/shop') {
     >
       <MemoryRouter initialEntries={[entry]}>
         <Routes>
-          <Route path="/shop" element={<StorefrontLayout />}>
-            <Route index element={<StorefrontPage />} />
+          <Route element={<StorefrontLayout />}>
+            <Route path="/shop" element={<StorefrontPage />} />
+            <Route path="/areas" element={<AreasPage />} />
           </Route>
         </Routes>
       </MemoryRouter>
@@ -54,6 +56,40 @@ beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock);
 });
 afterEach(() => vi.unstubAllGlobals());
+
+it('opens areas from the shop and returns to the same search and filters', () => {
+  view(
+    '/shop?q=yam&filter=open&filter=delivery&category=noodles&sort=name&source=test',
+  );
+  const header = within(screen.getByRole('banner'));
+  expect(header.getByRole('link', { name: 'ร้านอาหาร' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  const query = '?q=yam&filter=open&filter=delivery&category=noodles&sort=name';
+  expect(header.getByRole('link', { name: 'พื้นที่' })).toHaveAttribute(
+    'href',
+    `/areas${query}`,
+  );
+  fireEvent.click(screen.getByRole('link', { name: 'สำรวจพื้นที่' }));
+  expect(header.getByRole('link', { name: 'พื้นที่' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  const returnLink = screen.getByRole('link', { name: 'ดูร้านทั้งหมด' });
+  expect(returnLink).toHaveAttribute('href', `/shop${query}`);
+  fireEvent.click(returnLink);
+  expect(screen.getByRole('searchbox', { name: 'ค้นหาร้าน' })).toHaveValue(
+    'yam',
+  );
+  expect(screen.getByRole('button', { name: 'ก๋วยเตี๋ยว' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  expect(screen.getByRole('combobox', { name: 'เรียงตาม' })).toHaveValue(
+    'name',
+  );
+});
 
 it('shows the discovery page and searches real shops outside the header', async () => {
   view();
@@ -217,9 +253,7 @@ it('keeps uncategorized stores in All and ignores old type links', async () => {
   ).toBeVisible();
   expect(screen.getByRole('searchbox')).toHaveValue('yam');
   fireEvent.click(typeGroup().getByRole('button', { name: 'ก๋วยเตี๋ยว' }));
-  expect(
-    screen.getByRole('heading', { name: /^yam$/ }),
-  ).toBeVisible();
+  expect(screen.getByRole('heading', { name: /^yam$/ })).toBeVisible();
   expect(
     screen.queryByRole('heading', { name: 'yam unassigned' }),
   ).not.toBeInTheDocument();

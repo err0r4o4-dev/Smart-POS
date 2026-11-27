@@ -1,12 +1,9 @@
-.storefront-shell.shop-discovery-shell {
-  background: var(--surface);
-}
-
-.storefront-shell.shop-discovery-shell::before {
-  content: none;
-}
-
 .storefront-shell.shop-discovery-shell .storefront-content {
+  width: 100%;
+  padding: 0;
+}
+
+.storefront-shell.shop-directory-shell .storefront-content.shop-public-index {
   width: 100%;
   padding: 0;
 }
@@ -15,6 +12,138 @@
   gap: 0;
 }
 
+.shop-discovery-header {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 20;
+  background: var(--surface);
+  border-block-end: 1px solid var(--border);
+}
+
+.shop-discovery-header-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  min-height: calc(var(--header-height) - 1px);
+  padding-block: var(--header-padding-block);
+}
+
+.shop-discovery-brand {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  min-width: 0;
+  min-height: 44px;
+  border-radius: var(--radius-small);
+}
+
+.shop-discovery-header nav,
+.shop-discovery-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.shop-discovery-header nav a {
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  padding: var(--space-1) var(--space-4);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  font-weight: 700;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.shop-discovery-header nav a:hover,
+.shop-discovery-header nav a[aria-current='page'] {
+  background: var(--primary-subtle);
+  color: var(--text-primary);
+}
+
+.shop-discovery-header nav a[aria-current='page'] {
+  box-shadow: inset 0 0 0 1px var(--primary-border);
+}
+
+.shop-discovery-header-actions {
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.shop-discovery-header :is(a, button, summary):focus-visible,
+.areas-index a:focus-visible {
+  outline: 2px solid var(--primary-strong);
+  outline-offset: 2px;
+}
+
+.shop-discovery-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  margin-block-start: var(--space-2);
+}
+
+.shop-discovery-hero-actions .landing-popular {
+  margin: 0;
+}
+
+.shop-discovery-area-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  max-width: 100%;
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.shop-discovery-area-link:hover {
+  background: var(--primary-subtle);
+}
+
+.shop-discovery-area-link svg {
+  flex: none;
+  color: var(--primary-strong);
+}
+
+.areas-index .landing-discovery-section {
+  padding-block-end: var(--space-6);
+}
+
 #storefront-results {
   scroll-margin-top: calc(var(--header-height) + 12px);
+}
+
+@media (max-width: 767px) {
+  .shop-discovery-header {
+    position: relative;
+  }
+
+  .shop-discovery-header-inner {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-1) var(--space-2);
+  }
+
+  .shop-discovery-header nav {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .shop-discovery-header .brand small {
+    display: none;
+  }
+
+  #storefront-results {
+    scroll-margin-top: var(--space-3);
+  }
 }

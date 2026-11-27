@@ -75,6 +75,19 @@ it('filters areas locally by name or description', () => {
   expect(screen.getByText('ไม่พบพื้นที่ที่ตรงกับคำค้น')).toBeVisible();
 });
 
+it('moves focus to the filtered area results when search is submitted', () => {
+  view('/areas');
+  const form = screen.getByRole('search');
+  fireEvent.change(within(form).getByRole('searchbox'), {
+    target: { value: 'ตลาด' },
+  });
+  fireEvent.submit(form);
+  const results = screen.getByRole('list', { name: 'พื้นที่และชุมชน' });
+  expect(results.closest('section')).toHaveFocus();
+  expect(within(results).getAllByRole('link')).toHaveLength(1);
+  expect(within(results).getByRole('link', { name: /ตลาด/ })).toBeVisible();
+});
+
 it('shows the area and preserves the directory filter without presenting unassigned stores as local', () => {
   view('/areas/campus?filter=open');
   expect(

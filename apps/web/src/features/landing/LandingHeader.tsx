@@ -76,11 +76,6 @@ function LandingNavigation({
         ) : (
           <LanguageSwitcher />
         )}
-        {backHome && (
-          <Link className="landing-nav-link" to="/" onClick={close}>
-            <ArrowLeft size={17} aria-hidden="true" /> {backHome}
-          </Link>
-        )}
       </div>
     </nav>
   );

@@ -62,6 +62,62 @@ test('allows only approved organization creation and returned owner tenant route
   assert.equal(page.operations.length, 3);
 });
 
+test('accepts the configured localhost gateway alias only when explicitly selected', async () => {
+  const loopback = 'http://localhost:8088';
+  await assert.rejects(createMarketOwnerRequest(pageFor({ url: loopback })), /8088/);
+  await createMarketOwnerRequest(pageFor({ url: loopback }), { origin: loopback });
+  const other = 'http://localhost:9999';
+  await assert.rejects(createMarketOwnerRequest(pageFor({ url: other }), { origin: other }), /8088/);
+});
+
+test('draft-only owner requests never forward a storefront publication', async () => {
+  const page = pageFor();
+  const request = await createMarketOwnerRequest(page, { draftOnly: true });
+  await request(create);
+  const path = `${organizations}/${org}/storefront`;
+  const body = { slug: shop.settings.slug, accepting_orders: false };
+  const count = page.operations.length;
+  for (const published of [true, undefined]) {
+    await assert.rejects(request({ method: 'PUT', path, body: { ...body, published } }), /scope/);
+  }
+  assert.equal(page.operations.length, count);
+  await request({ method: 'PUT', path, body: { ...body, published: false } });
+  assert.equal(page.operations.length, count + 1);
+});
+
+test('binds an isolated owner request to its principal, MFA, and session before each write', async () => {
+  const user = '053a2d0d-89be-4bfa-8954-a20da0f60e05';
+  let identity = user, csrf = 'initial-session', verified = true, writes = 0;
+  const page = {
+    url: () => origin,
+    evaluate: async (callback, args) => {
+      const original = globalThis.fetch;
+      globalThis.location = { origin };
+      globalThis.fetch = async (path, options) => {
+        if (path === '/api/v1/auth/mfa') return Response.json({ data: { enabled: true, session_verified: verified } });
+        if (path === '/api/v1/auth/me') return Response.json({ data: { user: { id: identity }, csrf_token: csrf } });
+        assert.equal(options.method, 'POST');
+        writes++;
+        return Response.json({ data: { organization: { ...shop.organization, id: org }, membership: { user_id: identity, role: 'OWNER', status: 'ACTIVE' } } });
+      };
+      try { return await callback(args); } finally { globalThis.fetch = original; delete globalThis.location; }
+    },
+  };
+  const request = await createMarketOwnerRequest(page, { ownerID: user });
+  for (const state of [
+    { identity: foreign, csrf: 'initial-session', verified: true },
+    { identity: user, csrf: 'other-session', verified: true },
+    { identity: user, csrf: 'initial-session', verified: false },
+  ]) {
+    ({ identity, csrf, verified } = state);
+    await assert.rejects(request(create), /owner session|MFA/);
+  }
+  assert.equal(writes, 0);
+  ({ identity, csrf, verified } = { identity: user, csrf: 'initial-session', verified: true });
+  await request(create);
+  assert.equal(writes, 1);
+});
+
 test('does not trust tenant IDs from denied or non-owner responses', async () => {
   for (const page of [pageFor({ status: 403 }), pageFor({ verifiedOwner: false })]) {
     const request = await createMarketOwnerRequest(page);

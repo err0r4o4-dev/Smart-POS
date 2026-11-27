@@ -3,6 +3,7 @@ import {
   Link,
   Outlet,
   useLocation,
+  useMatch,
   useNavigate,
   useParams,
   useSearchParams,
@@ -12,6 +13,7 @@ import { paths } from '../app/routes';
 import { LandingHeader } from '../features/landing/LandingHeader';
 import { useShopCart } from '../features/storefront/shop-cart';
 import { CustomerHeader } from '../features/storefront/CustomerHeader';
+import { ShopDiscoveryHeader } from '../features/storefront/ShopDiscoveryHeader';
 import { VeloAssistantChat } from '../features/storefront/VeloAssistantChat';
 import '../features/storefront/catalog.css';
 import '../features/storefront/shop-directory.css';
@@ -30,6 +32,9 @@ export function StorefrontLayout() {
     (directorySearch === '' || directorySearch.startsWith('?'));
   const [searchParams] = useSearchParams();
   const directory = !slug && searchParams.get('view') !== 'cart';
+  const shopIndex = useMatch({ path: paths.shop, end: true });
+  const areasIndex = useMatch({ path: paths.areas, end: true });
+  const discoveryHeader = (shopIndex && directory) || areasIndex;
   const tableQuery = searchParams.has('table')
     ? `?${searchParams.toString()}`
     : '';
@@ -45,7 +50,9 @@ export function StorefrontLayout() {
       <a className="skip-link" href="#main-content">
         {t('pos.skipToContent')}
       </a>
-      {directory ? (
+      {discoveryHeader ? (
+        <ShopDiscoveryHeader />
+      ) : directory ? (
         <LandingHeader variant="directory" />
       ) : (
         <CustomerHeader
@@ -54,7 +61,15 @@ export function StorefrontLayout() {
           cartCount={cart.items.length}
         />
       )}
-      <main id="main-content" className="storefront-content" tabIndex={-1}>
+      <main
+        id="main-content"
+        className={
+          discoveryHeader
+            ? 'storefront-content shop-public-index'
+            : 'storefront-content'
+        }
+        tabIndex={-1}
+      >
         {slug && (
           <Link
             className="shop-back-link"

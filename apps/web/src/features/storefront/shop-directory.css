@@ -3,21 +3,7 @@
   isolation: isolate;
   min-height: 100vh;
   min-height: 100dvh;
-  background: var(--canvas) url('/images/shop-directory-background.svg') center
-    top / max(100%, 960px) auto no-repeat;
   color: var(--text-primary);
-}
-.storefront-shell.shop-directory-shell::before {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  pointer-events: none;
-  inset-inline: 0;
-  bottom: 0;
-  height: clamp(260px, 30vw, 540px);
-  background: url('/images/shop-directory-bottom-waves.svg') center bottom /
-    cover no-repeat;
-  mask-image: linear-gradient(to bottom, transparent, #000 48px);
 }
 .storefront-shell .storefront-header {
   position: relative;
@@ -250,14 +236,13 @@
   margin-inline: auto;
   padding-block: var(--space-6) var(--space-8);
   padding-inline: var(--storefront-content-inset);
-  background: linear-gradient(180deg, var(--directory-warm), var(--surface));
+  background: transparent;
 }
 
 .shop-discover-directory .shop-discover-toolbar,
 .shop-discover-directory .shop-discover-types,
 .shop-discover-directory .customer-chips {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
 }
@@ -270,6 +255,16 @@
 .shop-discover-directory .shop-discover-types {
   flex: 1 1 auto;
   min-width: 0;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  overflow-x: auto;
+  scroll-padding-inline: var(--space-1);
+  scrollbar-width: thin;
+  white-space: nowrap;
+}
+
+.shop-discover-directory .shop-discover-types > * {
+  flex: none;
 }
 
 .shop-discover-directory .shop-discover-filter-label {
@@ -319,7 +314,9 @@
 }
 
 .shop-discover-directory .shop-discover-types button {
-  padding-inline: clamp(var(--space-3), 1.1vw, var(--space-5));
+  max-width: none;
+  gap: var(--space-1);
+  padding-inline: var(--space-2);
 }
 
 .shop-discover-directory .shop-discover-types button svg,
@@ -335,6 +332,7 @@
 
 .shop-discover-directory .customer-sort {
   position: relative;
+  flex: none;
   padding-inline: var(--space-3) var(--space-2);
   max-width: 100%;
 }
@@ -367,6 +365,7 @@
 }
 
 .shop-discover-directory .customer-chips {
+  flex-wrap: wrap;
   margin-bottom: var(--space-5);
   padding: var(--space-1) var(--space-3);
   overflow: visible;
@@ -431,7 +430,7 @@
 }
 
 @media (max-width: 540px) {
-  .shop-discover-directory .shop-discover-filter-label {
+  .shop-discover-directory .customer-chips .shop-discover-filter-label {
     flex-basis: 100%;
   }
 }

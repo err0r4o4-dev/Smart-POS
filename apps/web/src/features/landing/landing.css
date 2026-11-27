@@ -1,6 +1,7 @@
 .landing-page {
   --landing-section-gap: 13px;
   --landing-grid-gap: clamp(13px, 1.15vw, 20px);
+  --landing-hero-title-size: clamp(1.875rem, 2.64vw, 2.5625rem);
   --landing-gold: linear-gradient(
     180deg,
     #ffdc32 0%,
@@ -131,8 +132,6 @@
   inset: 0 0 0 auto;
   z-index: -1;
   width: 48.3%;
-  height: var(--landing-hero-height);
-  margin-block: auto;
   pointer-events: none;
 }
 .landing-hero-art img {
@@ -172,7 +171,7 @@
 }
 .landing-hero h1 {
   margin-top: 7px;
-  font-size: clamp(1.875rem, 2.64vw, 2.5625rem);
+  font-size: var(--landing-hero-title-size);
   font-weight: 800;
   line-height: 1.25;
   letter-spacing: -0.02em;
@@ -964,7 +963,6 @@
     display: block;
     width: 100%;
     height: clamp(146px, 44vw, 218px);
-    margin-block: 0;
     overflow: hidden;
   }
   .landing-hero-art img {

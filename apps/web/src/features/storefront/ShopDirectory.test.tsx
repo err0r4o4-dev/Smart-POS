@@ -31,8 +31,8 @@ function view(entry = '/shop') {
     >
       <MemoryRouter initialEntries={[entry]}>
         <Routes>
-          <Route path="/shop" element={<StorefrontLayout />}>
-            <Route index element={<StorefrontPage />} />
+          <Route element={<StorefrontLayout />}>
+            <Route path="/shop" element={<StorefrontPage />} />
           </Route>
         </Routes>
       </MemoryRouter>
@@ -54,6 +54,34 @@ beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock);
 });
 afterEach(() => vi.unstubAllGlobals());
+
+it('keeps the current directory search in navigation without offering area browsing', () => {
+  view(
+    '/shop?q=yam&filter=open&filter=delivery&category=noodles&sort=name&source=test',
+  );
+  const header = within(screen.getByRole('banner'));
+  expect(header.getByRole('link', { name: 'ร้านอาหาร' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  const query = '?q=yam&filter=open&filter=delivery&category=noodles&sort=name';
+  expect(header.getByRole('link', { name: 'ร้านอาหาร' })).toHaveAttribute(
+    'href',
+    `/shop${query}`,
+  );
+  expect(header.queryByRole('link', { name: 'พื้นที่' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('combobox', { name: 'เลือกพื้นที่' })).not.toBeInTheDocument();
+  expect(screen.getByRole('searchbox', { name: 'ค้นหาร้าน' })).toHaveValue(
+    'yam',
+  );
+  expect(screen.getByRole('button', { name: 'ก๋วยเตี๋ยว' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  expect(screen.getByRole('combobox', { name: 'เรียงตาม' })).toHaveValue(
+    'name',
+  );
+});
 
 it('shows the discovery page and searches real shops outside the header', async () => {
   view();
@@ -217,9 +245,7 @@ it('keeps uncategorized stores in All and ignores old type links', async () => {
   ).toBeVisible();
   expect(screen.getByRole('searchbox')).toHaveValue('yam');
   fireEvent.click(typeGroup().getByRole('button', { name: 'ก๋วยเตี๋ยว' }));
-  expect(
-    screen.getByRole('heading', { name: /^yam$/ }),
-  ).toBeVisible();
+  expect(screen.getByRole('heading', { name: /^yam$/ })).toBeVisible();
   expect(
     screen.queryByRole('heading', { name: 'yam unassigned' }),
   ).not.toBeInTheDocument();

@@ -640,14 +640,8 @@ ul {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  background: var(--canvas);
-  background-image: var(--canvas-art), var(--canvas-background);
-  background-repeat: no-repeat;
-  background-size:
-    100% 100%,
-    auto,
-    auto,
-    auto;
+  background-color: var(--canvas);
+  background-image: var(--canvas-background);
 }
 .topbar {
   min-height: var(--header-height);
@@ -1539,12 +1533,7 @@ ul {
   display: flex;
   flex-direction: column;
   background-color: var(--canvas);
-  background-image: var(--canvas-art), var(--canvas-background);
-  background-size:
-    100% 100%,
-    auto,
-    auto,
-    auto;
+  background-image: var(--canvas-background);
   overflow-x: hidden;
   font-family: var(--font-body);
 }

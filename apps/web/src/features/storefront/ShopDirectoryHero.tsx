@@ -1,7 +1,6 @@
-import { ArrowRight, Flame, MapPin, Search } from 'lucide-react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { ArrowRight, Flame, Search } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../../app/language';
-import { paths } from '../../app/routes';
 import '../landing/landing.css';
 import './shop-discovery.css';
 
@@ -43,12 +42,6 @@ export function ShopDirectoryHero({
         </div>
         <div className="landing-container landing-hero-inner">
           <div className="landing-hero-copy">
-            <Link className="landing-hero-badge" to={paths.areas}>
-              <MapPin size={15} aria-hidden="true" />
-              {t('landing.heroBadge')}
-              <ArrowRight size={13} aria-hidden="true" />
-              <span className="sr-only">{t('landing.changeArea')}</span>
-            </Link>
             <h1 id="shop-discovery-title">
               {t('landing.heroTitleLead')}
               <span className="landing-title-accent">
@@ -80,29 +73,31 @@ export function ShopDirectoryHero({
                 <ArrowRight size={17} aria-hidden="true" />
               </button>
             </form>
-            {suggestions.length > 0 && (
-              <div className="landing-popular">
-                <span>
-                  <Flame size={15} aria-hidden="true" />
-                  {t('landing.trySearching')}
-                </span>
-                <ul>
-                  {suggestions.map((name) => (
-                    <li key={name}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          search(name);
-                          showResults();
-                        }}
-                      >
-                        {name}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            <div className="shop-discovery-hero-actions">
+              {suggestions.length > 0 && (
+                <div className="landing-popular">
+                  <span>
+                    <Flame size={15} aria-hidden="true" />
+                    {t('landing.trySearching')}
+                  </span>
+                  <ul>
+                    {suggestions.map((name) => (
+                      <li key={name}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            search(name);
+                            showResults();
+                          }}
+                        >
+                          {name}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </section>

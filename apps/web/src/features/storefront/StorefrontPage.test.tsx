@@ -771,6 +771,57 @@ describe('storefront reference layout', () => {
     expect(menu).toHaveFocus();
   });
 
+  it.each([
+    [
+      false,
+      'ข้อมูลร้าน',
+      '10:00–20:30 น. (เวลาไทย)',
+      'หยุดวันจันทร์',
+      'ซีฟู้ด',
+      'ปิดรับออเดอร์ชั่วคราว',
+    ],
+    [
+      true,
+      'Store info',
+      '10:00–20:30 (Thailand time)',
+      'Closed on Monday',
+      'Seafood',
+      'Orders temporarily closed',
+    ],
+  ] as const)(
+    'shows local hours separately from online ordering (English=%s)',
+    async (english, tab, hours, holiday, category, closed) => {
+      fetchMock.mockImplementation(async (url: string) => {
+        if (url === '/api/v1/storefronts') return response([]);
+        if (url.includes('/products?'))
+          return response({
+            items: [product],
+            total: 1,
+            page: 1,
+            page_size: 24,
+          });
+        return response({
+          ...settings,
+          accepting_orders: false,
+          category_codes: ['seafood'],
+          opening_hours: {
+            opens: '10:00',
+            closes: '20:30',
+            closed_weekday: 1,
+            timezone: 'Asia/Bangkok',
+          },
+        });
+      });
+      view('/shop/test-shop', english);
+      fireEvent.click(await screen.findByRole('tab', { name: tab }));
+      const info = within(screen.getByRole('tabpanel', { name: tab }));
+      expect(info.getByText(hours)).toBeVisible();
+      expect(info.getByText(holiday)).toBeVisible();
+      expect(info.getByText(category)).toBeVisible();
+      expect(screen.getByText(closed)).toBeVisible();
+    },
+  );
+
   it('claims "no reviews" only when the directory reports zero reviews', async () => {
     // Directory unknown for this store: the tab must not assert anything.
     view('/shop/test-shop');

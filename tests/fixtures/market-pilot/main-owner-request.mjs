@@ -1,46 +1,63 @@
 import { isDeepStrictEqual } from 'node:util';
 import { prepareMainCatalog } from './main-package.mjs';
 
-const origin = 'http://127.0.0.1:8088';
+const defaultOrigin = 'http://127.0.0.1:8088';
 const organizations = '/api/v1/organizations';
 const uuid = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 const resources = new Set(['categories', 'units', 'products', 'inventory/locations', 'pos/terminals']);
 
 // Evaluate on an owner page after interactive sign-in. Both the HttpOnly cookie
 // and CSRF value stay in the page; this module does not start an import or log in.
-export async function createMarketOwnerRequest(page) {
+export async function createMarketOwnerRequest(page, { origin = defaultOrigin, draftOnly = false, ownerID } = {}) {
+  if (origin !== defaultOrigin && origin !== 'http://localhost:8088') throw new Error('Invalid SmartPOS gateway on port 8088');
+  if (ownerID !== undefined && !uuid.test(ownerID)) throw new Error('Invalid market owner ID');
+  const binding = ownerID === undefined ? undefined : crypto.randomUUID();
   function checkPage() {
-    if (new URL(page.url()).origin !== origin) throw new Error('Open SmartPOS on 127.0.0.1:8088');
+    if (new URL(page.url()).origin !== origin) throw new Error(`Open SmartPOS on ${origin}`);
   }
 
   async function exchange(operation) {
     checkPage();
-    return page.evaluate(async ({ origin: target, path, method, body, idempotencyKey }) => {
+    return page.evaluate(async ({ origin: target, path, method, body, idempotencyKey, ownerID, binding }) => {
       if (location.origin !== target) return { ok: false, status: 0 };
       const send = (url, options = {}) => fetch(url, {
         ...options, credentials: 'same-origin', redirect: 'error', cache: 'no-store',
         signal: AbortSignal.timeout(15000),
       });
-      if (!method) {
+      if (!method || ownerID) {
         const response = await send('/api/v1/auth/mfa');
-        if (!response.ok) return { ok: false, status: response.status };
+        if (!response.ok) return { ok: false, status: response.status, session: true };
         const { data } = await response.json();
-        return { ok: data?.enabled === true && data.session_verified === true };
+        if (data?.enabled !== true || data.session_verified !== true) return { ok: false, session: true };
+        if (!ownerID) return { ok: true };
       }
       const headers = {};
-      if (method !== 'GET') {
+      if (ownerID || method !== 'GET') {
         const current = await send('/api/v1/auth/me');
-        if (!current.ok) return { ok: false, status: current.status };
+        if (!current.ok) return { ok: false, status: current.status, session: true };
         const { data } = await current.json();
-        if (typeof data?.csrf_token !== 'string' || !data.csrf_token) return { ok: false, status: 403 };
-        headers['X-CSRF-Token'] = data.csrf_token;
-        headers['Content-Type'] = 'application/json';
+        if (typeof data?.csrf_token !== 'string' || !data.csrf_token || (ownerID && data.user?.id !== ownerID)) {
+          return { ok: false, session: true };
+        }
+        if (ownerID) {
+          // Bind to the original session without moving its CSRF value out of the page.
+          const key = Symbol.for(`smartpos-market-owner:${binding}`);
+          if (!method) {
+            Object.defineProperty(globalThis, key, { value: data.csrf_token, configurable: true });
+            return { ok: true };
+          }
+          if (globalThis[key] !== data.csrf_token) return { ok: false, session: true };
+        }
+        if (method !== 'GET') {
+          headers['X-CSRF-Token'] = data.csrf_token;
+          headers['Content-Type'] = 'application/json';
+        }
       }
       if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
       const response = await send(path, { method, headers, body: JSON.stringify(body) });
       if (!response.ok) return { ok: false, status: response.status };
       return { ok: true, data: (await response.json()).data };
-    }, { origin, ...operation });
+    }, { origin, ownerID, binding, ...operation });
   }
 
   const proof = await exchange({});
@@ -55,13 +72,18 @@ export async function createMarketOwnerRequest(page) {
     const url = new URL(path, origin);
     if (url.origin !== origin || url.hash || url.pathname + url.search !== path) deny();
     let shop;
+    let listed = false;
     if (path === organizations) {
-      shop = approved.get(body?.code);
-      if (method !== 'POST' || !shop || !uuid.test(idempotencyKey) ||
-        !isDeepStrictEqual(body, {
-          ...shop.organization, address: shop.zone,
-          branch: { code: 'MAIN', name: shop.zone, status: 'ACTIVE' },
-        })) deny();
+      if (method === 'GET' && body === undefined && idempotencyKey === undefined) {
+        listed = true;
+      } else {
+        shop = approved.get(body?.code);
+        if (method !== 'POST' || !shop || !uuid.test(idempotencyKey) ||
+          !isDeepStrictEqual(body, {
+            ...shop.organization, address: shop.zone,
+            branch: { code: 'MAIN', name: shop.zone, status: 'ACTIVE' },
+          })) deny();
+      }
     } else {
       const [id, ...segments] = url.pathname.slice(organizations.length + 1).split('/');
       const shopScope = scope.get(id);
@@ -71,18 +93,35 @@ export async function createMarketOwnerRequest(page) {
         if (method !== 'GET' && method !== 'POST') deny();
       } else if (resource === 'storefront') {
         if (method !== 'GET' && (method !== 'PUT' ||
-          body?.slug !== shopScope.settings.slug || body.accepting_orders !== false)) deny();
+          body?.slug !== shopScope.settings.slug || body.accepting_orders !== false ||
+          (draftOnly && body.published !== false))) deny();
       } else if (resource === 'storefront/products') {
         if (method !== 'GET') deny();
       } else if (segments.length !== 3 || segments[0] !== 'storefront' ||
         segments[1] !== 'products' || !uuid.test(segments[2]) || method !== 'PUT') deny();
     }
     const reply = await exchange({ path, method, body, idempotencyKey });
-    if (!reply.ok) throw new Error(`Market owner API returned HTTP ${reply.status}`);
+    if (!reply.ok) {
+      if (reply.session) throw new Error('Market owner session or MFA assurance changed');
+      throw new Error(`Market owner API returned HTTP ${reply.status}`);
+    }
+    if (listed) {
+      if (!Array.isArray(reply.data)) throw new Error('Could not confirm owner organization listing');
+      for (const organization of reply.data) {
+        const matched = approved.get(organization?.code);
+        if (!matched) continue;
+        if (!uuid.test(organization?.id) || organization.name !== matched.organization.name ||
+          organization.status !== 'ACTIVE' || organization.business_type !== 'RESTAURANT' ||
+          (scope.has(organization.id) && scope.get(organization.id) !== matched)) {
+          throw new Error('Could not confirm owner access to the approved market organization');
+        }
+        scope.set(organization.id, matched);
+      }
+    }
     if (shop) {
       const { organization, membership } = reply.data ?? {};
       if (!uuid.test(organization?.id) || organization.code !== shop.organization.code ||
-        membership?.role !== 'OWNER' || membership.status !== 'ACTIVE' ||
+        membership?.role !== 'OWNER' || membership.status !== 'ACTIVE' || (ownerID && membership.user_id !== ownerID) ||
         (scope.has(organization.id) && scope.get(organization.id) !== shop)) {
         throw new Error('Could not confirm owner access to the approved market organization');
       }

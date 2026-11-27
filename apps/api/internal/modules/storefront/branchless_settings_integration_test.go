@@ -16,7 +16,9 @@ import (
 func verifyBranchlessSettings(testContext *testing.T, ctx, guestCtx context.Context, organizations *organization.Service, owner, guest, org string) {
 	testContext.Helper()
 	service := &storefront.Service{Organization: organizations}
-	input := storefront.SettingsInput{Name: "Restaurant draft", ShippingFee: "12.35", DeliveryEnabled: true, CategoryCodes: []string{"noodles", "drinks"}}
+	day := 0 // Sunday must survive the API and SQL round trip.
+	hours := &storefront.OpeningHours{Opens: "07:30", Closes: "15:00", ClosedWeekday: &day, Timezone: "Asia/Bangkok"}
+	input := storefront.SettingsInput{Name: "Restaurant draft", ShippingFee: "12.35", DeliveryEnabled: true, CategoryCodes: []string{"noodles", "seafood"}, OpeningHours: hours}
 	type outcome struct {
 		settings storefront.Settings
 		err      error
@@ -69,8 +71,9 @@ func verifyBranchlessSettings(testContext *testing.T, ctx, guestCtx context.Cont
 		testContext.Fatalf("stale draft revision accepted: %v", err)
 	}
 	input.Revision, input.ShippingFee, input.CategoryCodes = saved.Revision, "13.37", nil
+	input.OpeningHours = nil
 	updated, err := service.SaveSettings(ctx, owner, org, input)
-	if err != nil || updated.Revision != 2 || updated.Slug != saved.Slug || updated.ShippingFee != "13.37" || !reflect.DeepEqual(updated.CategoryCodes, []string{"noodles", "drinks"}) {
+	if err != nil || updated.Revision != 2 || updated.Slug != saved.Slug || updated.ShippingFee != "13.37" || !reflect.DeepEqual(updated.CategoryCodes, []string{"noodles", "seafood"}) || !reflect.DeepEqual(updated.OpeningHours, hours) {
 		testContext.Fatalf("draft revision update failed: %v", err)
 	}
 	if _, err = service.Settings(guestCtx, guest, org); !errors.Is(err, organization.ErrDenied) && !errors.Is(err, organization.ErrNotFound) {
@@ -111,7 +114,7 @@ func verifyBranchlessSettings(testContext *testing.T, ctx, guestCtx context.Cont
 		testContext.Fatalf("draft persistence/audit/infrastructure invariant failed: %v", err)
 	}
 	var storedCodes []string
-	if err = tx.QueryRow(ctx, "SELECT category_codes FROM storefronts WHERE organization_id=$1", org).Scan(&storedCodes); err != nil || !reflect.DeepEqual(storedCodes, []string{"noodles", "drinks"}) {
+	if err = tx.QueryRow(ctx, "SELECT category_codes FROM storefronts WHERE organization_id=$1", org).Scan(&storedCodes); err != nil || !reflect.DeepEqual(storedCodes, []string{"noodles", "seafood"}) {
 		testContext.Fatalf("denied category update changed the storefront: %v", err)
 	}
 	for name, statement := range map[string]string{

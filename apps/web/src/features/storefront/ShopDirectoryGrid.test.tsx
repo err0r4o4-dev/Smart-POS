@@ -115,11 +115,38 @@ it('offers the shared food categories and filters stores by membership', () => {
     'ของหวาน',
     'อาหารสุขภาพ',
     'อาหารทานเล่น',
+    'อาหารใต้และข้าวแกง',
+    'อาหารเหนือ',
+    'ซีฟู้ด',
+    'อาหารเช้า',
+    'อาหารเอเชีย',
   ]);
   fireEvent.click(types.getByRole('button', { name: 'ของหวาน' }));
   expect(headings()).toEqual(['Apple Bakery']);
   fireEvent.click(types.getByRole('button', { name: 'ทั้งหมด' }));
   expect(headings()).toHaveLength(3);
+});
+
+it('filters published seafood storefronts even while orders are paused', () => {
+  grid({
+    shops: [
+      ...shops,
+      {
+        slug: 'sea',
+        name: 'Seafood pilot',
+        category_codes: ['seafood'],
+        accepting_orders: false,
+      },
+    ],
+  });
+  fireEvent.click(
+    within(screen.getByRole('group', { name: 'หมวดอาหาร' })).getByRole(
+      'button',
+      { name: 'ซีฟู้ด' },
+    ),
+  );
+  expect(headings()).toEqual(['Seafood pilot']);
+  expect(screen.getByText('ปิดรับออเดอร์ชั่วคราว')).toBeInTheDocument();
 });
 
 it('shows each store with a cover, a text status and a favorite toggle', () => {

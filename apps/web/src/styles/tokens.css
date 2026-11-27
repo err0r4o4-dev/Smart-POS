@@ -34,7 +34,6 @@
   --focus-ring: 0 0 0 4px rgba(255, 197, 47, 0.22);
   --brand-gradient: linear-gradient(180deg, #ffda71, #ffc52f);
   --brand-soft-gradient: linear-gradient(135deg, #fff8e5, #ffe6a0);
-  --canvas-art: url('/images/warm-gold-waves.svg');
   --canvas-background:
     radial-gradient(ellipse 75% 420px at 100% 0%, #fff0cd 0%, transparent 74%),
     radial-gradient(ellipse 75% 300px at 0% 100%, #fff1d1 0%, transparent 72%),

@@ -243,6 +243,9 @@ for (const width of [320, 768, 1440, 1920, 2560]) {
     await page.goto('/shop');
     await expect(page.getByRole('heading', { name: store.name })).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
+    const results = page.locator('.shop-discover-directory');
+    await expect(results).toHaveCSS('background-image', 'none');
+    await expect(results).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     const content = page.locator('.storefront-content');
     await content.evaluate((element) => {
       element.style.minHeight = '1000px';
@@ -278,35 +281,16 @@ for (const width of [320, 768, 1440, 1920, 2560]) {
       element.style.minHeight = '4000px';
     });
     const long = await captureBackground();
-    expect(short.backgroundImage).toContain(
-      '/images/shop-directory-background.svg',
-    );
-    expect(short.backgroundSize).toBe('max(100%, 960px) auto');
-    expect(short.backgroundPosition).toBe('50% 0%');
-    expect(short.backgroundRepeat).toBe('no-repeat');
-    expect(short.wavesContent).toBe('""');
-    expect(short.wavesImage).toContain(
-      '/images/shop-directory-bottom-waves.svg',
-    );
-    expect(short.wavesPosition).toBe('50% 100%');
-    expect(short.wavesSize).toBe('cover');
-    expect(short.wavesHeight).not.toBe('0px');
-    for (const asset of [
-      '/images/shop-directory-background.svg',
-      '/images/shop-directory-bottom-waves.svg',
-    ]) {
-      const response = await page.request.get(asset);
-      expect(response.ok(), `${asset} should be served`).toBe(true);
-      expect(response.headers()['content-type']).toContain('image/svg+xml');
-    }
-    expect(long.backgroundSize).toBe(short.backgroundSize);
-    expect(long.backgroundPosition).toBe(short.backgroundPosition);
-    expect(long.wavesHeight).toBe(short.wavesHeight);
+    expect(short.backgroundImage).toContain('gradient(');
+    expect(short.backgroundImage).not.toContain('url(');
+    expect(short.wavesContent).toBe('none');
+    expect(short.wavesImage).toBe('none');
+    expect(long.backgroundImage).toBe(short.backgroundImage);
+    expect(long.wavesContent).toBe('none');
     await page.setViewportSize({ width, height: 1200 });
     const tall = await captureBackground();
-    expect(tall.backgroundSize).toBe(long.backgroundSize);
-    expect(tall.backgroundPosition).toBe(long.backgroundPosition);
-    expect(tall.wavesHeight).toBe(long.wavesHeight);
+    expect(tall.backgroundImage).toBe(long.backgroundImage);
+    expect(tall.wavesContent).toBe('none');
     await testInfo.attach('background-contract', {
       body: Buffer.from(JSON.stringify({ short, long, tall }, null, 2)),
       contentType: 'application/json',

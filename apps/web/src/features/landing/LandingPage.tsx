@@ -4,11 +4,9 @@ import {
   ArrowRight,
   BadgeCheck,
   ChartLine,
-  ChevronRight,
   ClipboardList,
   Flame,
   Heart,
-  MapPin,
   Monitor,
   QrCode,
   Search,
@@ -25,7 +23,6 @@ import { paths } from '../../app/routes';
 import { useStoreStatus } from '../../app/useStoreStatus';
 import type { TranslationKey } from '../../i18n';
 import { foodCategories } from '../storefront/food-categories';
-import { customerAreas } from '../storefront/customer-areas';
 import { ShopError } from '../storefront/shop-feedback';
 import { useShopFavorites } from '../storefront/shop-favorites';
 import { useShopDirectory } from '../storefront/useShopDirectory';
@@ -112,12 +109,6 @@ export function LandingPage() {
           </div>
           <div className="landing-container landing-hero-inner">
             <div className="landing-hero-copy">
-              <a className="landing-hero-badge" href="#landing-areas">
-                <MapPin size={15} aria-hidden="true" />
-                {t('landing.heroBadge')}
-                <ArrowRight size={13} aria-hidden="true" />
-                <span className="sr-only">{t('landing.changeArea')}</span>
-              </a>
               <h1 id="landing-title">
                 {t('landing.heroTitleLead')}
                 <span className="landing-title-accent">
@@ -159,43 +150,6 @@ export function LandingPage() {
                 </ul>
               </div>
             </div>
-          </div>
-        </section>
-
-        <section
-          className="landing-section landing-discovery-section"
-          aria-labelledby="landing-areas"
-        >
-          <div className="landing-container">
-            <SectionHeading
-              id="landing-areas"
-              title={t('landing.areasTitle')}
-              description={t('landing.areasDescription')}
-              action={{
-                to: paths.areas,
-                label: t('storefront.customer.allAreas'),
-              }}
-            />
-            <ul className="landing-areas" aria-label={t('landing.areasList')}>
-              {customerAreas.map(({ id, title, description }) => (
-                <li key={id}>
-                  <Link className="landing-area" to={`${paths.areas}/${id}`}>
-                    <img
-                      src={`${referenceArt}/area-${id}.webp`}
-                      alt=""
-                      loading="lazy"
-                    />
-                    <span className="landing-area-copy">
-                      <strong>{t(title)}</strong>
-                      <span>{t(description)}</span>
-                    </span>
-                    <span className="landing-area-arrow" aria-hidden="true">
-                      <ChevronRight size={16} />
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
           </div>
         </section>
 
@@ -435,23 +389,6 @@ function RecommendedShops() {
           title={t('landing.recommendedTitle')}
           action={{ to: paths.shop, label: t('landing.viewAllShops') }}
         >
-          <div
-            className="landing-shop-filter"
-            role="group"
-            aria-label={t('landing.recommendedFilter')}
-          >
-            {shopFilters.map(({ value, label, icon: Icon }) => (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={filter === value}
-                onClick={() => setFilter(value)}
-              >
-                <Icon size={15} aria-hidden="true" />
-                {t(label)}
-              </button>
-            ))}
-          </div>
         </SectionHeading>
         {directory.isPending && (
           <Loading>{t('storefront.loadingStorefronts')}</Loading>
@@ -507,7 +444,6 @@ function LandingFooter({ t }: { t: Translate }) {
       links: [
         ['landing.navHome', '/'],
         ['landing.navExplore', paths.shop],
-        ['landing.navAreas', paths.areas],
         ['landing.navCategories', '#landing-categories'],
       ],
     },

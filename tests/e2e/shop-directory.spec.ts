@@ -340,9 +340,8 @@ for (const width of [
           pageHeight: document.documentElement.scrollHeight,
         };
       });
-      expect(surfaces.background).toContain(
-        '/images/shop-directory-background.svg',
-      );
+      expect(surfaces.background).toContain('gradient(');
+      expect(surfaces.background).not.toContain('url(');
       expect(surfaces.footerBackground).toBe('rgb(255, 255, 255)');
       expect(
         Math.abs(surfaces.shellBottom - surfaces.footerBottom),

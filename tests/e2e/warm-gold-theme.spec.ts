@@ -32,6 +32,7 @@ async function mockNetwork(
   page: Page,
   baseURL: string,
   authenticated: boolean,
+  setupComplete = false,
 ) {
   const origin = new URL(baseURL).origin;
   const violations: string[] = [];
@@ -91,10 +92,10 @@ async function mockNetwork(
         organization_id: organization.id,
         branch_id: branch.id,
         current_step: 'profile',
-        ready: false,
-        completed: false,
+        ready: setupComplete,
+        completed: setupComplete,
         steps: [],
-        readiness: { ready: false, incomplete: [] },
+        readiness: { ready: setupComplete, incomplete: [] },
         profile: {
           organization: {
             ...organization,
@@ -710,12 +711,12 @@ test('management background spans the available shell outside the content cap', 
   baseURL,
 }) => {
   await page.setViewportSize({ width: 1920, height: 900 });
-  await mockNetwork(page, baseURL!, true);
+  await mockNetwork(page, baseURL!, true, true);
   await page.goto(paths.dashboard);
   await expect(page.locator('.content')).toBeVisible();
-  await expect(page.locator('.workspace-main')).not.toHaveCSS(
+  await expect(page.locator('.workspace-main')).toHaveCSS(
     'background-image',
-    'none',
+    /^(?!.*url\().*gradient\(/,
   );
   await expect(page.locator('.content')).toHaveCSS('background-image', 'none');
 });

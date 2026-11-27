@@ -126,7 +126,6 @@ it('links directly to sign-in and keeps the full directory link outside the hero
     nav.queryByRole('link', { name: 'ตะกร้าสินค้า' }),
   ).not.toBeInTheDocument();
   for (const name of [
-    'สำรวจร้านตามพื้นที่',
     'ประเภทอาหาร',
     'ร้านแนะนำ',
     'สั่งอาหารง่าย ๆ ใน 3 ขั้นตอน',
@@ -207,21 +206,22 @@ it('sends hero searches to the shop directory', () => {
   );
 });
 
-it('keeps area links on Main and links food categories to directory filters', () => {
+it('links directly to the directory and food categories without area browsing', () => {
   renderLanding();
   const categories = within(
     screen.getByRole('list', { name: 'ประเภทอาหาร' }),
   );
-  expect(categories.getAllByRole('listitem')).toHaveLength(8);
-  expect(categories.getByRole('link', { name: 'ก๋วยเตี๋ยว' })).toHaveAttribute('href', '/shop?category=noodles');
-  const areas = within(screen.getByRole('list', { name: 'พื้นที่และชุมชน' }));
-  expect(
-    areas.getAllByRole('link').map((link) => link.getAttribute('href')),
-  ).toEqual(['/areas/campus', '/areas/market', '/areas/dorm', '/areas/community']);
-  expect(screen.getByRole('link', { name: 'ดูทุกพื้นที่' })).toHaveAttribute(
+  expect(categories.getAllByRole('listitem')).toHaveLength(13);
+  expect(categories.getByRole('link', { name: 'ซีฟู้ด' })).toHaveAttribute(
     'href',
-    '/areas',
+    '/shop?category=seafood',
   );
+  expect(categories.getByRole('link', { name: 'ก๋วยเตี๋ยว' })).toHaveAttribute('href', '/shop?category=noodles');
+  expect(screen.queryByRole('heading', { name: 'สำรวจร้านตามพื้นที่' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: 'ดูทุกพื้นที่' })).not.toBeInTheDocument();
+  const footer = within(screen.getByRole('contentinfo'));
+  expect(footer.getByRole('link', { name: 'สำรวจร้าน' })).toHaveAttribute('href', '/shop');
+  expect(footer.queryByRole('link', { name: 'พื้นที่' })).not.toBeInTheDocument();
 });
 
 it('provides the reference footer without a duplicate language selector', () => {

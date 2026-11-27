@@ -17,7 +17,14 @@ export interface ShopDirectoryEntry extends ShopSummary {
 export interface CustomerReview {
   rating: number;
 }
+export interface StorefrontOpeningHours {
+  opens: string;
+  closes: string;
+  closed_weekday: number;
+  timezone: 'Asia/Bangkok';
+}
 export interface ShopSettings extends ShopSummary {
+  opening_hours?: StorefrontOpeningHours;
   assistant_enabled?: boolean;
   category_codes?: string[];
   description: string;

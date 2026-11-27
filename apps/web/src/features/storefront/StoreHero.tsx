@@ -1,5 +1,6 @@
 import { useRef, type KeyboardEvent } from 'react';
-import { Clock, Phone, Star, Store, Truck } from 'lucide-react';
+import { Clock, Phone, Star, Store, Truck, Utensils } from 'lucide-react';
+import { foodCategory } from './food-categories';
 import { useLanguage } from '../../app/language';
 import { moneyText } from '../../lib/pos-api';
 import type { ShopSettings } from '../../lib/storefront-api';
@@ -137,8 +138,23 @@ export function StoreTabs({
 }
 
 export function StoreInfoPanel({ store }: { store: ShopSettings }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const missing = t('storefront.customer.storeNoInfo');
+  const categories = (store.category_codes ?? []).flatMap((code) => {
+    const category = foodCategory(code);
+    return category ? [t(category.label)] : [];
+  });
+  const hours = store.opening_hours;
+  const day =
+    hours &&
+    Number.isInteger(hours.closed_weekday) &&
+    hours.closed_weekday >= 0 &&
+    hours.closed_weekday <= 6
+      ? new Intl.DateTimeFormat(language === 'th' ? 'th-TH' : 'en-GB', {
+          weekday: 'long',
+          timeZone: 'UTC',
+        }).format(new Date(Date.UTC(2026, 0, 4 + hours.closed_weekday)))
+      : undefined;
   return (
     <section
       id="store-panel-info"
@@ -147,6 +163,34 @@ export function StoreInfoPanel({ store }: { store: ShopSettings }) {
       className="customer-store-panel"
     >
       <dl className="customer-store-facts">
+        {categories.length > 0 && (
+          <div>
+            <dt>
+              <Utensils size={16} aria-hidden="true" />
+              {t('storefront.customer.foodCategories')}
+            </dt>
+            <dd>{categories.join(', ')}</dd>
+          </div>
+        )}
+        {hours && day && (
+          <div>
+            <dt>
+              <Clock size={16} aria-hidden="true" />
+              {t('storefront.customer.storeOpeningHours')}
+            </dt>
+            <dd>
+              <span>
+                {t('storefront.customer.storeLocalHours', {
+                  opens: hours.opens,
+                  closes: hours.closes,
+                })}
+              </span>
+              <span>
+                {t('storefront.customer.storeWeeklyClosure', { day })}
+              </span>
+            </dd>
+          </div>
+        )}
         <div>
           <dt>
             <Phone size={16} aria-hidden="true" />

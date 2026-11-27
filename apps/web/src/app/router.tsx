@@ -2,8 +2,6 @@ import { Suspense, useEffect } from 'react';
 import {
   LandingPage,
   StorefrontPage,
-  AreasPage,
-  AreaDetailPage,
   ShopCartPage,
   ShopTrackingPage,
   PaymentSandboxPage,
@@ -57,6 +55,20 @@ import {
 import { managementRoles } from './access';
 import { paths } from './routes';
 import { RequireSession } from './ProtectedRoute';
+import { shopDirectorySearch } from '../features/storefront/shop-directory-search';
+
+function LegacyAreaRedirect() {
+  const { search } = useLocation();
+  return (
+    <Navigate
+      to={{
+        pathname: paths.shop,
+        search: shopDirectorySearch(new URLSearchParams(search)),
+      }}
+      replace
+    />
+  );
+}
 
 function CustomerOrderRedirect() {
   const { slug = '', orderId = '' } = useParams();
@@ -97,6 +109,8 @@ const routes: RouteObject[] = [
     ),
   },
   { path: paths.faq, element: <FaqPage /> },
+  { path: '/areas', element: <LegacyAreaRedirect /> },
+  { path: '/areas/:areaId', element: <LegacyAreaRedirect /> },
   {
     element: (
       <>
@@ -116,8 +130,6 @@ const routes: RouteObject[] = [
           { path: ':slug/track/:orderId', element: <CustomerOrderRedirect /> },
         ],
       },
-      { path: paths.areas, element: <AreasPage /> },
-      { path: `${paths.areas}/:areaId`, element: <AreaDetailPage /> },
     ],
   },
   { path: '/sales/voids', element: <SystemPage /> },

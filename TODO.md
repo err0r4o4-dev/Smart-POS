@@ -37,3 +37,21 @@
 - [ ] Produce and inspect food photos and store covers.
 - [ ] Populate a task-owned loopback database and verify storefront and operational scenarios.
 - [ ] Obtain scoped independent review for data integrity, payment and isolation before acceptance.
+
+### Market Pilot v2 — retained local draft import (temporary, completed 2026-11-27; remove after handoff)
+
+- [ ] Complete retained operator wiring and review. Added the draft-only runner with owner binding, stop-on-ambiguity, journal events, and private/public readback checks; 36 catalog fixture tests passed. Review requires confirming the exact live target, isolated browser session, and durable private journal before running. Root `npm test` reports six unrelated HelpPage/layout failures (`ChevronDown is not defined`).
+- [x] Verify the retained snapshot archive in private on-machine storage with seven-day retention. Operator-run `pg_dump`/`pg_restore` passed; size and SHA-256 matched, owner-only ACL confirmed, retain until 2026-12-04 08:35 UTC.
+- [x] Provision the local import Owner through normal account, email, and MFA flows; import only the approved drafts. Private run folder `market-pilot-import-2026-11-27T08-56-16-995Z`.
+- [x] Verify all 13 drafts and 195 menus, unchanged retained storefront and public directory. Runner and read-only SQL: 13 hidden/closed, 195 listings, 0 public market stores, schema 54 clean, draft detail 404.
+- [x] Serve the 208 market images: copied the packaged WebP files to `apps/web/public/images/market-sip-soi/v2/` (untracked, about 18 MB). All 208 SHA-256 values matched through `localhost:8088`.
+- [x] Publish all 13 stores with `accepting_orders=false`. Public verifier passed: 13 stores, 195 menus, 13 covers, retained store unchanged. The browser loaded 16/16 images after lazy scroll.
+- [ ] Hand off owner access, then remove the private credential file. Decide whether to commit the market images. No independent review has covered the draft runner, publish runner, or post-review `runMarketDrafts` edits.
+
+### Market Pilot — storefront categories and public hours (temporary)
+
+- [x] Investigate live category coverage, source hours, and the presentation/ordering boundary.
+- [x] Execute the scoped design; observe failing Go, web, and catalog regression tests before implementation.
+- [x] Integrate the five categories and optional hours into `apps/web/`, `packages/contracts/openapi.yaml`, `database/migrations/000055_storefront_public_hours.{up,down}.sql`, and schema-54-safe Go validation files (`opening_hours.go`, `food_categories.go`, `domain.go`).
+- [x] Run `node .local/market-pilot/apply-storefront-details.mjs` from the host terminal: verified `TestPublicMetadataDisposable` and removed `smartpos-meta55-disposable`, verified pre-migration-55 backup (`1001987` bytes, SHA-256 `713ee5dbbdd7365a07d950454c13bf336c7e84b0ea4910c21f3e704afdf195e8`), applied migration 55 (`schema 55 clean`), synced the 3 schema-55 Go files (`database.go`, `service.go`, `organization_settings.go`), enriched 13/13 published Market Pilot stores (`{"checked":13,"updated":13}`), and verified public HTTP + SQL (`13|13|13|13`, retained storefront intact).
+- [ ] Complete post-cutover independent review of migration 55 and the metadata enrichment diff, and rotate/remove the private Owner credential file after handoff.

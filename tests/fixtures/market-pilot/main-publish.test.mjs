@@ -72,6 +72,28 @@ test('restores the confirmed publication to its draft without deleting listed me
   assert.deepEqual(await publishMarketShop(state.request, shop, staged, false), state.settings());
 });
 
+test('rejects an already visible store when asked for a draft without writing', async () => {
+  const state = fixture();
+  await publishMarketShop(state.request, shop, staged, true);
+  const count = state.writes.length;
+  await assert.rejects(publishMarketShop(state.request, shop, staged, false), /published/);
+  assert.equal(state.writes.length, count);
+  assert.equal(state.settings().published, true);
+});
+
+test('stops before menu writes if draft creation returns a visible store', async () => {
+  const state = fixture();
+  let menuReads = 0;
+  const request = async (operation) => {
+    if (operation.method === 'GET' && operation.path.endsWith('/storefront/products')) menuReads++;
+    const result = await state.request(operation);
+    return operation.method === 'PUT' && operation.path.endsWith('/storefront')
+      ? { ...result, published: true } : result;
+  };
+  await assert.rejects(publishMarketShop(request, shop, staged, false), /visible|published/);
+  assert.equal(menuReads, 0);
+});
+
 test('refuses to publish or restore after a concurrent revision change', async () => {
   const state = fixture();
   const draft = await publishMarketShop(state.request, shop, staged, false);

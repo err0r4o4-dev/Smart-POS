@@ -76,10 +76,6 @@ function CustomerNavigation() {
       className="customer-navigation"
       aria-label={t('shell.customerStorefrontNavigation')}
     >
-      <Link className="customer-nav-link" to="/" onClick={close}>
-        <ArrowLeft size={17} aria-hidden="true" />
-        {t('landing.backToHome')}
-      </Link>
       <LanguageSwitcher />
     </nav>
   );

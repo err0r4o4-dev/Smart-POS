@@ -51,7 +51,8 @@ Flow: `/shop` → สินค้าของร้านเดียว → ต
 
 - Go `storefront` เป็นเจ้าของ publication, estimates, guest orders/tracking และ staff status; Go `pos` เป็นเจ้าของ cashier cart, shifts, payment, stock posting และ receipt
 - `storefront.manage`: Owner/Manager; `online_orders.read/manage`: Owner/Manager/Cashier โดย API ตรวจ tenant และสาขาอีกครั้ง
-- Public API `/api/v1/storefronts...` ไม่ใช้ employee session; public POST ตรวจ allowed Origin และ per-IP rate limit (quote/track 120 ครั้ง/นาที, create 20 ครั้ง/ชั่วโมง)
+- Public API `/api/v1/storefronts...` ไม่ใช้ employee session; public POST ตรวจ allowed Origin และ per-IP rate limit (quote/track 120 ครั้ง/นาที, create 20 ครั้ง/ชั่วโมง, review 30 ครั้ง/นาที)
+- ลูกค้าให้คะแนน 1–5 ที่ `POST /api/v1/storefronts/{slug}/review` โดยใช้หลักฐานติดตามของออเดอร์ที่เสร็จสมบูรณ์ คะแนนแรกคงอยู่และการส่งซ้ำคืนคะแนนเดิม รายการร้านเปิดเผยเพียงคะแนนเฉลี่ยและจำนวนรีวิว ไม่มีตัวระบุออเดอร์หรือข้อมูลลูกค้า
 - Tenant API `/api/v1/organizations/{id}/storefront...` และ `/online-orders...` ใช้ session, CSRF สำหรับ write, permissions และ branch scope ดู [OpenAPI](../../packages/contracts/openapi.yaml)
 - UUID `Idempotency-Key` เป็น order ID; fingerprint ผูกทั้ง request รวม quote/contact/access token การ retry body เดิมไม่สร้างออเดอร์ซ้ำ; body ที่ต่างกันถูกปฏิเสธ
 - Token สุ่ม 32 bytes; ฐานเก็บ SHA256 เท่านั้น tracking link ใช้ fragment `#access=...`; browser ส่ง token ใน JSON POST ไม่ใช่ URL path/query Public response ไม่คืนชื่อ เบอร์ หมายเหตุ หรือ internal source IDs

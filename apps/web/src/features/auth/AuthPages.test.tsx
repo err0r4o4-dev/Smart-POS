@@ -33,7 +33,7 @@ it('places the store illustration before the login panel and preserves account l
   const illustration = screen.getByRole('img', {
     name: /point-of-sale terminal/i,
   });
-  const loginPanel = screen.getByRole('region', { name: 'Sign in' });
+  const loginPanel = screen.getByRole('region', { name: /^Sign in$/ });
   expect(illustration).toHaveAttribute('src', '/images/auth-pos-studio.svg');
   expect(
     illustration.compareDocumentPosition(loginPanel) &

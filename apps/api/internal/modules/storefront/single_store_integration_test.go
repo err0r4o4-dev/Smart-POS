@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -230,13 +231,13 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 			testContext.Fatalf("legacy storefront converted to draft: %v", problem)
 		}
 		current, problem := (&storefront.Service{Organization: multi}).Settings(ctx, owner.ID, first.Organization.ID)
-		if problem != nil || current == nil || *current != firstShop {
+		if problem != nil || current == nil || !reflect.DeepEqual(*current, firstShop) {
 			testContext.Fatalf("legacy storefront changed after rejected draft: %v", problem)
 		}
 	})
 	single := &organization.Service{Pool: pool, Mailer: mailbox, SingleStoreOrganizationID: first.Organization.ID}
 	shop := &storefront.Service{Organization: single}
-	t.Run("directory shop types preserve public projection visibility and rollback", func(t *testing.T) {
+	t.Run("directory food categories preserve public projection visibility and rollback", func(t *testing.T) {
 		publicDirectory := &storefront.Service{Organization: multi}
 		result, problem := publicDirectory.Directory(ctx)
 		if problem != nil {
@@ -247,8 +248,11 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 			t.Fatalf("multi-store directory: %v", problem)
 		}
 		for _, entry := range entries {
-			if len(entry) != 4 || entry["business_type"] != "RETAIL" || entry["name"] == nil || entry["accepting_orders"] != true || (entry["slug"] != firstShop.Slug && entry["slug"] != "second-fixture") {
+			if len(entry) != 7 || (entry["business_type"] != nil || !reflect.DeepEqual(entry["category_codes"], []any{})) || entry["name"] == nil || entry["accepting_orders"] != true || (entry["slug"] != firstShop.Slug && entry["slug"] != "second-fixture") {
 				t.Fatal("unexpected public directory projection")
+			}
+			if entry["average_rating"] != nil || entry["review_count"] != float64(0) || entry["delivery_enabled"] != false {
+				t.Fatal("unexpected unrated storefront metadata")
 			}
 		}
 		tx, _, problem := multi.Authorized(ctx, owner.ID, first.Organization.ID, "storefront.manage")
@@ -256,14 +260,14 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 			t.Fatal(problem)
 		}
 		defer tx.Rollback(ctx)
-		if _, problem = tx.Exec(ctx, "UPDATE organizations SET business_type='CAFE' WHERE id=$1", first.Organization.ID); problem != nil {
+		if _, problem = tx.Exec(ctx, "UPDATE storefronts SET category_codes=ARRAY['noodles','drinks'] WHERE organization_id=$1", first.Organization.ID); problem != nil {
 			t.Fatal(problem)
 		}
 		if problem = tx.QueryRow(ctx, "SELECT storefront_directory()").Scan(&result); problem != nil {
 			t.Fatal(problem)
 		}
-		if problem = json.Unmarshal(result, &entries); problem != nil || len(entries) != 2 || entries[0]["slug"] != firstShop.Slug || entries[0]["business_type"] != "CAFE" || entries[1]["business_type"] != "RETAIL" {
-			t.Fatalf("shop type metadata or ordering: %v", problem)
+		if problem = json.Unmarshal(result, &entries); problem != nil || len(entries) != 2 || entries[0]["slug"] != firstShop.Slug || !reflect.DeepEqual(entries[0]["category_codes"], []any{"noodles", "drinks"}) || !reflect.DeepEqual(entries[1]["category_codes"], []any{}) {
+			t.Fatalf("food category metadata or ordering: %v", problem)
 		}
 		for _, mutation := range []string{
 			"UPDATE storefronts SET published=false,accepting_orders=false WHERE organization_id=$1",
@@ -296,7 +300,7 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 		if problem != nil {
 			t.Fatal(problem)
 		}
-		if problem = json.Unmarshal(result, &entries); problem != nil || len(entries) != 1 || entries[0]["business_type"] != "RETAIL" {
+		if problem = json.Unmarshal(result, &entries); problem != nil || len(entries) != 1 || !reflect.DeepEqual(entries[0]["category_codes"], []any{}) {
 			t.Fatalf("directory fixture rollback failed: %v", problem)
 		}
 	})
@@ -424,7 +428,7 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 			t.Fatal(problem)
 		}
 		var entries []map[string]any
-		if problem = json.Unmarshal(result, &entries); problem != nil || len(entries) != 1 || entries[0]["slug"] != firstShop.Slug || len(entries[0]) != 4 || entries[0]["business_type"] != first.Organization.BusinessType {
+		if problem = json.Unmarshal(result, &entries); problem != nil || len(entries) != 1 || entries[0]["slug"] != firstShop.Slug || len(entries[0]) != 7 || !reflect.DeepEqual(entries[0]["category_codes"], []any{}) || entries[0]["average_rating"] != nil || entries[0]["review_count"] != float64(0) {
 			t.Fatalf("unsafe public directory: %v", problem)
 		}
 		if _, problem = shop.PublicSettings(ctx, "second-fixture"); !errors.Is(problem, storefront.ErrNotFound) {
@@ -729,7 +733,7 @@ func TestSingleStoreIsolatedDatabase(t *testing.T) {
 		deliveryAcceptance(t, ctx, guestSession.Context, multi, owner.ID, state.Organization.ID, seedShop(state, "delivery-fixture"), first.Organization.ID, guest.ID)
 	})
 	t.Run("atomic online reservation foundation", func(t *testing.T) {
-		reservationAcceptance(t, ctx, multi, owner.ID, first.Organization.ID, firstShop)
+		reservationAcceptance(t, ctx, multi, owner.ID, first.Organization.ID, firstShop, shop, second.Organization.ID, secondShop.Slug)
 	})
 	t.Run("recipe ingredient reservation and deduction", func(t *testing.T) {
 		state, problem := multi.Create(ctx, owner.ID, "ae111111-1111-4111-8111-111111111111", createInput("INGREDIENT"))

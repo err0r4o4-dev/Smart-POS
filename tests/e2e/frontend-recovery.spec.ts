@@ -284,7 +284,7 @@ test('the public storefront does not download operational page modules', async (
   });
   await page.goto('/shop');
   await expect(
-    page.getByRole('heading', { name: 'หน้าร้านออนไลน์', exact: true }),
+    page.getByRole('heading', { name: 'สำรวจร้านอาหาร', exact: true }),
   ).toBeVisible();
   expect(
     scripts.some((url) =>

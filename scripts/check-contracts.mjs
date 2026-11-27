@@ -227,9 +227,11 @@ const storefrontPaths = [
   ...[
     '',
     '/products',
+    '/assistant',
     '/quote',
     '/orders',
     '/track',
+    '/review',
     '/payment/checkout',
     '/payment/recover',
     '/payment/status',
@@ -455,6 +457,7 @@ assert.deepEqual(
     '/api/v1/auth/email/verify',
     '/api/v1/auth/email/resend',
     '/api/v1/organizations',
+    '/api/v1/organizations/store-status',
     '/api/v1/organizations/{id}',
     '/api/v1/organizations/{id}/audit',
     '/api/v1/organizations/{id}/branches',
@@ -565,10 +568,15 @@ for (const path of [...storefrontPaths, ...restaurantPaths]) {
       assert.deepEqual(operation.security, []);
       if (method === 'post') assert.ok(operation.responses['429']);
     }
-    assert.ok(operation.responses['409']);
+    if (!path.endsWith('/assistant')) assert.ok(operation.responses['409']);
     assert.ok(operation.responses['503']);
   }
 }
+const storefrontAssistant = api.paths['/api/v1/storefronts/{slug}/assistant'].post;
+const assistantQuestions = storefrontAssistant.requestBody.content['application/json'].schema.properties.questions;
+assert.equal(assistantQuestions.maxItems, 4);
+assert.equal(assistantQuestions.items.maxLength, 240);
+assert.equal(api.components.schemas.StorefrontSettings.properties.assistant_enabled.type, 'boolean');
 const guestCreate = api.paths['/api/v1/storefronts/{slug}/orders'].post;
 const prepaidSettlement =
   api.paths['/api/v1/organizations/{id}/online-orders/{orderId}/settle-prepaid']
@@ -613,6 +621,25 @@ assert.equal(
   '#/components/schemas/StorefrontTrackingInput',
 );
 const trackingInput = api.components.schemas.StorefrontTrackingInput;
+const guestReview = api.paths['/api/v1/storefronts/{slug}/review'].post;
+assert.equal(guestReview.requestBody.required, true);
+const reviewInput = guestReview.requestBody.content['application/json'].schema;
+assert.equal(reviewInput.additionalProperties, false);
+assert.deepEqual(reviewInput.required, ['order_id', 'access_token', 'rating']);
+assert.deepEqual(
+  reviewInput.properties.access_token,
+  trackingInput.properties.access_token,
+);
+assert.deepEqual(reviewInput.properties.rating, {
+  type: 'integer',
+  minimum: 1,
+  maximum: 5,
+});
+assert.equal(
+  guestReview.responses['200'].content['application/json'].schema.properties
+    .data.$ref,
+  '#/components/schemas/StorefrontCustomerReview',
+);
 assert.deepEqual(trackingInput.required, ['order_id', 'access_token']);
 assert.equal(trackingInput.additionalProperties, false);
 assert.deepEqual(trackingInput.properties.access_token, {

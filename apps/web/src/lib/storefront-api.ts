@@ -6,11 +6,20 @@ export interface ShopSummary {
   slug: string;
   name: string;
   accepting_orders: boolean;
+  cover_image_url?: string;
 }
 export interface ShopDirectoryEntry extends ShopSummary {
-  business_type?: string;
+  category_codes?: string[];
+  delivery_enabled?: boolean;
+  average_rating?: number | null;
+  review_count?: number;
+}
+export interface CustomerReview {
+  rating: number;
 }
 export interface ShopSettings extends ShopSummary {
+  assistant_enabled?: boolean;
+  category_codes?: string[];
   description: string;
   contact_phone: string;
   pickup_instructions: string;
@@ -22,6 +31,10 @@ export interface ShopSettings extends ShopSummary {
   stock_location_id?: string;
   published: boolean;
   revision: number;
+}
+export interface StoreAssistantAnswer {
+  intent: 'menu' | 'clarify';
+  items: Pick<ShopProduct, 'product_name' | 'variant_name' | 'unit_price'>[];
 }
 export interface ShopProduct {
   variant_id: string;
@@ -80,6 +93,8 @@ export type OrderStatus =
   | 'CANCELLED'
   | 'EXPIRED';
 export interface OnlineOrder {
+  review_eligible?: boolean;
+  review?: CustomerReview;
   readonly stock_policy: StockPolicy;
   table_code?: string;
   id: string;

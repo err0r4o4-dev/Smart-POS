@@ -7,7 +7,6 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   BarChart3,
   Bell,
-  ChevronDown,
   ChevronRight,
   House,
   Menu,
@@ -31,6 +30,8 @@ import { Brand, Tag } from '../components/ui/primitives';
 import { useAuth } from '../app/AuthProvider';
 import { useOrganization } from '../app/OrganizationProvider';
 import { NavigationMenu } from './NavigationMenu';
+import { VeloAssistantChat } from '../features/storefront/VeloAssistantChat';
+import { ContextSwitchers } from '../features/organization/OrganizationGate';
 
 export function ManagementLayout() {
   return <WorkspaceShell area="management" />;
@@ -56,6 +57,11 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
     access.authenticated && isManagementRole(access.role)
       ? access.role
       : undefined;
+  const showContextSwitchers =
+    area === 'management' &&
+    role &&
+    ((tenant.storeMode === 'multi' && tenant.organizations.length > 1) ||
+      (tenant.context?.branches.length ?? 0) > 1);
   const areaTitle = {
     management: t('shell.storeManagement'),
     account: t('shell.accountAndAccess'),
@@ -138,12 +144,10 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
               )?.name ?? t('inventory.noBranchSelected')}
             </small>
           </div>
-          <ChevronDown
-            size={15}
-            className="context-chevron"
-            aria-hidden="true"
-          />
         </div>
+        {showContextSwitchers && (
+          <ContextSwitchers className="tenant-switchers workspace-context-switchers" />
+        )}
         <div className="workspace-area-label">
           <strong>{areaTitle}</strong>
           {area !== 'management' && (
@@ -255,6 +259,22 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
         <main id="main-content" className="content">
           <Outlet />
         </main>
+        {area === 'management' &&
+          role &&
+          tenant.context &&
+          state.status === 'authenticated' && (
+            <VeloAssistantChat
+              key={JSON.stringify([
+                state.session.user.id,
+                tenant.context.organization.id,
+                tenant.branchID,
+              ])}
+              scope={{
+                mode: 'merchant',
+                organizationName: tenant.context.organization.name,
+              }}
+            />
+          )}
         {area === 'management' && (
           <footer className="footer">
             SmartPOS · {areaTitle}
@@ -279,8 +299,8 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
             if (event.key === 'Tab') {
               const controls = Array.from(
                 event.currentTarget.querySelectorAll<
-                  HTMLButtonElement | HTMLAnchorElement
-                >('button:not([disabled]), a[href]'),
+                  HTMLButtonElement | HTMLAnchorElement | HTMLSelectElement
+                >('button:not([disabled]), a[href], select:not([disabled])'),
               ).filter((control) => !control.closest('[hidden]'));
               const first = controls[0];
               const last = controls[controls.length - 1];
@@ -320,6 +340,9 @@ export function WorkspaceShell({ area }: { area: WorkspaceArea }) {
               {t('shell.customerStorefront')}
             </NavLink>
           </div>
+          {showContextSwitchers && (
+            <ContextSwitchers className="tenant-switchers workspace-context-switchers" />
+          )}
           <nav id="mobile-navigation" aria-label={t('shell.mobileNavigation')}>
             <NavigationMenu
               items={items}

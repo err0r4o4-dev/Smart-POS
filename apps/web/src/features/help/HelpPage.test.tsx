@@ -1,5 +1,6 @@
 ﻿import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider, useLanguage } from '../../app/language';
 import { HelpPage } from './HelpPage';
 
@@ -9,7 +10,9 @@ function HelpHarness() {
     <>
       <button onClick={() => setLanguage('en')}>English</button>
       <button onClick={() => setLanguage('th')}>Thai</button>
-      <HelpPage />
+      <MemoryRouter>
+        <HelpPage />
+      </MemoryRouter>
     </>
   );
 }

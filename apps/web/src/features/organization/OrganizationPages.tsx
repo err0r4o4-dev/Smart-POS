@@ -14,7 +14,6 @@ import {
   Banknote,
   Check,
   CheckCircle2,
-  ChevronDown,
   ChevronRight,
   CircleAlert,
   Coins,
@@ -33,6 +32,7 @@ import { useWorkspaceNavigate as useNavigate } from '../../app/useWorkspaceNavig
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../app/AuthProvider';
 import { useOrganization } from '../../app/OrganizationProvider';
+import { storeStatusKey } from '../../app/useStoreStatus';
 import { paths } from '../../app/routes';
 import {
   Brand,
@@ -78,6 +78,7 @@ import {
 import { validateStoreProfile, type ProfileErrors } from './setup-validation';
 import { ApiError } from '../../lib/api';
 import { getMFAStatus } from '../auth/mfa-api';
+import { authLink } from '../auth/auth-destination';
 import { MFARequiredState } from './MFARequiredState';
 import {
   CreationRecoveryError,
@@ -382,93 +383,6 @@ function SetupInput({
   );
 }
 
-function SetupSelect({
-  label,
-  value,
-  onChange,
-  required = false,
-  options,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  required?: boolean;
-  options: Array<{ value: string; label: string }>;
-}) {
-  const [open, setOpen] = useState(false);
-  const matchedOption = options.find((opt) => opt.value === value);
-  return (
-    <div className="tenant-field setup-field">
-      <label htmlFor="setup-business-type-input" className="setup-field-label">
-        {label}
-        {required && (
-          <span className="setup-required" aria-hidden="true">
-            {' '}
-            *
-          </span>
-        )}
-      </label>
-      <div className="setup-select-wrapper">
-        <input
-          id="setup-business-type-input"
-          aria-label={label}
-          value={value}
-          onFocus={() => setOpen(true)}
-          onBlur={() => setTimeout(() => setOpen(false), 150)}
-          onChange={(event) => onChange(event.target.value)}
-          required={required}
-          type="text"
-          list="setup-business-types"
-          className={`setup-select-element ${!open && matchedOption ? 'has-display-overlay' : ''}`}
-        />
-        {!open && matchedOption && (
-          <span className="setup-select-overlay" aria-hidden="true">
-            {matchedOption.label}
-          </span>
-        )}
-        <ChevronDown
-          size={18}
-          className="setup-chevron-icon"
-          aria-hidden="true"
-        />
-        <datalist id="setup-business-types">
-          {options.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </datalist>
-        {open && (
-          <ul
-            className="setup-select-dropdown"
-            role="listbox"
-            aria-label={label}
-          >
-            {options.map((opt) => (
-              <li
-                key={opt.value}
-                role="option"
-                aria-selected={opt.value === value}
-              >
-                <button
-                  type="button"
-                  className={`setup-select-option ${opt.value === value ? 'is-selected' : ''}`}
-                  onMouseDown={(event) => {
-                    event.preventDefault();
-                    onChange(opt.value);
-                    setOpen(false);
-                  }}
-                >
-                  {opt.label}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </div>
-  );
-}
 
 function SetupToggle({
   label,
@@ -602,20 +516,6 @@ function SetupStepFields({
           />
         </div>
         <div className="setup-form-grid">
-          <SetupSelect
-            label={t('organization.setupStoreType')}
-            value={profile.organization.business_type}
-            required
-            options={[
-              { value: 'RESTAURANT', label: t('organization.setupRestaurant') },
-            ]}
-            onChange={(business_type) =>
-              update('profile', {
-                ...profile,
-                organization: { ...profile.organization, business_type },
-              })
-            }
-          />
           <SetupInput
             label={t('organization.setupStorePhone')}
             value={profile.organization.contact_phone}
@@ -953,16 +853,18 @@ function ScopedSetupPage() {
       <main className="setup-page-wrapper">
         <Card className="tenant-page">
           <h1>{t('organization.setUpStore')}</h1>
-          <p>{t('organization.signInWithTheRecipientSEmail')}</p>
+          <p>{t('organization.signInToSetUpStore')}</p>
           <Link className="button" to="/login?returnTo=%2Fsetup">
             {t('auth.signIn')}
           </Link>
-          <Link className="button button-secondary" to="/register">
+          <Link className="button button-secondary" to="/register?returnTo=%2Fsetup">
             {t('organization.registerAccount')}
           </Link>
         </Card>
       </main>
     );
+  if (state.session.user.email_verified === false)
+    return <Navigate to={authLink(paths.verifyEmail, paths.setup)} replace />;
   if (tenant.loading)
     return (
       <main className="setup-page-wrapper">
@@ -1229,6 +1131,10 @@ function ScopedSetupPage() {
           )
             throw new ApiError(502, t('mfa.creationUnknown'));
           finishCreation(state.session.user.id, key);
+          void queryClient.invalidateQueries({
+            queryKey: storeStatusKey(state.session.user.id),
+            refetchType: 'none',
+          });
           creating = false;
           nextContext = {
             organizationID: result.organization.id,

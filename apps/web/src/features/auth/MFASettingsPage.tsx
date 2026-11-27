@@ -253,20 +253,24 @@ function MFAFlow({
       );
     }
   };
+  const needsVerification =
+    flow.kind === 'status' &&
+    flow.value.enabled &&
+    !flow.value.session_verified;
   const needsCode =
     flow.kind === 'enrollment' ||
     flow.kind === 'replacement' ||
-    (flow.kind === 'status' &&
-      flow.value.enabled &&
-      !flow.value.session_verified);
+    needsVerification;
 
   return (
     <LoginLayout titleId="mfa-title" story="security">
       <div className="mfa-panel">
         <div className="auth-header-card">
           <ShieldCheck size={28} aria-hidden="true" />
-          <h1 id="mfa-title">{t('mfa.title')}</h1>
-          <p>{t('mfa.intro')}</p>
+          <h1 id="mfa-title">
+            {t(needsVerification ? 'mfa.requiredTitle' : 'mfa.title')}
+          </h1>
+          <p>{t(needsVerification ? 'mfa.challenge' : 'mfa.intro')}</p>
         </div>
         {flow.kind === 'loading' && <Loading>{t('mfa.checking')}</Loading>}
         {flow.kind === 'unavailable' && (
@@ -376,7 +380,6 @@ function MFAFlow({
         {needsCode && (
           <form className="auth-form-body" onSubmit={submit}>
             <fieldset disabled={busy}>
-              {flow.kind === 'status' && <p>{t('mfa.challenge')}</p>}
               {flow.kind === 'replacement' && <p>{t('mfa.replacementHelp')}</p>}
               <div className="auth-field-group">
                 <label htmlFor="mfa-code">{t('mfa.code')}</label>

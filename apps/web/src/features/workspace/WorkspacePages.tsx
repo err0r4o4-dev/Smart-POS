@@ -1,5 +1,5 @@
 import { useLanguage } from '../../app/language';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { ArrowRight, Store } from 'lucide-react';
 import {
   useOrganization,
@@ -23,8 +23,9 @@ import { WorkspaceAreaGate } from './WorkspaceRouting';
 import { MFARequiredState } from '../organization/MFARequiredState';
 
 export function OrganizationWorkspaceProvider() {
+  const { pathname } = useLocation();
   return (
-    <OrganizationProvider>
+    <OrganizationProvider allowNewStoreWithoutMFA={pathname === paths.setup}>
       <WorkspaceAreaGate />
     </OrganizationProvider>
   );

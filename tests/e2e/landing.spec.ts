@@ -5,25 +5,25 @@ const shops = [
     slug: 'krapao',
     name: 'กะเพราพี่ต้น',
     accepting_orders: true,
-    business_type: 'RESTAURANT',
+    category_codes: ['made-to-order', 'noodles'],
   },
   {
     slug: 'mr-tea',
     name: 'Mr.Tea',
     accepting_orders: false,
-    business_type: 'CAFE',
+    category_codes: ['drinks'],
   },
   {
     slug: 'bakery',
     name: 'ร้านขนมบ้านสวน',
     accepting_orders: false,
-    business_type: 'BAKERY',
+    category_codes: ['desserts'],
   },
   {
     slug: 'grill',
     name: 'ไก่ย่างริมทาง',
     accepting_orders: false,
-    business_type: 'FAST_FOOD',
+    category_codes: ['fried'],
   },
 ];
 
@@ -108,6 +108,24 @@ test('hero search opens the shop directory with the query applied', async ({
   ).toBeVisible();
 });
 
+test('opens the shared food category from Main and ignores legacy type links', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page
+    .getByRole('list', { name: 'ประเภทอาหาร' })
+    .getByRole('link', { name: 'ก๋วยเตี๋ยว', exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/shop\?category=noodles$/);
+  await expect(
+    page.getByRole('button', { name: 'ก๋วยเตี๋ยว' }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('link', { name: 'กะเพราพี่ต้น' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Mr.Tea' })).toHaveCount(0);
+  await page.goto('/shop?type=restaurant&q=Mr.Tea');
+  await expect(page.getByRole('link', { name: 'Mr.Tea' })).toBeVisible();
+});
+
 test('filters published stores, keeps favorites, and opens the shop cart selector', async ({
   page,
 }) => {
@@ -131,26 +149,19 @@ test('filters published stores, keeps favorites, and opens the shop cart selecto
   await expect(list.getByRole('link', { name: 'กะเพราพี่ต้น' })).toBeVisible();
   await page.goto('/shop?view=cart');
   await expect(
-    page.getByRole('link', { name: 'เปิดตะกร้า' }).first(),
+    page
+      .getByRole('article', { name: 'กะเพราพี่ต้น' })
+      .getByRole('link', { name: 'เปิดตะกร้า' }),
   ).toHaveAttribute('href', '/shop/krapao/cart');
   await page.goto('/');
-  await page
-    .getByRole('list', { name: 'ประเภทอาหาร' })
-    .getByRole('link', { name: 'ก๋วยเตี๋ยว' })
-    .click();
-  await expect(page).toHaveURL(/\/shop\?q=/);
+  await page.getByRole('link', { name: 'เริ่มร้านค้า' }).click();
+  await expect(page).toHaveURL('/setup');
   await page.goto('/');
-  await page.getByRole('link', { name: /สมัครร้านค้าฟรี/ }).click();
-  await expect(page).toHaveURL(/\/register$/);
-  await page.goto('/');
-  await page
-    .getByRole('banner')
-    .getByRole('link', { name: 'เข้าสู่ระบบ' })
-    .click();
+  await page.getByRole('banner').getByRole('link', { name: 'เข้าสู่ระบบ', exact: true }).click();
   await expect(page).toHaveURL(/\/login$/);
 });
 
-test('mobile navigation exposes all destinations with the keyboard', async ({
+test('mobile navigation opens sign-in directly with the keyboard', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 320, height: 900 });
@@ -167,15 +178,18 @@ test('mobile navigation exposes all destinations with the keyboard', async ({
   ).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(menu).toBeFocused();
+  const signIn = page.getByRole('banner').getByRole('link', {
+    name: 'เข้าสู่ระบบ',
+    exact: true,
+  });
+  await expect(signIn).toHaveAttribute('href', '/login');
+  await page.keyboard.press('Tab');
+  await expect(signIn).toBeFocused();
   await page.keyboard.press('Enter');
-  await expect(menu).toHaveAttribute('aria-expanded', 'true');
-  const navigation = page.getByRole('navigation', { name: 'เมนูหน้าแรก' });
-  for (const name of ['หน้าหลัก', 'สำรวจร้าน', 'สำหรับร้านค้า', 'เข้าสู่ระบบ'])
-    await expect(navigation.getByRole('link', { name })).toBeVisible();
-  await navigation.getByRole('link', { name: 'หมวดหมู่อาหาร' }).click();
+  await expect(page).toHaveURL(/\/login$/);
   await expect(
-    page.getByRole('heading', { name: 'เลือกตามประเภทอาหาร' }),
-  ).toBeInViewport();
+    page.getByRole('heading', { name: 'เข้าสู่ระบบ', exact: true }),
+  ).toBeVisible();
 });
 
 test('home supports keyboard access to the main content', async ({ page }) => {
@@ -205,16 +219,18 @@ test('the header logo keeps visible keyboard focus and its home destination', as
   await expect(page).toHaveURL(/\/$/);
 });
 
-test('the footer language selector switches the page to English', async ({
-  page,
-}) => {
+test('the header switches the home page to English', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/');
   await page
-    .getByRole('contentinfo')
-    .getByRole('combobox', { name: 'ภาษา' })
-    .selectOption('en');
+    .getByRole('banner')
+    .getByRole('button', { name: 'English', exact: true })
+    .click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(
     'Find restaurants in your community',
   );
+  await expect(
+    page.getByRole('contentinfo').getByRole('heading', { name: 'Follow us' }),
+  ).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 });

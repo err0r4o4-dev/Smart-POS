@@ -59,7 +59,7 @@ for (const [width, path] of [
           return route.fulfill({ status: 503, json: {} });
       }
     });
-    await page.goto(path);
+    await page.goto(path === '/login' ? '/login?returnTo=%2Fsetup' : path);
     if (path === '/login') {
       await page.getByRole('button', { name: 'English', exact: true }).click();
       await page.getByLabel('Email address').fill(session.user.email);
@@ -68,18 +68,40 @@ for (const [width, path] of [
     }
     await expect(page).toHaveURL(/\/security$/);
     const banner = page.getByRole('banner');
-    await banner.getByRole('button', { name: 'English', exact: true }).click();
+    const thai = path === '/setup';
+    if (!thai)
+      await banner
+        .getByRole('button', { name: 'English', exact: true })
+        .click();
     await expect(banner.getByRole('link')).toHaveAttribute('href', '/');
     await expect(banner.getByRole('navigation')).toHaveCount(0);
     await expect(page.getByRole('main')).toHaveCount(1);
-    const code = page.getByRole('textbox', { name: 'Six-digit code' });
-    const verify = page.getByRole('button', { name: 'Verify code' });
+    const code = page.getByRole('textbox', {
+      name: thai ? 'รหัส 6 หลัก' : 'Six-digit code',
+    });
+    const verify = page.getByRole('button', {
+      name: thai ? 'ยืนยันรหัส' : 'Verify code',
+      exact: true,
+    });
     await expect(code).toBeVisible();
     await expect(
-      page.getByRole('heading', { name: 'Verify your identity' }),
-    ).toHaveCount(0);
+      page.getByRole('heading', {
+        name: thai ? 'ยืนยันตัวตนเพิ่มเติม' : 'Verify your identity',
+        exact: true,
+      }),
+    ).toBeVisible();
     await expect(
-      page.getByRole('link', { name: 'Back to workspace' }),
+      page.getByText(
+        thai
+          ? 'เปิดแอปยืนยันตัวตน แล้วกรอกรหัส 6 หลักที่แอปแสดง'
+          : 'Open your authenticator app and enter the six-digit code it shows.',
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('link', {
+        name: thai ? 'กลับพื้นที่ทำงาน' : 'Back to workspace',
+      }),
     ).toHaveCount(0);
     await expect(page.getByRole('main').locator('a[href="/"]')).toHaveCount(0);
     await expect
@@ -347,7 +369,10 @@ for (const width of [360, 1280]) {
         .click();
       await page.getByLabel('Six-digit code', { exact: true }).fill('001234');
       await page
-        .getByRole('button', { name: 'Enable MFA', exact: true })
+        .getByRole('button', {
+          name: 'Turn on two-step verification',
+          exact: true,
+        })
         .click();
       await page
         .getByRole('link', { name: 'Back to workspace', exact: true })
@@ -401,7 +426,10 @@ for (const width of [360, 390, 768, 1280]) {
       const { requests } = await fixture(page);
       await page.goto('/security');
       await expect(
-        page.getByRole('heading', { name: 'ความปลอดภัยของบัญชี', exact: true }),
+        page.getByRole('heading', {
+          name: 'การยืนยันตัวตน 2 ขั้นตอน',
+          exact: true,
+        }),
       ).toBeVisible();
       await noOverflow(page);
       await page.screenshot({
@@ -422,7 +450,10 @@ for (const width of [360, 390, 768, 1280]) {
       await noOverflow(page);
       await page.getByLabel('Six-digit code', { exact: true }).fill('001234');
       await page
-        .getByRole('button', { name: 'Enable MFA', exact: true })
+        .getByRole('button', {
+          name: 'Turn on two-step verification',
+          exact: true,
+        })
         .click();
       await expect(
         page.getByRole('heading', {
@@ -496,7 +527,9 @@ test('recovers dependency failure and a lost successful confirmation without ret
     .getByRole('button', { name: 'Set up authenticator', exact: true })
     .click();
   await page.getByLabel('Six-digit code', { exact: true }).fill('001234');
-  await page.getByRole('button', { name: 'Enable MFA', exact: true }).click();
+  await page
+    .getByRole('button', { name: 'Turn on two-step verification', exact: true })
+    .click();
   await expect(page.getByRole('alert')).toContainText(
     'operation outcome is unknown',
   );
@@ -508,7 +541,9 @@ test('recovers dependency failure and a lost successful confirmation without ret
   await page
     .getByRole('button', { name: 'Check status again', exact: true })
     .click();
-  await expect(page.getByText('MFA is enabled', { exact: true })).toBeVisible();
+  await expect(
+    page.getByText('Two-step verification is on', { exact: true }),
+  ).toBeVisible();
   await expect(
     page.getByText(
       /Code regeneration and administrator recovery are not available yet/,

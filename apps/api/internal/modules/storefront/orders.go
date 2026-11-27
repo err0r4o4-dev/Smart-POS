@@ -158,25 +158,48 @@ func (service *Service) CreateOrder(ctx context.Context, slug, key string, input
 	return result, dbError(tx.Commit(ctx))
 }
 func (service *Service) Track(ctx context.Context, slug string, input TrackingInput) (Order, error) {
-	if !slugPattern.MatchString(slug) || !uuidPattern.MatchString(input.OrderID) || !tokenPattern.MatchString(input.AccessToken) {
-		return Order{}, ErrNotFound
-	}
-	tx, err := service.Organization.Pool.Begin(ctx)
+	tx, org, err := service.openTrackingTx(ctx, slug, input)
 	if err != nil {
 		return Order{}, err
 	}
 	defer tx.Rollback(ctx)
-	var org *string
-	if err = tx.QueryRow(ctx, "SELECT storefront_tracking_resolve($1,$2,$3)::text", slug, input.OrderID, accessHash(input.AccessToken)).Scan(&org); err != nil {
+	result, err := readOrder(ctx, tx, org, input.OrderID, true)
+	if err != nil || result.Status != "COMPLETED" {
+		return result, err
+	}
+	result.ReviewEligible = true
+	var review CustomerReview
+	err = tx.QueryRow(ctx, `SELECT rating FROM storefront_ratings WHERE organization_id=$1 AND order_id=$2`, org, input.OrderID).Scan(&review.Rating)
+	if err == nil {
+		result.Review = &review
+	} else if !errors.Is(err, pgx.ErrNoRows) {
 		return Order{}, dbError(err)
 	}
+	return result, nil
+}
+
+func (service *Service) openTrackingTx(ctx context.Context, slug string, input TrackingInput) (pgx.Tx, string, error) {
+	if !slugPattern.MatchString(slug) || !uuidPattern.MatchString(input.OrderID) || !tokenPattern.MatchString(input.AccessToken) {
+		return nil, "", ErrNotFound
+	}
+	tx, err := service.Organization.Pool.Begin(ctx)
+	if err != nil {
+		return nil, "", err
+	}
+	var org *string
+	if err = tx.QueryRow(ctx, "SELECT storefront_tracking_resolve($1,$2,$3)::text", slug, input.OrderID, accessHash(input.AccessToken)).Scan(&org); err != nil {
+		_ = tx.Rollback(ctx)
+		return nil, "", dbError(err)
+	}
 	if !service.resolvedOrganizationAllowed(org) {
-		return Order{}, ErrNotFound
+		_ = tx.Rollback(ctx)
+		return nil, "", ErrNotFound
 	}
 	if _, err = tx.Exec(ctx, "SELECT set_config('app.organization_id',$1,true),set_config('app.user_id','',true)", *org); err != nil {
-		return Order{}, err
+		_ = tx.Rollback(ctx)
+		return nil, "", err
 	}
-	return readOrder(ctx, tx, *org, input.OrderID, true)
+	return tx, *org, nil
 }
 func (service *Service) Order(ctx context.Context, user, org, id string) (Order, error) {
 	authorization, err := service.Organization.AuthorizeMFA(ctx, user, org, "online_orders.read")

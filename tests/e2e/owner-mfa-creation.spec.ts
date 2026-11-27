@@ -45,6 +45,8 @@ async function fixture(
       return route.fulfill({ json: { data: session } });
     if (path === '/api/v1/auth/google/config')
       return route.fulfill({ json: { data: { enabled: false } } });
+    if (path === '/api/v1/storefronts' || path === '/api/v1/storefront/categories')
+      return route.fulfill({ json: { data: [] } });
     if (path === '/api/v1/auth/mfa')
       return route.fulfill({
         json: { data: { enabled: true, session_verified: verified } },
@@ -66,6 +68,10 @@ async function fixture(
       contact_phone: '',
       address: '',
     };
+    if (path === '/api/v1/organizations/store-status')
+      return route.fulfill({
+        json: { data: { has_store: existing || keys.length > 0, can_create_store: !existing && keys.length === 0 } },
+      });
     if (path === '/api/v1/organizations' && request.method() === 'GET') {
       if (listDenied && !verified)
         return route.fulfill({
@@ -219,7 +225,7 @@ for (const width of [360, 390, 768, 1280]) {
       await expect(submit).toBeEnabled();
       await submit.click();
       const security = page.getByRole('link', {
-        name: 'Open account security (new tab)',
+        name: 'Open two-step verification (new tab)',
         exact: true,
       });
       await expect(security).toBeVisible();
@@ -250,16 +256,16 @@ for (const width of [360, 390, 768, 1280]) {
       expect(state.keys[1]).toBe(state.keys[0]);
       expect(state.unexpected).toEqual([]);
     });
-    test('opens account security when List requires MFA', async ({
+    test('opens account security when an existing owner opens setup without MFA', async ({
       page,
       context,
     }) => {
-      const state = await fixture(context, false, true);
+      const state = await fixture(context, true, true);
       await page.goto('/setup');
       await expect(page).toHaveURL(/\/security$/);
       await expect(
         page.getByRole('heading', {
-          name: 'ความปลอดภัยของบัญชี',
+          name: 'ยืนยันตัวตนเพิ่มเติม',
           exact: true,
         }),
       ).toBeVisible();
@@ -270,11 +276,29 @@ for (const width of [360, 390, 768, 1280]) {
       expect(state.keys).toEqual([]);
       expect(state.unexpected).toEqual([]);
     });
+    test('shows the owner action on home before MFA', async ({ page, context }) => {
+      const state = await fixture(context, true, true);
+      await page.goto('/');
+      const merchant = page.getByRole('region', { name: 'มีร้านอาหารเป็นของตัวเอง?' });
+      const manage = merchant.getByRole('link', { name: 'จัดการร้าน' });
+      await expect(manage).toBeVisible();
+      await expect(page).toHaveURL(/\/$/);
+      await expect(merchant.getByRole('link', { name: 'เริ่มร้านค้า' })).toHaveCount(0);
+      await noOverflow(page);
+      const enlarged = await page.addStyleTag({ content: 'html { font-size: 200%; }' });
+      await noOverflow(page);
+      expect((await manage.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+      await enlarged.evaluate((element) => element.remove());
+      await manage.focus();
+      await page.keyboard.press('Enter');
+      await expect(page).toHaveURL(/\/security$/);
+      expect(state.keys).toEqual([]);
+    });
     test('keeps fields and the original key through MFA recovery', async ({
       page,
       context,
     }, info) => {
-      const state = await fixture(context);
+      const state = await fixture(context, false, true);
       await page.goto('/setup');
       await english(page);
       await fillStore(page);
@@ -284,7 +308,7 @@ for (const width of [360, 390, 768, 1280]) {
       });
       await submit.click();
       const security = page.getByRole('link', {
-        name: 'Open account security (new tab)',
+        name: 'Open two-step verification (new tab)',
         exact: true,
       });
       await expect(security).toBeVisible();
@@ -359,7 +383,7 @@ for (const width of [360, 390, 768, 1280]) {
       await expect(page).toHaveURL(/\/security$/);
       await expect(
         page.getByRole('heading', {
-          name: 'ความปลอดภัยของบัญชี',
+          name: 'ยืนยันตัวตนเพิ่มเติม',
           exact: true,
         }),
       ).toBeVisible();
@@ -416,7 +440,7 @@ test('reuses the original key after reload and blocks changed details or unavail
   await expect.poll(() => state.keys.length).toBe(1);
   await expect(
     page.getByRole('link', {
-      name: 'Open account security (new tab)',
+      name: 'Open two-step verification (new tab)',
       exact: true,
     }),
   ).toBeVisible();

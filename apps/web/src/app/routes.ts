@@ -3,6 +3,7 @@ import { managementRoles, type Role } from './access';
 export const paths = {
   workspace: '/workspace',
   shop: '/shop',
+  areas: '/areas',
   dashboard: '/dashboard',
   pos: '/pos',
   orders: '/orders',
@@ -19,6 +20,7 @@ export const paths = {
   forgotPassword: '/forgot-password',
   resetPassword: '/reset-password',
   security: '/security',
+  account: '/account',
   setup: '/setup',
   settings: '/settings',
   storefrontSettings: '/settings/storefront',

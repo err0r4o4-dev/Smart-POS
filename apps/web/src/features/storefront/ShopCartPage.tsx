@@ -18,7 +18,9 @@ import {
   Plus,
   ShoppingBag,
   ShoppingCart,
+  Store,
   Trash2,
+  Truck,
   UtensilsCrossed,
 } from 'lucide-react';
 import { Button, Card, Loading } from '../../components/ui/primitives';
@@ -975,7 +977,7 @@ function CartContents({ slug }: { slug: string }) {
       {checkout}
       <div className="shop-cart-page" hidden={isCheckout}>
         <PageHeader
-          heading={t('pos.shoppingCart')}
+          heading={t('storefront.customer.cartTitle')}
           backText={t('storefront.chooseMoreProducts')}
           to={shopPath}
         />
@@ -1028,6 +1030,12 @@ function CartContents({ slug }: { slug: string }) {
                 minWidth: 0,
               }}
             >
+              {shop.data?.name && (
+                <p className="customer-cart-store">
+                  <Store size={18} aria-hidden="true" />
+                  {shop.data.name}
+                </p>
+              )}
               {cart.items.map((item) => (
                 <CartLineItem
                   key={item.variant_id}
@@ -1055,6 +1063,9 @@ function CartContents({ slug }: { slug: string }) {
                   }}
                 />
               ))}
+              <Link className="customer-cart-add-more" to={shopPath}>
+                {t('storefront.customer.addMore')}
+              </Link>
             </section>
 
             {/* ORDER SUMMARY */}
@@ -1066,75 +1077,86 @@ function CartContents({ slug }: { slug: string }) {
                 padding: 'var(--card-padding, 24px)',
               }}
             >
-              {/* DINING OPTION */}
+              {/* FULFILLMENT OPTION (reference screen 7) */}
               <section style={{ marginBottom: 15 }}>
-                <h2 style={title}>
+                <h2 id="shop-fulfillment-title" style={title}>
                   <UtensilsCrossed size={21} aria-hidden="true" />
-                  {ui.dining}
+                  {t('storefront.customer.fulfillmentTitle')}
                 </h2>
 
                 <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                    gap: 9,
-                  }}
+                  className="customer-fulfillment-options"
+                  role="group"
+                  aria-labelledby="shop-fulfillment-title"
                 >
-                  {(['takeaway', 'dine-in'] as const).map((mode) => (
-                    <button
-                      type="button"
-                      key={mode}
-                      aria-pressed={diningType === mode}
-                      disabled={busy || (mode === 'takeaway' && !!tableToken)}
-                      onClick={() => selectDining(mode)}
-                      style={{
-                        ...action,
-                        minWidth: 0,
-                        minHeight: 44,
-                        fontSize: 13,
-                        padding: '8px 6px',
-                        border: `1px solid ${
-                          diningType === mode ? palette.yellow : palette.border
-                        }`,
-                        background:
-                          diningType === mode
-                            ? palette.yellow
-                            : 'var(--secondary)',
-                        color:
-                          diningType === mode ? palette.navy : palette.muted,
-                      }}
-                    >
-                      {mode === 'takeaway' ? (
-                        <ShoppingBag size={17} aria-hidden="true" />
-                      ) : (
-                        <UtensilsCrossed size={17} aria-hidden="true" />
-                      )}
-                      {mode === 'takeaway' ? ui.takeaway : ui.dineIn}
-                    </button>
-                  ))}
+                  <button
+                    type="button"
+                    className="customer-fulfillment-option"
+                    aria-pressed={diningType === 'takeaway'}
+                    disabled={busy || !!tableToken}
+                    onClick={() => selectDining('takeaway')}
+                  >
+                    <ShoppingBag size={20} aria-hidden="true" />
+                    <span>{t('storefront.customer.fulfillmentPickup')}</span>
+                    {diningType === 'takeaway' && (
+                      <Check
+                        className="customer-fulfillment-check"
+                        size={18}
+                        aria-hidden="true"
+                      />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    className="customer-fulfillment-option"
+                    aria-pressed={diningType === 'dine-in'}
+                    // Dine-in starts only from a table QR; never invent a table.
+                    disabled={busy || !tableToken}
+                    aria-describedby={
+                      tableToken ? undefined : 'shop-fulfillment-dinein-hint'
+                    }
+                    onClick={() => selectDining('dine-in')}
+                  >
+                    <UtensilsCrossed size={20} aria-hidden="true" />
+                    <span>{t('storefront.customer.fulfillmentDineIn')}</span>
+                    {diningType === 'dine-in' && (
+                      <Check
+                        className="customer-fulfillment-check"
+                        size={18}
+                        aria-hidden="true"
+                      />
+                    )}
+                  </button>
                   {!tableToken && shop.data?.delivery_enabled && (
                     <button
                       type="button"
+                      className="customer-fulfillment-option"
                       aria-pressed={diningType === 'delivery'}
                       disabled={busy}
                       onClick={() => selectDining('delivery')}
-                      style={{
-                        ...action,
-                        minWidth: 0,
-                        minHeight: 44,
-                        fontSize: 13,
-                        padding: '8px 6px',
-                        border: `1px solid ${diningType === 'delivery' ? palette.yellow : palette.border}`,
-                        background:
-                          diningType === 'delivery'
-                            ? palette.yellow
-                            : 'var(--secondary)',
-                      }}
                     >
-                      {language === 'th' ? 'จัดส่ง' : 'Delivery'}
+                      <Truck size={20} aria-hidden="true" />
+                      <span>
+                        {t('storefront.customer.fulfillmentDelivery')}
+                      </span>
+                      {diningType === 'delivery' && (
+                        <Check
+                          className="customer-fulfillment-check"
+                          size={18}
+                          aria-hidden="true"
+                        />
+                      )}
                     </button>
                   )}
                 </div>
+                {!tableToken && (
+                  <p
+                    id="shop-fulfillment-dinein-hint"
+                    className="customer-fulfillment-hint"
+                  >
+                    {t('storefront.customer.fulfillmentDineInHint')}
+                  </p>
+                )}
               </section>
 
               {/* TABLE CONTEXT */}

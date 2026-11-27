@@ -1,48 +1,38 @@
-import {
-  useState,
-  type FormEvent,
-  type MouseEvent,
-  type ReactNode,
-} from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
   BadgeCheck,
   ChartLine,
-  ChevronDown,
   ChevronRight,
   ClipboardList,
   Flame,
-  Globe,
   Heart,
-  House,
   MapPin,
-  Menu,
-  MessageCircle,
   Monitor,
   QrCode,
   Search,
   ShoppingBag,
-  ShoppingCart,
   Sparkles,
   Star,
-  Store,
   UtensilsCrossed,
   type LucideIcon,
 } from 'lucide-react';
-import { LanguageSwitcher } from '../../components/ui/LanguageSwitcher';
-import { Brand, Loading } from '../../components/ui/primitives';
+import { Loading } from '../../components/ui/primitives';
 import { useLanguage } from '../../app/language';
 import { useAuth } from '../../app/AuthProvider';
 import { paths } from '../../app/routes';
+import { useStoreStatus } from '../../app/useStoreStatus';
 import type { TranslationKey } from '../../i18n';
-import {
-  businessTypeLabel,
-  normalizeBusinessType,
-} from '../storefront/business-type';
+import { foodCategories } from '../storefront/food-categories';
+import { customerAreas } from '../storefront/customer-areas';
 import { ShopError } from '../storefront/shop-feedback';
 import { useShopFavorites } from '../storefront/shop-favorites';
 import { useShopDirectory } from '../storefront/useShopDirectory';
+import { VeloAssistantChat } from '../storefront/VeloAssistantChat';
+import { LandingHeader } from './LandingHeader';
+import { authLink, clearGoogleReturn } from '../auth/auth-destination';
+import { LandingShopCard } from './LandingShopCard';
 import './landing.css';
 
 type Translate = ReturnType<typeof useLanguage>['t'];
@@ -52,68 +42,6 @@ const popularSearches: Record<'th' | 'en', string[]> = {
   th: ['ข้าวกะเพรา', 'ก๋วยเตี๋ยว', 'ชาไข่มุก', 'ของทอด', 'ส้มตำ'],
   en: ['Krapao', 'Noodles', 'Bubble tea', 'Fried food', 'Som tam'],
 };
-
-const areas: {
-  title: TranslationKey;
-  description: TranslationKey;
-  image: string;
-}[] = [
-  {
-    title: 'landing.areaCampus',
-    description: 'landing.areaCampusDescription',
-    image: `${referenceArt}/area-campus.webp`,
-  },
-  {
-    title: 'landing.areaMarket',
-    description: 'landing.areaMarketDescription',
-    image: `${referenceArt}/area-market.webp`,
-  },
-  {
-    title: 'landing.areaDorm',
-    description: 'landing.areaDormDescription',
-    image: `${referenceArt}/area-dorm.webp`,
-  },
-  {
-    title: 'landing.areaCommunity',
-    description: 'landing.areaCommunityDescription',
-    image: `${referenceArt}/area-community.webp`,
-  },
-];
-
-const categories: { label: TranslationKey; image: string }[] = [
-  {
-    label: 'landing.categoryMadeToOrder',
-    image: `${referenceArt}/category-made-to-order.webp`,
-  },
-  {
-    label: 'landing.categoryNoodles',
-    image: `${referenceArt}/category-noodles.webp`,
-  },
-  {
-    label: 'landing.categoryIsan',
-    image: `${referenceArt}/category-isan.webp`,
-  },
-  {
-    label: 'landing.categoryFried',
-    image: `${referenceArt}/category-fried.webp`,
-  },
-  {
-    label: 'landing.categoryDrinks',
-    image: `${referenceArt}/category-drinks.webp`,
-  },
-  {
-    label: 'landing.categoryDesserts',
-    image: `${referenceArt}/category-desserts.webp`,
-  },
-  {
-    label: 'landing.categoryHealthy',
-    image: `${referenceArt}/category-healthy.webp`,
-  },
-  {
-    label: 'landing.categorySnacks',
-    image: `${referenceArt}/category-snacks.webp`,
-  },
-];
 
 const steps: {
   title: TranslationKey;
@@ -150,16 +78,6 @@ const shopFilters = [
   { value: 'favorites', label: 'landing.favoriteShops', icon: Heart },
 ] as const;
 
-function storefrontPhoto(type: string, name: string) {
-  if (type === 'CAFE' || type === 'BAR')
-    return `${referenceArt}/cover-tea.webp`;
-  if (type === 'BAKERY') return '/images/home/cat-desserts.webp';
-  if (type === 'FAST_FOOD') return `${referenceArt}/cover-fast-food.webp`;
-  if (/ก๋วยเตี๋ยว|noodles?/i.test(name))
-    return `${referenceArt}/cover-noodles.webp`;
-  return `${referenceArt}/cover-restaurant.webp`;
-}
-
 function shopSearch(query: string) {
   return `${paths.shop}?q=${encodeURIComponent(query)}`;
 }
@@ -167,11 +85,7 @@ function shopSearch(query: string) {
 export function LandingPage() {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const { state } = useAuth();
-  const authenticated = state.status === 'authenticated';
-  const loading = state.status === 'loading';
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -184,45 +98,7 @@ export function LandingPage() {
       <a className="skip-link" href="#landing-main">
         {t('landing.skipToContent')}
       </a>
-      <header className="landing-header">
-        <div className="layout-shell landing-header-inner">
-          <Link
-            className="landing-brand-link"
-            to="/"
-            aria-label={t('landing.veloPosHome')}
-          >
-            <Brand />
-          </Link>
-          <div className="landing-desktop-navigation">
-            <LandingNavigation
-              t={t}
-              loading={loading}
-              authenticated={authenticated}
-            />
-          </div>
-          <div className="landing-mobile-language">
-            <LanguageSwitcher />
-          </div>
-          <details
-            className="landing-mobile-menu"
-            onToggle={(event) => setMobileMenuOpen(event.currentTarget.open)}
-          >
-            <summary
-              role="button"
-              aria-label={t('landing.menu')}
-              aria-expanded={mobileMenuOpen}
-            >
-              <Menu size={22} aria-hidden="true" />
-            </summary>
-            <LandingNavigation
-              t={t}
-              loading={loading}
-              authenticated={authenticated}
-              compactLanguage
-            />
-          </details>
-        </div>
-      </header>
+      <LandingHeader />
       <main id="landing-main" tabIndex={-1}>
         <section className="landing-hero" aria-labelledby="landing-title">
           <div className="landing-hero-art" aria-hidden="true">
@@ -246,11 +122,6 @@ export function LandingPage() {
                 {t('landing.heroTitleLead')}
                 <span className="landing-title-accent">
                   {t('landing.heroTitleAccent')}
-                  <Sparkles
-                    className="landing-title-sparkle"
-                    size={26}
-                    aria-hidden="true"
-                  />
                 </span>
               </h1>
               <p className="landing-hero-description">
@@ -291,20 +162,29 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section className="landing-section" aria-labelledby="landing-areas">
+        <section
+          className="landing-section landing-discovery-section"
+          aria-labelledby="landing-areas"
+        >
           <div className="landing-container">
             <SectionHeading
               id="landing-areas"
-              icon={MapPin}
               title={t('landing.areasTitle')}
               description={t('landing.areasDescription')}
-              action={{ to: paths.shop, label: t('landing.viewAllShops') }}
+              action={{
+                to: paths.areas,
+                label: t('storefront.customer.allAreas'),
+              }}
             />
             <ul className="landing-areas" aria-label={t('landing.areasList')}>
-              {areas.map(({ title, description, image }) => (
-                <li key={title}>
-                  <Link className="landing-area" to={shopSearch(t(title))}>
-                    <img src={image} alt="" loading="lazy" />
+              {customerAreas.map(({ id, title, description }) => (
+                <li key={id}>
+                  <Link className="landing-area" to={`${paths.areas}/${id}`}>
+                    <img
+                      src={`${referenceArt}/area-${id}.webp`}
+                      alt=""
+                      loading="lazy"
+                    />
                     <span className="landing-area-copy">
                       <strong>{t(title)}</strong>
                       <span>{t(description)}</span>
@@ -326,7 +206,6 @@ export function LandingPage() {
           <div className="landing-container">
             <SectionHeading
               id="landing-categories"
-              icon={UtensilsCrossed}
               title={t('landing.categoriesTitle')}
               action={{ to: paths.shop, label: t('landing.viewAllShops') }}
             />
@@ -334,10 +213,17 @@ export function LandingPage() {
               className="landing-categories"
               aria-label={t('landing.categoriesList')}
             >
-              {categories.map(({ label, image }) => (
+              {foodCategories.map(({ code, label }) => (
                 <li key={label}>
-                  <Link className="landing-category" to={shopSearch(t(label))}>
-                    <img src={image} alt="" loading="lazy" />
+                  <Link
+                    className="landing-category"
+                    to={`${paths.shop}?category=${code}`}
+                  >
+                    <img
+                      src={`${referenceArt}/category-${code}.webp`}
+                      alt=""
+                      loading="lazy"
+                    />
                     {t(label)}
                   </Link>
                 </li>
@@ -386,6 +272,7 @@ export function LandingPage() {
           id="for-merchants"
           className="landing-section landing-merchant-section"
           aria-labelledby="landing-merchant"
+          tabIndex={-1}
         >
           <div className="landing-container">
             <div className="landing-merchant">
@@ -412,20 +299,65 @@ export function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <Link
-                className="button landing-merchant-action"
-                to={authenticated ? paths.workspace : paths.register}
-              >
-                {authenticated
-                  ? t('landing.goToWorkspace')
-                  : t('landing.merchantSignUp')}
-                <ArrowRight size={18} aria-hidden="true" />
-              </Link>
+              <MerchantActions />
             </div>
           </div>
         </section>
       </main>
       <LandingFooter t={t} />
+      <VeloAssistantChat />
+    </div>
+  );
+}
+
+function MerchantActions() {
+  const { t } = useLanguage();
+  const { state, refresh } = useAuth();
+  const user = state.session?.user;
+  const stores = useStoreStatus(user?.email_verified ? user.id : undefined);
+  const checking = state.status === 'loading' ||
+    (user?.email_verified && stores.isPending);
+  const target = state.status === 'anonymous'
+    ? paths.setup
+    : user?.email_verified === false
+      ? authLink(paths.verifyEmail, paths.setup)
+      : stores.data?.hasStore
+        ? paths.workspace
+        : stores.data?.canCreate ? paths.setup : null;
+
+  return (
+    <div className="landing-merchant-actions">
+      {checking ? (
+        <button className="button landing-merchant-action" type="button" disabled>
+          {t('landing.checking')}
+        </button>
+      ) : state.status === 'error' || stores.isError ? (
+        <>
+          <span role="alert">{t('landing.merchantCheckFailed')}</span>
+          <button
+            className="button button-secondary"
+            type="button"
+            disabled={stores.isFetching}
+            onClick={() => void (state.status === 'error' ? refresh() : stores.refetch())}
+          >
+            {t('common.retry')}
+          </button>
+        </>
+      ) : target ? (
+        <>
+          <Link className="button landing-merchant-action" to={target} onClick={clearGoogleReturn}>
+            {t(target === paths.workspace ? 'auth.manageStore' : 'landing.merchantSignUp')}
+            <ArrowRight size={18} aria-hidden="true" />
+          </Link>
+          {state.status === 'anonymous' && (
+            <Link className="button button-secondary" to={paths.login}>
+              {t('auth.signIn')}
+            </Link>
+          )}
+        </>
+      ) : (
+        <span>{t('landing.merchantCreationDisabled')}</span>
+      )}
     </div>
   );
 }
@@ -439,7 +371,7 @@ function SectionHeading({
   children,
 }: {
   id: string;
-  icon: LucideIcon;
+  icon?: LucideIcon;
   title: string;
   description?: string;
   action?: { to: string; label: string };
@@ -449,10 +381,12 @@ function SectionHeading({
     <div className="landing-section-heading">
       <div className="landing-section-lead">
         <h2 id={id} tabIndex={-1}>
-          <span className="landing-section-icon">
-            <Icon size={18} aria-hidden="true" />
-          </span>
-          <span>{title}</span>
+          {Icon && (
+            <span className="landing-section-icon">
+              <Icon size={18} aria-hidden="true" />
+            </span>
+          )}
+          {title}
         </h2>
         {description && <p>{description}</p>}
       </div>
@@ -472,7 +406,7 @@ function SectionHeading({
 }
 
 function RecommendedShops() {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const [filter, setFilter] =
     useState<(typeof shopFilters)[number]['value']>('all');
   const directory = useShopDirectory();
@@ -490,7 +424,10 @@ function RecommendedShops() {
     .slice(0, 4);
 
   return (
-    <section className="landing-section" aria-labelledby="landing-shops">
+    <section
+      className="landing-section landing-discovery-section landing-recommended-section"
+      aria-labelledby="landing-shops"
+    >
       <div className="landing-container">
         <SectionHeading
           id="landing-shops"
@@ -542,76 +479,15 @@ function RecommendedShops() {
                 className="landing-shops"
                 aria-label={t('landing.recommendedTitle')}
               >
-                {shops.map((shop) => {
-                  const favorite = saved.isFavorite(shop.slug);
-                  const type = normalizeBusinessType(shop.business_type);
-                  return (
-                    <li key={shop.slug}>
-                      <article className="landing-shop">
-                        <div className="landing-shop-art">
-                          <img
-                            src={storefrontPhoto(type, shop.name)}
-                            alt=""
-                            loading="lazy"
-                          />
-                          <span
-                            className={
-                              shop.accepting_orders
-                                ? 'landing-shop-badge is-open'
-                                : 'landing-shop-badge'
-                            }
-                          >
-                            {t(
-                              shop.accepting_orders
-                                ? 'landing.openNow'
-                                : 'landing.closedNow',
-                            )}
-                          </span>
-                          <button
-                            type="button"
-                            className="landing-shop-favorite"
-                            aria-label={t('landing.favorite', {
-                              name: shop.name,
-                            })}
-                            aria-pressed={favorite}
-                            onClick={() => saved.toggle(shop.slug)}
-                          >
-                            <Heart
-                              size={18}
-                              aria-hidden="true"
-                              fill={favorite ? 'currentColor' : 'none'}
-                            />
-                          </button>
-                        </div>
-                        <div className="landing-shop-body">
-                          <div className="landing-shop-title">
-                            <h3>
-                              <Link
-                                to={
-                                  paths.shop +
-                                  '/' +
-                                  encodeURIComponent(shop.slug)
-                                }
-                              >
-                                {shop.name}
-                              </Link>
-                            </h3>
-                            {type && (
-                              <span>{businessTypeLabel(type, language)}</span>
-                            )}
-                          </div>
-                          <span
-                            className="landing-shop-meta"
-                            aria-hidden="true"
-                          >
-                            {t('storefront.viewStore')}
-                            <ArrowRight size={15} />
-                          </span>
-                        </div>
-                      </article>
-                    </li>
-                  );
-                })}
+                {shops.map((shop) => (
+                  <li key={shop.slug}>
+                    <LandingShopCard
+                      shop={shop}
+                      favorite={saved.isFavorite(shop.slug)}
+                      onToggleFavorite={() => saved.toggle(shop.slug)}
+                    />
+                  </li>
+                ))}
               </ul>
             )}
           </div>
@@ -621,77 +497,7 @@ function RecommendedShops() {
   );
 }
 
-function LandingNavigation({
-  t,
-  loading,
-  authenticated,
-  compactLanguage = false,
-}: {
-  t: Translate;
-  loading: boolean;
-  authenticated: boolean;
-  compactLanguage?: boolean;
-}) {
-  const close = (event: MouseEvent<HTMLElement>) =>
-    event.currentTarget.closest('details')?.removeAttribute('open');
-  return (
-    <nav
-      className="landing-navigation"
-      aria-label={t('landing.homeNavigation')}
-    >
-      <div className="landing-nav-links">
-        <Link className="landing-nav-link is-active" to="/" aria-current="page">
-          <House size={17} aria-hidden="true" />
-          {t('landing.navHome')}
-        </Link>
-        <Link className="landing-nav-link" to={paths.shop}>
-          <Search size={17} aria-hidden="true" />
-          {t('landing.navExplore')}
-        </Link>
-        <a className="landing-nav-link" href="#landing-areas" onClick={close}>
-          <MapPin size={17} aria-hidden="true" />
-          {t('landing.navAreas')}
-        </a>
-        <a
-          className="landing-nav-link"
-          href="#landing-categories"
-          onClick={close}
-        >
-          <UtensilsCrossed size={17} aria-hidden="true" />
-          {t('landing.navCategories')}
-        </a>
-      </div>
-      <div className="landing-nav-actions">
-        {compactLanguage ? (
-          <div className="landing-menu-language">
-            <LanguageSwitcher />
-          </div>
-        ) : (
-          <LanguageSwitcher />
-        )}
-        <a className="landing-nav-link" href="#for-merchants" onClick={close}>
-          <Store size={17} aria-hidden="true" />
-          {t('landing.forMerchants')}
-        </a>
-        {loading ? (
-          <button className="button" type="button" disabled>
-            {t('landing.checking')}
-          </button>
-        ) : (
-          <Link
-            className="button"
-            to={authenticated ? paths.workspace : paths.login}
-          >
-            {authenticated ? t('landing.goToWorkspace') : t('auth.signIn')}
-          </Link>
-        )}
-      </div>
-    </nav>
-  );
-}
-
 function LandingFooter({ t }: { t: Translate }) {
-  const { language, setLanguage } = useLanguage();
   const columns: {
     title: TranslationKey;
     links: [TranslationKey, string][];
@@ -701,14 +507,14 @@ function LandingFooter({ t }: { t: Translate }) {
       links: [
         ['landing.navHome', '/'],
         ['landing.navExplore', paths.shop],
-        ['landing.navAreas', '#landing-areas'],
+        ['landing.navAreas', paths.areas],
         ['landing.navCategories', '#landing-categories'],
       ],
     },
     {
       title: 'landing.footerMerchants',
       links: [
-        ['landing.footerRegister', paths.register],
+        ['landing.footerRegister', '/#for-merchants'],
         ['landing.footerMerchantGuide', paths.help],
         ['landing.footerPricing', paths.help],
       ],
@@ -732,78 +538,82 @@ function LandingFooter({ t }: { t: Translate }) {
   ];
   return (
     <footer className="landing-footer">
-      <div className="landing-container">
-        <nav
-          className="landing-footer-grid"
-          aria-label={t('landing.footerLinks')}
-        >
-          <div className="landing-footer-about">
-            <h2>{t('landing.footerAbout')}</h2>
-            <p>{t('landing.footerAboutDescription')}</p>
-          </div>
-          {columns.map(({ title, links }) => (
-            <div key={title}>
-              <h2>{t(title)}</h2>
-              <ul>
-                {links.map(([label, to]) => (
-                  <li key={label}>
-                    {to.startsWith('#') ? (
-                      <a href={to}>{t(label)}</a>
-                    ) : (
-                      <Link to={to}>{t(label)}</Link>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-          <div className="landing-footer-social">
-            <h2>{t('landing.footerSocial')}</h2>
+      <nav
+        className="landing-container landing-footer-grid"
+        aria-label={t('landing.footerLinks')}
+      >
+        <div className="landing-footer-about">
+          <h2>{t('landing.footerAbout')}</h2>
+          <p>{t('landing.footerAboutDescription')}</p>
+          <small>© 2026 VELOPOS. All rights reserved.</small>
+        </div>
+        {columns.map(({ title, links }) => (
+          <div key={title}>
+            <h2>{t(title)}</h2>
             <ul>
-              <li>
-                <Link to={paths.help} aria-label={t('landing.footerContact')}>
-                  <MessageCircle size={18} aria-hidden="true" />
-                </Link>
-              </li>
-              <li>
-                <Link to={paths.help} aria-label={t('landing.help')}>
-                  <Globe size={18} aria-hidden="true" />
-                </Link>
-              </li>
-              <li>
-                <Link to={paths.shop} aria-label={t('landing.navExplore')}>
-                  <ShoppingCart size={18} aria-hidden="true" />
-                </Link>
-              </li>
+              {links.map(([label, to]) => (
+                <li key={label}>
+                  {to.startsWith('#') ? (
+                    <a href={to}>{t(label)}</a>
+                  ) : (
+                    <Link to={to}>{t(label)}</Link>
+                  )}
+                </li>
+              ))}
             </ul>
           </div>
-        </nav>
-        <div className="landing-footer-bottom">
-          <small>
-            © {new Date().getFullYear()} VELOPOS. {t('landing.footerRights')}
-          </small>
-          <a
-            className="landing-photo-credits"
-            href="/images/home/photo-credits.html"
-          >
-            {t('landing.photoCredits')}
-          </a>
-          <label className="landing-footer-language">
-            <Globe size={15} aria-hidden="true" />
-            <span className="sr-only">{t('common.language')}</span>
-            <select
-              value={language}
-              onChange={(event) =>
-                setLanguage(event.target.value === 'en' ? 'en' : 'th')
-              }
-            >
-              <option value="th">ภาษาไทย</option>
-              <option value="en">English</option>
-            </select>
-            <ChevronDown size={14} aria-hidden="true" />
-          </label>
+        ))}
+        <div className="landing-footer-social">
+          <h2>{t('landing.footerSocial')}</h2>
+          <div className="landing-footer-social-icons">
+            <svg viewBox="0 0 24 24" role="img" aria-label="Facebook">
+              <circle cx="12" cy="12" r="12" fill="currentColor" />
+              <path
+                fill="var(--canvas)"
+                d="M13.8 24v-9h3l.5-3.5h-3.5V9.3c0-1 .3-1.7 1.8-1.7h1.9V4.5c-.3 0-1.5-.2-2.8-.2-2.8 0-4.7 1.7-4.7 4.8v2.4H7V15h3v9z"
+              />
+            </svg>
+            <svg viewBox="0 0 24 24" role="img" aria-label="Instagram">
+              <rect
+                x="2"
+                y="2"
+                width="20"
+                height="20"
+                rx="5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              />
+              <circle
+                cx="12"
+                cy="12"
+                r="4.3"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              />
+              <circle cx="17.6" cy="6.4" r="1.4" fill="currentColor" />
+            </svg>
+            <svg viewBox="0 0 24 24" role="img" aria-label="LINE">
+              <circle cx="12" cy="12" r="12" fill="currentColor" />
+              <path
+                fill="var(--canvas)"
+                d="M19 11.3c0-3-3.1-5.3-7-5.3s-7 2.3-7 5.3c0 2.6 2.5 4.8 5.8 5.2l-.3 2.1c0 .3.2.5.6.3 1.7-.8 7.9-4.1 7.9-7.6Z"
+              />
+              <text
+                x="12"
+                y="13"
+                textAnchor="middle"
+                fontSize="4.2"
+                fontWeight="800"
+                fill="currentColor"
+              >
+                LINE
+              </text>
+            </svg>
+          </div>
         </div>
-      </div>
+      </nav>
     </footer>
   );
 }

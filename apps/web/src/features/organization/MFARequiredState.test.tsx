@@ -17,10 +17,10 @@ it('offers account security in a new tab without navigating away from a draft', 
     }),
   ).toBeVisible();
   expect(screen.getByRole('alert')).toHaveTextContent(
-    'For your security, verify your identity to continue.',
+    'For your security, set up an authenticator app or enter a code from it before continuing.',
   );
   const link = screen.getByRole('link', {
-    name: 'Open account security (new tab)',
+    name: 'Open two-step verification (new tab)',
   });
   expect(link).toHaveAttribute('href', '/security');
   expect(link).toHaveAttribute('target', '_blank');

@@ -21,6 +21,12 @@ type fileTable struct {
 	Rows    [][]string
 }
 
+// ParseImportTable decodes a bounded import file without applying catalog column mappings.
+func ParseImportTable(filename string, data []byte) (headers []string, rows [][]string, err error) {
+	table, err := parseFile(filename, data)
+	return table.Headers, table.Rows, err
+}
+
 func parseFile(filename string, data []byte) (fileTable, error) {
 	if len(data) == 0 || len(data) > MaxImportBytes {
 		return fileTable{}, ErrInput

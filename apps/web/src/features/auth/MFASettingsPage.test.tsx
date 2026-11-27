@@ -91,7 +91,9 @@ async function enroll() {
     target: { value: '001234' },
   });
   fireEvent.submit(
-    screen.getByRole('button', { name: 'Enable MFA' }).closest('form')!,
+    screen
+      .getByRole('button', { name: 'Turn on two-step verification' })
+      .closest('form')!,
   );
 }
 
@@ -241,7 +243,7 @@ it('keeps loading and dependency failure recoverable without automatic mutation'
   const pending = deferred<{ enabled: boolean; session_verified: boolean }>();
   mocks.getMFAStatus.mockReturnValueOnce(pending.promise);
   page();
-  expect(screen.getByText('Checking MFA…')).toBeVisible();
+  expect(screen.getByText('Checking verification status…')).toBeVisible();
   await act(() => pending.resolve({ enabled: false, session_verified: false }));
   expect(
     await screen.findByRole('button', { name: 'Set up authenticator' }),
@@ -300,13 +302,15 @@ it('retains the lost-confirmation warning after status says enabled', async () =
     session_verified: true,
   });
   fireEvent.click(check);
-  expect(await screen.findByText('MFA is enabled')).toBeVisible();
+  expect(await screen.findByText('Two-step verification is on')).toBeVisible();
   expect(
     screen.getByText(
       /Code regeneration and administrator recovery are not available yet/,
     ),
   ).toBeVisible();
-  expect(screen.queryByRole('button', { name: 'Enable MFA' })).toBeNull();
+  expect(
+    screen.queryByRole('button', { name: 'Turn on two-step verification' }),
+  ).toBeNull();
 });
 
 it('preserves a correctable proof error and offers a primary sign-in escape', async () => {

@@ -1,8 +1,8 @@
 import { render, renderInEnglish } from '../../test/render';
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { StorefrontLayout } from '../../layouts/StorefrontLayout';
 import { StorefrontPage } from './StorefrontPage';
 import { ShopCartPage } from './ShopCartPage';
@@ -106,9 +106,10 @@ it('renders a storefront directory with one or more published shops', async () =
   expect(screen.getByText('ร้านปิดรับออเดอร์')).toBeVisible();
   expect(screen.getByText('กำลังรับออเดอร์')).toBeVisible();
   expect(screen.getByText('ปิดรับออเดอร์ชั่วคราว')).toBeVisible();
-  expect(
-    screen.getAllByRole('link', { name: 'ดูหน้าร้าน' })[0],
-  ).toHaveAttribute('href', `/shop/${settings.slug}`);
+  expect(screen.getByRole('link', { name: settings.name })).toHaveAttribute(
+    'href',
+    `/shop/${settings.slug}`,
+  );
 });
 it.each(['single', 'multi'])(
   'keeps the directory visible with one published shop in %s mode',
@@ -129,7 +130,7 @@ it.each(['single', 'multi'])(
     });
     view('/shop');
     expect(
-      await screen.findByRole('link', { name: 'ดูหน้าร้าน' }),
+      await screen.findByRole('link', { name: settings.name }),
     ).toHaveAttribute('href', `/shop/${settings.slug}`);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   },
@@ -194,16 +195,22 @@ it.each([
 it('keeps the customer area independent of auth and organization providers', async () => {
   view('/shop');
   expect(
-    screen.getByRole('heading', { level: 1, name: 'หน้าร้านออนไลน์' }),
+    screen.getByRole('heading', {
+      level: 1,
+      name: /ค้นหาร้านอาหาร\s*ในชุมชนของคุณ/,
+    }),
   ).toBeVisible();
   expect(screen.queryByText('สำหรับลูกค้า')).not.toBeInTheDocument();
   expect(
-    screen.getByRole('navigation', { name: 'เมนูหน้าร้านลูกค้า' }),
+    screen.getAllByRole('navigation', { name: 'เมนูหน้าร้านลูกค้า' })[0],
   ).toBeVisible();
   expect(
     screen.queryByRole('navigation', { name: 'Main navigation' }),
   ).not.toBeInTheDocument();
-  expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+  // The only combobox is the store sort; no staff or account form appears.
+  expect(screen.getAllByRole('combobox')).toEqual([
+    screen.getByRole('combobox', { name: 'เรียงตาม' }),
+  ]);
   expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   for (const path of [
     '/pos',
@@ -487,7 +494,7 @@ it('keeps table QR context through cart review and submission', async () => {
     screen.getByRole('button', { name: 'ยืนยันและส่งคำสั่งซื้อ' }),
   );
   expect(
-    await screen.findByRole('heading', { name: 'ติดตามออเดอร์' }),
+    await screen.findByRole('heading', { name: 'คำสั่งซื้อของฉัน' }),
   ).toBeVisible();
   expect(await screen.findByText('โต๊ะ T01')).toBeVisible();
   for (const endpoint of ['/quote', '/orders']) {
@@ -629,7 +636,7 @@ it('retries an uncertain order with the same body, token and idempotency key', a
     screen.getByRole('button', { name: 'ลองส่งคำขอเดิมอีกครั้ง' }),
   );
   expect(
-    await screen.findByRole('heading', { name: 'ติดตามออเดอร์' }),
+    await screen.findByRole('heading', { name: 'คำสั่งซื้อของฉัน' }),
   ).toBeVisible();
   const writes = fetchMock.mock.calls.filter(([url]) =>
     String(url).endsWith('/orders'),
@@ -666,6 +673,193 @@ it('requires the private access fragment to track an order', () => {
   view('/shop/test-shop/orders/order');
   expect(screen.getByRole('alert')).toHaveTextContent('ลิงก์ติดตามไม่ครบ');
   expect(fetchMock).not.toHaveBeenCalled();
+});
+
+describe('storefront reference layout', () => {
+  beforeEach(() => {
+    HTMLDialogElement.prototype.showModal = vi.fn(function (
+      this: HTMLDialogElement,
+    ) {
+      this.setAttribute('open', '');
+    });
+    HTMLDialogElement.prototype.close = vi.fn(function (
+      this: HTMLDialogElement,
+    ) {
+      this.removeAttribute('open');
+      this.dispatchEvent(new Event('close'));
+    });
+  });
+
+  it('shows a store hero with a cover chosen from the food category and a real rating', async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === '/api/v1/storefronts')
+        return response([
+          {
+            slug: settings.slug,
+            name: settings.name,
+            accepting_orders: true,
+            category_codes: ['drinks'],
+            average_rating: 4.8,
+            review_count: 326,
+          },
+        ]);
+      if (url.includes('/products?'))
+        return response({ items: [product], total: 1, page: 1, page_size: 24 });
+      return response(settings);
+    });
+    view('/shop/test-shop');
+    const hero = await screen.findByRole('region', { name: settings.name });
+    await waitFor(() =>
+      expect(hero.querySelector('img')).toHaveAttribute(
+        'src',
+        '/images/customer/cover-cafe.webp',
+      ),
+    );
+    expect(within(hero).getByText('4.8')).toBeVisible();
+    expect(within(hero).getByText('326 รีวิว')).toBeVisible();
+    expect(within(hero).getByText('กำลังรับออเดอร์')).toBeVisible();
+  });
+
+  it('falls back to the restaurant cover and hides ratings without directory data', async () => {
+    view('/shop/test-shop');
+    const hero = await screen.findByRole('region', { name: settings.name });
+    expect(hero.querySelector('img')).toHaveAttribute(
+      'src',
+      '/images/customer/cover-restaurant.webp',
+    );
+    expect(within(hero).queryByText(/รีวิว/)).toBeNull();
+  });
+
+  it('switches between menu, store info and review tabs', async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes('/products?'))
+        return response({ items: [product], total: 1, page: 1, page_size: 24 });
+      return response({
+        ...settings,
+        delivery_enabled: true,
+        shipping_fee: '20.00',
+      });
+    });
+    view('/shop/test-shop');
+    await screen.findByRole('heading', { name: 'กาแฟ' });
+    const tabs = within(
+      screen.getByRole('tablist', { name: 'ข้อมูลหน้าร้าน' }),
+    );
+    const menu = tabs.getByRole('tab', { name: 'เมนูอาหาร' });
+    expect(menu).toHaveAttribute('aria-selected', 'true');
+
+    fireEvent.click(tabs.getByRole('tab', { name: 'ข้อมูลร้าน' }));
+    const info = screen.getByRole('tabpanel', { name: 'ข้อมูลร้าน' });
+    expect(within(info).getByText(settings.contact_phone)).toBeVisible();
+    expect(within(info).getByText(settings.pickup_instructions)).toBeVisible();
+    expect(within(info).getByText('ค่าจัดส่ง ฿20.00')).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'กาแฟ' })).toBeNull();
+
+    fireEvent.click(tabs.getByRole('tab', { name: 'รีวิว' }));
+    const reviews = screen.getByRole('tabpanel', { name: 'รีวิว' });
+    // No directory rating data here, so only the honest source note shows.
+    expect(
+      within(reviews).getByText(
+        'คะแนนมาจากลูกค้าที่สั่งซื้อสำเร็จแล้วเท่านั้น',
+      ),
+    ).toBeVisible();
+
+    fireEvent.keyDown(tabs.getByRole('tab', { name: 'รีวิว' }), {
+      key: 'ArrowRight',
+    });
+    expect(menu).toHaveAttribute('aria-selected', 'true');
+    expect(menu).toHaveFocus();
+  });
+
+  it('claims "no reviews" only when the directory reports zero reviews', async () => {
+    // Directory unknown for this store: the tab must not assert anything.
+    view('/shop/test-shop');
+    await screen.findByRole('heading', { name: 'กาแฟ' });
+    fireEvent.click(screen.getByRole('tab', { name: 'รีวิว' }));
+    const unknown = screen.getByRole('tabpanel', { name: 'รีวิว' });
+    expect(within(unknown).queryByText('ยังไม่มีรีวิว')).toBeNull();
+  });
+
+  it('says "no reviews" when the directory reports none', async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === '/api/v1/storefronts')
+        return response([
+          {
+            slug: settings.slug,
+            name: settings.name,
+            accepting_orders: true,
+            average_rating: null,
+            review_count: 0,
+          },
+        ]);
+      if (url.includes('/products?'))
+        return response({ items: [product], total: 1, page: 1, page_size: 24 });
+      return response(settings);
+    });
+    view('/shop/test-shop');
+    await screen.findByRole('heading', { name: 'กาแฟ' });
+    fireEvent.click(screen.getByRole('tab', { name: 'รีวิว' }));
+    expect(
+      await within(screen.getByRole('tabpanel', { name: 'รีวิว' })).findByText(
+        'ยังไม่มีรีวิว',
+      ),
+    ).toBeVisible();
+  });
+
+  it('shows no delivery fee when the store does not deliver', async () => {
+    view('/shop/test-shop');
+    await screen.findByRole('heading', { name: 'กาแฟ' });
+    fireEvent.click(screen.getByRole('tab', { name: 'ข้อมูลร้าน' }));
+    const info = screen.getByRole('tabpanel', { name: 'ข้อมูลร้าน' });
+    expect(within(info).getByText('ไม่มีบริการจัดส่ง')).toBeVisible();
+    expect(within(info).queryByText(/ค่าจัดส่ง/)).toBeNull();
+  });
+
+  it('opens menu details from a card, adds to the cart and returns focus', async () => {
+    view('/shop/test-shop');
+    await screen.findByRole('heading', { name: 'กาแฟ' });
+    const opener = screen.getByRole('button', { name: 'ดูรายละเอียด กาแฟ' });
+    fireEvent.click(opener);
+    const dialog = within(screen.getByRole('dialog', { name: 'กาแฟ' }));
+    fireEvent.click(dialog.getByRole('button', { name: 'เพิ่มลงตะกร้า' }));
+    expect(
+      JSON.parse(localStorage.getItem('shop-cart:test-shop')!)[0].quantity,
+    ).toBe('1.000');
+    expect(
+      screen.getByRole('status', { name: 'ผลการเพิ่มสินค้า' }),
+    ).toHaveTextContent('เพิ่ม กาแฟ');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(opener).toHaveFocus();
+  });
+
+  it('filters menu categories from a chip row', async () => {
+    const category = '22222222-2222-4222-8222-222222222222';
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes('/products?'))
+        return response({
+          items: [{ ...product, category_id: category }],
+          total: 2,
+          page: 1,
+          page_size: 24,
+          categories: [{ id: category, name: 'เครื่องดื่ม', count: 2 }],
+        });
+      return response(settings);
+    });
+    view('/shop/test-shop');
+    await screen.findByRole('heading', { name: 'กาแฟ' });
+    const chips = within(screen.getByRole('group', { name: 'หมวดหมู่เมนู' }));
+    const drinks = await chips.findByRole('button', { name: 'เครื่องดื่ม 2' });
+    fireEvent.click(drinks);
+    expect(
+      await chips.findByRole('button', {
+        name: 'เครื่องดื่ม 2',
+        pressed: true,
+      }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole('button', { name: 'ปิดเมนูหมวดหมู่' }),
+    ).toBeNull();
+  });
 });
 
 it('toggles favorite on a product in grid and list view', async () => {

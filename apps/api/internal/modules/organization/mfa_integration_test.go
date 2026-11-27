@@ -256,6 +256,35 @@ func TestOwnerMFAIsolatedDatabase(t *testing.T) {
 			t.Fatal(err)
 		}
 		other := testsupport.EnrollMFA(t, ctx, auth, "owner-gate-foreign@example.test", "Synthetic-owner-gate-password-2026")
+		t.Run("store navigation contains only caller and deployment hints", func(t *testing.T) {
+			for _, tc := range []struct {
+				name, token, singleStore string
+				hasStore, canCreate      bool
+			}{
+				{"primary-only owner", primaryToken, "", true, false},
+				{"foreign account", other.Token, "", false, true},
+				{"matching single store", primaryToken, created.Organization.ID, true, false},
+				{"foreign single store", other.Token, created.Organization.ID, false, false},
+			} {
+				t.Run(tc.name, func(t *testing.T) {
+					router := chi.NewRouter()
+					limited := &organization.Service{Pool: pool, SingleStoreOrganizationID: tc.singleStore}
+					organization.Handler{Service: limited, Authentication: auth}.Routes(router)
+					request := httptest.NewRequest(http.MethodGet, "/organizations/store-status?user_id="+user, nil).WithContext(ctx)
+					request.AddCookie(&http.Cookie{Name: "smartpos_session", Value: tc.token})
+					response := httptest.NewRecorder()
+					router.ServeHTTP(response, request)
+					var body struct {
+						Data map[string]bool `json:"data"`
+					}
+					if decodeErr := json.Unmarshal(response.Body.Bytes(), &body); decodeErr != nil || response.Code != http.StatusOK ||
+						len(body.Data) != 2 || body.Data["has_store"] != tc.hasStore ||
+						body.Data["can_create_store"] != tc.canCreate || response.Header().Get("Cache-Control") != "no-store" {
+						t.Fatalf("unexpected store status: HTTP %d, %v", response.Code, decodeErr)
+					}
+				})
+			}
+		})
 		if listed, problem := service.List(other.Context, foreign); problem != nil || len(listed) != 0 {
 			t.Fatalf("foreign list must be empty: %v", problem)
 		}

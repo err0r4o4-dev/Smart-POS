@@ -57,36 +57,41 @@ func autoSlug(name string) string {
 }
 
 var phonePattern = regexp.MustCompile(`^[0-9+() .-]{3,30}$`)
+var coverImagePattern = regexp.MustCompile(`^/images/[A-Za-z0-9_-]+(/[A-Za-z0-9_-]+)*[.](webp|jpg|jpeg|png|avif)$`)
 
 type Settings struct {
-	DeliveryEnabled    bool   `json:"delivery_enabled"`
-	ShippingFee        string `json:"shipping_fee"`
-	Slug               string `json:"slug"`
-	Name               string `json:"name"`
-	Description        string `json:"description"`
-	ContactPhone       string `json:"contact_phone"`
-	PickupInstructions string `json:"pickup_instructions"`
-	TerminalID         string `json:"terminal_id,omitempty"`
-	OnlineTerminalID   string `json:"online_terminal_id,omitempty"`
-	Published          bool   `json:"published"`
-	AcceptingOrders    bool   `json:"accepting_orders"`
-	Revision           int64  `json:"revision"`
-	BranchID           string `json:"branch_id,omitempty"`
-	LocationID         string `json:"stock_location_id,omitempty"`
+	CoverImageURL      string   `json:"cover_image_url,omitempty"`
+	CategoryCodes      []string `json:"category_codes"`
+	DeliveryEnabled    bool     `json:"delivery_enabled"`
+	ShippingFee        string   `json:"shipping_fee"`
+	Slug               string   `json:"slug"`
+	Name               string   `json:"name"`
+	Description        string   `json:"description"`
+	ContactPhone       string   `json:"contact_phone"`
+	PickupInstructions string   `json:"pickup_instructions"`
+	TerminalID         string   `json:"terminal_id,omitempty"`
+	OnlineTerminalID   string   `json:"online_terminal_id,omitempty"`
+	Published          bool     `json:"published"`
+	AcceptingOrders    bool     `json:"accepting_orders"`
+	Revision           int64    `json:"revision"`
+	BranchID           string   `json:"branch_id,omitempty"`
+	LocationID         string   `json:"stock_location_id,omitempty"`
 }
 type SettingsInput struct {
-	DeliveryEnabled    bool   `json:"delivery_enabled"`
-	ShippingFee        string `json:"shipping_fee"`
-	Slug               string `json:"slug"`
-	Name               string `json:"name"`
-	Description        string `json:"description"`
-	ContactPhone       string `json:"contact_phone"`
-	PickupInstructions string `json:"pickup_instructions"`
-	TerminalID         string `json:"terminal_id"`
-	OnlineTerminalID   string `json:"online_terminal_id"`
-	Published          bool   `json:"published"`
-	AcceptingOrders    bool   `json:"accepting_orders"`
-	Revision           int64  `json:"revision"`
+	CoverImageURL      *string  `json:"cover_image_url,omitempty"`
+	CategoryCodes      []string `json:"category_codes"`
+	DeliveryEnabled    bool     `json:"delivery_enabled"`
+	ShippingFee        string   `json:"shipping_fee"`
+	Slug               string   `json:"slug"`
+	Name               string   `json:"name"`
+	Description        string   `json:"description"`
+	ContactPhone       string   `json:"contact_phone"`
+	PickupInstructions string   `json:"pickup_instructions"`
+	TerminalID         string   `json:"terminal_id"`
+	OnlineTerminalID   string   `json:"online_terminal_id"`
+	Published          bool     `json:"published"`
+	AcceptingOrders    bool     `json:"accepting_orders"`
+	Revision           int64    `json:"revision"`
 }
 type Product struct {
 	VariantID   string  `json:"variant_id"`
@@ -154,34 +159,36 @@ type Event struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 type Order struct {
-	StockPolicy        string    `json:"stock_policy"`
-	Fulfillment        string    `json:"fulfillment"`
-	TableCode          string    `json:"table_code,omitempty"`
-	DeliveryAddress    string    `json:"delivery_address,omitempty"`
-	ShippingFee        string    `json:"shipping_fee"`
-	Subtotal           string    `json:"subtotal"`
-	ID                 string    `json:"id"`
-	Number             string    `json:"number"`
-	Status             string    `json:"status"`
-	PaymentStatus      string    `json:"payment_status"`
-	CustomerName       string    `json:"customer_name,omitempty"`
-	ContactPhone       string    `json:"contact_phone,omitempty"`
-	CustomerNote       string    `json:"customer_note,omitempty"`
-	StoreName          string    `json:"store_name"`
-	StorePhone         string    `json:"store_phone"`
-	PickupInstructions string    `json:"pickup_instructions"`
-	EstimatedTotal     string    `json:"estimated_total"`
-	FinalTotal         *string   `json:"final_total"`
-	ReceiptNumber      *string   `json:"receipt_number"`
-	BranchID           string    `json:"branch_id,omitempty"`
-	TerminalID         string    `json:"terminal_id,omitempty"`
-	CartID             *string   `json:"cart_id,omitempty"`
-	SaleID             *string   `json:"sale_id,omitempty"`
-	Revision           int64     `json:"revision"`
-	CreatedAt          time.Time `json:"created_at"`
-	ExpiresAt          time.Time `json:"expires_at"`
-	Items              []Line    `json:"items"`
-	Events             []Event   `json:"events"`
+	StockPolicy        string          `json:"stock_policy"`
+	Fulfillment        string          `json:"fulfillment"`
+	TableCode          string          `json:"table_code,omitempty"`
+	DeliveryAddress    string          `json:"delivery_address,omitempty"`
+	ShippingFee        string          `json:"shipping_fee"`
+	Subtotal           string          `json:"subtotal"`
+	ID                 string          `json:"id"`
+	Number             string          `json:"number"`
+	Status             string          `json:"status"`
+	PaymentStatus      string          `json:"payment_status"`
+	CustomerName       string          `json:"customer_name,omitempty"`
+	ContactPhone       string          `json:"contact_phone,omitempty"`
+	CustomerNote       string          `json:"customer_note,omitempty"`
+	StoreName          string          `json:"store_name"`
+	StorePhone         string          `json:"store_phone"`
+	PickupInstructions string          `json:"pickup_instructions"`
+	EstimatedTotal     string          `json:"estimated_total"`
+	FinalTotal         *string         `json:"final_total"`
+	ReceiptNumber      *string         `json:"receipt_number"`
+	BranchID           string          `json:"branch_id,omitempty"`
+	TerminalID         string          `json:"terminal_id,omitempty"`
+	CartID             *string         `json:"cart_id,omitempty"`
+	SaleID             *string         `json:"sale_id,omitempty"`
+	Revision           int64           `json:"revision"`
+	CreatedAt          time.Time       `json:"created_at"`
+	ExpiresAt          time.Time       `json:"expires_at"`
+	Items              []Line          `json:"items"`
+	Events             []Event         `json:"events"`
+	ReviewEligible     bool            `json:"review_eligible,omitempty"`
+	Review             *CustomerReview `json:"review,omitempty"`
 }
 
 type TrackingInput struct {
@@ -228,6 +235,12 @@ func normalizeItems(items []ItemInput) error {
 	return nil
 }
 func (input *SettingsInput) validate() error {
+	if path := input.CoverImageURL; path != nil && *path != "" && (len(*path) > 300 || !coverImagePattern.MatchString(*path)) {
+		return ErrInput
+	}
+	if err := validateFoodCategories(input.CategoryCodes); err != nil {
+		return err
+	}
 	if input.ShippingFee == "" {
 		input.ShippingFee = "0.00"
 	}

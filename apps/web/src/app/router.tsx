@@ -2,6 +2,8 @@ import { Suspense, useEffect } from 'react';
 import {
   LandingPage,
   StorefrontPage,
+  AreasPage,
+  AreaDetailPage,
   ShopCartPage,
   ShopTrackingPage,
   PaymentSandboxPage,
@@ -34,11 +36,13 @@ import {
   MFASettingsPage,
 } from './route-pages';
 import { OrganizationGate } from '../features/organization/OrganizationGate';
+import { GoogleReturn } from '../features/auth/GoogleReturn';
+import { PublicAccountPage } from '../features/auth/PublicAccountPage';
 import { PageError, RouteLoading } from '../components/feedback/PageError';
 import {
   createBrowserRouter,
   Navigate,
-  Outlet,
+  ScrollRestoration,
   useLocation,
   useParams,
   type RouteObject,
@@ -88,20 +92,32 @@ const routes: RouteObject[] = [
       <>
         <LandingPage />
         <ScrollToPublicSection id="for-merchants" />
+        <ScrollToPublicSection id="landing-categories" />
       </>
     ),
   },
   { path: paths.faq, element: <FaqPage /> },
   {
-    path: paths.shop,
-    element: <StorefrontLayout />,
+    element: (
+      <>
+        <StorefrontLayout />
+        <ScrollRestoration />
+      </>
+    ),
     children: [
-      { index: true, element: <StorefrontPage /> },
-      { path: ':slug', element: <StorefrontPage /> },
-      { path: ':slug/cart', element: <ShopCartPage /> },
-      { path: ':slug/checkout', element: <ShopCartPage /> },
-      { path: ':slug/orders/:orderId', element: <ShopTrackingPage /> },
-      { path: ':slug/track/:orderId', element: <CustomerOrderRedirect /> },
+      {
+        path: paths.shop,
+        children: [
+          { index: true, element: <StorefrontPage /> },
+          { path: ':slug', element: <StorefrontPage /> },
+          { path: ':slug/cart', element: <ShopCartPage /> },
+          { path: ':slug/checkout', element: <ShopCartPage /> },
+          { path: ':slug/orders/:orderId', element: <ShopTrackingPage /> },
+          { path: ':slug/track/:orderId', element: <CustomerOrderRedirect /> },
+        ],
+      },
+      { path: paths.areas, element: <AreasPage /> },
+      { path: `${paths.areas}/:areaId`, element: <AreaDetailPage /> },
     ],
   },
   { path: '/sales/voids', element: <SystemPage /> },
@@ -279,7 +295,10 @@ const routes: RouteObject[] = [
   { path: paths.login, element: <LoginPage /> },
   {
     element: <RequireSession />,
-    children: [{ path: paths.security, element: <MFASettingsPage /> }],
+    children: [
+      { path: paths.account, element: <PublicAccountPage /> },
+      { path: paths.security, element: <MFASettingsPage /> },
+    ],
   },
   { path: paths.register, element: <RegisterPage /> },
   { path: paths.verifyEmail, element: <EmailVerificationPage /> },
@@ -294,7 +313,7 @@ export const router = createBrowserRouter([
   {
     element: (
       <Suspense fallback={<RouteLoading />}>
-        <Outlet />
+        <GoogleReturn />
       </Suspense>
     ),
     errorElement: <PageError />,

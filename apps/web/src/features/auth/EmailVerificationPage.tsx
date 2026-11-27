@@ -1,16 +1,19 @@
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../app/AuthProvider';
 import { useLanguage } from '../../app/language';
 import { paths } from '../../app/routes';
 import { Button, ErrorState, Loading } from '../../components/ui/primitives';
 import { LoginLayout } from '../../layouts/LoginLayout';
 import { ResendVerification } from './VerificationFlow';
+import { authLink, safeReturnTo } from './auth-destination';
 
 export function EmailVerificationPage() {
   const { state, refresh } = useAuth();
   const { t } = useLanguage();
+  const [params] = useSearchParams();
+  const destination = safeReturnTo(params.get('returnTo'));
   if (state.session?.user.email_verified === true)
-    return <Navigate to={paths.workspace} replace />;
+    return <Navigate to={destination} replace />;
   return (
     <LoginLayout titleId="verification-required-title" story="verify">
       <div className="auth-header-card">
@@ -38,7 +41,9 @@ export function EmailVerificationPage() {
         </>
       )}
       <div className="auth-links auth-links-single">
-        <Link to="/login?returnTo=%2Fsetup">{t('auth.backToSignIn')}</Link>
+        <Link to={authLink(paths.login, destination)}>
+          {t('auth.backToSignIn')}
+        </Link>
       </div>
     </LoginLayout>
   );

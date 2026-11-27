@@ -1029,13 +1029,17 @@ ul {
 .mobile-menu {
   display: none;
 }
-.content {
+.content,
+.footer {
   max-width: var(--layout-container-max);
-  margin: 0 auto;
+  margin-inline: auto;
   width: 100%;
-  flex: 1;
   min-width: 0;
-  padding: var(--space-8) var(--layout-gutter);
+  padding-inline: var(--layout-gutter);
+}
+.content {
+  flex: 1;
+  padding-block: var(--space-8);
 }
 .page-heading {
   display: flex;
@@ -1402,8 +1406,7 @@ ul {
   font-size: 11px;
 }
 .footer {
-  padding: var(--space-5) var(--layout-shell-end) var(--space-5)
-    var(--layout-shell-start);
+  padding-block: var(--space-5);
   border-top: 1px solid var(--border);
   display: flex;
   flex-wrap: wrap;

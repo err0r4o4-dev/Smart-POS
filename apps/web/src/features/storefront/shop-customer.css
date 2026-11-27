@@ -175,7 +175,6 @@
   color: var(--primary-strong);
 }
 
-.shop-store-shell .catalog-sidebar,
 .shop-store-shell .catalog-products .catalog-product {
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
@@ -364,6 +363,26 @@
 
 .shop-tracking-card .shop-timeline {
   margin-bottom: 24px;
+}
+
+.shop-review-panel {
+  display: grid;
+  gap: 8px;
+  padding-block: 12px;
+  border-block: 1px solid var(--border);
+}
+.shop-review-panel form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+.shop-review-panel label {
+  display: grid;
+  gap: 4px;
+}
+.shop-review-panel select {
+  min-height: 44px;
 }
 
 .shop-payment-panel {

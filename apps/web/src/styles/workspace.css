@@ -30,6 +30,17 @@
   flex-shrink: 0;
   gap: var(--header-actions-gap);
 }
+.workspace-context-switchers.tenant-switchers {
+  grid-template-columns: minmax(0, 1fr);
+  margin: 0 0 12px;
+  padding: 10px;
+  box-shadow: none;
+}
+
+.workspace-context-switchers.tenant-switchers select {
+  min-height: 44px;
+}
+
 .mobile-workspace-links {
   display: flex;
   flex-wrap: wrap;

@@ -1,5 +1,6 @@
 ﻿import { useState, useMemo } from 'react';
 import { useLanguage } from '../../app/language';
+import { useLocation } from 'react-router-dom';
 import type { TranslationKey } from '../../i18n';
 import {
   ArrowRight,
@@ -17,6 +18,7 @@ import {
   X,
 } from 'lucide-react';
 import { StandardPageHeader } from '../../components/ui/StandardPage';
+import { merchantGuide } from './help-content';
 import { FaqList } from './FaqList';
 import { faqs, type CategoryKey } from './faq-content';
 import './help.css';
@@ -33,8 +35,18 @@ interface GuideItem {
 
 export function HelpPage() {
   const { t } = useLanguage();
+  const { hash } = useLocation();
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<CategoryKey>('all');
+  const [openFaqs, setOpenFaqs] = useState<Record<string, boolean>>({});
+
+  const toggleFaq = (id: string) => {
+    setOpenFaqs((prev) => ({
+      ...prev,
+      [id]: !(prev[id] ?? hash === `#${id}`),
+    }));
+  };
+
   const categories: { key: CategoryKey; label: string }[] = useMemo(
     () => [
       { key: 'all', label: t('help.categoryAll') },
@@ -54,7 +66,7 @@ export function HelpPage() {
         category: 'getting-started',
         icon: Store,
         titleKey: 'help.setupTitle',
-        bodyKey: 'help.setupBody',
+        bodyKey: merchantGuide.setup.body,
         steps: ['help.setupStep1', 'help.setupStep2'],
       },
       {
@@ -62,9 +74,9 @@ export function HelpPage() {
         category: 'kitchen',
         icon: CookingPot,
         titleKey: 'help.ordersTitle',
-        bodyKey: 'help.ordersBody',
+        bodyKey: merchantGuide.orders.body,
         secondaryBodyKey: 'help.statusBody',
-        steps: ['help.kitchenStep1', 'help.kitchenStep2'],
+        steps: merchantGuide.orders.steps,
       },
       {
         id: 'pos',
@@ -79,16 +91,52 @@ export function HelpPage() {
         category: 'menu',
         icon: Utensils,
         titleKey: 'help.menuTitle',
-        bodyKey: 'help.menuBody',
-        steps: ['help.menuStep1', 'help.menuStep2'],
+        bodyKey: merchantGuide.menu.body,
+        steps: merchantGuide.menu.steps,
       },
       {
         id: 'tracking',
         category: 'faq',
         icon: BookOpen,
         titleKey: 'help.trackingTitle',
-        bodyKey: 'help.trackingBody',
+        bodyKey: merchantGuide.tracking.body,
         secondaryBodyKey: 'help.recoveryBody',
+      },
+    ],
+    [],
+  );
+
+  const faqs: FaqItem[] = useMemo(
+    () => [
+      {
+        id: 'faq-kitchen',
+        category: 'kitchen',
+        questionKey: 'help.faqKitchenQueueQ',
+        answerKey: merchantGuide.kitchen.body,
+      },
+      {
+        id: 'faq-permission',
+        category: 'getting-started',
+        questionKey: 'help.faqPermissionQ',
+        answerKey: 'help.faqPermissionA',
+      },
+      {
+        id: 'faq-shift',
+        category: 'pos',
+        questionKey: 'help.faqShiftQ',
+        answerKey: 'help.faqShiftA',
+      },
+      {
+        id: 'faq-offline',
+        category: 'faq',
+        questionKey: 'help.faqOfflineQ',
+        answerKey: merchantGuide.offline.body,
+      },
+      {
+        id: 'faq-online-order',
+        category: 'menu',
+        questionKey: 'help.faqOnlineOrderQ',
+        answerKey: 'help.faqOnlineOrderA',
       },
     ],
     [],
@@ -269,7 +317,7 @@ export function HelpPage() {
           {filteredGuides.map((guide) => {
             const Icon = guide.icon;
             return (
-              <article key={guide.id} className="help-guide-card card">
+              <article id={guide.id} key={guide.id} className="help-guide-card card">
                 <div className="help-guide-card-icon" aria-hidden="true">
                   <Icon size={24} className="help-icon" />
                 </div>
@@ -297,7 +345,51 @@ export function HelpPage() {
         </div>
       )}
 
-      <FaqList items={filteredFaqs} showHeading />
+      {/* FAQs Section */}
+      {filteredFaqs.length > 0 && (
+        <section className="help-faq-section" aria-labelledby="help-faq-title">
+          <h2 id="help-faq-title" className="help-section-title">
+            <HelpCircle size={20} className="help-icon" aria-hidden="true" />
+            {t('help.faqSectionTitle')}
+          </h2>
+          <div className="help-faq-list">
+            {filteredFaqs.map((faq) => {
+              const isOpen = openFaqs[faq.id] ?? hash === `#${faq.id}`;
+              return (
+                <div
+                  id={faq.id}
+                  key={faq.id}
+                  className={`help-faq-item ${isOpen ? 'open' : ''}`}
+                >
+                  <button
+                    type="button"
+                    className="help-faq-trigger"
+                    aria-expanded={isOpen}
+                    aria-controls={`${faq.id}-answer`}
+                    onClick={() => toggleFaq(faq.id)}
+                  >
+                    <span>{t(faq.questionKey)}</span>
+                    <ChevronDown
+                      size={18}
+                      className="help-faq-chevron"
+                      aria-hidden="true"
+                    />
+                  </button>
+                  {isOpen && (
+                    <div
+                      id={`${faq.id}-answer`}
+                      className="help-faq-answer"
+                      role="region"
+                    >
+                      <p>{t(faq.answerKey)}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Empty State when search returns 0 */}
       {totalResultsCount === 0 && (
@@ -327,6 +419,11 @@ export function HelpPage() {
             <p>{t('help.supportDescription')}</p>
             <p style={{ marginTop: 4, color: 'var(--text-tertiary)' }}>
               {t('help.supportContact')}
+            </p>
+            <p>
+              <a className="underline" href="/images/home/photo-credits.html">
+                {t('landing.photoCredits')}
+              </a>
             </p>
           </div>
         </div>

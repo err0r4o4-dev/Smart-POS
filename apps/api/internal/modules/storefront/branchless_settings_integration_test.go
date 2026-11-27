@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -15,7 +16,7 @@ import (
 func verifyBranchlessSettings(testContext *testing.T, ctx, guestCtx context.Context, organizations *organization.Service, owner, guest, org string) {
 	testContext.Helper()
 	service := &storefront.Service{Organization: organizations}
-	input := storefront.SettingsInput{Name: "Restaurant draft", ShippingFee: "12.35", DeliveryEnabled: true}
+	input := storefront.SettingsInput{Name: "Restaurant draft", ShippingFee: "12.35", DeliveryEnabled: true, CategoryCodes: []string{"noodles", "drinks"}}
 	type outcome struct {
 		settings storefront.Settings
 		err      error
@@ -44,7 +45,7 @@ func verifyBranchlessSettings(testContext *testing.T, ctx, guestCtx context.Cont
 		testContext.Fatalf("draft identity/revision/price/concurrency mismatch: successes=%d conflicts=%d settings=%+v", successes, conflicts, saved)
 	}
 	read, err := service.Settings(ctx, owner, org)
-	if err != nil || read == nil || *read != saved {
+	if err != nil || read == nil || !reflect.DeepEqual(*read, saved) {
 		testContext.Fatalf("draft read mismatch: %v", err)
 	}
 	if _, err = service.PublicSettings(ctx, saved.Slug); !errors.Is(err, storefront.ErrNotFound) {
@@ -67,14 +68,15 @@ func verifyBranchlessSettings(testContext *testing.T, ctx, guestCtx context.Cont
 	if _, err = service.SaveSettings(ctx, owner, org, input); !errors.Is(err, storefront.ErrConflict) {
 		testContext.Fatalf("stale draft revision accepted: %v", err)
 	}
-	input.Revision, input.ShippingFee = saved.Revision, "13.37"
+	input.Revision, input.ShippingFee, input.CategoryCodes = saved.Revision, "13.37", nil
 	updated, err := service.SaveSettings(ctx, owner, org, input)
-	if err != nil || updated.Revision != 2 || updated.Slug != saved.Slug || updated.ShippingFee != "13.37" {
+	if err != nil || updated.Revision != 2 || updated.Slug != saved.Slug || updated.ShippingFee != "13.37" || !reflect.DeepEqual(updated.CategoryCodes, []string{"noodles", "drinks"}) {
 		testContext.Fatalf("draft revision update failed: %v", err)
 	}
 	if _, err = service.Settings(guestCtx, guest, org); !errors.Is(err, organization.ErrDenied) && !errors.Is(err, organization.ErrNotFound) {
 		testContext.Fatalf("non-owner read draft: %v", err)
 	}
+	input.Revision, input.CategoryCodes = updated.Revision, []string{"desserts"}
 	if _, err = service.SaveSettings(guestCtx, guest, org, input); !errors.Is(err, organization.ErrDenied) && !errors.Is(err, organization.ErrNotFound) {
 		testContext.Fatalf("non-owner changed draft: %v", err)
 	}
@@ -107,6 +109,10 @@ func verifyBranchlessSettings(testContext *testing.T, ctx, guestCtx context.Cont
 	 FROM storefronts WHERE organization_id=$1`, org).Scan(&kind, &reference, &branches, &stock, &terminals, &audits)
 	if err != nil || kind != "RESTAURANT" || reference != org || branches != 0 || stock != 0 || terminals != 0 || audits != 2 {
 		testContext.Fatalf("draft persistence/audit/infrastructure invariant failed: %v", err)
+	}
+	var storedCodes []string
+	if err = tx.QueryRow(ctx, "SELECT category_codes FROM storefronts WHERE organization_id=$1", org).Scan(&storedCodes); err != nil || !reflect.DeepEqual(storedCodes, []string{"noodles", "drinks"}) {
+		testContext.Fatalf("denied category update changed the storefront: %v", err)
 	}
 	for name, statement := range map[string]string{
 		"publish":           "UPDATE storefronts SET published=true WHERE organization_id=$1",

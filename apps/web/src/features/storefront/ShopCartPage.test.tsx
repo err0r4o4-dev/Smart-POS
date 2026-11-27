@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, expect, it, vi } from 'vitest';
@@ -114,9 +114,70 @@ it('keeps meaningful variants and quantity controls available', async () => {
 it('hides table selection for takeaway carts', async () => {
   view();
   expect(
-    await screen.findByRole('button', { name: 'ซื้อกลับบ้าน' }),
+    await screen.findByRole('button', { name: 'รับที่ร้าน' }),
   ).toHaveAttribute('aria-pressed', 'true');
   expect(screen.queryByLabelText('โต๊ะ')).not.toBeInTheDocument();
+});
+
+it('titles the cart with the store name and a way back to add more', async () => {
+  request.mockImplementation(async (path: string) =>
+    path.endsWith('/quote')
+      ? { quote_id: 'quote', items: [], estimated_total: '10.00' }
+      : { name: 'กะเพราพี่ต้น', accepting_orders: true },
+  );
+  const token = 'b'.repeat(64);
+  view(`?table=${token}`);
+  expect(
+    screen.getByRole('heading', { level: 1, name: 'ตะกร้าของคุณ' }),
+  ).toBeVisible();
+  expect(await screen.findByText('กะเพราพี่ต้น')).toBeVisible();
+  expect(
+    screen.getByRole('link', { name: '+ เพิ่มเมนูจากร้านนี้' }),
+  ).toHaveAttribute('href', `/shop/test-shop?table=${token}`);
+});
+
+it('offers fulfillment as labelled option cards that follow the table and delivery rules', async () => {
+  view();
+  const group = within(
+    await screen.findByRole('group', { name: 'วิธีรับอาหาร' }),
+  );
+  expect(group.getByRole('button', { name: 'รับที่ร้าน' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  const dineIn = group.getByRole('button', { name: 'ทานที่ร้าน' });
+  expect(dineIn).toBeDisabled();
+  expect(dineIn).toHaveAccessibleDescription(
+    'สแกน QR ที่โต๊ะเพื่อเลือกทานที่ร้าน',
+  );
+  expect(await group.findByRole('button', { name: 'จัดส่ง' })).toBeEnabled();
+});
+
+it('locks a table QR cart to dine-in and hides delivery', async () => {
+  view(`?table=${'a'.repeat(64)}`);
+  const group = within(
+    await screen.findByRole('group', { name: 'วิธีรับอาหาร' }),
+  );
+  expect(group.getByRole('button', { name: 'ทานที่ร้าน' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  expect(group.getByRole('button', { name: 'รับที่ร้าน' })).toBeDisabled();
+  await screen.findByRole('button', { name: 'ตรวจสอบรายการและยอดล่าสุด' });
+  expect(group.queryByRole('button', { name: 'จัดส่ง' })).toBeNull();
+});
+
+it('hides delivery when the store does not deliver', async () => {
+  request.mockImplementation(async () => ({
+    accepting_orders: true,
+    delivery_enabled: false,
+  }));
+  view();
+  const group = within(
+    await screen.findByRole('group', { name: 'วิธีรับอาหาร' }),
+  );
+  await waitFor(() => expect(request).toHaveBeenCalled());
+  expect(group.queryByRole('button', { name: 'จัดส่ง' })).toBeNull();
 });
 
 it('navigates to checkout and allows returning to cart', async () => {
@@ -143,7 +204,7 @@ it('navigates to checkout and allows returning to cart', async () => {
   );
   fireEvent.click(screen.getAllByRole('button', { name: 'กลับไปตะกร้า' })[0]);
   expect(
-    screen.getByRole('heading', { level: 1, name: 'ตะกร้าสินค้า' }),
+    screen.getByRole('heading', { level: 1, name: 'ตะกร้าของคุณ' }),
   ).toBeVisible();
 });
 
@@ -277,13 +338,14 @@ it('shows delivery fee copy without the pickup-only disclaimer', async () => {
 
 it('requires a QR token for dine-in and never submits an example table', async () => {
   view();
-  fireEvent.click(screen.getByRole('button', { name: 'ทานที่ร้าน' }));
-  const review = await screen.findByRole('button', {
-    name: 'ตรวจสอบรายการและยอดล่าสุด',
-  });
-  expect(review).toBeDisabled();
+  const dineIn = screen.getByRole('button', { name: 'ทานที่ร้าน' });
+  expect(dineIn).toBeDisabled();
+  fireEvent.click(dineIn);
+  expect(dineIn).toHaveAttribute('aria-pressed', 'false');
   expect(request).not.toHaveBeenCalledWith(
     '/test-shop/quote',
-    expect.anything(),
+    expect.objectContaining({
+      body: expect.objectContaining({ table_token: expect.anything() }),
+    }),
   );
 });

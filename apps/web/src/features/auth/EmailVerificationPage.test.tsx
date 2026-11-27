@@ -29,7 +29,7 @@ function page() {
       <AuthProvider>
         <Routes>
           <Route path="/verify-email" element={<EmailVerificationPage />} />
-          <Route path="/workspace" element={<h1>Verified workspace</h1>} />
+          <Route path="/" element={<h1>Public home</h1>} />
         </Routes>
       </AuthProvider>
     </MemoryRouter>,
@@ -47,7 +47,7 @@ it('shows the signed-in email and checks again after verification in another tab
   });
   fireEvent.click(screen.getByRole('button', { name: /check again/i }));
   expect(
-    await screen.findByRole('heading', { name: 'Verified workspace' }),
+    await screen.findByRole('heading', { name: 'Public home' }),
   ).toBeVisible();
 });
 
@@ -61,7 +61,7 @@ it('offers session retry instead of falsely claiming verification after a lookup
   expect(await screen.findByLabelText('Email address')).toHaveValue(
     'person@example.test',
   );
-  expect(screen.queryByText('Verified workspace')).not.toBeInTheDocument();
+  expect(screen.queryByText('Public home')).not.toBeInTheDocument();
 });
 
 it('allows anonymous users to request a link without exposing or inventing a session', async () => {
@@ -70,7 +70,7 @@ it('allows anonymous users to request a link without exposing or inventing a ses
   expect(await screen.findByLabelText('Email address')).toHaveValue('');
   expect(screen.getByRole('link', { name: 'Back to sign in' })).toHaveAttribute(
     'href',
-    '/login?returnTo=%2Fsetup',
+    '/login',
   );
   expect(
     screen.queryByRole('button', { name: /check again/i }),

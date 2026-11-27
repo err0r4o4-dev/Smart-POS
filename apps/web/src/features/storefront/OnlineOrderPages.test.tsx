@@ -112,6 +112,8 @@ it('allows initial store setup when settings do not exist', async () => {
   fireEvent.change(screen.getByLabelText(/เครื่องขาย \/ สาขา/), {
     target: { value: 'terminal' },
   });
+  fireEvent.click(screen.getByRole('checkbox', { name: 'ก๋วยเตี๋ยว' }));
+  fireEvent.click(screen.getByRole('checkbox', { name: 'เครื่องดื่ม' }));
   fireEvent.click(save);
   await waitFor(() =>
     expect(mocks.request).toHaveBeenCalledWith(
@@ -123,6 +125,7 @@ it('allows initial store setup when settings do not exist', async () => {
         body: expect.objectContaining({
           slug: 'test-shop',
           terminal_id: 'terminal',
+          category_codes: ['noodles', 'drinks'],
           revision: 0,
         }),
       }),
@@ -151,6 +154,38 @@ it('allows an empty slug so the server can generate it', async () => {
       expect.objectContaining({
         method: 'PUT',
         body: expect.objectContaining({ slug: '' }),
+      }),
+    ),
+  );
+});
+
+it('loads categories and can clear them without publishing a restaurant draft', async () => {
+  mocks.request.mockImplementation(async (_org: string, path: string) =>
+    path.startsWith('/pos/terminals') || path.startsWith('/storefront/products')
+      ? { items: [] }
+      : {
+          slug: 'draft',
+          name: 'Draft',
+          revision: 2,
+          category_codes: ['noodles'],
+        },
+  );
+  view(true);
+  const noodles = await screen.findByRole('checkbox', { name: 'ก๋วยเตี๋ยว' });
+  expect(noodles).toBeChecked();
+  fireEvent.click(noodles);
+  fireEvent.click(screen.getByRole('button', { name: 'บันทึกการตั้งค่า' }));
+  await waitFor(() =>
+    expect(mocks.request).toHaveBeenCalledWith(
+      'org',
+      '/storefront',
+      expect.objectContaining({
+        method: 'PUT',
+        body: expect.objectContaining({
+          category_codes: [],
+          published: false,
+          revision: 2,
+        }),
       }),
     ),
   );

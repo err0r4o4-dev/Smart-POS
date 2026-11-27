@@ -268,7 +268,7 @@ test('public shop remains available without a session (mock API)', async ({
 }, testInfo) => {
   await mockAPI(page, null);
   await page.goto('/shop');
-  await page.getByRole('link', { name: 'ดูหน้าร้าน', exact: true }).click();
+  await page.getByRole('link', { name: 'ร้านทดสอบ', exact: true }).click();
   await expect(page).toHaveURL(/\/shop\/fixture$/);
   await expect(
     page.getByRole('searchbox', { name: 'ค้นหาสินค้า', exact: true }),
@@ -290,5 +290,7 @@ test('public shop remains available without a session (mock API)', async ({
     order_id: 'order',
     access_token: 'a'.repeat(64),
   });
-  await expect(page.getByText('WEB-FIXTURE')).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'WEB-FIXTURE', exact: true }),
+  ).toBeVisible();
 });

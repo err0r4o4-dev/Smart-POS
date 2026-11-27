@@ -7,22 +7,24 @@ import { LandingPage } from './LandingPage';
 
 const mocks = vi.hoisted(() => ({ status: 'anonymous' }));
 const fetchMock = vi.fn();
+const mockSession = { user: { id: 'test-customer', display_name: 'Test Customer', email_verified: true } };
 const shops = [
   {
     slug: 'krapao',
     name: 'ครัวกะเพรา',
     accepting_orders: true,
-    business_type: 'RESTAURANT',
+    category_codes: ['noodles'],
   },
   {
     slug: 'tea',
     name: 'ร้านชาริมคลอง',
     accepting_orders: false,
-    business_type: 'CAFE',
+    category_codes: ['drinks'],
   },
 ];
 vi.mock('../../app/AuthProvider', () => ({
-  useAuth: () => ({ state: { status: mocks.status } }),
+  useAuth: () => ({ state: { status: mocks.status, session: mocks.status === 'authenticated' ? mockSession : null }, refresh: vi.fn() }),
+  useOptionalAuth: () => ({ state: { status: mocks.status, session: mocks.status === 'authenticated' ? mockSession : null }, signOut: vi.fn() }),
 }));
 
 function LocationProbe() {
@@ -60,7 +62,34 @@ beforeEach(() => {
 
 afterEach(() => vi.unstubAllGlobals());
 
-it('presents the mockup sections with the unchanged header destinations', () => {
+it('shows a directory rating, distinguishes zero reviews, and omits unavailable scores', async () => {
+  fetchMock.mockResolvedValueOnce({
+    ok: true,
+    json: async () => ({
+      data: [
+        {
+          ...shops[0],
+          average_rating: 4.8,
+          review_count: 126,
+          delivery_enabled: true,
+        },
+        { ...shops[1], average_rating: null, review_count: 0 },
+        { ...shops[1], name: 'ร้านไม่มีข้อมูลคะแนน', slug: 'unavailable' },
+      ],
+    }),
+  });
+  renderLanding();
+  const cards = within(
+    await screen.findByRole('list', { name: 'ร้านแนะนำ' }),
+  ).getAllByRole('article');
+  expect(within(cards[0]).getByText('4.8 / 5')).toBeVisible();
+  expect(within(cards[0]).getByText('126 รีวิว')).toBeVisible();
+  expect(within(cards[0]).getByText('มีจัดส่ง')).toBeVisible();
+  expect(within(cards[1]).getByText('ยังไม่มีรีวิว')).toBeVisible();
+  expect(within(cards[2]).queryByText(/รีวิว|\/ 5/)).not.toBeInTheDocument();
+});
+
+it('links directly to sign-in and keeps the full directory link outside the hero', () => {
   renderLanding();
   expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
     'ค้นหาร้านอาหารในชุมชนของคุณ',
@@ -70,17 +99,27 @@ it('presents the mockup sections with the unchanged header destinations', () => 
       .getByRole('banner')
       .querySelector('.landing-desktop-navigation') as HTMLElement,
   );
-  expect(nav.getByRole('link', { name: 'หน้าหลัก' })).toHaveAttribute(
-    'href',
-    '/',
-  );
-  expect(nav.getByRole('link', { name: 'สำรวจร้าน' })).toHaveAttribute(
-    'href',
-    '/shop',
-  );
-  expect(nav.getByRole('link', { name: 'เข้าสู่ระบบ' })).toHaveAttribute(
+  for (const name of ['หน้าหลัก', 'สำรวจร้าน'])
+    expect(nav.queryByRole('link', { name })).not.toBeInTheDocument();
+  expect(within(screen.getByRole('banner')).getByRole('link', { name: 'เข้าสู่ระบบ' })).toHaveAttribute(
     'href',
     '/login',
+  );
+  expect(nav.queryByRole('link', { name: 'สำหรับร้านค้า' })).toBeNull();
+  const merchant = within(
+    screen.getByRole('region', { name: 'มีร้านอาหารเป็นของตัวเอง?' }),
+  );
+  expect(
+    merchant.getByRole('link', { name: 'เริ่มร้านค้า' }),
+  ).toHaveAttribute('href', '/setup');
+  const hero = within(
+    screen.getByRole('region', { name: 'ค้นหาร้านอาหารในชุมชนของคุณ' }),
+  );
+  expect(hero.queryByRole('link', { name: 'ดูร้านทั้งหมด' })).toBeNull();
+  const categories = within(screen.getByRole('region', { name: 'ประเภทอาหาร' }));
+  expect(categories.getByRole('link', { name: 'ดูร้านทั้งหมด' })).toHaveAttribute(
+    'href',
+    '/shop',
   );
   expect(nav.getByRole('button', { name: 'English' })).toBeVisible();
   expect(
@@ -88,16 +127,12 @@ it('presents the mockup sections with the unchanged header destinations', () => 
   ).not.toBeInTheDocument();
   for (const name of [
     'สำรวจร้านตามพื้นที่',
-    'เลือกตามประเภทอาหาร',
+    'ประเภทอาหาร',
     'ร้านแนะนำ',
     'สั่งอาหารง่าย ๆ ใน 3 ขั้นตอน',
     'มีร้านอาหารเป็นของตัวเอง?',
   ])
     expect(screen.getByRole('heading', { name })).toBeVisible();
-  expect(screen.getByRole('link', { name: /สมัครร้านค้าฟรี/ })).toHaveAttribute(
-    'href',
-    '/register',
-  );
   expect(document.querySelector('#landing-main')).toHaveAttribute(
     'tabindex',
     '-1',
@@ -172,26 +207,27 @@ it('sends hero searches to the shop directory', () => {
   );
 });
 
-it('links category and area shortcuts to directory searches', () => {
+it('keeps area links on Main and links food categories to directory filters', () => {
   renderLanding();
   const categories = within(
     screen.getByRole('list', { name: 'ประเภทอาหาร' }),
-  ).getAllByRole('link');
-  expect(categories).toHaveLength(8);
-  expect(categories[1]).toHaveAttribute(
-    'href',
-    `/shop?q=${encodeURIComponent('ก๋วยเตี๋ยว')}`,
   );
+  expect(categories.getAllByRole('listitem')).toHaveLength(8);
+  expect(categories.getByRole('link', { name: 'ก๋วยเตี๋ยว' })).toHaveAttribute('href', '/shop?category=noodles');
+  const areas = within(screen.getByRole('list', { name: 'พื้นที่และชุมชน' }));
   expect(
-    within(screen.getByRole('list', { name: 'พื้นที่และชุมชน' })).getAllByRole(
-      'link',
-    ),
-  ).toHaveLength(4);
+    areas.getAllByRole('link').map((link) => link.getAttribute('href')),
+  ).toEqual(['/areas/campus', '/areas/market', '/areas/dorm', '/areas/community']);
+  expect(screen.getByRole('link', { name: 'ดูทุกพื้นที่' })).toHaveAttribute(
+    'href',
+    '/areas',
+  );
 });
 
-it('provides the mockup footer columns and a language selector', () => {
+it('provides the reference footer without a duplicate language selector', () => {
   renderLanding();
   const footer = within(screen.getByRole('contentinfo'));
+  expect(footer.queryByRole('combobox', { name: 'ภาษา' })).not.toBeInTheDocument();
   expect(
     footer.getByRole('link', { name: 'คำถามที่พบบ่อย (FAQ)' }),
   ).toHaveAttribute('href', '/faq');
@@ -201,28 +237,57 @@ it('provides the mockup footer columns and a language selector', () => {
     'สำหรับร้านค้า',
     'ช่วยเหลือ',
     'ข้อกำหนด',
-    'ติดต่อเรา',
+    'ติดตามเรา',
   ])
     expect(footer.getByRole('heading', { name })).toBeVisible();
   expect(footer.getByRole('link', { name: 'สมัครร้านค้า' })).toHaveAttribute(
     'href',
-    '/register',
+    '/#for-merchants',
   );
-  const language = footer.getByRole('combobox', { name: 'ภาษา' });
-  fireEvent.change(language, { target: { value: 'en' } });
-  expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
-    'Find restaurants in your community',
+  expect(footer.getByRole('link', { name: 'หมวดหมู่อาหาร' })).toHaveAttribute(
+    'href',
+    '#landing-categories',
   );
 });
 
-it('offers the workspace to signed-in users instead of sign-in', () => {
+function mockStoreStatus(hasStore: boolean, canCreateStore: boolean) {
+  fetchMock.mockImplementation(async (path) => ({
+    ok: true,
+    json: async () => ({
+      data: path === '/api/v1/organizations/store-status'
+        ? { has_store: hasStore, can_create_store: canCreateStore }
+        : shops,
+    }),
+  }));
+}
+
+it('displays the signed-in account and keeps store setup an explicit choice', async () => {
   mocks.status = 'authenticated';
+  mockStoreStatus(false, true);
   renderLanding();
-  for (const link of screen.getAllByRole('link', { name: 'เข้าพื้นที่ทำงาน' }))
-    expect(link).toHaveAttribute('href', '/workspace');
+  expect(screen.getByRole('button', { name: 'Test Customer' })).toBeVisible();
+  expect(await screen.findByRole('link', { name: 'เริ่มร้านค้า' })).toHaveAttribute('href', '/setup');
   expect(
-    screen.queryByRole('link', { name: 'เข้าสู่ระบบ' }),
+    screen.queryByRole('link', { name: /เข้าสู่ระบบ/ }),
   ).not.toBeInTheDocument();
+});
+
+it('shows the owner action before the account menu is opened', async () => {
+  mocks.status = 'authenticated';
+  mockStoreStatus(true, false);
+  renderLanding();
+  const merchant = within(screen.getByRole('region', { name: 'มีร้านอาหารเป็นของตัวเอง?' }));
+  expect(await merchant.findByRole('link', { name: 'จัดการร้าน' })).toHaveAttribute('href', '/workspace');
+  expect(merchant.queryByRole('link', { name: 'เริ่มร้านค้า' })).not.toBeInTheDocument();
+  expect(fetchMock.mock.calls.some(([path]) => path === '/api/v1/organizations')).toBe(false);
+});
+
+it('does not offer setup when creation is disabled', async () => {
+  mocks.status = 'authenticated';
+  mockStoreStatus(false, false);
+  renderLanding();
+  expect(await screen.findByText('ระบบนี้ไม่เปิดให้สร้างร้านเพิ่ม')).toBeVisible();
+  expect(screen.queryByRole('link', { name: 'เริ่มร้านค้า' })).not.toBeInTheDocument();
 });
 
 it('keeps session actions disabled while checking authentication', () => {

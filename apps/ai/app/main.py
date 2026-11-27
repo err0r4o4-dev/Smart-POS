@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.assistant import router as assistant_router
 from app.config import get_settings
 from app.observability import logger
 
@@ -34,6 +35,7 @@ class ErrorEnvelope(BaseModel):
 app = FastAPI(
     title="SmartPOS Internal AI", version="0.0.0", docs_url=None, redoc_url=None, openapi_url=None
 )
+app.include_router(assistant_router)
 
 
 @app.middleware("http")

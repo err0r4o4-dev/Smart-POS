@@ -5,6 +5,7 @@ import { canAccess } from './access';
 import { useAuth } from './AuthProvider';
 import { paths } from './routes';
 import { ErrorState, Loading } from '../components/ui/primitives';
+import { authLink, safeReturnTo } from '../features/auth/auth-destination';
 
 export function ProtectedRoute({
   session,
@@ -27,6 +28,10 @@ export function RequireSession() {
 
   const { state, refresh } = useAuth();
   const location = useLocation();
+  const destination =
+    safeReturnTo(location.pathname) === '/'
+      ? paths.workspace
+      : location.pathname;
   if (state.status === 'loading')
     return <Loading>{t('shell.checkingYourSession')}</Loading>;
   if (state.status === 'error')
@@ -37,13 +42,8 @@ export function RequireSession() {
       />
     );
   if (state.status === 'anonymous')
-    return (
-      <Navigate
-        to={`/login?returnTo=${encodeURIComponent(location.pathname)}`}
-        replace
-      />
-    );
+    return <Navigate to={authLink(paths.login, destination)} replace />;
   if (state.session?.user.email_verified === false)
-    return <Navigate to={paths.verifyEmail} replace />;
+    return <Navigate to={authLink(paths.verifyEmail, destination)} replace />;
   return <Outlet />;
 }

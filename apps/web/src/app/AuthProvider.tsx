@@ -19,7 +19,7 @@ import {
   VerificationFlow,
 } from '../features/auth/VerificationFlow';
 
-let initialVerificationToken = captureVerificationLink();
+const initialVerificationToken = captureVerificationLink();
 
 type AuthState =
   | { status: 'loading' | 'error' | 'anonymous'; session: null }
@@ -28,8 +28,11 @@ type AuthState =
 interface AuthContextValue {
   state: AuthState;
   refresh: () => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
-  signInWithGoogleLink: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<AuthSession | null>;
+  signInWithGoogleLink: (
+    email: string,
+    password: string,
+  ) => Promise<AuthSession | null>;
   signOut: () => Promise<void>;
   clear: () => void;
 }
@@ -38,9 +41,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const generation = useRef(0);
-  const [verificationToken, setVerificationToken] = useState(
-    initialVerificationToken,
-  );
+  const verificationToken = initialVerificationToken;
   const verificationAtStartup = useRef(verificationToken !== null);
   const [state, setState] = useState<AuthState>({
     status: 'loading',
@@ -101,8 +102,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = async (email: string, password: string) => {
     const current = ++generation.current;
     const session = await login(email, password);
-    if (current === generation.current)
-      setState({ status: 'authenticated', session });
+    if (current !== generation.current) return null;
+    setState({ status: 'authenticated', session });
+    return session;
   };
   const signOut = async () => {
     if (state.status !== 'authenticated') return;
@@ -114,8 +116,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithGoogleLink = async (email: string, password: string) => {
     const current = ++generation.current;
     const session = await linkGoogle(email, password);
-    if (current === generation.current)
-      setState({ status: 'authenticated', session });
+    if (current !== generation.current) return null;
+    setState({ status: 'authenticated', session });
+    return session;
   };
   return (
     <AuthContext.Provider
@@ -135,14 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         <VerificationFlow
           token={verificationToken}
           onComplete={completeVerification}
-          onContinue={
-            state.status === 'authenticated'
-              ? () => {
-                  initialVerificationToken = null;
-                  setVerificationToken(null);
-                }
-              : undefined
-          }
+          canContinue={state.status === 'authenticated'}
         />
       ) : (
         children
@@ -155,4 +151,9 @@ export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) throw new Error('AuthProvider is required');
   return context;
+}
+
+/** Read-only session status for public pages that must render without auth. */
+export function useOptionalAuth() {
+  return useContext(AuthContext);
 }

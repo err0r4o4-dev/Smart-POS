@@ -36,6 +36,8 @@ type Config struct {
 	GoogleRedirectURI         string
 	MFAEncryptionKeyID        string
 	MFAEncryptionKey          []byte
+	StoreAssistantURL         string
+	StoreAssistantToken       string
 }
 
 func Load() (Config, error) { return Parse(os.Getenv) }
@@ -157,5 +159,38 @@ func Parse(getenv func(string) string) (Config, error) {
 			return Config{}, errors.New("MFA_ENCRYPTION_KEY must be canonical standard Base64 encoding of exactly 32 bytes")
 		}
 	}
-	return Config{Address: address, DatabaseURL: databaseURL, Environment: environment, PublicOrigin: origin, AllowedOrigins: origins, SessionTTL: time.Duration(hours) * time.Hour, SMTPAddr: smtpAddr, SMTPUser: getenv("SMTP_USER"), SMTPPassword: getenv("SMTP_PASSWORD"), MailFrom: mailFrom, TrustedProxyIP: trustedProxyIP, PaymentSandbox: sandbox, CustomerPayments: customerPayments, SingleStoreOrganizationID: strings.ToLower(singleStore), GoogleClientID: googleID, GoogleClientSecret: googleSecret, GoogleRedirectURI: googleRedirect, MFAEncryptionKeyID: keyID, MFAEncryptionKey: mfaKey}, nil
+	assistantURL, assistantToken, err := storeAssistantConfig(environment, parsedOrigin, getenv)
+	if err != nil {
+		return Config{}, err
+	}
+	return Config{Address: address, DatabaseURL: databaseURL, Environment: environment, PublicOrigin: origin, AllowedOrigins: origins, SessionTTL: time.Duration(hours) * time.Hour, SMTPAddr: smtpAddr, SMTPUser: getenv("SMTP_USER"), SMTPPassword: getenv("SMTP_PASSWORD"), MailFrom: mailFrom, TrustedProxyIP: trustedProxyIP, PaymentSandbox: sandbox, CustomerPayments: customerPayments, SingleStoreOrganizationID: strings.ToLower(singleStore), GoogleClientID: googleID, GoogleClientSecret: googleSecret, GoogleRedirectURI: googleRedirect, MFAEncryptionKeyID: keyID, MFAEncryptionKey: mfaKey, StoreAssistantURL: assistantURL, StoreAssistantToken: assistantToken}, nil
+}
+
+func storeAssistantConfig(environment string, origin *url.URL, getenv func(string) string) (string, string, error) {
+	switch getenv("STORE_ASSISTANT_ENABLED") {
+	case "", "false":
+		return "", "", nil
+	case "true":
+	default:
+		return "", "", errors.New("STORE_ASSISTANT_ENABLED must be true or false")
+	}
+	if host := origin.Hostname(); environment != "development" || (host != "localhost" && host != "127.0.0.1") {
+		return "", "", errors.New("STORE_ASSISTANT_ENABLED requires a loopback development origin")
+	}
+	endpoint := getenv("STORE_ASSISTANT_AI_URL")
+	if endpoint != "http://ai:8001" && endpoint != "http://127.0.0.1:8001" && endpoint != "http://localhost:8001" {
+		return "", "", errors.New("STORE_ASSISTANT_AI_URL must point to the local SmartPOS AI service on port 8001")
+	}
+	if endpoint != "http://ai:8001" && getenv("API_ADDR") != "" {
+		host, _, err := net.SplitHostPort(getenv("API_ADDR"))
+		ip, parseErr := netip.ParseAddr(host)
+		if err != nil || parseErr != nil || !ip.IsLoopback() {
+			return "", "", errors.New("API_ADDR must bind to a loopback IP when the native store assistant is enabled")
+		}
+	}
+	token := getenv("AI_STORE_ASSISTANT_TOKEN")
+	if !regexp.MustCompile(`^[A-Za-z0-9_-]{32,128}$`).MatchString(token) {
+		return "", "", errors.New("AI_STORE_ASSISTANT_TOKEN must contain 32 through 128 URL-safe characters")
+	}
+	return endpoint, token, nil
 }

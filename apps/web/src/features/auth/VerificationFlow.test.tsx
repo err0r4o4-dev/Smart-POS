@@ -50,7 +50,7 @@ it('shows an explicit success confirmation after verification and session refres
   );
   expect(screen.getByRole('link', { name: /sign in/i })).toHaveAttribute(
     'href',
-    '/login?verified=1&returnTo=%2Fsetup',
+    '/login?verified=1',
   );
   expect(
     screen.queryByRole('button', { name: /resend/i }),

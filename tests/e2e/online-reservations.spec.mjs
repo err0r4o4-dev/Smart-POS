@@ -73,7 +73,8 @@ test('reservation notice and consent remain readable before guest submission (AP
         items: quote.items,
         events: [],
       };
-    } else if (path.endsWith('/reservation-fixture')) data = shop;
+    } else if (path === '/api/v1/storefronts') data = [shop];
+    else if (path.endsWith('/reservation-fixture')) data = shop;
     else throw new Error(`Unexpected fixture API: ${request.method()} ${path}`);
     await route.fulfill({ json: { data } });
   });
@@ -111,7 +112,7 @@ test('reservation notice and consent remain readable before guest submission (AP
     .getByRole('button', { name: 'ส่งออเดอร์ · ยังไม่ชำระเงิน' })
     .click();
   await expect(
-    page.getByRole('heading', { name: 'ติดตามออเดอร์' }),
+    page.getByRole('heading', { name: 'คำสั่งซื้อของฉัน' }),
   ).toBeVisible();
   expect(submissions).toBe(1);
   await expect(

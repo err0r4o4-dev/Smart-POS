@@ -88,6 +88,9 @@ func (handler Handler) Routes(router chi.Router, tenantExtensions ...func(chi.Ro
 		private.Get("/organizations", endpoint(200, func(ctx context.Context, user identity.Profile, org string, request *http.Request) (any, error) {
 			return service.List(ctx, user.ID)
 		}))
+		private.Get("/organizations/store-status", endpoint(200, func(ctx context.Context, user identity.Profile, _ string, _ *http.Request) (any, error) {
+			return service.storeStatus(ctx, user.ID)
+		}))
 		private.Route("/organizations/{id}", func(tenant chi.Router) {
 			for _, register := range tenantExtensions {
 				register(tenant)

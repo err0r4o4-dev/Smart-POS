@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useLanguage } from '../../app/language';
 import { ApiError, resendVerification, verifyEmail } from '../../lib/api';
 import { LoginLayout } from '../../layouts/LoginLayout';
+import { authLink, verificationReturn } from './auth-destination';
 import {
   accountFailure,
   dismissSuccessFeedback,
@@ -142,11 +143,11 @@ export function ResendVerification({
 export function VerificationFlow({
   token,
   onComplete,
-  onContinue,
+  canContinue = false,
 }: {
   token: string;
   onComplete: (userId: string) => Promise<void>;
-  onContinue?: () => void;
+  canContinue?: boolean;
 }) {
   const { language, t } = useLanguage();
   const en = language === 'en';
@@ -209,17 +210,22 @@ export function VerificationFlow({
           <p role="status" className="auth-status-banner">
             {t('auth.verificationSuccess')}
           </p>
-          {onContinue && (
-            <button
-              type="button"
+          {canContinue && (
+            <a
               className="button auth-submit-btn"
-              onClick={onContinue}
+              href={verificationReturn(verifiedId)}
             >
               {t('auth.verificationContinue')}
-            </button>
+            </a>
           )}
           <p className="auth-links auth-links-single">
-            <a href="/login?verified=1&returnTo=%2Fsetup">
+            <a
+              href={authLink(
+                '/login',
+                verificationReturn(verifiedId),
+                new URLSearchParams({ verified: '1' }),
+              )}
+            >
               {en ? 'Sign in' : 'เข้าสู่ระบบ'}
             </a>
           </p>
@@ -268,7 +274,7 @@ export function VerificationFlow({
             </>
           )}
           <p className="auth-links auth-links-single">
-            <a href="/login?returnTo=%2Fsetup">
+            <a href={authLink('/login', verificationReturn(verifiedId))}>
               {en ? 'Sign in' : 'เข้าสู่ระบบ'}
             </a>
           </p>

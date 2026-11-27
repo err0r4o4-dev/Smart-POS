@@ -1,0 +1,20 @@
+.storefront-shell.shop-discovery-shell {
+  background: var(--surface);
+}
+
+.storefront-shell.shop-discovery-shell::before {
+  content: none;
+}
+
+.storefront-shell.shop-discovery-shell .storefront-content {
+  width: 100%;
+  padding: 0;
+}
+
+.shop-discovery-page.customer-page {
+  gap: 0;
+}
+
+#storefront-results {
+  scroll-margin-top: calc(var(--header-height) + 12px);
+}

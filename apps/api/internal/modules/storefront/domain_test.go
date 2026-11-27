@@ -76,6 +76,27 @@ func TestAutoSlug(t *testing.T) {
 	}
 }
 
+func TestStorefrontCoverValidation(t *testing.T) {
+	for _, tc := range []struct {
+		path string
+		ok   bool
+	}{
+		{"", true},
+		{"/images/market-sip-soi/v2/covers/market-test.webp", true},
+		{"https://example.test/cover.webp", false},
+		{"//example.test/cover.webp", false},
+		{"/images/a/../cover.webp", false},
+		{"/images/%2e%2e/cover.webp", false},
+		{"/images/covers/cover.webp?secret=x", false},
+		{"/images/covers/vector.svg", false},
+	} {
+		input := SettingsInput{Name: "Test store", CoverImageURL: &tc.path}
+		if err := input.validate(); (err == nil) != tc.ok {
+			t.Errorf("cover %q: valid=%v, got %v", tc.path, tc.ok, err)
+		}
+	}
+}
+
 func TestSettingsValidation(t *testing.T) {
 	input := SettingsInput{Slug: "test-shop", Name: "ร้านทดสอบ", TerminalID: "11111111-1111-4111-8111-111111111111"}
 	if input.validate() != nil {

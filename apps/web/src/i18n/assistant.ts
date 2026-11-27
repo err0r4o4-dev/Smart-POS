@@ -2,6 +2,49 @@ import { defineMessages } from './defineMessages';
 
 export const assistant = defineMessages({
   th: {
+    discoveryTitle: 'ไกด์หาร้านอาหาร',
+    storeTitle: 'ผู้ช่วยร้าน {name}',
+    storeGeneric: 'ผู้ช่วยประจำร้าน',
+    merchantTitle: 'ผู้ช่วยใช้ระบบสำหรับร้าน',
+    discoveryIntro:
+      'ลองถามชื่อร้าน หมวดอาหาร ร้านที่รับออเดอร์ หรือร้านที่จัดส่งได้',
+    storeIntro: 'ถามเรื่องเมนู ราคา คิว หรือการติดตามออเดอร์ของร้านนี้ได้เลย',
+    merchantIntro: 'ถามวิธีเพิ่มเมนู ตั้งค่าร้าน หรือแก้ปัญหาคิวครัวได้เลย',
+    findOpen: 'ร้านไหนรับออเดอร์?',
+    findDelivery: 'ร้านไหนมีเดลิเวอรี?',
+    showMenu: 'ดูเมนูที่สั่งได้',
+    askQueue: 'ตอนนี้มีกี่คิว?',
+    addMenu: 'เพิ่มเมนูอย่างไร?',
+    kitchenHelp: 'ทำไมออเดอร์ไม่ขึ้นคิวครัว?',
+    reportProblem: 'ร่างรายงานปัญหา',
+    acceptOrdersIssue: 'ร้านไม่สามารถรับออเดอร์ได้',
+    reportSuggested: 'เตรียมร่างรายงานปัญหานี้เพื่อส่งให้ทีมดูแลได้',
+    prepareReport: 'เตรียมรายงาน',
+    guideFallback:
+      'ยังไม่พบคำตอบในคู่มือ ลองค้นในหน้าคู่มือหรือร่างรายงานปัญหา',
+    readGuide: 'อ่านคู่มือ',
+    noArea: 'ยังไม่มีข้อมูลตำแหน่งร้านพอสำหรับแนะนำตามพื้นที่',
+    browseStores: 'ดูร้านทั้งหมด',
+    noStores: 'ไม่พบร้านที่ตรงเงื่อนไข ลองค้นชื่อร้านหรือขยายเงื่อนไข',
+    loading: 'กำลังโหลดข้อมูล…',
+    retryData: 'โหลดข้อมูลไม่สำเร็จ ลองอีกครั้ง',
+    privateTracking:
+      'ใช้ลิงก์ติดตามส่วนตัวที่ได้รับหลังสั่งอาหารเพื่อดูสถานะล่าสุดของออเดอร์',
+    noPublicQueue:
+      'ตอนนี้ยังแสดงจำนวนคิวรวมไม่ได้ หากสั่งแล้วให้ตรวจสถานะจากลิงก์ติดตามของคุณ',
+    statusAtTop:
+      'ดูสถานะรับออเดอร์ของร้านได้ที่หัวแชท สถานะนี้เป็นของการสั่งออนไลน์',
+    noMenu: 'ไม่พบเมนูที่สั่งได้ตามเงื่อนไข',
+    menuClarify: 'ลองบอกชื่อเมนูที่อยากได้ หรืองบต่อจานอีกนิดนะครับ',
+    menuPrivacy: 'ถามเรื่องเมนูได้เลย ไม่ต้องใส่ชื่อ เบอร์โทร หรือลิงก์ออเดอร์',
+    availableMenu: 'เมนูที่สั่งได้:',
+    viewMenu: 'ดูเมนูทั้งหมด',
+    reportDraft: 'ร่างรายงานปัญหา',
+    reportUnsent:
+      'ยังไม่ส่งรายงาน โปรดไม่ใส่รหัสผ่าน ลิงก์ส่วนตัว หรือข้อมูลการชำระเงิน',
+    contactOptions: 'ดูช่องทางติดต่อ',
+    reportTemplate:
+      'ร้าน: {name}\nเวลา (UTC): {time}\nปัญหาที่พบ: {issue}\nงานที่ได้รับผลกระทบ:\nสิ่งที่ลองแก้แล้ว:\nรหัสอ้างอิง (ถ้ามี):',
     open: 'เปิดผู้ช่วย VELO Assistant',
     subtitle: 'สอบถามเกี่ยวกับร้านค้า เมนู หรือคำสั่งซื้อ',
     online: 'ออนไลน์',
@@ -36,6 +79,52 @@ export const assistant = defineMessages({
     send: 'ส่งข้อความ',
   },
   en: {
+    menuClarify: 'Tell me which dish you are looking for or your budget per dish.',
+    menuPrivacy: 'Ask about the menu without sharing names, phone numbers, or order links.',
+    discoveryTitle: 'Restaurant guide',
+    storeTitle: '{name} assistant',
+    storeGeneric: 'Restaurant assistant',
+    merchantTitle: 'Merchant guide',
+    discoveryIntro:
+      'Ask for a store by name, food category, order status, or delivery availability.',
+    storeIntro:
+      'Ask about this restaurant’s menu, prices, queue, or order tracking.',
+    merchantIntro:
+      'Ask how to add menu items, set up your store, or troubleshoot the kitchen queue.',
+    findOpen: 'Which stores are accepting orders?',
+    findDelivery: 'Which stores offer delivery?',
+    showMenu: 'Show available menu items',
+    askQueue: 'How long is the queue?',
+    addMenu: 'How do I add a menu item?',
+    kitchenHelp: 'Why is an order missing from the kitchen queue?',
+    reportProblem: 'Draft a problem report',
+    acceptOrdersIssue: 'Unable to accept orders',
+    reportSuggested: 'You can prepare a report for the support team.',
+    prepareReport: 'Prepare a report for this issue',
+    guideFallback:
+      'I couldn’t find an answer in the guide. Open the help page or draft a problem report.',
+    readGuide: 'Read the guide',
+    noArea:
+      'There isn’t enough store location data to recommend stores by area.',
+    browseStores: 'Browse all stores',
+    noStores: 'No matching stores. Try a store name or a broader search.',
+    loading: 'Loading information…',
+    retryData: 'Couldn’t load the information. Try again',
+    privateTracking:
+      'Use the private tracking link you received after ordering to see your latest order status.',
+    noPublicQueue:
+      'A public queue count isn’t available yet. If you’ve ordered, use your private tracking link to check your status.',
+    statusAtTop:
+      'The chat header shows whether this store is accepting online orders.',
+    noMenu: 'No available menu items match your request.',
+    availableMenu: 'Available menu items:',
+    viewMenu: 'View full menu',
+    reportDraft: 'Problem report draft',
+    reportUnsent:
+      'This report hasn’t been sent. Leave out passwords, private links, and payment information.',
+    contactOptions: 'See contact options',
+    reportTemplate:
+      'Store: {name}\nTime (UTC): {time}\nProblem: {issue}\nImpact:\nWhat you tried:\nReference code (if available):',
     open: 'Open VELO Assistant chat',
     subtitle: 'Ask about stores, menus, or orders',
     online: 'Online',

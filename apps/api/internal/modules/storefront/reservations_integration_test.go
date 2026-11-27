@@ -53,7 +53,7 @@ func assertTrackedAvailability(test *testing.T, ctx context.Context, organizatio
 	}
 }
 
-func reservationAcceptance(test *testing.T, ctx context.Context, organizations *organization.Service, owner, org string, shop storefront.Settings) {
+func reservationAcceptance(test *testing.T, ctx context.Context, organizations *organization.Service, owner, org string, shop storefront.Settings, pinned *storefront.Service, foreignOrg, foreignSlug string) {
 	test.Helper()
 	tx, _, err := organizations.Authorized(ctx, owner, org, "storefront.manage")
 	if err != nil {
@@ -293,6 +293,10 @@ func reservationAcceptance(test *testing.T, ctx context.Context, organizations *
 			test.Fatal(problem)
 		}
 		payReservationFixture(test, ctx, service, shop.Slug, input.AccessToken, next)
+		tracking := storefront.TrackingInput{OrderID: next.ID, AccessToken: input.AccessToken}
+		if _, problem = service.ReviewOrder(ctx, shop.Slug, storefront.ReviewInput{TrackingInput: tracking, Rating: 5}); !errors.Is(problem, storefront.ErrReviewNotReady) {
+			test.Fatalf("review before completion: %v", problem)
+		}
 		for _, status := range []string{"PREPARING", "READY"} {
 			next, problem = service.Transition(ctx, owner, org, next.ID, storefront.TransitionInput{Revision: next.Revision, Status: status})
 			if problem != nil {
@@ -314,10 +318,12 @@ func reservationAcceptance(test *testing.T, ctx context.Context, organizations *
 		if problem != nil || replay.ID != checkout.ID || replay.SaleID != checkout.SaleID {
 			test.Fatalf("settlement replay: %+v error %v", replay, problem)
 		}
-		tracked, problem := service.Track(ctx, shop.Slug, storefront.TrackingInput{OrderID: next.ID, AccessToken: input.AccessToken})
+		tracked, problem := service.Track(ctx, shop.Slug, tracking)
 		if problem != nil || tracked.Status != "COMPLETED" || tracked.PaymentStatus != "PAID_AT_STORE" {
 			test.Fatalf("completed reserved order: %+v error %v", tracked, problem)
 		}
+		foreign := &storefront.Service{Organization: &organization.Service{Pool: organizations.Pool, SingleStoreOrganizationID: foreignOrg}}
+		storefrontRatingsAcceptance(test, ctx, service, pinned, foreign, shop.Slug, foreignSlug, tracking)
 		products, problem := service.Products(ctx, "", "", shop.Slug, "", 1)
 		if problem != nil || len(products.Items) != 1 || products.Items[0].StockPolicy != "MENU_ONLY" || products.Items[0].Available != nil {
 			test.Fatalf("settled availability: %+v error %v", products.Items, problem)

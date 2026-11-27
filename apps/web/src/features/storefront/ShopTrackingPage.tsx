@@ -1,13 +1,19 @@
 import { useLanguage } from '../../app/language';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Button, Card, Loading } from '../../components/ui/primitives';
-import { storefrontRequest, type OnlineOrder } from '../../lib/storefront-api';
+import {
+  storefrontRequest,
+  type CustomerReview,
+  type OnlineOrder,
+} from '../../lib/storefront-api';
 import { ShopError } from './StorefrontPage';
 import { OrderDetails } from './OrderDetails';
 import { ShopOrderSteps } from './ShopOrderSteps';
-import { ArrowLeft } from 'lucide-react';
+import { CustomerOrderCard } from './CustomerOrderCard';
+import { moneyText } from '../../lib/pos-api';
+import { ArrowLeft, FlaskConical } from 'lucide-react';
 
 type PaymentState = 'REQUESTED' | 'OPEN' | 'PROCESSING' | 'EXPIRED' | 'PAID';
 type PaymentStatus = {
@@ -19,6 +25,84 @@ type PaymentStatus = {
 const returnLifetimeMs = 60 * 60 * 1000;
 const returnKey = (slug: string, orderId: string) =>
   `shop-payment-return:${encodeURIComponent(slug)}:${encodeURIComponent(orderId)}`;
+
+function OrderReview({
+  slug,
+  orderId,
+  token,
+  saved,
+}: {
+  slug: string;
+  orderId: string;
+  token: string;
+  saved?: CustomerReview;
+}) {
+  const { t } = useLanguage();
+  const client = useQueryClient();
+  const [rating, setRating] = useState('');
+  const submission = useMutation({
+    mutationFn: (score: number) =>
+      storefrontRequest<CustomerReview>(`/${encodeURIComponent(slug)}/review`, {
+        body: { order_id: orderId, access_token: token, rating: score },
+      }),
+    onSuccess: (review) => {
+      client.setQueryData<OnlineOrder>(
+        ['storefront-tracking', slug, orderId, token],
+        (order) => (order ? { ...order, review } : order),
+      );
+      void client.invalidateQueries({ queryKey: ['storefront-directory'] });
+    },
+  });
+  const current = submission.data ?? saved;
+  return (
+    <section
+      className="shop-review-panel"
+      aria-labelledby="shop-review-heading"
+    >
+      <h2 id="shop-review-heading">{t('storefront.rateOrder')}</h2>
+      {current ? (
+        <p role="status">
+          {t('storefront.savedRating', { rating: String(current.rating) })}
+        </p>
+      ) : (
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (/^[1-5]$/.test(rating) && !submission.isPending)
+              submission.mutate(Number(rating));
+          }}
+        >
+          <label>
+            {t('storefront.ratingScale')}
+            <select
+              value={rating}
+              required
+              disabled={submission.isPending}
+              onChange={(event) => setRating(event.target.value)}
+            >
+              <option value="">{t('storefront.chooseRating')}</option>
+              {[1, 2, 3, 4, 5].map((score) => (
+                <option key={score} value={score}>
+                  {score} / 5
+                </option>
+              ))}
+            </select>
+          </label>
+          <Button type="submit" disabled={!rating || submission.isPending}>
+            {t(
+              submission.isPending
+                ? 'storefront.savingRating'
+                : 'storefront.submitRating',
+            )}
+          </Button>
+        </form>
+      )}
+      {submission.isError && (
+        <p role="alert">{t('storefront.ratingSaveError')}</p>
+      )}
+    </section>
+  );
+}
 function paymentStatus(value: unknown): PaymentStatus {
   if (!value || typeof value !== 'object' || Array.isArray(value))
     throw new Error('ข้อมูลสถานะชำระเงินไม่ถูกต้อง');
@@ -184,10 +268,12 @@ function TrackingContents({
       if (result.attempt.state === 'PAID') void order.refetch();
     },
   });
+  const unpaidPending =
+    order.data?.status === 'PENDING' && order.data.payment_status === 'UNPAID';
   return (
-    <div className="shop-tracking-page">
+    <div className="shop-tracking-page customer-tracking-page">
       <div className="shop-page-heading">
-        <h1>{t('storefront.trackOrder')}</h1>
+        <h1>{t('storefront.customer.trackingTitle')}</h1>
 
         <Link className="shop-secondary-action" to={`/shop/${slug}`}>
           <ArrowLeft size={16} aria-hidden="true" />
@@ -220,14 +306,25 @@ function TrackingContents({
           )}
 
           {order.data && (
-            <Card className="shop-tracking-card">
-              <OrderDetails order={order.data} />
-              {order.data.status === 'PENDING' &&
-                order.data.payment_status === 'UNPAID' && (
-                  <section
-                    className="shop-payment-panel"
-                    aria-label={language === 'th' ? 'ชำระเงิน' : 'Payment'}
-                  >
+            <>
+              {unpaidPending && (
+                <section
+                  className="shop-payment-panel customer-payment-row"
+                  aria-labelledby="customer-payment-title"
+                >
+                  <div className="customer-payment-card">
+                    <div className="customer-payment-heading">
+                      <h2 id="customer-payment-title">
+                        {t('storefront.customer.paymentTitle')}
+                      </h2>
+                      <span className="customer-test-badge">
+                        <FlaskConical size={14} aria-hidden="true" />
+                        {t('storefront.customer.paymentTestMode')}
+                      </span>
+                    </div>
+                    <p className="customer-payment-note">
+                      {t('storefront.customer.paymentTestModeNote')}
+                    </p>
                     <div className="shop-actions">
                       <Button
                         disabled={
@@ -313,16 +410,52 @@ function TrackingContents({
                           : 'Unable to save the tracking link in this browser. Enable storage and try again.'}
                       </p>
                     )}
-                  </section>
-                )}
-              <Button
-                className="button-secondary"
-                disabled={order.isFetching}
-                onClick={() => void order.refetch()}
-              >
-                {t('storefront.refreshStatus')}
-              </Button>
-            </Card>
+                  </div>
+                  <aside
+                    className="customer-payment-summary"
+                    aria-labelledby="customer-payment-summary-title"
+                  >
+                    <h3 id="customer-payment-summary-title">
+                      {t('storefront.customer.paymentSummary')}
+                    </h3>
+                    <ul>
+                      {order.data.items.map((line) => (
+                        <li key={line.variant_id}>
+                          <span>
+                            {line.product_name} × {Number(line.quantity)}
+                          </span>
+                          <span>฿{moneyText(line.line_total)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="customer-payment-amount">
+                      <span>{t('storefront.customer.paymentAmount')}</span>
+                      <strong>฿{moneyText(order.data.estimated_total)}</strong>
+                    </p>
+                  </aside>
+                </section>
+              )}
+              <CustomerOrderCard order={order.data} />
+              <Card className="shop-tracking-card">
+                <OrderDetails order={order.data} variant="customer" />
+                {order.data.status === 'COMPLETED' &&
+                  order.data.review_eligible === true && (
+                    <OrderReview
+                      slug={slug}
+                      orderId={orderId}
+                      token={token}
+                      saved={order.data.review}
+                    />
+                  )}
+                <Button
+                  className="button-secondary"
+                  disabled={order.isFetching}
+                  onClick={() => void order.refetch()}
+                >
+                  {t('storefront.refreshStatus')}
+                </Button>
+              </Card>
+            </>
           )}
         </>
       )}

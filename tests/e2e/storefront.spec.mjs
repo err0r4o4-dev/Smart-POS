@@ -130,7 +130,7 @@ test('guest pickup order, staff preparation, locked POS cart and actual settleme
       .getByRole('button', { name: 'ส่งออเดอร์ · ยังไม่ชำระเงิน' })
       .click();
     await expect(
-      guest.getByRole('heading', { name: 'ติดตามออเดอร์' }),
+      guest.getByRole('heading', { name: 'คำสั่งซื้อของฉัน' }),
     ).toBeVisible();
     await expect(
       guest.getByText('ยังไม่ชำระเงิน · รับและจ่ายที่ร้าน'),

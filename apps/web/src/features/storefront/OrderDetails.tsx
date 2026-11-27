@@ -7,10 +7,14 @@ import { CheckCircle2, UtensilsCrossed } from 'lucide-react';
 export function OrderDetails({
   order,
   staff = false,
+  variant = 'staff',
 }: {
   order: OnlineOrder;
   staff?: boolean;
+  /** 'customer' omits the stepper and timeline shown by CustomerOrderCard. */
+  variant?: 'customer' | 'staff';
 }) {
+  const customer = variant === 'customer';
   const { t, localize, formatDateTime, language } = useLanguage();
 
   const isPaid = order.payment_status === 'PAID_AT_STORE';
@@ -105,30 +109,35 @@ export function OrderDetails({
       )}
 
       {/* 4-Step Dine-in Order Lifecycle Stepper (Image #1 Step 7) */}
-      <section className="dinein-tracking-stepper" aria-label="สถานะคำสั่งซื้อ">
-        <div className="dinein-step-list">
-          {timelineSteps.map((step, idx) => (
-            <div
-              key={step.id}
-              className={`dinein-step-item ${step.isDone ? 'done' : ''} ${step.isActive ? 'active' : ''}`}
-            >
-              <div className="dinein-step-circle">
-                {step.isDone ? (
-                  <CheckCircle2 size={20} className="icon-done" />
-                ) : step.isActive ? (
-                  <span className="dinein-step-pulse" />
-                ) : (
-                  <span>{idx + 1}</span>
-                )}
+      {!customer && (
+        <section
+          className="dinein-tracking-stepper"
+          aria-label="สถานะคำสั่งซื้อ"
+        >
+          <div className="dinein-step-list">
+            {timelineSteps.map((step, idx) => (
+              <div
+                key={step.id}
+                className={`dinein-step-item ${step.isDone ? 'done' : ''} ${step.isActive ? 'active' : ''}`}
+              >
+                <div className="dinein-step-circle">
+                  {step.isDone ? (
+                    <CheckCircle2 size={20} className="icon-done" />
+                  ) : step.isActive ? (
+                    <span className="dinein-step-pulse" />
+                  ) : (
+                    <span>{idx + 1}</span>
+                  )}
+                </div>
+                <div className="dinein-step-info">
+                  <strong>{step.label}</strong>
+                  {step.desc && <small>{step.desc}</small>}
+                </div>
               </div>
-              <div className="dinein-step-info">
-                <strong>{step.label}</strong>
-                {step.desc && <small>{step.desc}</small>}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      )}
 
       <p>
         {order.payment_status === 'PAID_AT_STORE'
@@ -194,16 +203,20 @@ export function OrderDetails({
         </p>
       )}
 
-      <h3>{t('storefront.progress')}</h3>
-      <ol className="shop-timeline">
-        {order.events.map((event, index) => (
-          <li key={`${event.created_at}:${index}`}>
-            <strong>{localize(orderStatusLabels[event.status])}</strong>
-            <p>{event.message}</p>
-            <small>{formatDateTime(event.created_at)}</small>
-          </li>
-        ))}
-      </ol>
+      {!customer && (
+        <>
+          <h3>{t('storefront.progress')}</h3>
+          <ol className="shop-timeline">
+            {order.events.map((event, index) => (
+              <li key={`${event.created_at}:${index}`}>
+                <strong>{localize(orderStatusLabels[event.status])}</strong>
+                <p>{event.message}</p>
+                <small>{formatDateTime(event.created_at)}</small>
+              </li>
+            ))}
+          </ol>
+        </>
+      )}
     </div>
   );
 }

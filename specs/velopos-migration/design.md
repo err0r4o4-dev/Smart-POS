@@ -1173,6 +1173,42 @@ Proposed native behavior:
   current restaurant, menu, modifier choices and prices before the customer
   confirms. Do not apply a stored price or replace a sold-out choice silently.
 
+#### Saved-draft implementation boundary (T3.2)
+
+Keep this slice separate from checkout. The retained `useShopCart` reads and
+replaces browser snapshots by storefront slug; do not add native expiry to
+that key or reuse it as an authenticated member store. The native checkout
+quote is also not a storage boundary: it prices and validates current inputs
+at checkout. The saved draft carries selections and quantities, not the
+checkout quote, proof, or a reservation. No existing cart is migrated or
+silently claimed by this slice.
+
+For the native draft, use the following operation outcomes. An editor must
+supply both the draft identity and its observed revision when modifying a
+known draft. Creation is a different operation that expects no live draft.
+Evaluate expiry at read time and again at the serialized write decision;
+`now == expires_at` is expired. Set expiry from the accepted edit instant,
+using the approved duration for that draft's scope.
+
+| Case                                                                                 | Expected outcome                                                                                         |
+| ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| Read a missing or expired draft                                                      | Return no draft; neither write nor extend expiry.                                                        |
+| Create when no live draft exists                                                     | Start a new identity; never inherit an expired draft's revision or checkout state.                       |
+| Two creates see the same absent draft                                                | One creates; the other reports a conflict, not an implicit edit.                                         |
+| Edit a live draft at its current identity and revision                               | Apply the edit and advance revision and expiry together.                                                 |
+| Edit using a stale revision, an expired identity or the identity of a replaced draft | Reject without modifying the current draft; do not recreate it as a side effect.                         |
+| Replay a recorded successful edit                                                    | Do not write again or extend expiry. Do not present a historical result as the current authorized draft. |
+| Sign in or change account                                                            | Keep the guest draft separate; select only the current member's scoped draft.                            |
+
+Guest serialization must hold across tabs using the same browser store.
+Member serialization must hold across clients in the server's persistence
+boundary with live member and restaurant scope. Do not implement either as
+an unlocked read followed by an unconditional write. Neither depends on
+payment hold or quota policy, but the member implementation still requires
+an additive schema design, a confirmed disposable test target and independent
+review. Draft availability expiry does not decide the retention/deletion
+policy for stored records or authorize access to a retained database.
+
 Acceptance: two clients edit the same revision and only one write succeeds;
 a stale client cannot overwrite a recreated draft; reading does not extend
 expiry; a second guest device or foreign member cannot see the draft; changing

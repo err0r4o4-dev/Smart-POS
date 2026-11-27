@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "flat-type-hierarchy",
+        "value": "*",
+        "files": [
+          "apps/web/public/images/home/photo-credits.html"
+        ],
+        "createdAt": "2026-11-26T03:52:17.292Z",
+        "reason": "Claude: pre-existing unstyled attribution page using browser default h1/h2 sizes; this change only appended a credits list"
+      }
+    ]
+  }
+}

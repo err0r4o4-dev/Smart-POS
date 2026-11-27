@@ -5,24 +5,13 @@ import { StandardPageHeader } from '../../components/ui/StandardPage';
 import { WorkspaceLink } from '../../app/WorkspaceNavigation';
 import { Table } from '../inventory/InventoryUI';
 import { QueryState } from './RestaurantUI';
-import {
-  useRestaurantCommand,
-  useRestaurantQuery,
-  useRestaurantScope,
-} from './restaurant-hooks';
+import { useRestaurantQuery, useRestaurantScope } from './restaurant-hooks';
 import { TablesScreen } from './StockAndTables';
 import { SettingsPage } from '../organization/SettingsPage';
 import { useState } from 'react';
 import { QueueBoard } from './QueueBoard';
 import './restaurant.css';
 
-export interface RestaurantSettings {
-  branch_id: string;
-  closing_time: string;
-  timezone: string;
-  revision: number;
-  period: { start: string; end: string };
-}
 export type RestaurantView = 'settings' | 'tables' | 'queue';
 const permissions: Record<RestaurantView, string> = {
   settings: 'storefront.manage',
@@ -64,40 +53,9 @@ export function RestaurantPage({ view }: { view: RestaurantView }) {
   );
 }
 function RestaurantContent({ view }: { view: RestaurantView }) {
-  if (view === 'settings') return <SettingsScreen />;
+  if (view === 'settings') return <SettingsPage />;
   if (view === 'tables') return <TablesScreen />;
   return <QueueScreen />;
-}
-function SettingsScreen() {
-  const scope = useRestaurantScope();
-  const query = useRestaurantQuery<RestaurantSettings>(
-    `/restaurant/settings?branch_id=${scope.branch}`,
-    'storefront.manage',
-  );
-  const command = useRestaurantCommand<RestaurantSettings>(
-    '/restaurant/settings',
-    'PATCH',
-  );
-  return (
-    <>
-      <QueryState query={query} />
-      {query.data && !query.error ? (
-        <SettingsPage
-          key={query.data.revision}
-          initialSettings={query.data}
-          branchId={scope.branch}
-          onSaveHours={(closing) => {
-            command.run({
-              branch_id: query.data!.branch_id,
-              closing_time: closing,
-              timezone: query.data!.timezone,
-              revision: query.data!.revision,
-            });
-          }}
-        />
-      ) : null}
-    </>
-  );
 }
 export interface QueueItem {
   order_id: string;

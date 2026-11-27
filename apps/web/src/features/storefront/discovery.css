@@ -1,0 +1,316 @@
+.discovery-page {
+  --discovery-cream: #fbf3e6;
+  --discovery-gold: var(--brand-gradient);
+}
+
+.storefront-shell:has(.discovery-page) .storefront-content {
+  --layout-content-max: var(--layout-discovery-max);
+}
+
+.discovery-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  background: radial-gradient(
+    ellipse at 92% 60%,
+    #ffe3a3,
+    var(--discovery-cream) 65%
+  );
+  border-radius: var(--radius-feature);
+}
+
+.discovery-hero-copy {
+  grid-column: 1;
+  z-index: 1;
+  align-self: center;
+  min-width: 0;
+  padding: clamp(20px, 3.2vw, 46px);
+  overflow-wrap: anywhere;
+}
+.discovery-hero-compact {
+  display: block;
+  background: linear-gradient(
+    110deg,
+    var(--surface) 48%,
+    var(--discovery-cream)
+  );
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
+.discovery-hero-compact .discovery-hero-copy {
+  padding: clamp(16px, 2vw, 28px);
+}
+.discovery-hero-compact .customer-search {
+  max-width: 42rem;
+}
+
+.discovery-hero h1 {
+  margin: 0;
+  font-size: clamp(1.625rem, 3.25vw, 2.75rem);
+  font-weight: 800;
+  line-height: 1.22;
+  letter-spacing: -0.02em;
+}
+
+.discovery-hero p {
+  margin: var(--space-2) 0 0;
+  color: var(--text-strong);
+}
+
+.discovery-hero .customer-search,
+.discovery-hero .discovery-area-select {
+  margin-block-start: var(--space-4);
+  background: var(--surface);
+}
+
+.storefront-content .discovery-hero .customer-search input[type='search'] {
+  width: 100%;
+  min-height: 44px;
+  padding-inline: 0 var(--space-3);
+  border: 0;
+  background: transparent;
+}
+
+.discovery-hero-art {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 46%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  mask-image: linear-gradient(90deg, transparent, #000 26%);
+  border-radius: inherit;
+}
+
+.discovery-area-select {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px var(--space-2);
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: var(--font-caption);
+  font-weight: 700;
+}
+
+.storefront-content .discovery-area-select select {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 0 var(--space-1);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.discovery-page .customer-directory-toolbar > .customer-sort {
+  margin-inline-start: auto;
+  flex-wrap: wrap;
+}
+
+.storefront-content .discovery-page .customer-sort select {
+  width: auto;
+  max-width: 100%;
+}
+
+.discovery-mobile-filter summary:focus-visible {
+  outline: 2px solid var(--primary-strong);
+  outline-offset: 2px;
+}
+
+.discovery-page .customer-chips {
+  flex-wrap: wrap;
+  overflow: visible;
+}
+
+.discovery-page .customer-chips button[aria-pressed='true'] {
+  background: var(--discovery-gold);
+}
+
+.discovery-page .customer-shop-card {
+  border-radius: var(--radius-control);
+}
+
+.discovery-page .customer-shop-cover {
+  aspect-ratio: 2 / 1;
+}
+
+.discovery-page .customer-shop-status.is-open {
+  background: #e8f6ea;
+  color: var(--success-strong);
+}
+
+.discovery-page .customer-shop-body {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.discovery-results-heading {
+  display: inline-block;
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-section);
+}
+
+.discovery-result-count {
+  display: inline-block;
+  margin: 0 0 var(--space-3) var(--space-3);
+  color: var(--text-secondary);
+  font-size: var(--font-caption);
+}
+
+.discovery-mobile-filter {
+  display: none;
+}
+
+.discovery-unavailable {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  padding: clamp(24px, 5vw, 56px) var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  text-align: center;
+}
+
+.discovery-unavailable > svg {
+  color: var(--primary-strong);
+}
+
+.discovery-unavailable h2,
+.discovery-unavailable p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.discovery-unavailable p {
+  color: var(--text-secondary);
+}
+
+.discovery-unavailable .button {
+  margin-block-start: var(--space-2);
+}
+
+.discovery-page .customer-area-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 1024px) {
+  .discovery-page .customer-type-panel {
+    background: var(--primary-subtle);
+    border-color: var(--primary-border);
+  }
+}
+
+@media (min-width: 1280px) {
+  .discovery-page .customer-shop-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1023px) {
+  .discovery-page .customer-type-heading,
+  .discovery-page .customer-type-list {
+    display: none;
+  }
+
+  .discovery-mobile-filter {
+    display: block;
+  }
+
+  .discovery-mobile-filter summary {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 44px;
+    padding-inline: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-control);
+    background: var(--surface);
+    font-size: var(--font-caption);
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .discovery-mobile-filter[open] .customer-sort {
+    display: flex;
+    flex-wrap: wrap;
+    margin-block-start: var(--space-2);
+  }
+}
+
+@media (max-width: 639px) {
+  .discovery-hero {
+    display: block;
+  }
+
+  .discovery-hero-art {
+    display: none;
+  }
+
+  .discovery-hero-area .discovery-hero-art {
+    display: block;
+    position: static;
+    width: 100%;
+    height: 76px;
+    object-position: center 55%;
+    mask-image: none;
+    border-radius: 0 0 var(--radius-feature) var(--radius-feature);
+  }
+
+  .discovery-page .customer-directory-toolbar > .customer-sort {
+    margin-inline-start: 0;
+  }
+
+  .discovery-page .customer-directory-toolbar {
+    justify-content: space-between;
+  }
+
+  .discovery-page .customer-shop-card {
+    display: grid;
+    grid-template-columns: minmax(92px, 32%) minmax(0, 1fr);
+  }
+
+  .discovery-page .customer-shop-cover {
+    aspect-ratio: auto;
+  }
+
+  .discovery-page .customer-shop-cover img {
+    position: absolute;
+    inset: 0;
+  }
+
+  .discovery-page .customer-shop-status {
+    inset: auto 4px 4px;
+    padding-inline: 4px;
+    overflow-wrap: anywhere;
+  }
+
+  .discovery-page .customer-shop-favorite {
+    top: 4px;
+    right: 4px;
+  }
+
+  .discovery-page .customer-area-grid {
+    gap: var(--space-2);
+  }
+
+  .discovery-page .customer-area-card {
+    min-height: 144px;
+  }
+
+  .discovery-page .customer-area-arrow {
+    display: none;
+  }
+}

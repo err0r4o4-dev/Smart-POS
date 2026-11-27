@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"smartpos/api/internal/modules/identity"
+	"smartpos/api/internal/modules/storefront"
 	"smartpos/api/internal/platform/config"
 	"smartpos/api/internal/platform/database"
 	"smartpos/api/internal/transport"
@@ -50,7 +51,11 @@ func run(logger *slog.Logger) error {
 		}
 		clear(settings.MFAEncryptionKey)
 	}
-	server := &http.Server{Addr: settings.Address, Handler: transport.RouterWithOptions(database.Checker{Pool: pool}, logger, transport.Options{PaymentSandbox: settings.PaymentSandbox, CustomerPayments: settings.CustomerPayments, SingleStoreOrganizationID: settings.SingleStoreOrganizationID}, identity.Handler{Service: authentication, Google: google, MFA: mfa, Origins: settings.AllowedOrigins, Production: settings.Environment == "production", TrustedProxyIP: settings.TrustedProxyIP}), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 1 << 20}
+	options := transport.Options{PaymentSandbox: settings.PaymentSandbox, CustomerPayments: settings.CustomerPayments, SingleStoreOrganizationID: settings.SingleStoreOrganizationID}
+	if settings.StoreAssistantURL != "" {
+		options.StoreAssistant = storefront.NewAssistantClient(settings.StoreAssistantURL, settings.StoreAssistantToken)
+	}
+	server := &http.Server{Addr: settings.Address, Handler: transport.RouterWithOptions(database.Checker{Pool: pool}, logger, options, identity.Handler{Service: authentication, Google: google, MFA: mfa, Origins: settings.AllowedOrigins, Production: settings.Environment == "production", TrustedProxyIP: settings.TrustedProxyIP}), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 1 << 20}
 	failures := make(chan error, 1)
 	go func() { failures <- server.ListenAndServe() }()
 	logger.Info("server starting", "event", "server_starting", "address", settings.Address)
